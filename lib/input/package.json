@@ -1,0 +1,5 @@
+{
+  "main": "./input.mjs",
+  "module": "./input.mjs",
+  "types": "./Input.d.ts"
+}

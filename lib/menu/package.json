@@ -1,0 +1,5 @@
+{
+  "main": "./menu.mjs",
+  "module": "./menu.mjs",
+  "types": "./Menu.d.ts"
+}

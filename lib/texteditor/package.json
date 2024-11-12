@@ -1,0 +1,5 @@
+{
+  "main": "./texteditor.mjs",
+  "module": "./texteditor.mjs",
+  "types": "./TextEditor.d.ts"
+}

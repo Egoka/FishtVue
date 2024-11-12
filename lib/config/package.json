@@ -1,0 +1,5 @@
+{
+  "main": "./config.mjs",
+  "module": "./config.mjs",
+  "types": "./FishtVue.d.ts"
+}

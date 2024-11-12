@@ -1,0 +1,5 @@
+{
+  "main": "./form.mjs",
+  "module": "./form.mjs",
+  "types": "./Form.d.ts"
+}

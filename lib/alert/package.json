@@ -1,0 +1,5 @@
+{
+  "main": "./alert.mjs",
+  "module": "./alert.mjs",
+  "types": "./Alert.d.ts"
+}

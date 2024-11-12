@@ -1,0 +1,5 @@
+{
+  "main": "./calendar.mjs",
+  "module": "./calendar.mjs",
+  "types": "./Calendar.d.ts"
+}

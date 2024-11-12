@@ -1,0 +1,5 @@
+{
+  "main": "./pagination.mjs",
+  "module": "./pagination.mjs",
+  "types": "./Pagination.d.ts"
+}

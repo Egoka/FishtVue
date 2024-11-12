@@ -1,0 +1,5 @@
+{
+  "main": "./label.mjs",
+  "module": "./label.mjs",
+  "types": "./Label.d.ts"
+}
