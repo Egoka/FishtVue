@@ -1,17 +1,17 @@
 {
   "name": "fishtvue",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": false,
   "author": "Egor Bondarenco",
   "description": "Beautiful components that you can use in your applications. Available. Customizable. Open source.",
-  "homepage": "https://github.com/Fisht-Org/FishtVue",
+  "homepage": "https://github.com/Egoka/FishtVue",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Fisht-Org/FishtVue.git"
+    "url": "https://github.com/Egoka/FishtVue.git"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Fisht-Org/FishtVue/issues"
+    "url": "https://github.com/Egoka/FishtVue/issues"
   },
   "keywords": [
     "fishtvue",
