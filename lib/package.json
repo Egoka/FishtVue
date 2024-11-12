@@ -1,10 +1,10 @@
 {
-  "name": "@egorkas/org-fishtvue",
+  "name": "fishtvue",
   "version": "0.0.1",
   "private": false,
   "author": "Egor Bondarenco",
   "description": "Beautiful components that you can use in your applications. Available. Customizable. Open source.",
-  "homepage": "https://github.com/Fisht-Org/",
+  "homepage": "https://github.com/Fisht-Org/FishtVue",
   "repository": {
     "type": "git",
     "url": "https://github.com/Fisht-Org/FishtVue.git"

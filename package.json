@@ -1,18 +1,27 @@
 {
-  "name": "@egorkas/org-fishtvue",
+  "name": "fishtvue",
   "version": "0.0.0",
   "description": "My package",
   "private": false,
   "type": "module",
   "scripts": {
+    "dev": "vite --open src/index.html",
+    "preview": "vite preview",
     "build:lib": "NODE_ENV=production rollup -c",
+    "pack": "cd dist && npm pack --pack-destination='../'",
     "format": "prettier --write \"**/*.{js,ts,vue,d.ts}\" --cache",
+    "format:check": "prettier --check \"**/*.{js,ts,vue,d.ts}\"",
     "lint": "eslint --fix .",
-    "test": "vitest run"
+    "lint:fix": "eslint --fix --ext \".js,.ts,.vue\" --ignore-path .gitignore .",
+    "patch": "npm version patch",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:unit": "vitest --ui",
+    "coverage": "vitest run --coverage"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Egoka/fisht-vue.git"
+    "url": "git+https://github.com/Fisht-Org/FishtVue.git"
   },
   "keywords": [
     "npm"
@@ -20,9 +29,9 @@
   "author": "Egor Bondarenko",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Egoka/fisht-vue/issues"
+    "url": "https://github.com/Fisht-Org/FishtVue/issues"
   },
-  "homepage": "https://github.com/Egoka/fisht-vue#readme",
+  "homepage": "https://github.com/Fisht-Org/FishtVue#readme",
   "devDependencies": {
     "@babel/eslint-parser": "^7.25.7",
     "@babel/preset-env": "^7.25.7",
