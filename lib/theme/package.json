@@ -1,0 +1,5 @@
+{
+  "main": "./theme.mjs",
+  "module": "./theme.mjs",
+  "types": "./Theme.d.ts"
+}

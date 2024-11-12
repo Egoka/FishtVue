@@ -1,0 +1,5 @@
+{
+  "main": "./locale.mjs",
+  "module": "./locale.mjs",
+  "types": "./TypesLocale.d.ts"
+}

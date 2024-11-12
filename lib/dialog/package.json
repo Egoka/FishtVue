@@ -1,0 +1,5 @@
+{
+  "main": "./dialog.mjs",
+  "module": "./dialog.mjs",
+  "types": "./Dialog.d.ts"
+}

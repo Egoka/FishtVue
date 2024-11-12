@@ -1,0 +1,5 @@
+{
+  "main": "./split.mjs",
+  "module": "./split.mjs",
+  "types": "./Split.d.ts"
+}

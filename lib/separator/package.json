@@ -1,0 +1,5 @@
+{
+  "main": "./separator.mjs",
+  "module": "./separator.mjs",
+  "types": "./Separator.d.ts"
+}

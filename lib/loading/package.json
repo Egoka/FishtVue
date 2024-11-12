@@ -1,0 +1,5 @@
+{
+  "main": "./loading.mjs",
+  "module": "./loading.mjs",
+  "types": "./Loading.d.ts"
+}

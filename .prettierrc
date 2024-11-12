@@ -1,0 +1,10 @@
+{
+  "useTabs": false,
+  "tabWidth": 2,
+  "trailingComma": "none",
+  "semi": false,
+  "vueIndentScriptAndStyle": true,
+  "printWidth": 120,
+  "arrowParens": "always",
+  "bracketSameLine": true
+}

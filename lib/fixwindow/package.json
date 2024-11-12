@@ -1,0 +1,5 @@
+{
+  "main": "./fixwindow.mjs",
+  "module": "./fixwindow.mjs",
+  "types": "./FixWindow.d.ts"
+}

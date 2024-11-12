@@ -1,0 +1,5 @@
+{
+  "main": "./table.mjs",
+  "module": "./table.mjs",
+  "types": "./Table.d.ts"
+}

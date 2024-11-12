@@ -1,0 +1,5 @@
+{
+  "main": "./accordion.mjs",
+  "module": "./accordion.mjs",
+  "types": "./Accordion.d.ts"
+}
