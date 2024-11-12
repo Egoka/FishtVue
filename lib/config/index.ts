@@ -82,8 +82,7 @@ export default {
     }
     FishtVue.config.theme = linksTheme(FishtVue.config.theme)
     FishtVueSymbol = Symbol("FishtVue")
-    // @ts-ignore
-    window.FishtVue = FishtVue
+    ;(window as any).FishtVue = FishtVue
     app.provide(FishtVueSymbol, FishtVue)
     app.config.globalProperties.$fishtVue = FishtVue
     const BaseStylesComponent = new Component("BaseComponent" as any)
