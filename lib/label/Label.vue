@@ -8,8 +8,12 @@
   // ---PROPS-EMITS-SLOTS-------------------
   const props = defineProps<LabelProps>()
   // ---PROPS-------------------------------
-  const mode = computed<NonNullable<LabelProps["mode"]>>(() => props.mode ?? "outlined")
-  const type = computed<NonNullable<LabelProps["type"]>>(() => props.type ?? "dynamic")
+  const mode = computed<NonNullable<LabelProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
+  const type = computed<NonNullable<LabelProps["type"]>>(() => props?.type ?? options?.type ?? "dynamic")
+  const translateX = computed<NonNullable<LabelProps["translateX"]>>(
+    () => props?.translateX ?? options?.translateX ?? 0
+  )
+  const maxWidth = computed<NonNullable<LabelProps["maxWidth"]>>(() => props?.maxWidth ?? options?.maxWidth ?? 0)
   const background = computed(() => {
     switch (mode.value) {
       case "outlined":
@@ -33,18 +37,18 @@
         ? `-translate-y-[48px] translate-x-4 bg-gradient-to-t ${background.value} from-50% to-transparent to-55%`
         : "",
       type.value === "static" ? "-translate-y-[60px] translate-x-4" : "",
-      type.value === "vanishing" ? `-translate-y-[30px]` : "",
-      type.value === "none" ? "opacity-0 -translate-y-[30px] !translate-x-8" : "",
+      type.value === "vanishing" ? `-translate-y-[28px]` : "",
+      type.value === "none" ? "opacity-0 -translate-y-[28px] translate-x-8" : "",
       props.isRequired ? `after:content-['*'] after:text-red-500 after:dark:text-red-800 after:ml-1` : "",
       options?.classBody ?? "",
       props.classBody ?? ""
     ])
   )
-  const classBody = computed(() =>
+  const classContent = computed(() =>
     Label.setStyle([
       "block text-sm font-medium text-gray-400 dark:text-gray-500 truncate",
       options?.class ?? "",
-      props.class ?? ""
+      props?.class ?? ""
     ])
   )
   // ---EXPOSE------------------------------
@@ -53,15 +57,15 @@
     mode,
     type,
     classBase,
-    classBody
+    classContent
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => Label.initStyle())
 </script>
 
 <template>
-  <div :class="classBase" :style="`--tw-translate-x: ${props.translateX}px;`">
-    <span :class="classBody" :style="`max-width: ${(props.maxWidth ?? 0) - 38}px`">
+  <div :class="classBase" :style="type !== 'none' ? `--tw-translate-x: ${translateX}px;` : ''">
+    <span :class="classContent" :style="`max-width: ${maxWidth - 38}px`">
       {{ props.title }}
     </span>
   </div>

@@ -77,7 +77,9 @@
         }))
       : (props?.dataSelect ?? [])
   )
-  const autoFocus = computed<NonNullable<SelectProps["autoFocus"]>>(() => props?.autoFocus ?? false)
+  const autoFocus = computed<NonNullable<SelectProps["autoFocus"]>>(
+    () => props?.autoFocus ?? options?.autoFocus ?? false
+  )
   const mode = computed<NonNullable<SelectProps["mode"]>>(() => props.mode ?? "outlined")
   const isDisabled = computed<NonNullable<SelectProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<SelectProps["loading"]>>(() => props.loading ?? false)
@@ -88,12 +90,15 @@
       isMultiple.value ? (value.value ? String(value.value).length : value.value) : (value.value ?? isOpenList.value)
     )
   )
-  const isMultiple = computed<NonNullable<SelectProps["multiple"]>>(() => props?.multiple ?? false)
-  const maxVisible = computed<SelectProps["maxVisible"] | undefined>(() => props?.maxVisible)
-  const noData = computed<NonNullable<SelectProps["noData"]>>(() => props?.noData ?? "Нет данных")
-  const isQuery = computed<NonNullable<SelectProps["noQuery"]>>(() => !props?.noQuery)
+  const isMultiple = computed<NonNullable<SelectProps["multiple"]>>(() => props?.multiple ?? options?.multiple ?? false)
+  const maxVisible = computed<SelectProps["maxVisible"] | undefined>(() => props?.maxVisible ?? options?.maxVisible)
+  const closeButtonBadge = computed<SelectProps["closeButtonBadge"] | undefined>(
+    () => props?.closeButtonBadge ?? options?.closeButtonBadge ?? false
+  )
+  const noData = computed<NonNullable<SelectProps["noData"]>>(() => props?.noData ?? options?.noData ?? "Нет данных")
+  const isQuery = computed<NonNullable<SelectProps["noQuery"]>>(() => !(props?.noQuery ?? options?.noQuery))
   const classMaskQuery = computed<NonNullable<SelectProps["classMaskQuery"]>>(() =>
-    Select.setStyle(props?.classMaskQuery ?? "font-bold text-theme-700 dark:text-theme-300")
+    Select.setStyle(props?.classMaskQuery ?? options?.classMaskQuery ?? "font-bold text-theme-700 dark:text-theme-300")
   )
   const dataList = computed<Array<any>>(() => {
     if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
@@ -122,6 +127,7 @@
     eventOpen: "click",
     eventClose: "hover",
     marginPx: 5,
+    ...options?.paramsFixWindow,
     ...props?.paramsFixWindow
   }))
   Select.setStyle(`transition ease-in-out duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`)
@@ -444,7 +450,7 @@
               <slot name="values" :selected="item" :key="valueSelect ? valueSelect : keySelect" :delete-select="select">
                 <Badge
                   mode="neutral"
-                  :close-button="props?.closeButtonBadge"
+                  :close-button="closeButtonBadge"
                   class-content="fill-theme-500"
                   @delete="select(item)"
                   class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500">
@@ -456,7 +462,7 @@
               <slot name="values" :selected="visibleValue.length" :delete-select="select">
                 <Badge
                   mode="neutral"
-                  :close-button="props?.closeButtonBadge"
+                  :close-button="closeButtonBadge"
                   class-content="fill-theme-500"
                   @delete="select(null)"
                   class="m-1 mb-0 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500">

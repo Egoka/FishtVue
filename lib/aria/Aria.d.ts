@@ -8,7 +8,6 @@ export declare type BaseAriaProps = {
   wrap?: "soft" | "hard" | "off"
   rows?: number
   maxLength?: number
-  classBase: StyleClass
   classInput?: StyleClass
 }
 
@@ -52,7 +51,7 @@ export declare type AriaExpose = {
   closeAria(evt: MouseEvent): void
   clear(): void
 }
-export declare type AriaOption = Pick<AriaProps, "classBase" | "classInput" | keyof InputLayoutOption>
+export declare type AriaOption = Pick<AriaProps, "classInput" | keyof InputLayoutOption>
 
 // ---------------------------------------
 declare class Aria extends ClassComponent<AriaProps, AriaSlots, AriaEmits, AriaExpose> {}

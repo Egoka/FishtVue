@@ -20,11 +20,13 @@
     { deep: true, immediate: true }
   )
   // ---PROPS-------------------------------
-  const multiple = computed<NonNullable<AccordionProps["multiple"]>>(() => props.multiple ?? false)
+  const multiple = computed<NonNullable<AccordionProps["multiple"]>>(() => props.multiple ?? options?.multiple ?? false)
   const animationDuration = computed<NonNullable<AccordionProps["animationDuration"]>>(
-    () => props.animationDuration ?? 300
+    () => props.animationDuration ?? options?.animationDuration ?? 300
   )
-  const typeIcon = computed<NonNullable<AccordionProps["typeIcon"]>>(() => props.typeIcon ?? "Plus")
+  const typeIcon = computed<NonNullable<AccordionProps["typeIcon"]>>(
+    () => props.typeIcon ?? options?.typeIcon ?? "Plus"
+  )
   Accordion.setStyle("rotate-0")
   Accordion.setStyle("rotate-90")
   Accordion.setStyle("rotate-180")

@@ -18,7 +18,7 @@ export declare type LabelExpose = {
   mode: ReadRef<LabelProps["mode"]>
   type: ReadRef<LabelProps["type"]>
   classBase: ReadRef<LabelProps["classBody"]>
-  classBody: ReadRef<LabelProps["class"]>
+  classContent: ReadRef<LabelProps["class"]>
 }
 export declare type LabelOption = Pick<LabelProps, "type" | "mode" | "translateX" | "maxWidth" | "class" | "classBody">
 

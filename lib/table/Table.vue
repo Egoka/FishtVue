@@ -89,113 +89,136 @@
   const allData = ref<NonNullable<TableProps["dataSource"]>>()
   const dataSource = ref<DataSource>([])
   // ---PROPS-------------------------------
-  const mode = computed<NonNullable<TableProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  const mode = computed<NonNullable<TableProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
+  const toolbar = computed<TableProps["toolbar"]>(() => props?.toolbar ?? options?.toolbar)
+  const sort = computed<TableProps["sort"]>(() => props?.sort ?? options?.sort)
+  const filter = computed<TableProps["filter"]>(() => props?.filter ?? options?.filter)
+  const grouping = computed<TableProps["grouping"]>(() => props?.grouping ?? options?.grouping)
+  const pagination = computed<TableProps["pagination"]>(() => props?.pagination ?? options?.pagination)
+  const columns = computed<TableProps["columns"]>(() => props?.columns)
+  // -----------
   const isVisibleToolbar = computed<boolean>(
-    () => (isSearch.value || !!props.toolbar) && ((props.toolbar as IToolbar)?.visible ?? true)
+    () => (isSearch.value || !!toolbar.value) && ((toolbar.value as IToolbar)?.visible ?? true)
   )
-  const isSearch = computed<boolean>(() => (props?.toolbar as IToolbar)?.search ?? props.search ?? false)
+  const isSearch = computed<boolean>(
+    () => (toolbar.value as IToolbar)?.search ?? props?.search ?? options?.search ?? false
+  )
   const isFilterClear = computed<boolean>(
     () =>
-      ((props.filter as IFilter)?.isClearAllFilter ?? false) &&
+      ((filter.value as IFilter)?.isClearAllFilter ?? false) &&
       (!!noEmptyFilters(filterColumns).length || !!queryTable.value.length)
   )
   const isColumns = computed<boolean>(() =>
-    typeof props.columns === "boolean" ? props.columns : Array.isArray(props.columns)
+    typeof columns.value === "boolean" ? columns.value : Array.isArray(columns.value)
   )
   const isSummary = computed<boolean>(() =>
     typeof props.summary === "boolean" ? props.summary : Array.isArray(props.summary)
   )
   const countDataOnLoading = computed<NonNullable<TableProps["countDataOnLoading"]>>(
-    () => props.countDataOnLoading ?? 1000
+    () => props?.countDataOnLoading ?? options?.countDataOnLoading ?? 1000
   )
   const classMaskQuery = computed<NonNullable<ITableStyles["maskQuery"]>>(
-    () => props.styles?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400"
+    () => styles.value?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400"
   )
-  const noData = computed<NonNullable<TableProps["noData"]>>(() => props.noData ?? "Нет данных")
-  const noColumn = computed<NonNullable<TableProps["noData"]>>(() => props.noColumn ?? "Нет колонок")
+  const noData = computed<NonNullable<TableProps["noData"]>>(() => props.noData ?? options?.noData ?? "Нет данных")
+  const noColumn = computed<NonNullable<TableProps["noData"]>>(
+    () => props.noColumn ?? options?.noColumn ?? "Нет колонок"
+  )
   const noFilter = computed<NonNullable<IFilter["noFilter"]>>(
-    () => (props.filter as IFilter)?.noFilter ?? "Не найдено подходящих данных"
+    () => (filter.value as IFilter)?.noFilter ?? "Не найдено подходящих данных"
   )
-  const iconSort = computed<ISort["icon"]>(() => (props?.sort as ISort)?.icon ?? "Arrow")
-  const resizedColumns = computed<TableProps["resizedColumns"]>(() => props.resizedColumns)
-  const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props.edit)
+  const iconSort = computed<ISort["icon"]>(() => (sort.value as ISort)?.icon ?? "Arrow")
+  const resizedColumns = computed<NonNullable<TableProps["resizedColumns"]>>(
+    () => props?.resizedColumns ?? options?.resizedColumns ?? false
+  )
+  const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props?.edit ?? options?.edit ?? false)
   const lengthData = computed<number>(() => props.totalCount ?? dataSource.value.length)
-  const groupField = computed<IGrouping["groupField"] | null>(() =>
-    typeof props?.grouping === "object"
-      ? typeof props?.grouping?.groupField === "string"
-        ? props.grouping.groupField
+  const isFilter = computed<boolean>(() => {
+    const filterValue = filter.value
+    return typeof filterValue === "object"
+      ? typeof filterValue?.visible === "boolean"
+        ? filterValue.visible
+        : true
+      : typeof filterValue === "boolean"
+        ? filterValue
+        : false
+  })
+  const isSort = computed<boolean>(() => {
+    const sortValue = sort.value
+    return typeof sortValue === "object"
+      ? typeof sortValue?.visible === "boolean"
+        ? sortValue.visible
+        : true
+      : typeof sortValue === "boolean"
+        ? sortValue
+        : false
+  })
+  const isGroup = computed<boolean>(() => {
+    const groupingValue = grouping.value
+    return typeof groupingValue === "object"
+      ? typeof groupingValue?.visible === "boolean"
+        ? groupingValue.visible
+        : true
+      : typeof groupingValue === "string"
+        ? !!groupingValue.length
+        : false
+  })
+  const groupField = computed<IGrouping["groupField"] | null>(() => {
+    const groupingValue = grouping.value
+    return typeof groupingValue === "object"
+      ? typeof groupingValue?.groupField === "string"
+        ? groupingValue.groupField
         : null
-      : typeof props?.grouping === "string"
-        ? props.grouping
+      : typeof groupingValue === "string"
+        ? groupingValue
         : null
-  )
-  const isFilter = computed<boolean>(() =>
-    typeof props?.filter === "object"
-      ? typeof props?.filter?.visible === "boolean"
-        ? props.filter.visible
-        : true
-      : typeof props?.filter === "boolean"
-        ? props.filter
-        : false
-  )
-  const isSort = computed<boolean>(() =>
-    typeof props?.sort === "object"
-      ? typeof props?.sort?.visible === "boolean"
-        ? props.sort.visible
-        : true
-      : typeof props?.sort === "boolean"
-        ? props.sort
-        : false
-  )
-  const isGroup = computed<boolean>(() =>
-    typeof props?.grouping === "object"
-      ? typeof props?.grouping?.visible === "boolean"
-        ? props.grouping.visible
-        : true
-      : typeof props?.grouping === "string"
-        ? !!props.grouping.length
-        : false
-  )
-  const isPagination = computed<boolean>(
-    () =>
+  })
+  const isPagination = computed<boolean>(() => {
+    const paginationValue = pagination.value
+    return (
       countVisibleRows.value > 0 &&
-      (typeof props?.pagination === "object"
-        ? typeof props?.pagination?.visible === "boolean"
-          ? props.pagination.visible
+      (typeof paginationValue === "object"
+        ? typeof paginationValue?.visible === "boolean"
+          ? paginationValue.visible
           : true
-        : typeof props?.pagination === "boolean"
-          ? props.pagination
+        : typeof paginationValue === "boolean"
+          ? paginationValue
           : false)
-  )
+    )
+  })
   // ---PAGINATION--------------------------
   const startPage = computed<NonNullable<TablePagination["startPage"]>>(
-    () => (props.pagination as TablePagination)?.startPage ?? 1
+    () => (pagination.value as TablePagination)?.startPage ?? 1
   )
   const modePagination = computed<NonNullable<TablePagination["mode"]>>(
-    () => (props.pagination as TablePagination)?.mode ?? mode.value
+    () => (pagination.value as TablePagination)?.mode ?? mode.value
   )
   const sizePage = computed<NonNullable<TablePagination["sizePage"]>>(
-    () => (props.pagination as TablePagination)?.sizePage ?? countVisibleRows.value
+    () => (pagination.value as TablePagination)?.sizePage ?? countVisibleRows.value
   )
   const visibleNumberPages = computed<TablePagination["visibleNumberPages"]>(
-    () => (props.pagination as TablePagination)?.visibleNumberPages
+    () => (pagination.value as TablePagination)?.visibleNumberPages
   )
   const sizesSelector = computed<TablePagination["sizesSelector"]>(
-    () => (props.pagination as TablePagination)?.sizesSelector
+    () => (pagination.value as TablePagination)?.sizesSelector
   )
   const isInfoText = computed<TablePagination["isInfoText"]>(
-    () => (props.pagination as TablePagination)?.isInfoText ?? false
+    () => (pagination.value as TablePagination)?.isInfoText ?? false
   )
   const isPageSizeSelector = computed<TablePagination["isPageSizeSelector"]>(
-    () => (props.pagination as TablePagination)?.isPageSizeSelector ?? false
+    () => (pagination.value as TablePagination)?.isPageSizeSelector ?? false
   )
   const isHiddenNavigationButtons = computed<TablePagination["isHiddenNavigationButtons"]>(
-    () => (props.pagination as TablePagination)?.isHiddenNavigationButtons ?? false
+    () => (pagination.value as TablePagination)?.isHiddenNavigationButtons ?? false
   )
   // ---CELL--------------------------------
-  const heightCell = computed<number>(() => props.styles?.heightCell ?? 24)
-  const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(() => props.countVisibleRows ?? 0)
-  const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(() => props.sizeLoadingRows ?? 5)
+  const heightCell = computed<number>(() => styles.value?.heightCell ?? 24)
+  const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
+    () => props?.countVisibleRows ?? options?.countVisibleRows ?? 0
+  )
+  const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
+    () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
+  )
   const isLoadingRows = computed(() => countVisibleRows.value > 0 && !isPagination.value)
   // ---DATA--------------------------------
   const dataGrouping = computed<DataGrouping>(() => {
@@ -234,8 +257,9 @@
     const listFields: Array<string> = LD.uniq(LD.flatten(LD.map(allData.value, LD.keys))).filter(
       (field) => field !== "_key"
     )
-    if (Array.isArray(props.columns) && props.columns?.length) {
-      return <Array<IColumnPrivate>>props.columns
+    const columnsValue = columns.value
+    if (Array.isArray(columnsValue) && columnsValue?.length) {
+      return <Array<IColumnPrivate>>columnsValue
         .map((column, index) => {
           const fieldName = column.dataField ?? listFields[index] ?? ""
           if (fieldName === "") {
@@ -273,7 +297,7 @@
             case "number": {
               options.paramsFilter = {
                 autocomplete: "off",
-                mask: "number",
+                maskInput: "number",
                 ...column.paramsFilter
               } as Partial<BaseInputProps>
               options.edit = {
@@ -461,11 +485,6 @@
   // ---STYLE-------------------------------
   const baseTableHeight = 288 // 18rem
   const heightTable = ref<string>(countVisibleRows.value ? `height: ${baseTableHeight}px` : "height: auto")
-  const defaultBorder = computed(() =>
-    typeof props.styles?.border === "string"
-      ? (props.styles?.border as string)
-      : "border-neutral-200 dark:border-neutral-800"
-  )
   const styles = computed<Omit<ITableStyles, "border"> & { border?: ITableStylesBorder }>((): any => {
     const s = props?.styles ?? options?.styles
     const hoverRows =
@@ -485,6 +504,9 @@
       horizontalLines: s?.horizontalLines ?? true
     }
   })
+  const defaultBorder = computed(() =>
+    typeof styles.value?.border === "object" ? styles.value?.border.table : "border-neutral-200 dark:border-neutral-800"
+  )
   const tableBodyStyle = computed<string>(() => {
     const borderTop = !slots.header
       ? `border-top-left-radius: ${styles.value.borderRadiusPx}px;border-top-right-radius: ${styles.value.borderRadiusPx}px;`

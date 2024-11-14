@@ -26,19 +26,21 @@
     const sizePageProp = props.sizePage ?? options?.sizePage
     return sizePageProp && sizePageProp > 0 ? sizePageProp : 5
   })
-  const visibleNumberPages = computed<NonNullable<PaginationProps["visibleNumberPages"]>>(
-    () => (props.visibleNumberPages && props.visibleNumberPages >= 5 ? props.visibleNumberPages : 5) ?? 5
-  )
-  const total = computed<NonNullable<PaginationProps["total"]>>(() => props.total ?? 0)
-  const isInfoText = computed<PaginationProps["isInfoText"]>(() => props.isInfoText ?? false)
+  const visibleNumberPages = computed<NonNullable<PaginationProps["visibleNumberPages"]>>(() => {
+    const countVisible = props?.visibleNumberPages ?? options?.visibleNumberPages
+    return countVisible && countVisible >= 5 ? countVisible : 5
+  })
+  const total = computed<NonNullable<PaginationProps["total"]>>(() => props.total ?? options?.total ?? 0)
+  const isInfoText = computed<PaginationProps["isInfoText"]>(() => props.isInfoText ?? options?.isInfoText ?? false)
+  const sizesSelector = computed<PaginationProps["sizesSelector"]>(() => props?.sizesSelector ?? options?.sizesSelector)
   const isPageSizeSelector = computed<PaginationProps["isPageSizeSelector"]>(
-    () => (props.isPageSizeSelector || !!props.sizesSelector?.length) ?? false
+    () => ((props.isPageSizeSelector ?? options?.isPageSizeSelector) || !!sizesSelector.value?.length) ?? false
   )
   const isNavigationButtons = computed<PaginationProps["isHiddenNavigationButtons"]>(
-    () => !props.isHiddenNavigationButtons
+    () => !(props?.isHiddenNavigationButtons ?? options?.isHiddenNavigationButtons)
   )
   const arraySizesSelector = computed<Array<{ key: number; value: string }>>(() =>
-    ((props.sizesSelector ?? [...new Set([+(sizePage.value ?? 5), 5, 15, 20, 50, 100, 150])]) as Array<number>)
+    ((sizesSelector.value ?? [...new Set([+(sizePage.value ?? 5), 5, 15, 20, 50, 100, 150])]) as Array<number>)
       .sort((a, b) => a - b)
       .map((size) => ({ key: size, value: `${size} rows` }))
   )
@@ -73,7 +75,7 @@
     }
   })
   const activePage = computed<NonNullable<PaginationProps["modelValue"]>>(() => props.modelValue ?? pages.value[0] ?? 1)
-  const mode = computed<NonNullable<PaginationProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  const mode = computed<NonNullable<PaginationProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
   const isStyleMode = computed<boolean>(() => mode.value === "outlined" || mode.value === "filled")
   const modeStyleSelect = computed<string>(() =>
     mode.value === "filled"

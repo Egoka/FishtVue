@@ -370,8 +370,6 @@ function copyDependencies(inFolder, outFolder, subFolder) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function addPackageJson() {
   const packageJson = fs.readJsonSync(`./${CORE_LIB_DIR}/package.json`)
-  const pkg = fs.readJsonSync("./package.json")
-  packageJson.version = pkg.version
   !fs.existsSync(OUTPUT_LIB_DIR) && fs.mkdirSync(OUTPUT_LIB_DIR)
   fs.writeFileSync(path.resolve(OUTPUT_LIB_DIR, "package.json"), JSON.stringify(packageJson, null, "  "))
 }

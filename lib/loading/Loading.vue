@@ -83,7 +83,7 @@
     }
   })
   const animationDuration = computed<NonNullable<LoadingProps["animationDuration"]>>(
-    () => props.animationDuration ?? options?.animationDuration ?? 1500
+    () => props?.animationDuration ?? options?.animationDuration ?? 1500
   )
   const size = computed<LoadingProps["size"]>(() => props.size ?? options?.size)
   const color = computed<LoadingProps["color"]>(() => {
@@ -99,7 +99,9 @@
     return color
   })
   const baseClass = computed<LoadingProps["class"]>(() => Loading.setStyle("inline-block"))
-  const classLoading = computed<LoadingProps["class"]>(() => Loading.setStyle([options?.class ?? "", props.class]))
+  const classLoading = computed<LoadingProps["class"]>(() =>
+    Loading.setStyle([options?.class ?? "", props?.class ?? ""])
+  )
   const loadingIsSimple = computed(() =>
     Loading.setStyle(`animate-[spin_${animationDuration.value / 1000}s_ease-in-out_infinite] duration-50`)
   )

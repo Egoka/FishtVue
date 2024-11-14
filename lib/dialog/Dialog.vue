@@ -4,7 +4,7 @@
   import Button from "fishtvue/button/Button.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
-  import { StyleClass } from "fishtvue/types"
+  import { Size, StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
   const Dialog = new Component<"Dialog">()
   const options = Dialog.getOptions()
@@ -15,7 +15,8 @@
   const toTeleport = computed<DialogProps["toTeleport"]>(() => props.toTeleport ?? options?.toTeleport ?? "body")
   const isOpen = computed<boolean>(() => props.modelValue ?? false)
   const size = computed<string>(() => {
-    switch (props.size) {
+    const size: Size = props?.size ?? options?.size ?? "2xl"
+    switch (size) {
       case "xs":
         return "sm:max-w-xs"
       case "sm":
@@ -42,16 +43,23 @@
         return "sm:max-w-2xl"
     }
   })
-  const isCloseButton = computed<DialogProps["closeButton"]>(() => props.closeButton ?? false)
-  const notCloseBackground = computed<DialogProps["notCloseBackground"]>(() => props.notCloseBackground ?? false)
-  const withoutMargin = computed<DialogProps["withoutMargin"]>(() => props.withoutMargin ?? false)
-  const position = computed<NonNullable<DialogProps["position"]>>(() => props.position ?? "center")
+  const isCloseButton = computed<NonNullable<DialogProps["closeButton"]>>(
+    () => props.closeButton ?? options?.closeButton ?? false
+  )
+  const notCloseBackground = computed<NonNullable<DialogProps["notCloseBackground"]>>(
+    () => props.notCloseBackground ?? options?.notCloseBackground ?? false
+  )
+  const withoutMargin = computed<NonNullable<DialogProps["withoutMargin"]>>(
+    () => props.withoutMargin ?? options?.withoutMargin ?? false
+  )
+  const position = computed<NonNullable<DialogProps["position"]>>(() => props.position ?? options?.position ?? "center")
   const classBodyDialog = computed<DialogProps["class"]>(() =>
     Dialog.setStyle([options?.class ?? "", props?.class ?? ""])
   )
   const enterAndLeaveClass = computed<StyleClass>(() => {
     let returnClass
-    if (!props.notAnimate) {
+    const isNotAnimate = props?.notAnimate ?? options?.notAnimate ?? false
+    if (!isNotAnimate) {
       if (position.value.includes("left")) {
         returnClass = "-translate-x-full"
       } else if (position.value.includes("right")) {
@@ -93,7 +101,7 @@
     Dialog.setStyle([
       "fixed top-0 left-0 right-0 bottom-0 z-[200] w-full overflow-x-hidden overflow-y-auto inset-0 h-screen max-h-full",
       options?.classBody ?? "",
-      props.classBody ?? ""
+      props?.classBody ?? ""
     ])
   )
   const classBackground = ref<StyleClass>(Dialog.setStyle("fixed inset-0"))

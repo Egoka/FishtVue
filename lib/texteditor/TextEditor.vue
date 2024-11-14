@@ -34,7 +34,7 @@
   )
   // ---PROPS-------------------------------
   const id = ref<NonNullable<TextEditorProps["id"]>>(String(props.id ?? getCurrentInstance()?.uid))
-  const theme = ref<NonNullable<TextEditorProps["theme"]>>(props?.theme ?? "bubble")
+  const theme = ref<NonNullable<TextEditorProps["theme"]>>(props?.theme ?? options?.theme ?? "bubble")
   const isValue = computed<boolean>(() =>
     Boolean(modelValue.value ? String(modelValue.value).length : (modelValue.value ?? isActiveTextEditor.value))
   )
@@ -45,7 +45,6 @@
     !isDisabled.value ? props.isInvalid : false
   )
   const messageInvalid = computed<NonNullable<TextEditorProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
-  const classBase = computed<StyleClass>(() => TextEditor.setStyle([options?.classBase ?? "", props.classBase ?? ""]))
   const classStyle = computed<NonNullable<TextEditorProps["class"]>>(() =>
     props.class ? props.class + additionalStyles.value : additionalStyles.value
   )
@@ -85,7 +84,8 @@
       ["link", "image"],
       ["clean"] // remove formatting button
     ],
-    ...props.paramsTextEditor
+    ...options?.paramsTextEditor,
+    ...props?.paramsTextEditor
   }))
   const inputLayout = computed<Omit<InputLayoutProps, "value">>(() => ({
     isValue: isValue.value,
@@ -120,7 +120,6 @@
     isLoading,
     isInvalid,
     messageInvalid,
-    classBase,
     classStyle,
     paramsDialog,
     paramsQuillEditor,
@@ -171,63 +170,61 @@
 </script>
 
 <template>
-  <div :class="classBase">
-    <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="clear">
-      <div :class="editorSmall">
-        <QuillEditor
-          v-if="theme === 'bubble'"
-          :id="id"
-          ref="quillEditor"
-          theme="bubble"
-          v-bind="paramsQuillEditor"
-          @update:content="inputModelValue"
-          @focus="isActiveTextEditor = true"
-          @blur="isActiveTextEditor = false"
-          @ready="ready" />
-      </div>
-      <template #body>
-        <Dialog
-          v-model="open"
-          v-bind="paramsDialog"
-          @update:modelValue="theme = 'bubble'"
-          :class="['p-0 max-w-screen-sm sm:max-w-5xl sm:m-3 sm:w-[90%] max-h-screen']">
-          <div :class="['editor', isDisabled ? 'editor-disabled' : '', editor]">
-            <QuillEditor
-              v-if="theme === 'snow'"
-              theme="snow"
-              v-bind="paramsQuillEditor"
-              @update:content="inputModelValue" />
-            <div :class="resizeButtonToBubble" @click="theme = 'bubble'">
-              <Button
-                type="icon"
-                size="xs"
-                mode="ghost"
-                icon="ArrowsPointingIn"
-                class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400">
-              </Button>
-            </div>
+  <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="clear">
+    <div :class="editorSmall">
+      <QuillEditor
+        v-if="theme === 'bubble'"
+        :id="id"
+        ref="quillEditor"
+        theme="bubble"
+        v-bind="paramsQuillEditor"
+        @update:content="inputModelValue"
+        @focus="isActiveTextEditor = true"
+        @blur="isActiveTextEditor = false"
+        @ready="ready" />
+    </div>
+    <template #body>
+      <Dialog
+        v-model="open"
+        v-bind="paramsDialog"
+        @update:modelValue="theme = 'bubble'"
+        :class="['p-0 max-w-screen-sm sm:max-w-5xl sm:m-3 sm:w-[90%] max-h-screen']">
+        <div :class="['editor', isDisabled ? 'editor-disabled' : '', editor]">
+          <QuillEditor
+            v-if="theme === 'snow'"
+            theme="snow"
+            v-bind="paramsQuillEditor"
+            @update:content="inputModelValue" />
+          <div :class="resizeButtonToBubble" @click="theme = 'bubble'">
+            <Button
+              type="icon"
+              size="xs"
+              mode="ghost"
+              icon="ArrowsPointingIn"
+              class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400">
+            </Button>
           </div>
-        </Dialog>
-        <slot />
-      </template>
-      <template #before>
-        <slot v-if="slots.before" name="before" />
-      </template>
-      <template #after>
-        <div :class="resizeButtonToSnow" @click="theme = 'snow'">
-          <Button
-            type="icon"
-            size="xs"
-            mode="ghost"
-            icon="ArrowsPointingOut"
-            class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400"
-            >Увеличить
-          </Button>
         </div>
-        <slot v-if="slots.after" name="after" />
-      </template>
-    </InputLayout>
-  </div>
+      </Dialog>
+      <slot />
+    </template>
+    <template #before>
+      <slot v-if="slots.before" name="before" />
+    </template>
+    <template #after>
+      <div :class="resizeButtonToSnow" @click="theme = 'snow'">
+        <Button
+          type="icon"
+          size="xs"
+          mode="ghost"
+          icon="ArrowsPointingOut"
+          class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400"
+          >Увеличить
+        </Button>
+      </div>
+      <slot v-if="slots.after" name="after" />
+    </template>
+  </InputLayout>
 </template>
 <style>
   .editor {

@@ -25,7 +25,7 @@
   const id = ref<NonNullable<InputProps["id"]>>(String(props.id ?? getCurrentInstance()?.uid))
   const type = ref<InputProps["type"]>(props?.type && arrayInputType.includes(props.type) ? props?.type : "text")
   const mask = computed<InputProps["maskInput"]>(() => props?.maskInput)
-  const mode = computed<NonNullable<InputProps["mode"]>>(() => props.mode ?? "outlined")
+  const mode = computed<NonNullable<InputProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const isValue = computed<boolean>(() => !!modelValue.value || isActiveInput.value)
   const autoFocus = computed<NonNullable<InputProps["autoFocus"]>>(() => props?.autoFocus ?? false)
   const placeholder = computed<NonNullable<InputProps["placeholder"]>>(() => String(props?.placeholder ?? ""))
@@ -44,7 +44,7 @@
       "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
       "focus:outline-0 focus:ring-0 transition-all caret-theme-500",
       options?.classInput ?? "",
-      props.classInput ?? "",
+      props?.classInput ?? "",
       "classInput flex"
     ])
   )
@@ -109,7 +109,7 @@
   )
   watch(isActiveInput, (value) => {
     classLayout.value =
-      (props.class ?? "") +
+      (props?.class ?? options?.class ?? "") +
       (value ? " border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700" : "")
     Input.setStyle(classLayout.value ?? "")
     emit("isActive", value)

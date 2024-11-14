@@ -54,11 +54,17 @@
   }
   // ---PROPS-------------------------------
   const name = computed<FormProps["name"]>(() => props.name ?? "")
-  const modeStyle = computed<FormProps["modeStyle"]>(() => props.modeStyle)
-  const modeLabel = computed<NonNullable<FormProps["modeLabel"]>>(() => props.modeLabel ?? "offsetDynamic")
+  const modeStyle = computed<FormProps["modeStyle"]>(() => props.modeStyle ?? options?.modeStyle)
+  const modeLabel = computed<NonNullable<FormProps["modeLabel"]>>(
+    () => props.modeLabel ?? options?.modeLabel ?? "offsetDynamic"
+  )
   const isDisabled = computed<NonNullable<FormProps["disabled"]>>(() => props.disabled ?? false)
-  const autocomplete = computed<NonNullable<FormProps["autocomplete"]>>(() => props?.autocomplete ?? "on")
-  const modeValidate = computed<NonNullable<FormProps["modeValidate"]>>(() => props.modeValidate ?? "onChange")
+  const autocomplete = computed<NonNullable<FormProps["autocomplete"]>>(
+    () => props?.autocomplete ?? options?.autocomplete ?? "on"
+  )
+  const modeValidate = computed<NonNullable<FormProps["modeValidate"]>>(
+    () => props.modeValidate ?? options?.modeValidate ?? "onChange"
+  )
   // ---------------------------------------
   const formFields = reactive<FormValues>({})
   const formInvalidFields = reactive<{ [key: string]: boolean }>({})
@@ -143,11 +149,16 @@
   function getStructure(structures: Array<FormStructure>): Array<FormStructure> {
     return structures.map((structure) => {
       if (!structure?.class?.length)
-        structure.class = Form.setStyle(["border-b border-gray-900/10 pb-12", props.structureClass])
+        structure.class = Form.setStyle([
+          "border-b border-gray-900/10 pb-12",
+          options?.structureClass ?? "",
+          props?.structureClass ?? ""
+        ])
       if (!structure?.classGrid?.length)
         structure.classGrid = Form.setStyle([
           "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10",
-          props.structureClassGrid
+          options?.structureClassGrid ?? "",
+          props?.structureClassGrid ?? ""
         ])
       if (structure.fields) {
         structure.fields = structure.fields.map((field: FieldType) => {

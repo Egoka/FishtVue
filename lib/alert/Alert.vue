@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref, watch, onMounted, useSlots } from "vue"
+  import { computed, ref, watch, onMounted, useSlots, CSSProperties } from "vue"
   import type { AlertProps, AlertEmits, AlertExpose } from "./Alert"
   import {
     CheckCircleIcon,
@@ -21,17 +21,20 @@
   // ---STATE-------------------------------
   const isVisible = ref<boolean>(props.modelValue)
   // ---PROPS-------------------------------
-  const type = computed<NonNullable<AlertProps["type"]>>(() => props.type ?? "success")
+  const type = computed<NonNullable<AlertProps["type"]>>(() => props.type ?? options?.type ?? "success")
   const title = computed<NonNullable<AlertProps["title"]>>(() => props.title ?? "")
   const subtitle = computed<NonNullable<AlertProps["subtitle"]>>(() => props.subtitle ?? "")
-  const displayTime = computed<number>(() => +props.displayTime ?? options?.displayTime ?? 0)
+  const displayTime = computed<number>(() => +(props.displayTime ?? options?.displayTime ?? 0))
+  const notAnimate = computed<NonNullable<AlertProps["notAnimate"]>>(
+    () => props.notAnimate ?? options?.notAnimate ?? false
+  )
   const isCloseButton = computed<NonNullable<AlertProps["closeButton"]>>(
     () => props.closeButton ?? options?.closeButton ?? false
   )
   const position = computed<NonNullable<AlertProps["position"]>>(() => props.position ?? options?.position ?? "top")
   const startEnterAndLeaveClass = computed<StyleClass>(() => {
     let classAnimate
-    if (!props.notAnimate) {
+    if (!notAnimate.value) {
       if (position.value.includes("left")) classAnimate = "-translate-x-[200%] opacity-0"
       else if (position.value.includes("right")) classAnimate = "translate-x-[200%] opacity-0"
       else if (position.value.includes("top")) classAnimate = "-translate-y-[200%] opacity-0"
@@ -42,7 +45,7 @@
   })
   const endEnterAndLeaveClass = computed<StyleClass>(() => {
     let classAnimate
-    if (!props.notAnimate) {
+    if (!notAnimate.value) {
       if (position.value.includes("left")) classAnimate = "translate-x-0 opacity-100"
       else if (position.value.includes("right")) classAnimate = "translate-x-0 opacity-100"
       else if (position.value.includes("top")) classAnimate = "translate-y-0 opacity-100"
@@ -129,7 +132,8 @@
   })
   const size = computed<StyleClass>(() => {
     let classSize
-    switch (props.size) {
+    const size = props.size ?? options?.size ?? "2xl"
+    switch (size) {
       case "xs":
         classSize = "sm:max-w-xs"
         break
@@ -174,11 +178,12 @@
     Alert.setStyle([
       "alert-body p-4 w-auto max-w-[89vw] rounded-md",
       classesStyle.value.body,
-      props.class ?? "",
+      props?.class ?? "",
       options?.class ?? "",
       size.value
     ])
   )
+  const styleBase = computed<CSSProperties>(() => props.style ?? options?.style)
   const classBody = computed(() => Alert.setStyle("flex"))
   const classDivIcon = computed(() => Alert.setStyle("shrink-0"))
   const classIcon = computed(() => Alert.setStyle(["h-5 w-5", classesStyle.value.icon]))
@@ -248,7 +253,7 @@
     :enter-from-class="startEnterAndLeaveClass"
     :enter-to-class="endEnterAndLeaveClass">
     <div v-if="isVisible">
-      <div :class="classBase" :style="props.style">
+      <div :class="classBase" :style="styleBase">
         <div :class="classBody">
           <div :class="classDivIcon">
             <component :is="icon" aria-hidden="true" :class="classIcon" />

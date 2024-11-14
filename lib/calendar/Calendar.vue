@@ -42,6 +42,7 @@
       modelValue: props.paramsDatePicker?.mask ?? "DD MMMM YYYY",
       input: [props.paramsDatePicker?.mask ?? "DD MMMM YYYY"]
     },
+    ...options?.paramsDatePicker,
     ...props.paramsDatePicker
   }))
   const calendarPicker = ref<ICalendarPicker>()
@@ -74,11 +75,13 @@
       return !!visibleDate.value || isOpenPicker.value
     }
   })
-  const autoFocus = computed<NonNullable<CalendarProps["autoFocus"]>>(() => props?.autoFocus ?? false)
-  const isNotCloseOnDateChange = computed<NonNullable<CalendarProps["isNotCloseOnDateChange"]>>(
-    () => props?.isNotCloseOnDateChange ?? false
+  const autoFocus = computed<NonNullable<CalendarProps["autoFocus"]>>(
+    () => props?.autoFocus ?? options?.autoFocus ?? false
   )
-  const mode = computed<NonNullable<CalendarProps["mode"]>>(() => props.mode ?? "outlined")
+  const isNotCloseOnDateChange = computed<NonNullable<CalendarProps["isNotCloseOnDateChange"]>>(
+    () => props?.isNotCloseOnDateChange ?? options?.isNotCloseOnDateChange ?? false
+  )
+  const mode = computed<NonNullable<CalendarProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const placeholder = computed<IParamsDatePicker["placeholder"]>(() =>
     String(props.paramsDatePicker?.placeholder ?? "")
   )
@@ -117,6 +120,7 @@
     eventOpen: "click",
     eventClose: "hover",
     marginPx: 5,
+    ...options?.paramsFixWindow,
     ...props?.paramsFixWindow
   }))
   const classDataPicker = computed(() =>
@@ -273,7 +277,7 @@
   function focus(focus: boolean = true) {
     isFocus.value = focus
     classLayout.value =
-      (props.class ?? "cursor-pointer") +
+      (props.class ?? options?.class ?? "cursor-pointer") +
       (isFocus.value
         ? " border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
         : "")

@@ -1,6 +1,5 @@
-import { VNode } from "vue"
+import { CSSProperties, VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, StyleClass, Size, PositionShort, ReadRef } from "../types"
-import type { Properties as CSS } from "csstype"
 // ---------------------------------------
 export declare type BaseAlert = {
   modelValue?: boolean
@@ -11,7 +10,7 @@ export declare type BaseAlert = {
   subtitle?: string
   toTeleport?: string
   class?: StyleClass
-  style?: CSS
+  style?: CSSProperties
   displayTime?: string | number | 1000 | 2000 | 3000 | 4000 | 5000
   notAnimate?: boolean
   closeButton?: boolean

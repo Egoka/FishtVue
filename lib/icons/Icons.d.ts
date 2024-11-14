@@ -12,7 +12,6 @@ export declare type IconsExpose = {
   type: ReadRef<IconsProps["type"]>
   classIcon: ReadRef<IconsProps["class"]>
   style: ReadRef<IconsProps["style"]>
-  // ---METHODS-----------------------
 }
 export declare type IconsOption = Pick<IconsProps, "class">
 

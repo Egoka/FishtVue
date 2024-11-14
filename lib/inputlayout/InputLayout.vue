@@ -26,10 +26,13 @@
   const afterWidth = ref<number>(0)
   // ---PROPS-------------------------------
   const value = computed<InputLayoutProps["value"]>(() => props.value ?? null)
-  const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props.isValue ?? false)
-  const mode = computed<NonNullable<InputLayoutProps["mode"]>>(() => props.mode ?? "outlined")
-  const label = computed<NonNullable<InputLayoutProps["label"]>>(() => String(props.label ?? ""))
-  const labelMode = computed<NonNullable<InputLayoutProps["labelMode"]>>(() => props.labelMode ?? "offsetDynamic")
+  const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props?.isValue ?? false)
+  const mode = computed<NonNullable<InputLayoutProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
+  const label = computed<NonNullable<InputLayoutProps["label"]>>(() => String(props?.label ?? ""))
+  const labelMode = computed<NonNullable<InputLayoutProps["labelMode"]>>(() => {
+    const labelModeValue = props?.labelMode ?? options?.labelMode ?? "offsetDynamic"
+    return labelModeValue ? labelModeValue : "offsetDynamic"
+  })
   const labelType = computed<NonNullable<InputLayoutProps["labelMode"]>>(() =>
     getLabelType(isValue.value, label.value, labelMode.value)
   )
@@ -46,14 +49,14 @@
     props?.height ? (typeof props?.height === "number" ? `${props?.height}px` : props?.height) : ""
   )
   const animation = computed<NonNullable<InputLayoutProps["animation"]>>(
-    () => props?.animation ?? "transition-all duration-550"
+    () => props?.animation ?? options?.animation ?? "transition-all duration-550"
   )
   const classBody = computed(() =>
     InputLayout.setStyle([
       "inputBody classBody relative mb-6 rounded-md",
       animation.value ?? "",
       options?.classBody ?? "",
-      props.classBody ?? "",
+      props?.classBody ?? "",
       isInvalid.value ? "is-invalid" : ""
     ])
   )
@@ -69,7 +72,7 @@
         : "",
       animation.value ?? "",
       options?.class ?? "",
-      props.class ?? "",
+      props?.class ?? "",
       isInvalid.value
         ? "border-red-500 dark:border-red-500 ring-1 ring-inset ring-red-500 dark:ring-red-500 scroll-mt-10"
         : "",

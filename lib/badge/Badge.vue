@@ -12,8 +12,10 @@
   const emit = defineEmits<BadgeEmits>()
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<BadgeProps["mode"]>>(() => props.mode ?? options?.mode ?? "primary")
-  const isPoint = computed<BadgeProps["point"]>(() => props.point || options?.point)
-  const isButton = computed<BadgeProps["closeButton"]>(() => props.closeButton || options?.closeButton)
+  const isPoint = computed<NonNullable<BadgeProps["point"]>>(() => props.point ?? options?.point ?? false)
+  const isButton = computed<NonNullable<BadgeProps["closeButton"]>>(
+    () => props.closeButton ?? options?.closeButton ?? false
+  )
   const modeStyle = computed<string>(() =>
     mode.value === "primary"
       ? "bg-theme-600 text-theme-100 dark:bg-theme-700 dark:text-theme-100"
@@ -48,7 +50,7 @@
             : "",
       modeStyle.value,
       options?.class ?? "",
-      props.class,
+      props?.class ?? "",
       "inline-flex"
     ])
   )

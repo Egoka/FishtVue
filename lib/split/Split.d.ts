@@ -43,10 +43,7 @@ export declare type SplitExpose = {
   // ---PROPS-------------------------
   // ---METHODS-----------------------
 }
-export declare type SplitOption = Pick<
-  SplitProps,
-  "autoSaveName" | "separatorType" | "separatorNotHoverOpacity" | "class" | "styles"
->
+export declare type SplitOption = Pick<SplitProps, "separatorType" | "separatorNotHoverOpacity" | "class" | "styles">
 
 // ---------------------------------------
 declare class Split extends ClassComponent<SplitProps, SplitSlots, SplitEmits, SplitExpose> {}

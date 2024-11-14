@@ -21,14 +21,19 @@
   const isActiveSwitch = ref<boolean>(false)
   // ---PROPS-------------------------------
   const id = ref(props.id ?? getCurrentInstance()?.uid)
-  const switchingType = computed<SwitchProps["switchingType"]>(() => props?.switchingType ?? "checkbox")
-  const mode = computed<SwitchProps["mode"]>(() => props?.mode ?? "none")
+  const switchingType = computed<SwitchProps["switchingType"]>(
+    () => props?.switchingType ?? options?.switchingType ?? "checkbox"
+  )
+  const mode = computed<SwitchProps["mode"]>(() => props?.mode ?? options?.mode ?? "none")
   const label = computed<SwitchProps["label"]>(() => String(props.label ?? ""))
   const isDisabled = computed<NonNullable<SwitchProps["disabled"]>>(() => props.disabled ?? false)
   const isRequired = computed<SwitchProps["required"]>(() => props.required ?? false)
-  const rounded = computed<number>(() => (props?.rounded === "full" ? 9999 : (props?.rounded ?? 9999)))
-  const iconActive = computed<SwitchProps["iconActive"]>(() => props?.iconActive ?? "")
-  const iconInactive = computed<SwitchProps["iconInactive"]>(() => props?.iconInactive ?? "")
+  const rounded = computed<number>(() => {
+    const valueRounded = props?.rounded ?? options?.rounded
+    return valueRounded === "full" ? 9999 : (valueRounded ?? 9999)
+  })
+  const iconActive = computed<SwitchProps["iconActive"]>(() => props?.iconActive ?? options?.iconActive ?? "")
+  const iconInactive = computed<SwitchProps["iconInactive"]>(() => props?.iconInactive ?? options?.iconInactive ?? "")
   const classBaseSwitch = computed<StyleClass>(() =>
     switchingType.value === "switch"
       ? Switch.setStyle([
@@ -43,7 +48,7 @@
             ? `bg-stone-100 dark:bg-stone-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`
             : "",
           options?.class ?? "",
-          props.class ?? "",
+          props?.class ?? "",
           isActiveSwitch.value && mode.value !== "none"
             ? "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
             : "",

@@ -41,9 +41,11 @@
       }) ?? []
   )
   const direction = computed<SplitProps["direction"]>(() => props?.direction || "horizontal")
-  const separatorType = computed<NonNullable<SplitProps["separatorType"]>>(() => props?.separatorType ?? "strip")
+  const separatorType = computed<NonNullable<SplitProps["separatorType"]>>(
+    () => props?.separatorType ?? options?.separatorType ?? "strip"
+  )
   const separatorNotHoverOpacity = computed<SplitProps["separatorNotHoverOpacity"]>(
-    () => props?.separatorNotHoverOpacity
+    () => props?.separatorNotHoverOpacity ?? options?.separatorNotHoverOpacity
   )
   // ---STYLE-------------------------------
   const styles = computed<SplitProps["styles"]>(() => props?.styles ?? options?.styles)

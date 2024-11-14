@@ -1,5 +1,5 @@
 import { Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, ReadRef } from "../types"
 import { Delta } from "@vueup/vue-quill"
 import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 import Quill from "quill"
@@ -44,8 +44,6 @@ export declare type BaseTextEditorProps = {
   paramsDialog?: Partial<DialogProps>
   paramsTextEditor?: Partial<IDataTextEditor>
   theme?: "snow" | "bubble"
-  classBase: StyleClass
-  classInput: StyleClass
 }
 
 export interface TextEditorProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseTextEditorProps> {
@@ -80,7 +78,6 @@ export declare type TextEditorExpose = {
   isLoading: ReadRef<NonNullable<TextEditorProps["isInvalid"]>>
   isInvalid: ReadRef<NonNullable<TextEditorProps["isInvalid"]>>
   messageInvalid: ReadRef<NonNullable<TextEditorProps["messageInvalid"]>>
-  classBase: ReadRef<StyleClass>
   classStyle: ReadRef<NonNullable<TextEditorProps["class"]>>
   paramsDialog: ReadRef<TextEditorProps["paramsDialog"]>
   paramsQuillEditor: ReadRef<NonNullable<Partial<TextEditorProps["paramsTextEditor"]>>>
@@ -91,7 +88,7 @@ export declare type TextEditorExpose = {
 }
 export declare type TextEditorOption = Pick<
   TextEditorProps,
-  "paramsDialog" | "paramsTextEditor" | "theme" | "classBase" | "classInput" | keyof InputLayoutOption
+  "paramsDialog" | "paramsTextEditor" | "theme" | keyof InputLayoutOption
 >
 
 // ---------------------------------------

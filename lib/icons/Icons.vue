@@ -22,8 +22,14 @@
   const type = computed(() => props.type)
   const style = computed(() => props.style)
   const classIcon = computed(() =>
-    Icons.setStyle(["h-5 w-5 text-gray-900 dark:text-gray-100", options?.class ?? "", props.class, "select-none"])
+    Icons.setStyle([
+      "h-5 w-5 text-gray-900 dark:text-gray-100",
+      options?.class ?? "",
+      props?.class ?? "",
+      "select-none"
+    ])
   )
+
   // ---------------------------------------
   function loadTestIcons(icons: (IconifyIconName | string)[]) {
     return new Promise((fulfill, reject) => {
