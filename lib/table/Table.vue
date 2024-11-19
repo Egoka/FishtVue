@@ -120,12 +120,14 @@
   const classMaskQuery = computed<NonNullable<ITableStyles["maskQuery"]>>(
     () => styles.value?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400"
   )
-  const noData = computed<NonNullable<TableProps["noData"]>>(() => props.noData ?? options?.noData ?? "Нет данных")
+  const noData = computed<NonNullable<TableProps["noData"]>>(
+    () => props.noData ?? options?.noData ?? Table.t("noData") ?? "No data"
+  )
   const noColumn = computed<NonNullable<TableProps["noData"]>>(
-    () => props.noColumn ?? options?.noColumn ?? "Нет колонок"
+    () => props.noColumn ?? options?.noColumn ?? Table.t("noColumn") ?? "There are no columns"
   )
   const noFilter = computed<NonNullable<IFilter["noFilter"]>>(
-    () => (filter.value as IFilter)?.noFilter ?? "Не найдено подходящих данных"
+    () => (filter.value as IFilter)?.noFilter ?? Table.t("noDataForQuery") ?? "No data was found for your query"
   )
   const iconSort = computed<ISort["icon"]>(() => (sort.value as ISort)?.icon ?? "Arrow")
   const resizedColumns = computed<NonNullable<TableProps["resizedColumns"]>>(
@@ -1477,7 +1479,7 @@
         <Input
           v-if="isSearch"
           :model-value="queryTable"
-          label="Найти..."
+          :label="Table.t('find') ?? 'Find...'"
           clear
           :mode="mode"
           label-mode="vanishing"

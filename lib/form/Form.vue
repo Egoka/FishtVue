@@ -171,10 +171,10 @@
             if ("rules" in field && field?.rules) {
               field.required = !!field.rules["required"] || field?.required || false
               if (field.required && (!field.rules["required"] || typeof field.rules["required"] === "boolean")) {
-                field.rules["required"] = "Обязательное поле"
+                field.rules["required"] = Form.t("requiredField") ?? "Required field"
               }
             } else if (field?.required) {
-              field.rules = { required: "Обязательное поле" }
+              field.rules = { required: Form.t("requiredField") ?? "Required field" }
             }
             field.labelMode = field.labelMode ?? modeLabel.value
           }

@@ -1,119 +1,32 @@
 import { DeepPartial } from "../types"
 
-export declare type Locale = DeepPartial<Record<string | "en", DefaultLocale>>
-export declare type TypeLocale = { [key: string]: string | string[] | TypeLocale }
-export declare interface DefaultLocale extends DeepPartial<TypeLocale> {
-  startsWith: string
-  contains: string
-  notContains: string
-  endsWith: string
-  equals: string
-  notEquals: string
-  noFilter: string
-  lt: string
-  lte: string
-  gt: string
-  gte: string
-  dateIs: string
-  dateIsNot: string
-  dateBefore: string
-  dateAfter: string
-  clear: string
-  apply: string
-  matchAll: string
-  matchAny: string
-  addRule: string
-  removeRule: string
-  accept: string
-  reject: string
-  choose: string
-  upload: string
-  cancel: string
-  completed: string
-  pending: string
-  fileSizeTypes: string[]
-  dayNames: string[]
-  dayNamesShort: string[]
-  dayNamesMin: string[]
-  monthNames: string[]
-  monthNamesShort: string[]
-  chooseYear: string
-  chooseMonth: string
-  chooseDate: string
-  prevDecade: string
-  nextDecade: string
-  prevYear: string
-  nextYear: string
-  prevMonth: string
-  nextMonth: string
-  prevHour: string
-  nextHour: string
-  prevMinute: string
-  nextMinute: string
-  prevSecond: string
-  nextSecond: string
-  am: string
-  pm: string
-  today: string
-  weekHeader: string
-  dateFormat: string
-  weak: string
-  medium: string
-  strong: string
-  passwordPrompt: string
-  searchMessage: string
-  selectionMessage: string
-  emptySelectionMessage: string
-  emptySearchMessage: string
-  emptyMessage: string
-  aria: {
-    trueLabel: string
-    falseLabel: string
-    nullLabel: string
-    star: string
-    stars: string
-    selectAll: string
-    unselectAll: string
-    close: string
-    previous: string
-    next: string
-    navigation: string
-    scrollTop: string
-    moveTop: string
-    moveUp: string
-    moveDown: string
-    moveBottom: string
-    moveToTarget: string
-    moveToSource: string
-    moveAllToTarget: string
-    moveAllToSource: string
-    pageLabel: string
-    firstPageLabel: string
-    lastPageLabel: string
-    nextPageLabel: string
-    prevPageLabel: string
-    rowsPerPageLabel: string
-    jumpToPageDropdownLabel: string
-    jumpToPageInputLabel: string
-    selectRow: string
-    unselectRow: string
-    expandRow: string
-    collapseRow: string
-    showFilterMenu: string
-    hideFilterMenu: string
-    filterOperator: string
-    filterConstraint: string
-    editRow: string
-    saveEdit: string
-    cancelEdit: string
-    listView: string
-    gridView: string
-    slide: string
-    slideNumber: string
-    zoomImage: string
-    zoomIn: string
-    zoomOut: string
-    rotateRight: string
-    rotateLeft: string
-  }
+export declare type NameLocale = string | "en" | "ru"
+declare type Locale = Partial<{
+  name: string
+  code: NameLocale
+}>
+declare type TypeLocale = { [key: string]: string | string[] | TypeLocale }
+
+export declare interface DefaultMessages extends DeepPartial<TypeLocale> {
+  find: string
+  copy: string
+  requiredField: string
+  noData: string
+  noColumn: string
+  noDataForQuery: string
 }
+
+export declare type Messages = DeepPartial<Record<NameLocale, DefaultMessages>>
+
+export declare type Locales = Partial<{
+  defaultLocale: NameLocale
+  activeLocale: NameLocale
+  locales: Array<Locale>
+  messages: Messages
+}>
+
+export declare function switchLocale(activeLocale: NameLocale): string | boolean | undefined
+
+declare let Locales: Messages
+
+export default Locales

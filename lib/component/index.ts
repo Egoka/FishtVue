@@ -10,10 +10,11 @@ import {
 import { useStyle, tailwind } from "fishtvue/theme"
 import { cn } from "fishtvue/utils/tailwindHandler"
 import { toKebabCase } from "fishtvue/utils/stringHandler"
-import { fieldsPick } from "fishtvue/utils/objectHandler"
-// import { minifyCSS } from "fishtvue/utils/domHandler"
+import { fieldsPick, get } from "fishtvue/utils/objectHandler"
+import { minifyCSS } from "fishtvue/utils/domHandler"
 import type { ComponentInternalInstance } from "vue"
 import type { Theme } from "fishtvue/theme"
+import { DefaultMessages, Locales } from "fishtvue/locale"
 import type { ComponentsOptions, FishtVue, OptionsTheme } from "fishtvue/config"
 import type { PublicFields, StylesComponent } from "./TypeComponent"
 import { UniqueKeySetCollection } from "fishtvue/utils/uniqueCollection"
@@ -59,6 +60,7 @@ export default class Component<T extends keyof ComponentsOptions> {
   private readonly __instance: ComponentInternalInstance | null
   private readonly __globalConfig?: FishtVue
   private readonly __globalTheme?: Theme
+  private readonly __globalLocale?: Locales
   private readonly __globalOptionsTheme?: OptionsTheme
   private readonly __options?: ComponentsOptions[T]
   private __stylesComp?: StylesComponent
@@ -78,6 +80,7 @@ export default class Component<T extends keyof ComponentsOptions> {
     this.__instance = getCurrentInstance()
     this.__globalConfig = this.__instance?.appContext.config.globalProperties.$fishtVue ?? (window as any).FishtVue
     this.__globalTheme = this.__globalConfig?.config?.theme
+    this.__globalLocale = this.__globalConfig?.config?.locale
     this.__globalOptionsTheme = this.__globalConfig?.config?.optionsTheme
     this.name = (name ?? this.__instance?.type.__name) as T
     this.scopeId = `data-fisht-${this.name}`
@@ -180,9 +183,19 @@ export default class Component<T extends keyof ComponentsOptions> {
         if (!isMediaA && isMediaB) return -1
         return 0
       })
-      const css = stylesComp(this.__globalOptionsTheme?.layers ?? "fishtvue", CSS.join("\n"))
+      const css = minifyCSS(stylesComp(this.__globalOptionsTheme?.layers ?? "fishtvue", CSS.join("\n")))
       const style = useStyle(css, { name: this.name })
       if (style.isLoaded) listComponents.add(this.name)
     }
+  }
+  public t(key: keyof DefaultMessages | string): string | undefined {
+    if (!key) return
+    const nameLocale = this.__globalConfig?.getActiveLocale() ?? "en"
+    if (!nameLocale) return
+    const localeMessages = this.__globalLocale?.messages?.[nameLocale]
+    if (!localeMessages) return
+    const value = get<unknown>(localeMessages, key)
+    if (!value) return
+    return typeof value === "string" ? value : undefined
   }
 }

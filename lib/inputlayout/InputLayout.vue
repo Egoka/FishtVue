@@ -296,7 +296,9 @@
             type="DocumentDuplicate"
             class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 transition"
             @click.stop="copy" />
-          <FixWindow :mode="mode" :delay="10" :padding-window="40">Копировать</FixWindow>
+          <FixWindow :mode="mode" :delay="10" :padding-window="40">
+            {{ InputLayout.t("copy") ?? "Copy" }}
+          </FixWindow>
         </div>
         <Icons v-else type="Check" class="mr-2 text-emerald-400 dark:text-emerald-600" />
       </template>

@@ -95,7 +95,9 @@
   const closeButtonBadge = computed<SelectProps["closeButtonBadge"] | undefined>(
     () => props?.closeButtonBadge ?? options?.closeButtonBadge ?? false
   )
-  const noData = computed<NonNullable<SelectProps["noData"]>>(() => props?.noData ?? options?.noData ?? "Нет данных")
+  const noData = computed<NonNullable<SelectProps["noData"]>>(
+    () => props?.noData ?? options?.noData ?? Select.t("noData") ?? "No data available"
+  )
   const isQuery = computed<NonNullable<SelectProps["noQuery"]>>(() => !(props?.noQuery ?? options?.noQuery))
   const classMaskQuery = computed<NonNullable<SelectProps["classMaskQuery"]>>(() =>
     Select.setStyle(props?.classMaskQuery ?? options?.classMaskQuery ?? "font-bold text-theme-700 dark:text-theme-300")
@@ -130,6 +132,7 @@
     ...options?.paramsFixWindow,
     ...props?.paramsFixWindow
   }))
+  const labelInput = computed(() => Select.t("find") ?? "Find...")
   Select.setStyle(`transition ease-in-out duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`)
   const classBase = computed<SelectProps["classSelect"]>(() => {
     return Select.setStyle([
@@ -499,7 +502,7 @@
             v-if="isQuery"
             ref="selectSearch"
             v-model="query"
-            label="Найти..."
+            :label="labelInput"
             :mode="mode"
             label-mode="vanishing"
             clear

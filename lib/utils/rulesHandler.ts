@@ -139,7 +139,7 @@ export function getValidate(value: any, field: any): { isInvalid: boolean; messa
               ? rules["required"] || ""
               : typeof rules["required"] === "boolean"
                 ? rules["required"]
-                  ? "Обязательное поле"
+                  ? "Required field"
                   : ""
                 : rules["required"]?.message || ""
           return true

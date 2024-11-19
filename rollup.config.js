@@ -121,6 +121,7 @@ const GLOBAL_DEPENDENCIES = {
 }
 const CORE_DEPENDENCIES = JSON.parse(`{
   "${PROJECT_NAME}/config": "${PROJECT_NAME}.config",
+  "${PROJECT_NAME}/config/index": "${PROJECT_NAME}.config.index",
   "${PROJECT_NAME}/component": "${PROJECT_NAME}.component",
   "${PROJECT_NAME}/types": "${PROJECT_NAME}.types",
   "${PROJECT_NAME}/label": "${PROJECT_NAME}.label",
@@ -150,6 +151,7 @@ const CORE_DEPENDENCIES = JSON.parse(`{
   "${PROJECT_NAME}/utils/tailwindHandler": "${PROJECT_NAME}.utils.tailwindHandler",
   "${PROJECT_NAME}/utils/uniqueCollection": "${PROJECT_NAME}.utils.uniqueCollection",
   "${PROJECT_NAME}/utils": "${PROJECT_NAME}.utils",
+  "${PROJECT_NAME}/locale": "${PROJECT_NAME}.locale",
   "${PROJECT_NAME}/locale/locale": "${PROJECT_NAME}.locale.locale",
   "${PROJECT_NAME}/theme": "${PROJECT_NAME}.theme",
   "${PROJECT_NAME}/theme/themes/Aurora": "${PROJECT_NAME}.theme.themes.Aurora",
@@ -328,7 +330,7 @@ function addTheme() {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function addLocale() {
-  addEntry("locale", "locale.ts", "locale")
+  addEntry("locale", "index.ts", "locale")
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
