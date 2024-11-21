@@ -61,7 +61,7 @@
     separatorNotHoverOpacity.value ? "" : "transition-opacity duration-500 opacity-0",
     direction.value === "vertical" ? "rotate-90" : ""
   ])
-  const classBase = computed(() =>
+  const classBase = computed<StyleClass>(() =>
     Split.setStyle([
       "h-full w-full",
       options?.class ?? "",
@@ -89,9 +89,21 @@
   const classSeparatorDisabled = ref(Split.setStyle([separatorClass.value, "group"]))
   // ---EXPOSE------------------------------
   defineExpose<SplitExpose>({
-    // ---STATE-------------------------
+    // ---REF-LINK----------------------------
+    resizableGroup,
+    resizablePanels,
+    // ---STATE-------------------------------
+    sizePanels,
+    cursorPanels,
+    activeCursorPanel,
     // ---PROPS-------------------------
-    // ---METHODS-----------------------
+    units,
+    panels,
+    direction,
+    separatorType,
+    separatorNotHoverOpacity,
+    styles,
+    classBase
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {

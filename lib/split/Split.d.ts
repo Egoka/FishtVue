@@ -1,5 +1,5 @@
-import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
+import { UnwrapNestedRefs, VNode } from "vue"
+import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
 import { IconsProps } from "fishtvue/icons"
 // ---------------------------------------
 export type CursorType = "center" | "left" | "right"
@@ -39,9 +39,21 @@ export declare type SplitEmits = {
   (event: "out-resize-panel", $event: MouseEvent, namePanel: Panel["name"]): void
 }
 export declare type SplitExpose = {
-  // ---STATE-------------------------
+  // ---REF-LINK----------------------------
+  resizableGroup: ReadRef<HTMLElement | undefined>
+  resizablePanels: ReadRef<Record<string, HTMLElement>>
+  // ---STATE-------------------------------
+  sizePanels: UnwrapNestedRefs<Record<Panel["name"], number>>
+  cursorPanels: UnwrapNestedRefs<Record<Panel["name"], CursorType>>
+  activeCursorPanel: ReadRef<CursorType>
   // ---PROPS-------------------------
-  // ---METHODS-----------------------
+  units: ReadRef<SplitProps["units"]>
+  panels: ReadRef<SplitProps["panels"]>
+  direction: ReadRef<SplitProps["direction"]>
+  separatorType: ReadRef<NonNullable<SplitProps["separatorType"]>>
+  separatorNotHoverOpacity: ReadRef<SplitProps["separatorNotHoverOpacity"]>
+  styles: ReadRef<SplitProps["styles"]>
+  classBase: ReadRef<StyleClass>
 }
 export declare type SplitOption = Pick<SplitProps, "separatorType" | "separatorNotHoverOpacity" | "class" | "styles">
 
