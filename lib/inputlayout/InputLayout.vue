@@ -27,7 +27,9 @@
   // ---PROPS-------------------------------
   const value = computed<InputLayoutProps["value"]>(() => props.value ?? null)
   const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props?.isValue ?? false)
-  const mode = computed<NonNullable<InputLayoutProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
+  const mode = computed<NonNullable<InputLayoutProps["mode"]>>(
+    () => props?.mode ?? options?.mode ?? InputLayout.componentsStyle() ?? "outlined"
+  )
   const label = computed<NonNullable<InputLayoutProps["label"]>>(() => String(props?.label ?? ""))
   const labelMode = computed<NonNullable<InputLayoutProps["labelMode"]>>(() => {
     const labelModeValue = props?.labelMode ?? options?.labelMode ?? "offsetDynamic"

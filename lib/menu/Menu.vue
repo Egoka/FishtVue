@@ -37,7 +37,9 @@
     keyof ItemMenuPrivate
   >)
   // ---PROPS-------------------------------
-  const mode = computed<NonNullable<MenuProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
+  const mode = computed<NonNullable<MenuProps["mode"]>>(
+    () => props?.mode ?? options?.mode ?? MenuComponent.componentsStyle() ?? "outlined"
+  )
   const selected = computed<NonNullable<MenuProps["selected"]>>(() => props?.selected ?? options?.selected ?? false)
   const horizontal = computed<NonNullable<MenuProps["horizontal"]>>(
     () => props?.horizontal ?? options?.horizontal ?? false

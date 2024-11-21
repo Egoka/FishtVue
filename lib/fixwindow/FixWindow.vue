@@ -73,7 +73,7 @@
   const mode = computed<string>(() => {
     const baseStyle =
       "flex items-center px-1 border border-neutral-200 dark:border-neutral-900 text-black text-zinc-600 dark:text-zinc-400"
-    const mode = props.mode ?? options?.mode
+    const mode = props.mode ?? options?.mode ?? FixWindow.componentsStyle()
     switch (mode) {
       case "filled":
         return `${baseStyle} bg-stone-100 dark:bg-stone-900 rounded-md`

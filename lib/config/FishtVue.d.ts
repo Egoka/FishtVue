@@ -60,20 +60,12 @@ declare module "@vue/runtime-core" {
 }
 
 export declare interface FishtVueConfiguration {
-  inputStyle?: StyleMode
-  zIndex?: ZIndexOptions
+  componentsStyle?: StyleMode
   locale?: Locales
   theme?: Theme
   optionsTheme?: OptionsTheme
   componentsOptions?: ComponentsOptions
 }
-
-type ZIndexOptions = Partial<{
-  modal: number
-  overlay: number
-  menu: number
-  tooltip: number
-}>
 
 export type OptionsTheme = Partial<{
   /**

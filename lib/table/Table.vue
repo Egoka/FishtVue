@@ -89,7 +89,9 @@
   const allData = ref<NonNullable<TableProps["dataSource"]>>()
   const dataSource = ref<DataSource>([])
   // ---PROPS-------------------------------
-  const mode = computed<NonNullable<TableProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
+  const mode = computed<NonNullable<TableProps["mode"]>>(
+    () => props?.mode ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
+  )
   const toolbar = computed<TableProps["toolbar"]>(() => props?.toolbar ?? options?.toolbar)
   const sort = computed<TableProps["sort"]>(() => props?.sort ?? options?.sort)
   const filter = computed<TableProps["filter"]>(() => props?.filter ?? options?.filter)

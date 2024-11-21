@@ -18,7 +18,7 @@ import { DefaultMessages, Locales } from "fishtvue/locale"
 import type { ComponentsOptions, FishtVue, OptionsTheme } from "fishtvue/config"
 import type { PublicFields, StylesComponent } from "./TypeComponent"
 import { UniqueKeySetCollection } from "fishtvue/utils/uniqueCollection"
-import { StyleClass } from "fishtvue/types"
+import { StyleClass, StyleMode } from "fishtvue/types"
 
 type namesComponents = keyof ComponentsOptions | "BaseComponent"
 type setStyleOptions = Partial<{
@@ -37,7 +37,6 @@ const listOfCssComponents = new UniqueKeySetCollection<namesComponents | undefin
  * ### Properties
  *
  * - `name`: The name of the component.
- * - `scopeId`: The scope ID of the component.
  * - `prefix`: The prefix for the component.
  *
  * ### Constructor
@@ -62,18 +61,11 @@ export default class Component<T extends keyof ComponentsOptions> {
   private readonly __globalTheme?: Theme
   private readonly __globalLocale?: Locales
   private readonly __globalOptionsTheme?: OptionsTheme
+  private readonly __componentsStyle?: StyleMode
   private readonly __options?: ComponentsOptions[T]
   private __stylesComp?: StylesComponent
-  private readonly __arrayPublicFields: Array<keyof this> = [
-    "name",
-    "scopeId",
-    "prefix",
-    "getOptions",
-    "getPrefix",
-    "initStyle"
-  ]
+  private readonly __arrayPublicFields: Array<keyof this> = ["name", "prefix", "getOptions", "getPrefix", "initStyle"]
   public readonly name?: T
-  public readonly scopeId?: string
   public readonly prefix?: OptionsTheme["prefix"]
 
   constructor(name?: T) {
@@ -82,9 +74,9 @@ export default class Component<T extends keyof ComponentsOptions> {
     this.__globalTheme = this.__globalConfig?.config?.theme
     this.__globalLocale = this.__globalConfig?.config?.locale
     this.__globalOptionsTheme = this.__globalConfig?.config?.optionsTheme
+    this.__componentsStyle = this.__globalConfig?.config?.componentsStyle
     this.name = (name ?? this.__instance?.type.__name) as T
-    this.scopeId = `data-fisht-${this.name}`
-    this.prefix = this.__globalOptionsTheme?.prefix ? `${this.__globalOptionsTheme?.prefix}-` : ""
+    this.prefix = this.__globalOptionsTheme?.prefix ?? "fishtvue"
     this.__options = this.__globalConfig?.getOptions(this.name) as ComponentsOptions[T]
     this.__stylesComp = this.__stylesBase
   }
@@ -144,9 +136,8 @@ export default class Component<T extends keyof ComponentsOptions> {
       isNotScopeId: false
     }
   ): string => {
-    const specialClass = `${toKebabCase(this.name)}-component`
+    const specialClass = `${this.prefix}-${toKebabCase(this.name)}`
     const isBaseClasses = options.isBaseClasses ? "" : " "
-    // const scopeId = options.isNotScopeId ? "" : `[${this.scopeId}]`
     const styles = cn(stylesComp)
     const newClasses = styles
       .split(" ")
@@ -155,9 +146,6 @@ export default class Component<T extends keyof ComponentsOptions> {
       newClasses.forEach((item) => {
         listOfStyledComponents.add(this.name, [`${isBaseClasses}${item}`])
         const css = tailwind(item, {
-          // selector: options.selector
-          //   ? `${options.selector}${scopeId}${isBaseClasses}`
-          //   : `.${this.prefix}${toKebabCase(this.name)}${scopeId}${isBaseClasses}.${specialClass}`,
           selector: options.selector ? `${options.selector}${isBaseClasses}` : `.${specialClass}`,
           darkSelector: this.__globalOptionsTheme?.darkModeSelector ?? ""
         })
@@ -175,19 +163,18 @@ export default class Component<T extends keyof ComponentsOptions> {
 `
 
   private __setStyle(stylesComp: StylesComponent): void {
-    if (this.scopeId) {
-      const CSS = [...(listOfCssComponents.get(this.name) ?? [])].sort((a, b) => {
-        const isMediaA = a.trim().includes("@media")
-        const isMediaB = b.trim().includes("@media")
-        if (isMediaA && !isMediaB) return 1
-        if (!isMediaA && isMediaB) return -1
-        return 0
-      })
-      const css = minifyCSS(stylesComp(this.__globalOptionsTheme?.layers ?? "fishtvue", CSS.join("\n")))
-      const style = useStyle(css, { name: this.name })
-      if (style.isLoaded) listComponents.add(this.name)
-    }
+    const CSS = [...(listOfCssComponents.get(this.name) ?? [])].sort((a, b) => {
+      const isMediaA = a.trim().includes("@media")
+      const isMediaB = b.trim().includes("@media")
+      if (isMediaA && !isMediaB) return 1
+      if (!isMediaA && isMediaB) return -1
+      return 0
+    })
+    const css = minifyCSS(stylesComp(this.__globalOptionsTheme?.layers ?? "fishtvue", CSS.join("\n")))
+    const style = useStyle(css, { name: this.name })
+    if (style.isLoaded) listComponents.add(this.name)
   }
+
   public t(key: keyof DefaultMessages | string): string | undefined {
     if (!key) return
     const nameLocale = this.__globalConfig?.getActiveLocale() ?? "en"
@@ -197,5 +184,9 @@ export default class Component<T extends keyof ComponentsOptions> {
     const value = get<unknown>(localeMessages, key)
     if (!value) return
     return typeof value === "string" ? value : undefined
+  }
+
+  public componentsStyle(): StyleMode | undefined {
+    return this.__componentsStyle
   }
 }

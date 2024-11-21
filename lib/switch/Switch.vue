@@ -24,7 +24,7 @@
   const switchingType = computed<SwitchProps["switchingType"]>(
     () => props?.switchingType ?? options?.switchingType ?? "checkbox"
   )
-  const mode = computed<SwitchProps["mode"]>(() => props?.mode ?? options?.mode ?? "none")
+  const mode = computed<SwitchProps["mode"]>(() => props?.mode ?? options?.mode ?? Switch.componentsStyle() ?? "none")
   const label = computed<SwitchProps["label"]>(() => String(props.label ?? ""))
   const isDisabled = computed<NonNullable<SwitchProps["disabled"]>>(() => props.disabled ?? false)
   const isRequired = computed<SwitchProps["required"]>(() => props.required ?? false)

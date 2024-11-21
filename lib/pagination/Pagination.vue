@@ -75,7 +75,9 @@
     }
   })
   const activePage = computed<NonNullable<PaginationProps["modelValue"]>>(() => props.modelValue ?? pages.value[0] ?? 1)
-  const mode = computed<NonNullable<PaginationProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
+  const mode = computed<NonNullable<PaginationProps["mode"]>>(
+    () => props?.mode ?? options?.mode ?? Pagination.componentsStyle() ?? "outlined"
+  )
   const isStyleMode = computed<boolean>(() => mode.value === "outlined" || mode.value === "filled")
   const modeStyleSelect = computed<string>(() =>
     mode.value === "filled"

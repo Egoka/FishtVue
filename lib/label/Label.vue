@@ -8,7 +8,9 @@
   // ---PROPS-EMITS-SLOTS-------------------
   const props = defineProps<LabelProps>()
   // ---PROPS-------------------------------
-  const mode = computed<NonNullable<LabelProps["mode"]>>(() => props?.mode ?? options?.mode ?? "outlined")
+  const mode = computed<NonNullable<LabelProps["mode"]>>(
+    () => props?.mode ?? options?.mode ?? Label.componentsStyle() ?? "outlined"
+  )
   const type = computed<NonNullable<LabelProps["type"]>>(() => props?.type ?? options?.type ?? "dynamic")
   const translateX = computed<NonNullable<LabelProps["translateX"]>>(
     () => props?.translateX ?? options?.translateX ?? 0

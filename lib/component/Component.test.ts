@@ -87,7 +87,7 @@ describe("Testing class Component", () => {
   })
 
   it("should return the correct prefix with getPrefix", () => {
-    expect(component.getPrefix()).toBe("test-prefix-")
+    expect(component.getPrefix()).toBe("test-prefix")
   })
 
   it("should trigger onMounted hook", () => {
