@@ -157,15 +157,15 @@
     emit("clear", "")
   }
 
-  function focus(env: FocusEvent) {
+  function focus(eventFocus: FocusEvent) {
     inputRef.value?.focus()
     isActiveInput.value = true
-    emit("focus", env)
+    emit("focus", eventFocus)
   }
 
-  function blur(env: FocusEvent) {
+  function blur(eventFocus: FocusEvent) {
     isActiveInput.value = false
-    emit("blur", env)
+    emit("blur", eventFocus)
   }
 </script>
 

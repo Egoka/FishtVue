@@ -262,13 +262,13 @@
     isOpenPicker.value = true
   }
 
-  function closeCalendar(evt?: MouseEvent) {
+  function closeCalendar(event?: MouseEvent) {
     if (isDisabled.value) return
-    if (evt) {
+    if (event) {
       if ((isOpenPicker.value ?? false) && ((dataPicker.value ?? false) || (picker.value ?? false)))
         isOpenPicker.value =
-          evt.composedPath().includes(dataPicker.value as HTMLElement) ||
-          evt.composedPath().includes(picker.value as HTMLElement)
+          event.composedPath().includes(dataPicker.value as HTMLElement) ||
+          event.composedPath().includes(picker.value as HTMLElement)
     } else isOpenPicker.value = false
   }
 

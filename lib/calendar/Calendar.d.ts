@@ -1,5 +1,5 @@
 import { Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode } from "../types"
 import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 import { namesColors } from "fishtvue/theme"
 import { FixWindowProps } from "fishtvue/fixwindow"
@@ -16,6 +16,16 @@ import { UpdateOptions, ValueTarget } from "v-calendar/dist/types/src/use/datePi
 import { MoveOptions, MoveTarget } from "v-calendar/dist/types/src/use/calendar"
 import { DateParts, DatePartsRules } from "v-calendar/dist/types/src/utils/date/helpers"
 import { PopoverEventHandlers, PopoverOptions } from "v-calendar/dist/types/src/utils/popovers"
+
+/**
+ * ## Calendar
+ *
+ * Calendar - a component for selecting single or range dates with advanced customization options.
+ *
+ * Supports flexible configurations, various styles, and emits events for date changes and interactions.
+ */
+declare class Calendar extends ClassComponent<CalendarProps, CalendarSlots, CalendarEmits, CalendarExpose> {}
+
 // ---------------------------------------
 type DateValueCalendar = Date | number | string | null
 // https://vcalendar.io/i18n/masks.html
@@ -212,17 +222,63 @@ export interface IParamsDatePicker {
 }
 
 export declare type BaseCalendarProps = {
+  /**
+   * Additional parameters for date picker behavior and formatting.
+   * @type {Partial<IParamsDatePicker> | undefined}
+   */
   paramsDatePicker?: Partial<IParamsDatePicker>
+
+  /**
+   * Automatically focuses the calendar input on mount.
+   * @type {boolean | undefined}
+   */
   autoFocus?: boolean
+
+  /**
+   * Prevents the calendar from closing when a date is selected.
+   * @type {boolean | undefined}
+   */
   isNotCloseOnDateChange?: boolean
+
+  /**
+   * Custom CSS class for the data picker.
+   * @type {StyleClass | undefined}
+   */
   classDataPicker?: StyleClass
+
+  /**
+   * Custom CSS class for the calendar picker.
+   * @type {StyleClass | undefined}
+   */
   classPicker?: StyleClass
+
+  /**
+   * Custom CSS class for the displayed date text.
+   * @type {StyleClass | undefined}
+   */
   classDateText?: StyleClass
+
+  /**
+   * Configuration for fixing the calendar window's position.
+   * @type {FixWindowProps | undefined}
+   */
   paramsFixWindow?: FixWindowProps
 }
 
+/**
+ * Props for the Calendar component.
+ */
 export interface CalendarProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseCalendarProps> {
+  /**
+   * The unique identifier for the calendar component.
+   * @type {string | undefined}
+   */
   id?: string
+
+  /**
+   * The current value of the calendar, can be a single date or a date range.
+   * @type {DateValueCalendar | Partial<IRangeValue>}
+   */
   modelValue?: DateValueCalendar | Partial<IRangeValue>
 }
 
@@ -232,48 +288,241 @@ export declare type CalendarSlots = {
   before(): VNode[]
   after(): VNode[]
 }
+/**
+ * Events emitted by the Calendar component.
+ */
 export declare type CalendarEmits = {
+  /**
+   * Emitted when the invalid state of the calendar is updated.
+   * @param event
+   * @param {CalendarProps["isInvalid"]} payload - The invalid state.
+   */
   (event: "update:isInvalid", payload: CalendarProps["isInvalid"]): void
+
+  /**
+   * Emitted when the `modelValue` is updated.
+   * @param event
+   * @param {CalendarProps["modelValue"]} payload - The updated value.
+   */
   (event: "update:modelValue", payload: CalendarProps["modelValue"]): void
+
+  /**
+   * Emitted when the `modelValue` changes.
+   * @param event
+   * @param {CalendarProps["modelValue"]} payload - The changed value.
+   */
   (event: "change:modelValue", payload: CalendarProps["modelValue"]): void
+
+  /**
+   * Emitted when the calendar data is retrieved.
+   * @param event
+   * @param {ICalendarPicker} payload - The calendar picker instance.
+   */
   (event: "getCalendar", payload: ICalendarPicker): void
+
+  /**
+   * Emitted when the calendar's active state changes.
+   * @param event
+   * @param {boolean} payload - Indicates if the calendar is active.
+   */
   (event: "isActive", payload: boolean): void
 }
+
+/**
+ * Methods and states exposed via `ref` for the Calendar component.
+ */
 export declare type CalendarExpose = {
-  //---STATE-------------------------
+  // ---STATE-------------------------
+  /**
+   * Reference to the layout state of the input field.
+   * @type {Ref<InputLayoutExpose | undefined>}
+   */
   layout: Ref<InputLayoutExpose | undefined>
+
+  /**
+   * Reference to the input layout properties.
+   * @type {Ref<Omit<InputLayoutProps, "value">>}
+   */
   inputLayout: Ref<Omit<InputLayoutProps, "value">>
+
+  /**
+   * Reference to the data picker HTML element.
+   * @type {ReadRef<HTMLElement | undefined>}
+   */
   dataPicker: ReadRef<HTMLElement | undefined>
+
+  /**
+   * Reference to the calendar picker HTML element.
+   * @type {ReadRef<HTMLElement | undefined>}
+   */
   picker: ReadRef<HTMLElement | undefined>
+
+  /**
+   * Instance of the calendar picker.
+   * @type {ReadRef<ICalendarPicker | undefined>}
+   */
   calendarPicker: ReadRef<ICalendarPicker | undefined>
+
+  /**
+   * Indicates if the calendar input is focused.
+   * @type {ReadRef<boolean>}
+   */
   isFocus: ReadRef<boolean>
+
+  /**
+   * Indicates if the calendar picker is open.
+   * @type {ReadRef<boolean>}
+   */
   isOpenPicker: ReadRef<boolean>
+
+  /**
+   * Parameters for the date picker.
+   * @type {ReadRef<Partial<IParamsDatePicker>>}
+   */
   datePicker: ReadRef<Partial<IParamsDatePicker>>
+
+  /**
+   * Current value of the calendar.
+   * @type {ReadRef<CalendarProps["modelValue"]>}
+   */
   value: ReadRef<CalendarProps["modelValue"]>
+
+  /**
+   * The currently visible date in the picker.
+   * @type {ReadRef<ICalendarPicker["inputValue"] | undefined>}
+   */
   visibleDate: ReadRef<ICalendarPicker["inputValue"] | undefined>
+
   // ---PROPS-------------------------------
+  /**
+   * Current `id` value for the calendar component.
+   * @type {ReadRef<CalendarProps["id"]>}
+   */
   id: ReadRef<CalendarProps["id"]>
+
+  /**
+   * Indicates whether the calendar has a value.
+   * @type {ReadRef<boolean>}
+   */
   isValue: ReadRef<boolean>
+
+  /**
+   * Indicates if autofocus is enabled.
+   * @type {ReadRef<CalendarProps["autoFocus"]>}
+   */
   autoFocus: ReadRef<CalendarProps["autoFocus"]>
+
+  /**
+   * Indicates if the calendar remains open on date selection.
+   * @type {ReadRef<CalendarProps["isNotCloseOnDateChange"]>}
+   */
   isNotCloseOnDateChange: ReadRef<CalendarProps["isNotCloseOnDateChange"]>
-  mode: ReadRef<CalendarProps["mode"]>
+
+  /**
+   * The current styling mode of the editor.
+   * @type {ReadRef<StyleMode>}
+   */
+  mode: ReadRef<StyleMode>
+
+  /**
+   * Placeholder text for the input field.
+   * @type {ReadRef<IParamsDatePicker["placeholder"] | undefined>}
+   */
   placeholder: ReadRef<IParamsDatePicker["placeholder"] | undefined>
+
+  /**
+   * Indicates if the calendar is in a loading state.
+   * @type {ReadRef<CalendarProps["loading"]>}
+   */
   isLoading: ReadRef<CalendarProps["loading"]>
+
+  /**
+   * Indicates if the calendar is disabled.
+   * @type {ReadRef<CalendarProps["disabled"]>}
+   */
   isDisabled: ReadRef<CalendarProps["disabled"]>
+
+  /**
+   * Indicates if the calendar is invalid.
+   * @type {ReadRef<CalendarProps["isInvalid"]>}
+   */
   isInvalid: ReadRef<CalendarProps["isInvalid"]>
+
+  /**
+   * Validation message for the calendar input.
+   * @type {ReadRef<CalendarProps["messageInvalid"]>}
+   */
   messageInvalid: ReadRef<CalendarProps["messageInvalid"]>
+
+  /**
+   * Separator character for date ranges.
+   * @type {ReadRef<IParamsDatePicker["separator"] | undefined>}
+   */
   separator: ReadRef<IParamsDatePicker["separator"] | undefined>
+
+  /**
+   * Current layout value.
+   * @type {ReadRef<string>}
+   */
   valueLayout: ReadRef<string>
+
+  /**
+   * Configuration for fixing the calendar window.
+   * @type {ReadRef<CalendarProps["paramsFixWindow"]>}
+   */
   paramsFixWindow: ReadRef<CalendarProps["paramsFixWindow"]>
+
+  /**
+   * CSS class for the layout container.
+   * @type {ReadRef<CalendarProps["class"]>}
+   */
   classLayout: ReadRef<CalendarProps["class"]>
+
+  /**
+   * CSS class for the data picker.
+   * @type {ReadRef<CalendarProps["classDataPicker"]>}
+   */
   classDataPicker: ReadRef<CalendarProps["classDataPicker"]>
+
+  /**
+   * CSS class for the date text display.
+   * @type {ReadRef<CalendarProps["classDateText"]>}
+   */
   classDateText: ReadRef<CalendarProps["classDateText"]>
+
+  /**
+   * CSS class for the calendar picker.
+   * @type {ReadRef<CalendarProps["classPicker"]>}
+   */
   classPicker: ReadRef<CalendarProps["classPicker"]>
-  // ---METHODS-----------------------------
+
+  // ---METHODS-----------------------
+  /**
+   * Opens the calendar picker.
+   */
   openCalendar(): void
-  closeCalendar(evt?: MouseEvent): void
+
+  /**
+   * Closes the calendar picker.
+   * @param {MouseEvent | undefined} event - The event that triggered the action.
+   */
+  closeCalendar(event?: MouseEvent): void
+
+  /**
+   * Changes the selected date in the calendar.
+   * @param {ICalendarPicker["inputValue"]} date - The new date value.
+   */
   changeDate(date: ICalendarPicker["inputValue"]): void
+
+  /**
+   * Sets the focus state for the calendar.
+   * @param {boolean} focus - The desired focus state.
+   */
   focus(focus: boolean): void
+
+  /**
+   * Clears the selected date in the calendar.
+   */
   clearDataPicker(): void
 }
 export declare type CalendarOption = Pick<
@@ -289,7 +538,6 @@ export declare type CalendarOption = Pick<
 >
 
 // ---------------------------------------
-declare class Calendar extends ClassComponent<CalendarProps, CalendarSlots, CalendarEmits, CalendarExpose> {}
 
 declare module "vue" {
   export interface GlobalComponents {
