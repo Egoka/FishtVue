@@ -276,3 +276,11 @@ export function getParentElements(element: HTMLElement): HTMLElement[] {
 
   return parents
 }
+
+export function htmlToText<T>(html: T): string | T {
+  if (typeof html !== "string") return html
+  const text = html.replace(/<\/?[^>]+(>|$)/g, "")
+  const textarea = document.createElement("textarea")
+  textarea.innerHTML = text.trim() ?? ""
+  return textarea.value
+}

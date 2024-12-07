@@ -121,6 +121,7 @@ const GLOBAL_DEPENDENCIES = {
 }
 const CORE_DEPENDENCIES = JSON.parse(`{
   "${PROJECT_NAME}/config": "${PROJECT_NAME}.config",
+  "${PROJECT_NAME}/config/index": "${PROJECT_NAME}.config.index",
   "${PROJECT_NAME}/component": "${PROJECT_NAME}.component",
   "${PROJECT_NAME}/types": "${PROJECT_NAME}.types",
   "${PROJECT_NAME}/label": "${PROJECT_NAME}.label",
@@ -142,14 +143,18 @@ const CORE_DEPENDENCIES = JSON.parse(`{
   "${PROJECT_NAME}/menu": "${PROJECT_NAME}.menu",
   "${PROJECT_NAME}/pagination": "${PROJECT_NAME}.pagination",
   "${PROJECT_NAME}/utils/domHandler": "${PROJECT_NAME}.utils.domHandler",
+  "${PROJECT_NAME}/utils/colorsHandler": "${PROJECT_NAME}.utils.colorsHandler",
+  "${PROJECT_NAME}/utils/rulesHandler": "${PROJECT_NAME}.utils.rulesHandler",
   "${PROJECT_NAME}/utils/dateHandler": "${PROJECT_NAME}.utils.dateHandler",
   "${PROJECT_NAME}/utils/arrayHandler": "${PROJECT_NAME}.utils.arrayHandler",
+  "${PROJECT_NAME}/utils/numberHandler": "${PROJECT_NAME}.utils.numberHandler",
   "${PROJECT_NAME}/utils/stringHandler": "${PROJECT_NAME}.utils.stringHandler",
   "${PROJECT_NAME}/utils/objectHandler": "${PROJECT_NAME}.utils.objectHandler",
   "${PROJECT_NAME}/utils/functionHandler": "${PROJECT_NAME}.utils.functionHandler",
   "${PROJECT_NAME}/utils/tailwindHandler": "${PROJECT_NAME}.utils.tailwindHandler",
   "${PROJECT_NAME}/utils/uniqueCollection": "${PROJECT_NAME}.utils.uniqueCollection",
   "${PROJECT_NAME}/utils": "${PROJECT_NAME}.utils",
+  "${PROJECT_NAME}/locale": "${PROJECT_NAME}.locale",
   "${PROJECT_NAME}/locale/locale": "${PROJECT_NAME}.locale.locale",
   "${PROJECT_NAME}/theme": "${PROJECT_NAME}.theme",
   "${PROJECT_NAME}/theme/themes/Aurora": "${PROJECT_NAME}.theme.themes.Aurora",
@@ -300,12 +305,15 @@ function addUtils() {
   addEntry("utils", "Utils.ts", "utils")
   const utilsHandlers = [
     "stringHandler",
+    "numberHandler",
     "objectHandler",
     "arrayHandler",
     "dateHandler",
     "functionHandler",
     "tailwindHandler",
     "uniqueCollection",
+    "colorsHandler",
+    "rulesHandler",
     "domHandler"
   ]
   utilsHandlers.forEach((name) => addEntry("utils", `${name}.ts`, `${name}`))
@@ -328,7 +336,7 @@ function addTheme() {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function addLocale() {
-  addEntry("locale", "locale.ts", "locale")
+  addEntry("locale", "index.ts", "locale")
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -370,8 +378,6 @@ function copyDependencies(inFolder, outFolder, subFolder) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function addPackageJson() {
   const packageJson = fs.readJsonSync(`./${CORE_LIB_DIR}/package.json`)
-  const pkg = fs.readJsonSync("./package.json")
-  packageJson.version = pkg.version
   !fs.existsSync(OUTPUT_LIB_DIR) && fs.mkdirSync(OUTPUT_LIB_DIR)
   fs.writeFileSync(path.resolve(OUTPUT_LIB_DIR, "package.json"), JSON.stringify(packageJson, null, "  "))
 }

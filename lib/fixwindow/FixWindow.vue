@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, getCurrentInstance, ref, watch, onMounted, onUnmounted } from "vue"
+  import { computed, getCurrentInstance, ref, watch, onMounted, onUnmounted, nextTick } from "vue"
   import { XMarkIcon } from "@heroicons/vue/20/solid"
   import type { FixWindowProps, FixWindowEmits, FixWindowExpose, FixWindowEvent } from "./FixWindow"
   import Button from "fishtvue/button/Button.vue"
@@ -8,7 +8,11 @@
   const FixWindow = new Component<"FixWindow">()
   const options = FixWindow.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<FixWindowProps>()
+  const props = withDefaults(defineProps<FixWindowProps>(), {
+    byCursor: undefined,
+    closeButton: undefined,
+    stopOpenPropagation: undefined
+  })
   const emit = defineEmits<FixWindowEmits>()
   // ---REF-LINK----------------------------
   const fixWindow = ref<Element>()
@@ -21,24 +25,23 @@
   const countTimer = ref<number>(0)
   const positionMouse = ref<{ x: number; y: number }>()
   // ---PROPS-------------------------------
-  const stylePosition = computed<NonNullable<FixWindowProps["stylePosition"]>>(() => {
-    const position = props?.stylePosition ?? options?.stylePosition
-    if (position === "fixed" || position === "absolute") return position
-    else return "fixed"
-  })
+  const stylePosition = computed<NonNullable<FixWindowProps["stylePosition"]>>(
+    () => props?.stylePosition ?? options?.stylePosition ?? "fixed"
+  )
   const position = computed<NonNullable<FixWindowProps["position"]>>(
     () => props?.position ?? options?.position ?? "top"
   )
-  const delay = computed<NonNullable<FixWindowProps["delay"]>>(() =>
-    props?.delay && props?.delay > 0 ? props.delay : options?.delay && options?.delay > 0 ? options.delay : 0
-  )
+  const delay = computed<NonNullable<FixWindowProps["delay"]>>(() => {
+    const delay = props?.delay ?? options?.delay
+    return delay && delay > 0 ? delay : 0
+  })
   const marginPx = computed<NonNullable<FixWindowProps["marginPx"]>>(() => props.marginPx ?? options?.marginPx ?? 10)
   const translatePx = computed<NonNullable<FixWindowProps["translatePx"]>>(
     () => props.translatePx ?? options?.translatePx ?? 0
   )
   const eventOpen = computed<FixWindowEvent>(() => props.eventOpen ?? options?.eventOpen ?? "hover")
   const eventClose = computed<FixWindowEvent>(
-    () => props.eventClose ?? defaultCloseEvent(eventOpen.value as FixWindowEvent) ?? options?.eventClose ?? "hover"
+    () => props.eventClose ?? defaultCloseEvent(eventOpen.value) ?? options?.eventClose ?? "hover"
   )
   const paddingWindow = computed<NonNullable<FixWindowProps["paddingWindow"]>>(
     () => props.paddingWindow ?? options?.paddingWindow ?? 0
@@ -74,7 +77,8 @@
   const mode = computed<string>(() => {
     const baseStyle =
       "flex items-center px-1 border border-neutral-200 dark:border-neutral-900 text-black text-zinc-600 dark:text-zinc-400"
-    switch (props.mode) {
+    const mode = props.mode ?? options?.mode ?? FixWindow.componentsStyle()
+    switch (mode) {
       case "filled":
         return `${baseStyle} bg-stone-100 dark:bg-stone-900 rounded-md`
       case "outlined":
@@ -88,11 +92,11 @@
   FixWindow.setStyle(`transition-opacity ease-in-out duration-300 opacity-100 opacity-0`)
   const classBase = computed(() => {
     const classes = `text-neutral-800 dark:text-neutral-300 text-sm z-5`
-    return FixWindow.setStyle([classes, options?.classBody ?? "", props.classBody, stylePosition.value], {
+    return FixWindow.setStyle([classes, options?.classBody ?? "", props?.classBody ?? "", stylePosition.value], {
       isBaseClasses: true
     })
   })
-  const classBody = computed(() => FixWindow.setStyle([mode.value ?? "", options?.class ?? "", props.class]))
+  const classContent = computed(() => FixWindow.setStyle([mode.value ?? "", options?.class ?? "", props?.class ?? ""]))
   // ---EXPOSE------------------------------
   defineExpose<FixWindowExpose>({
     // ---STATE-------------------------
@@ -157,20 +161,28 @@
     isOpen,
     (value: boolean) => {
       if (value) {
-        setTimeout(() => {
+        nextTick(() => {
           removeOpenListener()
           addCloseListener()
           updatePosition()
-        }, 10)
+        })
       } else {
-        setTimeout(() => {
+        nextTick(() => {
           addOpenListener()
           removeCloseListener()
-        }, 10)
+        })
       }
       emit("update:modelValue", value)
     },
     { immediate: true }
+  )
+  watch(
+    () => eventOpen.value,
+    () => addOpenListener()
+  )
+  watch(
+    () => eventClose.value,
+    () => addCloseListener()
   )
 
   // ---SET-LISTENER--------------------------
@@ -465,8 +477,8 @@
     enter-active-class="transition-opacity ease-in-out duration-300"
     enter-from-class="opacity-0"
     enter-to-class="opacity-100">
-    <div v-show="isOpen" ref="fixWindow" :class="classBase" :style="`left: ${x}; top: ${y};${border}`">
-      <div :class="classBody">
+    <div v-show="isOpen" data-fix-window ref="fixWindow" :class="classBase" :style="`left: ${x}; top: ${y};${border}`">
+      <div data-fix-window-content :class="classContent">
         <slot />
       </div>
       <Button v-if="isCloseButton" mode="ghost" class="absolute top-2 right-2 px-[5px] m-0.5 h-9 w-9" @click="close">

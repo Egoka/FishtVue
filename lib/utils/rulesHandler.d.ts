@@ -1,59 +1,110 @@
 type message = string
-
-export declare interface ResultCallback {
+type ReturnValid = { isInvalid: boolean; message: string }
+export declare interface RuleCallback {
   isInvalid: boolean
   message?: string
 }
 
 interface Rule {
   message?: message
+  isActive?: boolean
 }
 
 // ---------------------------------------
-export declare interface RequiredRule extends Rule {}
+export declare type RequiredRule = Rule & {
+  type: "required"
+}
 
-export declare interface EmailRule extends Rule {}
+export declare type EmailRule = Rule & {
+  type: "email"
+}
 
-export declare interface PhoneRule extends Rule {}
+export declare type PhoneRule = Rule & {
+  type: "phone"
+}
 
-export declare interface NumericRule extends Rule {}
-
-export declare interface RegularRule extends Rule {
+export declare type NumericRule = Rule & {
+  type: "numeric"
+}
+type Regular = {
   regular: RegExp | string
 }
+export declare type RegularRule = Rule &
+  Regular & {
+    type: "regular"
+  }
 
-export declare interface RangeRule extends Rule {
+type Range = {
   min?: number
   max?: number
-}
+} & Rule
+export declare type RangeRule = Rule &
+  Range & {
+    type: "range"
+  }
 
-export declare interface LengthRule extends Rule {
+type Length = {
   min?: number
   max?: number
-}
+} & Rule
+export declare type LengthRule = Rule &
+  Length & {
+    type: "length"
+  }
 
-export declare interface AsyncRule extends Rule {
-  validationCallback(value: any): Promise<ResultCallback>
-}
+type Async = {
+  validationCallback(value: any): Promise<RuleCallback>
+} & Rule
+export declare type AsyncRule = Rule &
+  Async & {
+    type: "async"
+  }
 
-export declare interface CustomRule extends Rule {
-  validationCallback(value: any): ResultCallback
-}
+type Custom = {
+  validationCallback(value: any): RuleCallback
+} & Rule
 
-export declare interface CompareRule extends Rule {
+export declare type CustomRule = Rule &
+  Custom & {
+    type: "custom"
+  }
+
+type Compare = {
   compareField: any
-}
+} & Rule
+export declare type CompareRule = Rule &
+  Compare & {
+    type: "compare"
+  }
 
 // ---------------------------------------
-export declare type Rules = {
-  required?: RequiredRule | message | boolean
-  email?: EmailRule | message
-  phone?: PhoneRule | message
-  numeric?: NumericRule | message
-  regular?: RegularRule
-  range?: RangeRule
-  length?: LengthRule
-  async?: AsyncRule
-  custom?: CustomRule
-  compare?: CompareRule
+export declare type RulesArray = Array<
+  | RequiredRule
+  | EmailRule
+  | PhoneRule
+  | NumericRule
+  | RegularRule
+  | RangeRule
+  | LengthRule
+  | AsyncRule
+  | CustomRule
+  | CompareRule
+>
+type RuleObject = message | boolean | Rule
+export declare type RulesObject = {
+  required?: RuleObject
+  email?: RuleObject
+  phone?: RuleObject
+  numeric?: RuleObject
+  regular?: Regular
+  range?: Range
+  length?: Length
+  async?: Async
+  custom?: Custom
+  compare?: Compare
 }
+export declare type Rules = RulesArray | RulesObject
+
+export function getValidate(value: any, rules: Rules): ReturnValid
+export function isExistRule(rules: RulesArray | RulesObject, rule: keyof RulesObject): boolean
+export function getAsyncValidate(value: any, rules: Rules): Promise<ReturnValid>

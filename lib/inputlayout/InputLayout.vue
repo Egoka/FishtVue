@@ -10,7 +10,14 @@
   const InputLayout = new Component<"InputLayout">()
   const options = InputLayout.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<InputLayoutProps>()
+  const props = withDefaults(defineProps<InputLayoutProps>(), {
+    isValue: undefined,
+    isInvalid: undefined,
+    required: undefined,
+    loading: undefined,
+    disabled: undefined,
+    clear: undefined
+  })
   const emit = defineEmits<InputLayoutEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
@@ -26,10 +33,15 @@
   const afterWidth = ref<number>(0)
   // ---PROPS-------------------------------
   const value = computed<InputLayoutProps["value"]>(() => props.value ?? null)
-  const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props.isValue ?? false)
-  const mode = computed<NonNullable<InputLayoutProps["mode"]>>(() => props.mode ?? "outlined")
-  const label = computed<NonNullable<InputLayoutProps["label"]>>(() => String(props.label ?? ""))
-  const labelMode = computed<NonNullable<InputLayoutProps["labelMode"]>>(() => props.labelMode ?? "offsetDynamic")
+  const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props?.isValue ?? false)
+  const mode = computed<NonNullable<InputLayoutProps["mode"]>>(
+    () => props?.mode ?? options?.mode ?? InputLayout.componentsStyle() ?? "outlined"
+  )
+  const label = computed<NonNullable<InputLayoutProps["label"]>>(() => String(props?.label ?? ""))
+  const labelMode = computed<NonNullable<InputLayoutProps["labelMode"]>>(() => {
+    const labelModeValue = props?.labelMode ?? options?.labelMode ?? "offsetDynamic"
+    return labelModeValue ? labelModeValue : "offsetDynamic"
+  })
   const labelType = computed<NonNullable<InputLayoutProps["labelMode"]>>(() =>
     getLabelType(isValue.value, label.value, labelMode.value)
   )
@@ -46,14 +58,14 @@
     props?.height ? (typeof props?.height === "number" ? `${props?.height}px` : props?.height) : ""
   )
   const animation = computed<NonNullable<InputLayoutProps["animation"]>>(
-    () => props?.animation ?? "transition-all duration-550"
+    () => props?.animation ?? options?.animation ?? "transition-all duration-550"
   )
   const classBody = computed(() =>
     InputLayout.setStyle([
       "inputBody classBody relative mb-6 rounded-md",
       animation.value ?? "",
       options?.classBody ?? "",
-      props.classBody ?? "",
+      props?.classBody ?? "",
       isInvalid.value ? "is-invalid" : ""
     ])
   )
@@ -69,7 +81,7 @@
         : "",
       animation.value ?? "",
       options?.class ?? "",
-      props.class ?? "",
+      props?.class ?? "",
       isInvalid.value
         ? "border-red-500 dark:border-red-500 ring-1 ring-inset ring-red-500 dark:ring-red-500 scroll-mt-10"
         : "",
@@ -206,11 +218,17 @@
 </script>
 
 <template>
-  <div ref="inputBody" :class="classBody" :style="`scroll-margin-top: ${headerHeight + 10}px;`">
-    <div v-if="slots.before" ref="beforeInput" :class="classBeforeInput" :style="`height: ${height};max-height: 4rem;`">
+  <div data-input-layout ref="inputBody" :class="classBody" :style="`scroll-margin-top: ${headerHeight + 10}px;`">
+    <div
+      v-if="slots.before"
+      data-input-layout-before
+      ref="beforeInput"
+      :class="classBeforeInput"
+      :style="`height: ${height};max-height: 4rem;`">
       <slot name="before" />
     </div>
     <div
+      data-input-layout-base
       ref="input"
       :class="classBase"
       :style="`width:${width};height:${height};min-height: ${baseHeight}px;padding-left: ${beforeWidth || 10}px; padding-right: ${afterWidth || 10}px;`">
@@ -226,7 +244,7 @@
       :translate-x="beforeWidth || 15"
       :max-width="widthInput" />
     <span ref="afterInput" :class="classAfterInput" :style="`height: ${height};max-height: 4rem;`">
-      <div v-if="slots.after" :class="classAfterSlot">
+      <div v-if="slots.after" data-input-layout-after :class="classAfterSlot">
         <slot name="after" />
       </div>
       <transition
@@ -236,11 +254,11 @@
         enter-active-class="transition ease-in duration-200"
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
-        <div v-if="isLoading" :class="classLoading">
+        <div v-if="isLoading" data-loading :class="classLoading">
           <Loading v-if="isLoading" type="simple" class="absolute" />
         </div>
       </transition>
-      <div v-if="help?.length" :class="classIconBody">
+      <div v-if="help?.length" data-input-layout-help :class="classIconBody">
         <Icons
           type="QuestionMarkCircle"
           class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 transition cursor-help" />
@@ -257,7 +275,7 @@
         </FixWindow>
       </div>
       <template v-if="!isDisabled">
-        <div v-if="isInvalid && messageInvalid" :class="classIconBody">
+        <div v-if="isInvalid && messageInvalid" data-input-layout-invalid :class="classIconBody">
           <Icons type="ExclamationCircle" class="text-red-500 dark:text-red-500 transition cursor-pointer" />
           <FixWindow
             :mode="mode"
@@ -278,7 +296,7 @@
           enter-active-class="transition ease-in duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-if="clear && (value?.length || value > 0)" :class="classIconBody">
+          <div v-if="clear && (value?.length || value > 0)" data-input-layout-clear :class="classIconBody">
             <Icons
               type="XCircle"
               class="text-gray-400 dark:text-gray-600 hover:text-red-600 hover:dark:text-red-500 transition-all duration-300 cursor-pointer"
@@ -288,17 +306,23 @@
         </transition>
       </template>
       <template v-else-if="value?.length">
-        <div v-if="!isCopy" :class="classIconBody">
+        <div v-if="!isCopy" data-input-layout-copy :class="classIconBody">
           <Icons
             type="DocumentDuplicate"
             class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 transition"
             @click.stop="copy" />
-          <FixWindow :mode="mode" :delay="10" :padding-window="40">Копировать</FixWindow>
+          <FixWindow :mode="mode" :delay="10" :padding-window="40">
+            {{ InputLayout.t("copy") ?? "Copy" }}
+          </FixWindow>
         </div>
         <Icons v-else type="Check" class="mr-2 text-emerald-400 dark:text-emerald-600" />
       </template>
     </span>
-    <p :data-invalid="isInvalid" :class="classInvalid" :style="`max-width: ${inputBody?.['offsetWidth'] || 10}px`">
+    <p
+      data-input-layout-message-invalid
+      :data-invalid="isInvalid"
+      :class="classInvalid"
+      :style="`max-width: ${inputBody?.['offsetWidth'] || 10}px`">
       {{ messageInvalid }}
     </p>
   </div>

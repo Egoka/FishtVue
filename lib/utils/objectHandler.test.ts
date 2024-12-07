@@ -16,7 +16,8 @@ import {
   deepCopy,
   deepFreeze,
   freeze,
-  unFreeze
+  unFreeze,
+  deepMergeSoft
 } from "fishtvue/utils/objectHandler"
 
 describe("Testing object handler", () => {
@@ -393,10 +394,10 @@ describe("Testing object handler", () => {
 
   describe("deepMerge function", () => {
     it("should merge objects with primitive values", () => {
-      const obj1 = { a: 1, b: 2 }
-      const obj2 = { b: 3, c: 4 }
+      const obj1 = { a: 1, b: "2" }
+      const obj2 = { b: "3", c: 4 }
       const result = deepMerge(obj1, obj2)
-      expect(result).toEqual({ a: 1, b: 3, c: 4 })
+      expect(result).toEqual({ a: 1, b: "3", c: 4 })
     })
 
     it("should merge nested objects", () => {
@@ -406,10 +407,17 @@ describe("Testing object handler", () => {
       expect(result).toEqual({ a: { x: 1, y: 2 }, b: 2, c: 3 })
     })
 
-    it("should concatenate arrays", () => {
+    it("should not concatenate arrays", () => {
       const obj1 = { a: [1, 2], b: 2 }
       const obj2 = { a: [3, 4], c: 3 }
       const result = deepMerge(obj1, obj2)
+      expect(result).toEqual({ a: [3, 4], b: 2, c: 3 })
+    })
+
+    it("should concatenate arrays", () => {
+      const obj1 = { a: [1, 2], b: 2 }
+      const obj2 = { a: [3, 4], c: 3 }
+      const result = deepMergeSoft(obj1, obj2)
       expect(result).toEqual({ a: [1, 2, 3, 4], b: 2, c: 3 })
     })
 
@@ -420,11 +428,32 @@ describe("Testing object handler", () => {
       expect(result).toEqual({ a: { y: 3 }, b: 3 })
     })
 
-    it("should handle merging with undefined and null values", () => {
-      const obj1 = { a: 1, b: null }
-      const obj2 = { b: 2, c: undefined }
+    it("should not handle merging with undefined and null values", () => {
+      const obj1 = { a: 1, b: 2 }
+      const obj2 = { b: null, c: undefined }
       const result = deepMerge(obj1, obj2)
       expect(result).toEqual({ a: 1, b: 2, c: undefined })
+    })
+
+    it("should handle undefined as the second object", () => {
+      const obj1 = { a: 1, b: 2 }
+      const obj2 = undefined
+      const result = deepMerge(obj1, obj2)
+      expect(result).toEqual({ a: 1, b: 2 })
+    })
+
+    it("should handle undefined as the first object", () => {
+      const obj1 = undefined
+      const obj2 = { a: 1, b: 2 }
+      const result = deepMerge(obj1, obj2)
+      expect(result).toEqual({ a: 1, b: 2 })
+    })
+
+    it("should return undefined if both inputs are undefined", () => {
+      const obj1 = undefined
+      const obj2 = undefined
+      const result = deepMerge(obj1, obj2)
+      expect(result).toBeUndefined()
     })
 
     it("should handle merging of multiple objects", () => {
@@ -440,6 +469,72 @@ describe("Testing object handler", () => {
       const obj2 = {}
       const result = deepMerge(obj1, obj2)
       expect(result).toEqual({ a: 1 })
+    })
+
+    it("should handle merging with arrays as root values", () => {
+      const obj1 = [1, 2]
+      const obj2 = [3, 4]
+      const result = deepMerge(obj1, obj2)
+      expect(result).toEqual([3, 4]) // Arrays are not deeply merged, second overrides
+    })
+
+    it("should handle merging with non-object types (strings, numbers)", () => {
+      const obj1 = "string1"
+      const obj2 = "string2"
+      const result = deepMerge(obj1, obj2)
+      expect(result).toEqual("string2") // Non-object types are overridden
+    })
+
+    it("should merge objects containing functions", () => {
+      const obj1 = { a: 1, func: () => "hello" }
+      const obj2 = { b: 2, func: () => "world" }
+      const result = deepMerge(obj1, obj2)
+      // @ts-ignore
+      expect(result.a).toBe(1)
+      // @ts-ignore
+      expect(result.b).toBe(2)
+      // @ts-ignore
+      expect(result.func()).toBe("world") // Function in obj2 overrides obj1
+    })
+
+    it("should merge objects with dates", () => {
+      const obj1 = { a: new Date("2023-01-01") }
+      const obj2 = { b: new Date("2024-01-01") }
+      const result = deepMerge(obj1, obj2)
+      // @ts-ignore
+      expect(result.a).toEqual(new Date("2023-01-01"))
+      // @ts-ignore
+      expect(result.b).toEqual(new Date("2024-01-01"))
+    })
+
+    it("should handle cyclic references without crashing", () => {
+      const obj1 = { a: 1 }
+      const obj2 = { b: 2 }
+      // @ts-ignore
+      obj1.self = obj1 // Cyclic reference
+      // @ts-ignore
+      obj2.self = obj2 // Cyclic reference
+      const result = deepMerge(obj1, obj2)
+      // @ts-ignore
+      expect(result.a).toBe(1)
+      // @ts-ignore
+      expect(result.b).toBe(2)
+      // @ts-ignore
+      expect(result.self).toEqual(result) // The cyclic reference is preserved
+    })
+
+    it("should handle merging objects with mixed primitive and object values", () => {
+      const obj1 = { a: { b: 1 }, c: 3 }
+      const obj2 = { a: 2, d: 4 }
+      const result = deepMerge(obj1, obj2)
+      expect(result).toEqual({ a: 2, c: 3, d: 4 }) // Primitive value overrides nested object
+    })
+
+    it("should handle merging with objects containing `null` keys", () => {
+      const obj1 = { a: 1, b: null }
+      const obj2 = { b: { c: 2 }, d: 3 }
+      const result = deepMerge(obj1, obj2)
+      expect(result).toEqual({ a: 1, b: { c: 2 }, d: 3 })
     })
   })
 

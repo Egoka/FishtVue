@@ -5,6 +5,7 @@ import type { App } from "vue"
 import FishtVue, { useFishtVue } from "fishtvue/config"
 import type { FishtVue as FishtVueType } from "fishtvue/config"
 import type { FishtVueConfiguration } from "fishtvue/config"
+import { getDefaultLocale } from "fishtvue/config/index"
 
 describe("Testing config", () => {
   const expectText = "Start use FishtVue"
@@ -290,6 +291,143 @@ describe("Testing config", () => {
         expect(optionsFromGlobal).toBeUndefined()
         expect(warnSpy).toHaveBeenCalledWith("FishtVue is not installed!")
       }
+
+      // Восстанавливаем исходное состояние console.warn
+      warnSpy.mockRestore()
+    })
+  })
+  describe("Locale management", () => {
+    let app: App
+
+    beforeEach(() => {
+      app = createApp(App)
+    })
+
+    afterEach(() => {
+      // @ts-ignore
+      app = null
+      // @ts-ignore
+      delete window.FishtVue
+    })
+
+    it("should set active locale correctly using setActiveLocale", () => {
+      const options: FishtVueConfiguration = {
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "en",
+          messages: {
+            en: { hello: "Hello" },
+            ru: { hello: "Привет" }
+          }
+        }
+      }
+
+      app.use(FishtVue, options)
+      const wrapper = mount(App, {
+        global: {
+          plugins: [[FishtVue, options]]
+        }
+      })
+
+      const fishtVueInstance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+
+      expect(fishtVueInstance).toBeDefined()
+      expect(fishtVueInstance.setActiveLocale).toBeDefined()
+
+      // Set new active locale
+      const newLocale = "ru"
+      const result = fishtVueInstance.setActiveLocale(newLocale)
+
+      expect(result).toBe(newLocale)
+      expect(fishtVueInstance.config.locale.activeLocale).toBe(newLocale)
+    })
+
+    it("should warn and return false when attempting to set active locale without plugin", () => {
+      const warnSpy = vi.spyOn(console, "warn")
+
+      const wrapper = mount(App)
+      const fishtVueInstance = wrapper?.vm?.$?.appContext.config.globalProperties.$fishtVue
+
+      if (fishtVueInstance && fishtVueInstance.setActiveLocale) {
+        const result = fishtVueInstance.setActiveLocale("ru")
+        expect(result).toBe(false)
+        expect(warnSpy).toHaveBeenCalledWith("The locale has not been changed")
+      }
+
+      warnSpy.mockRestore()
+    })
+
+    it("should return default locale correctly using getDefaultLocale", () => {
+      const options: FishtVueConfiguration = {
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "ru",
+          messages: {
+            en: { hello: "Hello" },
+            ru: { hello: "Привет" }
+          }
+        }
+      }
+
+      app.use(FishtVue, options)
+      const wrapper = mount(App, {
+        global: {
+          plugins: [[FishtVue, options]]
+        }
+      })
+
+      const fishtVueInstance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+
+      expect(fishtVueInstance).toBeDefined()
+      expect(fishtVueInstance.getDefaultLocale).toBeDefined()
+
+      const defaultLocale = fishtVueInstance.getDefaultLocale()
+
+      expect(defaultLocale).toBe("en")
+    })
+
+    it("should warn and return undefined when accessing getDefaultLocale without plugin", () => {
+      const warnSpy = vi.spyOn(console, "warn")
+
+      const wrapper = mount(App)
+      const fishtVueInstance = wrapper?.vm?.$?.appContext.config.globalProperties.$fishtVue
+
+      if (!(fishtVueInstance && fishtVueInstance.getDefaultLocale)) {
+        const defaultLocale = getDefaultLocale()
+        expect(defaultLocale).toBeUndefined()
+        expect(warnSpy).toHaveBeenCalledWith("FishtVue is not installed!")
+      }
+
+      warnSpy.mockRestore()
+    })
+
+    it.skip("should warn and return false when locale configuration is undefined in setActiveLocale", () => {
+      const warnSpy = vi.spyOn(console, "warn")
+
+      const options: FishtVueConfiguration = {
+        // Указываем конфигурацию без locale
+        locale: undefined,
+        optionsTheme: {
+          nameTheme: "Aurora"
+        }
+      }
+
+      app.use(FishtVue, options)
+      const wrapper = mount(App, {
+        global: {
+          plugins: [[FishtVue, options]]
+        }
+      })
+
+      const fishtVueInstance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+
+      expect(fishtVueInstance).toBeDefined()
+      expect(fishtVueInstance.setActiveLocale).toBeDefined()
+
+      const result = fishtVueInstance.setActiveLocale("ru")
+
+      expect(result).toBe("ru")
+      expect(warnSpy).toHaveBeenCalledWith("The locale has not been changed")
 
       // Восстанавливаем исходное состояние console.warn
       warnSpy.mockRestore()

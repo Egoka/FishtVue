@@ -16,7 +16,11 @@
   const Pagination = new Component<"Pagination">()
   const options = Pagination.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<PaginationProps>()
+  const props = withDefaults(defineProps<PaginationProps>(), {
+    isInfoText: undefined,
+    isPageSizeSelector: undefined,
+    isHiddenNavigationButtons: undefined
+  })
   const emit = defineEmits<PaginationEmits>()
   // ---STATE-------------------------------
   const selectPageSize = ref<SelectExpose>()
@@ -26,19 +30,21 @@
     const sizePageProp = props.sizePage ?? options?.sizePage
     return sizePageProp && sizePageProp > 0 ? sizePageProp : 5
   })
-  const visibleNumberPages = computed<NonNullable<PaginationProps["visibleNumberPages"]>>(
-    () => (props.visibleNumberPages && props.visibleNumberPages >= 5 ? props.visibleNumberPages : 5) ?? 5
-  )
-  const total = computed<NonNullable<PaginationProps["total"]>>(() => props.total ?? 0)
-  const isInfoText = computed<PaginationProps["isInfoText"]>(() => props.isInfoText ?? false)
+  const visibleNumberPages = computed<NonNullable<PaginationProps["visibleNumberPages"]>>(() => {
+    const countVisible = props?.visibleNumberPages ?? options?.visibleNumberPages
+    return countVisible && countVisible >= 5 ? countVisible : 5
+  })
+  const total = computed<NonNullable<PaginationProps["total"]>>(() => props.total ?? options?.total ?? 0)
+  const isInfoText = computed<PaginationProps["isInfoText"]>(() => props.isInfoText ?? options?.isInfoText ?? false)
+  const sizesSelector = computed<PaginationProps["sizesSelector"]>(() => props?.sizesSelector ?? options?.sizesSelector)
   const isPageSizeSelector = computed<PaginationProps["isPageSizeSelector"]>(
-    () => (props.isPageSizeSelector || !!props.sizesSelector?.length) ?? false
+    () => ((props.isPageSizeSelector ?? options?.isPageSizeSelector) || !!sizesSelector.value?.length) ?? false
   )
   const isNavigationButtons = computed<PaginationProps["isHiddenNavigationButtons"]>(
-    () => !props.isHiddenNavigationButtons
+    () => !(props?.isHiddenNavigationButtons ?? options?.isHiddenNavigationButtons)
   )
   const arraySizesSelector = computed<Array<{ key: number; value: string }>>(() =>
-    ((props.sizesSelector ?? [...new Set([+(sizePage.value ?? 5), 5, 15, 20, 50, 100, 150])]) as Array<number>)
+    ((sizesSelector.value ?? [...new Set([+(sizePage.value ?? 5), 5, 15, 20, 50, 100, 150])]) as Array<number>)
       .sort((a, b) => a - b)
       .map((size) => ({ key: size, value: `${size} rows` }))
   )
@@ -49,13 +55,13 @@
       .map((_, i) => i + 1)
     if (countPages > visibleNumberPages.value) {
       // ---------------
-      let beforeCount = activePage.value - Math.floor((visibleNumberPages.value - 3) / 2)
-      let afterCount = activePage.value + Math.ceil((visibleNumberPages.value - 3) / 2)
-      if (!(activePage.value > 1 && beforeCount > 1)) {
+      let beforeCount = (activePage.value ?? 1) - Math.floor((visibleNumberPages.value - 3) / 2)
+      let afterCount = (activePage.value ?? 1) + Math.ceil((visibleNumberPages.value - 3) / 2)
+      if (!((activePage.value ?? 1) > 1 && beforeCount > 1)) {
         beforeCount = 1
         afterCount = afterCount + (visibleNumberPages.value - (afterCount - beforeCount + 1) - 1)
       }
-      if (!(activePage.value < countPages && afterCount < countPages)) {
+      if (!((activePage.value ?? 1) < countPages && afterCount < countPages)) {
         afterCount = countPages
         beforeCount = beforeCount - (visibleNumberPages.value - (afterCount - beforeCount + 1) - 1)
       }
@@ -72,8 +78,18 @@
       return resultArray.length ? resultArray : [0]
     }
   })
-  const activePage = computed<NonNullable<PaginationProps["modelValue"]>>(() => props.modelValue ?? pages.value[0] ?? 1)
-  const mode = computed<NonNullable<PaginationProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  const activePage = ref<NonNullable<PaginationProps["modelValue"]>>()
+  watch(
+    () => props.modelValue,
+    () => {
+      activePage.value =
+        typeof (+props.modelValue as any) === "number" && +props.modelValue ? (+props.modelValue ?? pages.value[0]) : 1
+    },
+    { immediate: true }
+  )
+  const mode = computed<NonNullable<PaginationProps["mode"]>>(
+    () => props?.mode ?? options?.mode ?? Pagination.componentsStyle() ?? "outlined"
+  )
   const isStyleMode = computed<boolean>(() => mode.value === "outlined" || mode.value === "filled")
   const modeStyleSelect = computed<string>(() =>
     mode.value === "filled"
@@ -104,9 +120,11 @@
     }
   }))
   const classBase = ref(
-    Pagination.setStyle(
-      "flex items-center justify-between w-full border-t border-gray-200 dark:border-gray-800 pb-3 -mt-px"
-    )
+    Pagination.setStyle([
+      "flex items-center justify-between w-full border-t border-gray-200 dark:border-gray-800 pb-3 -mt-px",
+      options?.class ?? "",
+      props?.class ?? ""
+    ])
   )
   const classShortVersion = computed(() =>
     Pagination.setStyle(["justify-between mx-5 sm:hidden", isStyleMode.value ? "pt-3" : "", "flex flex-1"])
@@ -137,13 +155,13 @@
   )
   const classPrevious = computed(() =>
     Pagination.setStyle([
-      isInfoText.value || isPageSizeSelector.value ? "-mt-px flex flex-1 w-5" : "",
+      isInfoText.value || isPageSizeSelector.value ? "-mt-px flex flex-1 w-12" : "",
       isStyleMode.value ? "pt-3" : ""
     ])
   )
   const classNext = computed(() =>
     Pagination.setStyle([
-      isInfoText.value || isPageSizeSelector.value ? "-mt-px flex flex-1 w-0 justify-end" : "",
+      isInfoText.value || isPageSizeSelector.value ? "-mt-px flex flex-1 w-12 justify-end" : "",
       isStyleMode.value ? "pt-3" : ""
     ])
   )
@@ -194,20 +212,19 @@
 
   // ---METHODS-----------------------------
   function switchPage(value: PaginationProps["modelValue"] | Array<PaginationProps["modelValue"]>) {
-    let page
     if (Array.isArray(value)) {
-      page = value
+      activePage.value = value
         .filter((i) => typeof i === "number")
         ?.reduce((active, page, index, array) => {
-          if (page === activePage.value) {
+          if (page === (activePage.value ?? 1)) {
             return array[index + 1]
           }
           return active
         }, 0)
-    } else {
-      page = value
+    } else if (value && typeof +value === "number") {
+      activePage.value = value
     }
-    emit("update:modelValue", page === undefined || page === null || page <= 0 ? activePage.value : page)
+    emit("update:modelValue", activePage.value)
   }
 
   function switchSizePage(sizePageValue: PaginationProps["modelValue"]) {
@@ -217,66 +234,69 @@
 </script>
 
 <template>
-  <div :class="classBase">
-    <div :class="classShortVersion">
+  <div data-pagination :class="classBase">
+    <div data-pagination-short-version :class="classShortVersion">
       <Button
+        data-pagination-short-previous
         :class="['m-0 w-5 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
         :disabled="[0, activePage].includes(pages[pages.length - 1])"
         @click="switchPage(pages.slice().reverse())">
-        Previous
+        {{ Pagination.t("previous") ?? "Previous" }}
       </Button>
       <!-- -------------------------------- -->
-      <div :class="classShortContent">
+      <div data-pagination-content :class="classShortContent">
         <span :class="classShortContentActivePage">{{ activePage }}</span>
         <span :class="classShortContentSeparator">/</span>
         <span :class="classShortContentCountPages">{{ pages[pages.length - 1] }}</span>
       </div>
       <!-- -------------------------------- -->
       <Button
+        data-pagination-short-next
         :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
         :disabled="[0, activePage].includes(pages[pages.length - 1])"
         @click="switchPage(pages)">
-        Next
+        {{ Pagination.t("next") ?? "Next" }}
       </Button>
     </div>
     <!-- -------------------------------- -->
-    <div :class="classContent">
+    <div data-pagination-content :class="classContent">
       <!-- -------------------------------- -->
-      <div v-if="isInfoText" :class="classInfoText">
+      <div v-if="isInfoText" data-pagination-content-info :class="classInfoText">
         <p :class="classInfoTextContent">
           <span :class="classInfoTextPage">
             {{
-              (sizePage ?? 5) * activePage +
-              (total - (sizePage ?? 5) * activePage < 0 ? total - (sizePage ?? 5) * activePage : 0)
+              (sizePage ?? 5) * (activePage ?? 1) +
+              (total - (sizePage ?? 5) * (activePage ?? 1) < 0 ? total - (sizePage ?? 5) * (activePage ?? 1) : 0)
             }}
           </span>
-          of
+          {{ Pagination.t("of") ?? "of" }}
           <span :class="classInfoTextPage">{{ total }}</span>
-          items
+          {{ Pagination.t("lines") ?? "lines" }}
         </p>
       </div>
       <!-- -------------------------------- -->
-      <nav v-if="pages.length" :class="classNav" aria-label="Pagination">
-        <div :class="classPrevious">
+      <nav v-if="pages.length" data-pagination-nav :class="classNav" aria-label="Pagination">
+        <div data-pagination-nav-previous :class="classPrevious">
           <Button
             v-if="isNavigationButtons"
             :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
             :disabled="[0, activePage].includes(pages[0])"
             @click="switchPage(pages.slice().reverse())">
             <template v-if="isInfoText || isPageSizeSelector">
-              <span :class="classButtonSpan">Previous</span>
+              <span :class="classButtonSpan">{{ Pagination.t("previous") ?? "Previous" }}</span>
               <ChevronLeftIcon :class="classIcon" aria-hidden="true" />
             </template>
             <template v-else>
               <ArrowLongLeftIcon :class="classIconContent" aria-hidden="true" />
-              Previous
+              {{ Pagination.t("previous") ?? "Previous" }}
             </template>
           </Button>
         </div>
-        <div :class="classBodyPages">
+        <div data-pagination-nav-pages :class="classBodyPages">
           <template v-for="(page, key) in pages" :key="`${page}-${key}`">
             <Button
               v-if="page > 0"
+              data-pagination-nav-page
               :aria-current="page === activePage ? 'page' : false"
               :class="[
                 'font-medium select-none m-0',
@@ -311,26 +331,30 @@
           <span :class="classShortContentSeparator">/</span>
           <span :class="classShortContentCountPages">{{ pages[pages.length - 1] }}</span>
         </div>
-        <div :class="classNext">
+        <div data-pagination-nav-next :class="classNext">
           <Button
             v-if="isNavigationButtons"
             :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
             :disabled="[0, activePage].includes(pages[pages.length - 1])"
             @click="switchPage(pages)">
             <template v-if="isInfoText || isPageSizeSelector">
-              <span :class="classButtonSpan">Next</span>
+              <span :class="classButtonSpan">{{ Pagination.t("next") ?? "Next" }}</span>
               <ChevronRightIcon :class="classIcon" aria-hidden="true" />
             </template>
             <template v-else>
-              Next
+              {{ Pagination.t("next") ?? "Next" }}
               <ArrowLongRightIcon :class="classIconContent" aria-hidden="true" />
             </template>
           </Button>
         </div>
       </nav>
       <!-- -------------------------------- -->
-      <div v-if="isPageSizeSelector" :class="classPageSizeSelector" @click="selectPageSize?.openSelect()">
-        <p :class="classPageSizeSelectorText">Show:</p>
+      <div
+        v-if="isPageSizeSelector"
+        data-pagination-selector
+        :class="classPageSizeSelector"
+        @click="selectPageSize?.openSelect()">
+        <p :class="classPageSizeSelectorText">{{ Pagination.t("show") ?? "Show:" }}</p>
         <Select
           v-bind="paramsSelect"
           ref="selectPageSize"

@@ -1,8 +1,7 @@
 import * as Vue from "vue"
-// @ts-ignore
 import Alert from "./Alert.vue"
-import { BaseAlert } from "./Alert"
 import Component from "fishtvue/component"
+import type { BaseAlert } from "./Alert"
 
 const valuesPosition = [
   "top",
@@ -23,19 +22,12 @@ export function openAlert(optionsAlert: BaseAlert) {
   const alertId = `alert-${crypto.randomUUID()}`
   // SET options
   const options: BaseAlert = Object.assign({}, optionsAlert)
-  if (!options.position) {
+  if (!options.position || !(options?.position && valuesPosition.includes(options.position))) {
     options.position = "top"
   }
-  if (typeof options?.modelValue !== "boolean") {
+  if (!("modelValue" in options) || typeof options?.modelValue !== "boolean") {
     options.modelValue = true
   }
-  // const alerts = [...document.querySelectorAll('.alert.top .alert-body')]
-  // if (alerts.length) {
-  //   const lastAlert = alerts[alerts.length-1].getBoundingClientRect()
-  //   options.style = {
-  //     transform: `translate(-50%, ${lastAlert.height + lastAlert.top}px)`
-  //   }
-  // }
   /////////////////////////////////////////////////////////
   const alertBody = document.querySelector(`.alert-${options.position}`)
   if (alertBody) {
@@ -79,7 +71,7 @@ export function openAlert(optionsAlert: BaseAlert) {
   if (options.displayTime && +options.displayTime >= 100) {
     timer = +setTimeout(() => destroy(), +options.displayTime) as number
   }
-  const alertButton = document.querySelector(`#${alertId} .button-delete`)
+  const alertButton = document.querySelector(`#${alertId} [data-alert-button] button[data-button]`)
   if (alertButton) {
     alertButton.addEventListener("click", destroy)
   }

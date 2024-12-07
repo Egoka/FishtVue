@@ -1,15 +1,18 @@
 <script setup lang="ts">
   import { computed, getCurrentInstance, ref, watch, onMounted } from "vue"
   import type { SwitchProps, SwitchEmits, SwitchExpose } from "./Switch"
+  import type { StyleClass, StyleMode } from "fishtvue/types"
   import Icons from "fishtvue/icons/Icons.vue"
-  import Component from "fishtvue/component"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
-  import { StyleClass, StyleMode } from "fishtvue/types"
+  import Component from "fishtvue/component"
   // ---BASE-COMPONENT----------------------
   const Switch = new Component<"Switch">()
   const options = Switch.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<SwitchProps>()
+  const props = withDefaults(defineProps<SwitchProps>(), {
+    disabled: undefined,
+    required: undefined
+  })
   const emit = defineEmits<SwitchEmits>()
   // ---STATE-------------------------------
   const modelValue = ref<SwitchProps["modelValue"]>()
@@ -21,14 +24,19 @@
   const isActiveSwitch = ref<boolean>(false)
   // ---PROPS-------------------------------
   const id = ref(props.id ?? getCurrentInstance()?.uid)
-  const switchingType = computed<SwitchProps["switchingType"]>(() => props?.switchingType ?? "checkbox")
-  const mode = computed<SwitchProps["mode"]>(() => props?.mode ?? "none")
+  const switchingType = computed<SwitchProps["switchingType"]>(
+    () => props?.switchingType ?? options?.switchingType ?? "checkbox"
+  )
+  const mode = computed<SwitchProps["mode"]>(() => props?.mode ?? options?.mode ?? Switch.componentsStyle() ?? "none")
   const label = computed<SwitchProps["label"]>(() => String(props.label ?? ""))
   const isDisabled = computed<NonNullable<SwitchProps["disabled"]>>(() => props.disabled ?? false)
   const isRequired = computed<SwitchProps["required"]>(() => props.required ?? false)
-  const rounded = computed<number>(() => (props?.rounded === "full" ? 9999 : (props?.rounded ?? 9999)))
-  const iconActive = computed<SwitchProps["iconActive"]>(() => props?.iconActive ?? "")
-  const iconInactive = computed<SwitchProps["iconInactive"]>(() => props?.iconInactive ?? "")
+  const rounded = computed<number>(() => {
+    const valueRounded = props?.rounded ?? options?.rounded
+    return valueRounded === "full" ? 9999 : (valueRounded ?? 9999)
+  })
+  const iconActive = computed<SwitchProps["iconActive"]>(() => props?.iconActive ?? options?.iconActive ?? "")
+  const iconInactive = computed<SwitchProps["iconInactive"]>(() => props?.iconInactive ?? options?.iconInactive ?? "")
   const classBaseSwitch = computed<StyleClass>(() =>
     switchingType.value === "switch"
       ? Switch.setStyle([
@@ -43,7 +51,7 @@
             ? `bg-stone-100 dark:bg-stone-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`
             : "",
           options?.class ?? "",
-          props.class ?? "",
+          props?.class ?? "",
           isActiveSwitch.value && mode.value !== "none"
             ? "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
             : "",
@@ -159,13 +167,15 @@
 </script>
 
 <template>
-  <div :class="classBaseSwitch">
+  <div data-switch :class="classBaseSwitch">
     <div :class="classInputDiv">
       <button
         v-if="switchingType === 'switch'"
+        data-input-switch
         role="switch"
         type="button"
         tabindex="0"
+        :disabled="isDisabled"
         :aria-checked="modelValue"
         :data-headlessui-state="modelValue ? 'checked' : ''"
         :class="classSwitch"
@@ -188,6 +198,7 @@
       </button>
       <input
         v-else-if="switchingType === 'checkbox'"
+        data-input-checkbox
         :id="id"
         :name="id"
         tabindex="0"
@@ -196,18 +207,18 @@
         type="checkbox"
         :class="classSwitch"
         :style="`border-radius: ${rounded - 1}px`"
-        @keydown.enter="inputEvent(!modelValue)"
+        @keydown.stop.enter="inputEvent(!modelValue)"
         @focus="isActiveSwitch = true"
         @blur="isActiveSwitch = false"
         @input="inputEvent(($event.target as HTMLInputElement).checked)"
         @change="changeModelValue(($event.target as HTMLInputElement).checked)" />
     </div>
-    <div :class="classLabel">
+    <div data-switch-label :class="classLabel" @click="inputEvent(!modelValue)">
       {{ label }}
     </div>
     <slot />
-    <span ref="afterInput" :class="classAfterInput">
-      <div v-if="help?.length" :class="classIconBody">
+    <span data-switch-after ref="afterInput" :class="classAfterInput">
+      <div data-switch-help v-if="help?.length" :class="classIconBody">
         <Icons
           type="QuestionMarkCircle"
           class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 transition cursor-help" />

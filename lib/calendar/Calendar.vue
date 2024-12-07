@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, getCurrentInstance, ref, watch, onMounted, useSlots } from "vue"
+  import { computed, getCurrentInstance, ref, watch, onMounted, useSlots, nextTick } from "vue"
   import type {
     CalendarProps,
     CalendarEmits,
@@ -21,7 +21,16 @@
   const Calendar = new Component<"Calendar">()
   const options = Calendar.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<CalendarProps>()
+  const props = withDefaults(defineProps<CalendarProps>(), {
+    autoFocus: undefined,
+    isNotCloseOnDateChange: undefined,
+    isValue: undefined,
+    isInvalid: undefined,
+    required: undefined,
+    loading: undefined,
+    disabled: undefined,
+    clear: undefined
+  })
   const emit = defineEmits<CalendarEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
@@ -42,6 +51,7 @@
       modelValue: props.paramsDatePicker?.mask ?? "DD MMMM YYYY",
       input: [props.paramsDatePicker?.mask ?? "DD MMMM YYYY"]
     },
+    ...options?.paramsDatePicker,
     ...props.paramsDatePicker
   }))
   const calendarPicker = ref<ICalendarPicker>()
@@ -74,11 +84,13 @@
       return !!visibleDate.value || isOpenPicker.value
     }
   })
-  const autoFocus = computed<NonNullable<CalendarProps["autoFocus"]>>(() => props?.autoFocus ?? false)
-  const isNotCloseOnDateChange = computed<NonNullable<CalendarProps["isNotCloseOnDateChange"]>>(
-    () => props?.isNotCloseOnDateChange ?? false
+  const autoFocus = computed<NonNullable<CalendarProps["autoFocus"]>>(
+    () => props?.autoFocus ?? options?.autoFocus ?? false
   )
-  const mode = computed<NonNullable<CalendarProps["mode"]>>(() => props.mode ?? "outlined")
+  const isNotCloseOnDateChange = computed<NonNullable<CalendarProps["isNotCloseOnDateChange"]>>(
+    () => props?.isNotCloseOnDateChange ?? options?.isNotCloseOnDateChange ?? false
+  )
+  const mode = computed<NonNullable<CalendarProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const placeholder = computed<IParamsDatePicker["placeholder"]>(() =>
     String(props.paramsDatePicker?.placeholder ?? "")
   )
@@ -117,6 +129,7 @@
     eventOpen: "click",
     eventClose: "hover",
     marginPx: 5,
+    ...options?.paramsFixWindow,
     ...props?.paramsFixWindow
   }))
   const classDataPicker = computed(() =>
@@ -144,7 +157,7 @@
   )
   const classPicker = computed(() =>
     Calendar.setStyle([
-      "mt-1 w-min min-w-min max-w-lg max-h-max text-base sm:text-sm rounded-md ring-1 ring-black/5 shadow-xl",
+      "mt-0 w-min min-w-min max-w-lg max-h-max text-base sm:text-sm rounded-md ring-1 ring-black/5 shadow-xl",
       mode.value === "filled"
         ? "border-0 bg-stone-100 dark:bg-stone-900"
         : mode.value === "outlined"
@@ -216,11 +229,11 @@
   onMounted(() => {
     Calendar.initStyle()
     if (autoFocus.value) openCalendar()
-    setTimeout(() => {
+    nextTick(() => {
       visibleDate.value = <ICalendarPicker["inputValue"]>(
         (calendarPicker.value?.inputValue as ICalendarPicker["inputValue"])
       )
-    }, 1)
+    })
   })
   // ---WATCHERS----------------------------
   watch(calendarPicker, () => emit("getCalendar", calendarPicker.value as ICalendarPicker), { deep: true })
@@ -249,22 +262,20 @@
     isOpenPicker.value = true
   }
 
-  function closeCalendar(evt?: MouseEvent) {
+  function closeCalendar(event?: MouseEvent) {
     if (isDisabled.value) return
-    if (evt) {
+    if (event) {
       if ((isOpenPicker.value ?? false) && ((dataPicker.value ?? false) || (picker.value ?? false)))
         isOpenPicker.value =
-          evt.composedPath().includes(dataPicker.value as HTMLElement) ||
-          evt.composedPath().includes(picker.value as HTMLElement)
+          event.composedPath().includes(dataPicker.value as HTMLElement) ||
+          event.composedPath().includes(picker.value as HTMLElement)
     } else isOpenPicker.value = false
   }
 
   // ---------------------------------------
   function changeDate(date: ICalendarPicker["inputValue"]) {
     visibleDate.value = date
-    if (!isNotCloseOnDateChange.value) {
-      // isOpenPicker.value = false
-    }
+    if (!isNotCloseOnDateChange.value) isOpenPicker.value = false
     emit("update:isInvalid", false)
     emit("update:modelValue", baseDate.value)
     emit("change:modelValue", baseDate.value)
@@ -273,14 +284,15 @@
   function focus(focus: boolean = true) {
     isFocus.value = focus
     classLayout.value =
-      (props.class ?? "cursor-pointer") +
+      (props.class ?? options?.class ?? "cursor-pointer") +
       (isFocus.value
         ? " border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
         : "")
   }
 
   function clearDataPicker() {
-    isOpenPicker.value = false
+    value.value = undefined
+    if (!isNotCloseOnDateChange.value) isOpenPicker.value = false
     emit("update:isInvalid", false)
     emit("update:modelValue", null)
     emit("change:modelValue", null)
@@ -292,6 +304,7 @@
     <div
       ref="dataPicker"
       :id="id"
+      data-calendar
       tabindex="0"
       :class="classDataPicker"
       @focusin="focus(true)"
@@ -327,8 +340,9 @@
         v-bind="paramsFixWindow"
         :model-value="isOpenPicker"
         class-body="z-30"
+        class="px-0 rounded-[0.4rem]"
         @close="(env) => closeCalendar(env)">
-        <div ref="picker" :class="classPicker">
+        <div data-calendar-picker ref="picker" :class="classPicker">
           <DatePicker
             v-if="datePicker?.isRange"
             v-model.range.string="value"

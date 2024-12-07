@@ -1,203 +1,263 @@
-type message = string
+import { FormValues } from "fishtvue/form"
 
-export declare interface ResultCallback {
+type message = string
+type ReturnValid = { isInvalid: boolean; message: string }
+
+export declare interface RuleCallback {
   isInvalid: boolean
   message?: string
 }
 
 interface Rule {
   message?: message
+  isActive?: boolean
 }
 
 // ---------------------------------------
-export declare interface RequiredRule extends Rule {}
+export declare type RequiredRule = Rule & {
+  type: "required"
+}
 
-export declare interface EmailRule extends Rule {}
+export declare type EmailRule = Rule & {
+  type: "email"
+}
 
-export declare interface PhoneRule extends Rule {}
+export declare type PhoneRule = Rule & {
+  type: "phone"
+}
 
-export declare interface NumericRule extends Rule {}
-
-export declare interface RegularRule extends Rule {
+export declare type NumericRule = Rule & {
+  type: "numeric"
+}
+type Regular = {
   regular: RegExp | string
 }
+export declare type RegularRule = Rule &
+  Regular & {
+    type: "regular"
+  }
 
-export declare interface RangeRule extends Rule {
+type Range = {
   min?: number
   max?: number
-}
+} & Rule
+export declare type RangeRule = Rule &
+  Range & {
+    type: "range"
+  }
 
-export declare interface LengthRule extends Rule {
+type Length = {
   min?: number
   max?: number
-}
+} & Rule
+export declare type LengthRule = Rule &
+  Length & {
+    type: "length"
+  }
 
-export declare interface AsyncRule extends Rule {
-  validationCallback(value: any): Promise<ResultCallback>
-}
+type Async = {
+  validationCallback(value: any): Promise<RuleCallback>
+} & Rule
+export declare type AsyncRule = Rule &
+  Async & {
+    type: "async"
+  }
 
-export declare interface CustomRule extends Rule {
-  validationCallback(value: any): ResultCallback
-}
+type Custom = {
+  validationCallback(value: any): RuleCallback
+} & Rule
 
-export declare interface CompareRule extends Rule {
-  compareField: any
-}
+export declare type CustomRule = Rule &
+  Custom & {
+    type: "custom"
+  }
+
+type Compare = {
+  compareFields?: string[]
+  validationCallback(value: any, compareFields: FormValues): RuleCallback
+} & Rule
+export declare type CompareRule = Rule &
+  Compare & {
+    type: "compare"
+  }
 
 // ---------------------------------------
-export declare type Rules = {
-  required?: RequiredRule | message | boolean
-  email?: EmailRule | message
-  phone?: PhoneRule | message
-  numeric?: NumericRule | message
-  regular?: RegularRule
-  range?: RangeRule
-  length?: LengthRule
-  async?: AsyncRule
-  custom?: CustomRule
-  compare?: CompareRule
+type RulesArray = Array<
+  | RequiredRule
+  | EmailRule
+  | PhoneRule
+  | NumericRule
+  | RegularRule
+  | RangeRule
+  | LengthRule
+  | AsyncRule
+  | CustomRule
+  | CompareRule
+>
+type RuleObject = message | boolean | Rule
+type RulesObject = {
+  required?: RuleObject
+  email?: RuleObject
+  phone?: RuleObject
+  numeric?: RuleObject
+  regular?: Regular
+  range?: Range
+  length?: Length
+  async?: Async
+  custom?: Custom
+  compare?: Compare
+}
+export declare type Rules = RulesArray | RulesObject
+
+// ---------------------------------------
+
+import { required, email, phone, numeric, regular, range, length } from "./rulesMethods"
+import { fieldsPick } from "fishtvue/utils/objectHandler"
+
+const listRules: Record<keyof RulesObject, any> = {
+  required,
+  email,
+  phone,
+  numeric,
+  regular,
+  range,
+  length,
+  async: undefined,
+  custom: undefined,
+  compare: undefined
+}
+const arrayRules: Array<keyof RulesObject> = [
+  "required",
+  "email",
+  "phone",
+  "numeric",
+  "regular",
+  "range",
+  "length",
+  "async",
+  "custom",
+  "compare"
+]
+const defaultMessages: Record<keyof RulesObject, message> = {
+  required: "Required field",
+  email: "Invalid email",
+  phone: "Invalid phone",
+  numeric: "Invalid numeric",
+  regular: "The value does not satisfy the rule",
+  range: "The value is not within the set range",
+  length: "Invalid length value",
+  async: "Invalid field",
+  custom: "Invalid field",
+  compare: "The field does not fall off"
 }
 
-const emptyData = [undefined, null, ""]
-
-function required(value: boolean | string | number | { [index: string]: any } | [any]): boolean {
-  if (value) {
-    if (Array.isArray(value) || typeof value === "string") {
-      return !!value?.length
-    } else if (Object.prototype.toString.call(value) === "[object Date]" || typeof value === "number") {
-      return true
-    } else if (Object.values(value)?.length) {
-      return !!Object.values(value)?.filter((i) => i).length
-    } else {
-      return !!value
-    }
-  }
-  return false
-}
-
-function email(value: string) {
-  if (emptyData.includes(value)) {
-    return false
-  }
-  return !value.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)?.[0]
-}
-
-function phone(value: string) {
-  if (emptyData.includes(value)) {
-    return false
-  }
-  return !value.match(
-    /^\s*(?:\+?(\d{1,3}))?([-. (]*(\d{1,3})[-. )]*)?((\d{1,4})[-. ]*(\d{0,4})[-. ]*(\d{0,4})[-. ]*(\d{0,7}))$/m
-  )
-}
-
-function numeric(value: string) {
-  if (emptyData.includes(value)) {
-    return false
-  }
-  return !value.match(/^\d+$/)?.[0]
-}
-
-function regular(value: string, regular: RegExp | string) {
-  if (emptyData.includes(value)) {
-    return false
-  }
-  return typeof regular === "string" ? !value.match(new RegExp(regular))?.[0] : !value.match(regular)?.[0]
-}
-
-function range(value: string | any, min: number | undefined, max: number | undefined) {
-  if (typeof value !== "string") {
-    return false
-  }
-  if (emptyData.includes(value)) {
-    return false
-  }
-  if (!value.match(/^\d+$/)?.[0]) return true
-  if (min && +value < min) return true
-  if (max && +value > max) return true
-}
-
-function length(value: string, min: number | undefined, max: number | undefined) {
-  if (emptyData.includes(value)) {
-    return false
-  }
-  if (min && value.length < min) return true
-  if (max && value.length > max) return true
-}
-
-export function getValidate(value: any, field: any): { isInvalid: boolean; message: string } {
-  const rules: Rules = field.rules
-  let message: string = ""
-  const arrayOfOrderRules = ["required", "email", "phone", "numeric", "regular", "range", "length", "custom", "compare"]
-  const isInvalid = arrayOfOrderRules
-    .filter((rule) => Object.keys(rules).includes(rule))
-    .some((rule) => {
-      if (rule === "required") {
-        if (!required(value)) {
-          message =
-            typeof rules["required"] === "string"
-              ? rules["required"] || ""
-              : typeof rules["required"] === "boolean"
-                ? rules["required"]
-                  ? "Обязательное поле"
+function toRulesArray(rules: RulesArray | RulesObject): RulesArray {
+  return Array.isArray(rules)
+    ? (rules
+        .map((rule) => {
+          if (!arrayRules.find((name) => rule.type === name)) return
+          return {
+            ...rule,
+            message: rule?.message ?? defaultMessages[rule.type],
+            isActive: rule?.isActive ?? true
+          }
+        })
+        .filter(Boolean) as RulesArray)
+    : ((Object.keys(rules) as Array<keyof RulesObject>)
+        .map((rule: keyof RulesObject) => {
+          const type = rule
+          const message =
+            typeof rules[rule] === "string"
+              ? rules[rule]
+              : typeof rules[rule] === "boolean"
+                ? rules[rule]
+                  ? defaultMessages[rule]
                   : ""
-                : rules["required"]?.message || ""
-          return true
-        }
-      } else if (rule === "email") {
-        if (email(value)) {
-          message = typeof rules["email"] === "string" ? rules["email"] || "" : rules["email"]?.message || ""
-          return true
-        }
-      } else if (rule === "phone") {
-        if (phone(value)) {
-          message = typeof rules["phone"] === "string" ? rules["phone"] || "" : rules["phone"]?.message || ""
-          return true
-        }
-      } else if (rule === "numeric") {
-        if (numeric(value)) {
-          message = typeof rules["numeric"] === "string" ? rules["numeric"] || "" : rules["numeric"]?.message || ""
-          return true
-        }
-      } else if (rule === "regular") {
-        if (regular(value, rules["regular"]?.regular || "")) {
-          message = rules["regular"]?.message || ""
-          return true
-        }
-      } else if (rule === "range") {
-        if (range(value, rules["range"]?.min, rules["range"]?.max)) {
-          message = rules["range"]?.message || ""
-          return true
-        }
-      } else if (rule === "length") {
-        if (length(value, rules["length"]?.min, rules["length"]?.max)) {
-          message = rules["length"]?.message || ""
-          return true
-        }
-      } else if (rule === "custom") {
-        const result = rules["custom"]?.validationCallback(value)
-        if (result !== undefined && result?.isInvalid) {
-          message = result?.message || rules["custom"]?.message || ""
-          return true
-        }
-      } else if (rule === "compare") {
-        // if (rules["compare"]?.compareField) {
-        //   message = rules["compare"]?.message||""
-        //   return true
-        // }
+                : typeof rules[rule] === "object"
+                  ? ((rules[rule] as Rule)?.message ?? "")
+                  : ""
+          const isActive =
+            typeof rules[rule] === "boolean"
+              ? rules[rule]
+              : typeof rules[rule] === "object"
+                ? ((rules[rule] as Rule)?.isActive ?? true)
+                : true
+          if (rule === "required" || rule === "email" || rule === "phone" || rule === "numeric")
+            return { type, message, isActive } as Rule & { type: keyof RulesObject }
+          else if (rule === "regular")
+            return { type, message, isActive, regular: rules[rule]?.regular ?? "" } as RegularRule
+          else if (rule === "range" || rule === "length")
+            return { type, message, isActive, min: rules[rule]?.min, max: rules[rule]?.max } as RangeRule | LengthRule
+          else if (rule === "async")
+            return { type, message, isActive, validationCallback: rules[rule]?.validationCallback } as AsyncRule
+          else if (rule === "custom")
+            return { type, message, isActive, validationCallback: rules[rule]?.validationCallback } as CustomRule
+          else if (rule === "compare")
+            return {
+              type,
+              message,
+              isActive,
+              compareField: rules[rule]?.compareFields,
+              validationCallback: rules[rule]?.validationCallback
+            } as CompareRule
+        })
+        .filter(Boolean) as RulesArray)
+}
+
+export function getValidate(value: any, rules: Rules, formFields: FormValues): ReturnValid {
+  const orderOfRules: RulesArray = toRulesArray(rules)
+  let message: string = ""
+  const isInvalid = orderOfRules.some((rule) => {
+    if (!rule.isActive) return false
+    if (rule.type === "required" || rule.type === "email" || rule.type === "phone" || rule.type === "numeric") {
+      if (!listRules?.[rule.type](value)) {
+        message = rule.message ?? defaultMessages[rule.type]
+        return true
       }
-    })
+    } else if (rule.type === "regular") {
+      if (!regular(value, rule?.regular || "")) {
+        message = rule.message ?? defaultMessages[rule.type]
+        return true
+      }
+    } else if (rule.type === "range" || rule.type === "length") {
+      if (!listRules?.[rule.type](value, rule?.min, rule?.max)) {
+        message = rule.message ?? defaultMessages[rule.type]
+        return true
+      }
+    } else if (rule.type === "custom") {
+      const result = rule?.validationCallback(value)
+      if (result !== undefined && result?.isInvalid) {
+        message = result?.message ?? rule?.message ?? ""
+        return true
+      }
+    } else if (rule.type === "compare") {
+      const result = rule?.validationCallback(
+        value,
+        rule?.compareFields && rule?.compareFields?.length ? fieldsPick(formFields, rule?.compareFields) : formFields
+      )
+      if (result !== undefined && result?.isInvalid) {
+        message = result?.message ?? rule?.message ?? ""
+        return true
+      }
+    }
+  })
   return { isInvalid, message }
 }
 
-export async function getAsyncValidate(value: any, field: any) {
-  const rules: Rules = field.rules
+export function isExistRule(rules: RulesArray | RulesObject, rule: keyof RulesObject): boolean {
+  return !!(Object.keys(rules).includes(rule) || (Array.isArray(rules) && rules.find((item) => item.type === rule)))
+}
+
+export async function getAsyncValidate(value: any, rules: Rules): Promise<ReturnValid> {
   let isInvalid: boolean = false
   let message: string = ""
-  const result = await rules["async"]?.validationCallback(value)
+  const asyncRule = toRulesArray(rules).find((rule) => rule.type === "async") as AsyncRule | undefined
+  if (!asyncRule) return { isInvalid, message }
+  if (!asyncRule?.isActive) return { isInvalid, message }
+  const result = await asyncRule?.validationCallback(value)
   if (result !== undefined) {
     isInvalid = result.isInvalid
-    message = result.message || rules["async"]?.message || ""
+    message = result.message ?? asyncRule?.message ?? ""
   }
   return { isInvalid, message }
 }

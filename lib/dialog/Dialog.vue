@@ -4,18 +4,30 @@
   import Button from "fishtvue/button/Button.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
-  import { StyleClass } from "fishtvue/types"
+  import { Size, StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
   const Dialog = new Component<"Dialog">()
   const options = Dialog.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<DialogProps>()
+  const props = withDefaults(defineProps<DialogProps>(), {
+    // notAnimate: undefined,
+    closeButton: undefined,
+    withoutMargin: undefined,
+    notCloseBackground: undefined
+  })
   const emit = defineEmits<DialogEmits>()
+  // ---STATE-------------------------------
+  const isOpen = ref<boolean>(props.modelValue ?? false)
+  watch(
+    () => props.modelValue,
+    (value) => (isOpen.value = value),
+    { immediate: true }
+  )
   // ---PROPS-------------------------------
   const toTeleport = computed<DialogProps["toTeleport"]>(() => props.toTeleport ?? options?.toTeleport ?? "body")
-  const isOpen = computed<boolean>(() => props.modelValue ?? false)
   const size = computed<string>(() => {
-    switch (props.size) {
+    const size: Size | undefined = props?.size ?? options?.size
+    switch (size) {
       case "xs":
         return "sm:max-w-xs"
       case "sm":
@@ -42,16 +54,23 @@
         return "sm:max-w-2xl"
     }
   })
-  const isCloseButton = computed<DialogProps["closeButton"]>(() => props.closeButton ?? false)
-  const notCloseBackground = computed<DialogProps["notCloseBackground"]>(() => props.notCloseBackground ?? false)
-  const withoutMargin = computed<DialogProps["withoutMargin"]>(() => props.withoutMargin ?? false)
-  const position = computed<NonNullable<DialogProps["position"]>>(() => props.position ?? "center")
+  const isCloseButton = computed<NonNullable<DialogProps["closeButton"]>>(
+    () => props.closeButton ?? options?.closeButton ?? false
+  )
+  const notCloseBackground = computed<NonNullable<DialogProps["notCloseBackground"]>>(
+    () => props.notCloseBackground ?? options?.notCloseBackground ?? false
+  )
+  const withoutMargin = computed<NonNullable<DialogProps["withoutMargin"]>>(
+    () => props.withoutMargin ?? options?.withoutMargin ?? false
+  )
+  const position = computed<NonNullable<DialogProps["position"]>>(() => props.position ?? options?.position ?? "center")
   const classBodyDialog = computed<DialogProps["class"]>(() =>
     Dialog.setStyle([options?.class ?? "", props?.class ?? ""])
   )
   const enterAndLeaveClass = computed<StyleClass>(() => {
     let returnClass
-    if (!props.notAnimate) {
+    const isNotAnimate = props?.notAnimate ?? options?.notAnimate ?? false
+    if (!isNotAnimate) {
       if (position.value.includes("left")) {
         returnClass = "-translate-x-full"
       } else if (position.value.includes("right")) {
@@ -93,7 +112,7 @@
     Dialog.setStyle([
       "fixed top-0 left-0 right-0 bottom-0 z-[200] w-full overflow-x-hidden overflow-y-auto inset-0 h-screen max-h-full",
       options?.classBody ?? "",
-      props.classBody ?? ""
+      props?.classBody ?? ""
     ])
   )
   const classBackground = ref<StyleClass>(Dialog.setStyle("fixed inset-0"))
@@ -150,6 +169,7 @@
 
   // ---METHODS-----------------------------
   function closeDialog() {
+    isOpen.value = !isOpen.value
     emit("update:modelValue", false)
   }
 </script>
@@ -164,9 +184,9 @@
       enter-active-class="transition-all ease-in-out duration-500"
       :enter-from-class="enterAndLeaveClass"
       enter-to-class="translate-x-0 opacity-100">
-      <div v-if="isOpen" :class="classBase">
+      <div v-if="isOpen" :class="classBase" data-dialog>
         <div v-if="!notCloseBackground" :class="classBackground" @click="closeDialog" />
-        <div :class="classDialog">
+        <div data-dialog-content :class="classDialog">
           <slot :closeDialog="closeDialog"></slot>
           <Button
             v-if="isCloseButton"
@@ -185,7 +205,7 @@
       enter-active-class="transition-opacity ease-in-out duration-500"
       enter-from-class="opacity-0"
       enter-to-class="opacity-100">
-      <div v-if="isOpen" :class="classBackgroundBase">
+      <div v-if="isOpen" :class="classBackgroundBase" data-dialog-background>
         <slot name="background">
           <div :class="classBackgroundBaseColor" />
         </slot>

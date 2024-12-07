@@ -391,23 +391,100 @@ export function fieldsPick<Structure extends Record<string | number, any>>(
 
  **Note**: The `deepMerge` function can be used to perform a deep merge of multiple objects.
  */
-export function deepMerge(...objects: any[]): object {
-  return objects.reduce((prev: Record<string, any>, obj: Record<string, any>) => {
-    if (obj && Object.keys(obj)?.length)
-      Object.keys(obj).forEach((key) => {
-        const pVal = prev[key]
-        const oVal = obj[key]
+export function deepMerge<T extends object | any[]>(...objects: any[]): T {
+  const seen = new WeakMap()
 
-        if (Array.isArray(pVal) && Array.isArray(oVal)) {
-          prev[key] = pVal.concat(...oVal)
-        } else if (isObject(pVal) && isObject(oVal)) {
-          prev[key] = deepMerge(pVal, oVal)
-        } else {
-          prev[key] = oVal
-        }
-      })
+  function merge(prev: Record<string, any>, obj: Record<string, any>): Record<string, any> {
+    // If either value is not an object, replace the previous value with the current one
+    if (!isObject(prev) || !isObject(obj)) {
+      return isEmpty(obj) ? prev : obj
+    }
+
+    // Check for cyclic references
+    if (seen.has(obj)) {
+      return seen.get(obj)
+    }
+
+    // Register the current object in WeakMap
+    seen.set(obj, prev)
+
+    // Iterate through the keys of the current object
+    Object.keys(obj).forEach((key) => {
+      const pVal = prev[key]
+      const oVal = obj[key]
+
+      // If the new value is empty, do not overwrite
+      if (isEmpty(oVal)) {
+        return
+      }
+
+      // Handle nested objects: recursively merge
+      if (isObject(pVal) && isObject(oVal)) {
+        prev[key] = merge(pVal, oVal)
+      }
+      // For all other types (primitives, arrays, etc.), override the previous value
+      else {
+        prev[key] = oVal
+      }
+    })
+
     return prev
-  }, {})
+  }
+
+  // Reduce over all objects, merging them sequentially
+  return objects.reduce((prev, obj) => merge(prev, obj), undefined)
+}
+
+export function deepMergeSoft<T extends object | any[]>(...objects: any[]): T {
+  const seen = new WeakMap()
+
+  function merge(prev: Record<string, any>, obj: Record<string, any>): Record<string, any> {
+    // If either value is not an object, replace the previous value with the current one
+    if (!isObject(prev) || !isObject(obj)) {
+      return isEmpty(obj) ? prev : obj
+    }
+
+    // Check for cyclic references
+    if (seen.has(obj)) {
+      return seen.get(obj)
+    }
+
+    // Register the current object in WeakMap
+    seen.set(obj, prev)
+
+    // Iterate through the keys of the current object
+    Object.keys(obj).forEach((key) => {
+      const pVal = prev[key]
+      const oVal = obj[key]
+
+      // If the new value is empty, do not overwrite
+      if (isEmpty(oVal)) {
+        return
+      }
+
+      // Handle arrays: concatenate values from both arrays
+      if (Array.isArray(pVal) && Array.isArray(oVal)) {
+        prev[key] = pVal.concat(...oVal)
+      }
+      // Handle strings: concatenate strings
+      else if (typeof pVal === "string" && typeof oVal === "string") {
+        prev[key] = pVal + " " + oVal
+      }
+      // Handle objects: recursively merge nested objects
+      else if (isObject(pVal) && isObject(oVal)) {
+        prev[key] = merge(pVal, oVal)
+      }
+      // For other types, override the previous value with the current one
+      else {
+        prev[key] = oVal
+      }
+    })
+
+    return prev
+  }
+
+  // Reduce over all objects, merging them sequentially
+  return objects.reduce((prev, obj) => merge(prev, obj), undefined)
 }
 
 /**

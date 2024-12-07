@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed, ref, onMounted, useSlots } from "vue"
   import { ChevronRightIcon } from "@heroicons/vue/20/solid"
-  import {
+  import type {
     MenuProps,
     MenuEmits,
     MenuExpose,
@@ -10,12 +10,13 @@
     GroupsPrivate,
     MenuItemPrivate,
     GroupMenuPrivate,
-    MenuStylesPrivate
+    MenuStylesPrivate,
+    MenuStyles
   } from "./Menu"
-  import { FixWindowProps } from "fishtvue/fixwindow"
-  import { SeparatorProps } from "fishtvue/separator"
-  import { _key, RefLink, StyleClass } from "fishtvue/types"
-  import { fieldsOmit } from "fishtvue/utils/objectHandler"
+  import type { FixWindowProps } from "fishtvue/fixwindow"
+  import type { SeparatorProps } from "fishtvue/separator"
+  import type { _key, RefLink, StyleClass } from "fishtvue/types"
+  import { deepCopyObject, deepMergeSoft, fieldsOmit } from "fishtvue/utils/objectHandler"
   import Icons from "fishtvue/icons/Icons.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import Separator from "fishtvue/separator/Separator.vue"
@@ -24,7 +25,11 @@
   const MenuComponent = new Component<"Menu">()
   const options = MenuComponent.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<MenuProps>()
+  const props = withDefaults(defineProps<MenuProps>(), {
+    selected: undefined,
+    horizontal: undefined,
+    onlyIcons: undefined
+  })
   const emit = defineEmits<MenuEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
@@ -36,34 +41,42 @@
     keyof ItemMenuPrivate
   >)
   // ---PROPS-------------------------------
-  const mode = computed<NonNullable<MenuProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
-  const selected = computed<NonNullable<MenuProps["selected"]>>(() => props.selected)
-  const horizontal = computed<NonNullable<MenuProps["horizontal"]>>(() => props.horizontal)
-  const onlyIcons = computed<NonNullable<MenuProps["onlyIcons"]>>(() => props.onlyIcons)
-  const title = computed<NonNullable<MenuProps["title"]>>(() => props.title ?? "")
-  const iconSeparator = computed<MenuSeparator["icon"]>(() => props.separator?.icon)
-  const isSeparator = computed<NonNullable<MenuSeparator["isVisible"]>>(() => props.separator?.isVisible ?? true)
+  const mode = computed<NonNullable<MenuProps["mode"]>>(
+    () => props?.mode ?? options?.mode ?? MenuComponent.componentsStyle() ?? "outlined"
+  )
+  const selected = computed<NonNullable<MenuProps["selected"]>>(() => props?.selected ?? options?.selected ?? false)
+  const horizontal = computed<NonNullable<MenuProps["horizontal"]>>(
+    () => props?.horizontal ?? options?.horizontal ?? false
+  )
+  const onlyIcons = computed<NonNullable<MenuProps["onlyIcons"]>>(() => props?.onlyIcons ?? options?.onlyIcons ?? false)
+  const title = computed<NonNullable<MenuProps["title"]>>(() => props?.title ?? options?.title ?? "")
+  const iconSeparator = computed<MenuSeparator["icon"]>(() => props.separator?.icon ?? options?.separator?.icon)
+  const isSeparator = computed<NonNullable<MenuSeparator["isVisible"]>>(
+    () => props.separator?.isVisible ?? options?.separator?.isVisible ?? true
+  )
   const listGroups = computed<GroupsPrivate>(() => setItems(props as MenuItemPrivate)?.groups ?? [])
   const paramsWindowMenu = computed<MenuProps["paramsWindowMenu"]>(() => ({
     delay: 2,
     position: "right-top",
     eventOpen: onlyIcons.value ? "click" : "hover",
     eventClose: "hover",
+    ...options?.paramsWindowMenu,
     ...props?.paramsWindowMenu
   }))
   const baseSeparator = computed<MenuSeparator>(() => ({
     class: horizontal.value ? "my-1" : "-mx-1",
+    ...options?.separator,
     ...props.separator
   }))
   const styles = computed<MenuStylesPrivate>(() => {
-    const s = props.styles
+    const s = deepMergeSoft<MenuStyles>(deepCopyObject(options?.styles), deepCopyObject(props?.styles))
     return {
       class: s?.class,
       width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
       height: s?.height ? (typeof s?.height === "number" ? `${s?.height}px` : s?.height) : "",
       animation: s?.animation ?? "transition-all duration-500",
       activeRows:
-        typeof s?.activeRows === "string" && s?.animation
+        typeof s?.activeRows === "string"
           ? s?.activeRows
           : s?.activeRows || s?.activeRows === undefined
             ? "bg-neutral-200/50 dark:bg-neutral-700/50"
@@ -92,6 +105,7 @@
       horizontal.value ? "flex flex-row items-center" : "",
       modeStyle.value,
       styles.value?.class?.body ?? "",
+      options?.class ?? "",
       props?.class ?? "",
       "overflow-auto"
     ])
@@ -202,21 +216,20 @@
   function overItem(event: MouseEvent, item: ItemMenuPrivate) {
     setActiveItem(item?._key)
     emit("onActive", event, item)
-    if (item?.onActive)
-      item?.onActive(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
+    if (item?.onActive) item.onActive(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
   }
 
   function leaveItem(event: MouseEvent, item: ItemMenuPrivate) {
     setActiveItem(undefined)
     emit("onInactive", event, item)
     if (item?.onInactive)
-      item?.onInactive(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
+      item.onInactive(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
   }
 
   function clickItem(event: PointerEvent, item: ItemMenuPrivate) {
     if (selected.value) setSelectedItem(item?._key)
     emit("onClick", event, item)
-    if (item?.onClick) item?.onClick(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
+    if (item?.onClick) item.onClick(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
   }
 
   function setSelectedItem(itemKey: _key | undefined): void {
@@ -270,12 +283,13 @@
 
 <template>
   <div
+    data-menu
     ref="menuRefLink"
     role="menu"
     :class="classMenu"
     :style="`width:${styles.width};height:${styles.height};`"
     tabindex="-1">
-    <div v-if="title.length || slots?.title" :class="classTitle">
+    <div v-if="title.length || slots?.title" data-menu-title :class="classTitle">
       <slot name="title" :title="title">{{ title }}</slot>
     </div>
     <template v-for="(group, keyGroup) in listGroups as Array<GroupMenuPrivate>" :key="keyGroup">
@@ -292,19 +306,21 @@
           :vertical="horizontal">
           <Icons :type="group.separator?.icon ?? iconSeparator ?? ''" :class="classSeparatorIcon" />
         </Separator>
+        <!--not icon-->
         <Separator
           v-else
           v-bind="fieldsOmit(group?.separator ?? baseSeparator, ['isVisible', 'icon']) as SeparatorProps"
           :class="classSeparator"
           :vertical="horizontal" />
       </template>
-      <div role="group" :class="classGroup">
-        <div v-if="!onlyIcons && group.title" :class="classGroupTitle">
+      <div data-menu-group role="group" :class="classGroup">
+        <div v-if="!onlyIcons && group.title" data-menu-group-title :class="classGroupTitle">
           {{ group.title }}
         </div>
         <div
           v-for="(item, keyItem) in group.items as Array<ItemMenuPrivate>"
           :key="keyItem"
+          data-menu-item
           role="menuitem"
           :data-collection-item="item?._key"
           :aria-disabled="item?.disabled ?? false"

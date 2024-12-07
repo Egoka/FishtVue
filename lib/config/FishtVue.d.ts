@@ -1,7 +1,7 @@
 import { Plugin } from "vue"
 import { StyleMode } from "../types"
 
-import { Locale } from "fishtvue/locale/TypesLocale"
+import { Locales, type NameLocale } from "fishtvue/locale/TypesLocale"
 import { Theme } from "fishtvue/theme"
 
 import { NamesTheme } from "fishtvue/theme"
@@ -34,6 +34,10 @@ export declare type FishtVue = {
   getOptions<T extends keyof ComponentsOptions>(
     component?: T
   ): keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>
+  getActiveLocale(): string | undefined
+  setActiveLocale(activeLocale: NameLocale): string | boolean | undefined
+  getActiveLocale(): string | undefined
+  getDefaultLocale(): string | undefined
 }
 
 export declare function useFishtVue<T extends FishtVue>(): Readonly<T> | undefined
@@ -58,20 +62,12 @@ declare module "@vue/runtime-core" {
 }
 
 export declare interface FishtVueConfiguration {
-  inputStyle?: StyleMode
-  zIndex?: ZIndexOptions
-  locale?: Locale
-  optionsTheme?: OptionsTheme
+  componentsStyle?: StyleMode
+  locale?: Locales
   theme?: Theme
+  optionsTheme?: OptionsTheme
   componentsOptions?: ComponentsOptions
 }
-
-type ZIndexOptions = Partial<{
-  modal: number
-  overlay: number
-  menu: number
-  tooltip: number
-}>
 
 export type OptionsTheme = Partial<{
   /**

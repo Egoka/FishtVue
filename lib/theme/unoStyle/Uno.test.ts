@@ -3,6 +3,12 @@ import { tailwind } from "fishtvue/theme"
 import { baseBackdropFilter, baseFilter, baseTransform, baseTransition } from "fishtvue/theme/unoStyle/unoStatic"
 
 describe("unoStyle", () => {
+  describe("Special tests", () => {
+    it("Not string", () => {
+      // @ts-ignore
+      expect(tailwind(42)).toBeUndefined()
+    })
+  })
   describe("Handling Hover, Focus, and Other States", () => {
     describe("Pseudo-classes", () => {
       describe("Hover, focus, and active", () => {

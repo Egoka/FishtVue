@@ -14,19 +14,12 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       enabled: true,
+      reportsDirectory: "./coverage",
       reporter: ["text", "json", "html"],
       include: ["lib/**/*.ts", "lib/**/*.vue"],
-      exclude: [
-        "node_modules",
-        "dist",
-        "lib/locale/**",
-        ".husky/**",
-        "**/*.d.ts",
-        "lib/**/styles.ts",
-        "lib/**/themes/**",
-        "**/*.test.ts"
-      ]
+      exclude: ["node_modules", "dist", "**/*.d.ts", "**/*.test.ts"]
     },
+    setupFiles: ["./.tests/setup/setupTests.ts"],
     ui: false,
     alias: {
       "@": new URL("./src", import.meta.url).pathname,

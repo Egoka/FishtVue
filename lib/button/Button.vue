@@ -5,12 +5,15 @@
   import Loading from "fishtvue/loading/Loading.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import Component from "fishtvue/component"
+  import { StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
   const Button = new Component<"Button">()
   const options = Button.getOptions()
-  const prefix = Button.getPrefix()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<ButtonProps>()
+  const props = withDefaults(defineProps<ButtonProps>(), {
+    disabled: undefined,
+    loading: undefined
+  })
   const slots = useSlots()
   // ---STATE-------------------------------
   const buttonRef = ref<HTMLButtonElement>()
@@ -294,19 +297,20 @@
   const icon = computed<ButtonProps["icon"]>(() => props.icon ?? "")
   const iconPosition = computed<ButtonProps["iconPosition"] | null>(() => props.iconPosition ?? "right")
   const isLoading = computed<ButtonProps["loading"]>(() => props.loading)
-  const mode = computed<NonNullable<ButtonProps["mode"]>>(() => props.mode ?? options?.mode ?? "primary")
-  const size = computed(() => props.size ?? options?.size ?? "md")
-  const rounded = computed(() => props.rounded ?? options?.rounded ?? "md")
-  const color = computed(() => props.color ?? options?.color ?? "neutral")
-  const classBase = computed(() => {
+  const disabled = computed<ButtonProps["disabled"]>(() => props.disabled ?? false)
+  const mode = computed<NonNullable<ButtonProps["mode"]>>(() => props?.mode ?? options?.mode ?? "primary")
+  const size = computed<NonNullable<ButtonProps["size"]>>(() => props?.size ?? options?.size ?? "md")
+  const rounded = computed<NonNullable<ButtonProps["rounded"]>>(() => props?.rounded ?? options?.rounded ?? "md")
+  const color = computed<NonNullable<ButtonProps["color"]>>(() => props?.color ?? options?.color ?? "neutral")
+  const classBase = computed<StyleClass>(() => {
     const classes = [
       baseClasses.value,
       modeClasses.value[mode.value][color.value],
       sizeClasses.value[type.value === "icon" ? "icon" : "button"][size.value],
       roundedClasses.value[rounded.value],
       options?.class ?? "",
-      props.class,
-      props.disabled ? "opacity-50 cursor-not-allowed" : ""
+      props?.class ?? "",
+      disabled.value ? "opacity-50 cursor-not-allowed" : ""
     ]
     return Button.setStyle(classes.filter(Boolean))
   })
@@ -336,12 +340,7 @@
   })
 </script>
 <template>
-  <button
-    ref="buttonRef"
-    :type="type"
-    :class="[`${prefix}button`, classBase]"
-    :data-loading="isLoading"
-    :disabled="disabled">
+  <button ref="buttonRef" data-button :type="type" :class="classBase" :data-loading="isLoading" v-bind="{ disabled }">
     <template v-if="type === 'icon'">
       <Icons v-if="icon" :type="icon" :class="classIcon" />
       <Loading v-if="isLoading" type="simple" :size="25" class="absolute" />

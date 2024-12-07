@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref } from "vue"
+  import { computed, onMounted, ref, watch } from "vue"
   import type { IconsProps, IconsExpose } from "./Icons"
   import { convertToCamelCase } from "fishtvue/utils/stringHandler"
   // ---------------------------------------
@@ -12,7 +12,6 @@
   // ---BASE-COMPONENT----------------------
   const Icons = new Component<"Icons">()
   const options = Icons.getOptions()
-  const prefix = Icons.getPrefix()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = defineProps<IconsProps>()
   // ---REF-LINK----------------------------
@@ -22,8 +21,14 @@
   const type = computed(() => props.type)
   const style = computed(() => props.style)
   const classIcon = computed(() =>
-    Icons.setStyle(["h-5 w-5 text-gray-900 dark:text-gray-100", options?.class ?? "", props.class, "select-none"])
+    Icons.setStyle([
+      "h-5 w-5 text-gray-900 dark:text-gray-100",
+      options?.class ?? "",
+      props?.class ?? "",
+      "select-none"
+    ])
   )
+
   // ---------------------------------------
   function loadTestIcons(icons: (IconifyIconName | string)[]) {
     return new Promise((fulfill, reject) => {
@@ -52,10 +57,16 @@
 
   onMounted(async () => {
     Icons.initStyle()
-    if (!heroIcons[convertToCamelCase(type.value) + "Icon"]) {
-      isViewIcon.value = await isIcon(type.value)
-    }
   })
+  watch(
+    () => type.value,
+    async () => {
+      if (!heroIcons[convertToCamelCase(type.value) + "Icon"]) {
+        isViewIcon.value = await isIcon(type.value)
+      }
+    },
+    { immediate: true }
+  )
   // ---------------------------------------
   defineExpose<IconsExpose>({
     // ---PROPS-------------------------
@@ -66,7 +77,7 @@
 </script>
 
 <template>
-  <i :class="`${prefix}icons`">
+  <i data-icon>
     <component
       v-if="heroIcons[convertToCamelCase(type) + 'Icon']"
       :is="heroIcons[convertToCamelCase(type) + 'Icon']"

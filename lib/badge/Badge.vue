@@ -8,12 +8,17 @@
   const Badge = new Component<"Badge">()
   const options = Badge.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<BadgeProps>()
+  const props = withDefaults(defineProps<BadgeProps>(), {
+    point: undefined,
+    closeButton: undefined
+  })
   const emit = defineEmits<BadgeEmits>()
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<BadgeProps["mode"]>>(() => props.mode ?? options?.mode ?? "primary")
-  const isPoint = computed<BadgeProps["point"]>(() => props.point || options?.point)
-  const isButton = computed<BadgeProps["closeButton"]>(() => props.closeButton || options?.closeButton)
+  const isPoint = computed<NonNullable<BadgeProps["point"]>>(() => props.point ?? options?.point ?? false)
+  const isButton = computed<NonNullable<BadgeProps["closeButton"]>>(
+    () => props.closeButton ?? options?.closeButton ?? false
+  )
   const modeStyle = computed<string>(() =>
     mode.value === "primary"
       ? "bg-theme-600 text-theme-100 dark:bg-theme-700 dark:text-theme-100"
@@ -38,8 +43,8 @@
   const classBase = computed(() =>
     Badge.setStyle([
       "items-center m-[2px] px-2 py-1 text-xs font-medium rounded-md",
-      isPoint.value || isButton ? "gap-x-[2px]" : "",
-      isPoint.value && isButton
+      isPoint.value || isButton.value ? "gap-x-[2px]" : "",
+      isPoint.value && isButton.value
         ? "px-1"
         : isPoint.value && !isButton.value
           ? "pl-1"
@@ -48,7 +53,7 @@
             : "",
       modeStyle.value,
       options?.class ?? "",
-      props.class,
+      props?.class ?? "",
       "inline-flex"
     ])
   )
@@ -75,8 +80,8 @@
 </script>
 
 <template>
-  <div :class="classBase">
-    <svg v-if="isPoint" :class="classIcon" viewBox="0 0 6 6" aria-hidden="true">
+  <div :class="classBase" data-badge>
+    <svg v-if="isPoint" data-badge-point :class="classIcon" viewBox="0 0 6 6" aria-hidden="true">
       <circle cx="3" cy="3" r="3"></circle>
     </svg>
     <slot />

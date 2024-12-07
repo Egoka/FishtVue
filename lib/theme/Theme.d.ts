@@ -16,7 +16,6 @@ export enum NamesTheme {
 
 // ----------------------
 declare type Theme = DeepPartial<{
-  name: keyof typeof NamesTheme
   primitive: ThemePrimitive
   semantic: ThemeSemantic
 }>

@@ -10,7 +10,15 @@
   const Input = new Component<"Input">()
   const options = Input.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<InputProps>()
+  const props = withDefaults(defineProps<InputProps>(), {
+    autoFocus: undefined,
+    isValue: undefined,
+    isInvalid: undefined,
+    required: undefined,
+    loading: undefined,
+    disabled: undefined,
+    clear: undefined
+  })
   const emit = defineEmits<InputEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
@@ -25,7 +33,7 @@
   const id = ref<NonNullable<InputProps["id"]>>(String(props.id ?? getCurrentInstance()?.uid))
   const type = ref<InputProps["type"]>(props?.type && arrayInputType.includes(props.type) ? props?.type : "text")
   const mask = computed<InputProps["maskInput"]>(() => props?.maskInput)
-  const mode = computed<NonNullable<InputProps["mode"]>>(() => props.mode ?? "outlined")
+  const mode = computed<NonNullable<InputProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const isValue = computed<boolean>(() => !!modelValue.value || isActiveInput.value)
   const autoFocus = computed<NonNullable<InputProps["autoFocus"]>>(() => props?.autoFocus ?? false)
   const placeholder = computed<NonNullable<InputProps["placeholder"]>>(() => String(props?.placeholder ?? ""))
@@ -44,7 +52,7 @@
       "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
       "focus:outline-0 focus:ring-0 transition-all caret-theme-500",
       options?.classInput ?? "",
-      props.classInput ?? "",
+      props?.classInput ?? "",
       "classInput flex"
     ])
   )
@@ -109,7 +117,7 @@
   )
   watch(isActiveInput, (value) => {
     classLayout.value =
-      (props.class ?? "") +
+      (props?.class ?? options?.class ?? "") +
       (value ? " border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700" : "")
     Input.setStyle(classLayout.value ?? "")
     emit("isActive", value)
@@ -149,21 +157,22 @@
     emit("clear", "")
   }
 
-  function focus(env: FocusEvent) {
+  function focus(eventFocus: FocusEvent) {
     inputRef.value?.focus()
     isActiveInput.value = true
-    emit("focus", env)
+    emit("focus", eventFocus)
   }
 
-  function blur(env: FocusEvent) {
+  function blur(eventFocus: FocusEvent) {
     isActiveInput.value = false
-    emit("blur", env)
+    emit("blur", eventFocus)
   }
 </script>
 
 <template>
   <InputLayout ref="layout" :value="modelValue" :class="classLayout ?? ''" v-bind="inputLayout" @clear="clear">
     <input
+      data-input
       ref="inputRef"
       :id="id"
       :name="id"
@@ -188,11 +197,13 @@
       <slot v-if="slots.after" name="after" />
       <Icons
         v-if="props?.type === 'password' && type === 'password'"
+        data-eye-slash
         type="EyeSlash"
         class="text-gray-400 dark:text-gray-600 hover:text-cyan-500 hover:dark:text-cyan-700 transition cursor-pointer"
         @click="type = 'text'" />
       <Icons
         v-if="props?.type === 'password' && type === 'text'"
+        data-eye
         type="Eye"
         class="text-gray-400 dark:text-gray-600 hover:text-cyan-500 hover:dark:text-cyan-700 transition cursor-pointer"
         @click="type = 'password'" />

@@ -8,7 +8,6 @@ import type { ComponentsOptions, OptionsTheme } from "fishtvue/config"
  * ### Properties
  *
  * - `name`: The name of the component.
- * - `scopeId`: The scope ID of the component.
  * - `prefix`: The prefix for the component.
  *
  * ### Constructor
@@ -29,7 +28,6 @@ import type { ComponentsOptions, OptionsTheme } from "fishtvue/config"
  */
 declare class Component<T extends keyof ComponentsOptions> {
   readonly name?: T
-  readonly scopeId?: ScopeId
   readonly prefix?: OptionsTheme["prefix"]
 
   /**
@@ -78,11 +76,8 @@ declare class Component<T extends keyof ComponentsOptions> {
   initStyle(stylesComp: StylesComponent): void
 }
 
-type ScopeId = string
-
 export type PublicFields =
   | "name"
-  | "scopeId"
   | "prefix"
   | "onBeforeMount"
   | "onMounted"

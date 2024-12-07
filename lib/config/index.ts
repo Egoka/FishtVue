@@ -2,14 +2,15 @@ import { hasInjectionContext, inject, reactive } from "vue"
 import { NamesTheme, linksTheme } from "fishtvue/theme"
 import { deepMerge, deepFreeze, deepCopyObject } from "fishtvue/utils/objectHandler"
 import Component from "fishtvue/component"
-import Locales from "fishtvue/locale/locale"
+import Locales from "fishtvue/locale"
 import Aurora from "fishtvue/theme/themes/Aurora"
 import Harmony from "fishtvue/theme/themes/Harmony"
 import Sapphire from "fishtvue/theme/themes/Sapphire"
+import baseStyle from "./baseStyle"
 import type { ObjectPlugin } from "vue"
 import type { Theme } from "fishtvue/theme"
-import type { ComponentsOptions, FishtVue, FishtVueConfiguration } from "fishtvue/config/FishtVue"
-import baseStyle from "./baseStyle"
+import type { NameLocale } from "fishtvue/locale"
+import type { ComponentsOptions, FishtVue, FishtVueConfiguration, OptionsTheme } from "fishtvue/config/FishtVue"
 
 let FishtVueSymbol = Symbol()
 
@@ -33,6 +34,36 @@ export function getOptions<T extends keyof ComponentsOptions>(component?: T) {
   })
 }
 
+export function setActiveLocale(activeLocale: NameLocale) {
+  return isExistFishtVue((FishtVue) => {
+    const locale = FishtVue?.config?.locale
+    if (locale && locale.activeLocale) {
+      locale.activeLocale = activeLocale
+      return locale.activeLocale
+    }
+    console.warn("The locale has not been changed")
+    return false
+  })
+}
+
+export function getActiveLocale(): string | undefined {
+  return isExistFishtVue((FishtVue) => {
+    const locale = FishtVue?.config?.locale
+    if (locale && locale.activeLocale) {
+      return locale.activeLocale
+    }
+  })
+}
+
+export function getDefaultLocale(): string | undefined {
+  return isExistFishtVue((FishtVue) => {
+    const locale = FishtVue?.config?.locale
+    if (locale && locale.defaultLocale) {
+      return locale.defaultLocale
+    }
+  })
+}
+
 function isExistFishtVue<T>(func: (FishtVue: FishtVue) => T): T | undefined {
   if (FishtVueSymbol.toString() === Symbol("FishtVue").toString()) {
     // @ts-ignore
@@ -44,12 +75,8 @@ function isExistFishtVue<T>(func: (FishtVue: FishtVue) => T): T | undefined {
   console.warn("FishtVue is not installed!")
 }
 
-function getDefaultOptions(options: FishtVueConfiguration): FishtVueConfiguration {
-  const nameTheme = <keyof typeof NamesTheme>(
-    (Object.values(NamesTheme).includes(options?.optionsTheme?.nameTheme ?? "")
-      ? options?.optionsTheme?.nameTheme
-      : "Aurora")
-  )
+function getDefaultOptions(nameTheme: OptionsTheme["nameTheme"]): FishtVueConfiguration {
+  nameTheme = <keyof typeof NamesTheme>(Object.values(NamesTheme).includes(nameTheme ?? "") ? nameTheme : "Aurora")
   let theme: Theme | undefined
   switch (nameTheme) {
     case "Aurora":
@@ -67,19 +94,29 @@ function getDefaultOptions(options: FishtVueConfiguration): FishtVueConfiguratio
   return {
     theme: theme,
     locale: {
-      en: Locales.en
+      defaultLocale: "en",
+      messages: {
+        en: Locales.en,
+        ru: Locales.ru
+      }
     }
   }
 }
 
 export default {
   install: (app, options: FishtVueConfiguration) => {
-    const defaultOptions = getDefaultOptions(options)
+    const defaultOptions = getDefaultOptions(options?.optionsTheme?.nameTheme)
     const FishtVue: FishtVue = {
       config: reactive(options ? deepMerge(defaultOptions, options) : defaultOptions),
-      useFishtVue: useFishtVue as FishtVue["useFishtVue"],
-      getOptions: getOptions as FishtVue["getOptions"]
+      getOptions: getOptions as FishtVue["getOptions"],
+      useFishtVue,
+      getActiveLocale,
+      setActiveLocale,
+      getDefaultLocale
     }
+    if (FishtVue.config.locale)
+      FishtVue.config.locale.activeLocale =
+        FishtVue.config.locale?.activeLocale ?? FishtVue.config.locale?.defaultLocale
     FishtVue.config.theme = linksTheme(FishtVue.config.theme)
     FishtVueSymbol = Symbol("FishtVue")
     ;(window as any).FishtVue = FishtVue

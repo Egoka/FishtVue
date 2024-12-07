@@ -8,7 +8,9 @@
   const Accordion = new Component<"Accordion">()
   const options = Accordion.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<AccordionProps>()
+  const props = withDefaults(defineProps<AccordionProps>(), {
+    multiple: undefined
+  })
   const emit = defineEmits<AccordionEmits>()
   // ---STATE-------------------------------
   const dataItems = ref(props.dataSource)
@@ -20,11 +22,13 @@
     { deep: true, immediate: true }
   )
   // ---PROPS-------------------------------
-  const multiple = computed<NonNullable<AccordionProps["multiple"]>>(() => props.multiple ?? false)
+  const multiple = computed<NonNullable<AccordionProps["multiple"]>>(() => props.multiple ?? options?.multiple ?? false)
   const animationDuration = computed<NonNullable<AccordionProps["animationDuration"]>>(
-    () => props.animationDuration ?? 300
+    () => props.animationDuration ?? options?.animationDuration ?? 300
   )
-  const typeIcon = computed<NonNullable<AccordionProps["typeIcon"]>>(() => props.typeIcon ?? "Plus")
+  const typeIcon = computed<NonNullable<AccordionProps["typeIcon"]>>(
+    () => props.typeIcon ?? options?.typeIcon ?? "Plus"
+  )
   Accordion.setStyle("rotate-0")
   Accordion.setStyle("rotate-90")
   Accordion.setStyle("rotate-180")
@@ -98,22 +102,28 @@
 </script>
 
 <template>
-  <div :class="classBody">
-    <div v-for="(item, key) in dataItems" :key="key" :class="classItem">
+  <div v-if="dataItems?.length" :class="classBody" data-accordion>
+    <div v-for="(item, key) in dataItems" :key="key" :class="classItem" role="group" data-accordion-group>
       <h2>
-        <button type="button" :class="classButton" @click="toggle(key)" :aria-expanded="item.open">
+        <button
+          type="button"
+          :class="classButton"
+          :aria-expanded="item.open"
+          data-accordion-button
+          @click="toggle(key)">
           <slot name="title" :title="item.title">
             <span :class="classTitle">{{ item.title }}</span>
             <ChevronDownIcon
               v-if="typeIcon === 'ChevronDown'"
               aria-hidden="true"
-              :class="[styleIcon, item.open ? 'rotate-180' : '']" />
+              :class="['ChevronDownIcon', styleIcon, item.open ? 'rotate-180' : '']" />
             <ArrowDownCircleIcon
               v-else-if="typeIcon === 'ArrowDownCircle'"
               aria-hidden="true"
-              :class="[styleIcon, item.open ? 'rotate-180' : '']" />
+              :class="['ArrowDownCircleIcon', styleIcon, item.open ? 'rotate-180' : '']" />
             <svg
               v-else-if="typeIcon === 'Plus'"
+              class="PlusIcon"
               :class="classPlus"
               width="10"
               height="10"
@@ -138,7 +148,7 @@
         role="region"
         :class="[classSubtitle, item.open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0']"
         :style="`transition-duration: ${animationDuration}ms;`">
-        <div :class="classTemplate">
+        <div data-accordion-content :class="classTemplate">
           <slot v-if="item.template" :name="item.template" v-bind="fieldsOmit(item, ['template', 'open'])" />
           <p v-else :class="classNotTemplate" v-html="item.subtitle" />
         </div>
