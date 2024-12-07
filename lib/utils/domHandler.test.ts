@@ -7,7 +7,9 @@ import {
   isClient,
   setAttribute,
   setAttributes,
-  minifyCSS
+  minifyCSS,
+  getParentElements,
+  htmlToText
 } from "fishtvue/utils/domHandler"
 
 describe("Testing Dom handler", () => {
@@ -506,6 +508,151 @@ describe("Testing Dom handler", () => {
       const input = ["body { color: red; }"]
       const output = ""
       expect(minifyCSS(input as any)).toBe(output)
+    })
+  })
+  describe("getParentElements", () => {
+    it("should return an empty array if the element has no parent", () => {
+      // Создаем элемент без родителя
+      const element = document.createElement("div")
+
+      const result = getParentElements(element)
+
+      expect(result).toEqual([])
+    })
+
+    it("should return all parent elements of a nested element", () => {
+      // Создаем структуру DOM
+      const grandParent = document.createElement("div")
+      const parent = document.createElement("div")
+      const child = document.createElement("div")
+
+      grandParent.appendChild(parent)
+      parent.appendChild(child)
+
+      const result = getParentElements(child)
+
+      expect(result).toEqual([parent, grandParent])
+    })
+
+    it("should handle deeply nested elements", () => {
+      // Создаем глубокую структуру DOM
+      const level1 = document.createElement("div")
+      const level2 = document.createElement("div")
+      const level3 = document.createElement("div")
+      const level4 = document.createElement("div")
+
+      level1.appendChild(level2)
+      level2.appendChild(level3)
+      level3.appendChild(level4)
+
+      const result = getParentElements(level4)
+
+      expect(result).toEqual([level3, level2, level1])
+    })
+
+    it("should return only direct parent elements (not including shadow DOM hosts)", () => {
+      // Создаем элемент с shadow root
+      const host = document.createElement("div")
+      const shadowRoot = host.attachShadow({ mode: "open" })
+      const shadowChild = document.createElement("div")
+
+      shadowRoot.appendChild(shadowChild)
+
+      const result = getParentElements(shadowChild)
+
+      // Проверяем, что shadow root не включается
+      expect(result).toEqual([])
+    })
+
+    it("should handle elements dynamically added to the DOM", () => {
+      // Создаем динамическую структуру
+      const parent = document.createElement("div")
+      const child = document.createElement("div")
+
+      parent.appendChild(child)
+
+      const result = getParentElements(child)
+
+      expect(result).toEqual([parent])
+    })
+
+    it("should handle elements with only one parent", () => {
+      // Создаем структуру с одним родителем
+      const parent = document.createElement("div")
+      const child = document.createElement("div")
+
+      parent.appendChild(child)
+
+      const result = getParentElements(child)
+
+      expect(result).toEqual([parent])
+    })
+
+    it("should return an empty array if the element itself is null", () => {
+      // Передаем null вместо элемента
+      expect(() => getParentElements(null as unknown as HTMLElement)).toThrowError()
+    })
+  })
+
+  describe("htmlToText", () => {
+    it("should return the input unchanged if it is not a string", () => {
+      expect(htmlToText(null)).toBe(null)
+      expect(htmlToText(123)).toBe(123)
+      expect(htmlToText({})).toEqual({})
+      expect(htmlToText(["<b>bold</b>"])).toEqual(["<b>bold</b>"])
+    })
+
+    it("should remove all HTML tags from a string", () => {
+      const html = "<div><p>Hello <b>world</b></p></div>"
+      const result = htmlToText(html)
+      expect(result).toBe("Hello world")
+    })
+
+    it("should handle a string with no HTML tags", () => {
+      const plainText = "Just some plain text"
+      const result = htmlToText(plainText)
+      expect(result).toBe("Just some plain text")
+    })
+
+    it("should handle an empty string", () => {
+      const result = htmlToText("")
+      expect(result).toBe("")
+    })
+
+    it("should handle strings with only HTML tags", () => {
+      const html = "<div><p></p></div>"
+      const result = htmlToText(html)
+      expect(result).toBe("")
+    })
+
+    it("should trim the resulting string", () => {
+      const html = "  <p>   Hello world   </p>  "
+      const result = htmlToText(html)
+      expect(result).toBe("Hello world")
+    })
+
+    it("should return an empty string if HTML string contains only whitespace", () => {
+      const html = "   "
+      const result = htmlToText(html)
+      expect(result).toBe("")
+    })
+
+    it("should handle strings with nested HTML tags", () => {
+      const html = "<div><p><span>Nested <b>HTML</b></span></p></div>"
+      const result = htmlToText(html)
+      expect(result).toBe("Nested HTML")
+    })
+
+    it("should remove self-closing HTML tags", () => {
+      const html = "<div>Hello<br/>world</div>"
+      const result = htmlToText(html)
+      expect(result).toBe("Helloworld")
+    })
+
+    it("should handle special characters within HTML", () => {
+      const html = "<div>&lt;Hello &amp; world&gt;</div>"
+      const result = htmlToText(html)
+      expect(result).toBe("<Hello & world>")
     })
   })
 })

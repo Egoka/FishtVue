@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest"
-import { isString, toFlatCase, toKebabCase, toCapitalCase, stringify } from "fishtvue/utils/stringHandler"
+import {
+  isString,
+  toFlatCase,
+  toKebabCase,
+  toCapitalCase,
+  stringify,
+  convertToDashCase,
+  convertToCamelCase,
+  convertToSnakeCase
+} from "fishtvue/utils/stringHandler"
 
 describe("Testing string handler", () => {
   describe("isString function", () => {
@@ -221,6 +230,207 @@ describe("Testing string handler", () => {
       const capitalizedStr = "AlreadyCapitalized"
       const result = toCapitalCase(capitalizedStr)
       expect(result).toBe(capitalizedStr)
+    })
+  })
+
+  describe("convertToCamelCase", () => {
+    it("should convert snake_case to CamelCase", () => {
+      const snakeCaseStr = "snake_case_string"
+      expect(convertToCamelCase(snakeCaseStr)).toBe("SnakeCaseString")
+    })
+
+    it("should convert kebab-case to CamelCase", () => {
+      const kebabCaseStr = "kebab-case-string"
+      expect(convertToCamelCase(kebabCaseStr)).toBe("KebabCaseString")
+    })
+
+    it("should convert a string with mixed delimiters to CamelCase", () => {
+      const mixedStr = "mixed-delimiter_string-example"
+      expect(convertToCamelCase(mixedStr)).toBe("MixedDelimiterStringExample")
+    })
+
+    it("should capitalize the first letter of a single word", () => {
+      const singleWord = "word"
+      expect(convertToCamelCase(singleWord)).toBe("Word")
+    })
+
+    it("should handle strings with leading delimiters", () => {
+      const leadingDelimiters = "-_leading-underscore"
+      expect(convertToCamelCase(leadingDelimiters)).toBe("_leadingUnderscore")
+    })
+
+    it("should handle strings with trailing delimiters", () => {
+      const trailingDelimiters = "trailing-underscore-_"
+      expect(convertToCamelCase(trailingDelimiters)).toBe("TrailingUnderscore_")
+    })
+
+    it("should handle strings with multiple consecutive delimiters", () => {
+      const consecutiveDelimiters = "multiple--underscores__example"
+      expect(convertToCamelCase(consecutiveDelimiters)).toBe("Multiple-Underscores_example")
+    })
+
+    it("should handle an empty string", () => {
+      const emptyStr = ""
+      expect(convertToCamelCase(emptyStr)).toBe("")
+    })
+
+    it("should handle a string with no delimiters", () => {
+      const noDelimiters = "alreadycamelcase"
+      expect(convertToCamelCase(noDelimiters)).toBe("Alreadycamelcase")
+    })
+
+    it("should capitalize the first letter of a single character", () => {
+      const singleChar = "a"
+      expect(convertToCamelCase(singleChar)).toBe("A")
+    })
+
+    it("should handle a string with only delimiters", () => {
+      const onlyDelimiters = "---___"
+      expect(convertToCamelCase(onlyDelimiters)).toBe("--__")
+    })
+
+    it("should convert a string with numbers and delimiters to CamelCase", () => {
+      const numbersAndDelimiters = "convert-to-2camel_case"
+      expect(convertToCamelCase(numbersAndDelimiters)).toBe("ConvertTo2camelCase")
+    })
+
+    it("should handle strings with special characters", () => {
+      const specialChars = "special-@-case"
+      expect(convertToCamelCase(specialChars)).toBe("Special-@Case")
+    })
+  })
+
+  describe("convertToDashCase", () => {
+    it("should convert camelCase to dash-case", () => {
+      const camelCaseStr = "camelCaseString"
+      expect(convertToDashCase(camelCaseStr)).toBe("camel-case-string")
+    })
+
+    it("should convert PascalCase to dash-case", () => {
+      const pascalCaseStr = "PascalCaseString"
+      expect(convertToDashCase(pascalCaseStr)).toBe("pascal-case-string")
+    })
+
+    it("should convert snake_case to dash-case", () => {
+      const snakeCaseStr = "snake_case_string"
+      expect(convertToDashCase(snakeCaseStr)).toBe("snake-case-string")
+    })
+
+    it("should convert strings with special characters to dash-case", () => {
+      const specialCharStr = "hello@World#Test"
+      expect(convertToDashCase(specialCharStr)).toBe("hello--world--test")
+    })
+
+    it("should handle strings with only special characters", () => {
+      const specialChars = "@#_$"
+      expect(convertToDashCase(specialChars)).toBe("----")
+    })
+
+    it("should handle strings with mixed cases and special characters", () => {
+      const mixedStr = "Hello_World-Test123"
+      expect(convertToDashCase(mixedStr)).toBe("hello--world--test123")
+    })
+
+    it("should handle empty strings", () => {
+      const emptyStr = ""
+      expect(convertToDashCase(emptyStr)).toBe("")
+    })
+
+    it("should handle strings with no uppercase or special characters", () => {
+      const simpleStr = "helloworld"
+      expect(convertToDashCase(simpleStr)).toBe("helloworld")
+    })
+
+    it("should handle a single uppercase character", () => {
+      const singleUpper = "A"
+      expect(convertToDashCase(singleUpper)).toBe("a")
+    })
+
+    it("should handle strings with numbers and uppercase letters", () => {
+      const strWithNumbers = "Test123String456"
+      expect(convertToDashCase(strWithNumbers)).toBe("test123-string456")
+    })
+
+    it("should handle strings starting with special characters", () => {
+      const specialStart = "@HelloWorld"
+      expect(convertToDashCase(specialStart)).toBe("--hello-world")
+    })
+  })
+
+  describe("convertToSnakeCase", () => {
+    it("should convert camelCase to snake_case", () => {
+      const camelCaseStr = "camelCaseString"
+      expect(convertToSnakeCase(camelCaseStr)).toBe("camel_case_string")
+    })
+
+    it("should convert PascalCase to snake_case", () => {
+      const pascalCaseStr = "PascalCaseString"
+      expect(convertToSnakeCase(pascalCaseStr)).toBe("pascal_case_string")
+    })
+
+    it("should convert kebab-case to snake_case", () => {
+      const kebabCaseStr = "kebab-case-string"
+      expect(convertToSnakeCase(kebabCaseStr)).toBe("kebab_case_string")
+    })
+
+    it("should convert a string with mixed delimiters to snake_case", () => {
+      const mixedStr = "Mixed-Delimiter_stringExample"
+      expect(convertToSnakeCase(mixedStr)).toBe("mixed__delimiter_string_example")
+    })
+
+    it("should handle strings with special characters", () => {
+      const specialChars = "special@Case#Test"
+      expect(convertToSnakeCase(specialChars)).toBe("special__case__test")
+    })
+
+    it("should handle strings with leading uppercase letters", () => {
+      const leadingUpper = "LeadingCaseString"
+      expect(convertToSnakeCase(leadingUpper)).toBe("leading_case_string")
+    })
+
+    it("should handle strings with trailing uppercase letters", () => {
+      const trailingUpper = "TrailingCaseString"
+      expect(convertToSnakeCase(trailingUpper)).toBe("trailing_case_string")
+    })
+
+    it("should handle strings with multiple consecutive uppercase letters", () => {
+      const multipleUpper = "XMLHTTPRequest"
+      expect(convertToSnakeCase(multipleUpper)).toBe("x_m_l_h_t_t_p_request")
+    })
+
+    it("should handle an empty string", () => {
+      const emptyStr = ""
+      expect(convertToSnakeCase(emptyStr)).toBe("")
+    })
+
+    it("should handle a string with no uppercase or special characters", () => {
+      const simpleStr = "already_snake_case"
+      expect(convertToSnakeCase(simpleStr)).toBe("already_snake_case")
+    })
+
+    it("should handle a single uppercase character", () => {
+      const singleUpper = "A"
+      expect(convertToSnakeCase(singleUpper)).toBe("a")
+    })
+
+    it("should handle strings with numbers", () => {
+      const strWithNumbers = "convertTo2SnakeCase"
+      expect(convertToSnakeCase(strWithNumbers)).toBe("convert_to2_snake_case")
+    })
+
+    it("should handle strings with only special characters", () => {
+      const onlySpecials = "@#_$"
+      expect(convertToSnakeCase(onlySpecials)).toBe("____")
+    })
+
+    it("should handle strings with leading special characters", () => {
+      const leadingSpecials = "@HelloWorld"
+      expect(convertToSnakeCase(leadingSpecials)).toBe("__hello_world")
+    })
+
+    it("should handle strings with trailing special characters", () => {
+      const trailingSpecials = "HelloWorld@#"
+      expect(convertToSnakeCase(trailingSpecials)).toBe("hello_world__")
     })
   })
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import primitive from "fishtvue/theme/primitive"
 import semantic from "fishtvue/theme/semantic"
 import { palette, toVarsCss, linksTheme, useStyle } from "fishtvue/theme"
@@ -391,6 +391,9 @@ describe("Testing theme", () => {
   })
 
   describe("useStyle", () => {
+    beforeEach(() => {
+      vi.unmock("fishtvue/theme")
+    })
     it("should add a style tag to the head with correct attributes and CSS", () => {
       const css = ".test { color: red; }"
       const options = {

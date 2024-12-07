@@ -137,4 +137,73 @@ describe("Testing class Component", () => {
     hook()
     expect(hook).toHaveBeenCalled()
   })
+  describe("Component Lifecycle Hooks", () => {
+    let component: Component<"FixWindow">
+    const options: FishtVueConfiguration = {
+      componentsOptions: {
+        FixWindow: { closeButton: true }
+      }
+    }
+
+    beforeEach(() => {
+      const app = createApp({})
+      app.use<FishtVueConfiguration>(FishtVue, options)
+      mount({}, { global: { plugins: [[FishtVue, options]] } })
+      component = new Component<"FixWindow">()
+    })
+
+    it("should trigger onBeforeMount with the correct instance", () => {
+      const hook = vi.fn()
+      component.onBeforeMount(hook)
+      expect(hook).not.toHaveBeenCalled()
+      vi.mocked(hook).mock.calls.forEach((call) => {
+        expect(call[0]).toMatchObject({ name: "FixWindow", prefix: "fishtvue" })
+      })
+    })
+
+    it("should trigger onMounted with the correct instance", () => {
+      const hook = vi.fn()
+      component.onMounted(hook)
+      expect(hook).not.toHaveBeenCalled()
+      vi.mocked(hook).mock.calls.forEach((call) => {
+        expect(call[0]).toMatchObject({ name: "FixWindow", prefix: "fishtvue" })
+      })
+    })
+
+    it("should trigger onBeforeUpdate with the correct instance", () => {
+      const hook = vi.fn()
+      component.onBeforeUpdate(hook)
+      expect(hook).not.toHaveBeenCalled()
+      vi.mocked(hook).mock.calls.forEach((call) => {
+        expect(call[0]).toMatchObject({ name: "FixWindow", prefix: "fishtvue" })
+      })
+    })
+
+    it("should trigger onUpdated with the correct instance", () => {
+      const hook = vi.fn()
+      component.onUpdated(hook)
+      expect(hook).not.toHaveBeenCalled()
+      vi.mocked(hook).mock.calls.forEach((call) => {
+        expect(call[0]).toMatchObject({ name: "FixWindow", prefix: "fishtvue" })
+      })
+    })
+
+    it("should trigger onBeforeUnmount with the correct instance", () => {
+      const hook = vi.fn()
+      component.onBeforeUnmount(hook)
+      expect(hook).not.toHaveBeenCalled()
+      vi.mocked(hook).mock.calls.forEach((call) => {
+        expect(call[0]).toMatchObject({ name: "FixWindow", prefix: "fishtvue" })
+      })
+    })
+
+    it("should trigger onUnmounted with the correct instance", () => {
+      const hook = vi.fn()
+      component.onUnmounted(hook)
+      expect(hook).not.toHaveBeenCalled()
+      vi.mocked(hook).mock.calls.forEach((call) => {
+        expect(call[0]).toMatchObject({ name: "FixWindow", prefix: "fishtvue" })
+      })
+    })
+  })
 })

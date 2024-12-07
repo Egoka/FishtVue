@@ -33,6 +33,7 @@ export function getOptions<T extends keyof ComponentsOptions>(component?: T) {
     }
   })
 }
+
 export function setActiveLocale(activeLocale: NameLocale) {
   return isExistFishtVue((FishtVue) => {
     const locale = FishtVue?.config?.locale
@@ -44,6 +45,7 @@ export function setActiveLocale(activeLocale: NameLocale) {
     return false
   })
 }
+
 export function getActiveLocale(): string | undefined {
   return isExistFishtVue((FishtVue) => {
     const locale = FishtVue?.config?.locale
@@ -52,6 +54,7 @@ export function getActiveLocale(): string | undefined {
     }
   })
 }
+
 export function getDefaultLocale(): string | undefined {
   return isExistFishtVue((FishtVue) => {
     const locale = FishtVue?.config?.locale
@@ -105,10 +108,11 @@ export default {
     const defaultOptions = getDefaultOptions(options?.optionsTheme?.nameTheme)
     const FishtVue: FishtVue = {
       config: reactive(options ? deepMerge(defaultOptions, options) : defaultOptions),
-      useFishtVue: useFishtVue as FishtVue["useFishtVue"],
       getOptions: getOptions as FishtVue["getOptions"],
-      getActiveLocale: getActiveLocale as FishtVue["getActiveLocale"],
-      setActiveLocale: setActiveLocale as FishtVue["setActiveLocale"]
+      useFishtVue,
+      getActiveLocale,
+      setActiveLocale,
+      getDefaultLocale
     }
     if (FishtVue.config.locale)
       FishtVue.config.locale.activeLocale =
