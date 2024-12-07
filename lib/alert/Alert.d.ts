@@ -16,7 +16,7 @@ export declare type BaseAlert = {
   closeButton?: boolean
 }
 
-export interface AlertProps extends Omit<BaseAlert, "position"> {
+export interface AlertProps extends Omit<BaseAlert, "position" | "toTeleport"> {
   position?: "top" | "bottom" | "left" | "right" | "center"
 }
 
@@ -43,7 +43,7 @@ export declare type AlertExpose = {
   close(): void
 }
 export declare type AlertOption = Pick<
-  AlertProps,
+  AlertProps & { toTeleport?: string },
   "type" | "position" | "size" | "class" | "style" | "displayTime" | "notAnimate" | "toTeleport" | "closeButton"
 >
 

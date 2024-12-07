@@ -1,14 +1,17 @@
 <script setup lang="ts">
   import { computed, ref, watch, onMounted, reactive } from "vue"
+  import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
+  import type { StyleClass } from "fishtvue/types"
   import type { SplitProps, SplitEmits, SplitExpose, Panel, CursorType } from "./Split"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
-  import { StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
   const Split = new Component<"Split">()
   const options = Split.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<SplitProps>()
+  const props = withDefaults(defineProps<SplitProps>(), {
+    separatorNotHoverOpacity: undefined
+  })
   const emit = defineEmits<SplitEmits>()
   // ---REF-LINK----------------------------
   const resizableGroup = ref<HTMLElement>()
@@ -36,7 +39,6 @@
             item.size = item?.minSize + (item?.maxSize - item?.minSize) / 2
           }
         }
-        if (styles.value && styles.value?.panel) item.class = [styles.value?.panel as string, item.class as string]
         return item
       }) ?? []
   )
@@ -48,7 +50,9 @@
     () => props?.separatorNotHoverOpacity ?? options?.separatorNotHoverOpacity
   )
   // ---STYLE-------------------------------
-  const styles = computed<SplitProps["styles"]>(() => props?.styles ?? options?.styles)
+  const styles = computed<SplitProps["styles"]>(() =>
+    deepMergeSoft<NonNullable<SplitProps["styles"]>>(deepCopyObject(options?.styles), deepCopyObject(props?.styles))
+  )
   const separatorClass = ref<StyleClass>([
     "relative flex w-px items-center justify-center bg-gray-200 dark:bg-gray-800",
     "touch-none select-none",
@@ -70,7 +74,12 @@
       "flex data-[direction=vertical]:flex-col overflow-hidden dark:text-gray-300 transition-all"
     ])
   )
-  const classPanelBody = (panel: Panel) => Split.setStyle([panel.class, "relative overflow-hidden w-full"])
+  const classPanelBody = (panel: Panel) =>
+    Split.setStyle([
+      styles.value && styles.value?.panel ? styles.value?.panel : "",
+      panel.class,
+      "relative overflow-hidden w-full"
+    ])
   const classSeparator = (panel: Panel) =>
     Split.setStyle([separatorClass.value, getStyleCursor(cursorPanels[panel.name]), "group"])
   const classSeparatorStrip = (panel: Panel) =>
@@ -371,6 +380,7 @@
 
 <template>
   <div
+    data-split
     ref="resizableGroup"
     :class="classBase"
     :data-direction="direction"
@@ -378,6 +388,7 @@
     :data-units="units ?? null">
     <template v-for="(panel, key) in panels" :key="key">
       <div
+        data-split-item
         :ref="(el) => setItemRef(el as HTMLElement, panel.name)"
         :class="classPanelBody(panel)"
         :data-name="panel.name"
@@ -387,6 +398,7 @@
       </div>
       <div
         v-if="!(panel.disabled || panels[key + 1]?.disabled) && key !== panels?.length - 1"
+        data-split-separator
         role="separator"
         tabindex="0"
         :class="classSeparator(panel)"
@@ -403,10 +415,10 @@
         @mouseout="outResizePanel($event, panel.name)"
         @mousedown="startResizePanel($event, panel.name)"
         @mouseup="stopResizePanel($event, panel.name)">
-        <div v-if="separatorType === 'strip'" :class="classSeparatorStrip(panel)">
+        <div v-if="separatorType === 'strip'" data-split-separator-strip :class="classSeparatorStrip(panel)">
           <div :class="classSeparatorStripStyle"></div>
         </div>
-        <div v-else :class="classSeparatorIcon(panel)">
+        <div v-else data-split-separator-icon :class="classSeparatorIcon(panel)">
           <svg
             v-if="separatorType === 'hexagon'"
             width="15"

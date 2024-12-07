@@ -8,7 +8,10 @@
   const Badge = new Component<"Badge">()
   const options = Badge.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<BadgeProps>()
+  const props = withDefaults(defineProps<BadgeProps>(), {
+    point: undefined,
+    closeButton: undefined
+  })
   const emit = defineEmits<BadgeEmits>()
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<BadgeProps["mode"]>>(() => props.mode ?? options?.mode ?? "primary")
@@ -40,8 +43,8 @@
   const classBase = computed(() =>
     Badge.setStyle([
       "items-center m-[2px] px-2 py-1 text-xs font-medium rounded-md",
-      isPoint.value || isButton ? "gap-x-[2px]" : "",
-      isPoint.value && isButton
+      isPoint.value || isButton.value ? "gap-x-[2px]" : "",
+      isPoint.value && isButton.value
         ? "px-1"
         : isPoint.value && !isButton.value
           ? "pl-1"
@@ -77,8 +80,8 @@
 </script>
 
 <template>
-  <div :class="classBase">
-    <svg v-if="isPoint" :class="classIcon" viewBox="0 0 6 6" aria-hidden="true">
+  <div :class="classBase" data-badge>
+    <svg v-if="isPoint" data-badge-point :class="classIcon" viewBox="0 0 6 6" aria-hidden="true">
       <circle cx="3" cy="3" r="3"></circle>
     </svg>
     <slot />

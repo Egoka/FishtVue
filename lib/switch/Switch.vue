@@ -1,15 +1,18 @@
 <script setup lang="ts">
   import { computed, getCurrentInstance, ref, watch, onMounted } from "vue"
   import type { SwitchProps, SwitchEmits, SwitchExpose } from "./Switch"
+  import type { StyleClass, StyleMode } from "fishtvue/types"
   import Icons from "fishtvue/icons/Icons.vue"
-  import Component from "fishtvue/component"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
-  import { StyleClass, StyleMode } from "fishtvue/types"
+  import Component from "fishtvue/component"
   // ---BASE-COMPONENT----------------------
   const Switch = new Component<"Switch">()
   const options = Switch.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<SwitchProps>()
+  const props = withDefaults(defineProps<SwitchProps>(), {
+    disabled: undefined,
+    required: undefined
+  })
   const emit = defineEmits<SwitchEmits>()
   // ---STATE-------------------------------
   const modelValue = ref<SwitchProps["modelValue"]>()
@@ -164,13 +167,15 @@
 </script>
 
 <template>
-  <div :class="classBaseSwitch">
+  <div data-switch :class="classBaseSwitch">
     <div :class="classInputDiv">
       <button
         v-if="switchingType === 'switch'"
+        data-input-switch
         role="switch"
         type="button"
         tabindex="0"
+        :disabled="isDisabled"
         :aria-checked="modelValue"
         :data-headlessui-state="modelValue ? 'checked' : ''"
         :class="classSwitch"
@@ -193,6 +198,7 @@
       </button>
       <input
         v-else-if="switchingType === 'checkbox'"
+        data-input-checkbox
         :id="id"
         :name="id"
         tabindex="0"
@@ -201,18 +207,18 @@
         type="checkbox"
         :class="classSwitch"
         :style="`border-radius: ${rounded - 1}px`"
-        @keydown.enter="inputEvent(!modelValue)"
+        @keydown.stop.enter="inputEvent(!modelValue)"
         @focus="isActiveSwitch = true"
         @blur="isActiveSwitch = false"
         @input="inputEvent(($event.target as HTMLInputElement).checked)"
         @change="changeModelValue(($event.target as HTMLInputElement).checked)" />
     </div>
-    <div :class="classLabel">
+    <div data-switch-label :class="classLabel" @click="inputEvent(!modelValue)">
       {{ label }}
     </div>
     <slot />
-    <span ref="afterInput" :class="classAfterInput">
-      <div v-if="help?.length" :class="classIconBody">
+    <span data-switch-after ref="afterInput" :class="classAfterInput">
+      <div data-switch-help v-if="help?.length" :class="classIconBody">
         <Icons
           type="QuestionMarkCircle"
           class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 transition cursor-help" />

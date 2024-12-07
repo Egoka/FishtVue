@@ -10,7 +10,14 @@
   const Aria = new Component<"Aria">()
   const options = Aria.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<AriaProps>()
+  const props = withDefaults(defineProps<AriaProps>(), {
+    isValue: undefined,
+    isInvalid: undefined,
+    required: undefined,
+    loading: undefined,
+    disabled: undefined,
+    clear: undefined
+  })
   const emit = defineEmits<AriaEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
@@ -29,10 +36,12 @@
   // ---PROPS-------------------------------
   const id = ref<NonNullable<AriaProps["id"]>>(String(props.id ?? getCurrentInstance()?.uid))
   const placeholder = computed<NonNullable<AriaProps["placeholder"]>>(() => String(props?.placeholder ?? ""))
-  const autocomplete = computed<NonNullable<AriaProps["autocomplete"]>>(() => props?.autocomplete ?? "on")
-  const wrap = computed<NonNullable<AriaProps["wrap"]>>(() => props?.wrap ?? "soft")
-  const rows = computed<NonNullable<AriaProps["rows"]>>(() => props?.rows ?? 3)
-  const maxLength = computed<NonNullable<AriaProps["maxLength"]>>(() => props?.maxLength ?? 9999)
+  const autocomplete = computed<NonNullable<AriaProps["autocomplete"]>>(
+    () => props?.autocomplete ?? options?.autocomplete ?? "on"
+  )
+  const wrap = computed<NonNullable<AriaProps["wrap"]>>(() => props?.wrap ?? options?.wrap ?? "soft")
+  const rows = computed<NonNullable<AriaProps["rows"]>>(() => props?.rows ?? options?.rows ?? 3)
+  const maxLength = computed<NonNullable<AriaProps["maxLength"]>>(() => props?.maxLength ?? options?.maxLength ?? 9999)
   const isValue = computed<boolean>(() => !!modelValue.value || isActiveAria.value)
   const mode = computed<NonNullable<AriaProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const isDisabled = computed<NonNullable<AriaProps["disabled"]>>(() => props.disabled ?? false)
@@ -91,8 +100,9 @@
     messageInvalid,
     classStyle,
     // ---METHODS-----------------------
-    closeAria,
-    clear
+    clear,
+    focus,
+    blur
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
@@ -100,8 +110,6 @@
   })
   // ---WATCHERS----------------------------
   watch(isActiveAria, (value) => {
-    if (value) document.addEventListener("click", closeAria)
-    else document.removeEventListener("click", closeAria)
     classLayout.value =
       (props.class ?? options?.class ?? "") +
       (value
@@ -110,10 +118,6 @@
   })
 
   // ---METHODS-----------------------------
-  function closeAria(evt: MouseEvent) {
-    isActiveAria.value = evt.composedPath().includes(inputRef.value as HTMLElement)
-  }
-
   function clear() {
     isActiveAria.value = false
     inputModelValue("")

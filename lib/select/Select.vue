@@ -15,7 +15,17 @@
   const Select = new Component<"Select">()
   const options = Select.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<SelectProps>()
+  const props = withDefaults(defineProps<SelectProps>(), {
+    autoFocus: undefined,
+    multiple: undefined,
+    noQuery: undefined,
+    isValue: undefined,
+    isInvalid: undefined,
+    required: undefined,
+    loading: undefined,
+    disabled: undefined,
+    clear: undefined
+  })
   const emit = defineEmits<SelectEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
@@ -431,13 +441,14 @@
 <template>
   <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="select(null)">
     <div
+      data-select
       ref="selectBody"
       tabindex="0"
       :class="classBase"
       @focusin="focusSelect(true)"
       @focusout="focusSelect(false)"
       @click="openSelect">
-      <div :class="classSelectContent">
+      <div data-select-content :class="classSelectContent">
         <template v-if="isMultiple">
           <transition-group
             leave-active-class="transition ease-in-out duration-300"
@@ -449,6 +460,7 @@
             <div
               v-for="item in typeof maxVisible === 'number' ? visibleValue.slice(0, maxVisible) : visibleValue"
               :key="item[keySelect]"
+              data-select-item
               :class="classSelectItem">
               <slot name="values" :selected="item" :key="valueSelect ? valueSelect : keySelect" :delete-select="select">
                 <Badge
@@ -493,6 +505,7 @@
         :class-body="['z-20', `ml-[${layout?.beforeWidth}px]`]"
         @close="closeSelect">
         <div
+          data-select-list
           ref="selectList"
           :class="classSelectList"
           :style="`width: ${(selectBody as HTMLElement)?.clientWidth ?? 0}px`">
@@ -501,6 +514,7 @@
           <Input
             v-if="isQuery"
             ref="selectSearch"
+            data-select-search
             v-model="query"
             :label="labelInput"
             :mode="mode"
@@ -523,6 +537,7 @@
             tag="ul"
             :css="false"
             ref="selectItems"
+            data-select-list-items
             @before-enter="onBeforeEnter"
             @enter="onEnter"
             @leave="onLeave">
@@ -530,6 +545,7 @@
               <li
                 v-for="(item, index) in dataList"
                 :key="`${item[keySelect]}`"
+                data-select-list-item
                 :tabindex="activeItem === index ? 0 : -1"
                 :data-index="index"
                 :class="classLiItem"

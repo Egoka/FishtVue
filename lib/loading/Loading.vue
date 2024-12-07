@@ -88,6 +88,7 @@
   const size = computed<LoadingProps["size"]>(() => props.size ?? options?.size)
   const color = computed<LoadingProps["color"]>(() => {
     let color = get(colors, props.color ?? options?.color) as string | undefined
+    if (color && typeof color === "object") color = color?.["500"]
     if (color && color.startsWith("hsl")) {
       color = color.replace(/var\((?<var>.*?)\)|(?<alpha><alpha-value>)/g, (substring, args) => {
         if (substring === "<alpha-value>") return "100"
@@ -120,7 +121,7 @@
 </script>
 
 <template>
-  <div :class="baseClass">
+  <div data-loading :class="baseClass">
     <svg
       v-if="type === 'simple'"
       :class="[loadingIsSimple, classLoading]"

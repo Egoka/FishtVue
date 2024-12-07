@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, getCurrentInstance, ref, watch, onMounted, onUnmounted } from "vue"
+  import { computed, getCurrentInstance, ref, watch, onMounted, onUnmounted, nextTick } from "vue"
   import { XMarkIcon } from "@heroicons/vue/20/solid"
   import type { FixWindowProps, FixWindowEmits, FixWindowExpose, FixWindowEvent } from "./FixWindow"
   import Button from "fishtvue/button/Button.vue"
@@ -8,7 +8,11 @@
   const FixWindow = new Component<"FixWindow">()
   const options = FixWindow.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<FixWindowProps>()
+  const props = withDefaults(defineProps<FixWindowProps>(), {
+    byCursor: undefined,
+    closeButton: undefined,
+    stopOpenPropagation: undefined
+  })
   const emit = defineEmits<FixWindowEmits>()
   // ---REF-LINK----------------------------
   const fixWindow = ref<Element>()
@@ -157,20 +161,28 @@
     isOpen,
     (value: boolean) => {
       if (value) {
-        setTimeout(() => {
+        nextTick(() => {
           removeOpenListener()
           addCloseListener()
           updatePosition()
-        }, 10)
+        })
       } else {
-        setTimeout(() => {
+        nextTick(() => {
           addOpenListener()
           removeCloseListener()
-        }, 10)
+        })
       }
       emit("update:modelValue", value)
     },
     { immediate: true }
+  )
+  watch(
+    () => eventOpen.value,
+    () => addOpenListener()
+  )
+  watch(
+    () => eventClose.value,
+    () => addCloseListener()
   )
 
   // ---SET-LISTENER--------------------------
@@ -465,8 +477,8 @@
     enter-active-class="transition-opacity ease-in-out duration-300"
     enter-from-class="opacity-0"
     enter-to-class="opacity-100">
-    <div v-show="isOpen" ref="fixWindow" :class="classBase" :style="`left: ${x}; top: ${y};${border}`">
-      <div :class="classContent">
+    <div v-show="isOpen" data-fix-window ref="fixWindow" :class="classBase" :style="`left: ${x}; top: ${y};${border}`">
+      <div data-fix-window-content :class="classContent">
         <slot />
       </div>
       <Button v-if="isCloseButton" mode="ghost" class="absolute top-2 right-2 px-[5px] m-0.5 h-9 w-9" @click="close">

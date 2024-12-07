@@ -53,12 +53,23 @@
   import { BaseSelectProps } from "fishtvue/select"
   import { BaseCalendarProps, IRangeValue } from "fishtvue/calendar"
   import { InputLayoutProps } from "fishtvue/inputlayout"
-  import { convertToNumber, convertToPhone } from "fishtvue/utils/numberHandler"
+  import { convertToNumber, convertToPhone, isNumber } from "fishtvue/utils/numberHandler"
+  import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
   // ---BASE-COMPONENT----------------------
   const Table = new Component<"Table">()
   const options = Table.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<TableProps>()
+  const props = withDefaults(defineProps<TableProps>(), {
+    toolbar: undefined,
+    edit: undefined,
+    sort: undefined,
+    filter: undefined,
+    resizedColumns: undefined,
+    pagination: undefined,
+    search: undefined,
+    columns: undefined,
+    summary: undefined
+  })
   const emit = defineEmits<TableEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
@@ -92,11 +103,17 @@
   const mode = computed<NonNullable<TableProps["mode"]>>(
     () => props?.mode ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
   )
-  const toolbar = computed<TableProps["toolbar"]>(() => props?.toolbar ?? options?.toolbar)
-  const sort = computed<TableProps["sort"]>(() => props?.sort ?? options?.sort)
-  const filter = computed<TableProps["filter"]>(() => props?.filter ?? options?.filter)
-  const grouping = computed<TableProps["grouping"]>(() => props?.grouping ?? options?.grouping)
-  const pagination = computed<TableProps["pagination"]>(() => props?.pagination ?? options?.pagination)
+  const toolbar = computed<TableProps["toolbar"]>(
+    () => deepMerge(options?.toolbar, props?.toolbar) as TableProps["toolbar"]
+  )
+  const sort = computed<TableProps["sort"]>(() => deepMerge(options?.sort, props?.sort) as TableProps["sort"])
+  const filter = computed<TableProps["filter"]>(() => deepMerge(options?.filter, props?.filter) as TableProps["filter"])
+  const grouping = computed<TableProps["grouping"]>(
+    () => deepMerge(options?.grouping, props?.grouping) as TableProps["grouping"]
+  )
+  const pagination = computed<TableProps["pagination"]>(
+    () => deepMerge(options?.pagination, props?.pagination) as TableProps["pagination"]
+  )
   const columns = computed<TableProps["columns"]>(() => props?.columns)
   // -----------
   const isVisibleToolbar = computed<boolean>(
@@ -191,14 +208,16 @@
     )
   })
   // ---PAGINATION--------------------------
-  const startPage = computed<NonNullable<TablePagination["startPage"]>>(
-    () => (pagination.value as TablePagination)?.startPage ?? 1
+  const startPage = computed<NonNullable<TablePagination["startPage"]>>(() =>
+    isNumber((pagination.value as TablePagination)?.startPage as number) ? +(pagination.value as any).startPage : 1
   )
   const modePagination = computed<NonNullable<TablePagination["mode"]>>(
     () => (pagination.value as TablePagination)?.mode ?? mode.value
   )
-  const sizePage = computed<NonNullable<TablePagination["sizePage"]>>(
-    () => (pagination.value as TablePagination)?.sizePage ?? countVisibleRows.value
+  const sizePage = computed<NonNullable<TablePagination["sizePage"]>>(() =>
+    isNumber((pagination.value as TablePagination)?.sizePage as number)
+      ? +(pagination.value as any).sizePage
+      : countVisibleRows.value
   )
   const visibleNumberPages = computed<TablePagination["visibleNumberPages"]>(
     () => (pagination.value as TablePagination)?.visibleNumberPages
@@ -228,9 +247,8 @@
   const dataGrouping = computed<DataGrouping>(() => {
     let data = toRaw(dataSource.value)
     if (isPagination.value) {
-      if (isGroup.value && groupField.value) {
+      if (isGroup.value && groupField.value)
         data = Object.values(LD.groupBy(data, (item) => item[groupField.value as string])).flat()
-      }
       data = LD.slice(data, sizeTable.value * (pageTable.value - 1), sizeTable.value * pageTable.value)
     }
     return isGroup.value && groupField.value
@@ -266,9 +284,7 @@
       return <Array<IColumnPrivate>>columnsValue
         .map((column, index) => {
           const fieldName = column.dataField ?? listFields[index] ?? ""
-          if (fieldName === "") {
-            return false
-          }
+          if (fieldName === "") return false
           const options = <IColumnPrivate>{
             ...column,
             id: `Col-${fieldName}-${index}`,
@@ -393,8 +409,8 @@
         })
         .filter((i) => i)
     } else {
-      return listFields.map<IColumnPrivate>((column, index): IColumnPrivate => {
-        return {
+      return listFields.map<IColumnPrivate>(
+        (column, index): IColumnPrivate => ({
           id: `Col-${column}-${index}`,
           dataField: column,
           name: `Col-${column}`,
@@ -407,14 +423,12 @@
           isSort: isSort.value,
           isResized: resizedColumns.value,
           isEdit: isEditCells.value
-        }
-      })
+        })
+      )
     }
   })
   const dataSummary = computed<Array<ISummaryPrivate>>(() => {
-    if (!isSummary.value) {
-      return []
-    }
+    if (!isSummary.value) return []
     if (Array.isArray(props.summary) && props.summary?.length) {
       return <Array<ISummaryPrivate>>props.summary.map((summary, index) => {
         const column = getColumn(summary.dataField, index)
@@ -442,6 +456,7 @@
                 : ["number", "select"].includes(column.type as string)
                   ? "Сум. {0}"
                   : "Кол. {0}"),
+            // todo added locale
             type:
               summary.type ??
               (["string", "date", "select"].includes(column.type as string)
@@ -458,29 +473,25 @@
     } else {
       return <Array<ISummaryPrivate>>dataColumns.value
         .filter((item) => item.visible)
-        .map((column) => {
-          return {
-            name: `Sum-${column.name}`,
-            dataField: column.dataField,
-            displayFormat: ["string", "date"].includes(column.type as string)
-              ? "Кол. {0}"
-              : ["number", "select"].includes(column.type as string)
-                ? "Сум. {0}"
-                : "Кол. {0}",
-            type: ["string", "date", "select"].includes(column.type as string)
-              ? "count"
-              : ["number"].includes(column.type as string)
-                ? "sum"
-                : "count",
-            dataType: column.type
-          }
-        })
+        .map((column) => ({
+          name: `Sum-${column.name}`,
+          dataField: column.dataField,
+          displayFormat: ["string", "date"].includes(column.type as string)
+            ? "Кол. {0}"
+            : ["number", "select"].includes(column.type as string)
+              ? "Сум. {0}"
+              : "Кол. {0}",
+          type: ["string", "date", "select"].includes(column.type as string)
+            ? "count"
+            : ["number"].includes(column.type as string)
+              ? "sum"
+              : "count",
+          dataType: column.type
+        }))
     }
   })
   const summaryColumns = computed(() => {
-    if (!isSummary.value || !dataSummary.value?.length) {
-      return {}
-    }
+    if (!isSummary.value || !dataSummary.value?.length) return {}
     return dataSummary.value.reduce((result: { [key: string]: string }, summary) => {
       result[summary.dataField] = setSummary(summary)
       return result
@@ -490,16 +501,15 @@
   const baseTableHeight = 288 // 18rem
   const heightTable = ref<string>(countVisibleRows.value ? `height: ${baseTableHeight}px` : "height: auto")
   const styles = computed<Omit<ITableStyles, "border"> & { border?: ITableStylesBorder }>((): any => {
-    const s = props?.styles ?? options?.styles
-    const hoverRows =
-      typeof s?.hoverRows === "string"
-        ? (s?.hoverRows as string)
-        : typeof s?.hoverRows === "boolean" && s?.hoverRows
-          ? "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50"
-          : ""
+    const s = deepMergeSoft<ITableStyles>(deepCopyObject(options?.styles), deepCopyObject(props?.styles))
     return {
       ...s,
-      hoverRows: hoverRows,
+      hoverRows:
+        typeof s?.hoverRows === "string"
+          ? (s?.hoverRows as string)
+          : typeof s?.hoverRows === "boolean" && s?.hoverRows
+            ? "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50"
+            : "",
       width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
       height: s?.height ? (typeof s?.height === "number" ? `${s?.height}px` : s?.height) : "",
       animation: s?.animation ?? "transition-all duration-500",
@@ -509,7 +519,9 @@
     }
   })
   const defaultBorder = computed(() =>
-    typeof styles.value?.border === "object" ? styles.value?.border.table : "border-neutral-200 dark:border-neutral-800"
+    typeof styles.value?.border === "object"
+      ? styles.value?.border.table
+      : (styles.value?.border ?? "border-neutral-200 dark:border-neutral-800")
   )
   const tableBodyStyle = computed<string>(() => {
     const borderTop = !slots.header
@@ -852,9 +864,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Table.initStyle()
-    if (tbody.value) {
-      tableObserver.observe(tbody.value as Element)
-    }
+    if (tbody.value) tableObserver.observe(tbody.value as Element)
     Object.assign(
       sortColumns,
       Object.fromEntries(new Map(dataColumns.value.map((column) => [column.dataField, column.defaultSort ?? null])))
@@ -893,9 +903,7 @@
     () => props.dataSource,
     () => {
       allData.value = props.dataSource?.length
-        ? props.dataSource?.map((item) => {
-            return { ...item, _key: crypto.randomUUID() }
-          })
+        ? props.dataSource?.map((item) => ({ ...item, _key: crypto.randomUUID() }))
         : []
       updateDataSource()
     },
@@ -923,20 +931,8 @@
       emit("search", query)
     }
   )
-  watch(
-    startPage,
-    (numberPage: number) => {
-      nextTick(() => switchPage(numberPage))
-    },
-    { immediate: true }
-  )
-  watch(
-    sizePage,
-    (sizePageValue: number) => {
-      switchSizePage(sizePageValue ?? sizePage.value)
-    },
-    { immediate: true }
-  )
+  watch(startPage, (numberPage: number) => setTimeout(() => switchPage(numberPage), 1), { immediate: true })
+  watch(sizePage, (sizePageValue: number) => switchSizePage(sizePageValue ?? sizePage.value), { immediate: true })
 
   // ---METHODS-----------------------------
   function getHeightVisibleRows(): number {
@@ -983,9 +979,7 @@
   }
 
   function updateDataSource(): Array<Record<string, any>> {
-    if (!(allData.value && allData.value?.length)) {
-      return []
-    }
+    if (!(allData.value && allData.value?.length)) return []
     let data = toRaw(allData.value) as Array<Record<string, any>>
     // Sort
     if (data && Object.keys(sortColumns).filter((i) => sortColumns[i] !== null).length) {
@@ -1045,9 +1039,7 @@
   }
 
   function filtering(dataField: IColumn["dataField"], value: any) {
-    if (!dataField) {
-      return
-    }
+    if (!dataField) return
     const isLoading =
       typeof value === "object" || typeof value === "number"
         ? true
@@ -1097,25 +1089,20 @@
   }
 
   function isEqualsValue(column: IColumnPrivate, columnValue: any, value: any): boolean {
-    if (columnValue === null || columnValue === undefined) {
-      return false
-    }
+    if (columnValue === null || columnValue === undefined) return false
     switch (column.type) {
       case "string":
         return String(columnValue).includes(value)
       case "number":
         return columnValue === Number(value)
       case "select": {
-        if (Array.isArray(value)) {
-          return (value as Array<string>).includes(columnValue)
-        } else {
-          return String(columnValue).includes(value)
-        }
+        if (Array.isArray(value)) return (value as Array<string>).includes(columnValue)
+        else return String(columnValue).includes(value)
       }
       case "date": {
-        if (value instanceof Date) {
+        if (value instanceof Date)
           return dayjs(dayjs(columnValue).startOf("day")).isSame(dayjs(value as Date).startOf("day"))
-        } else {
+        else {
           if (value?.start instanceof Date && value?.end instanceof Date) {
             dayjs.extend(isBetween)
             return dayjs(dayjs(columnValue).startOf("day")).isBetween(
@@ -1124,9 +1111,7 @@
               null,
               "[]"
             )
-          } else {
-            return false
-          }
+          } else return false
         }
       }
       default:
@@ -1139,101 +1124,77 @@
     const columnData: Array<any> = LD.map(dataSource.value, summary.dataField ?? "")
     switch (summary.type) {
       case "sum": {
-        if ((["number"] as Array<DataType>).includes(summary.dataType)) {
+        if ((["number"] as Array<DataType>).includes(summary.dataType))
           result = LD.sumBy(LD.compact(columnData), (i) => (!isNaN(Number(i)) ? Number(i) : 0))
-        }
         break
       }
       case "count": {
-        if ((["string", "select", "number", "date"] as Array<DataType>).includes(summary.dataType)) {
+        if ((["string", "select", "number", "date"] as Array<DataType>).includes(summary.dataType))
           result = LD.size(columnData)
-        }
         break
       }
       case "min": {
-        if ((["string", "select"] as Array<DataType>).includes(summary.dataType)) {
+        if ((["string", "select"] as Array<DataType>).includes(summary.dataType))
           result = LD.minBy(columnData, (i) => String(i).length)
-        }
-        if (summary.dataType === "number") {
-          result = LD.minBy(columnData, (i) => (!isNaN(Number(i)) ? Number(i) : 0))
-        }
-        if (summary.dataType === "date") {
-          result = LD.minBy(columnData, (i) => new Date(i).getTime())
-        }
+        if (summary.dataType === "number") result = LD.minBy(columnData, (i) => (!isNaN(Number(i)) ? Number(i) : 0))
+        if (summary.dataType === "date") result = LD.minBy(columnData, (i) => new Date(i).getTime())
         break
       }
       case "max": {
-        if ((["string", "select"] as Array<DataType>).includes(summary.dataType)) {
+        if ((["string", "select"] as Array<DataType>).includes(summary.dataType))
           result = LD.maxBy(columnData, (i) => String(i).length)
-        }
-        if (summary.dataType === "number") {
-          result = LD.maxBy(columnData, (i) => (!isNaN(Number(i)) ? Number(i) : 0))
-        }
-        if (summary.dataType === "date") {
-          result = LD.maxBy(columnData, (i) => new Date(i).getTime())
-        }
+        if (summary.dataType === "number") result = LD.maxBy(columnData, (i) => (!isNaN(Number(i)) ? Number(i) : 0))
+        if (summary.dataType === "date") result = LD.maxBy(columnData, (i) => new Date(i).getTime())
         break
       }
       case "avg": {
-        if ((["string", "select"] as Array<DataType>).includes(summary.dataType)) {
+        if ((["string", "select"] as Array<DataType>).includes(summary.dataType))
           result = LD.round(
             LD.meanBy(columnData, (i) => String(i).length),
             0
           )
-        }
-        if (summary.dataType === "number") {
+        if (summary.dataType === "number")
           result = LD.round(
             LD.meanBy(columnData, (i) => (!isNaN(Number(i)) ? Number(i) : 0)),
             0
           )
-        }
-        if (summary.dataType === "date") {
-          result = LD.meanBy(columnData, (i) => new Date(i).getTime())
-        }
+        if (summary.dataType === "date") result = LD.meanBy(columnData, (i) => new Date(i).getTime())
         break
       }
     }
-    if (result === null || result === undefined) {
-      return ""
-    }
+    if (result === null || result === undefined) return ""
     const column = getColumn(summary.dataField)
     if (column) result = setCell(column, String(result))
-    if (summary?.customizeText && typeof summary.customizeText === "function") {
+    if (summary?.customizeText && typeof summary.customizeText === "function")
       return summary?.customizeText(summary, `${result}`) ?? ""
-    } else {
-      return String(summary?.displayFormat).replace(/\{0}/g, `${result}`)
-    }
+    else return String(summary?.displayFormat).replace(/\{0}/g, `${result}`)
   }
 
   function setCell(column: IColumnPrivate, value: any, data?: any): string {
     function toMask() {
-      if (column?.mask === "phone") {
-        return convertToPhone(String(value))
-      } else if (column?.mask === "number") {
+      if (column?.mask === "phone") return convertToPhone(String(value))
+      else if (column?.mask === "number")
         return convertToNumber(
           value,
           (column.paramsFilter as Partial<BaseInputProps>)?.lengthInteger ?? 20,
           (column.paramsFilter as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
           ""
         )
-      } else if (column?.mask === "price") {
+      else if (column?.mask === "price")
         return convertToNumber(
           value,
           (column.paramsFilter as Partial<BaseInputProps>)?.lengthInteger ?? 20,
           (column.paramsFilter as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
           " "
         )
-      } else {
-        return String(value)
-      }
+      else return String(value)
     }
 
     let valueCell
-    if (value === null || value === undefined) {
-      valueCell = null
-    } else if ("setCellValue" in column && typeof column.setCellValue === "function") {
+    if (value === null || value === undefined) valueCell = null
+    else if ("setCellValue" in column && typeof column.setCellValue === "function")
       valueCell = column.setCellValue(column, value, data)
-    } else {
+    else {
       switch (column.type) {
         case "string":
           valueCell = toMask()
@@ -1255,12 +1216,11 @@
   }
 
   function setMarker(column: IColumnPrivate, valueCell: any): string {
-    if (valueCell && (filterColumns[column.dataField] || queryTable.value.length)) {
+    if (valueCell && (filterColumns[column.dataField] || queryTable.value.length))
       valueCell = valueCell.replace(
         new RegExp(filterColumns[column.dataField] ?? queryTable.value, "gi"),
         `<span class="${classMaskQuery.value}">$&</span>`
       )
-    }
     return valueCell
   }
 
@@ -1299,9 +1259,8 @@
 
   function clearEditableCell(indexRow: number, indexCol: number) {
     nextTick(() => {
-      if (editableCell.value?.indexRow === indexRow && editableCell.value?.indexCol === indexCol) {
+      if (editableCell.value?.indexRow === indexRow && editableCell.value?.indexCol === indexCol)
         editableCell.value = null
-      }
     })
   }
 
@@ -1332,9 +1291,7 @@
     indexRow: number,
     indexCol: number
   ) {
-    if ((column as IColumnPrivate)?.isEdit) {
-      editableCell.value = { indexRow, indexCol }
-    }
+    if ((column as IColumnPrivate)?.isEdit) editableCell.value = { indexRow, indexCol }
     emit("click-cell", {
       eventEl: ((tbody.value as HTMLElement)?.querySelector(`.${key}`) as HTMLElement) ?? null,
       column,
@@ -1345,11 +1302,14 @@
     })
   }
 
-  function addRow(data: any): number {
-    const newValueRow: any = { ...data, _key: crypto.randomUUID() }
-    const index: number = (allData.value as Array<any>)?.push(newValueRow) - 1
-    emit("add-row", { value: data, index, _key: newValueRow._key })
-    return index
+  function addRow(data: any): false | number {
+    if (data) {
+      const newValueRow: any = { ...data, _key: crypto.randomUUID() }
+      const index: number = (allData.value as Array<any>)?.push(newValueRow) - 1
+      emit("add-row", { value: data, index, _key: newValueRow._key })
+      return index
+    }
+    return false
   }
 
   function deleteRow(_key: string): false | any {
@@ -1380,7 +1340,7 @@
   function updateCell(_key: string, column: IColumnPrivate, value: any): false | any {
     if (_key && Array.isArray(allData.value) && column && column?.dataField) {
       const index = allData.value?.findIndex((i) => i._key === _key)
-      if (index && index >= 0 && column.dataField in allData.value[index]) {
+      if (index >= 0 && column.dataField in allData.value[index]) {
         emit("before-edit-cell", { newValue: value, oldValue: allData.value[index][column.dataField], _key, column })
         allData.value[index][column.dataField] = value
         emit("after-edit-cell", { newValue: allData.value[index][column.dataField], oldValue: value, _key, column })
@@ -1437,13 +1397,9 @@
       const rect = columnEl.getBoundingClientRect()
       let newW = $event.pageX - rect.left
       const maxW = column.maxWidth
-      if (maxW && newW > maxW) {
-        newW = maxW
-      }
+      if (maxW && newW > maxW) newW = maxW
       const minW = column.minWidth ?? 100
-      if (minW && newW < minW) {
-        newW = minW
-      }
+      if (minW && newW < minW) newW = minW
       widthsColumns[column.dataField] = Math.round(newW)
     }
   }
@@ -1467,29 +1423,27 @@
     window.removeEventListener("mousemove", moveResizedColumns)
     window.removeEventListener("mouseup", stopResizeColumn)
   }
-
-  // ---------------------------------------
 </script>
 
 <template>
-  <div ref="componentTable" :class="classBaseTable" :style="`width:${styles.width};height:${styles.height};`">
-    <div v-if="isVisibleToolbar" ref="tableToolbar" :class="classBaseToolbar">
-      <div v-if="slots.toolbar" :class="classSlotToolbar">
+  <div
+    data-table-component
+    ref="componentTable"
+    :class="classBaseTable"
+    :style="`width:${styles.width};height:${styles.height};`">
+    <div v-if="isVisibleToolbar" data-table-toolbar ref="tableToolbar" :class="classBaseToolbar">
+      <div v-if="slots.toolbar" data-table-toolbar-slot :class="classSlotToolbar">
         <slot name="toolbar" />
       </div>
-      <div :class="classSearch">
+      <div v-if="isSearch" data-table-search :class="classSearch">
         <Input
-          v-if="isSearch"
           :model-value="queryTable"
           :label="Table.t('find') ?? 'Find...'"
           clear
           :mode="mode"
           label-mode="vanishing"
-          :params-input="{
-            autocomplete: 'off',
-            classInput:
-              'min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] transition-all duration-500'
-          }"
+          autocomplete="off"
+          class-input="min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] transition-all duration-500"
           :class-body="`sticky top-1 rounded-md ease-out ${modeStyle} mb-2`"
           @change:model-value="(v) => searching(v)"
           @update:model-value="(v) => lengthData > 100 || searching(v)">
@@ -1507,29 +1461,35 @@
         enter-to-class="opacity-100">
         <Button
           v-if="isFilterClear"
+          data-table-clear-filter
           class="group rounded-md ml-2 h-[38px] min-w-[38px] px-2 bg-stone-100 dark:bg-stone-900"
           @click="clearFilter">
           <FunnelIcon aria-hidden="true" :class="classIconClearFilter" />
-          <FixWindow :mode="mode">Очистить все фильтры</FixWindow>
+          <FixWindow :mode="mode">{{ Table.t("clearAllFilters") ?? "Clear all filters" }}</FixWindow>
         </Button>
       </transition>
     </div>
-    <div :class="classTableBody" :style="`border-radius: ${styles.borderRadiusPx}px;`">
-      <div v-if="slots.header" ref="tableHeader" :class="classBodySlotHeader" :style="styleHeader">
-        <div :class="classSlotHeader">
+    <div data-table-body :class="classTableBody" :style="`border-radius: ${styles.borderRadiusPx}px;`">
+      <div v-if="slots.header" data-table-header ref="tableHeader" :class="classBodySlotHeader" :style="styleHeader">
+        <div data-table-header-slot :class="classSlotHeader">
           <slot name="header" />
         </div>
       </div>
-      <div :class="classBaseTableBody">
+      <div data-table-body-base :class="classBaseTableBody">
         <div ref="tableBody" :class="classBodyTable" :style="styleBodyTable">
-          <table ref="table" :class="classTable">
+          <table data-table ref="table" :class="classTable">
             <!-- -------------------------------- -->
-            <thead v-if="isColumns" ref="thead" :class="classTHead">
+            <thead v-if="isColumns" data-table-thead ref="thead" :class="classTHead">
               <tr>
                 <template v-for="(column, key) in dataColumns" :key="column.id">
-                  <th v-if="column.visible" scope="col" :class="classTh(column)" :style="styleTh(column)">
+                  <th
+                    v-if="column.visible"
+                    data-table-thead-col
+                    scope="col"
+                    :class="classTh(column)"
+                    :style="styleTh(column)">
                     <div :class="classBodyFilter">
-                      <div v-if="column.isFilter" :class="classIsFilter(column)">
+                      <div v-if="column.isFilter" data-table-thead-col-filter :class="classIsFilter(column)">
                         <Input
                           v-if="column.type === 'string' || column.type === 'number'"
                           :model-value="filterColumns[column?.dataField]"
@@ -1568,11 +1528,12 @@
                           clear
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                       </div>
-                      <div v-else :class="classNotFilter">
+                      <div v-else data-table-thead-col-no-filter :class="classNotFilter(column)">
                         {{ column.caption }}
                       </div>
                       <div
                         v-if="column.isSort ?? isSort"
+                        data-table-thead-col-sort
                         :class="classIsSort(column)"
                         @click="sorting(column?.dataField)">
                         <ArrowLongUpIcon
@@ -1590,6 +1551,7 @@
                       </div>
                       <div
                         v-if="column.isResized ?? resizedColumns"
+                        data-table-thead-col-resized
                         :class="classResizedColumns(column, key)"
                         @mousedown="startResizeColumn($event, column.id)"
                         @mouseup="stopResizeColumn">
@@ -1601,10 +1563,15 @@
               </tr>
             </thead>
             <!-- -------------------------------- -->
-            <tbody ref="tbody" :class="classTBody">
+            <tbody data-table-tbody ref="tbody" :class="classTBody">
               <template v-for="(group, key) in resultDataSource" :key="key">
-                <tr v-if="isGroup">
-                  <th :colspan="dataColumns.length" scope="colgroup" :class="classGroup" :style="styleGroup">
+                <tr v-if="isGroup" data-table-tbody-group>
+                  <th
+                    :colspan="dataColumns.length"
+                    data-table-tbody-colgroup
+                    scope="colgroup"
+                    :class="classGroup"
+                    :style="styleGroup">
                     <div :class="classGroupText" :style="styleGroupText">
                       <slot name="group" :item="key" :length="group.length">{{ key }}</slot>
                     </div>
@@ -1612,11 +1579,13 @@
                 </tr>
                 <template v-for="(data, indexRow) in group" :key="indexRow">
                   <tr
+                    data-table-tbody-tr
                     :class="classTr(data, indexRow)"
                     @click="clickRow(`tr--${data?._key ?? indexRow}`, data, indexRow)">
                     <template v-for="(column, indexCol) in dataColumns" :key="`${indexRow}-${indexCol}`">
                       <td
                         v-if="column.visible"
+                        data-table-tbody-td
                         :class="classColumnTd(data, indexRow, column, indexCol)"
                         :style="styleColumnTd(column)"
                         @click="
@@ -1632,6 +1601,7 @@
                         ">
                         <div
                           v-if="!column?.cellTemplate"
+                          data-table-tbody-not-cell-template
                           :class="classCellTable(indexRow, column, indexCol)"
                           :style="styleCellTable">
                           <div
@@ -1670,12 +1640,12 @@
                               class="border-none font-normal bg-transparent dark:bg-transparent"
                               class-body="pt-[2px] -my-3 w-full"
                               label-mode="vanishing"
+                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
                               @update:model-value="
                                 (value) => {
                                   updateCell(data?._key, column, value)
                                 }
                               " />
-                            <!--                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"-->
                             <Calendar
                               v-else-if="column.type === 'date'"
                               :model-value="data[column.dataField]"
@@ -1697,7 +1667,11 @@
                               @update:model-value="(value) => updateCell(data?._key, column, value)" />
                           </template>
                         </div>
-                        <div v-else :class="classTemplate" :style="styleCellTable">
+                        <div
+                          v-else
+                          data-table-tbody-cell-template
+                          :class="classTemplate(column)"
+                          :style="styleCellTable">
                           <slot
                             :name="column?.cellTemplate"
                             :key="data?._key"
@@ -1715,13 +1689,21 @@
               </template>
             </tbody>
             <!-- -------------------------------- -->
-            <tr v-if="footerPaddingHeight" :class="classFooterPaddingHeight" :style="styleFooterPaddingHeight"></tr>
+            <tr
+              v-if="footerPaddingHeight"
+              data-table-padding-height
+              :class="classFooterPaddingHeight"
+              :style="styleFooterPaddingHeight"></tr>
             <!-- -------------------------------- -->
-            <tfoot v-if="isSummary && Object.keys(summaryColumns).length" ref="tfoot" :class="classTFoot">
-              <tr>
+            <tfoot
+              v-if="isSummary && Object.keys(summaryColumns).length"
+              data-table-tfoot
+              ref="tfoot"
+              :class="classTFoot">
+              <tr data-table-tfoot-tr>
                 <template v-for="column in dataColumns" :key="column.id">
-                  <th v-if="column.visible" scope="col" :class="classThSummary">
-                    <div :class="classThSummaryText" v-html="summaryColumns[column.dataField]" />
+                  <th v-if="column.visible" data-table-tfoot-th scope="col" :class="classThSummary(column)">
+                    <div :class="classThSummaryText(column)" v-html="summaryColumns[column.dataField]" />
                   </th>
                 </template>
               </tr>
@@ -1730,7 +1712,12 @@
           </table>
         </div>
         <!-- -------------------------------- -->
-        <div v-if="isPagination && allData?.length" ref="pager" :class="classIsPagination" :style="styleIsPagination">
+        <div
+          v-if="isPagination && allData?.length"
+          data-table-pagination
+          ref="pager"
+          :class="classIsPagination"
+          :style="styleIsPagination">
           <Pagination
             :model-value="pageTable"
             :size-page="+sizeTable"
@@ -1743,9 +1730,9 @@
             :is-hidden-navigation-buttons="isHiddenNavigationButtons"
             :class="[
               'classPagination border-t sm:px-2',
-              styles.class?.pagination,
-              defaultBorder,
-              styles.border?.pagination
+              styles.class?.pagination as string,
+              defaultBorder as string,
+              styles.border?.pagination as string
             ]"
             @update:model-value="switchPage"
             @update:size-page="switchSizePage" />
@@ -1758,7 +1745,7 @@
           enter-active-class="transition ease-in duration-500"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-if="isLoading" :class="classIsLoading">
+          <div v-if="isLoading" data-table-loading :class="classIsLoading">
             <div :class="classIsLoadingBody">
               <Loading type="Fingerprint" :size="100" :color="isDark ? 'theme.600' : 'theme.500'" />
             </div>
@@ -1772,7 +1759,7 @@
           enter-active-class="transition ease-in duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-if="!isLoading && !allData?.length" :class="classNoData">
+          <div v-if="!isLoading && !allData?.length" data-table-no-data :class="classNoData">
             <TableCellsIcon aria-hidden="true" :class="classIcon" />
             <div v-html="noData" />
           </div>
@@ -1784,7 +1771,11 @@
           enter-active-class="transition ease-in duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-if="!isLoading && allData?.length && !dataColumns?.length" :class="classNoColumn" v-html="noColumn" />
+          <div
+            v-if="!isLoading && allData?.length && !dataColumns?.length"
+            data-table-no-column
+            :class="classNoColumn"
+            v-html="noColumn" />
         </transition>
         <transition
           leave-active-class="transition-all ease-in duration-200"
@@ -1793,13 +1784,21 @@
           enter-active-class="transition-all ease-in duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-if="!isLoading && allData?.length && dataColumns?.length && !dataSource.length" :class="classNoFilter">
+          <div
+            v-if="!isLoading && allData?.length && dataColumns?.length && !dataSource.length"
+            data-table-no-filter
+            :class="classNoFilter">
             <FunnelIcon aria-hidden="true" :class="classIcon" />
             <div v-html="noFilter" />
           </div>
         </transition>
       </div>
-      <div v-if="slots.footer" ref="tableFooter" :class="classSlotFooterBody" :style="styleSlotFooterBody">
+      <div
+        v-if="slots.footer"
+        data-table-footer
+        ref="tableFooter"
+        :class="classSlotFooterBody"
+        :style="styleSlotFooterBody">
         <div :class="classSlotFooter">
           <slot name="footer" />
         </div>

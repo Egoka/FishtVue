@@ -100,11 +100,6 @@ export interface IColumnPrivate extends Omit<IColumn, "dataField"> {
   id: string
   dataField: string
   isEdit: boolean
-  // edit?: {
-  //   paramsInput?: BaseInputProps
-  //   paramsSelect?: BaseSelectProps
-  //   paramsDatePicker?: Partial<BaseCalendarProps>
-  // }
 }
 
 export interface ISummary {
@@ -285,7 +280,7 @@ export declare type TableExpose = {
   modeStyle: ReadRef<string>
   isDark: ReadRef<boolean>
   // ---METHODS-----------------------------
-  addRow(data: any): number
+  addRow(data: any): false | number
   deleteRow(_key: string): false | any
   updateRow(_key: string, data: any): false | any
   updateCell(_key: string, column: IColumnPrivate, value: any): false | any

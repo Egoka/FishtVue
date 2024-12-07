@@ -8,12 +8,21 @@ declare type Locale = Partial<{
 declare type TypeLocale = { [key: string]: string | string[] | TypeLocale }
 
 export declare interface DefaultMessages extends DeepPartial<TypeLocale> {
+  of: string
+  items: string
+  lines: string
+  previous: string
+  next: string
+  save: string
+  increase: string
+  show: string
   find: string
   copy: string
   requiredField: string
   noData: string
   noColumn: string
   noDataForQuery: string
+  clearAllFilters: string
 }
 
 export declare type Messages = DeepPartial<Record<NameLocale, DefaultMessages>>
@@ -24,8 +33,6 @@ export declare type Locales = Partial<{
   locales: Array<Locale>
   messages: Messages
 }>
-
-export declare function switchLocale(activeLocale: NameLocale): string | boolean | undefined
 
 declare let Locales: Messages
 

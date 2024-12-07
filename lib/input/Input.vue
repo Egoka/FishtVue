@@ -10,7 +10,15 @@
   const Input = new Component<"Input">()
   const options = Input.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<InputProps>()
+  const props = withDefaults(defineProps<InputProps>(), {
+    autoFocus: undefined,
+    isValue: undefined,
+    isInvalid: undefined,
+    required: undefined,
+    loading: undefined,
+    disabled: undefined,
+    clear: undefined
+  })
   const emit = defineEmits<InputEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
@@ -164,6 +172,7 @@
 <template>
   <InputLayout ref="layout" :value="modelValue" :class="classLayout ?? ''" v-bind="inputLayout" @clear="clear">
     <input
+      data-input
       ref="inputRef"
       :id="id"
       :name="id"
@@ -188,11 +197,13 @@
       <slot v-if="slots.after" name="after" />
       <Icons
         v-if="props?.type === 'password' && type === 'password'"
+        data-eye-slash
         type="EyeSlash"
         class="text-gray-400 dark:text-gray-600 hover:text-cyan-500 hover:dark:text-cyan-700 transition cursor-pointer"
         @click="type = 'text'" />
       <Icons
         v-if="props?.type === 'password' && type === 'text'"
+        data-eye
         type="Eye"
         class="text-gray-400 dark:text-gray-600 hover:text-cyan-500 hover:dark:text-cyan-700 transition cursor-pointer"
         @click="type = 'password'" />

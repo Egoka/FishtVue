@@ -36,6 +36,8 @@ export declare type FishtVue = {
   ): keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>
   getActiveLocale(): string | undefined
   setActiveLocale(activeLocale: NameLocale): string | boolean | undefined
+  getActiveLocale(): string | undefined
+  getDefaultLocale(): string | undefined
 }
 
 export declare function useFishtVue<T extends FishtVue>(): Readonly<T> | undefined

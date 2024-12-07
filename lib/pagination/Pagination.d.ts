@@ -1,5 +1,5 @@
 import { Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleMode } from "../types"
+import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode } from "../types"
 import type { BaseSelectProps, SelectExpose } from "fishtvue/select"
 // ---------------------------------------
 
@@ -13,6 +13,7 @@ export declare type PaginationProps = {
   isInfoText?: boolean
   isPageSizeSelector?: boolean
   isHiddenNavigationButtons?: boolean
+  class?: StyleClass
 }
 export declare type PaginationSlots = {
   default(): VNode[]
@@ -33,7 +34,7 @@ export declare type PaginationExpose = {
   isNavigationButtons: ReadRef<PaginationProps["isHiddenNavigationButtons"]>
   arraySizesSelector: ReadRef<Array<{ key: number; value: string }>>
   pages: ReadRef<Array<number>>
-  activePage: ReadRef<NonNullable<PaginationProps["modelValue"]>>
+  activePage: Ref<PaginationProps["modelValue"]>
   mode: ReadRef<NonNullable<PaginationProps["mode"]>>
   paramsSelect: ReadRef<Partial<BaseSelectProps>>
   // ---METHODS-----------------------
@@ -50,6 +51,7 @@ export declare type PaginationOption = Pick<
   | "isInfoText"
   | "isPageSizeSelector"
   | "isHiddenNavigationButtons"
+  | "class"
 >
 
 // ---------------------------------------

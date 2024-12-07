@@ -9,13 +9,24 @@
   const Dialog = new Component<"Dialog">()
   const options = Dialog.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<DialogProps>()
+  const props = withDefaults(defineProps<DialogProps>(), {
+    // notAnimate: undefined,
+    closeButton: undefined,
+    withoutMargin: undefined,
+    notCloseBackground: undefined
+  })
   const emit = defineEmits<DialogEmits>()
+  // ---STATE-------------------------------
+  const isOpen = ref<boolean>(props.modelValue ?? false)
+  watch(
+    () => props.modelValue,
+    (value) => (isOpen.value = value),
+    { immediate: true }
+  )
   // ---PROPS-------------------------------
   const toTeleport = computed<DialogProps["toTeleport"]>(() => props.toTeleport ?? options?.toTeleport ?? "body")
-  const isOpen = computed<boolean>(() => props.modelValue ?? false)
   const size = computed<string>(() => {
-    const size: Size = props?.size ?? options?.size ?? "2xl"
+    const size: Size | undefined = props?.size ?? options?.size
     switch (size) {
       case "xs":
         return "sm:max-w-xs"
@@ -158,6 +169,7 @@
 
   // ---METHODS-----------------------------
   function closeDialog() {
+    isOpen.value = !isOpen.value
     emit("update:modelValue", false)
   }
 </script>
@@ -172,9 +184,9 @@
       enter-active-class="transition-all ease-in-out duration-500"
       :enter-from-class="enterAndLeaveClass"
       enter-to-class="translate-x-0 opacity-100">
-      <div v-if="isOpen" :class="classBase">
+      <div v-if="isOpen" :class="classBase" data-dialog>
         <div v-if="!notCloseBackground" :class="classBackground" @click="closeDialog" />
-        <div :class="classDialog">
+        <div data-dialog-content :class="classDialog">
           <slot :closeDialog="closeDialog"></slot>
           <Button
             v-if="isCloseButton"
@@ -193,7 +205,7 @@
       enter-active-class="transition-opacity ease-in-out duration-500"
       enter-from-class="opacity-0"
       enter-to-class="opacity-100">
-      <div v-if="isOpen" :class="classBackgroundBase">
+      <div v-if="isOpen" :class="classBackgroundBase" data-dialog-background>
         <slot name="background">
           <div :class="classBackgroundBaseColor" />
         </slot>

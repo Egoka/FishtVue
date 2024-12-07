@@ -39,19 +39,19 @@ export type FieldSelect = Field &
   FieldAdditional &
   SelectProps & {
     typeComponent: "Select"
-    rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
+    // rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
   }
 export type FieldCalendar = Field &
   FieldAdditional &
   CalendarProps & {
     typeComponent: "Calendar"
-    rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
+    // rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
   }
 export type FieldTextEditor = Field &
   FieldAdditional &
   TextEditorProps & {
     typeComponent: "TextEditor"
-    rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
+    // rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
   }
 export type FieldSwitch = Field &
   SwitchProps & {
@@ -112,9 +112,10 @@ export declare type FormExpose = {
   // ---PROPS-------------------------------
   formFields: FormValues
   // ---METHODS-----------------------------
-  setFieldValue(fieldName: string, value: any): void
+  setFieldValue(fieldName: string, value: any): unknown | undefined
   setFieldParam(fieldName: string, param: keyof FieldType, value: any): void
   getField(fieldName: string): FieldType | null
+  isFieldInvalid(fieldName: string): boolean | undefined
   setStructureParam(indexStructure: number, param: keyof FormStructure, value: any): void
   validateFields(nameField?: Array<string> | string): boolean
 }

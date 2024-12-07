@@ -15,7 +15,10 @@
   const Alert = new Component<"Alert">()
   const options = Alert.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<AlertProps>()
+  const props = withDefaults(defineProps<AlertProps>(), {
+    notAnimate: undefined,
+    closeButton: undefined
+  })
   const emit = defineEmits<AlertEmits>()
   const slots = useSlots()
   // ---STATE-------------------------------
@@ -55,6 +58,7 @@
     return Alert.setStyle(classAnimate)
   })
   const classesStyle = computed<Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>>(
+    // eslint-disable-next-line vue/return-in-computed-property
     () => {
       switch (type.value) {
         case "success":
@@ -102,18 +106,10 @@
             button: "hover:bg-neutral-200 dark:hover:bg-neutral-700",
             buttonIcon: "fill-neutral-500 dark:fill-neutral-500"
           }
-        default:
-          return {
-            body: "bg-green-50 dark:bg-green-950",
-            icon: "text-green-400 dark:text-green-600",
-            title: "text-green-800 dark:text-green-200",
-            subtitle: "text-green-700 dark:text-green-300",
-            button: "hover:bg-green-200 dark:hover:bg-green-800",
-            buttonIcon: "fill-green-500 dark:fill-green-500"
-          }
       }
     }
   )
+  // eslint-disable-next-line vue/return-in-computed-property
   const icon = computed(() => {
     switch (type.value) {
       case "success":
@@ -126,8 +122,6 @@
         return XCircleIcon
       case "neutral":
         return ChatBubbleOvalLeftIcon
-      default:
-        return CheckCircleIcon
     }
   })
   const size = computed<StyleClass>(() => {
@@ -167,9 +161,6 @@
       case "7xl":
         classSize = "sm:max-w-7xl"
         break
-      default:
-        classSize = "sm:max-w-2xl"
-        break
     }
     return Alert.setStyle(classSize)
   })
@@ -187,7 +178,7 @@
   const classBody = computed(() => Alert.setStyle("flex"))
   const classDivIcon = computed(() => Alert.setStyle("shrink-0"))
   const classIcon = computed(() => Alert.setStyle(["h-5 w-5", classesStyle.value.icon]))
-  const classContent = computed(() => Alert.setStyle("ml-3"))
+  const classContent = computed(() => Alert.setStyle("ml-3 mt-0.5"))
   const classTitle = computed(() => Alert.setStyle(["text-sm font-medium", classesStyle.value.title]))
   const classSubtitle = computed(() =>
     Alert.setStyle(["text-sm", title.value?.length ? "mt-2" : "", classesStyle.value.subtitle])
@@ -195,7 +186,7 @@
   const classSlotDefault = computed(() =>
     Alert.setStyle(["text-sm", title.value?.length ? "mt-2" : "", classesStyle.value.subtitle])
   )
-  const classDivCloseButton = ref(Alert.setStyle("ml-auto pl-3"))
+  const classDivCloseButton = ref(Alert.setStyle("relative bottom-[2px] ml-auto pl-3"))
   // ---EXPOSE------------------------------
   defineExpose<AlertExpose>({
     // ---STATE-------------------------
@@ -252,20 +243,20 @@
     enter-active-class="transition-all ease-in-out duration-500"
     :enter-from-class="startEnterAndLeaveClass"
     :enter-to-class="endEnterAndLeaveClass">
-    <div v-if="isVisible">
+    <div v-if="isVisible" data-alert>
       <div :class="classBase" :style="styleBase">
         <div :class="classBody">
-          <div :class="classDivIcon">
+          <div data-alert-icon :class="classDivIcon">
             <component :is="icon" aria-hidden="true" :class="classIcon" />
           </div>
-          <div :class="classContent">
-            <h3 v-if="title?.length" :class="classTitle">{{ title }}</h3>
-            <div v-if="subtitle" :class="classSubtitle" v-html="subtitle" />
-            <div v-if="slots?.default" :class="classSlotDefault">
+          <div data-alert-content :class="classContent">
+            <h3 v-if="title?.length" data-alert-title :class="classTitle">{{ title }}</h3>
+            <div v-if="subtitle" data-alert-subtitle :class="classSubtitle" v-html="subtitle" />
+            <div v-if="slots?.default" data-alert-slot :class="classSlotDefault">
               <slot />
             </div>
           </div>
-          <div v-if="isCloseButton || displayTime === 0" :class="classDivCloseButton">
+          <div data-alert-button v-if="isCloseButton || displayTime === 0" :class="classDivCloseButton">
             <Button
               type="icon"
               icon="XMark"

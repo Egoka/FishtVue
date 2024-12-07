@@ -7,18 +7,20 @@
   const Separator = new Component<"Separator">()
   const options = Separator.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<SeparatorProps>()
+  const props = withDefaults(defineProps<SeparatorProps>(), {
+    gradient: undefined
+  })
   const slots = useSlots()
   // ---PROPS-------------------------------
   const vertical = computed<NonNullable<SeparatorProps["vertical"]>>(() => props.vertical)
   const content = computed<NonNullable<SeparatorProps["content"]>>(() => props.content ?? options?.content ?? "center")
   const gradient = computed<number>(() => {
-    let gradient = props.gradient ?? options?.gradient
+    let gradient = props?.gradient ?? options?.gradient
     if (Array.isArray(gradient)) gradient = gradient[0]
     return typeof gradient === "boolean" ? 20 : gradient && gradient > 0 && gradient <= 100 ? +gradient : 0
   })
   const gradientLength = computed<number>(() => {
-    const gradient = props.gradient ?? options?.gradient
+    const gradient = props?.gradient ?? options?.gradient
     return Array.isArray(gradient) ? gradient[1] : 30
   })
   const depth = computed<NonNullable<SeparatorProps["depth"]>>(() => {
@@ -107,8 +109,8 @@
 </script>
 
 <template>
-  <div :class="classBase">
-    <div v-if="!['left', 'full'].includes(content)" :class="classBodyLineLeft" aria-hidden="true">
+  <div data-separator :class="classBase">
+    <div v-if="!['left', 'full'].includes(content)" data-separator-left :class="classBodyLineLeft" aria-hidden="true">
       <div
         :class="classLineLeft"
         :style="[
@@ -116,8 +118,12 @@
           `--tw-gradient-from-position: ${gradient}%;--tw-gradient-via-position: ${gradient > 0 ? gradient + gradientLength : 0}%`
         ]" />
     </div>
-    <span v-if="slots?.default" :class="classContent"><slot /></span>
-    <div v-if="!['right', 'full'].includes(content)" :class="classBodyLineRight" aria-hidden="true">
+    <span v-if="slots?.default" data-separator-content :class="classContent"><slot /></span>
+    <div
+      v-if="!['right', 'full'].includes(content)"
+      data-separator-right
+      :class="classBodyLineRight"
+      aria-hidden="true">
       <div
         :class="classLineRight"
         :style="[

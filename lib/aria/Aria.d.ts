@@ -48,10 +48,14 @@ export declare type AriaExpose = {
   messageInvalid: ReadRef<AriaProps["messageInvalid"]>
   classStyle: ReadRef<AriaProps["class"]>
   // ---METHODS-----------------------
-  closeAria(evt: MouseEvent): void
   clear(): void
+  focus(env: FocusEvent): void
+  blur(env: FocusEvent): void
 }
-export declare type AriaOption = Pick<AriaProps, "classInput" | keyof InputLayoutOption>
+export declare type AriaOption = Pick<
+  AriaProps,
+  "autocomplete" | "wrap" | "rows" | "maxLength" | "classInput" | keyof InputLayoutOption
+>
 
 // ---------------------------------------
 declare class Aria extends ClassComponent<AriaProps, AriaSlots, AriaEmits, AriaExpose> {}

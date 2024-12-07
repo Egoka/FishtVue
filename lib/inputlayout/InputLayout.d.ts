@@ -63,7 +63,7 @@ export declare type InputLayoutExpose = {
 }
 export declare type InputLayoutOption = Pick<
   InputLayoutProps,
-  "mode" | "labelMode" | "animation" | "classBody" | "class"
+  "mode" | "labelMode" | "clear" | "animation" | "classBody" | "class"
 >
 
 // ---------------------------------------

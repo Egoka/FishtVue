@@ -345,7 +345,7 @@ export declare function fieldsPick<Structure extends Record<string | number, any
 
  **Note**: The `deepMerge` function can be used to perform a deep merge of multiple objects.
  */
-export declare function deepMerge(...objects: any[]): object
+export declare function deepMerge<T extends object>(...objects: any[]): T
 /**
  #### `deepEquals` Function Documentation
 

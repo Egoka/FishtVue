@@ -6,7 +6,9 @@
   const Label = new Component<"Label">()
   const options = Label.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<LabelProps>()
+  const props = withDefaults(defineProps<LabelProps>(), {
+    isRequired: undefined
+  })
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<LabelProps["mode"]>>(
     () => props?.mode ?? options?.mode ?? Label.componentsStyle() ?? "outlined"
@@ -66,7 +68,7 @@
 </script>
 
 <template>
-  <div :class="classBase" :style="type !== 'none' ? `--tw-translate-x: ${translateX}px;` : ''">
+  <div data-label :class="classBase" :style="type !== 'none' ? `--tw-translate-x: ${translateX}px;` : ''">
     <span :class="classContent" :style="`max-width: ${maxWidth - 38}px`">
       {{ props.title }}
     </span>

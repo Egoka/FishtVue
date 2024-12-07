@@ -20,13 +20,15 @@
   import Button from "fishtvue/button/Button.vue"
   import Badge from "fishtvue/badge/Badge.vue"
   import Component from "fishtvue/component"
-  import { getAsyncValidate, getValidate } from "fishtvue/utils/rulesHandler"
+  import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
   // ---BASE-COMPONENT----------------------
   const Form = new Component<"Form">()
   const options = Form.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
-  const props = defineProps<FormProps>()
+  const props = withDefaults(defineProps<FormProps>(), {
+    disabled: undefined
+  })
   const emit = defineEmits<FormEmits>()
   // ---REF-LINK----------------------------
   const formRef = ref<HTMLElement>()
@@ -69,18 +71,20 @@
   const formFields = reactive<FormValues>({})
   const formInvalidFields = reactive<{ [key: string]: boolean }>({})
   const formStructure = computed<Array<FormStructure>>(() => getStructure(props.structure))
-  const submitButton = computed<FormProps["submitButton"]>(() => props.submitButton ?? "Save")
+  const submitButton = computed<FormProps["submitButton"]>(
+    () => props.submitButton ?? options?.submitButton ?? Form.t("save") ?? "Save"
+  )
   // ---------------------------------------
   Form.setStyle("transition ease-in-out duration-500 opacity-100 opacity-0")
   const classBase = computed(() => Form.setStyle([options?.class ?? "", props.class ?? ""]))
-  const classItemGrid = computed(() => Form.setStyle("grid transition"))
-  const classBeforeSlot = computed(() => Form.setStyle("flex select-none items-center text-gray-500 sm:text-sm"))
-  const classAfterSlot = computed(() => Form.setStyle("ml-1 mr-3 text-gray-400 dark:text-gray-600 select-none"))
-  const classSelectItemIsQuery = computed(() =>
+  const classItemGrid = ref(Form.setStyle("grid transition"))
+  const classBeforeSlot = ref(Form.setStyle("flex select-none items-center text-gray-500 sm:text-sm"))
+  const classAfterSlot = ref(Form.setStyle("ml-1 mr-3 text-gray-400 dark:text-gray-600 select-none"))
+  const classSelectItemIsQuery = ref(
     Form.setStyle("text-gray-600 dark:text-gray-300 group-hover:text-theme-700 dark:group-hover:text-theme-400")
   )
-  const classSelectItemNotQuery = computed(() => Form.setStyle("text-gray-500 dark:text-gray-300"))
-  const classFooter = computed(() => Form.setStyle("mt-6 flex items-center justify-end gap-x-6"))
+  const classSelectItemNotQuery = ref(Form.setStyle("text-gray-500 dark:text-gray-300"))
+  const classFooter = ref(Form.setStyle("mt-6 flex items-center justify-end gap-x-6"))
   // ---EXPOSE------------------------------
   defineExpose<FormExpose>({
     // ---PROPS-------------------------------
@@ -89,6 +93,7 @@
     setFieldValue,
     setFieldParam,
     getField,
+    isFieldInvalid,
     setStructureParam,
     validateFields
   })
@@ -111,16 +116,19 @@
   )
 
   // ---METHODS-----------------------------
-  function setFieldValue(fieldName: string, value: any) {
-    formFields[fieldName] = value
+  function setFieldValue(fieldName: string, value: any): unknown | undefined {
+    if (fieldName in formFields) {
+      formFields[fieldName] = value
+      return formFields[fieldName]
+    }
+    console.error(`Field with field name '${fieldName}' does not exist in structure`)
+    return
   }
 
   function setFieldParam(fieldName: string, param: keyof FieldType, value: any): void {
     formStructure.value.forEach((structure, i: number) => {
       structure.fields?.forEach((item: FieldType, j: number) => {
-        if (item.name === fieldName) {
-          ;(formStructure.value[i].fields[j] as any)[param] = value
-        }
+        if (item.name === fieldName) (formStructure.value[i].fields[j] as any)[param] = value
       })
     })
   }
@@ -129,19 +137,23 @@
     let field: FieldType | null = null
     formStructure.value.forEach((structure) => {
       structure.fields?.forEach((item: FieldType) => {
-        if (item.name === fieldName) {
-          field = item
-        }
+        if (item.name === fieldName) field = item
       })
     })
     return field
   }
 
+  function isFieldInvalid(fieldName: string): boolean | undefined {
+    if (fieldName in formFields) {
+      return formInvalidFields[fieldName] ?? false
+    }
+    console.error(`Field with field name '${fieldName}' does not exist in structure`)
+    return
+  }
+
   function setStructureParam(indexStructure: number, param: keyof FormStructure, value: any): void {
     formStructure.value.some((_, index: number) => {
-      if (index === indexStructure) {
-        ;(formStructure.value[index] as any)[param] = value
-      }
+      if (index === indexStructure) (formStructure.value[index] as any)[param] = value
     })
   }
 
@@ -150,7 +162,7 @@
     return structures.map((structure) => {
       if (!structure?.class?.length)
         structure.class = Form.setStyle([
-          "border-b border-gray-900/10 pb-12",
+          "border-b border-gray-900/10",
           options?.structureClass ?? "",
           props?.structureClass ?? ""
         ])
@@ -164,7 +176,7 @@
         structure.fields = structure.fields.map((field: FieldType) => {
           if (!field.name) {
             field.name = "field" + Math.floor(Math.random() * 100)
-            console.error(`There is no name field. Temporary name ${field.name} is set.`, field)
+            console.error(`There is no name field. Temporary name ${field.name} is set.`)
           }
           if (arrayFieldsValidate.includes(field.typeComponent)) {
             field = field as FieldUseInputLayout
@@ -193,14 +205,14 @@
   async function validateField(field: FieldType) {
     if (arrayFieldsValidate.includes(field.typeComponent)) {
       field = field as FieldUseInputLayout
-      if ("rules" in field && field?.rules) {
-        let { isInvalid, message } = getValidate(formFields[field.name], field)
-        if (!isInvalid && Object.keys(field.rules).includes("async")) {
+      if (field?.rules) {
+        let { isInvalid, message } = getValidate(formFields[field.name], field.rules, formFields)
+        if (!isInvalid && isExistRule(field.rules, "async")) {
           field.loading = true
-          const result = await getAsyncValidate(formFields[field.name], field)
+          const result = await getAsyncValidate(formFields[field.name], field.rules)
           field.loading = false
-          isInvalid = result?.isInvalid ?? isInvalid
-          message = result?.message ?? message
+          isInvalid = result.isInvalid
+          message = result.message
         }
         formInvalidFields[field.name] = isInvalid
         field.messageInvalid = message
@@ -211,51 +223,35 @@
   function validateFields(nameField?: Array<string> | string): boolean {
     props.structure?.forEach((item) =>
       item.fields?.forEach((field) => {
-        if (nameField) {
-          if ([nameField].flat().find((item: string) => item === field.name)) {
-            validateField(field)
-          }
-        } else {
-          if (!formInvalidFields[field.name]) {
-            validateField(field)
-          }
-        }
+        if (nameField && [nameField].flat().find((item: string) => item === field.name)) validateField(field)
+        else if (!formInvalidFields[field.name]) validateField(field)
       })
     )
-    const isValidateForm = Object.values(formInvalidFields).filter((i) => i)?.length > 0
-    if (isValidateForm) {
-      nextTick(() => {
-        document.querySelector(".is-invalid")?.scrollIntoView({ block: "start", behavior: "smooth" })
-      })
-      return isValidateForm
-    } else {
-      return isValidateForm
+    const isValidForm = !(Object.values(formInvalidFields).filter((i) => i)?.length > 0)
+    if (isValidForm) return isValidForm
+    else {
+      nextTick(() => document.querySelector(".is-invalid")?.scrollIntoView({ block: "start", behavior: "smooth" }))
+      return isValidForm
     }
   }
 
   // ---------------------------------------
   function inputField(field: any) {
-    if (modeValidate.value === "onInput") {
-      validateField(field)
-    }
+    if (modeValidate.value === "onInput") validateField(field)
   }
 
   function changeField(field: any) {
-    if (modeValidate.value === "onChange") {
-      validateField(field)
-    }
+    if (modeValidate.value === "onChange") validateField(field)
   }
 
   function submit() {
-    if (validateFields()) {
-      emit("submit", formFields)
-    }
+    if (validateFields()) emit("submit", formFields)
   }
 </script>
 
 <template>
-  <form :name="name" :autocomplete="autocomplete" @submit.prevent="submit">
-    <div ref="formRef" :class="classBase">
+  <form data-form :name="name" :autocomplete="autocomplete" :class="classBase" @submit.prevent="submit">
+    <div ref="formRef">
       <template v-for="(structure, key) in formStructure" :key="key">
         <transition
           leave-active-class="transition ease-in-out duration-500"
@@ -264,9 +260,9 @@
           enter-active-class="transition ease-in-out duration-500"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-show="!structure.isHidden" :class="structure.class">
+          <div v-show="!structure.isHidden" data-form-item :class="structure.class">
             <slot name="itemTitle" :structure="fieldsOmit(structure, ['class', 'classGrid', 'fields']) as any" />
-            <div :class="[structure.classGrid, classItemGrid]">
+            <div data-form-group :class="[structure.classGrid, classItemGrid]">
               <div v-for="(field, itemKey) in structure.fields" :key="itemKey" :class="field.classCol">
                 <transition
                   leave-active-class="transition ease-in-out duration-500"
@@ -275,7 +271,7 @@
                   enter-active-class="transition ease-in-out duration-500"
                   enter-from-class="opacity-0"
                   enter-to-class="opacity-100">
-                  <div v-show="!field.isHidden">
+                  <div v-show="!field.isHidden" data-form-group-item>
                     <component
                       v-if="Object.keys(baseInputs).includes(field.typeComponent)"
                       :is="baseInputs[field.typeComponent]"
@@ -358,7 +354,7 @@
         </transition>
       </template>
     </div>
-    <div :class="classFooter">
+    <div data-form-footer :class="classFooter">
       <slot name="footer">
         <Button v-if="submitButton" type="submit">{{ submitButton }}</Button>
       </slot>
