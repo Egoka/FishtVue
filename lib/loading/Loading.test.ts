@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils"
 import { describe, it, expect } from "vitest"
 import FishtVue from "fishtvue/config"
-import Loading from "fishtvue/loading/loading.vue"
+import Loading from "fishtvue/loading/Loading.vue"
 
 describe("Loading Component Tests", () => {
   describe("Loading Component - Without Library Initialization", () => {

@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils"
 import { describe, it, expect, vi } from "vitest"
 import FishtVue from "fishtvue/config"
-import InputLayout from "fishtvue/inputLayout/InputLayout.vue"
+import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
 
 describe("InputLayout Component", () => {
   describe("Without Library Initialization", () => {
