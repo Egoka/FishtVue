@@ -143,8 +143,11 @@ const CORE_DEPENDENCIES = JSON.parse(`{
   "${PROJECT_NAME}/menu": "${PROJECT_NAME}.menu",
   "${PROJECT_NAME}/pagination": "${PROJECT_NAME}.pagination",
   "${PROJECT_NAME}/utils/domHandler": "${PROJECT_NAME}.utils.domHandler",
+  "${PROJECT_NAME}/utils/colorsHandler": "${PROJECT_NAME}.utils.colorsHandler",
+  "${PROJECT_NAME}/utils/rulesHandler": "${PROJECT_NAME}.utils.rulesHandler",
   "${PROJECT_NAME}/utils/dateHandler": "${PROJECT_NAME}.utils.dateHandler",
   "${PROJECT_NAME}/utils/arrayHandler": "${PROJECT_NAME}.utils.arrayHandler",
+  "${PROJECT_NAME}/utils/numberHandler": "${PROJECT_NAME}.utils.numberHandler",
   "${PROJECT_NAME}/utils/stringHandler": "${PROJECT_NAME}.utils.stringHandler",
   "${PROJECT_NAME}/utils/objectHandler": "${PROJECT_NAME}.utils.objectHandler",
   "${PROJECT_NAME}/utils/functionHandler": "${PROJECT_NAME}.utils.functionHandler",
@@ -302,12 +305,15 @@ function addUtils() {
   addEntry("utils", "Utils.ts", "utils")
   const utilsHandlers = [
     "stringHandler",
+    "numberHandler",
     "objectHandler",
     "arrayHandler",
     "dateHandler",
     "functionHandler",
     "tailwindHandler",
     "uniqueCollection",
+    "colorsHandler",
+    "rulesHandler",
     "domHandler"
   ]
   utilsHandlers.forEach((name) => addEntry("utils", `${name}.ts`, `${name}`))
