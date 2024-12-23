@@ -3,6 +3,7 @@
   "version": "0.0.5",
   "private": false,
   "author": "Egor Bondarenco",
+  "type": "module",
   "description": "Beautiful components that you can use in your applications. Available. Customizable. Open source.",
   "homepage": "https://github.com/Egoka/FishtVue",
   "repository": {

@@ -30,4 +30,4 @@ jobs:
       - name: Test library
         run: pnpm test
       - name: Build library
-        run: pnpm build:lib
+        run: pnpm lib:build

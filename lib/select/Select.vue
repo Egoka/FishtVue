@@ -50,7 +50,6 @@
     { immediate: true }
   )
   // ---PROPS-------------------------------
-  // const id = ref(props.id ?? getCurrentInstance()?.uid)
   const visibleValue = ref<any[]>([])
   const valueKeys = computed<any[]>(() => {
     return keySelect.value ? visibleValue.value.map((item) => item[keySelect.value ?? ""]) : []
@@ -127,6 +126,7 @@
                 `<span class="${classMaskQuery.value}">$&</span>`
               )
             : String(item[valueSelect.value as string])
+          item._key = crypto.randomUUID()
           return item
         }
       )
@@ -502,7 +502,7 @@
         ref="selectListWindow"
         v-bind="paramsFixWindow"
         :model-value="isOpenList"
-        :class-body="['z-20', `ml-[${layout?.beforeWidth}px]`]"
+        :class-body="['z-50', `ml-[${layout?.beforeWidth}px]`]"
         @close="closeSelect">
         <div
           data-select-list
@@ -520,16 +520,16 @@
             :mode="mode"
             label-mode="vanishing"
             clear
-            class-base="sticky top-2 z-20"
             :class-body="[
               `m-2 mb-5 rounded-md`,
               mode === 'outlined' ? 'ring-stone-200 dark:ring-black' : '',
               mode === 'underlined' ? 'ring-stone-200 dark:ring-stone-950' : '',
-              mode === 'filled' ? 'ring-stone-100 dark:ring-stone-900' : ''
+              mode === 'filled' ? 'ring-stone-100 dark:ring-stone-900' : '',
+              'sticky top-2 z-20'
             ]"
             @focus="activeItem = -1">
             <template #before>
-              <Icons type="<MagnifyingGlass" class="h-5 w-5 text-gray-400 dark:text-gray-600" />
+              <Icons type="MagnifyingGlass" class="h-5 w-5 text-gray-400 dark:text-gray-600" />
             </template>
           </Input>
           <TransitionGroup
@@ -544,7 +544,7 @@
             <template v-if="dataSelect?.length">
               <li
                 v-for="(item, index) in dataList"
-                :key="`${item[keySelect]}`"
+                :key="`${item._key}-${item[keySelect]}`"
                 data-select-list-item
                 :tabindex="activeItem === index ? 0 : -1"
                 :data-index="index"

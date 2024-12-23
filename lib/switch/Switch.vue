@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import type { ComponentInternalInstance } from "vue"
   import { computed, getCurrentInstance, ref, watch, onMounted } from "vue"
   import type { SwitchProps, SwitchEmits, SwitchExpose } from "./Switch"
   import type { StyleClass, StyleMode } from "fishtvue/types"
@@ -15,6 +16,7 @@
   })
   const emit = defineEmits<SwitchEmits>()
   // ---STATE-------------------------------
+  const instance = ref<ComponentInternalInstance | null>()
   const modelValue = ref<SwitchProps["modelValue"]>()
   watch(
     () => props.modelValue,
@@ -23,7 +25,7 @@
   )
   const isActiveSwitch = ref<boolean>(false)
   // ---PROPS-------------------------------
-  const id = ref(props.id ?? getCurrentInstance()?.uid)
+  const id = ref(props.id ?? instance.value?.uid)
   const switchingType = computed<SwitchProps["switchingType"]>(
     () => props?.switchingType ?? options?.switchingType ?? "checkbox"
   )
@@ -149,6 +151,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Switch.initStyle()
+    instance.value = getCurrentInstance()
   })
 
   // ---METHODS-----------------------------

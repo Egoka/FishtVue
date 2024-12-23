@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import type { ComponentInternalInstance } from "vue"
   import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
   import type { AriaProps, AriaEmits, AriaExpose } from "./Aria"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
@@ -24,6 +25,7 @@
   const layout = ref<InputLayoutExpose>()
   const inputRef = ref<HTMLElement>()
   // ---STATE-------------------------------
+  const instance = ref<ComponentInternalInstance | null>()
   const isActiveAria = ref<boolean>(false)
   const additionalStyles = ref<string>("max-h-max")
   const classLayout = ref<AriaProps["class"]>()
@@ -34,7 +36,7 @@
     { immediate: true }
   )
   // ---PROPS-------------------------------
-  const id = ref<NonNullable<AriaProps["id"]>>(String(props.id ?? getCurrentInstance()?.uid))
+  const id = ref<NonNullable<AriaProps["id"]>>(String(props.id ?? instance.value?.uid))
   const placeholder = computed<NonNullable<AriaProps["placeholder"]>>(() => String(props?.placeholder ?? ""))
   const autocomplete = computed<NonNullable<AriaProps["autocomplete"]>>(
     () => props?.autocomplete ?? options?.autocomplete ?? "on"
@@ -107,6 +109,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Aria.initStyle()
+    instance.value = getCurrentInstance()
   })
   // ---WATCHERS----------------------------
   watch(isActiveAria, (value) => {

@@ -24,7 +24,6 @@ type namesComponents = keyof ComponentsOptions | "BaseComponent"
 type setStyleOptions = Partial<{
   selector: string
   isBaseClasses: boolean
-  isNotScopeId: boolean
 }>
 const listComponents = new Set<namesComponents | undefined>()
 const listOfStyledComponents = new UniqueKeySetCollection<namesComponents | undefined, string>()
@@ -70,7 +69,7 @@ export default class Component<T extends keyof ComponentsOptions> {
 
   constructor(name?: T) {
     this.__instance = getCurrentInstance()
-    this.__globalConfig = this.__instance?.appContext.config.globalProperties.$fishtVue ?? (window as any).FishtVue
+    this.__globalConfig = this.__instance?.appContext.config.globalProperties.$fishtVue ?? (window as any)?.FishtVue
     this.__globalTheme = this.__globalConfig?.config?.theme
     this.__globalLocale = this.__globalConfig?.config?.locale
     this.__globalOptionsTheme = this.__globalConfig?.config?.optionsTheme
@@ -132,13 +131,13 @@ export default class Component<T extends keyof ComponentsOptions> {
   public setStyle = <T extends StyleClass | StyleClass[] | undefined>(
     stylesComp: T | T[],
     options: setStyleOptions = {
-      isBaseClasses: false,
-      isNotScopeId: false
+      isBaseClasses: false
     }
   ): string => {
     const specialClass = `${this.prefix}-${toKebabCase(this.name)}`
-    const isBaseClasses = options.isBaseClasses ? "" : " "
     const styles = cn(stylesComp)
+    if (typeof window === "undefined") return `${specialClass} ${styles}`
+    const isBaseClasses = options.isBaseClasses ? "" : " "
     const newClasses = styles
       .split(" ")
       .filter((item) => !listOfStyledComponents.hasValue(this.name, `${isBaseClasses}${item}`))
@@ -155,6 +154,7 @@ export default class Component<T extends keyof ComponentsOptions> {
     }
     return `${specialClass} ${styles}`
   }
+
   private __stylesBase: StylesComponent = (layers = "fishtvue", css = "") => `
   @layer ${layers};
   @layer fishtvue {

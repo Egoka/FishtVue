@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { computed, ref, onMounted, onUnmounted, useSlots } from "vue"
-  import type { InputLayoutProps, InputLayoutEmits, InputLayoutExpose } from "./InputLayout"
+  import { computed, onMounted, onUnmounted, ref, useSlots } from "vue"
+  import type { InputLayoutEmits, InputLayoutExpose, InputLayoutProps } from "./InputLayout"
   import Label from "fishtvue/label/Label.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Loading from "fishtvue/loading/Loading.vue"
@@ -55,7 +55,7 @@
     props?.width ? (typeof props?.width === "number" ? `${props?.width}px` : props?.width) : ""
   )
   const height = computed<InputLayoutProps["height"]>(() =>
-    props?.height ? (typeof props?.height === "number" ? `${props?.height}px` : props?.height) : ""
+    props?.height ? (typeof props?.height === "number" ? `${props?.height}px` : props?.height) : `${baseHeight}px`
   )
   const animation = computed<NonNullable<InputLayoutProps["animation"]>>(
     () => props?.animation ?? options?.animation ?? "transition-all duration-550"
@@ -163,11 +163,13 @@
     headerHeight.value = <number>document.querySelector("header")?.offsetHeight
   })
   // ---SET_OBSERVER-------------------------
-  const tableObserver = new ResizeObserver((entries) => {
-    entries.forEach(() => {
-      setWidthInput()
-    })
-  })
+  let layoutObserver: ResizeObserver
+  if (typeof window !== "undefined")
+    layoutObserver = new ResizeObserver((entries) =>
+      entries.forEach(() => {
+        setWidthInput()
+      })
+    )
   const widthInput = ref<number>(0)
 
   function setWidthInput() {
@@ -176,12 +178,11 @@
   }
 
   onMounted(() => {
-    if (inputBody.value) {
-      tableObserver.observe(inputBody.value as Element)
-    }
+    InputLayout.initStyle()
+    if (typeof window !== "undefined" && inputBody.value) layoutObserver.observe(inputBody.value as Element)
   })
   onUnmounted(() => {
-    tableObserver.disconnect()
+    if (typeof window !== "undefined" && layoutObserver) layoutObserver.disconnect()
   })
   // ---METHODS-----------------------------
   const getLabelType = (
@@ -236,11 +237,11 @@
     </div>
     <slot name="body" />
     <Label
+      v-if="label"
       :title="label"
       :type="labelType"
       :mode="mode"
       :is-required="isRequired"
-      :is-disabled="isDisabled"
       :translate-x="beforeWidth || 15"
       :max-width="widthInput" />
     <span ref="afterInput" :class="classAfterInput" :style="`height: ${height};max-height: 4rem;`">

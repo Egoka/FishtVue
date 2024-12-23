@@ -40,8 +40,8 @@ export default (css: string, options: StyleOptions = {}): Style => {
     const _styleProps = { ...props, ..._props }
     const [_name, _id, _nonce] = [_styleProps.name || name, _styleProps.id || id, _styleProps.nonce || nonce]
 
-    styleRef.value = (document.querySelector(`style[data-fishtvue-style-id="${_name}"]`) ||
-      (document as Document).getElementById(_id) ||
+    styleRef.value = (document.querySelector(`style[data-fishtvue-style-id="${_name}"]`) ??
+      (_id ? (document as Document).getElementById(_id) : undefined) ??
       (document as Document).createElement("style")) as HTMLElement
 
     if (styleRef.value) {
@@ -82,10 +82,12 @@ export default (css: string, options: StyleOptions = {}): Style => {
     if (styleRef.value) isExist(styleRef.value) && (document as Document).head.removeChild(styleRef.value)
     isLoaded.value = false
   }
+
   function tryOnMounted(fn: () => void, sync = true) {
     if (sync) fn()
     else nextTick(fn).then()
   }
+
   if (immediate && !manual) tryOnMounted(load)
   return {
     id,

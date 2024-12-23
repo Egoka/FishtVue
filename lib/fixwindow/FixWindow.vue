@@ -1,7 +1,8 @@
 <script setup lang="ts">
-  import { computed, getCurrentInstance, ref, watch, onMounted, onUnmounted, nextTick } from "vue"
+  import type { ComponentInternalInstance } from "vue"
+  import { computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
   import { XMarkIcon } from "@heroicons/vue/20/solid"
-  import type { FixWindowProps, FixWindowEmits, FixWindowExpose, FixWindowEvent } from "./FixWindow"
+  import type { FixWindowEmits, FixWindowEvent, FixWindowExpose, FixWindowProps } from "./FixWindow"
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
   // ---BASE-COMPONENT----------------------
@@ -18,6 +19,7 @@
   const fixWindow = ref<Element>()
   const scrollableEl = ref<Element>()
   // ---STATE-------------------------------
+  const instance = ref<ComponentInternalInstance | null>()
   const x = ref<string>("0px")
   const y = ref<string>("0px")
   const isOpen = ref<boolean>(false)
@@ -61,7 +63,7 @@
         return props.el
       }
     } else {
-      return getCurrentInstance()?.vnode?.el?.parentElement
+      return instance.value?.vnode?.el?.parentElement
     }
   })
   const border = computed<string>(() => {
@@ -119,6 +121,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     FixWindow.initStyle()
+    instance.value = getCurrentInstance()
     if (element.value) {
       updatePosition()
       addOpenListener()
