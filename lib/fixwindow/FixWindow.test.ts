@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, vi, expect, beforeEach, afterEach } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 

@@ -1,23 +1,23 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import {
-  type,
-  isObject,
-  isEmpty,
-  isNotEmpty,
-  get,
+  compare,
+  deepCopy,
+  deepCopyObject,
+  deepEquals,
+  deepFreeze,
+  deepMerge,
+  deepMergeSoft,
+  equals,
   fieldsOmit,
   fieldsPick,
-  deepMerge,
-  deepEquals,
-  resolveFieldData,
-  equals,
-  compare,
-  deepCopyObject,
-  deepCopy,
-  deepFreeze,
   freeze,
-  unFreeze,
-  deepMergeSoft
+  get,
+  isEmpty,
+  isNotEmpty,
+  isObject,
+  resolveFieldData,
+  type,
+  unFreeze
 } from "fishtvue/utils/objectHandler"
 
 describe("Testing object handler", () => {

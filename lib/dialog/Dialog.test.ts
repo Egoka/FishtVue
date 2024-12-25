@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect, afterEach, beforeEach } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Dialog from "fishtvue/dialog/Dialog.vue"
 

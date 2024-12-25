@@ -1,17 +1,17 @@
 import stylesRules from "./unoRules"
 import {
+  formElementStates as formElementStatesList,
   media as mediaList,
   mediaDynamic as mediaDynamicList,
-  selectors as selectorsList,
-  selectorsDynamic as selectorsDynamicList,
-  userInteractionStates as userInteractionStatesList,
-  formElementStates as formElementStatesList,
-  structuralPseudoClasses as structuralPseudoClassesList,
   pseudoContent as pseudoContentList,
   pseudoElements as pseudoElementsList,
-  specialStates as specialStatesList,
+  selectors as selectorsList,
+  selectorsDynamic as selectorsDynamicList,
   singleStyles,
-  specialSelectors
+  specialSelectors,
+  specialStates as specialStatesList,
+  structuralPseudoClasses as structuralPseudoClassesList,
+  userInteractionStates as userInteractionStatesList
 } from "./unoStatic"
 import { Modifier, PseudoClasses } from "fishtvue/theme/unoStyle/UnoTypes"
 

@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import Calendar from "fishtvue/calendar/Calendar.vue"
 import { nextTick } from "vue"
 

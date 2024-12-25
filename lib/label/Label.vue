@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted } from "vue"
-  import type { LabelProps, LabelExpose } from "./Label"
+  import type { LabelExpose, LabelProps } from "./Label"
   import Component from "fishtvue/component"
   // ---BASE-COMPONENT----------------------
   const Label = new Component<"Label">()

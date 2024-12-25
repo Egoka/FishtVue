@@ -1,6 +1,6 @@
 /**
  * ## Config Semantic-release
- * @type {import('semantic-release').GlobalConfig}
+ * @type {import("semantic-release").GlobalConfig}
  */
 const config = {
   branches: [
@@ -21,70 +21,70 @@ const config = {
   ],
   plugins: [
     [
-      '@semantic-release/commit-analyzer',
+      "@semantic-release/commit-analyzer",
       {
         preset: "angular",
         releaseRules: [
-          {type: 'build', release: false}, // Сборка
-          {type: 'ci', release: false}, // Непрерывная интеграция
-          {type: 'test', release: false}, // Добавление или исправление тестов
-          {type: 'docs', release: 'patch'}, // Документация
-          {type: 'refactor', release: 'patch'}, // Рефакторинг кода
-          {type: 'chore', release: 'patch'}, // Внутренние изменения
-          {type: 'revert', release: 'patch'}, // Отмена предыдущего коммита
-          {type: 'style', release: 'patch'}, // Изменения в стиле кода
-          {type: 'fix', release: 'patch'}, // Исправление ошибок
-          {type: 'feat', release: 'minor'}, // Новая функциональность
-          {type: 'perf', release: 'minor'}, // Улучшение производительности
-          {breaking: true, release: 'major'}, // BREAKING CHANGE
-          {scope: 'no-release', release: false},
+          { type: "build", release: false }, // Сборка
+          { type: "ci", release: false }, // Непрерывная интеграция
+          { type: "test", release: false }, // Добавление или исправление тестов
+          { type: "docs", release: "patch" }, // Документация
+          { type: "refactor", release: "patch" }, // Рефакторинг кода
+          { type: "chore", release: "patch" }, // Внутренние изменения
+          { type: "revert", release: "patch" }, // Отмена предыдущего коммита
+          { type: "style", release: "patch" }, // Изменения в стиле кода
+          { type: "fix", release: "patch" }, // Исправление ошибок
+          { type: "feat", release: "minor" }, // Новая функциональность
+          { type: "perf", release: "minor" }, // Улучшение производительности
+          { breaking: true, release: "major" }, // BREAKING CHANGE
+          { scope: "no-release", release: false }
         ],
         parserOpts: {
-          noteKeywords: ['BREAKING CHANGE', 'BREAKING CHANGES'],
-        },
-      },
+          noteKeywords: ["BREAKING CHANGE", "BREAKING CHANGES"]
+        }
+      }
     ],
     [
       "@semantic-release/release-notes-generator",
       {
         preset: "angular",
         writerOpts: {
-          commitsSort: ['subject', 'scope'],
+          commitsSort: ["subject", "scope"]
         },
         presetConfig: {
           types: [
-            {type: 'feat', section: 'Features', hidden: false},
-            {type: 'fix', section: 'Bug Fixes', hidden: false},
-            {type: 'chore', section: 'Chores', hidden: true},
-            {type: 'docs', section: 'Documentation', hidden: false},
-            {type: 'style', section: 'Styles', hidden: false},
-            {type: 'refactor', section: 'Code Refactoring', hidden: false},
-            {type: 'perf', section: 'Performance Improvements', hidden: false},
-            {type: 'test', section: 'Tests', hidden: false},
-            {type: 'build', section: 'Build System', hidden: false},
-            {type: 'ci', section: 'Continuous Integration', hidden: false},
-            {type: 'revert', section: 'Reverts', hidden: false},
-          ],
-        },
+            { type: "feat", section: "Features", hidden: false },
+            { type: "fix", section: "Bug Fixes", hidden: false },
+            { type: "chore", section: "Chores", hidden: true },
+            { type: "docs", section: "Documentation", hidden: false },
+            { type: "style", section: "Styles", hidden: false },
+            { type: "refactor", section: "Code Refactoring", hidden: false },
+            { type: "perf", section: "Performance Improvements", hidden: false },
+            { type: "test", section: "Tests", hidden: false },
+            { type: "build", section: "Build System", hidden: false },
+            { type: "ci", section: "Continuous Integration", hidden: false },
+            { type: "revert", section: "Reverts", hidden: false }
+          ]
+        }
       }
     ],
     [
-      '@semantic-release/npm',
+      "@semantic-release/npm",
       {
-        pkgRoot: 'dist'
+        pkgRoot: "dist"
       }
     ],
     [
-      '@semantic-release/changelog',
+      "@semantic-release/changelog",
       {
-        changelogFile: 'CHANGELOG.md',
-        changelogTitle: '# CHANGELOG'
+        changelogFile: "CHANGELOG.md",
+        changelogTitle: "# CHANGELOG"
       }
     ],
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "cd lib && npm version ${nextRelease.version} && git add package.json",
+        prepareCmd: "cd lib && npm version ${nextRelease.version} && git add package.json"
       }
     ],
     [
@@ -95,18 +95,18 @@ const config = {
       }
     ],
     [
-      '@semantic-release/github',
+      "@semantic-release/github",
       {
         assets: [
-          {path: 'dist/*.zip', label: 'Distribution'},
-          {path: 'build/coverage.xml', label: 'Coverage Report'},
+          { path: "dist/*.zip", label: "Distribution" },
+          { path: "build/coverage.xml", label: "Coverage Report" }
         ],
         successComment: false,
         failComment: false,
-        releasedLabels: ['released'],
-        addReleases: 'bottom',
-      },
-    ],
+        releasedLabels: ["released"],
+        addReleases: "bottom"
+      }
+    ]
   ]
 }
 

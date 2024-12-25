@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import TextEditor from "fishtvue/texteditor/TextEditor.vue"
 import { QuillEditor } from "@vueup/vue-quill"

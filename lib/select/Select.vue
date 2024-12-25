@@ -535,7 +535,6 @@
           <TransitionGroup
             name="ul"
             tag="ul"
-            :css="false"
             ref="selectItems"
             data-select-list-items
             @before-enter="onBeforeEnter"

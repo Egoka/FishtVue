@@ -24,7 +24,7 @@
     SwappingSquaresSpinner,
     TrinityRingsSpinner
   } from "epic-spinners"
-  import type { LoadingProps, LoadingExpose } from "./Loading"
+  import type { LoadingExpose, LoadingProps } from "./Loading"
   import { get } from "fishtvue/utils/objectHandler"
   import Component from "fishtvue/component"
   import { hslToHex } from "fishtvue/utils/colorsHandler"

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { computed, ref, watch, onMounted, reactive } from "vue"
-  import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
+  import { computed, onMounted, reactive, ref, watch } from "vue"
+  import { deepCopyObject, deepMergeSoft } from "fishtvue/utils/objectHandler"
   import type { StyleClass } from "fishtvue/types"
-  import type { SplitProps, SplitEmits, SplitExpose, Panel, CursorType } from "./Split"
+  import type { CursorType, Panel, SplitEmits, SplitExpose, SplitProps } from "./Split"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
   // ---BASE-COMPONENT----------------------

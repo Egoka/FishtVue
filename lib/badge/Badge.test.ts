@@ -1,6 +1,6 @@
 import { createApp } from "vue"
 import { mount } from "@vue/test-utils"
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Badge from "fishtvue/badge/Badge.vue"
 

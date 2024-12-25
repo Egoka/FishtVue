@@ -1,13 +1,13 @@
 import { Ref, VNode } from "vue"
 import {
+  _key,
   ClassComponent,
   GlobalComponentConstructor,
-  StyleMode,
+  ReadRef,
   StyleClass,
-  _key,
-  TWidth,
+  StyleMode,
   THeight,
-  ReadRef
+  TWidth
 } from "../types"
 import { FixWindowProps } from "fishtvue/fixwindow"
 import { SeparatorProps } from "fishtvue/separator"

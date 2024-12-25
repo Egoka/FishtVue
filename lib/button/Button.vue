@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots } from "vue"
-  import { ButtonProps, ButtonExpose } from "./Button"
+  import { ButtonExpose, ButtonProps } from "./Button"
   import Icons from "fishtvue/icons/Icons.vue"
   import Loading from "fishtvue/loading/Loading.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"

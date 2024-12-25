@@ -1,10 +1,10 @@
-import { describe, vi, it, expect, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import Component from "fishtvue/component"
-import { createApp } from "vue"
-import FishtVue from "fishtvue/config"
-import type { FishtVueConfiguration } from "fishtvue/config"
 import type { App } from "vue"
+import { createApp } from "vue"
+import type { FishtVueConfiguration } from "fishtvue/config"
+import FishtVue from "fishtvue/config"
 
 describe("Testing class Component", () => {
   let component: Component<"FixWindow">

@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import type { ComponentInternalInstance } from "vue"
-  import { computed, getCurrentInstance, ref, watch, onMounted, useSlots } from "vue"
-  import type { InputProps, InputEmits, InputExpose } from "./Input"
+  import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
+  import type { InputEmits, InputExpose, InputProps } from "./Input"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
-  import { convertToNumber, convertToPhone, toNumber, toPhone, onkeydown } from "fishtvue/utils/numberHandler"
+  import { convertToNumber, convertToPhone, onkeydown, toNumber, toPhone } from "fishtvue/utils/numberHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"

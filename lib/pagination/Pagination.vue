@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref, onMounted, watch } from "vue"
+  import { computed, onMounted, ref, watch } from "vue"
   import {
     ArrowLongLeftIcon,
     ArrowLongRightIcon,
@@ -7,7 +7,7 @@
     ChevronRightIcon,
     EllipsisHorizontalIcon
   } from "@heroicons/vue/20/solid"
-  import type { PaginationProps, PaginationEmits, PaginationExpose } from "./Pagination"
+  import type { PaginationEmits, PaginationExpose, PaginationProps } from "./Pagination"
   import type { BaseSelectProps, SelectExpose } from "fishtvue/select"
   import Button from "fishtvue/button/Button.vue"
   import Select from "fishtvue/select/Select.vue"

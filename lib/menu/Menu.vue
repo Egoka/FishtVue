@@ -1,17 +1,17 @@
 <script setup lang="ts">
-  import { computed, ref, onMounted, useSlots } from "vue"
+  import { computed, onMounted, ref, useSlots } from "vue"
   import { ChevronRightIcon } from "@heroicons/vue/20/solid"
   import type {
-    MenuProps,
+    GroupMenuPrivate,
+    GroupsPrivate,
+    ItemMenuPrivate,
     MenuEmits,
     MenuExpose,
-    ItemMenuPrivate,
-    MenuSeparator,
-    GroupsPrivate,
     MenuItemPrivate,
-    GroupMenuPrivate,
-    MenuStylesPrivate,
-    MenuStyles
+    MenuProps,
+    MenuSeparator,
+    MenuStyles,
+    MenuStylesPrivate
   } from "./Menu"
   import type { FixWindowProps } from "fishtvue/fixwindow"
   import type { SeparatorProps } from "fishtvue/separator"

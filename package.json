@@ -5,9 +5,9 @@
   "private": false,
   "type": "module",
   "scripts": {
-    "doc:build":  "pnpm --filter doc build",
+    "doc:build": "pnpm --filter doc build",
     "doc:dev": "pnpm --filter doc dev",
-    "doc:generate":  "pnpm --filter doc generate",
+    "doc:generate": "pnpm --filter doc generate",
     "doc:preview": "pnpm --filter doc preview",
     "sandbox:dev": "pnpm --filter sandbox dev",
     "sandbox:build": "pnpm --filter sandbox build",

@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest"
-import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
+import { describe, expect, it } from "vitest"
 import type { Rules } from "fishtvue/utils/rulesHandler"
-import { required, email, phone, numeric, regular, range, length } from "./rulesMethods"
+import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
+import { email, length, numeric, phone, range, regular, required } from "./rulesMethods"
 
 describe("Testing rules handler", () => {
   describe("required", () => {

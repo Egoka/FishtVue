@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, useSlots } from "vue"
-  import type { SeparatorProps, SeparatorExpose } from "./Separator"
+  import type { SeparatorExpose, SeparatorProps } from "./Separator"
   import Component from "fishtvue/component"
   import { StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------

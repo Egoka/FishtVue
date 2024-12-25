@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { ComponentInternalInstance } from "vue"
-  import { computed, getCurrentInstance, ref, watch, onMounted } from "vue"
-  import type { SwitchProps, SwitchEmits, SwitchExpose } from "./Switch"
+  import { computed, getCurrentInstance, onMounted, ref, watch } from "vue"
+  import type { SwitchEmits, SwitchExpose, SwitchProps } from "./Switch"
   import type { StyleClass, StyleMode } from "fishtvue/types"
   import Icons from "fishtvue/icons/Icons.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"

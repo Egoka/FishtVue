@@ -1,12 +1,12 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, vi, expect } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Form from "fishtvue/form/Form.vue"
 import { nextTick } from "vue"
 import type { FieldType } from "fishtvue/form/Form"
 
-import * as AllRules from "fishtvue/utils/rulesHandler"
 import type { RuleCallback, Rules } from "fishtvue/utils/rulesHandler"
+import * as AllRules from "fishtvue/utils/rulesHandler"
 
 describe("Form Component Tests", () => {
   const structure = () => [

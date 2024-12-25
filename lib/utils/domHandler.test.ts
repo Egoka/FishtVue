@@ -1,15 +1,15 @@
-import { describe, it, vi, expect } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import {
-  isElement,
-  getParentNode,
-  isExist,
-  isClient,
-  setAttribute,
-  setAttributes,
-  minifyCSS,
   getParentElements,
-  htmlToText
+  getParentNode,
+  htmlToText,
+  isClient,
+  isElement,
+  isExist,
+  minifyCSS,
+  setAttribute,
+  setAttributes
 } from "fishtvue/utils/domHandler"
 
 describe("Testing Dom handler", () => {

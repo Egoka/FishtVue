@@ -1,11 +1,11 @@
 import {
-  isObject,
-  isNotEmpty,
-  equals,
-  resolveFieldData,
-  isEmpty,
   compare,
-  deepCopyObject
+  deepCopyObject,
+  equals,
+  isEmpty,
+  isNotEmpty,
+  isObject,
+  resolveFieldData
 } from "fishtvue/utils/objectHandler"
 
 /**

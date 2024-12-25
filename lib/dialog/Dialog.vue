@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { computed, ref, watch, onMounted } from "vue"
-  import type { DialogProps, DialogEmits, DialogExpose } from "./Dialog"
+  import { computed, onMounted, ref, watch } from "vue"
+  import type { DialogEmits, DialogExpose, DialogProps } from "./Dialog"
   import Button from "fishtvue/button/Button.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"

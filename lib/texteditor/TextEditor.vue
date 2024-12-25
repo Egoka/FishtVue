@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { ComponentInternalInstance } from "vue"
-  import { computed, getCurrentInstance, ref, watch, onMounted, useSlots } from "vue"
-  import { TextEditorProps, TextEditorEmits, TextEditorExpose, IQuillEditor } from "./TextEditor"
+  import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
+  import { IQuillEditor, TextEditorEmits, TextEditorExpose, TextEditorProps } from "./TextEditor"
   import { QuillEditor } from "@vueup/vue-quill"
   import "@vueup/vue-quill/dist/vue-quill.snow.css"
   import "@vueup/vue-quill/dist/vue-quill.bubble.css"

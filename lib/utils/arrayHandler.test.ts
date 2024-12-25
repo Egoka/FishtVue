@@ -1,16 +1,16 @@
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import {
-  isArray,
   contains,
-  nestedKeys,
-  sort,
+  deepCopyArray,
   filter,
-  reorderArray,
+  findIndexInList,
   findLast,
   findLastIndex,
-  findIndexInList,
   insertIntoOrderedArray,
-  deepCopyArray
+  isArray,
+  nestedKeys,
+  reorderArray,
+  sort
 } from "fishtvue/utils/arrayHandler"
 
 describe("Testing array handler", () => {

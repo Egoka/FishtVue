@@ -5,9 +5,9 @@ import {
   AllowedComponentProps,
   ComponentCustomProps,
   ObjectEmitsOptions,
-  VNodeProps,
   type Ref,
-  type UnwrapRef
+  type UnwrapRef,
+  VNodeProps
 } from "vue"
 
 /**

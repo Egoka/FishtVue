@@ -1,19 +1,19 @@
+import type { ComponentInternalInstance } from "vue"
 import {
   getCurrentInstance,
   onBeforeMount as vueOnBeforeMount,
-  onMounted as vueOnMounted,
-  onBeforeUpdate as vueOnBeforeUpdate,
-  onUpdated as vueOnUpdated,
   onBeforeUnmount as vueOnBeforeUnmount,
-  onUnmounted as vueOnUnmounted
+  onBeforeUpdate as vueOnBeforeUpdate,
+  onMounted as vueOnMounted,
+  onUnmounted as vueOnUnmounted,
+  onUpdated as vueOnUpdated
 } from "vue"
-import { useStyle, tailwind } from "fishtvue/theme"
+import type { Theme } from "fishtvue/theme"
+import { tailwind, useStyle } from "fishtvue/theme"
 import { cn } from "fishtvue/utils/tailwindHandler"
 import { toKebabCase } from "fishtvue/utils/stringHandler"
 import { fieldsPick, get } from "fishtvue/utils/objectHandler"
 import { minifyCSS } from "fishtvue/utils/domHandler"
-import type { ComponentInternalInstance } from "vue"
-import type { Theme } from "fishtvue/theme"
 import { DefaultMessages, Locales } from "fishtvue/locale"
 import type { ComponentsOptions, FishtVue, OptionsTheme } from "fishtvue/config"
 import type { PublicFields, StylesComponent } from "./TypeComponent"

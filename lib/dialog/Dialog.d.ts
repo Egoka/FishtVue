@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, Size, PositionShort, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, PositionShort, ReadRef, Size, StyleClass } from "../types"
 
 /**
  * ## Dialog

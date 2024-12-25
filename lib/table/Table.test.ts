@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Table from "fishtvue/table/Table.vue"
 import { TableOption, TableProps } from "fishtvue/table/Table"

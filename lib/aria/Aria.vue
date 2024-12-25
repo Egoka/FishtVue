@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { ComponentInternalInstance } from "vue"
   import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
-  import type { AriaProps, AriaEmits, AriaExpose } from "./Aria"
+  import type { AriaEmits, AriaExpose, AriaProps } from "./Aria"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import { onkeydown } from "fishtvue/utils/numberHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"

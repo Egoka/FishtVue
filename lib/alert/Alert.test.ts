@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, vi, expect, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import { createApp } from "vue"
 import Alert from "fishtvue/alert/Alert.vue"
