@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, useSlots, watch } from "vue"
-  import LD from "lodash"
+  import * as LD from "lodash"
   import dayjs from "dayjs"
   import isBetween from "dayjs/plugin/isBetween"
   import {
@@ -55,6 +55,7 @@
   import { InputLayoutProps } from "fishtvue/inputlayout"
   import { convertToNumber, convertToPhone, isNumber } from "fishtvue/utils/numberHandler"
   import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
+  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Table = new Component<"Table">()
   const options = Table.getOptions()
@@ -637,7 +638,7 @@
   const classIsSort = (column: IColumnPrivate) =>
     Table.setStyle([
       "flex items-center transition-opacity duration-500 pr-1 cursor-pointer",
-      sortColumns[column?.dataField] === null ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+      !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100" : "opacity-100"
     ])
   const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-gray-400 dark:text-gray-600"))
   const classResizedColumns = (column: IColumnPrivate, key: number) =>
@@ -774,8 +775,7 @@
   )
   // ---TABLE_OBSERVER----------------------
   let tableObserver: ResizeObserver
-  if (typeof window !== "undefined")
-    tableObserver = new ResizeObserver((entries) => entries.forEach(() => setFooterPaddingHeight()))
+  if (isClient()) tableObserver = new ResizeObserver((entries) => entries.forEach(() => setFooterPaddingHeight()))
   const footerPaddingHeight = ref<number>(0)
 
   function setFooterPaddingHeight() {
@@ -787,7 +787,7 @@
 
   // ---IS-DARK-----------------------------
   const isDark = ref<boolean>(false)
-  if (typeof window !== "undefined") {
+  if (isClient()) {
     const colorSchemeQueryList = window.matchMedia("(prefers-color-scheme: dark)")
     const setColorScheme = (e: any) => (isDark.value = e.matches)
 
@@ -873,7 +873,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Table.initStyle()
-    if (typeof window !== "undefined" && tbody.value) tableObserver.observe(tbody.value as Element)
+    if (isClient() && tbody.value) tableObserver.observe(tbody.value as Element)
     Object.assign(
       sortColumns,
       Object.fromEntries(new Map(dataColumns.value.map((column) => [column.dataField, column.defaultSort ?? null])))
@@ -896,7 +896,7 @@
     })
   })
   onUnmounted(() => {
-    if (typeof window !== "undefined" && tableObserver) tableObserver.disconnect()
+    if (isClient() && tableObserver) tableObserver.disconnect()
   })
   // ---WATCHERS----------------------------
   watch(
@@ -1390,7 +1390,7 @@
 
   // ---INTERSECTION_OBSERVER---------------
   let lastRowVisibleObserver: IntersectionObserver
-  if (typeof window !== "undefined")
+  if (isClient())
     lastRowVisibleObserver = new IntersectionObserver(
       (entries) => {
         if (!entries[0].isIntersecting) return
@@ -1424,7 +1424,7 @@
     if ($event.stopPropagation) $event.stopPropagation()
     if ($event.preventDefault) $event.preventDefault()
     resizableColumn.value = column
-    if (typeof window !== "undefined") {
+    if (isClient()) {
       window.addEventListener("mousemove", moveResizedColumns)
       window.addEventListener("mouseup", stopResizeColumn)
     }
@@ -1432,7 +1432,7 @@
 
   function stopResizeColumn() {
     resizableColumn.value = null
-    if (typeof window !== "undefined") {
+    if (isClient()) {
       window.removeEventListener("mousemove", moveResizedColumns)
       window.removeEventListener("mouseup", stopResizeColumn)
     }

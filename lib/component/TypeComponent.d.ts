@@ -1,5 +1,8 @@
 import type { ComponentsOptions, OptionsTheme } from "fishtvue/config"
 
+export type NamesComponents = keyof ComponentsOptions | "BaseComponent"
+export const cssComponents: Map<NamesComponents, string>
+
 /**
  * ## Class: Component
  *

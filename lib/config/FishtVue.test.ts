@@ -127,7 +127,6 @@ describe("Testing config", () => {
       app = null
       // @ts-ignore
       delete window.FishtVue
-      // document.getElementById("app")?.remove()
     })
 
     it("should return FishtVue instance when plugin is installed", () => {

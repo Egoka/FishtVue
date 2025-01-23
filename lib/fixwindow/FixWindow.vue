@@ -2,6 +2,7 @@
   import type { ComponentInternalInstance } from "vue"
   import { computed, getCurrentInstance, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
   import { XMarkIcon } from "@heroicons/vue/20/solid"
+  import { isClient } from "fishtvue/utils/domHandler"
   import type { FixWindowEmits, FixWindowEvent, FixWindowExpose, FixWindowProps } from "./FixWindow"
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
@@ -16,8 +17,8 @@
   })
   const emit = defineEmits<FixWindowEmits>()
   // ---REF-LINK----------------------------
-  const fixWindow = ref<Element>()
-  const scrollableEl = ref<Element>()
+  const fixWindow = ref<HTMLElement>()
+  const scrollableEl = ref<HTMLElement | Element>()
   // ---STATE-------------------------------
   const instance = ref<ComponentInternalInstance | null>()
   const x = ref<string>("0px")
@@ -57,7 +58,7 @@
   )
   const element = computed<HTMLElement>(() => {
     if (props.el) {
-      if (typeof props.el === "string") {
+      if (isClient() && typeof props.el === "string") {
         return document.querySelector(props.el)
       } else {
         return props.el
@@ -138,18 +139,16 @@
   watch(
     () => props.scrollableEl as FixWindowProps["scrollableEl"],
     (value) => {
-      if (value) {
+      if (isClient() && value) {
         if (typeof value === "string") {
           const el = document.querySelector(value)
           if (el) scrollableEl.value = el
           addPositionListener()
-        } else {
+        } else if (value instanceof HTMLElement) {
           scrollableEl.value = value
           addPositionListener()
-        }
-      } else {
-        scrollableEl.value = undefined
-      }
+        } else scrollableEl.value = undefined
+      } else scrollableEl.value = undefined
     },
     { immediate: true }
   )
@@ -236,69 +235,71 @@
   }
 
   function addCloseListener() {
-    switch (eventClose.value) {
-      case "hover": {
-        const el = byCursor.value ? (fixWindow.value as HTMLElement) : element.value
-        el?.addEventListener("mouseleave", close)
-        break
+    if (isClient())
+      switch (eventClose.value) {
+        case "hover": {
+          const el = byCursor.value ? (fixWindow.value as HTMLElement) : element.value
+          el?.addEventListener("mouseleave", close)
+          break
+        }
+        case "click":
+          window?.addEventListener("click", closeOnClick)
+          break
+        case "mousedown":
+          window?.addEventListener("mousedown", closeOnClick)
+          break
+        case "mouseup":
+          window?.addEventListener("mouseup", closeOnClick)
+          break
+        case "dblclick":
+          window?.addEventListener("dblclick", closeOnClick)
+          break
+        case "contextmenu":
+          window?.addEventListener("contextmenu", closeOnClick)
+          break
       }
-      case "click":
-        window?.addEventListener("click", closeOnClick)
-        break
-      case "mousedown":
-        window?.addEventListener("mousedown", closeOnClick)
-        break
-      case "mouseup":
-        window?.addEventListener("mouseup", closeOnClick)
-        break
-      case "dblclick":
-        window?.addEventListener("dblclick", closeOnClick)
-        break
-      case "contextmenu":
-        window?.addEventListener("contextmenu", closeOnClick)
-        break
-    }
   }
 
   function removeCloseListener() {
-    switch (eventClose.value) {
-      case "hover":
-        window?.removeEventListener("mouseleave", closeOnClick)
-        break
-      case "click":
-        window?.removeEventListener("click", closeOnClick)
-        break
-      case "mousedown":
-        window?.removeEventListener("mousedown", closeOnClick)
-        break
-      case "mouseup":
-        window?.removeEventListener("mouseup", closeOnClick)
-        break
-      case "dblclick":
-        window?.removeEventListener("dblclick", closeOnClick)
-        break
-      case "contextmenu":
-        window?.removeEventListener("contextmenu", closeOnClick)
-        break
-    }
+    if (isClient())
+      switch (eventClose.value) {
+        case "hover":
+          window?.removeEventListener("mouseleave", closeOnClick)
+          break
+        case "click":
+          window?.removeEventListener("click", closeOnClick)
+          break
+        case "mousedown":
+          window?.removeEventListener("mousedown", closeOnClick)
+          break
+        case "mouseup":
+          window?.removeEventListener("mouseup", closeOnClick)
+          break
+        case "dblclick":
+          window?.removeEventListener("dblclick", closeOnClick)
+          break
+        case "contextmenu":
+          window?.removeEventListener("contextmenu", closeOnClick)
+          break
+      }
   }
 
   function addPositionListener() {
-    if (scrollableEl.value) (scrollableEl.value as HTMLElement).addEventListener("scroll", updatePosition)
-    window.addEventListener("scroll", updatePosition)
-    if (scrollableEl.value) (scrollableEl.value as HTMLElement).addEventListener("resize", updatePosition)
-    window.addEventListener("resize", updatePosition)
+    if (isClient()) {
+      if (scrollableEl.value) (scrollableEl.value as HTMLElement).addEventListener("scroll", updatePosition)
+      window.addEventListener("scroll", updatePosition)
+      if (scrollableEl.value) (scrollableEl.value as HTMLElement).addEventListener("resize", updatePosition)
+      window.addEventListener("resize", updatePosition)
+    }
   }
 
   function removePositionListener() {
-    if (scrollableEl.value) {
-      ;(scrollableEl.value as HTMLElement).removeEventListener("scroll", updatePosition)
+    if (isClient()) {
+      if (scrollableEl.value) (scrollableEl.value as HTMLElement).removeEventListener("scroll", updatePosition)
+      window.removeEventListener("scroll", updatePosition)
+      if (scrollableEl.value) (scrollableEl.value as HTMLElement).removeEventListener("resize", updatePosition)
+      window.removeEventListener("resize", updatePosition)
     }
-    window.removeEventListener("scroll", updatePosition)
-    if (scrollableEl.value) {
-      ;(scrollableEl.value as HTMLElement).removeEventListener("resize", updatePosition)
-    }
-    window.removeEventListener("resize", updatePosition)
   }
 
   // ---OPEN-CLOSE--------------------------
@@ -449,21 +450,21 @@
                 : paddingWindow.value
               : body.height + body.y
         }
-        if (window.innerWidth - (xNum + child.width) < paddingWindow.value) {
-          xNum =
-            body.x > window.innerWidth - paddingWindow.value
-              ? body.x - child.width
-              : position.value.match("^right")
+        if (isClient()) {
+          if (window.innerWidth - (xNum + child.width) < paddingWindow.value)
+            xNum =
+              body.x > window.innerWidth - paddingWindow.value
                 ? body.x - child.width
-                : window.innerWidth - paddingWindow.value - child.width
-        }
-        if (window.innerHeight - (yNum + child.height) < paddingWindow.value) {
-          yNum =
-            body.y > window.innerHeight - paddingWindow.value
-              ? body.y - child.height
-              : position.value.match("^bottom")
+                : position.value.match("^right")
+                  ? body.x - child.width
+                  : window.innerWidth - paddingWindow.value - child.width
+          if (window.innerHeight - (yNum + child.height) < paddingWindow.value)
+            yNum =
+              body.y > window.innerHeight - paddingWindow.value
                 ? body.y - child.height
-                : window.innerHeight - paddingWindow.value - child.height
+                : position.value.match("^bottom")
+                  ? body.y - child.height
+                  : window.innerHeight - paddingWindow.value - child.height
         }
         x.value = `${xNum}px`
         y.value = `${yNum}px`

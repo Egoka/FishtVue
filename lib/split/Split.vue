@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, reactive, ref, watch } from "vue"
+  import { isClient } from "fishtvue/utils/domHandler"
   import { deepCopyObject, deepMergeSoft } from "fishtvue/utils/objectHandler"
   import type { StyleClass } from "fishtvue/types"
   import type { CursorType, Panel, SplitEmits, SplitExpose, SplitProps } from "./Split"
@@ -343,9 +344,11 @@
     if ($event.preventDefault) $event.preventDefault()
     resizablePanel.value = namePanel
     isStartResize.value = true
-    document.body.classList.add(getStyleCursor(activeCursorPanel.value))
-    window.addEventListener("mousemove", moveResizedPanels)
-    window.addEventListener("mouseup", stopResizePanel)
+    if (isClient()) {
+      document.body.classList.add(getStyleCursor(activeCursorPanel.value))
+      window.addEventListener("mousemove", moveResizedPanels)
+      window.addEventListener("mouseup", stopResizePanel)
+    }
     emit("start-resize-panel", $event, namePanel)
   }
 
@@ -354,9 +357,11 @@
     if (!isStartMove.value) {
       resizablePanel.value = null
     }
-    document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
-    window.removeEventListener("mousemove", moveResizedPanels)
-    window.removeEventListener("mouseup", stopResizePanel)
+    if (isClient()) {
+      document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
+      window.removeEventListener("mousemove", moveResizedPanels)
+      window.removeEventListener("mouseup", stopResizePanel)
+    }
     emit("stop-resize-panel", $event, namePanel as Panel["name"])
   }
 
@@ -373,8 +378,10 @@
   }
 
   watch(activeCursorPanel, (value, oldValue) => {
-    document.body.classList.remove(getStyleCursor(oldValue))
-    document.body.classList.add(getStyleCursor(value))
+    if (isClient()) {
+      document.body.classList.remove(getStyleCursor(oldValue))
+      document.body.classList.add(getStyleCursor(value))
+    }
   })
 </script>
 

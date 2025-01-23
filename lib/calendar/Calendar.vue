@@ -18,6 +18,7 @@
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
+  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Calendar = new Component<"Calendar">()
   const options = Calendar.getOptions()
@@ -241,12 +242,14 @@
   // ---WATCHERS----------------------------
   watch(calendarPicker, () => emit("getCalendar", calendarPicker.value as ICalendarPicker), { deep: true })
   watch(isOpenPicker, (value) => {
+    if (!isClient()) return
     if (value) document.addEventListener("keydown", keydownCalendar)
     else document.removeEventListener("keydown", keydownCalendar)
     focus(value)
     emit("isActive", value)
   })
   watch(isFocus, (value) => {
+    if (!isClient()) return
     if (value) document.addEventListener("keydown", openCalendarOnEnter)
     else document.removeEventListener("keydown", openCalendarOnEnter)
   })

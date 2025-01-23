@@ -2,6 +2,7 @@ import * as Vue from "vue"
 import Alert from "./Alert.vue"
 import Component from "fishtvue/component"
 import type { BaseAlert } from "./Alert"
+import { isClient } from "fishtvue/utils/domHandler"
 
 const valuesPosition = [
   "top",
@@ -16,6 +17,7 @@ const valuesPosition = [
 ]
 
 export function openAlert(optionsAlert: BaseAlert) {
+  if (!isClient()) return
   const AlertComponent = new Component<"Alert">("Alert")
   const globalOptions = AlertComponent.getOptions()
   // SET alertId
@@ -78,6 +80,7 @@ export function openAlert(optionsAlert: BaseAlert) {
   /////////////////////////////////////////////////////////
   // functions
   function destroy() {
+    if (!isClient()) return
     const alertEl = document.querySelector(`#${alertId}`)
     if (alertEl) {
       alertEl.className = "z-10"

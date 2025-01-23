@@ -22,6 +22,7 @@
   import Component from "fishtvue/component"
   import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
+  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Form = new Component<"Form">()
   const options = Form.getOptions()
@@ -230,7 +231,13 @@
     const isValidForm = !(Object.values(formInvalidFields).filter((i) => i)?.length > 0)
     if (isValidForm) return isValidForm
     else {
-      nextTick(() => document.querySelector(".is-invalid")?.scrollIntoView({ block: "start", behavior: "smooth" }))
+      nextTick(() => {
+        if (isClient() && formRef.value instanceof HTMLElement) {
+          const invalidField = formRef.value.querySelector(".is-invalid")
+          if (invalidField && invalidField.scrollIntoView)
+            invalidField?.scrollIntoView({ block: "start", behavior: "smooth" })
+        }
+      })
       return isValidForm
     }
   }

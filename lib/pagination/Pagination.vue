@@ -238,7 +238,7 @@
     <div data-pagination-short-version :class="classShortVersion">
       <Button
         data-pagination-short-previous
-        :class="['m-0 w-5 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
+        :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
         :disabled="[0, activePage].includes(pages[pages.length - 1])"
         @click="switchPage(pages.slice().reverse())">
         {{ Pagination.t("previous") ?? "Previous" }}

@@ -1,10 +1,11 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from "vue"
+  import { isClient } from "fishtvue/utils/domHandler"
+  import type { Size, StyleClass } from "fishtvue/types"
   import type { DialogEmits, DialogExpose, DialogProps } from "./Dialog"
   import Button from "fishtvue/button/Button.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
-  import { Size, StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
   const Dialog = new Component<"Dialog">()
   const options = Dialog.getOptions()
@@ -154,6 +155,7 @@
   })
   // ---WATCHERS----------------------------
   watch(isOpen, (value) => {
+    if (!isClient()) return
     const bodyEl = document.querySelector("body")
     if (bodyEl) {
       if (value) {

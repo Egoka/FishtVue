@@ -1,9 +1,10 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
+  import { isClient } from "fishtvue/utils/domHandler"
   import type { BaseDataItem, IDataItem, SelectEmits, SelectExpose, SelectProps } from "./Select"
   import type { FixWindowExpose } from "fishtvue/fixwindow"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
-  import LD from "lodash"
+  import * as LD from "lodash"
   import gsap from "gsap"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Input from "fishtvue/input/Input.vue"
@@ -126,7 +127,6 @@
                 `<span class="${classMaskQuery.value}">$&</span>`
               )
             : String(item[valueSelect.value as string])
-          item._key = crypto.randomUUID()
           return item
         }
       )
@@ -179,7 +179,7 @@
       mode.value === "outlined" ? "from-white dark:from-black via-white dark:via-black" : "",
       mode.value === "underlined" ? "from-stone-50 dark:from-stone-950 via-stone-50 dark:via-stone-950" : "",
       mode.value === "filled" ? "from-stone-100 dark:from-stone-900 via-stone-100 dark:via-stone-900" : "",
-      "sticky z-20"
+      "sticky z-20" // todo need to switch to absolute
     ])
   )
   const iconCheck = computed(() =>
@@ -198,7 +198,7 @@
       "focus-visible:bg-theme-200 focus-visible:dark:bg-theme-900 focus-visible:text-theme-700 dark:focus-visible:text-theme-100 focus-visible:ring-1 focus-visible:ring-theme-100 focus-visible:dark:ring-theme-800 focus-visible:outline-none",
       mode.value === "outlined" ? "rounded-md" : "",
       mode.value === "filled" ? "rounded-md" : "",
-      "group/li relative cursor-default select-none flex transition-colors duration-75"
+      "group/li relative cursor-default select-none flex transition-colors duration-500"
     ])
   )
   const classItemSelectValue = computed(() =>
@@ -266,27 +266,21 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Select.initStyle()
-    if (autoFocus.value) {
-      openSelect()
-    }
+    if (autoFocus.value) openSelect()
     new ResizeObserver(() => {
       if (isOpenList.value) selectListWindow.value?.updatePosition()
     }).observe(selectBody.value as HTMLElement)
   })
   // ---WATCHERS----------------------------
   watch(isFocus, (value) => {
-    if (value) {
-      document.addEventListener("keydown", openSelectOnEnter)
-    } else {
-      document.removeEventListener("keydown", openSelectOnEnter)
-    }
+    if (!isClient()) return
+    if (value) document.addEventListener("keydown", openSelectOnEnter)
+    else document.removeEventListener("keydown", openSelectOnEnter)
   })
   watch(isOpenList, (value) => {
-    if (value) {
-      document.addEventListener("keydown", keydownSelect)
-    } else {
-      document.removeEventListener("keydown", keydownSelect)
-    }
+    if (!isClient()) return
+    if (value) document.addEventListener("keydown", keydownSelect)
+    else document.removeEventListener("keydown", keydownSelect)
     focusSelect(value)
     emit("isActive", value)
   })
@@ -309,9 +303,7 @@
           )
           visibleValue.value = result ? [result] : []
         }
-      } else {
-        visibleValue.value = []
-      }
+      } else visibleValue.value = []
     },
     { immediate: true }
   )
@@ -374,9 +366,7 @@
       isOpenList.value =
         event.composedPath().includes(selectBody.value as HTMLElement) ||
         event.composedPath().includes(selectList.value as HTMLElement)
-      if (isOpenList.value === false) {
-        emit("change:modelValue", value.value, visibleValue.value)
-      }
+      if (isOpenList.value === false) emit("change:modelValue", value.value, visibleValue.value)
     }
   }
 
@@ -393,17 +383,12 @@
           value[keySelect.value ?? ""] ===
           (typeof selectValue === "object" ? selectValue[keySelect.value ?? ""] : selectValue)
       )
-      if (index >= 0) {
-        visibleValue.value.splice(index, 1)
-      } else {
-        if (!isMultiple.value) {
-          visibleValue.value = []
-        }
+      if (index >= 0) visibleValue.value.splice(index, 1)
+      else {
+        if (!isMultiple.value) visibleValue.value = []
         visibleValue.value.push(selectValue)
       }
-    } else {
-      visibleValue.value = []
-    }
+    } else visibleValue.value = []
     value.value = valueKeys.value.length ? (isMultiple.value ? valueKeys.value : valueKeys.value[0]) : null
     emit("update:isInvalid", false)
     emit("update:modelValue", value.value, visibleValue.value)
@@ -478,9 +463,9 @@
                 <Badge
                   mode="neutral"
                   :close-button="closeButtonBadge"
+                  class="m-1 mb-0 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500"
                   class-content="fill-theme-500"
-                  @delete="select(null)"
-                  class="m-1 mb-0 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500">
+                  @delete="select(null)">
                   <Icons type="Funnel" class="h-3 w-3 mr-1 text-theme-400 dark:text-theme-600" />
                   {{ visibleValue.length }}
                 </Badge>
@@ -543,7 +528,7 @@
             <template v-if="dataSelect?.length">
               <li
                 v-for="(item, index) in dataList"
-                :key="`${item._key}-${item[keySelect]}`"
+                :key="`${item[keySelect]}`"
                 data-select-list-item
                 :tabindex="activeItem === index ? 0 : -1"
                 :data-index="index"
