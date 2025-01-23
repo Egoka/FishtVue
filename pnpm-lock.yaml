@@ -289,6 +289,8 @@ importers:
 
   dist/pagination: {}
 
+  dist/plugins: {}
+
   dist/select: {}
 
   dist/separator: {}
@@ -302,8 +304,6 @@ importers:
   dist/texteditor: {}
 
   dist/theme: {}
-
-  dist/utils: {}
 
   doc:
     dependencies:
@@ -419,6 +419,8 @@ importers:
 
   lib/pagination: {}
 
+  lib/plugins: {}
+
   lib/select: {}
 
   lib/separator: {}
@@ -432,8 +434,6 @@ importers:
   lib/texteditor: {}
 
   lib/theme: {}
-
-  lib/utils: {}
 
   sandbox:
     dependencies:

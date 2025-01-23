@@ -1,0 +1,5 @@
+{
+  "main": "./plugins.mjs",
+  "module": "./plugins.mjs",
+  "types": "./Plugins.d.ts"
+}
