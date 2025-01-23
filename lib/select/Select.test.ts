@@ -228,9 +228,8 @@ describe("Select Component Tests", () => {
       document.body?.dispatchEvent(clickEvent)
 
       expect(wrapper.emitted("change:modelValue")?.[0][0]).toEqual(["Banana"])
-      console.log()
       expect((wrapper.emitted("change:modelValue")?.[0][1] as any)[0].marker).toBe(
-        `<span class="fishtvue-select font-bold text-theme-700 dark:text-theme-300">Ban</span>ana`
+        `<span class="fv fishtvue-select font-bold text-theme-700 dark:text-theme-300">Ban</span>ana`
       )
     })
   })

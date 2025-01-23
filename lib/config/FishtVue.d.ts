@@ -98,6 +98,7 @@ export type OptionsTheme = Partial<{
   lightModeSelector: string
   darkModeSelector: string
   layers: string | "fishtvue"
+  isNotMinifyCSS: boolean
 }>
 
 export type ComponentsOptions = Partial<{

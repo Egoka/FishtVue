@@ -86,7 +86,7 @@ export function tailwind(
       modifier.state = `.${mod.state}${mod.stateName ? `\\/${mod.stateName}` : ""}${modifier.pseudoClasses}`
     if (mod.state && mod.abstract) modifier.state = setCustomModifier(modifier.state, mod.abstract)
     else if (mod.abstract) modifier.abstract = mod.abstract
-    if (mod.pseudoContent) modifier.content = "  content: var(--tw-content);\n"
+    if (mod.pseudoContent) modifier.content = "  content: var(--fv-content);\n"
     if (mod.selectors) modifier.selectors = selectorsList[mod.selectors]
     if (mod.selectorsDynamic && mod.selectorsAbstract)
       modifier.selectors = selectorsDynamicList[mod.selectorsDynamic](mod.selectorsAbstract)

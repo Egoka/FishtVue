@@ -99,6 +99,7 @@ describe("FixWindow Component Tests", () => {
       {
         mode: "filled",
         expectedClass: [
+          "fv",
           "fishtvue-fix-window",
           "flex",
           "items-center",
@@ -116,6 +117,7 @@ describe("FixWindow Component Tests", () => {
       {
         mode: "outlined",
         expectedClass: [
+          "fv",
           "fishtvue-fix-window",
           "flex",
           "items-center",
@@ -133,6 +135,7 @@ describe("FixWindow Component Tests", () => {
       {
         mode: "underlined",
         expectedClass: [
+          "fv",
           "fishtvue-fix-window",
           "flex",
           "items-center",

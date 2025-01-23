@@ -47,7 +47,7 @@ describe("Icons Component Tests", () => {
         }
       })
 
-      expect(wrapper.find("[data-label]").attributes("style")).toContain("--tw-translate-x: 20px;")
+      expect(wrapper.find("[data-label]").attributes("style")).toContain("--fv-translate-x: 20px;")
     })
 
     it("computes correct maxWidth style", () => {

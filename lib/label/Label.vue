@@ -68,7 +68,7 @@
 </script>
 
 <template>
-  <div data-label :class="classBase" :style="type !== 'none' ? `--tw-translate-x: ${translateX}px;` : ''">
+  <div data-label :class="classBase" :style="type !== 'none' ? `--fv-translate-x: ${translateX}px;` : ''">
     <span :class="classContent" :style="`max-width: ${maxWidth - 38}px`">
       {{ props.title }}
     </span>

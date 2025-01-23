@@ -1,9 +1,9 @@
 import { PseudoClasses } from "fishtvue/theme/unoStyle/UnoTypes"
 
-export const baseFilter = `filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);`
-export const baseBackdropFilter = `-webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);\n  backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);`
+export const baseFilter = `filter: var(--fv-blur) var(--fv-brightness) var(--fv-contrast) var(--fv-grayscale) var(--fv-hue-rotate) var(--fv-invert) var(--fv-saturate) var(--fv-sepia) var(--fv-drop-shadow);`
+export const baseBackdropFilter = `-webkit-backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);\n  backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);`
 export const baseTransition = `transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n  transition-duration: 150ms;`
-export const baseTransform = `transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));`
+export const baseTransform = `transform: translate(var(--fv-translate-x), var(--fv-translate-y)) rotate(var(--fv-rotate)) skewX(var(--fv-skew-x)) skewY(var(--fv-skew-y)) scaleX(var(--fv-scale-x)) scaleY(var(--fv-scale-y));`
 export const specialSelectors: Record<string, string> = {
   divide: " > :not([hidden]) ~ :not([hidden])"
 }
@@ -38,18 +38,18 @@ export const singleStyles: Record<string, string> = {
   border: "border-width: 1px;",
   "outline-none": "outline: 2px solid transparent;\n  outline-offset: 2px;",
   outline: "outline-style: solid;",
-  "ring-inset": "--tw-ring-inset: inset;",
-  ring: "box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);",
+  "ring-inset": "--fv-ring-inset: inset;",
+  ring: "box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);",
   shadow: "box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);",
-  blur: `--tw-blur: blur(8px);\n  ${baseFilter}`,
-  "drop-shadow": `--tw-drop-shadow: drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));\n  ${baseFilter}`,
-  grayscale: `--tw-grayscale: grayscale(100%);\n  ${baseFilter}`,
-  invert: `--tw-invert: invert(100%);\n  ${baseFilter}`,
-  sepia: `--tw-sepia: sepia(100%);\n  ${baseFilter}`,
-  "backdrop-blur": `--tw-backdrop-blur: blur(8px);\n  ${baseBackdropFilter}`,
-  "backdrop-grayscale": `--tw-backdrop-grayscale: grayscale(100%);\n  ${baseBackdropFilter}`,
-  "backdrop-invert": `--tw-backdrop-invert: invert(100%);\n  ${baseBackdropFilter}`,
-  "backdrop-sepia": `--tw-backdrop-sepia: sepia(100%);\n  ${baseBackdropFilter}`,
+  blur: `--fv-blur: blur(8px);\n  ${baseFilter}`,
+  "drop-shadow": `--fv-drop-shadow: drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));\n  ${baseFilter}`,
+  grayscale: `--fv-grayscale: grayscale(100%);\n  ${baseFilter}`,
+  invert: `--fv-invert: invert(100%);\n  ${baseFilter}`,
+  sepia: `--fv-sepia: sepia(100%);\n  ${baseFilter}`,
+  "backdrop-blur": `--fv-backdrop-blur: blur(8px);\n  ${baseBackdropFilter}`,
+  "backdrop-grayscale": `--fv-backdrop-grayscale: grayscale(100%);\n  ${baseBackdropFilter}`,
+  "backdrop-invert": `--fv-backdrop-invert: invert(100%);\n  ${baseBackdropFilter}`,
+  "backdrop-sepia": `--fv-backdrop-sepia: sepia(100%);\n  ${baseBackdropFilter}`,
   "transition-none": `transition-property: none;`,
   "transition-shadow": `transition-property: box-shadow;\n  ${baseTransition}`,
   transition: `transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;\n  ${baseTransition}`,
@@ -233,12 +233,12 @@ export const blur: Record<string, string | number> = {
   "3xl": 64
 }
 export const dropShadow: Record<string, string> = {
-  sm: "--tw-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));",
-  md: "--tw-drop-shadow: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));",
-  lg: "--tw-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));",
-  xl: "--tw-drop-shadow: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));",
-  "2xl": "--tw-drop-shadow: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15));",
-  none: "--tw-drop-shadow: drop-shadow(0 0 #0000);"
+  sm: "--fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));",
+  md: "--fv-drop-shadow: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));",
+  lg: "--fv-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));",
+  xl: "--fv-drop-shadow: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));",
+  "2xl": "--fv-drop-shadow: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15));",
+  none: "--fv-drop-shadow: drop-shadow(0 0 #0000);"
 }
 export const transitionProperty: Record<string, string> = {
   all: `all`,
@@ -321,11 +321,11 @@ export const bgRepeat: Record<string, string> = {
 }
 export const snapType: Record<string, string> = {
   none: "scroll-snap-type: none;",
-  x: "scroll-snap-type: x var(--tw-scroll-snap-strictness);",
-  y: "scroll-snap-type: y var(--tw-scroll-snap-strictness);",
-  both: "scroll-snap-type: both var(--tw-scroll-snap-strictness);",
-  mandatory: "--tw-scroll-snap-strictness: mandatory;",
-  proximity: "--tw-scroll-snap-strictness: proximity;"
+  x: "scroll-snap-type: x var(--fv-scroll-snap-strictness);",
+  y: "scroll-snap-type: y var(--fv-scroll-snap-strictness);",
+  both: "scroll-snap-type: both var(--fv-scroll-snap-strictness);",
+  mandatory: "--fv-scroll-snap-strictness: mandatory;",
+  proximity: "--fv-scroll-snap-strictness: proximity;"
 }
 export const willChange: Record<string, string> = {
   auto: "auto",
@@ -403,9 +403,9 @@ export const placeContent: Record<string, string> = {
 }
 export const divideWidth: Record<string, (value: string) => string> = {
   x: (value) =>
-    `--tw-divide-x-reverse: 0;\n  border-right-width: calc(${value}* var(--tw-divide-x-reverse));\n  border-left-width: calc(${value}* calc(1 - var(--tw-divide-x-reverse)));`,
+    `--fv-divide-x-reverse: 0;\n  border-right-width: calc(${value}* var(--fv-divide-x-reverse));\n  border-left-width: calc(${value}* calc(1 - var(--fv-divide-x-reverse)));`,
   y: (value) =>
-    `--tw-divide-y-reverse: 0;\n  border-top-width: calc(${value}* calc(1 - var(--tw-divide-y-reverse)));\n  border-bottom-width: calc(${value}* var(--tw-divide-y-reverse));`
+    `--fv-divide-y-reverse: 0;\n  border-top-width: calc(${value}* calc(1 - var(--fv-divide-y-reverse)));\n  border-bottom-width: calc(${value}* var(--fv-divide-y-reverse));`
 }
 export const borderLogical: Record<string, (value: string) => string> = {
   undefined: (value) => `border-radius: ${value};`,
@@ -448,22 +448,22 @@ export const positionPaddingOrMargin: Record<string, (styleName: string, value: 
 }
 export const borderSpacing: Record<string, (value: string) => string> = {
   undefined: (value) => `border-spacing: ${value} ${value};`,
-  x: (value) => `border-spacing: ${value} var(--tw-border-spacing-y);`,
-  y: (value) => `border-spacing: var(--tw-border-spacing-x) ${value};`
+  x: (value) => `border-spacing: ${value} var(--fv-border-spacing-y);`,
+  y: (value) => `border-spacing: var(--fv-border-spacing-x) ${value};`
 }
 export const scale: Record<string, (value: string) => string> = {
-  undefined: (value) => `--tw-scale-x: ${value};\n  --tw-scale-y: ${value};\n  ${baseTransform}`,
-  x: (value) => `--tw-scale-x: ${value};\n  ${baseTransform}`,
-  y: (value) => `--tw-scale-y: ${value};\n  ${baseTransform}`
+  undefined: (value) => `--fv-scale-x: ${value};\n  --fv-scale-y: ${value};\n  ${baseTransform}`,
+  x: (value) => `--fv-scale-x: ${value};\n  ${baseTransform}`,
+  y: (value) => `--fv-scale-y: ${value};\n  ${baseTransform}`
 }
 export const translate: Record<string, (value: string) => string> = {
-  undefined: (value) => `--tw-translate-x: ${value};\n  --tw-translate-y: ${value};\n  ${baseTransform}`,
-  x: (value) => `--tw-translate-x: ${value};\n  ${baseTransform}`,
-  y: (value) => `--tw-translate-y: ${value};\n  ${baseTransform}`
+  undefined: (value) => `--fv-translate-x: ${value};\n  --fv-translate-y: ${value};\n  ${baseTransform}`,
+  x: (value) => `--fv-translate-x: ${value};\n  ${baseTransform}`,
+  y: (value) => `--fv-translate-y: ${value};\n  ${baseTransform}`
 }
 export const skew: Record<string, (value: string) => string> = {
-  x: (value) => `--tw-skew-x: ${value};\n  ${baseTransform}`,
-  y: (value) => `--tw-skew-y: ${value};\n  ${baseTransform}`
+  x: (value) => `--fv-skew-x: ${value};\n  ${baseTransform}`,
+  y: (value) => `--fv-skew-y: ${value};\n  ${baseTransform}`
 }
 export const textSize: Record<string, (value?: string) => string> = {
   xs: (value?: string) => `font-size: 0.75rem;\n  line-height: ${value ?? "1rem"};`,

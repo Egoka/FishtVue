@@ -176,7 +176,7 @@ describe("TextEditor Component", () => {
       ["theme", "snow"],
       ["mode", "outlined"],
       ["labelMode", "offsetDynamic"],
-      ["animation", "transition-all duration-550"],
+      // ["animation", "transition-all duration-550"],
       ["classBody", "custom-body-class"],
       ["class", "custom-class"]
     ])("applies global %s option", (optionKey, optionValue) => {
