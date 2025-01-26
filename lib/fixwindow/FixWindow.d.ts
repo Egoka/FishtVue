@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleMode, Position, ReadRef, RefLink, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, Position, ReadRef, RefLink, StyleClass, StyleMode } from "../types"
 
 /**
  * ## FixWindow

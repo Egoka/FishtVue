@@ -12,6 +12,7 @@ export function addAlphaToHex(color: string, alpha?: number): string {
   if (color[0] !== "#" || (color.length !== 7 && color.length !== 4)) return color
   return `${color}${alphaHex}`
 }
+
 export function sizing(value: string): string {
   if (/(?<dividend>\d+)\/(?<divisor>\d+)/.test(value)) {
     const res = value.match(/(?<dividend>\d+)\/(?<divisor>\d+)/)

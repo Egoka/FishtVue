@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Pagination from "fishtvue/pagination/Pagination.vue"
 import { nextTick } from "vue"

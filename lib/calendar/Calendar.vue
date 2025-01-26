@@ -1,13 +1,14 @@
 <script setup lang="ts">
-  import { computed, getCurrentInstance, ref, watch, onMounted, useSlots, nextTick } from "vue"
+  import type { ComponentInternalInstance } from "vue"
+  import { computed, getCurrentInstance, nextTick, onMounted, ref, useSlots, watch } from "vue"
   import type {
-    CalendarProps,
     CalendarEmits,
     CalendarExpose,
-    IParamsDatePicker,
+    CalendarProps,
     ICalendarPicker,
-    IRangeValue,
-    IRangeDate
+    IParamsDatePicker,
+    IRangeDate,
+    IRangeValue
   } from "./Calendar"
   import { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
   import { DatePicker } from "v-calendar"
@@ -17,6 +18,7 @@
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
+  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Calendar = new Component<"Calendar">()
   const options = Calendar.getOptions()
@@ -38,6 +40,7 @@
   const dataPicker = ref<HTMLElement>()
   const picker = ref<HTMLElement>()
   // ---STATE-------------------------------
+  const instance = ref<ComponentInternalInstance | null>()
   const isFocus = ref<boolean>(false)
   const isOpenPicker = ref<boolean>(false)
   const datePicker = computed<Partial<IParamsDatePicker>>(() => ({
@@ -73,7 +76,7 @@
     { immediate: true }
   )
   // ---PROPS-------------------------------
-  const id = ref<NonNullable<CalendarProps["id"]>>(String(String(props.id ?? getCurrentInstance()?.uid)))
+  const id = ref<NonNullable<CalendarProps["id"]>>(String(String(props.id ?? instance.value?.uid)))
   const isValue = computed<boolean>(() => {
     if (props.paramsDatePicker?.isRange) {
       return (
@@ -228,6 +231,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Calendar.initStyle()
+    instance.value = getCurrentInstance()
     if (autoFocus.value) openCalendar()
     nextTick(() => {
       visibleDate.value = <ICalendarPicker["inputValue"]>(
@@ -238,12 +242,14 @@
   // ---WATCHERS----------------------------
   watch(calendarPicker, () => emit("getCalendar", calendarPicker.value as ICalendarPicker), { deep: true })
   watch(isOpenPicker, (value) => {
+    if (!isClient()) return
     if (value) document.addEventListener("keydown", keydownCalendar)
     else document.removeEventListener("keydown", keydownCalendar)
     focus(value)
     emit("isActive", value)
   })
   watch(isFocus, (value) => {
+    if (!isClient()) return
     if (value) document.addEventListener("keydown", openCalendarOnEnter)
     else document.removeEventListener("keydown", openCalendarOnEnter)
   })

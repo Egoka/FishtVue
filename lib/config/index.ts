@@ -1,15 +1,16 @@
+import type { ObjectPlugin } from "vue"
 import { hasInjectionContext, inject, reactive } from "vue"
-import { NamesTheme, linksTheme } from "fishtvue/theme"
-import { deepMerge, deepFreeze, deepCopyObject } from "fishtvue/utils/objectHandler"
+import type { Theme } from "fishtvue/theme"
+import { linksTheme, NamesTheme } from "fishtvue/theme"
+import { isClient } from "fishtvue/utils/domHandler"
+import { deepCopyObject, deepFreeze, deepMerge } from "fishtvue/utils/objectHandler"
 import Component from "fishtvue/component"
+import type { NameLocale } from "fishtvue/locale"
 import Locales from "fishtvue/locale"
 import Aurora from "fishtvue/theme/themes/Aurora"
 import Harmony from "fishtvue/theme/themes/Harmony"
 import Sapphire from "fishtvue/theme/themes/Sapphire"
 import baseStyle from "./baseStyle"
-import type { ObjectPlugin } from "vue"
-import type { Theme } from "fishtvue/theme"
-import type { NameLocale } from "fishtvue/locale"
 import type { ComponentsOptions, FishtVue, FishtVueConfiguration, OptionsTheme } from "fishtvue/config/FishtVue"
 
 let FishtVueSymbol = Symbol()
@@ -66,10 +67,9 @@ export function getDefaultLocale(): string | undefined {
 
 function isExistFishtVue<T>(func: (FishtVue: FishtVue) => T): T | undefined {
   if (FishtVueSymbol.toString() === Symbol("FishtVue").toString()) {
-    // @ts-ignore
-    const FishtVue: FishtVue | undefined = hasInjectionContext()
-      ? (inject(FishtVueSymbol) ?? (window as any).FishtVue)
-      : (window as any).FishtVue
+    let FishtVue: any = undefined
+    if (isClient()) FishtVue = (window as any).FishtVue
+    if (hasInjectionContext()) FishtVue = inject(FishtVueSymbol) ?? FishtVue
     if (FishtVue) return func(FishtVue)
   }
   console.warn("FishtVue is not installed!")
@@ -119,15 +119,22 @@ export default {
         FishtVue.config.locale?.activeLocale ?? FishtVue.config.locale?.defaultLocale
     FishtVue.config.theme = linksTheme(FishtVue.config.theme)
     FishtVueSymbol = Symbol("FishtVue")
-    ;(window as any).FishtVue = FishtVue
+    if (isClient()) (window as any).FishtVue = FishtVue
     app.provide(FishtVueSymbol, FishtVue)
     app.config.globalProperties.$fishtVue = FishtVue
     const BaseStylesComponent = new Component("BaseComponent" as any)
-    BaseStylesComponent.initStyle(
-      () => `@layer fishtvue {:root {
+    const baseLayer = `:root {
   --theme: ${FishtVue.config.theme?.semantic?.customThemeColor ?? 0};
   --theme-contrast: ${FishtVue.config.theme?.semantic?.customThemeColorContrast ?? 0};
-}\n${baseStyle}}`
+  }\n${baseStyle}}`
+
+    BaseStylesComponent.initStyle(() =>
+      FishtVue.config.optionsTheme?.layers
+        ? `
+  @layer ${FishtVue.config.optionsTheme?.layers};
+  @layer fishtvue {${baseLayer}
+  }`
+        : `@layer fishtvue {${baseLayer}}`
     )
   }
 } as ObjectPlugin

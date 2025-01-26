@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import primitive from "fishtvue/theme/primitive"
 import semantic from "fishtvue/theme/semantic"
-import { palette, toVarsCss, linksTheme, useStyle } from "fishtvue/theme"
+import { linksTheme, palette, toVarsCss, useStyle } from "fishtvue/theme"
 
 describe("Testing theme", () => {
   describe("ThemePrimitive structure", () => {

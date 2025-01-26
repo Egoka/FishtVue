@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { computed, getCurrentInstance, ref, watch, onMounted, useSlots } from "vue"
-  import { TextEditorProps, TextEditorEmits, TextEditorExpose, IQuillEditor } from "./TextEditor"
-  import { QuillEditor } from "@vueup/vue-quill"
+  import type { ComponentInternalInstance } from "vue"
+  import { computed, getCurrentInstance, onMounted, onBeforeMount, ref, useSlots, watch } from "vue"
+  import { IQuillEditor, TextEditorEmits, TextEditorExpose, TextEditorProps } from "./TextEditor"
   import "@vueup/vue-quill/dist/vue-quill.snow.css"
   import "@vueup/vue-quill/dist/vue-quill.bubble.css"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
@@ -10,7 +10,7 @@
   import Component from "fishtvue/component"
   import { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
   import { StyleClass } from "fishtvue/types"
-  import { htmlToText } from "fishtvue/utils/domHandler"
+  import { htmlToText, isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const TextEditor = new Component<"TextEditor">()
   const options = TextEditor.getOptions()
@@ -26,11 +26,12 @@
   const emit = defineEmits<TextEditorEmits>()
   const slots = useSlots()
   // ---STATE-------------------------------
+  const instance = ref<ComponentInternalInstance | null>()
   const layout = ref<InputLayoutExpose>()
   const valueLayout = ref<TextEditorProps["modelValue"]>()
   const classLayout = ref<TextEditorProps["class"]>()
   const open = ref<boolean>(false)
-  const quillEditor = ref<IQuillEditor>()
+  const quillEditorLink = ref<IQuillEditor>()
   const isActiveTextEditor = ref<boolean>(false)
   const additionalStyles = ref<string>("max-h-max h-max")
   const editorSmall = ref<StyleClass>(TextEditor.setStyle("editor-small max-h-40 caret-theme-500"))
@@ -44,7 +45,7 @@
     { immediate: true }
   )
   // ---PROPS-------------------------------
-  const id = ref<NonNullable<TextEditorProps["id"]>>(String(props.id ?? getCurrentInstance()?.uid))
+  const id = ref<NonNullable<TextEditorProps["id"]>>(String(props.id ?? instance.value?.uid))
   const theme = ref<NonNullable<TextEditorProps["theme"]>>(props?.theme ?? options?.theme ?? "bubble")
   const isValue = computed<boolean>(() =>
     Boolean(modelValue.value ? String(modelValue.value).length : (modelValue.value ?? isActiveTextEditor.value))
@@ -68,7 +69,7 @@
       "st-text-editor caret-theme-500"
     ])
   )
-  const resizeButtonToBubble = ref<StyleClass>(TextEditor.setStyle("absolute top-0 right-0", { isNotScopeId: true }))
+  const resizeButtonToBubble = ref<StyleClass>(TextEditor.setStyle("absolute top-0 right-0"))
   const resizeButtonToSnow = ref<StyleClass>(TextEditor.setStyle("relative flex text-left h-[36px]"))
   const paramsDialog = computed<NonNullable<TextEditorProps["paramsDialog"]>>(() => ({
     ...options?.paramsDialog,
@@ -120,7 +121,7 @@
     valueLayout,
     classLayout,
     open,
-    quillEditor,
+    quillEditorLink,
     isActiveTextEditor,
     // ---PROPS-------------------------------
     id,
@@ -142,6 +143,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     TextEditor.initStyle()
+    instance.value = getCurrentInstance()
   })
   // ---WATCHERS----------------------------
   watch(theme, (theme) => {
@@ -157,6 +159,12 @@
       if (!value) changeModelValue(modelValue.value)
     }
   })
+  onBeforeMount(async () => {
+    if (isClient()) {
+      QuillEditor = (await import("@vueup/vue-quill")).QuillEditor
+    }
+  })
+  let QuillEditor: any
 
   // ---METHODS-----------------------------
   function inputModelValue(value: any) {
@@ -193,7 +201,7 @@
       <QuillEditor
         v-if="theme === 'bubble'"
         :id="id"
-        ref="quillEditor"
+        ref="quillEditorLink"
         theme="bubble"
         v-bind="paramsQuillEditor"
         @update:content="inputModelValue"

@@ -1,4 +1,6 @@
 import { FormValues } from "fishtvue/form"
+import { email, length, numeric, phone, range, regular, required } from "./rulesMethods"
+import { fieldsPick } from "fishtvue/utils/objectHandler"
 
 type message = string
 type ReturnValid = { isInvalid: boolean; message: string }
@@ -110,9 +112,6 @@ type RulesObject = {
 export declare type Rules = RulesArray | RulesObject
 
 // ---------------------------------------
-
-import { required, email, phone, numeric, regular, range, length } from "./rulesMethods"
-import { fieldsPick } from "fishtvue/utils/objectHandler"
 
 const listRules: Record<keyof RulesObject, any> = {
   required,

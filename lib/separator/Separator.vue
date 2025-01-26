@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, useSlots } from "vue"
-  import type { SeparatorProps, SeparatorExpose } from "./Separator"
+  import type { SeparatorExpose, SeparatorProps } from "./Separator"
   import Component from "fishtvue/component"
   import { StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
@@ -115,7 +115,7 @@
         :class="classLineLeft"
         :style="[
           vertical ? `height: 100%;width: ${depth}px;` : `width: 100%;height: ${depth}px;`,
-          `--tw-gradient-from-position: ${gradient}%;--tw-gradient-via-position: ${gradient > 0 ? gradient + gradientLength : 0}%`
+          `--fv-gradient-from-position: ${gradient}%;--fv-gradient-via-position: ${gradient > 0 ? gradient + gradientLength : 0}%`
         ]" />
     </div>
     <span v-if="slots?.default" data-separator-content :class="classContent"><slot /></span>
@@ -128,7 +128,7 @@
         :class="classLineRight"
         :style="[
           vertical ? `height: 100%;width: ${depth}px;` : `width: 100%;height: ${depth}px;`,
-          `--tw-gradient-from-position: ${gradient}%;--tw-gradient-via-position: ${gradient > 0 ? gradient + gradientLength : 0}%`
+          `--fv-gradient-from-position: ${gradient}%;--fv-gradient-via-position: ${gradient > 0 ? gradient + gradientLength : 0}%`
         ]" />
     </div>
   </div>

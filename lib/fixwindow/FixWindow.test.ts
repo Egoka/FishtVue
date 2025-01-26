@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, vi, expect, beforeEach, afterEach } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 
@@ -99,6 +99,7 @@ describe("FixWindow Component Tests", () => {
       {
         mode: "filled",
         expectedClass: [
+          "fv",
           "fishtvue-fix-window",
           "flex",
           "items-center",
@@ -116,6 +117,7 @@ describe("FixWindow Component Tests", () => {
       {
         mode: "outlined",
         expectedClass: [
+          "fv",
           "fishtvue-fix-window",
           "flex",
           "items-center",
@@ -133,6 +135,7 @@ describe("FixWindow Component Tests", () => {
       {
         mode: "underlined",
         expectedClass: [
+          "fv",
           "fishtvue-fix-window",
           "flex",
           "items-center",

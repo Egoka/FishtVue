@@ -1,17 +1,17 @@
 import stylesRules from "./unoRules"
 import {
+  formElementStates as formElementStatesList,
   media as mediaList,
   mediaDynamic as mediaDynamicList,
-  selectors as selectorsList,
-  selectorsDynamic as selectorsDynamicList,
-  userInteractionStates as userInteractionStatesList,
-  formElementStates as formElementStatesList,
-  structuralPseudoClasses as structuralPseudoClassesList,
   pseudoContent as pseudoContentList,
   pseudoElements as pseudoElementsList,
-  specialStates as specialStatesList,
+  selectors as selectorsList,
+  selectorsDynamic as selectorsDynamicList,
   singleStyles,
-  specialSelectors
+  specialSelectors,
+  specialStates as specialStatesList,
+  structuralPseudoClasses as structuralPseudoClassesList,
+  userInteractionStates as userInteractionStatesList
 } from "./unoStatic"
 import { Modifier, PseudoClasses } from "fishtvue/theme/unoStyle/UnoTypes"
 
@@ -86,7 +86,7 @@ export function tailwind(
       modifier.state = `.${mod.state}${mod.stateName ? `\\/${mod.stateName}` : ""}${modifier.pseudoClasses}`
     if (mod.state && mod.abstract) modifier.state = setCustomModifier(modifier.state, mod.abstract)
     else if (mod.abstract) modifier.abstract = mod.abstract
-    if (mod.pseudoContent) modifier.content = "  content: var(--tw-content);\n"
+    if (mod.pseudoContent) modifier.content = "  content: var(--fv-content);\n"
     if (mod.selectors) modifier.selectors = selectorsList[mod.selectors]
     if (mod.selectorsDynamic && mod.selectorsAbstract)
       modifier.selectors = selectorsDynamicList[mod.selectorsDynamic](mod.selectorsAbstract)

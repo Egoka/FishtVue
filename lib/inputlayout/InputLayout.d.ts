@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleMode, TWidth, THeight, StyleClass, ReadRef } from "../types"
+import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode, THeight, TWidth } from "../types"
 import { LabelMode } from "fishtvue/label"
 
 /**

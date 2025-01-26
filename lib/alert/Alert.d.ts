@@ -1,5 +1,5 @@
 import { CSSProperties, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass, Size, PositionShort, ReadRef } from "../types"
+import { ClassComponent, GlobalComponentConstructor, PositionShort, ReadRef, Size, StyleClass } from "../types"
 
 /**
  * ## Alert

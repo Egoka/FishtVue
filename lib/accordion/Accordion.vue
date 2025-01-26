@@ -1,7 +1,7 @@
 <script setup lang="ts">
-  import { computed, ref, watch, onMounted } from "vue"
-  import { ChevronDownIcon, ArrowDownCircleIcon } from "@heroicons/vue/20/solid"
-  import { AccordionProps, AccordionEmits, AccordionExpose } from "./Accordion"
+  import { computed, onMounted, ref, watch } from "vue"
+  import { ArrowDownCircleIcon, ChevronDownIcon } from "@heroicons/vue/20/solid"
+  import { AccordionEmits, AccordionExpose, AccordionProps } from "./Accordion"
   import Component from "fishtvue/component"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
   // ---BASE-COMPONENT----------------------

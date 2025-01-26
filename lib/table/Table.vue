@@ -1,44 +1,44 @@
 <script setup lang="ts">
-  import { computed, ref, watch, onMounted, onUnmounted, reactive, useSlots, toRaw, nextTick } from "vue"
-  import LD from "lodash"
+  import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, useSlots, watch } from "vue"
+  import * as LD from "lodash"
   import dayjs from "dayjs"
   import isBetween from "dayjs/plugin/isBetween"
   import {
-    ArrowLongUpIcon,
     ArrowLongDownIcon,
-    BarsArrowUpIcon,
+    ArrowLongUpIcon,
     BarsArrowDownIcon,
-    MagnifyingGlassIcon,
+    BarsArrowUpIcon,
     FunnelIcon,
+    MagnifyingGlassIcon,
     TableCellsIcon
   } from "@heroicons/vue/20/solid"
   import {
-    TableProps,
-    TableEmits,
-    TableExpose,
-    Page,
-    Search,
-    Sorted,
-    Filters,
-    Widths,
-    DataSource,
     DataGrouping,
-    IToolbar,
-    IFilter,
-    ITableStyles,
-    ISort,
-    IGrouping,
-    TablePagination,
-    ResultData,
-    IColumnPrivate,
+    DataSource,
+    DataType,
+    EditDate,
     EditInput,
     EditSelect,
-    EditDate,
-    ISummaryPrivate,
-    ITableStylesBorder,
+    Filters,
     IColumn,
+    IColumnPrivate,
+    IFilter,
+    IGrouping,
+    ISort,
+    ISummaryPrivate,
+    ITableStyles,
+    ITableStylesBorder,
+    IToolbar,
+    Page,
+    ResultData,
+    Search,
     Sort,
-    DataType
+    Sorted,
+    TableEmits,
+    TableExpose,
+    TablePagination,
+    TableProps,
+    Widths
   } from "./Table"
   import Button from "fishtvue/button/Button.vue"
   import Loading from "fishtvue/loading/Loading.vue"
@@ -55,6 +55,7 @@
   import { InputLayoutProps } from "fishtvue/inputlayout"
   import { convertToNumber, convertToPhone, isNumber } from "fishtvue/utils/numberHandler"
   import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
+  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Table = new Component<"Table">()
   const options = Table.getOptions()
@@ -136,8 +137,8 @@
   const countDataOnLoading = computed<NonNullable<TableProps["countDataOnLoading"]>>(
     () => props?.countDataOnLoading ?? options?.countDataOnLoading ?? 1000
   )
-  const classMaskQuery = computed<NonNullable<ITableStyles["maskQuery"]>>(
-    () => styles.value?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400"
+  const classMaskQuery = computed<NonNullable<ITableStyles["maskQuery"]>>(() =>
+    Table.setStyle(styles.value?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400")
   )
   const noData = computed<NonNullable<TableProps["noData"]>>(
     () => props.noData ?? options?.noData ?? Table.t("noData") ?? "No data"
@@ -242,7 +243,7 @@
   const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
     () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
   )
-  const isLoadingRows = computed(() => countVisibleRows.value > 0 && !isPagination.value)
+  const isLoadingRows = computed(() => countVisibleRows.value > 0)
   // ---DATA--------------------------------
   const dataGrouping = computed<DataGrouping>(() => {
     let data = toRaw(dataSource.value)
@@ -637,7 +638,7 @@
   const classIsSort = (column: IColumnPrivate) =>
     Table.setStyle([
       "flex items-center transition-opacity duration-500 pr-1 cursor-pointer",
-      sortColumns[column?.dataField] === null ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+      !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100" : "opacity-100"
     ])
   const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-gray-400 dark:text-gray-600"))
   const classResizedColumns = (column: IColumnPrivate, key: number) =>
@@ -676,7 +677,7 @@
   const styleGroupText = computed(() => `min-height: ${heightCell.value}px`)
   const classTr = (data: Record<string, any>, indexRow: number) =>
     Table.setStyle([
-      `tr--${data?._key ?? indexRow} group/tr`,
+      `tr--${indexRow} group/tr`,
       styles.value.hoverRows ? `${styles.value.hoverRows} transition-colors duration-200` : "",
       styles.value.isStripedRows
         ? mode.value === "filled"
@@ -691,7 +692,7 @@
   const classColumnTd = (data: Record<string, any>, indexRow: number, column: IColumnPrivate, indexCol: number) =>
     Table.setStyle([
       "ColumnClassTd",
-      `td--${data?._key ?? indexRow}--${column?.name ?? indexCol}`,
+      `td--${indexRow}--${column?.name ?? indexCol}`,
       "first:border-l-0 group-first/tr:border-t-0 last:border-r-0 group-last/tr:border-b-0",
       "text-sm font-medium",
       "px-6 py-4 text-gray-800 dark:text-gray-300",
@@ -773,7 +774,8 @@
     ])
   )
   // ---TABLE_OBSERVER----------------------
-  const tableObserver = new ResizeObserver((entries) => entries.forEach(() => setFooterPaddingHeight()))
+  let tableObserver: ResizeObserver
+  if (isClient()) tableObserver = new ResizeObserver((entries) => entries.forEach(() => setFooterPaddingHeight()))
   const footerPaddingHeight = ref<number>(0)
 
   function setFooterPaddingHeight() {
@@ -784,11 +786,18 @@
   }
 
   // ---IS-DARK-----------------------------
-  const isDark = ref<boolean>(window.matchMedia("(prefers-color-scheme: dark)")?.matches)
-  const colorSchemeQueryList = window.matchMedia("(prefers-color-scheme: dark)")
-  const setColorScheme = (e: any) => (isDark.value = e.matches)
-  setColorScheme(colorSchemeQueryList)
-  colorSchemeQueryList.addEventListener("change", setColorScheme)
+  const isDark = ref<boolean>(false)
+  if (isClient()) {
+    const colorSchemeQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+    const setColorScheme = (e: any) => (isDark.value = e.matches)
+
+    isDark.value = colorSchemeQueryList.matches
+    colorSchemeQueryList.addEventListener("change", setColorScheme)
+
+    onUnmounted(() => {
+      colorSchemeQueryList.removeEventListener("change", setColorScheme)
+    })
+  }
   // ---EXPOSE------------------------------
   defineExpose<TableExpose>({
     //---STATE-------------------------
@@ -864,7 +873,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Table.initStyle()
-    if (tbody.value) tableObserver.observe(tbody.value as Element)
+    if (isClient() && tbody.value) tableObserver.observe(tbody.value as Element)
     Object.assign(
       sortColumns,
       Object.fromEntries(new Map(dataColumns.value.map((column) => [column.dataField, column.defaultSort ?? null])))
@@ -887,8 +896,7 @@
     })
   })
   onUnmounted(() => {
-    tableObserver.disconnect()
-    colorSchemeQueryList.removeEventListener("change", setColorScheme)
+    if (isClient() && tableObserver) tableObserver.disconnect()
   })
   // ---WATCHERS----------------------------
   watch(
@@ -937,12 +945,12 @@
   // ---METHODS-----------------------------
   function getHeightVisibleRows(): number {
     if (countVisibleRows.value && tbody.value && componentTable.value) {
-      const tagTrs: NodeListOf<HTMLTableRowElement> = (tbody.value as HTMLElement)?.querySelectorAll(
+      const tagTrs: NodeListOf<HTMLTableRowElement> | undefined = (tbody.value as HTMLElement)?.querySelectorAll(
         `tr:nth-child(-n+${countVisibleRows.value ?? 1})`
       )
       if (tagTrs && tagTrs.length) {
         let sum = 0
-        tagTrs.forEach((item) => (sum += item?.offsetHeight))
+        tagTrs.forEach((item) => (sum += item?.offsetHeight ?? 0))
         return sum
       } else return countVisibleRows.value * (32 + heightCell.value + 1)
     }
@@ -1381,13 +1389,15 @@
   }
 
   // ---INTERSECTION_OBSERVER---------------
-  const lastRowVisibleObserver = new IntersectionObserver(
-    (entries) => {
-      if (!entries[0].isIntersecting) return
-      updateSizeLoadedRows()
-    },
-    { root: tableBody.value as Element, rootMargin: `100px` }
-  )
+  let lastRowVisibleObserver: IntersectionObserver
+  if (isClient())
+    lastRowVisibleObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting) return
+        updateSizeLoadedRows()
+      },
+      { root: tableBody.value as Element, rootMargin: `100px` }
+    )
 
   // ---RESIZE-COLUMN-----------------------
   function resizeColumn($event: MouseEvent, columnId: string) {
@@ -1414,14 +1424,18 @@
     if ($event.stopPropagation) $event.stopPropagation()
     if ($event.preventDefault) $event.preventDefault()
     resizableColumn.value = column
-    window.addEventListener("mousemove", moveResizedColumns)
-    window.addEventListener("mouseup", stopResizeColumn)
+    if (isClient()) {
+      window.addEventListener("mousemove", moveResizedColumns)
+      window.addEventListener("mouseup", stopResizeColumn)
+    }
   }
 
   function stopResizeColumn() {
     resizableColumn.value = null
-    window.removeEventListener("mousemove", moveResizedColumns)
-    window.removeEventListener("mouseup", stopResizeColumn)
+    if (isClient()) {
+      window.removeEventListener("mousemove", moveResizedColumns)
+      window.removeEventListener("mouseup", stopResizeColumn)
+    }
   }
 </script>
 
@@ -1577,12 +1591,12 @@
                     </div>
                   </th>
                 </tr>
-                <template v-for="(data, indexRow) in group" :key="indexRow">
+                <template v-for="(data, indexRow) in group" :key="`${data?._key}-${indexRow}`">
                   <tr
                     data-table-tbody-tr
                     :class="classTr(data, indexRow)"
-                    @click="clickRow(`tr--${data?._key ?? indexRow}`, data, indexRow)">
-                    <template v-for="(column, indexCol) in dataColumns" :key="`${indexRow}-${indexCol}`">
+                    @click="clickRow(`tr--${indexRow}`, data, indexRow)">
+                    <template v-for="(column, indexCol) in dataColumns" :key="`${data?._key}-${indexRow}-${indexCol}`">
                       <td
                         v-if="column.visible"
                         data-table-tbody-td
@@ -1590,7 +1604,7 @@
                         :style="styleColumnTd(column)"
                         @click="
                           clickCell(
-                            `td--${data?._key ?? indexRow}--${column?.name ?? indexCol}`,
+                            `td--${indexRow}--${column?.name ?? indexCol}`,
                             column,
                             data[column.dataField],
                             setMarker(column, setCell(column, data[column.dataField], data)),

@@ -24,10 +24,11 @@
     SwappingSquaresSpinner,
     TrinityRingsSpinner
   } from "epic-spinners"
-  import type { LoadingProps, LoadingExpose } from "./Loading"
+  import type { LoadingExpose, LoadingProps } from "./Loading"
   import { get } from "fishtvue/utils/objectHandler"
   import Component from "fishtvue/component"
   import { hslToHex } from "fishtvue/utils/colorsHandler"
+  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Loading = new Component<"Loading">()
   const options = Loading.getOptions()
@@ -92,7 +93,8 @@
     if (color && color.startsWith("hsl")) {
       color = color.replace(/var\((?<var>.*?)\)|(?<alpha><alpha-value>)/g, (substring, args) => {
         if (substring === "<alpha-value>") return "100"
-        if (substring.startsWith("var")) return getComputedStyle(document.documentElement).getPropertyValue(args)
+        if (isClient() && substring.startsWith("var"))
+          return getComputedStyle(document.documentElement).getPropertyValue(args)
         return substring
       })
       return hslToHex(color)

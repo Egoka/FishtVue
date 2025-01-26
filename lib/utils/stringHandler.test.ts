@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import {
-  isString,
-  toFlatCase,
-  toKebabCase,
-  toCapitalCase,
-  stringify,
-  convertToDashCase,
   convertToCamelCase,
-  convertToSnakeCase
+  convertToDashCase,
+  convertToSnakeCase,
+  isString,
+  stringify,
+  toCapitalCase,
+  toFlatCase,
+  toKebabCase
 } from "fishtvue/utils/stringHandler"
 
 describe("Testing string handler", () => {

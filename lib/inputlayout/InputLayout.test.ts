@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
 
@@ -37,17 +37,17 @@ describe("InputLayout Component", () => {
       {
         mode: "outlined",
         expected:
-          "fishtvue-input-layout classLayout rounded-md w-full max-h-20 text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-950 transition-all duration-550 block peer overflow-auto"
+          "fv fishtvue-input-layout classLayout rounded-md w-full max-h-20 text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-950 block peer overflow-auto"
       },
       {
         mode: "underlined",
         expected:
-          "fishtvue-input-layout classLayout w-full max-h-20 text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950 transition-all duration-550 block peer overflow-auto"
+          "fv fishtvue-input-layout classLayout w-full max-h-20 text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950 block peer overflow-auto"
       },
       {
         mode: "filled",
         expected:
-          "fishtvue-input-layout classLayout rounded-md w-full max-h-20 text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 border-0 border-transparent bg-stone-100 dark:bg-stone-900 transition-all duration-550 block peer overflow-auto"
+          "fv fishtvue-input-layout classLayout rounded-md w-full max-h-20 text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 border-0 border-transparent bg-stone-100 dark:bg-stone-900 block peer overflow-auto"
       }
     ])("applies mode: %s", ({ mode, expected }) => {
       const wrapper = mount(InputLayout, {

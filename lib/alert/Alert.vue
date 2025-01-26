@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import { computed, ref, watch, onMounted, useSlots, CSSProperties } from "vue"
-  import type { AlertProps, AlertEmits, AlertExpose } from "./Alert"
+  import { computed, CSSProperties, onMounted, ref, useSlots, watch } from "vue"
+  import type { AlertEmits, AlertExpose, AlertProps } from "./Alert"
   import {
+    ChatBubbleOvalLeftIcon,
     CheckCircleIcon,
-    InformationCircleIcon,
-    XCircleIcon,
     ExclamationTriangleIcon,
-    ChatBubbleOvalLeftIcon
+    InformationCircleIcon,
+    XCircleIcon
   } from "@heroicons/vue/20/solid"
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"

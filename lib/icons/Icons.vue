@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from "vue"
-  import type { IconsProps, IconsExpose } from "./Icons"
+  import type { IconsExpose, IconsProps } from "./Icons"
   import { convertToCamelCase } from "fishtvue/utils/stringHandler"
   // ---------------------------------------
   import * as HeroIcons from "@heroicons/vue/24/solid"

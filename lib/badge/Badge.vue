@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted } from "vue"
-  import type { BadgeProps, BadgeEmits, BadgeExpose } from "./Badge"
+  import type { BadgeEmits, BadgeExpose, BadgeProps } from "./Badge"
   import Icons from "fishtvue/icons/Icons.vue"
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"

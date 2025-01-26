@@ -136,11 +136,11 @@ describe("unoStyle", () => {
         it.each<{ classValue: string; expected: string }>([
           {
             classValue: "after:p-0",
-            expected: ".after\\:p-0::after {\n  content: var(--tw-content);\n  padding: 0px;\n}"
+            expected: ".after\\:p-0::after {\n  content: var(--fv-content);\n  padding: 0px;\n}"
           },
           {
             classValue: "before:p-0",
-            expected: ".before\\:p-0::before {\n  content: var(--tw-content);\n  padding: 0px;\n}"
+            expected: ".before\\:p-0::before {\n  content: var(--fv-content);\n  padding: 0px;\n}"
           }
         ])(`tailwind($classValue)`, ({ classValue, expected }) => {
           expect(tailwind(classValue)).toBe(expected)
@@ -1068,7 +1068,7 @@ describe("unoStyle", () => {
         { classValue: "content-stretch", expected: ".content-stretch {\n  align-content: stretch;\n}" },
         {
           classValue: "content-['*']",
-          expected: ".content-\\[\\'\\*\\'\\] {\n  --tw-content: '*';\n  content: var(--tw-content);\n}"
+          expected: ".content-\\[\\'\\*\\'\\] {\n  --fv-content: '*';\n  content: var(--fv-content);\n}"
         }
       ])("tailwind($classValue)", ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -1946,39 +1946,39 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "bg-gradient-to-t",
-          expected: ".bg-gradient-to-t {\n  background-image: linear-gradient(to top, var(--tw-gradient-stops));\n}"
+          expected: ".bg-gradient-to-t {\n  background-image: linear-gradient(to top, var(--fv-gradient-stops));\n}"
         },
         {
           classValue: "bg-gradient-to-tr",
           expected:
-            ".bg-gradient-to-tr {\n  background-image: linear-gradient(to top right, var(--tw-gradient-stops));\n}"
+            ".bg-gradient-to-tr {\n  background-image: linear-gradient(to top right, var(--fv-gradient-stops));\n}"
         },
         {
           classValue: "bg-gradient-to-r",
-          expected: ".bg-gradient-to-r {\n  background-image: linear-gradient(to right, var(--tw-gradient-stops));\n}"
+          expected: ".bg-gradient-to-r {\n  background-image: linear-gradient(to right, var(--fv-gradient-stops));\n}"
         },
         {
           classValue: "bg-gradient-to-br",
           expected:
-            ".bg-gradient-to-br {\n  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));\n}"
+            ".bg-gradient-to-br {\n  background-image: linear-gradient(to bottom right, var(--fv-gradient-stops));\n}"
         },
         {
           classValue: "bg-gradient-to-b",
-          expected: ".bg-gradient-to-b {\n  background-image: linear-gradient(to bottom, var(--tw-gradient-stops));\n}"
+          expected: ".bg-gradient-to-b {\n  background-image: linear-gradient(to bottom, var(--fv-gradient-stops));\n}"
         },
         {
           classValue: "bg-gradient-to-bl",
           expected:
-            ".bg-gradient-to-bl {\n  background-image: linear-gradient(to bottom left, var(--tw-gradient-stops));\n}"
+            ".bg-gradient-to-bl {\n  background-image: linear-gradient(to bottom left, var(--fv-gradient-stops));\n}"
         },
         {
           classValue: "bg-gradient-to-l",
-          expected: ".bg-gradient-to-l {\n  background-image: linear-gradient(to left, var(--tw-gradient-stops));\n}"
+          expected: ".bg-gradient-to-l {\n  background-image: linear-gradient(to left, var(--fv-gradient-stops));\n}"
         },
         {
           classValue: "bg-gradient-to-tl",
           expected:
-            ".bg-gradient-to-tl {\n  background-image: linear-gradient(to top left, var(--tw-gradient-stops));\n}"
+            ".bg-gradient-to-tl {\n  background-image: linear-gradient(to top left, var(--fv-gradient-stops));\n}"
         },
         {
           classValue: "bg-[url('/img/hero-pattern.svg')]",
@@ -1994,42 +1994,42 @@ describe("unoStyle", () => {
         {
           classValue: "from-inherit",
           expected:
-            ".from-inherit {\n  --tw-gradient-from: inherit var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-inherit {\n  --fv-gradient-from: inherit var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-current",
           expected:
-            ".from-current {\n  --tw-gradient-from: currentColor var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-current {\n  --fv-gradient-from: currentColor var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-transparent",
           expected:
-            ".from-transparent {\n  --tw-gradient-from: transparent var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-transparent {\n  --fv-gradient-from: transparent var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-black",
           expected:
-            ".from-black {\n  --tw-gradient-from: #000000 var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-black {\n  --fv-gradient-from: #000000 var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-white",
           expected:
-            ".from-white {\n  --tw-gradient-from: #ffffff var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-white {\n  --fv-gradient-from: #ffffff var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-white/0",
           expected:
-            ".from-white\\/0 {\n  --tw-gradient-from: #ffffff00 var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-white\\/0 {\n  --fv-gradient-from: #ffffff00 var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-white/50",
           expected:
-            ".from-white\\/50 {\n  --tw-gradient-from: #ffffff80 var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-white\\/50 {\n  --fv-gradient-from: #ffffff80 var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-white/100",
           expected:
-            ".from-white\\/100 {\n  --tw-gradient-from: #ffffff var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-white\\/100 {\n  --fv-gradient-from: #ffffff var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2038,69 +2038,69 @@ describe("unoStyle", () => {
         {
           classValue: "from-slate-50",
           expected:
-            ".from-slate-50 {\n  --tw-gradient-from: #f8fafc var(--tw-gradient-from-position);\n  --tw-gradient-to: #f8fafc00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-slate-50 {\n  --fv-gradient-from: #f8fafc var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8fafc00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-gray-100",
           expected:
-            ".from-gray-100 {\n  --tw-gradient-from: #f3f4f6 var(--tw-gradient-from-position);\n  --tw-gradient-to: #f3f4f600 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-gray-100 {\n  --fv-gradient-from: #f3f4f6 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f3f4f600 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-zinc-200",
           expected:
-            ".from-zinc-200 {\n  --tw-gradient-from: #e4e4e7 var(--tw-gradient-from-position);\n  --tw-gradient-to: #e4e4e700 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-zinc-200 {\n  --fv-gradient-from: #e4e4e7 var(--fv-gradient-from-position);\n  --fv-gradient-to: #e4e4e700 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-neutral-300",
           expected:
-            ".from-neutral-300 {\n  --tw-gradient-from: #d4d4d4 var(--tw-gradient-from-position);\n  --tw-gradient-to: #d4d4d400 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-neutral-300 {\n  --fv-gradient-from: #d4d4d4 var(--fv-gradient-from-position);\n  --fv-gradient-to: #d4d4d400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-stone-400",
           expected:
-            ".from-stone-400 {\n  --tw-gradient-from: #a8a29e var(--tw-gradient-from-position);\n  --tw-gradient-to: #a8a29e00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-stone-400 {\n  --fv-gradient-from: #a8a29e var(--fv-gradient-from-position);\n  --fv-gradient-to: #a8a29e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-500",
           expected:
-            ".from-red-500 {\n  --tw-gradient-from: #ef4444 var(--tw-gradient-from-position);\n  --tw-gradient-to: #ef444400 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-red-500 {\n  --fv-gradient-from: #ef4444 var(--fv-gradient-from-position);\n  --fv-gradient-to: #ef444400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-orange-600",
           expected:
-            ".from-orange-600 {\n  --tw-gradient-from: #ea580c var(--tw-gradient-from-position);\n  --tw-gradient-to: #ea580c00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-orange-600 {\n  --fv-gradient-from: #ea580c var(--fv-gradient-from-position);\n  --fv-gradient-to: #ea580c00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-amber-700",
           expected:
-            ".from-amber-700 {\n  --tw-gradient-from: #b45309 var(--tw-gradient-from-position);\n  --tw-gradient-to: #b4530900 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-amber-700 {\n  --fv-gradient-from: #b45309 var(--fv-gradient-from-position);\n  --fv-gradient-to: #b4530900 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-yellow-800",
           expected:
-            ".from-yellow-800 {\n  --tw-gradient-from: #854d0e var(--tw-gradient-from-position);\n  --tw-gradient-to: #854d0e00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-yellow-800 {\n  --fv-gradient-from: #854d0e var(--fv-gradient-from-position);\n  --fv-gradient-to: #854d0e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-lime-900",
           expected:
-            ".from-lime-900 {\n  --tw-gradient-from: #365314 var(--tw-gradient-from-position);\n  --tw-gradient-to: #36531400 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-lime-900 {\n  --fv-gradient-from: #365314 var(--fv-gradient-from-position);\n  --fv-gradient-to: #36531400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-green-950",
           expected:
-            ".from-green-950 {\n  --tw-gradient-from: #052e16 var(--tw-gradient-from-position);\n  --tw-gradient-to: #052e1600 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-green-950 {\n  --fv-gradient-from: #052e16 var(--fv-gradient-from-position);\n  --fv-gradient-to: #052e1600 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-[#50d71e]",
           expected:
-            ".from-\\[\\#50d71e\\] {\n  --tw-gradient-from: #50d71e var(--tw-gradient-from-position);\n  --tw-gradient-to: #50d71e00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-\\[\\#50d71e\\] {\n  --fv-gradient-from: #50d71e var(--fv-gradient-from-position);\n  --fv-gradient-to: #50d71e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "from-0%", expected: ".from-0\\% {\n  --tw-gradient-from-position: 0%;\n}" },
-        { classValue: "from-100%", expected: ".from-100\\% {\n  --tw-gradient-from-position: 100%;\n}" }
+        { classValue: "from-0%", expected: ".from-0\\% {\n  --fv-gradient-from-position: 0%;\n}" },
+        { classValue: "from-100%", expected: ".from-100\\% {\n  --fv-gradient-from-position: 100%;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -2108,27 +2108,27 @@ describe("unoStyle", () => {
         {
           classValue: "from-red-400/0",
           expected:
-            ".from-red-400\\/0 {\n  --tw-gradient-from: #f8717100 var(--tw-gradient-from-position);\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-red-400\\/0 {\n  --fv-gradient-from: #f8717100 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-400/50",
           expected:
-            ".from-red-400\\/50 {\n  --tw-gradient-from: #f8717180 var(--tw-gradient-from-position);\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-red-400\\/50 {\n  --fv-gradient-from: #f8717180 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-400/100",
           expected:
-            ".from-red-400\\/100 {\n  --tw-gradient-from: #f87171 var(--tw-gradient-from-position);\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-red-400\\/100 {\n  --fv-gradient-from: #f87171 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-400/[.06]",
           expected:
-            ".from-red-400\\/\\[\\.06\\] {\n  --tw-gradient-from: #f871710f var(--tw-gradient-from-position);\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-red-400\\/\\[\\.06\\] {\n  --fv-gradient-from: #f871710f var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-[#50d71e]/25",
           expected:
-            ".from-\\[\\#50d71e\\]\\/25 {\n  --tw-gradient-from: #50d71e40 var(--tw-gradient-from-position);\n  --tw-gradient-to: #50d71e00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);\n}"
+            ".from-\\[\\#50d71e\\]\\/25 {\n  --fv-gradient-from: #50d71e40 var(--fv-gradient-from-position);\n  --fv-gradient-to: #50d71e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2139,42 +2139,42 @@ describe("unoStyle", () => {
         {
           classValue: "via-inherit",
           expected:
-            ".via-inherit {\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), inherit var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-inherit {\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), inherit var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-current",
           expected:
-            ".via-current {\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), currentColor var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-current {\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), currentColor var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-transparent",
           expected:
-            ".via-transparent {\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), transparent var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-transparent {\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), transparent var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-black",
           expected:
-            ".via-black {\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #000000 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-black {\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #000000 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-white",
           expected:
-            ".via-white {\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #ffffff var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-white {\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #ffffff var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-white/0",
           expected:
-            ".via-white\\/0 {\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #ffffff00 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-white\\/0 {\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #ffffff00 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-white/50",
           expected:
-            ".via-white\\/50 {\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #ffffff80 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-white\\/50 {\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #ffffff80 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-white/100",
           expected:
-            ".via-white\\/100 {\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #ffffff var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-white\\/100 {\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #ffffff var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2183,69 +2183,69 @@ describe("unoStyle", () => {
         {
           classValue: "via-slate-50",
           expected:
-            ".via-slate-50 {\n  --tw-gradient-to: #f8fafc00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #f8fafc var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-slate-50 {\n  --fv-gradient-to: #f8fafc00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f8fafc var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-gray-100",
           expected:
-            ".via-gray-100 {\n  --tw-gradient-to: #f3f4f600 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #f3f4f6 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-gray-100 {\n  --fv-gradient-to: #f3f4f600 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f3f4f6 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-zinc-200",
           expected:
-            ".via-zinc-200 {\n  --tw-gradient-to: #e4e4e700 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #e4e4e7 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-zinc-200 {\n  --fv-gradient-to: #e4e4e700 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #e4e4e7 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-neutral-300",
           expected:
-            ".via-neutral-300 {\n  --tw-gradient-to: #d4d4d400 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #d4d4d4 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-neutral-300 {\n  --fv-gradient-to: #d4d4d400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #d4d4d4 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-stone-400",
           expected:
-            ".via-stone-400 {\n  --tw-gradient-to: #a8a29e00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #a8a29e var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-stone-400 {\n  --fv-gradient-to: #a8a29e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #a8a29e var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-red-500",
           expected:
-            ".via-red-500 {\n  --tw-gradient-to: #ef444400 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #ef4444 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-red-500 {\n  --fv-gradient-to: #ef444400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #ef4444 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-orange-600",
           expected:
-            ".via-orange-600 {\n  --tw-gradient-to: #ea580c00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #ea580c var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-orange-600 {\n  --fv-gradient-to: #ea580c00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #ea580c var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-amber-700",
           expected:
-            ".via-amber-700 {\n  --tw-gradient-to: #b4530900 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #b45309 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-amber-700 {\n  --fv-gradient-to: #b4530900 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #b45309 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-yellow-800",
           expected:
-            ".via-yellow-800 {\n  --tw-gradient-to: #854d0e00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #854d0e var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-yellow-800 {\n  --fv-gradient-to: #854d0e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #854d0e var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-lime-900",
           expected:
-            ".via-lime-900 {\n  --tw-gradient-to: #36531400 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #365314 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-lime-900 {\n  --fv-gradient-to: #36531400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #365314 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-green-950",
           expected:
-            ".via-green-950 {\n  --tw-gradient-to: #052e1600 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #052e16 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-green-950 {\n  --fv-gradient-to: #052e1600 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #052e16 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-[#50d71e]",
           expected:
-            ".via-\\[\\#50d71e\\] {\n  --tw-gradient-to: #50d71e00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #50d71e var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-\\[\\#50d71e\\] {\n  --fv-gradient-to: #50d71e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #50d71e var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "via-0%", expected: ".via-0\\% {\n  --tw-gradient-from-position: 0%;\n}" },
-        { classValue: "via-100%", expected: ".via-100\\% {\n  --tw-gradient-from-position: 100%;\n}" }
+        { classValue: "via-0%", expected: ".via-0\\% {\n  --fv-gradient-from-position: 0%;\n}" },
+        { classValue: "via-100%", expected: ".via-100\\% {\n  --fv-gradient-from-position: 100%;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -2253,27 +2253,27 @@ describe("unoStyle", () => {
         {
           classValue: "via-red-400/0",
           expected:
-            ".via-red-400\\/0 {\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #f8717100 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-red-400\\/0 {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f8717100 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-red-400/50",
           expected:
-            ".via-red-400\\/50 {\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #f8717180 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-red-400\\/50 {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f8717180 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-red-400/100",
           expected:
-            ".via-red-400\\/100 {\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #f87171 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-red-400\\/100 {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f87171 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-red-400/[.06]",
           expected:
-            ".via-red-400\\/\\[\\.06\\] {\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #f871710f var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-red-400\\/\\[\\.06\\] {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f871710f var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-[#50d71e]/25",
           expected:
-            ".via-\\[\\#50d71e\\]\\/25 {\n  --tw-gradient-to: #50d71e00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), #50d71e40 var(--tw-gradient-via-position), var(--tw-gradient-to);\n}"
+            ".via-\\[\\#50d71e\\]\\/25 {\n  --fv-gradient-to: #50d71e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #50d71e40 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2283,35 +2283,35 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "to-inherit",
-          expected: ".to-inherit {\n  --tw-gradient-to: inherit var(--tw-gradient-to-position);\n}"
+          expected: ".to-inherit {\n  --fv-gradient-to: inherit var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-current",
-          expected: ".to-current {\n  --tw-gradient-to: currentColor var(--tw-gradient-to-position);\n}"
+          expected: ".to-current {\n  --fv-gradient-to: currentColor var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-transparent",
-          expected: ".to-transparent {\n  --tw-gradient-to: transparent var(--tw-gradient-to-position);\n}"
+          expected: ".to-transparent {\n  --fv-gradient-to: transparent var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-black",
-          expected: ".to-black {\n  --tw-gradient-to: #000000 var(--tw-gradient-to-position);\n}"
+          expected: ".to-black {\n  --fv-gradient-to: #000000 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-white",
-          expected: ".to-white {\n  --tw-gradient-to: #ffffff var(--tw-gradient-to-position);\n}"
+          expected: ".to-white {\n  --fv-gradient-to: #ffffff var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-white/0",
-          expected: ".to-white\\/0 {\n  --tw-gradient-to: #ffffff00 var(--tw-gradient-to-position);\n}"
+          expected: ".to-white\\/0 {\n  --fv-gradient-to: #ffffff00 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-white/50",
-          expected: ".to-white\\/50 {\n  --tw-gradient-to: #ffffff80 var(--tw-gradient-to-position);\n}"
+          expected: ".to-white\\/50 {\n  --fv-gradient-to: #ffffff80 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-white/100",
-          expected: ".to-white\\/100 {\n  --tw-gradient-to: #ffffff var(--tw-gradient-to-position);\n}"
+          expected: ".to-white\\/100 {\n  --fv-gradient-to: #ffffff var(--fv-gradient-to-position);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2319,81 +2319,81 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "to-slate-50",
-          expected: ".to-slate-50 {\n  --tw-gradient-to: #f8fafc var(--tw-gradient-to-position);\n}"
+          expected: ".to-slate-50 {\n  --fv-gradient-to: #f8fafc var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-gray-100",
-          expected: ".to-gray-100 {\n  --tw-gradient-to: #f3f4f6 var(--tw-gradient-to-position);\n}"
+          expected: ".to-gray-100 {\n  --fv-gradient-to: #f3f4f6 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-zinc-200",
-          expected: ".to-zinc-200 {\n  --tw-gradient-to: #e4e4e7 var(--tw-gradient-to-position);\n}"
+          expected: ".to-zinc-200 {\n  --fv-gradient-to: #e4e4e7 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-neutral-300",
-          expected: ".to-neutral-300 {\n  --tw-gradient-to: #d4d4d4 var(--tw-gradient-to-position);\n}"
+          expected: ".to-neutral-300 {\n  --fv-gradient-to: #d4d4d4 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-stone-400",
-          expected: ".to-stone-400 {\n  --tw-gradient-to: #a8a29e var(--tw-gradient-to-position);\n}"
+          expected: ".to-stone-400 {\n  --fv-gradient-to: #a8a29e var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-red-500",
-          expected: ".to-red-500 {\n  --tw-gradient-to: #ef4444 var(--tw-gradient-to-position);\n}"
+          expected: ".to-red-500 {\n  --fv-gradient-to: #ef4444 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-orange-600",
-          expected: ".to-orange-600 {\n  --tw-gradient-to: #ea580c var(--tw-gradient-to-position);\n}"
+          expected: ".to-orange-600 {\n  --fv-gradient-to: #ea580c var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-amber-700",
-          expected: ".to-amber-700 {\n  --tw-gradient-to: #b45309 var(--tw-gradient-to-position);\n}"
+          expected: ".to-amber-700 {\n  --fv-gradient-to: #b45309 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-yellow-800",
-          expected: ".to-yellow-800 {\n  --tw-gradient-to: #854d0e var(--tw-gradient-to-position);\n}"
+          expected: ".to-yellow-800 {\n  --fv-gradient-to: #854d0e var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-lime-900",
-          expected: ".to-lime-900 {\n  --tw-gradient-to: #365314 var(--tw-gradient-to-position);\n}"
+          expected: ".to-lime-900 {\n  --fv-gradient-to: #365314 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-green-950",
-          expected: ".to-green-950 {\n  --tw-gradient-to: #052e16 var(--tw-gradient-to-position);\n}"
+          expected: ".to-green-950 {\n  --fv-gradient-to: #052e16 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-[#50d71e]",
-          expected: ".to-\\[\\#50d71e\\] {\n  --tw-gradient-to: #50d71e var(--tw-gradient-to-position);\n}"
+          expected: ".to-\\[\\#50d71e\\] {\n  --fv-gradient-to: #50d71e var(--fv-gradient-to-position);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "to-0%", expected: ".to-0\\% {\n  --tw-gradient-to-position: 0%;\n}" },
-        { classValue: "to-100%", expected: ".to-100\\% {\n  --tw-gradient-to-position: 100%;\n}" }
+        { classValue: "to-0%", expected: ".to-0\\% {\n  --fv-gradient-to-position: 0%;\n}" },
+        { classValue: "to-100%", expected: ".to-100\\% {\n  --fv-gradient-to-position: 100%;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "to-red-400/0",
-          expected: ".to-red-400\\/0 {\n  --tw-gradient-to: #f8717100 var(--tw-gradient-to-position);\n}"
+          expected: ".to-red-400\\/0 {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-red-400/50",
-          expected: ".to-red-400\\/50 {\n  --tw-gradient-to: #f8717180 var(--tw-gradient-to-position);\n}"
+          expected: ".to-red-400\\/50 {\n  --fv-gradient-to: #f8717180 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-red-400/100",
-          expected: ".to-red-400\\/100 {\n  --tw-gradient-to: #f87171 var(--tw-gradient-to-position);\n}"
+          expected: ".to-red-400\\/100 {\n  --fv-gradient-to: #f87171 var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-red-400/[.06]",
-          expected: ".to-red-400\\/\\[\\.06\\] {\n  --tw-gradient-to: #f871710f var(--tw-gradient-to-position);\n}"
+          expected: ".to-red-400\\/\\[\\.06\\] {\n  --fv-gradient-to: #f871710f var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-[#50d71e]/25",
-          expected: ".to-\\[\\#50d71e\\]\\/25 {\n  --tw-gradient-to: #50d71e40 var(--tw-gradient-to-position);\n}"
+          expected: ".to-\\[\\#50d71e\\]\\/25 {\n  --fv-gradient-to: #50d71e40 var(--fv-gradient-to-position);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2493,61 +2493,61 @@ describe("unoStyle", () => {
         {
           classValue: "divide-x",
           expected:
-            ".divide-x > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-x-reverse: 0;\n  border-right-width: calc(1px* var(--tw-divide-x-reverse));\n  border-left-width: calc(1px* calc(1 - var(--tw-divide-x-reverse)));\n}"
+            ".divide-x > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-x-reverse: 0;\n  border-right-width: calc(1px* var(--fv-divide-x-reverse));\n  border-left-width: calc(1px* calc(1 - var(--fv-divide-x-reverse)));\n}"
         },
         {
           classValue: "divide-x-0",
           expected:
-            ".divide-x-0 > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-x-reverse: 0;\n  border-right-width: calc(0px* var(--tw-divide-x-reverse));\n  border-left-width: calc(0px* calc(1 - var(--tw-divide-x-reverse)));\n}"
+            ".divide-x-0 > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-x-reverse: 0;\n  border-right-width: calc(0px* var(--fv-divide-x-reverse));\n  border-left-width: calc(0px* calc(1 - var(--fv-divide-x-reverse)));\n}"
         },
         {
           classValue: "divide-x-1",
           expected:
-            ".divide-x-1 > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-x-reverse: 0;\n  border-right-width: calc(1px* var(--tw-divide-x-reverse));\n  border-left-width: calc(1px* calc(1 - var(--tw-divide-x-reverse)));\n}"
+            ".divide-x-1 > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-x-reverse: 0;\n  border-right-width: calc(1px* var(--fv-divide-x-reverse));\n  border-left-width: calc(1px* calc(1 - var(--fv-divide-x-reverse)));\n}"
         },
         {
           classValue: "divide-x-2",
           expected:
-            ".divide-x-2 > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-x-reverse: 0;\n  border-right-width: calc(2px* var(--tw-divide-x-reverse));\n  border-left-width: calc(2px* calc(1 - var(--tw-divide-x-reverse)));\n}"
+            ".divide-x-2 > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-x-reverse: 0;\n  border-right-width: calc(2px* var(--fv-divide-x-reverse));\n  border-left-width: calc(2px* calc(1 - var(--fv-divide-x-reverse)));\n}"
         },
         {
           classValue: "divide-x-reverse",
-          expected: ".divide-x-reverse > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-x-reverse: 1;\n}"
+          expected: ".divide-x-reverse > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-x-reverse: 1;\n}"
         },
         {
           classValue: "divide-x-[5px]",
           expected:
-            ".divide-x-\\[5px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-x-reverse: 0;\n  border-right-width: calc(5px* var(--tw-divide-x-reverse));\n  border-left-width: calc(5px* calc(1 - var(--tw-divide-x-reverse)));\n}"
+            ".divide-x-\\[5px\\] > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-x-reverse: 0;\n  border-right-width: calc(5px* var(--fv-divide-x-reverse));\n  border-left-width: calc(5px* calc(1 - var(--fv-divide-x-reverse)));\n}"
         },
         {
           classValue: "divide-y",
           expected:
-            ".divide-y > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-y-reverse: 0;\n  border-top-width: calc(1px* calc(1 - var(--tw-divide-y-reverse)));\n  border-bottom-width: calc(1px* var(--tw-divide-y-reverse));\n}"
+            ".divide-y > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-y-reverse: 0;\n  border-top-width: calc(1px* calc(1 - var(--fv-divide-y-reverse)));\n  border-bottom-width: calc(1px* var(--fv-divide-y-reverse));\n}"
         },
         {
           classValue: "divide-y-0",
           expected:
-            ".divide-y-0 > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-y-reverse: 0;\n  border-top-width: calc(0px* calc(1 - var(--tw-divide-y-reverse)));\n  border-bottom-width: calc(0px* var(--tw-divide-y-reverse));\n}"
+            ".divide-y-0 > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-y-reverse: 0;\n  border-top-width: calc(0px* calc(1 - var(--fv-divide-y-reverse)));\n  border-bottom-width: calc(0px* var(--fv-divide-y-reverse));\n}"
         },
         {
           classValue: "divide-y-1",
           expected:
-            ".divide-y-1 > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-y-reverse: 0;\n  border-top-width: calc(1px* calc(1 - var(--tw-divide-y-reverse)));\n  border-bottom-width: calc(1px* var(--tw-divide-y-reverse));\n}"
+            ".divide-y-1 > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-y-reverse: 0;\n  border-top-width: calc(1px* calc(1 - var(--fv-divide-y-reverse)));\n  border-bottom-width: calc(1px* var(--fv-divide-y-reverse));\n}"
         },
         {
           classValue: "divide-y-2",
           expected:
-            ".divide-y-2 > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-y-reverse: 0;\n  border-top-width: calc(2px* calc(1 - var(--tw-divide-y-reverse)));\n  border-bottom-width: calc(2px* var(--tw-divide-y-reverse));\n}"
+            ".divide-y-2 > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-y-reverse: 0;\n  border-top-width: calc(2px* calc(1 - var(--fv-divide-y-reverse)));\n  border-bottom-width: calc(2px* var(--fv-divide-y-reverse));\n}"
         },
 
         {
           classValue: "divide-y-reverse",
-          expected: ".divide-y-reverse > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-y-reverse: 1;\n}"
+          expected: ".divide-y-reverse > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-y-reverse: 1;\n}"
         },
         {
           classValue: "divide-y-[5px]",
           expected:
-            ".divide-y-\\[5px\\] > :not([hidden]) ~ :not([hidden]) {\n  --tw-divide-y-reverse: 0;\n  border-top-width: calc(5px* calc(1 - var(--tw-divide-y-reverse)));\n  border-bottom-width: calc(5px* var(--tw-divide-y-reverse));\n}"
+            ".divide-y-\\[5px\\] > :not([hidden]) ~ :not([hidden]) {\n  --fv-divide-y-reverse: 0;\n  border-top-width: calc(5px* calc(1 - var(--fv-divide-y-reverse)));\n  border-bottom-width: calc(5px* var(--fv-divide-y-reverse));\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2875,38 +2875,38 @@ describe("unoStyle", () => {
         {
           classValue: "ring-0",
           expected:
-            ".ring-0 {\n  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);\n  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(0px + var(--tw-ring-offset-width)) var(--tw-ring-color);\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);\n}"
+            ".ring-0 {\n  --fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(0px + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);\n}"
         },
         {
           classValue: "ring-1",
           expected:
-            ".ring-1 {\n  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);\n  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);\n}"
+            ".ring-1 {\n  --fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(1px + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);\n}"
         },
         {
           classValue: "ring-2",
           expected:
-            ".ring-2 {\n  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);\n  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);\n}"
+            ".ring-2 {\n  --fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(2px + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);\n}"
         },
         {
           classValue: "ring",
           expected:
-            ".ring {\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);\n}"
+            ".ring {\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);\n}"
         },
         {
           classValue: "ring-4",
           expected:
-            ".ring-4 {\n  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);\n  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(4px + var(--tw-ring-offset-width)) var(--tw-ring-color);\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);\n}"
+            ".ring-4 {\n  --fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(4px + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);\n}"
         },
         {
           classValue: "ring-8",
           expected:
-            ".ring-8 {\n  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);\n  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(8px + var(--tw-ring-offset-width)) var(--tw-ring-color);\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);\n}"
+            ".ring-8 {\n  --fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(8px + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);\n}"
         },
-        { classValue: "ring-inset", expected: ".ring-inset {\n  --tw-ring-inset: inset;\n}" },
+        { classValue: "ring-inset", expected: ".ring-inset {\n  --fv-ring-inset: inset;\n}" },
         {
           classValue: "ring-[10px]",
           expected:
-            ".ring-\\[10px\\] {\n  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);\n  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(10px + var(--tw-ring-offset-width)) var(--tw-ring-color);\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);\n}"
+            ".ring-\\[10px\\] {\n  --fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(10px + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2914,42 +2914,42 @@ describe("unoStyle", () => {
     })
     describe("Ring Color", () => {
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "ring-inherit", expected: ".ring-inherit {\n  --tw-ring-color: inherit;\n}" },
-        { classValue: "ring-current", expected: ".ring-current {\n  --tw-ring-color: currentColor;\n}" },
-        { classValue: "ring-transparent", expected: ".ring-transparent {\n  --tw-ring-color: transparent;\n}" },
-        { classValue: "ring-black", expected: ".ring-black {\n  --tw-ring-color: #000000;\n}" },
-        { classValue: "ring-white", expected: ".ring-white {\n  --tw-ring-color: #ffffff;\n}" },
-        { classValue: "ring-white/0", expected: ".ring-white\\/0 {\n  --tw-ring-color: #ffffff00;\n}" },
-        { classValue: "ring-white/50", expected: ".ring-white\\/50 {\n  --tw-ring-color: #ffffff80;\n}" },
-        { classValue: "ring-white/100", expected: ".ring-white\\/100 {\n  --tw-ring-color: #ffffff;\n}" }
+        { classValue: "ring-inherit", expected: ".ring-inherit {\n  --fv-ring-color: inherit;\n}" },
+        { classValue: "ring-current", expected: ".ring-current {\n  --fv-ring-color: currentColor;\n}" },
+        { classValue: "ring-transparent", expected: ".ring-transparent {\n  --fv-ring-color: transparent;\n}" },
+        { classValue: "ring-black", expected: ".ring-black {\n  --fv-ring-color: #000000;\n}" },
+        { classValue: "ring-white", expected: ".ring-white {\n  --fv-ring-color: #ffffff;\n}" },
+        { classValue: "ring-white/0", expected: ".ring-white\\/0 {\n  --fv-ring-color: #ffffff00;\n}" },
+        { classValue: "ring-white/50", expected: ".ring-white\\/50 {\n  --fv-ring-color: #ffffff80;\n}" },
+        { classValue: "ring-white/100", expected: ".ring-white\\/100 {\n  --fv-ring-color: #ffffff;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "ring-slate-50", expected: ".ring-slate-50 {\n  --tw-ring-color: #f8fafc;\n}" },
-        { classValue: "ring-emerald-100", expected: ".ring-emerald-100 {\n  --tw-ring-color: #d1fae5;\n}" },
-        { classValue: "ring-green-200", expected: ".ring-green-200 {\n  --tw-ring-color: #bbf7d0;\n}" },
-        { classValue: "ring-lime-300", expected: ".ring-lime-300 {\n  --tw-ring-color: #bef264;\n}" },
-        { classValue: "ring-red-400", expected: ".ring-red-400 {\n  --tw-ring-color: #f87171;\n}" },
-        { classValue: "ring-orange-500", expected: ".ring-orange-500 {\n  --tw-ring-color: #f97316;\n}" },
-        { classValue: "ring-amber-600", expected: ".ring-amber-600 {\n  --tw-ring-color: #d97706;\n}" },
-        { classValue: "ring-yellow-700", expected: ".ring-yellow-700 {\n  --tw-ring-color: #a16207;\n}" },
-        { classValue: "ring-teal-800", expected: ".ring-teal-800 {\n  --tw-ring-color: #115e59;\n}" },
-        { classValue: "ring-cyan-900", expected: ".ring-cyan-900 {\n  --tw-ring-color: #164e63;\n}" },
-        { classValue: "ring-sky-950", expected: ".ring-sky-950 {\n  --tw-ring-color: #082f49;\n}" },
-        { classValue: "ring-[#50d71e]", expected: ".ring-\\[\\#50d71e\\] {\n  --tw-ring-color: #50d71e;\n}" }
+        { classValue: "ring-slate-50", expected: ".ring-slate-50 {\n  --fv-ring-color: #f8fafc;\n}" },
+        { classValue: "ring-emerald-100", expected: ".ring-emerald-100 {\n  --fv-ring-color: #d1fae5;\n}" },
+        { classValue: "ring-green-200", expected: ".ring-green-200 {\n  --fv-ring-color: #bbf7d0;\n}" },
+        { classValue: "ring-lime-300", expected: ".ring-lime-300 {\n  --fv-ring-color: #bef264;\n}" },
+        { classValue: "ring-red-400", expected: ".ring-red-400 {\n  --fv-ring-color: #f87171;\n}" },
+        { classValue: "ring-orange-500", expected: ".ring-orange-500 {\n  --fv-ring-color: #f97316;\n}" },
+        { classValue: "ring-amber-600", expected: ".ring-amber-600 {\n  --fv-ring-color: #d97706;\n}" },
+        { classValue: "ring-yellow-700", expected: ".ring-yellow-700 {\n  --fv-ring-color: #a16207;\n}" },
+        { classValue: "ring-teal-800", expected: ".ring-teal-800 {\n  --fv-ring-color: #115e59;\n}" },
+        { classValue: "ring-cyan-900", expected: ".ring-cyan-900 {\n  --fv-ring-color: #164e63;\n}" },
+        { classValue: "ring-sky-950", expected: ".ring-sky-950 {\n  --fv-ring-color: #082f49;\n}" },
+        { classValue: "ring-[#50d71e]", expected: ".ring-\\[\\#50d71e\\] {\n  --fv-ring-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "ring-red-400/0", expected: ".ring-red-400\\/0 {\n  --tw-ring-color: #f8717100;\n}" },
-        { classValue: "ring-red-400/50", expected: ".ring-red-400\\/50 {\n  --tw-ring-color: #f8717180;\n}" },
-        { classValue: "ring-red-400/100", expected: ".ring-red-400\\/100 {\n  --tw-ring-color: #f87171;\n}" },
+        { classValue: "ring-red-400/0", expected: ".ring-red-400\\/0 {\n  --fv-ring-color: #f8717100;\n}" },
+        { classValue: "ring-red-400/50", expected: ".ring-red-400\\/50 {\n  --fv-ring-color: #f8717180;\n}" },
+        { classValue: "ring-red-400/100", expected: ".ring-red-400\\/100 {\n  --fv-ring-color: #f87171;\n}" },
         {
           classValue: "ring-red-400/[.06]",
-          expected: ".ring-red-400\\/\\[\\.06\\] {\n  --tw-ring-color: #f871710f;\n}"
+          expected: ".ring-red-400\\/\\[\\.06\\] {\n  --fv-ring-color: #f871710f;\n}"
         },
-        { classValue: "ring-[#50d71e]/25", expected: ".ring-\\[\\#50d71e\\]\\/25 {\n  --tw-ring-color: #50d71e40;\n}" }
+        { classValue: "ring-[#50d71e]/25", expected: ".ring-\\[\\#50d71e\\]\\/25 {\n  --fv-ring-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -2959,29 +2959,29 @@ describe("unoStyle", () => {
         {
           classValue: "ring-offset-0",
           expected:
-            ".ring-offset-0 {\n  --tw-ring-offset-width: 0px;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-0 {\n  --fv-ring-offset-width: 0px;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-1",
           expected:
-            ".ring-offset-1 {\n  --tw-ring-offset-width: 1px;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-1 {\n  --fv-ring-offset-width: 1px;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-2",
           expected:
-            ".ring-offset-2 {\n  --tw-ring-offset-width: 2px;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-2 {\n  --fv-ring-offset-width: 2px;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-4",
           expected:
-            ".ring-offset-4 {\n  --tw-ring-offset-width: 4px;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-4 {\n  --fv-ring-offset-width: 4px;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-8",
           expected:
-            ".ring-offset-8 {\n  --tw-ring-offset-width: 8px;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-8 {\n  --fv-ring-offset-width: 8px;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
-        { classValue: "ring-offset-[3px]", expected: ".ring-offset-\\[3px\\] {\n  --tw-ring-offset-width: 3px;\n}" }
+        { classValue: "ring-offset-[3px]", expected: ".ring-offset-\\[3px\\] {\n  --fv-ring-offset-width: 3px;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -2990,29 +2990,29 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "ring-offset-inherit",
-          expected: ".ring-offset-inherit {\n  --tw-ring-offset-color: inherit;\n}"
+          expected: ".ring-offset-inherit {\n  --fv-ring-offset-color: inherit;\n}"
         },
         {
           classValue: "ring-offset-current",
-          expected: ".ring-offset-current {\n  --tw-ring-offset-color: currentColor;\n}"
+          expected: ".ring-offset-current {\n  --fv-ring-offset-color: currentColor;\n}"
         },
         {
           classValue: "ring-offset-transparent",
-          expected: ".ring-offset-transparent {\n  --tw-ring-offset-color: transparent;\n}"
+          expected: ".ring-offset-transparent {\n  --fv-ring-offset-color: transparent;\n}"
         },
-        { classValue: "ring-offset-black", expected: ".ring-offset-black {\n  --tw-ring-offset-color: #000000;\n}" },
-        { classValue: "ring-offset-white", expected: ".ring-offset-white {\n  --tw-ring-offset-color: #ffffff;\n}" },
+        { classValue: "ring-offset-black", expected: ".ring-offset-black {\n  --fv-ring-offset-color: #000000;\n}" },
+        { classValue: "ring-offset-white", expected: ".ring-offset-white {\n  --fv-ring-offset-color: #ffffff;\n}" },
         {
           classValue: "ring-offset-white/0",
-          expected: ".ring-offset-white\\/0 {\n  --tw-ring-offset-color: #ffffff00;\n}"
+          expected: ".ring-offset-white\\/0 {\n  --fv-ring-offset-color: #ffffff00;\n}"
         },
         {
           classValue: "ring-offset-white/50",
-          expected: ".ring-offset-white\\/50 {\n  --tw-ring-offset-color: #ffffff80;\n}"
+          expected: ".ring-offset-white\\/50 {\n  --fv-ring-offset-color: #ffffff80;\n}"
         },
         {
           classValue: "ring-offset-white/100",
-          expected: ".ring-offset-white\\/100 {\n  --tw-ring-offset-color: #ffffff;\n}"
+          expected: ".ring-offset-white\\/100 {\n  --fv-ring-offset-color: #ffffff;\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3021,62 +3021,62 @@ describe("unoStyle", () => {
         {
           classValue: "ring-offset-slate-50",
           expected:
-            ".ring-offset-slate-50 {\n  --tw-ring-offset-color: #f8fafc;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-slate-50 {\n  --fv-ring-offset-color: #f8fafc;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-emerald-100",
           expected:
-            ".ring-offset-emerald-100 {\n  --tw-ring-offset-color: #d1fae5;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-emerald-100 {\n  --fv-ring-offset-color: #d1fae5;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-green-200",
           expected:
-            ".ring-offset-green-200 {\n  --tw-ring-offset-color: #bbf7d0;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-green-200 {\n  --fv-ring-offset-color: #bbf7d0;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-lime-300",
           expected:
-            ".ring-offset-lime-300 {\n  --tw-ring-offset-color: #bef264;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-lime-300 {\n  --fv-ring-offset-color: #bef264;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400",
           expected:
-            ".ring-offset-red-400 {\n  --tw-ring-offset-color: #f87171;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-red-400 {\n  --fv-ring-offset-color: #f87171;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-orange-500",
           expected:
-            ".ring-offset-orange-500 {\n  --tw-ring-offset-color: #f97316;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-orange-500 {\n  --fv-ring-offset-color: #f97316;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-amber-600",
           expected:
-            ".ring-offset-amber-600 {\n  --tw-ring-offset-color: #d97706;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-amber-600 {\n  --fv-ring-offset-color: #d97706;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-yellow-700",
           expected:
-            ".ring-offset-yellow-700 {\n  --tw-ring-offset-color: #a16207;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-yellow-700 {\n  --fv-ring-offset-color: #a16207;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-teal-800",
           expected:
-            ".ring-offset-teal-800 {\n  --tw-ring-offset-color: #115e59;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-teal-800 {\n  --fv-ring-offset-color: #115e59;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-cyan-900",
           expected:
-            ".ring-offset-cyan-900 {\n  --tw-ring-offset-color: #164e63;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-cyan-900 {\n  --fv-ring-offset-color: #164e63;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-sky-950",
           expected:
-            ".ring-offset-sky-950 {\n  --tw-ring-offset-color: #082f49;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-sky-950 {\n  --fv-ring-offset-color: #082f49;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-[#50d71e]",
           expected:
-            ".ring-offset-\\[\\#50d71e\\] {\n  --tw-ring-offset-color: #50d71e;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-\\[\\#50d71e\\] {\n  --fv-ring-offset-color: #50d71e;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3085,27 +3085,27 @@ describe("unoStyle", () => {
         {
           classValue: "ring-offset-red-400/0",
           expected:
-            ".ring-offset-red-400\\/0 {\n  --tw-ring-offset-color: #f8717100;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-red-400\\/0 {\n  --fv-ring-offset-color: #f8717100;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400/50",
           expected:
-            ".ring-offset-red-400\\/50 {\n  --tw-ring-offset-color: #f8717180;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-red-400\\/50 {\n  --fv-ring-offset-color: #f8717180;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400/100",
           expected:
-            ".ring-offset-red-400\\/100 {\n  --tw-ring-offset-color: #f87171;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-red-400\\/100 {\n  --fv-ring-offset-color: #f87171;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400/[.06]",
           expected:
-            ".ring-offset-red-400\\/\\[\\.06\\] {\n  --tw-ring-offset-color: #f871710f;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-red-400\\/\\[\\.06\\] {\n  --fv-ring-offset-color: #f871710f;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-[#50d71e]/25",
           expected:
-            ".ring-offset-\\[\\#50d71e\\]\\/25 {\n  --tw-ring-offset-color: #50d71e40;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);\n}"
+            ".ring-offset-\\[\\#50d71e\\]\\/25 {\n  --fv-ring-offset-color: #50d71e40;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3142,7 +3142,7 @@ describe("unoStyle", () => {
         {
           classValue: "shadow-[0_35px_60px_-15px_rgba(0,0,0,0.3)]",
           expected:
-            ".shadow-\\[0_35px_60px_-15px_rgba\\(0\\,0\\,0\\,0\\.3\\)\\] {\n  --tw-shadow: 0 35px 60px -15px rgba(0,0,0,0.3);\n  --tw-shadow-colored: 0 35px 60px -15px var(--tw-shadow-color);\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);\n}"
+            ".shadow-\\[0_35px_60px_-15px_rgba\\(0\\,0\\,0\\,0\\.3\\)\\] {\n  --fv-shadow: 0 35px 60px -15px rgba(0,0,0,0.3);\n  --fv-shadow-colored: 0 35px 60px -15px var(--fv-shadow-color);\n  box-shadow: var(--fv-ring-offset-shadow, 0 0 #0000), var(--fv-ring-shadow, 0 0 #0000), var(--fv-shadow);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3150,44 +3150,44 @@ describe("unoStyle", () => {
     })
     describe("Box Shadow Color", () => {
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "shadow-inherit", expected: ".shadow-inherit {\n  --tw-shadow-color: inherit;\n}" },
-        { classValue: "shadow-current", expected: ".shadow-current {\n  --tw-shadow-color: currentColor;\n}" },
-        { classValue: "shadow-transparent", expected: ".shadow-transparent {\n  --tw-shadow-color: transparent;\n}" },
-        { classValue: "shadow-black", expected: ".shadow-black {\n  --tw-shadow-color: #000000;\n}" },
-        { classValue: "shadow-white", expected: ".shadow-white {\n  --tw-shadow-color: #ffffff;\n}" },
-        { classValue: "shadow-white/0", expected: ".shadow-white\\/0 {\n  --tw-shadow-color: #ffffff00;\n}" },
-        { classValue: "shadow-white/50", expected: ".shadow-white\\/50 {\n  --tw-shadow-color: #ffffff80;\n}" },
-        { classValue: "shadow-white/100", expected: ".shadow-white\\/100 {\n  --tw-shadow-color: #ffffff;\n}" }
+        { classValue: "shadow-inherit", expected: ".shadow-inherit {\n  --fv-shadow-color: inherit;\n}" },
+        { classValue: "shadow-current", expected: ".shadow-current {\n  --fv-shadow-color: currentColor;\n}" },
+        { classValue: "shadow-transparent", expected: ".shadow-transparent {\n  --fv-shadow-color: transparent;\n}" },
+        { classValue: "shadow-black", expected: ".shadow-black {\n  --fv-shadow-color: #000000;\n}" },
+        { classValue: "shadow-white", expected: ".shadow-white {\n  --fv-shadow-color: #ffffff;\n}" },
+        { classValue: "shadow-white/0", expected: ".shadow-white\\/0 {\n  --fv-shadow-color: #ffffff00;\n}" },
+        { classValue: "shadow-white/50", expected: ".shadow-white\\/50 {\n  --fv-shadow-color: #ffffff80;\n}" },
+        { classValue: "shadow-white/100", expected: ".shadow-white\\/100 {\n  --fv-shadow-color: #ffffff;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "shadow-slate-50", expected: ".shadow-slate-50 {\n  --tw-shadow-color: #f8fafc;\n}" },
-        { classValue: "shadow-emerald-100", expected: ".shadow-emerald-100 {\n  --tw-shadow-color: #d1fae5;\n}" },
-        { classValue: "shadow-green-200", expected: ".shadow-green-200 {\n  --tw-shadow-color: #bbf7d0;\n}" },
-        { classValue: "shadow-lime-300", expected: ".shadow-lime-300 {\n  --tw-shadow-color: #bef264;\n}" },
-        { classValue: "shadow-red-400", expected: ".shadow-red-400 {\n  --tw-shadow-color: #f87171;\n}" },
-        { classValue: "shadow-orange-500", expected: ".shadow-orange-500 {\n  --tw-shadow-color: #f97316;\n}" },
-        { classValue: "shadow-amber-600", expected: ".shadow-amber-600 {\n  --tw-shadow-color: #d97706;\n}" },
-        { classValue: "shadow-yellow-700", expected: ".shadow-yellow-700 {\n  --tw-shadow-color: #a16207;\n}" },
-        { classValue: "shadow-teal-800", expected: ".shadow-teal-800 {\n  --tw-shadow-color: #115e59;\n}" },
-        { classValue: "shadow-cyan-900", expected: ".shadow-cyan-900 {\n  --tw-shadow-color: #164e63;\n}" },
-        { classValue: "shadow-sky-950", expected: ".shadow-sky-950 {\n  --tw-shadow-color: #082f49;\n}" },
-        { classValue: "shadow-[#50d71e]", expected: ".shadow-\\[\\#50d71e\\] {\n  --tw-shadow-color: #50d71e;\n}" }
+        { classValue: "shadow-slate-50", expected: ".shadow-slate-50 {\n  --fv-shadow-color: #f8fafc;\n}" },
+        { classValue: "shadow-emerald-100", expected: ".shadow-emerald-100 {\n  --fv-shadow-color: #d1fae5;\n}" },
+        { classValue: "shadow-green-200", expected: ".shadow-green-200 {\n  --fv-shadow-color: #bbf7d0;\n}" },
+        { classValue: "shadow-lime-300", expected: ".shadow-lime-300 {\n  --fv-shadow-color: #bef264;\n}" },
+        { classValue: "shadow-red-400", expected: ".shadow-red-400 {\n  --fv-shadow-color: #f87171;\n}" },
+        { classValue: "shadow-orange-500", expected: ".shadow-orange-500 {\n  --fv-shadow-color: #f97316;\n}" },
+        { classValue: "shadow-amber-600", expected: ".shadow-amber-600 {\n  --fv-shadow-color: #d97706;\n}" },
+        { classValue: "shadow-yellow-700", expected: ".shadow-yellow-700 {\n  --fv-shadow-color: #a16207;\n}" },
+        { classValue: "shadow-teal-800", expected: ".shadow-teal-800 {\n  --fv-shadow-color: #115e59;\n}" },
+        { classValue: "shadow-cyan-900", expected: ".shadow-cyan-900 {\n  --fv-shadow-color: #164e63;\n}" },
+        { classValue: "shadow-sky-950", expected: ".shadow-sky-950 {\n  --fv-shadow-color: #082f49;\n}" },
+        { classValue: "shadow-[#50d71e]", expected: ".shadow-\\[\\#50d71e\\] {\n  --fv-shadow-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "shadow-red-400/0", expected: ".shadow-red-400\\/0 {\n  --tw-shadow-color: #f8717100;\n}" },
-        { classValue: "shadow-red-400/50", expected: ".shadow-red-400\\/50 {\n  --tw-shadow-color: #f8717180;\n}" },
-        { classValue: "shadow-red-400/100", expected: ".shadow-red-400\\/100 {\n  --tw-shadow-color: #f87171;\n}" },
+        { classValue: "shadow-red-400/0", expected: ".shadow-red-400\\/0 {\n  --fv-shadow-color: #f8717100;\n}" },
+        { classValue: "shadow-red-400/50", expected: ".shadow-red-400\\/50 {\n  --fv-shadow-color: #f8717180;\n}" },
+        { classValue: "shadow-red-400/100", expected: ".shadow-red-400\\/100 {\n  --fv-shadow-color: #f87171;\n}" },
         {
           classValue: "shadow-red-400/[.06]",
-          expected: ".shadow-red-400\\/\\[\\.06\\] {\n  --tw-shadow-color: #f871710f;\n}"
+          expected: ".shadow-red-400\\/\\[\\.06\\] {\n  --fv-shadow-color: #f871710f;\n}"
         },
         {
           classValue: "shadow-[#50d71e]/25",
-          expected: ".shadow-\\[\\#50d71e\\]\\/25 {\n  --tw-shadow-color: #50d71e40;\n}"
+          expected: ".shadow-\\[\\#50d71e\\]\\/25 {\n  --fv-shadow-color: #50d71e40;\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3285,39 +3285,39 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "blur-none",
-          expected: `.blur-none {\n  --tw-blur: ;\n  ${baseFilter}\n}`
+          expected: `.blur-none {\n  --fv-blur: ;\n  ${baseFilter}\n}`
         },
         {
           classValue: "blur-sm",
-          expected: `.blur-sm {\n  --tw-blur: blur(4px);\n  ${baseFilter}\n}`
+          expected: `.blur-sm {\n  --fv-blur: blur(4px);\n  ${baseFilter}\n}`
         },
         {
           classValue: "blur",
-          expected: `.blur {\n  --tw-blur: blur(8px);\n  ${baseFilter}\n}`
+          expected: `.blur {\n  --fv-blur: blur(8px);\n  ${baseFilter}\n}`
         },
         {
           classValue: "blur-md",
-          expected: `.blur-md {\n  --tw-blur: blur(12px);\n  ${baseFilter}\n}`
+          expected: `.blur-md {\n  --fv-blur: blur(12px);\n  ${baseFilter}\n}`
         },
         {
           classValue: "blur-lg",
-          expected: `.blur-lg {\n  --tw-blur: blur(16px);\n  ${baseFilter}\n}`
+          expected: `.blur-lg {\n  --fv-blur: blur(16px);\n  ${baseFilter}\n}`
         },
         {
           classValue: "blur-xl",
-          expected: `.blur-xl {\n  --tw-blur: blur(24px);\n  ${baseFilter}\n}`
+          expected: `.blur-xl {\n  --fv-blur: blur(24px);\n  ${baseFilter}\n}`
         },
         {
           classValue: "blur-2xl",
-          expected: `.blur-2xl {\n  --tw-blur: blur(40px);\n  ${baseFilter}\n}`
+          expected: `.blur-2xl {\n  --fv-blur: blur(40px);\n  ${baseFilter}\n}`
         },
         {
           classValue: "blur-3xl",
-          expected: `.blur-3xl {\n  --tw-blur: blur(64px);\n  ${baseFilter}\n}`
+          expected: `.blur-3xl {\n  --fv-blur: blur(64px);\n  ${baseFilter}\n}`
         },
         {
           classValue: "blur-[2px]",
-          expected: `.blur-\\[2px\\] {\n  --tw-blur: blur(2px);\n  ${baseFilter}\n}`
+          expected: `.blur-\\[2px\\] {\n  --fv-blur: blur(2px);\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3327,19 +3327,19 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "brightness-0",
-          expected: `.brightness-0 {\n  --tw-brightness: brightness(0);\n  ${baseFilter}\n}`
+          expected: `.brightness-0 {\n  --fv-brightness: brightness(0);\n  ${baseFilter}\n}`
         },
         {
           classValue: "brightness-50",
-          expected: `.brightness-50 {\n  --tw-brightness: brightness(0.5);\n  ${baseFilter}\n}`
+          expected: `.brightness-50 {\n  --fv-brightness: brightness(0.5);\n  ${baseFilter}\n}`
         },
         {
           classValue: "brightness-200",
-          expected: `.brightness-200 {\n  --tw-brightness: brightness(2);\n  ${baseFilter}\n}`
+          expected: `.brightness-200 {\n  --fv-brightness: brightness(2);\n  ${baseFilter}\n}`
         },
         {
           classValue: "brightness-[1.75]",
-          expected: `.brightness-\\[1\\.75\\] {\n  --tw-brightness: brightness(1.75);\n  ${baseFilter}\n}`
+          expected: `.brightness-\\[1\\.75\\] {\n  --fv-brightness: brightness(1.75);\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3349,19 +3349,19 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "contrast-0",
-          expected: `.contrast-0 {\n  --tw-contrast: contrast(0);\n  ${baseFilter}\n}`
+          expected: `.contrast-0 {\n  --fv-contrast: contrast(0);\n  ${baseFilter}\n}`
         },
         {
           classValue: "contrast-50",
-          expected: `.contrast-50 {\n  --tw-contrast: contrast(0.5);\n  ${baseFilter}\n}`
+          expected: `.contrast-50 {\n  --fv-contrast: contrast(0.5);\n  ${baseFilter}\n}`
         },
         {
           classValue: "contrast-200",
-          expected: `.contrast-200 {\n  --tw-contrast: contrast(2);\n  ${baseFilter}\n}`
+          expected: `.contrast-200 {\n  --fv-contrast: contrast(2);\n  ${baseFilter}\n}`
         },
         {
           classValue: "contrast-[.25]",
-          expected: `.contrast-\\[\\.25\\] {\n  --tw-contrast: contrast(.25);\n  ${baseFilter}\n}`
+          expected: `.contrast-\\[\\.25\\] {\n  --fv-contrast: contrast(.25);\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3371,35 +3371,35 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "drop-shadow-sm",
-          expected: `.drop-shadow-sm {\n  --tw-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-sm {\n  --fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow",
-          expected: `.drop-shadow {\n  --tw-drop-shadow: drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow {\n  --fv-drop-shadow: drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-md",
-          expected: `.drop-shadow-md {\n  --tw-drop-shadow: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-md {\n  --fv-drop-shadow: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-lg",
-          expected: `.drop-shadow-lg {\n  --tw-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-lg {\n  --fv-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-xl",
-          expected: `.drop-shadow-xl {\n  --tw-drop-shadow: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-xl {\n  --fv-drop-shadow: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-2xl",
-          expected: `.drop-shadow-2xl {\n  --tw-drop-shadow: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-2xl {\n  --fv-drop-shadow: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-none",
-          expected: `.drop-shadow-none {\n  --tw-drop-shadow: drop-shadow(0 0 #0000);\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-none {\n  --fv-drop-shadow: drop-shadow(0 0 #0000);\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]",
-          expected: `.drop-shadow-\\[0_35px_35px_rgba\\(0\\,0\\,0\\,0\\.25\\)\\] {\n  --tw-drop-shadow: drop-shadow(0 35px 35px rgba(0,0,0,0.25));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-\\[0_35px_35px_rgba\\(0\\,0\\,0\\,0\\.25\\)\\] {\n  --fv-drop-shadow: drop-shadow(0 35px 35px rgba(0,0,0,0.25));\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3409,15 +3409,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "grayscale-0",
-          expected: `.grayscale-0 {\n  --tw-grayscale: grayscale(0);\n  ${baseFilter}\n}`
+          expected: `.grayscale-0 {\n  --fv-grayscale: grayscale(0);\n  ${baseFilter}\n}`
         },
         {
           classValue: "grayscale",
-          expected: `.grayscale {\n  --tw-grayscale: grayscale(100%);\n  ${baseFilter}\n}`
+          expected: `.grayscale {\n  --fv-grayscale: grayscale(100%);\n  ${baseFilter}\n}`
         },
         {
           classValue: "grayscale-[50%]",
-          expected: `.grayscale-\\[50\\%\\] {\n  --tw-grayscale: grayscale(50%);\n  ${baseFilter}\n}`
+          expected: `.grayscale-\\[50\\%\\] {\n  --fv-grayscale: grayscale(50%);\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3427,19 +3427,19 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "hue-rotate-0",
-          expected: `.hue-rotate-0 {\n  --tw-hue-rotate: hue-rotate(0deg);\n  ${baseFilter}\n}`
+          expected: `.hue-rotate-0 {\n  --fv-hue-rotate: hue-rotate(0deg);\n  ${baseFilter}\n}`
         },
         {
           classValue: "hue-rotate-15",
-          expected: `.hue-rotate-15 {\n  --tw-hue-rotate: hue-rotate(15deg);\n  ${baseFilter}\n}`
+          expected: `.hue-rotate-15 {\n  --fv-hue-rotate: hue-rotate(15deg);\n  ${baseFilter}\n}`
         },
         {
           classValue: "hue-rotate-180",
-          expected: `.hue-rotate-180 {\n  --tw-hue-rotate: hue-rotate(180deg);\n  ${baseFilter}\n}`
+          expected: `.hue-rotate-180 {\n  --fv-hue-rotate: hue-rotate(180deg);\n  ${baseFilter}\n}`
         },
         {
           classValue: "hue-rotate-[270deg]",
-          expected: `.hue-rotate-\\[270deg\\] {\n  --tw-hue-rotate: hue-rotate(270deg);\n  ${baseFilter}\n}`
+          expected: `.hue-rotate-\\[270deg\\] {\n  --fv-hue-rotate: hue-rotate(270deg);\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3449,15 +3449,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "invert-0",
-          expected: `.invert-0 {\n  --tw-invert: invert(0);\n  ${baseFilter}\n}`
+          expected: `.invert-0 {\n  --fv-invert: invert(0);\n  ${baseFilter}\n}`
         },
         {
           classValue: "invert",
-          expected: `.invert {\n  --tw-invert: invert(100%);\n  ${baseFilter}\n}`
+          expected: `.invert {\n  --fv-invert: invert(100%);\n  ${baseFilter}\n}`
         },
         {
           classValue: "invert-[50%]",
-          expected: `.invert-\\[50\\%\\] {\n  --tw-invert: invert(50%);\n  ${baseFilter}\n}`
+          expected: `.invert-\\[50\\%\\] {\n  --fv-invert: invert(50%);\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3467,19 +3467,19 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "saturate-0",
-          expected: `.saturate-0 {\n  --tw-saturate: saturate(0);\n  ${baseFilter}\n}`
+          expected: `.saturate-0 {\n  --fv-saturate: saturate(0);\n  ${baseFilter}\n}`
         },
         {
           classValue: "saturate-50",
-          expected: `.saturate-50 {\n  --tw-saturate: saturate(0.5);\n  ${baseFilter}\n}`
+          expected: `.saturate-50 {\n  --fv-saturate: saturate(0.5);\n  ${baseFilter}\n}`
         },
         {
           classValue: "saturate-200",
-          expected: `.saturate-200 {\n  --tw-saturate: saturate(2);\n  ${baseFilter}\n}`
+          expected: `.saturate-200 {\n  --fv-saturate: saturate(2);\n  ${baseFilter}\n}`
         },
         {
           classValue: "saturate-[.25]",
-          expected: `.saturate-\\[\\.25\\] {\n  --tw-saturate: saturate(.25);\n  ${baseFilter}\n}`
+          expected: `.saturate-\\[\\.25\\] {\n  --fv-saturate: saturate(.25);\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3489,15 +3489,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "sepia-0",
-          expected: `.sepia-0 {\n  --tw-sepia: sepia(0);\n  ${baseFilter}\n}`
+          expected: `.sepia-0 {\n  --fv-sepia: sepia(0);\n  ${baseFilter}\n}`
         },
         {
           classValue: "sepia",
-          expected: `.sepia {\n  --tw-sepia: sepia(100%);\n  ${baseFilter}\n}`
+          expected: `.sepia {\n  --fv-sepia: sepia(100%);\n  ${baseFilter}\n}`
         },
         {
           classValue: "sepia-[50%]",
-          expected: `.sepia-\\[50\\%\\] {\n  --tw-sepia: sepia(50%);\n  ${baseFilter}\n}`
+          expected: `.sepia-\\[50\\%\\] {\n  --fv-sepia: sepia(50%);\n  ${baseFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3507,39 +3507,39 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-blur-none",
-          expected: `.backdrop-blur-none {\n  --tw-backdrop-blur: ;\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur-none {\n  --fv-backdrop-blur: ;\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-blur-sm",
-          expected: `.backdrop-blur-sm {\n  --tw-backdrop-blur: blur(4px);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur-sm {\n  --fv-backdrop-blur: blur(4px);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-blur",
-          expected: `.backdrop-blur {\n  --tw-backdrop-blur: blur(8px);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur {\n  --fv-backdrop-blur: blur(8px);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-blur-md",
-          expected: `.backdrop-blur-md {\n  --tw-backdrop-blur: blur(12px);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur-md {\n  --fv-backdrop-blur: blur(12px);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-blur-lg",
-          expected: `.backdrop-blur-lg {\n  --tw-backdrop-blur: blur(16px);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur-lg {\n  --fv-backdrop-blur: blur(16px);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-blur-xl",
-          expected: `.backdrop-blur-xl {\n  --tw-backdrop-blur: blur(24px);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur-xl {\n  --fv-backdrop-blur: blur(24px);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-blur-2xl",
-          expected: `.backdrop-blur-2xl {\n  --tw-backdrop-blur: blur(40px);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur-2xl {\n  --fv-backdrop-blur: blur(40px);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-blur-3xl",
-          expected: `.backdrop-blur-3xl {\n  --tw-backdrop-blur: blur(64px);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur-3xl {\n  --fv-backdrop-blur: blur(64px);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-blur-[2px]",
-          expected: `.backdrop-blur-\\[2px\\] {\n  --tw-backdrop-blur: blur(2px);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-blur-\\[2px\\] {\n  --fv-backdrop-blur: blur(2px);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3549,19 +3549,19 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-brightness-0",
-          expected: `.backdrop-brightness-0 {\n  --tw-backdrop-brightness: brightness(0);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-brightness-0 {\n  --fv-backdrop-brightness: brightness(0);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-brightness-50",
-          expected: `.backdrop-brightness-50 {\n  --tw-backdrop-brightness: brightness(0.5);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-brightness-50 {\n  --fv-backdrop-brightness: brightness(0.5);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-brightness-200",
-          expected: `.backdrop-brightness-200 {\n  --tw-backdrop-brightness: brightness(2);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-brightness-200 {\n  --fv-backdrop-brightness: brightness(2);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-brightness-[1.75]",
-          expected: `.backdrop-brightness-\\[1\\.75\\] {\n  --tw-backdrop-brightness: brightness(1.75);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-brightness-\\[1\\.75\\] {\n  --fv-backdrop-brightness: brightness(1.75);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3571,19 +3571,19 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-contrast-0",
-          expected: `.backdrop-contrast-0 {\n  --tw-backdrop-contrast: contrast(0);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-contrast-0 {\n  --fv-backdrop-contrast: contrast(0);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-contrast-50",
-          expected: `.backdrop-contrast-50 {\n  --tw-backdrop-contrast: contrast(0.5);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-contrast-50 {\n  --fv-backdrop-contrast: contrast(0.5);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-contrast-200",
-          expected: `.backdrop-contrast-200 {\n  --tw-backdrop-contrast: contrast(2);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-contrast-200 {\n  --fv-backdrop-contrast: contrast(2);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-contrast-[.25]",
-          expected: `.backdrop-contrast-\\[\\.25\\] {\n  --tw-backdrop-contrast: contrast(.25);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-contrast-\\[\\.25\\] {\n  --fv-backdrop-contrast: contrast(.25);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3593,15 +3593,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-grayscale-0",
-          expected: `.backdrop-grayscale-0 {\n  --tw-backdrop-grayscale: grayscale(0);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-grayscale-0 {\n  --fv-backdrop-grayscale: grayscale(0);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-grayscale",
-          expected: `.backdrop-grayscale {\n  --tw-backdrop-grayscale: grayscale(100%);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-grayscale {\n  --fv-backdrop-grayscale: grayscale(100%);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-grayscale-[50%]",
-          expected: `.backdrop-grayscale-\\[50\\%\\] {\n  --tw-backdrop-grayscale: grayscale(50%);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-grayscale-\\[50\\%\\] {\n  --fv-backdrop-grayscale: grayscale(50%);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3611,19 +3611,19 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-hue-rotate-0",
-          expected: `.backdrop-hue-rotate-0 {\n  --tw-backdrop-hue-rotate: hue-rotate(0deg);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-hue-rotate-0 {\n  --fv-backdrop-hue-rotate: hue-rotate(0deg);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-hue-rotate-15",
-          expected: `.backdrop-hue-rotate-15 {\n  --tw-backdrop-hue-rotate: hue-rotate(15deg);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-hue-rotate-15 {\n  --fv-backdrop-hue-rotate: hue-rotate(15deg);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-hue-rotate-180",
-          expected: `.backdrop-hue-rotate-180 {\n  --tw-backdrop-hue-rotate: hue-rotate(180deg);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-hue-rotate-180 {\n  --fv-backdrop-hue-rotate: hue-rotate(180deg);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-hue-rotate-[270deg]",
-          expected: `.backdrop-hue-rotate-\\[270deg\\] {\n  --tw-backdrop-hue-rotate: hue-rotate(270deg);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-hue-rotate-\\[270deg\\] {\n  --fv-backdrop-hue-rotate: hue-rotate(270deg);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3633,15 +3633,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-invert-0",
-          expected: `.backdrop-invert-0 {\n  --tw-backdrop-invert: invert(0);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-invert-0 {\n  --fv-backdrop-invert: invert(0);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-invert",
-          expected: `.backdrop-invert {\n  --tw-backdrop-invert: invert(100%);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-invert {\n  --fv-backdrop-invert: invert(100%);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-invert-[50%]",
-          expected: `.backdrop-invert-\\[50\\%\\] {\n  --tw-backdrop-invert: invert(50%);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-invert-\\[50\\%\\] {\n  --fv-backdrop-invert: invert(50%);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3651,15 +3651,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-opacity-0",
-          expected: `.backdrop-opacity-0 {\n  --tw-backdrop-opacity: opacity(0);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-opacity-0 {\n  --fv-backdrop-opacity: opacity(0);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-opacity-5",
-          expected: `.backdrop-opacity-5 {\n  --tw-backdrop-opacity: opacity(0.05);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-opacity-5 {\n  --fv-backdrop-opacity: opacity(0.05);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-opacity-[.67]",
-          expected: `.backdrop-opacity-\\[\\.67\\] {\n  --tw-backdrop-opacity: opacity(0.67);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-opacity-\\[\\.67\\] {\n  --fv-backdrop-opacity: opacity(0.67);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3669,15 +3669,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-saturate-0",
-          expected: `.backdrop-saturate-0 {\n  --tw-backdrop-saturate: saturate(0);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-saturate-0 {\n  --fv-backdrop-saturate: saturate(0);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-saturate-200",
-          expected: `.backdrop-saturate-200 {\n  --tw-backdrop-saturate: saturate(2);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-saturate-200 {\n  --fv-backdrop-saturate: saturate(2);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-saturate-[.25]",
-          expected: `.backdrop-saturate-\\[\\.25\\] {\n  --tw-backdrop-saturate: saturate(.25);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-saturate-\\[\\.25\\] {\n  --fv-backdrop-saturate: saturate(.25);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3687,15 +3687,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "backdrop-sepia-0",
-          expected: `.backdrop-sepia-0 {\n  --tw-backdrop-sepia: sepia(0);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-sepia-0 {\n  --fv-backdrop-sepia: sepia(0);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-sepia",
-          expected: `.backdrop-sepia {\n  --tw-backdrop-sepia: sepia(100%);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-sepia {\n  --fv-backdrop-sepia: sepia(100%);\n  ${baseBackdropFilter}\n}`
         },
         {
           classValue: "backdrop-sepia-[50%]",
-          expected: `.backdrop-sepia-\\[50\\%\\] {\n  --tw-backdrop-sepia: sepia(50%);\n  ${baseBackdropFilter}\n}`
+          expected: `.backdrop-sepia-\\[50\\%\\] {\n  --fv-backdrop-sepia: sepia(50%);\n  ${baseBackdropFilter}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3716,20 +3716,20 @@ describe("unoStyle", () => {
         { classValue: "border-spacing-0", expected: ".border-spacing-0 {\n  border-spacing: 0px 0px;\n}" },
         {
           classValue: "border-spacing-x-0",
-          expected: ".border-spacing-x-0 {\n  border-spacing: 0px var(--tw-border-spacing-y);\n}"
+          expected: ".border-spacing-x-0 {\n  border-spacing: 0px var(--fv-border-spacing-y);\n}"
         },
         {
           classValue: "border-spacing-y-0",
-          expected: ".border-spacing-y-0 {\n  border-spacing: var(--tw-border-spacing-x) 0px;\n}"
+          expected: ".border-spacing-y-0 {\n  border-spacing: var(--fv-border-spacing-x) 0px;\n}"
         },
         { classValue: "border-spacing-px", expected: ".border-spacing-px {\n  border-spacing: 1px 1px;\n}" },
         {
           classValue: "border-spacing-x-px",
-          expected: ".border-spacing-x-px {\n  border-spacing: 1px var(--tw-border-spacing-y);\n}"
+          expected: ".border-spacing-x-px {\n  border-spacing: 1px var(--fv-border-spacing-y);\n}"
         },
         {
           classValue: "border-spacing-y-px",
-          expected: ".border-spacing-y-px {\n  border-spacing: var(--tw-border-spacing-x) 1px;\n}"
+          expected: ".border-spacing-y-px {\n  border-spacing: var(--fv-border-spacing-x) 1px;\n}"
         },
         {
           classValue: "border-spacing-0.5",
@@ -3737,29 +3737,29 @@ describe("unoStyle", () => {
         },
         {
           classValue: "border-spacing-x-0.5",
-          expected: ".border-spacing-x-0\\.5 {\n  border-spacing: 0.125rem var(--tw-border-spacing-y);\n}"
+          expected: ".border-spacing-x-0\\.5 {\n  border-spacing: 0.125rem var(--fv-border-spacing-y);\n}"
         },
         {
           classValue: "border-spacing-y-0.5",
-          expected: ".border-spacing-y-0\\.5 {\n  border-spacing: var(--tw-border-spacing-x) 0.125rem;\n}"
+          expected: ".border-spacing-y-0\\.5 {\n  border-spacing: var(--fv-border-spacing-x) 0.125rem;\n}"
         },
         { classValue: "border-spacing-1", expected: ".border-spacing-1 {\n  border-spacing: 0.25rem 0.25rem;\n}" },
         {
           classValue: "border-spacing-x-1",
-          expected: ".border-spacing-x-1 {\n  border-spacing: 0.25rem var(--tw-border-spacing-y);\n}"
+          expected: ".border-spacing-x-1 {\n  border-spacing: 0.25rem var(--fv-border-spacing-y);\n}"
         },
         {
           classValue: "border-spacing-y-1",
-          expected: ".border-spacing-y-1 {\n  border-spacing: var(--tw-border-spacing-x) 0.25rem;\n}"
+          expected: ".border-spacing-y-1 {\n  border-spacing: var(--fv-border-spacing-x) 0.25rem;\n}"
         },
         { classValue: "border-spacing-[7px]", expected: ".border-spacing-\\[7px\\] {\n  border-spacing: 7px 7px;\n}" },
         {
           classValue: "border-spacing-x-[7px]",
-          expected: ".border-spacing-x-\\[7px\\] {\n  border-spacing: 7px var(--tw-border-spacing-y);\n}"
+          expected: ".border-spacing-x-\\[7px\\] {\n  border-spacing: 7px var(--fv-border-spacing-y);\n}"
         },
         {
           classValue: "border-spacing-y-[7px]",
-          expected: ".border-spacing-y-\\[7px\\] {\n  border-spacing: var(--tw-border-spacing-x) 7px;\n}"
+          expected: ".border-spacing-y-\\[7px\\] {\n  border-spacing: var(--fv-border-spacing-x) 7px;\n}"
         }
       ])("tailwind($classValue)", ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3887,36 +3887,36 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "scale-0",
-          expected: `.scale-0 {\n  --tw-scale-x: 0;\n  --tw-scale-y: 0;\n  ${baseTransform}\n}`
+          expected: `.scale-0 {\n  --fv-scale-x: 0;\n  --fv-scale-y: 0;\n  ${baseTransform}\n}`
         },
-        { classValue: "scale-x-0", expected: `.scale-x-0 {\n  --tw-scale-x: 0;\n  ${baseTransform}\n}` },
-        { classValue: "scale-y-0", expected: `.scale-y-0 {\n  --tw-scale-y: 0;\n  ${baseTransform}\n}` },
+        { classValue: "scale-x-0", expected: `.scale-x-0 {\n  --fv-scale-x: 0;\n  ${baseTransform}\n}` },
+        { classValue: "scale-y-0", expected: `.scale-y-0 {\n  --fv-scale-y: 0;\n  ${baseTransform}\n}` },
         {
           classValue: "scale-50",
-          expected: `.scale-50 {\n  --tw-scale-x: 0.5;\n  --tw-scale-y: 0.5;\n  ${baseTransform}\n}`
+          expected: `.scale-50 {\n  --fv-scale-x: 0.5;\n  --fv-scale-y: 0.5;\n  ${baseTransform}\n}`
         },
-        { classValue: "scale-x-50", expected: `.scale-x-50 {\n  --tw-scale-x: 0.5;\n  ${baseTransform}\n}` },
-        { classValue: "scale-y-50", expected: `.scale-y-50 {\n  --tw-scale-y: 0.5;\n  ${baseTransform}\n}` },
+        { classValue: "scale-x-50", expected: `.scale-x-50 {\n  --fv-scale-x: 0.5;\n  ${baseTransform}\n}` },
+        { classValue: "scale-y-50", expected: `.scale-y-50 {\n  --fv-scale-y: 0.5;\n  ${baseTransform}\n}` },
         {
           classValue: "scale-[1.7]",
-          expected: `.scale-\\[1\\.7\\] {\n  --tw-scale-x: 1.7;\n  --tw-scale-y: 1.7;\n  ${baseTransform}\n}`
+          expected: `.scale-\\[1\\.7\\] {\n  --fv-scale-x: 1.7;\n  --fv-scale-y: 1.7;\n  ${baseTransform}\n}`
         },
         {
           classValue: "scale-x-[1.7]",
-          expected: `.scale-x-\\[1\\.7\\] {\n  --tw-scale-x: 1.7;\n  ${baseTransform}\n}`
+          expected: `.scale-x-\\[1\\.7\\] {\n  --fv-scale-x: 1.7;\n  ${baseTransform}\n}`
         },
-        { classValue: "scale-y-[1.7]", expected: `.scale-y-\\[1\\.7\\] {\n  --tw-scale-y: 1.7;\n  ${baseTransform}\n}` }
+        { classValue: "scale-y-[1.7]", expected: `.scale-y-\\[1\\.7\\] {\n  --fv-scale-y: 1.7;\n  ${baseTransform}\n}` }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
     })
     describe("Rotate", () => {
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "rotate-0", expected: `.rotate-0 {\n  --tw-rotate: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "rotate-180", expected: `.rotate-180 {\n  --tw-rotate: 180deg;\n  ${baseTransform}\n}` },
+        { classValue: "rotate-0", expected: `.rotate-0 {\n  --fv-rotate: 0deg;\n  ${baseTransform}\n}` },
+        { classValue: "rotate-180", expected: `.rotate-180 {\n  --fv-rotate: 180deg;\n  ${baseTransform}\n}` },
         {
           classValue: "rotate-[17deg]",
-          expected: `.rotate-\\[17deg\\] {\n  --tw-rotate: 17deg;\n  ${baseTransform}\n}`
+          expected: `.rotate-\\[17deg\\] {\n  --fv-rotate: 17deg;\n  ${baseTransform}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3926,57 +3926,57 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "translate-0",
-          expected: `.translate-0 {\n  --tw-translate-x: 0px;\n  --tw-translate-y: 0px;\n  ${baseTransform}\n}`
+          expected: `.translate-0 {\n  --fv-translate-x: 0px;\n  --fv-translate-y: 0px;\n  ${baseTransform}\n}`
         },
-        { classValue: "translate-x-0", expected: `.translate-x-0 {\n  --tw-translate-x: 0px;\n  ${baseTransform}\n}` },
-        { classValue: "translate-y-0", expected: `.translate-y-0 {\n  --tw-translate-y: 0px;\n  ${baseTransform}\n}` },
+        { classValue: "translate-x-0", expected: `.translate-x-0 {\n  --fv-translate-x: 0px;\n  ${baseTransform}\n}` },
+        { classValue: "translate-y-0", expected: `.translate-y-0 {\n  --fv-translate-y: 0px;\n  ${baseTransform}\n}` },
         {
           classValue: "translate-x-px",
-          expected: `.translate-x-px {\n  --tw-translate-x: 1px;\n  ${baseTransform}\n}`
+          expected: `.translate-x-px {\n  --fv-translate-x: 1px;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-y-px",
-          expected: `.translate-y-px {\n  --tw-translate-y: 1px;\n  ${baseTransform}\n}`
+          expected: `.translate-y-px {\n  --fv-translate-y: 1px;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-x-0.5",
-          expected: `.translate-x-0\\.5 {\n  --tw-translate-x: 0.125rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-0\\.5 {\n  --fv-translate-x: 0.125rem;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-y-0.5",
-          expected: `.translate-y-0\\.5 {\n  --tw-translate-y: 0.125rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-0\\.5 {\n  --fv-translate-y: 0.125rem;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-x-1",
-          expected: `.translate-x-1 {\n  --tw-translate-x: 0.25rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-1 {\n  --fv-translate-x: 0.25rem;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-y-1",
-          expected: `.translate-y-1 {\n  --tw-translate-y: 0.25rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-1 {\n  --fv-translate-y: 0.25rem;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-x-1/2",
-          expected: `.translate-x-1\\/2 {\n  --tw-translate-x: 50%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-1\\/2 {\n  --fv-translate-x: 50%;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-x-3/4",
-          expected: `.translate-x-3\\/4 {\n  --tw-translate-x: 75%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-3\\/4 {\n  --fv-translate-x: 75%;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-x-full",
-          expected: `.translate-x-full {\n  --tw-translate-x: 100%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-full {\n  --fv-translate-x: 100%;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-y-1/2",
-          expected: `.translate-y-1\\/2 {\n  --tw-translate-y: 50%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-1\\/2 {\n  --fv-translate-y: 50%;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-y-3/4",
-          expected: `.translate-y-3\\/4 {\n  --tw-translate-y: 75%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-3\\/4 {\n  --fv-translate-y: 75%;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-y-full",
-          expected: `.translate-y-full {\n  --tw-translate-y: 100%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-full {\n  --fv-translate-y: 100%;\n  ${baseTransform}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3984,15 +3984,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "translate-[17rem]",
-          expected: `.translate-\\[17rem\\] {\n  --tw-translate-x: 17rem;\n  --tw-translate-y: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  --fv-translate-y: 17rem;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-x-[17rem]",
-          expected: `.translate-x-\\[17rem\\] {\n  --tw-translate-x: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  ${baseTransform}\n}`
         },
         {
           classValue: "translate-y-[17rem]",
-          expected: `.translate-y-\\[17rem\\] {\n  --tw-translate-y: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-\\[17rem\\] {\n  --fv-translate-y: 17rem;\n  ${baseTransform}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -4000,17 +4000,17 @@ describe("unoStyle", () => {
     })
     describe("Skew", () => {
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "skew-x-0", expected: `.skew-x-0 {\n  --tw-skew-x: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "skew-y-0", expected: `.skew-y-0 {\n  --tw-skew-y: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "skew-x-1", expected: `.skew-x-1 {\n  --tw-skew-x: 1deg;\n  ${baseTransform}\n}` },
-        { classValue: "skew-y-1", expected: `.skew-y-1 {\n  --tw-skew-y: 1deg;\n  ${baseTransform}\n}` },
+        { classValue: "skew-x-0", expected: `.skew-x-0 {\n  --fv-skew-x: 0deg;\n  ${baseTransform}\n}` },
+        { classValue: "skew-y-0", expected: `.skew-y-0 {\n  --fv-skew-y: 0deg;\n  ${baseTransform}\n}` },
+        { classValue: "skew-x-1", expected: `.skew-x-1 {\n  --fv-skew-x: 1deg;\n  ${baseTransform}\n}` },
+        { classValue: "skew-y-1", expected: `.skew-y-1 {\n  --fv-skew-y: 1deg;\n  ${baseTransform}\n}` },
         {
           classValue: "skew-x-[17deg]",
-          expected: `.skew-x-\\[17deg\\] {\n  --tw-skew-x: 17deg;\n  ${baseTransform}\n}`
+          expected: `.skew-x-\\[17deg\\] {\n  --fv-skew-x: 17deg;\n  ${baseTransform}\n}`
         },
         {
           classValue: "skew-y-[17deg]",
-          expected: `.skew-y-\\[17deg\\] {\n  --tw-skew-y: 17deg;\n  ${baseTransform}\n}`
+          expected: `.skew-y-\\[17deg\\] {\n  --fv-skew-y: 17deg;\n  ${baseTransform}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -4267,14 +4267,14 @@ describe("unoStyle", () => {
     describe("Scroll Snap Type", () => {
       it.each<{ classValue: string; expected: string }>([
         { classValue: "snap-none", expected: ".snap-none {\n  scroll-snap-type: none;\n}" },
-        { classValue: "snap-x", expected: ".snap-x {\n  scroll-snap-type: x var(--tw-scroll-snap-strictness);\n}" },
-        { classValue: "snap-y", expected: ".snap-y {\n  scroll-snap-type: y var(--tw-scroll-snap-strictness);\n}" },
+        { classValue: "snap-x", expected: ".snap-x {\n  scroll-snap-type: x var(--fv-scroll-snap-strictness);\n}" },
+        { classValue: "snap-y", expected: ".snap-y {\n  scroll-snap-type: y var(--fv-scroll-snap-strictness);\n}" },
         {
           classValue: "snap-both",
-          expected: ".snap-both {\n  scroll-snap-type: both var(--tw-scroll-snap-strictness);\n}"
+          expected: ".snap-both {\n  scroll-snap-type: both var(--fv-scroll-snap-strictness);\n}"
         },
-        { classValue: "snap-mandatory", expected: ".snap-mandatory {\n  --tw-scroll-snap-strictness: mandatory;\n}" },
-        { classValue: "snap-proximity", expected: ".snap-proximity {\n  --tw-scroll-snap-strictness: proximity;\n}" }
+        { classValue: "snap-mandatory", expected: ".snap-mandatory {\n  --fv-scroll-snap-strictness: mandatory;\n}" },
+        { classValue: "snap-proximity", expected: ".snap-proximity {\n  --fv-scroll-snap-strictness: proximity;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })

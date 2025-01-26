@@ -1,11 +1,12 @@
 <script setup lang="ts">
-  import { computed, ref, onMounted, onUnmounted, useSlots } from "vue"
-  import type { InputLayoutProps, InputLayoutEmits, InputLayoutExpose } from "./InputLayout"
+  import { computed, onMounted, onUnmounted, ref, useSlots } from "vue"
+  import type { InputLayoutEmits, InputLayoutExpose, InputLayoutProps } from "./InputLayout"
   import Label from "fishtvue/label/Label.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Loading from "fishtvue/loading/Loading.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import Component from "fishtvue/component"
+  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const InputLayout = new Component<"InputLayout">()
   const options = InputLayout.getOptions()
@@ -31,6 +32,7 @@
   const isCopy = ref<boolean>(false)
   const beforeWidth = ref<number>(0)
   const afterWidth = ref<number>(0)
+  const isTick = ref<boolean>(false)
   // ---PROPS-------------------------------
   const value = computed<InputLayoutProps["value"]>(() => props.value ?? null)
   const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props?.isValue ?? false)
@@ -55,10 +57,10 @@
     props?.width ? (typeof props?.width === "number" ? `${props?.width}px` : props?.width) : ""
   )
   const height = computed<InputLayoutProps["height"]>(() =>
-    props?.height ? (typeof props?.height === "number" ? `${props?.height}px` : props?.height) : ""
+    props?.height ? (typeof props?.height === "number" ? `${props?.height}px` : props?.height) : `${baseHeight}px`
   )
-  const animation = computed<NonNullable<InputLayoutProps["animation"]>>(
-    () => props?.animation ?? options?.animation ?? "transition-all duration-550"
+  const animation = computed<NonNullable<InputLayoutProps["animation"]>>(() =>
+    isTick.value ? (props?.animation ?? options?.animation ?? "transition-all duration-550") : ""
   )
   const classBody = computed(() =>
     InputLayout.setStyle([
@@ -91,10 +93,18 @@
       "block peer overflow-auto"
     ])
   )
+  const styleBase = computed(
+    () =>
+      (width.value ? `width:${width.value};` : "") +
+      (height.value ? `height:${height.value};` : "") +
+      (baseHeight ? `min-height: ${baseHeight}px;` : "") +
+      (beforeWidth.value ? `padding-left: ${beforeWidth.value}px;` : "padding-left: 10px;") +
+      (afterWidth.value ? `padding-right: ${afterWidth.value}px;` : "padding-right: 10px;")
+  )
   const classBeforeInput = computed(() =>
     InputLayout.setStyle([
       "beforeInput absolute inset-y-0 left-0 flex items-center pr-1",
-      beforeInput.value && beforeWidth.value > 16 ? "pl-3" : "pl-1.5"
+      beforeInput.value && beforeWidth.value > 16 ? "pl-2" : "pl-1.5"
     ])
   )
   const classAfterInput = computed(() => InputLayout.setStyle("absolute inset-y-0 right-0 flex items-center"))
@@ -150,24 +160,25 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     InputLayout.initStyle()
-    if (beforeInput.value) {
+    if (beforeInput.value)
       new ResizeObserver((entries) => {
         for (const entry of entries) beforeWidth.value = (entry as any).target["offsetWidth"]
       }).observe(beforeInput.value as HTMLElement)
-    }
-    if (afterInput.value) {
+    if (afterInput.value)
       new ResizeObserver((entries) => {
         for (const entry of entries) afterWidth.value = (entry as any)?.target["offsetWidth"]
       }).observe(afterInput.value as HTMLElement)
-    }
-    headerHeight.value = <number>document.querySelector("header")?.offsetHeight
+    if (isClient()) headerHeight.value = <number>document.querySelector("header")?.offsetHeight
+    setTimeout(() => (isTick.value = true), 100)
   })
   // ---SET_OBSERVER-------------------------
-  const tableObserver = new ResizeObserver((entries) => {
-    entries.forEach(() => {
-      setWidthInput()
-    })
-  })
+  let layoutObserver: ResizeObserver
+  if (isClient())
+    layoutObserver = new ResizeObserver((entries) =>
+      entries.forEach(() => {
+        setWidthInput()
+      })
+    )
   const widthInput = ref<number>(0)
 
   function setWidthInput() {
@@ -176,12 +187,11 @@
   }
 
   onMounted(() => {
-    if (inputBody.value) {
-      tableObserver.observe(inputBody.value as Element)
-    }
+    InputLayout.initStyle()
+    if (isClient() && inputBody.value) layoutObserver.observe(inputBody.value as Element)
   })
   onUnmounted(() => {
-    tableObserver.disconnect()
+    if (isClient() && layoutObserver) layoutObserver.disconnect()
   })
   // ---METHODS-----------------------------
   const getLabelType = (
@@ -191,19 +201,11 @@
   ): NonNullable<InputLayoutProps["labelMode"]> => {
     if (label?.length) {
       if (value) {
-        if (["offsetDynamic", "offsetStatic"].includes(labelMode)) {
-          return "offsetStatic"
-        } else if (["vanishing"].includes(labelMode)) {
-          return "none"
-        } else {
-          return "static"
-        }
-      } else {
-        return labelMode
-      }
-    } else {
-      return "none"
-    }
+        if (["offsetDynamic", "offsetStatic"].includes(labelMode)) return "offsetStatic"
+        else if (["vanishing"].includes(labelMode)) return "none"
+        else return "static"
+      } else return labelMode
+    } else return "none"
   }
 
   async function copy() {
@@ -227,21 +229,17 @@
       :style="`height: ${height};max-height: 4rem;`">
       <slot name="before" />
     </div>
-    <div
-      data-input-layout-base
-      ref="input"
-      :class="classBase"
-      :style="`width:${width};height:${height};min-height: ${baseHeight}px;padding-left: ${beforeWidth || 10}px; padding-right: ${afterWidth || 10}px;`">
+    <div data-input-layout-base ref="input" :class="classBase" :style="styleBase">
       <slot />
     </div>
     <slot name="body" />
     <Label
+      v-if="label"
       :title="label"
       :type="labelType"
       :mode="mode"
       :is-required="isRequired"
-      :is-disabled="isDisabled"
-      :translate-x="beforeWidth || 15"
+      :translate-x="beforeWidth || 10"
       :max-width="widthInput" />
     <span ref="afterInput" :class="classAfterInput" :style="`height: ${height};max-height: 4rem;`">
       <div v-if="slots.after" data-input-layout-after :class="classAfterSlot">

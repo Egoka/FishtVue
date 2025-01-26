@@ -1,4 +1,4 @@
-import { isArray, deepCopyArray } from "fishtvue/utils/arrayHandler"
+import { deepCopyArray, isArray } from "fishtvue/utils/arrayHandler"
 import { isFunction } from "fishtvue/utils/functionHandler"
 
 /**

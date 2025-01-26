@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import { computed, getCurrentInstance, ref, watch, onMounted, useSlots } from "vue"
-  import type { InputProps, InputEmits, InputExpose } from "./Input"
+  import type { ComponentInternalInstance } from "vue"
+  import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
+  import type { InputEmits, InputExpose, InputProps } from "./Input"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
-  import { convertToNumber, convertToPhone, toNumber, toPhone, onkeydown } from "fishtvue/utils/numberHandler"
+  import { convertToNumber, convertToPhone, onkeydown, toNumber, toPhone } from "fishtvue/utils/numberHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
@@ -25,12 +26,13 @@
   const layout = ref<InputLayoutExpose>()
   const inputRef = ref<HTMLElement | undefined>()
   // ---STATE-------------------------------
+  const instance = ref<ComponentInternalInstance | null>()
   const classLayout = ref<InputProps["class"]>()
   const isActiveInput = ref<boolean>(false)
   const modelValue = ref<InputProps["modelValue"]>()
   const arrayInputType: Array<InputProps["type"]> = ["text", "number", "email", "password"]
   // ---PROPS-------------------------------
-  const id = ref<NonNullable<InputProps["id"]>>(String(props.id ?? getCurrentInstance()?.uid))
+  const id = ref<NonNullable<InputProps["id"]>>(String(props?.id ?? instance.value?.uid))
   const type = ref<InputProps["type"]>(props?.type && arrayInputType.includes(props.type) ? props?.type : "text")
   const mask = computed<InputProps["maskInput"]>(() => props?.maskInput)
   const mode = computed<NonNullable<InputProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
@@ -43,6 +45,7 @@
   const isDisabled = computed<NonNullable<InputProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<InputProps["loading"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<InputProps["isInvalid"]>>(() => (!isDisabled.value ? props.isInvalid : false))
+  const isClear = computed<NonNullable<InputProps["clear"]>>(() => props?.clear ?? options?.clear ?? false)
   const messageInvalid = computed<NonNullable<InputProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
   const classBaseInput = computed(() =>
     Input.setStyle([
@@ -67,7 +70,7 @@
     loading: isLoading.value,
     disabled: isDisabled.value,
     help: props.help,
-    clear: props.clear,
+    clear: isClear.value,
     classBody: props.classBody,
     class: props.class
   }))
@@ -105,6 +108,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Input.initStyle()
+    instance.value = getCurrentInstance()
     if (autoFocus.value) {
       inputRef.value?.focus()
     }

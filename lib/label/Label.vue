@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted } from "vue"
-  import type { LabelProps, LabelExpose } from "./Label"
+  import type { LabelExpose, LabelProps } from "./Label"
   import Component from "fishtvue/component"
   // ---BASE-COMPONENT----------------------
   const Label = new Component<"Label">()
@@ -68,7 +68,7 @@
 </script>
 
 <template>
-  <div data-label :class="classBase" :style="type !== 'none' ? `--tw-translate-x: ${translateX}px;` : ''">
+  <div data-label :class="classBase" :style="type !== 'none' ? `--fv-translate-x: ${translateX}px;` : ''">
     <span :class="classContent" :style="`max-width: ${maxWidth - 38}px`">
       {{ props.title }}
     </span>

@@ -15,34 +15,34 @@
 
  ##### Methods
  - `add(key: K, values?: V[]): void`
-   Adds values from an array to the Set associated with the specified key. If the values array is not provided, it creates an empty Set.
+ Adds values from an array to the Set associated with the specified key. If the values array is not provided, it creates an empty Set.
 
  - `deleteValue(key: K, values: V[]): void`
-   Removes values from the Set associated with the specified key.
+ Removes values from the Set associated with the specified key.
 
  - `deleteKey(key: K): void`
-   Removes the key and its associated Set completely.
+ Removes the key and its associated Set completely.
 
  - `hasValue(key: K, value: V): boolean`
-   Checks if a value exists in the Set associated with the specified key.
+ Checks if a value exists in the Set associated with the specified key.
 
  - `get(key: K): Set<V> | undefined`
-   Returns the Set associated with the specified key.
+ Returns the Set associated with the specified key.
 
  - `hasKey(key: K): boolean`
-   Checks if the key exists in the collection.
+ Checks if the key exists in the collection.
 
  - `keys(): K[]`
-   Returns all keys in the collection.
+ Returns all keys in the collection.
 
  - `values(): Set<V>[]`
-   Returns all Sets of values in the collection.
+ Returns all Sets of values in the collection.
 
  - `size(): number`
-   Returns the number of keys in the collection.
+ Returns the number of keys in the collection.
 
  - `clear(): void`
-   Clears the entire collection.
+ Clears the entire collection.
 
  ##### Example Usage
  ```typescript

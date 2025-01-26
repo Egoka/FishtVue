@@ -2,9 +2,8 @@ import { Ref, VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, ReadRef } from "../types"
 import { Delta } from "@vueup/vue-quill"
 import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
-import Quill from "quill"
 // @ts-ignore
-import { Sources } from "quill"
+import Quill, { Sources } from "quill"
 import { DialogProps } from "fishtvue/dialog"
 
 /**
@@ -152,7 +151,7 @@ export declare type TextEditorExpose = {
    * Reference to the Quill editor instance.
    * @type {ReadRef<IQuillEditor | undefined>}
    */
-  quillEditor: ReadRef<IQuillEditor | undefined>
+  quillEditorLink: ReadRef<IQuillEditor | undefined>
 
   /**
    * Indicates whether the text editor is active.

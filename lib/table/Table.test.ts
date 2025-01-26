@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Table from "fishtvue/table/Table.vue"
 import { TableOption, TableProps } from "fishtvue/table/Table"
@@ -994,7 +994,7 @@ describe("Table Component", () => {
         await nextTick()
         const highlightedText = wrapper.find("[data-table-tbody-td] [data-table-tbody-not-cell-template] div span")
         expect(highlightedText.exists()).toBe(true)
-        expect(highlightedText.html()).toBe('<span class="font-bold text-theme-700">orange</span>')
+        expect(highlightedText.html()).toBe('<span class="fv fishtvue-table font-bold text-theme-700">orange</span>')
         vi.clearAllTimers()
         vi.useRealTimers()
       })

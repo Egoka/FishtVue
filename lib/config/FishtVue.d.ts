@@ -2,9 +2,7 @@ import { Plugin } from "vue"
 import { StyleMode } from "../types"
 
 import { Locales, type NameLocale } from "fishtvue/locale/TypesLocale"
-import { Theme } from "fishtvue/theme"
-
-import { NamesTheme } from "fishtvue/theme"
+import { NamesTheme, Theme } from "fishtvue/theme"
 import { FixWindowOption } from "fishtvue/fixwindow"
 import { BadgeOption } from "fishtvue/badge"
 import { ButtonOption } from "fishtvue/button"
@@ -100,6 +98,7 @@ export type OptionsTheme = Partial<{
   lightModeSelector: string
   darkModeSelector: string
   layers: string | "fishtvue"
+  isNotMinifyCSS: boolean
 }>
 
 export type ComponentsOptions = Partial<{

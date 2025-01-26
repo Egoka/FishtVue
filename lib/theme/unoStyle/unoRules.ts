@@ -1,17 +1,55 @@
 import { addAlphaToHex, sizing } from "./helpers"
-import type { StyleType, GroupsRegExp } from "./UnoTypes"
+import type { GroupsRegExp, StyleType } from "./UnoTypes"
 // prettier-ignore
 import {
+  alignContent,
+  alignSelf,
+  animations,
+  aspect,
+  attachmentBackground,
+  baseBackdropFilter,
+  baseFilter,
+  baseTransform,
+  baseTransition,
+  bgClip,
+  bgOrigin,
+  bgRepeat,
+  blend,
+  blur,
+  borderLogical,
+  borderSides,
+  borderSize,
+  borderSpacing,
+  boxShadow,
+  cursor,
+  divideWidth,
+  dropShadow,
+  flex,
+  floatAndClear,
+  fontFamily,
+  fontWeights,
+  gridAuto,
+  justifyContent,
+  letterSpacing,
+  lineHeight,
+  order,
+  placeContent,
+  positionPaddingOrMargin,
+  positionsBackground,
+  resize,
+  scale,
+  sizesBackground,
+  skew,
+  snapAlign,
+  snapType,
   specialColor,
-  baseFilter, baseBackdropFilter, baseTransition, baseTransform,
-  specialValues, attachmentBackground, sizesBackground, positionsBackground,
-  textSize, fontFamily, fontWeights, letterSpacing, lineHeight,
-  wordBreak, borderSize, boxShadow, blend, blur, dropShadow,
-  transitionProperty, transitionFunction,
-  cursor, resize, snapAlign, bgClip, bgOrigin, bgRepeat, snapType, willChange,
-  borderLogical, borderSides, positionPaddingOrMargin, borderSpacing, scale, translate, skew,
-  aspect, floatAndClear, flex, order, gridAuto,
-  justifyContent, alignContent, alignSelf, placeContent, animations, divideWidth
+  specialValues,
+  textSize,
+  transitionFunction,
+  transitionProperty,
+  translate,
+  willChange,
+  wordBreak
 } from "./unoStatic"
 import { colors } from "fishtvue/theme/primitive"
 
@@ -355,7 +393,7 @@ export default <Record<string, StyleType>>{
         if (groups?.bottom) to += " bottom"
         if (groups?.left) to += " left"
         if (groups?.right) to += " right"
-        return `background-image: linear-gradient(to${to}, var(--tw-gradient-stops));`
+        return `background-image: linear-gradient(to${to}, var(--fv-gradient-stops));`
       }
     }
   },
@@ -436,22 +474,22 @@ export default <Record<string, StyleType>>{
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
         if (groups.abstract.startsWith("#"))
-          return `--tw-gradient-from: ${addAlphaToHex(
+          return `--fv-gradient-from: ${addAlphaToHex(
             groups?.abstract,
             groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )} var(--tw-gradient-from-position);\n  --tw-gradient-to: ${groups?.abstract}00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);`
+          )} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${groups?.abstract}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
-        return `--tw-gradient-from: ${addAlphaToHex(
+        return `--fv-gradient-from: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--tw-gradient-from-position);\n  --tw-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone]}00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);`
+        )} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone]}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
-        return `--tw-gradient-from: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--tw-gradient-from-position);\n  --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);`
+        return `--fv-gradient-from: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
-        return `--tw-gradient-from-position: ${groups.special.replace("-", " ")};`
+        return `--fv-gradient-from-position: ${groups.special.replace("-", " ")};`
       }
     }
   },
@@ -471,22 +509,22 @@ export default <Record<string, StyleType>>{
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
         if (groups.abstract.startsWith("#"))
-          return `--tw-gradient-to: ${groups?.abstract}00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), ${addAlphaToHex(
+          return `--fv-gradient-to: ${groups?.abstract}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${addAlphaToHex(
             groups?.abstract,
             groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )} var(--tw-gradient-via-position), var(--tw-gradient-to);`
+          )} var(--fv-gradient-via-position), var(--fv-gradient-to);`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
-        return `--tw-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone]}00 var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), ${addAlphaToHex(
+        return `--fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone]}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--tw-gradient-via-position), var(--tw-gradient-to);`
+        )} var(--fv-gradient-via-position), var(--fv-gradient-to);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
-        return `--tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);\n  --tw-gradient-stops: var(--tw-gradient-from), ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--tw-gradient-via-position), var(--tw-gradient-to);`
+        return `--fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--fv-gradient-via-position), var(--fv-gradient-to);`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
-        return `--tw-gradient-from-position: ${groups.special.replace("-", " ")};`
+        return `--fv-gradient-from-position: ${groups.special.replace("-", " ")};`
       }
     }
   },
@@ -506,22 +544,22 @@ export default <Record<string, StyleType>>{
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
         if (groups.abstract.startsWith("#"))
-          return `--tw-gradient-to: ${addAlphaToHex(
+          return `--fv-gradient-to: ${addAlphaToHex(
             groups?.abstract,
             groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )} var(--tw-gradient-to-position);`
+          )} var(--fv-gradient-to-position);`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
-        return `--tw-gradient-to: ${addAlphaToHex(
+        return `--fv-gradient-to: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--tw-gradient-to-position);`
+        )} var(--fv-gradient-to-position);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
-        return `--tw-gradient-to: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--tw-gradient-to-position);`
+        return `--fv-gradient-to: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--fv-gradient-to-position);`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
-        return `--tw-gradient-to-position: ${groups.special.replace("-", " ")};`
+        return `--fv-gradient-to-position: ${groups.special.replace("-", " ")};`
       }
     }
   },
@@ -613,7 +651,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.width.test(classStyle)) {
         const groups = classStyle.match(reg.width)?.groups as GroupsRegExp
         return groups?.special === "reverse"
-          ? `--tw-divide-${groups.axis}-reverse: 1;`
+          ? `--fv-divide-${groups.axis}-reverse: 1;`
           : divideWidth[groups.axis](groups?.abstract ?? (groups?.special ?? 1) + "px")
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
@@ -700,43 +738,43 @@ export default <Record<string, StyleType>>{
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
         if (groups.abstract.startsWith("#"))
-          return `--tw-ring-color: ${addAlphaToHex(
+          return `--fv-ring-color: ${addAlphaToHex(
             groups?.abstract,
             groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
           )};`
-        return `--tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);\n  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(${groups?.abstract} + var(--tw-ring-offset-width)) var(--tw-ring-color);\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);`
+        return `--fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(${groups?.abstract} + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);`
       } else if (reg.colorOffset.test(classStyle)) {
         const groups = classStyle.match(reg.colorOffset)?.groups as GroupsRegExp
-        return `--tw-ring-offset-color: ${addAlphaToHex(
+        return `--fv-ring-offset-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);`
+        )};\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
       } else if (reg.specialColorOffset.test(classStyle)) {
         const groups = classStyle.match(reg.specialColorOffset)?.groups as GroupsRegExp
-        return `--tw-ring-offset-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
+        return `--fv-ring-offset-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
-        return `--tw-ring-color: ${addAlphaToHex(
+        return `--fv-ring-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
-        return `--tw-ring-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
+        return `--fv-ring-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.width.test(classStyle)) {
         const groups = classStyle.match(reg.width)?.groups as GroupsRegExp
-        return `--tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);\n  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(${groups.special}px + var(--tw-ring-offset-width)) var(--tw-ring-color);\n  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);`
+        return `--fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(${groups.special}px + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);`
       } else if (reg.offset.test(classStyle)) {
         const groups = classStyle.match(reg.offset)?.groups as GroupsRegExp
         if (groups.abstract) {
           if (groups.abstract.startsWith("#"))
-            return `--tw-ring-offset-color: ${addAlphaToHex(
+            return `--fv-ring-offset-color: ${addAlphaToHex(
               groups?.abstract,
               groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-            )};\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);`
-          return `--tw-ring-offset-width: ${groups?.abstract};`
+            )};\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
+          return `--fv-ring-offset-width: ${groups?.abstract};`
         }
-        return `--tw-ring-offset-width: ${groups.special}px;\n  box-shadow: 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color), var(--tw-ring-shadow);`
+        return `--fv-ring-offset-width: ${groups.special}px;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
       }
     }
   },
@@ -758,20 +796,20 @@ export default <Record<string, StyleType>>{
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
         if (groups.abstract.startsWith("#"))
-          return `--tw-shadow-color: ${addAlphaToHex(
+          return `--fv-shadow-color: ${addAlphaToHex(
             groups?.abstract,
             groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
           )};`
-        return `--tw-shadow: ${groups?.abstract.replace(/_/g, " ")};\n  --tw-shadow-colored: ${groups?.abstract.replace(/_(rgb)a?\(.*\)/g, "").replace(/_/g, " ")} var(--tw-shadow-color);\n  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);`
+        return `--fv-shadow: ${groups?.abstract.replace(/_/g, " ")};\n  --fv-shadow-colored: ${groups?.abstract.replace(/_(rgb)a?\(.*\)/g, "").replace(/_/g, " ")} var(--fv-shadow-color);\n  box-shadow: var(--fv-ring-offset-shadow, 0 0 #0000), var(--fv-ring-shadow, 0 0 #0000), var(--fv-shadow);`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
-        return `--tw-shadow-color: ${addAlphaToHex(
+        return `--fv-shadow-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
-        return `--tw-shadow-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
+        return `--fv-shadow-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.size.test(classStyle)) {
         const groups = classStyle.match(reg.size)?.groups as GroupsRegExp
         return boxShadow[groups.special]
@@ -796,22 +834,22 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>blur)-((?<special>${Object.keys(blur).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups?.special === "none") return `--tw-blur: ;\n  ${baseFilter}`
-      return `--tw-blur: blur(${groups?.abstract ?? `${blur[groups.special]}px`});\n  ${baseFilter}`
+      if (groups?.special === "none") return `--fv-blur: ;\n  ${baseFilter}`
+      return `--fv-blur: blur(${groups?.abstract ?? `${blur[groups.special]}px`});\n  ${baseFilter}`
     }
   },
   brightness: {
     reg: new RegExp(`(?<style>brightness)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-brightness: brightness(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
+      return `--fv-brightness: brightness(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
     }
   },
   contrast: {
     reg: new RegExp(`(?<style>contrast)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups) return `--tw-contrast: contrast(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
+      if (groups) return `--fv-contrast: contrast(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
     }
   },
   "drop-shadow": {
@@ -821,7 +859,7 @@ export default <Record<string, StyleType>>{
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return groups.abstract
-        ? `--tw-drop-shadow: drop-shadow(${groups?.abstract.replace(/_/g, " ")});\n  ${baseFilter}`
+        ? `--fv-drop-shadow: drop-shadow(${groups?.abstract.replace(/_/g, " ")});\n  ${baseFilter}`
         : `${dropShadow[groups.special]}\n  ${baseFilter}`
     }
   },
@@ -829,99 +867,99 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>grayscale)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-grayscale: grayscale(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
+      return `--fv-grayscale: grayscale(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
     }
   },
   "hue-rotate": {
     reg: new RegExp(`(?<style>hue-rotate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-hue-rotate: hue-rotate(${groups?.abstract ?? `${groups.special}deg`});\n  ${baseFilter}`
+      return `--fv-hue-rotate: hue-rotate(${groups?.abstract ?? `${groups.special}deg`});\n  ${baseFilter}`
     }
   },
   invert: {
     reg: new RegExp(`(?<style>invert)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-invert: invert(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
+      return `--fv-invert: invert(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
     }
   },
   sepia: {
     reg: new RegExp(`(?<style>sepia)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-sepia: sepia(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
+      return `--fv-sepia: sepia(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
     }
   },
   saturate: {
     reg: new RegExp(`(?<style>saturate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-saturate: saturate(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
+      return `--fv-saturate: saturate(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
     }
   },
   "backdrop-blur": {
     reg: new RegExp(`(?<style>backdrop-blur)-((?<special>${Object.keys(blur).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups?.special === "none") return `--tw-backdrop-blur: ;\n  ${baseBackdropFilter}`
-      return `--tw-backdrop-blur: blur(${groups?.abstract ?? `${blur[groups.special]}px`});\n  ${baseBackdropFilter}`
+      if (groups?.special === "none") return `--fv-backdrop-blur: ;\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-blur: blur(${groups?.abstract ?? `${blur[groups.special]}px`});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-brightness": {
     reg: new RegExp(`(?<style>backdrop-brightness)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-backdrop-brightness: brightness(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-brightness: brightness(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-contrast": {
     reg: new RegExp(`(?<style>backdrop-contrast)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-backdrop-contrast: contrast(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-contrast: contrast(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-grayscale": {
     reg: new RegExp(`(?<style>backdrop-grayscale)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-backdrop-grayscale: grayscale(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-grayscale: grayscale(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-hue-rotate": {
     reg: new RegExp(`(?<style>backdrop-hue-rotate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-backdrop-hue-rotate: hue-rotate(${groups?.abstract ?? `${groups.special}deg`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-hue-rotate: hue-rotate(${groups?.abstract ?? `${groups.special}deg`});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-invert": {
     reg: new RegExp(`(?<style>backdrop-invert)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-backdrop-invert: invert(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-invert: invert(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-sepia": {
     reg: new RegExp(`(?<style>backdrop-sepia)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-backdrop-sepia: sepia(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-sepia: sepia(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-saturate": {
     reg: new RegExp(`(?<style>backdrop-saturate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-backdrop-saturate: saturate(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-saturate: saturate(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-opacity": {
     reg: /(?<style>backdrop-opacity)-((?<special>\d+)|(\[(?<abstract>.*?)]))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-backdrop-opacity: opacity(${groups?.abstract ? +groups.abstract : groups.special ? +groups.special / 100 : 1});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-opacity: opacity(${groups?.abstract ? +groups.abstract : groups.special ? +groups.special / 100 : 1});\n  ${baseBackdropFilter}`
     }
   },
   transition: {
@@ -967,7 +1005,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>rotate)-((?<special>\d+)|(\[(?<abstract>.*?)]))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--tw-rotate: ${groups?.abstract ?? `${groups.special}deg`};\n  ${baseTransform}`
+      return `--fv-rotate: ${groups?.abstract ?? `${groups.special}deg`};\n  ${baseTransform}`
     }
   },
   translate: {
@@ -1577,7 +1615,7 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>content)-((?<special>${Object.keys(alignContent).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups.abstract) return `--tw-content: ${groups.abstract};\n  content: var(--tw-content);`
+      if (groups.abstract) return `--fv-content: ${groups.abstract};\n  content: var(--fv-content);`
       return `align-content: ${alignContent[groups?.special]};`
     }
   },

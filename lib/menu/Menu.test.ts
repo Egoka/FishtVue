@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Menu from "fishtvue/menu/Menu.vue"
 import { Groups, ItemMenuPrivate, MenuOption, MenuProps } from "fishtvue/menu/Menu"

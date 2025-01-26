@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Separator from "fishtvue/separator/Separator.vue"
 
@@ -47,7 +47,7 @@ describe("Separator Component", () => {
       })
       const leftLine = wrapper.find("[data-separator-left] div")
       const gradientStyle = leftLine.attributes("style")
-      expect(gradientStyle).toContain(`--tw-gradient-from-position: ${gradient}%`)
+      expect(gradientStyle).toContain(`--fv-gradient-from-position: ${gradient}%`)
     })
 
     it("renders with gradient array", () => {
@@ -56,8 +56,8 @@ describe("Separator Component", () => {
       })
       const leftLine = wrapper.find("[data-separator-left] div")
       const gradientStyle = leftLine.attributes("style")
-      expect(gradientStyle).toContain("--tw-gradient-from-position: 10%")
-      expect(gradientStyle).toContain("--tw-gradient-via-position: 25%")
+      expect(gradientStyle).toContain("--fv-gradient-from-position: 10%")
+      expect(gradientStyle).toContain("--fv-gradient-via-position: 25%")
     })
 
     it.each([

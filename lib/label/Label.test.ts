@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Label from "fishtvue/label/Label.vue"
 
@@ -47,7 +47,7 @@ describe("Icons Component Tests", () => {
         }
       })
 
-      expect(wrapper.find("[data-label]").attributes("style")).toContain("--tw-translate-x: 20px;")
+      expect(wrapper.find("[data-label]").attributes("style")).toContain("--fv-translate-x: 20px;")
     })
 
     it("computes correct maxWidth style", () => {

@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
-import { createApp } from "vue"
 import type { App } from "vue"
+import { createApp } from "vue"
+import type { FishtVue as FishtVueType, FishtVueConfiguration } from "fishtvue/config"
 import FishtVue, { useFishtVue } from "fishtvue/config"
-import type { FishtVue as FishtVueType } from "fishtvue/config"
-import type { FishtVueConfiguration } from "fishtvue/config"
 import { getDefaultLocale } from "fishtvue/config/index"
 
 describe("Testing config", () => {
@@ -128,7 +127,6 @@ describe("Testing config", () => {
       app = null
       // @ts-ignore
       delete window.FishtVue
-      // document.getElementById("app")?.remove()
     })
 
     it("should return FishtVue instance when plugin is installed", () => {

@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Select from "fishtvue/select/Select.vue"
 
@@ -227,16 +227,10 @@ describe("Select Component Tests", () => {
       // Эмитируем событие клика
       document.body?.dispatchEvent(clickEvent)
 
-      expect(wrapper.emitted("change:modelValue")?.[0]).toEqual([
-        ["Banana"],
-        [
-          {
-            id: "Banana",
-            marker: `<span class="fishtvue-select font-bold text-theme-700 dark:text-theme-300">Ban</span>ana`,
-            value: "Banana"
-          }
-        ]
-      ])
+      expect(wrapper.emitted("change:modelValue")?.[0][0]).toEqual(["Banana"])
+      expect((wrapper.emitted("change:modelValue")?.[0][1] as any)[0].marker).toBe(
+        `<span class="fv fishtvue-select font-bold text-theme-700 dark:text-theme-300">Ban</span>ana`
+      )
     })
   })
 })

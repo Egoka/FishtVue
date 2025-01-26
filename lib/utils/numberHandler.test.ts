@@ -1,5 +1,5 @@
-import { describe, it, vi, expect, beforeEach, afterEach } from "vitest"
-import { convertToPhone, toPhone, onkeydown, convertToNumber, toNumber, isNumber } from "fishtvue/utils/numberHandler"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { convertToNumber, convertToPhone, isNumber, onkeydown, toNumber, toPhone } from "fishtvue/utils/numberHandler"
 
 describe("Testing Number handler", () => {
   describe("convertToPhone", () => {
