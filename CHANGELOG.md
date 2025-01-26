@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [0.0.6](https://github.com/Egoka/FishtVue/compare/v0.0.5...v0.0.6) (2025-01-26)
+
+
+### Bug Fixes
+
+* **components:** fixed components for ssr ([d120e4e](https://github.com/Egoka/FishtVue/commit/d120e4ee76c4192d9da94492f10426ac440eae6b))
+* **tailwind:** switching from --tw to --fv ([8009480](https://github.com/Egoka/FishtVue/commit/8009480bf7a52a829ab97eff1862b914801c24c1))
+* **components:** the components have been adapted to ssr and rendering errors have been fixed ([9abf0bf](https://github.com/Egoka/FishtVue/commit/9abf0bf3a15319110127e113d2951123c1a572f9))
+* **instance:** the correct definition of instance has been made and a window check has been added ([7ea5e90](https://github.com/Egoka/FishtVue/commit/7ea5e90cf0f0a2a5d792321148102082b47cc161))
+* **ssr:** the nuxtInitPlugin function has been written ([e47d5b7](https://github.com/Egoka/FishtVue/commit/e47d5b713d70a5b2115669b3bb785707feb89b6d))
+
 ## [0.0.5](https://github.com/Egoka/FishtVue/compare/v0.0.4...v0.0.5) (2024-12-07)
 
 
