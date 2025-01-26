@@ -135,15 +135,13 @@ export default class Component<T extends keyof ComponentsOptions> {
     if (this.__stylesComp) this.__setStyle(this.__stylesComp)
   }
 
-  public setStyle = <T extends StyleClass | StyleClass[] | undefined>(
+  public setStyle = <T extends StyleClass | boolean | undefined>(
     stylesComp: T | T[],
-    options: setStyleOptions = {
-      isBaseClasses: false
-    }
+    options?: setStyleOptions
   ): string => {
     const specialClass = `${this.prefix}-${toKebabCase(this.name)}`
     const styles = cn(stylesComp)
-    const isBaseClasses = options.isBaseClasses ? "" : " "
+    const isBaseClasses = options?.isBaseClasses ? "" : " "
     const newClasses = styles
       .split(" ")
       .filter((item) => !listOfStyledComponents.hasValue(this.name, `${isBaseClasses}${item}`))
@@ -151,7 +149,7 @@ export default class Component<T extends keyof ComponentsOptions> {
       newClasses.forEach((item) => {
         listOfStyledComponents.add(this.name, [`${isBaseClasses}${item}`])
         const css = tailwind(item, {
-          selector: options.selector ? `${options.selector}${isBaseClasses}` : `.${specialClass}`,
+          selector: options?.selector ? `${options.selector}${isBaseClasses}` : `.${specialClass}`,
           darkSelector: this.__globalOptionsTheme?.darkModeSelector ?? ""
         })
         if (css) listOfCssComponents.add(this.name, [css])

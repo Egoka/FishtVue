@@ -151,7 +151,7 @@ export declare type TextEditorExpose = {
    * Reference to the Quill editor instance.
    * @type {ReadRef<IQuillEditor | undefined>}
    */
-  quillEditor: ReadRef<IQuillEditor | undefined>
+  quillEditorLink: ReadRef<IQuillEditor | undefined>
 
   /**
    * Indicates whether the text editor is active.

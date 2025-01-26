@@ -191,6 +191,7 @@
   const classGradientSelectListButton = computed(() =>
     Select.setStyle([classGradientSelectList.value, "bg-gradient-to-t top-[220px]"])
   )
+  const classUl = computed(() => Select.setStyle("p-0"))
   const classLiItem = computed(() =>
     Select.setStyle([
       "text-gray-900 dark:text-gray-100 items-center h-9 mt-2 mx-2 pl-8 pr-4 last:mb-5",
@@ -520,6 +521,7 @@
           <TransitionGroup
             name="ul"
             tag="ul"
+            :class="classUl"
             ref="selectItems"
             data-select-list-items
             @before-enter="onBeforeEnter"
