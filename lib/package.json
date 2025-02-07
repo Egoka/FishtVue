@@ -14,6 +14,8 @@
   "bugs": {
     "url": "https://github.com/Egoka/FishtVue/issues"
   },
+  "main": "./index.mjs",
+  "types": "./index.d.ts",
   "keywords": [
     "fishtvue",
     "vue",
@@ -23,7 +25,16 @@
     "component library"
   ],
   "peerDependencies": {
-    "vue": "^3.3.x"
+    "@nuxt/kit": "^3.0.0",
+    "nuxt": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@nuxt/kit": {
+      "optional": true
+    },
+    "nuxt": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@iconify/vue": "^4.1.2",
@@ -38,6 +49,7 @@
     "lodash": "^4.17.21",
     "quill": "^2.0.2",
     "v-calendar": "^3.1.2",
-    "clsx": "^2.1.x"
+    "clsx": "^2.1.x",
+    "vue": "^3.0.0"
   }
 }

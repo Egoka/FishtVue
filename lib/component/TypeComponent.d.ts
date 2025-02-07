@@ -1,4 +1,6 @@
 import type { ComponentsOptions, OptionsTheme } from "fishtvue/config"
+import { StyleClass, StyleMode } from "fishtvue/types"
+import { DefaultMessages } from "fishtvue/locale"
 
 export type NamesComponents = keyof ComponentsOptions | "BaseComponent"
 export const cssComponents: Map<NamesComponents, string>
@@ -30,6 +32,7 @@ export const cssComponents: Map<NamesComponents, string>
  * - `initStyle(stylesComp)`: A method that initializes the style for the component.
  */
 declare class Component<T extends keyof ComponentsOptions> {
+  constructor(name?: T)
   readonly name?: T
   readonly prefix?: OptionsTheme["prefix"]
 
@@ -76,7 +79,11 @@ declare class Component<T extends keyof ComponentsOptions> {
   /**
    * `initStyle(stylesComp)`: A method that initializes the style for the component.
    */
-  initStyle(stylesComp: StylesComponent): void
+  initStyle(stylesComp?: StylesComponent): void
+
+  setStyle<T extends StyleClass | boolean | undefined>(stylesComp: T | T[], options?: setStyleOptions): string
+  t(key: keyof DefaultMessages | string): string | undefined
+  componentsStyle(): StyleMode | undefined
 }
 
 export type PublicFields =
@@ -91,6 +98,9 @@ export type PublicFields =
   | "getOptions"
   | "getPrefix"
   | "initStyle"
-
+export type setStyleOptions = Partial<{
+  selector: string
+  isBaseClasses: boolean
+}>
 export type StylesComponent = (layers: string, css: string) => string
 export default Component

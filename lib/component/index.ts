@@ -16,14 +16,10 @@ import { fieldsPick, get } from "fishtvue/utils/objectHandler"
 import { isClient, minifyCSS } from "fishtvue/utils/domHandler"
 import { DefaultMessages, Locales } from "fishtvue/locale"
 import type { ComponentsOptions, FishtVue, OptionsTheme } from "fishtvue/config"
-import type { NamesComponents, PublicFields, StylesComponent } from "./TypeComponent"
+import type { NamesComponents, PublicFields, setStyleOptions, StylesComponent } from "./TypeComponent"
 import { UniqueKeySetCollection } from "fishtvue/utils/uniqueCollection"
 import { StyleClass, StyleMode } from "fishtvue/types"
 
-type setStyleOptions = Partial<{
-  selector: string
-  isBaseClasses: boolean
-}>
 const listComponents = new Set<NamesComponents | undefined>()
 const listOfStyledComponents = new UniqueKeySetCollection<NamesComponents | undefined, string>()
 const listOfCssComponents = new UniqueKeySetCollection<NamesComponents | undefined, string>()

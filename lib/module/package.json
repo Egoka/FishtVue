@@ -1,0 +1,5 @@
+{
+  "main": "./nuxt.mjs",
+  "module": "./nuxt.mjs",
+  "types": "./index.d.ts"
+}
