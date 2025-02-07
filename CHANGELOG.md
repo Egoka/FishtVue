@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.0.7](https://github.com/Egoka/FishtVue/compare/v0.0.6...v0.0.7) (2025-02-07)
+
+
+### Bug Fixes
+
+* **module:** added a module for nuxt ([5fa78ba](https://github.com/Egoka/FishtVue/commit/5fa78badccb2116acdbccf3c9ce0621e03edcb11))
+
 ## [0.0.6](https://github.com/Egoka/FishtVue/compare/v0.0.5...v0.0.6) (2025-01-26)
 
 
