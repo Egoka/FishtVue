@@ -1,5 +1,4 @@
 import { config } from "@vue/test-utils"
-import "intersection-observer"
 import ResizeObserver from "resize-observer-polyfill"
 import { mockFishtvueTheme } from "./mocks/fishtvueThemeMock"
 

@@ -1,11 +1,20 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { beforeAll, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Table from "fishtvue/table/Table.vue"
 import { TableOption, TableProps } from "fishtvue/table/Table"
 import { nextTick } from "vue"
 
 describe("Table Component", () => {
+  beforeAll(() => {
+    // @ts-ignore
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  })
   const baseData = [
     { name: "orange", color: "orange", shape: "round" },
     { name: "banana", color: "yellow", shape: "long" },

@@ -1,5 +1,5 @@
 {
   "main": "./component.mjs",
   "module": "./component.mjs",
-  "types": "./Component.d.ts"
+  "types": "./TypeComponent.d.ts"
 }
