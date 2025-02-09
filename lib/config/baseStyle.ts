@@ -36,7 +36,7 @@ export default `
     --fv-ring-inset: ;
     --fv-ring-offset-width: 0px;
     --fv-ring-offset-color: #fff;
-    --fv-ring-color: rgb(59 130 246 / 0.5);
+    --fv-ring-color: rgb(160 160 160 / 0.5);
     --fv-ring-offset-shadow: 0 0 #0000;
     --fv-ring-shadow: 0 0 #0000;
     --fv-shadow: 0 0 #0000;
