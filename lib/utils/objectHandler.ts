@@ -435,6 +435,48 @@ export function deepMerge<T extends object | any[]>(...objects: any[]): T {
   return objects.reduce((prev, obj) => merge(prev, obj), undefined)
 }
 
+/**
+ * #### `deepMergeSoft` Function Documentation
+ *
+ * The `deepMergeSoft` function is a utility function that performs a deep merge of multiple objects, with special handling for arrays and strings.
+ * Unlike `deepMerge`, which overwrites values, `deepMergeSoft` concatenates arrays and strings, and recursively merges nested objects.
+ * It takes any number of objects as arguments and returns a new object that is the result of merging all the passed objects.
+ *
+ * ##### Syntax
+ * ```typescript
+ * export function deepMergeSoft<T extends object | any[]>(...objects: any[]): T
+ * ```
+ *
+ * ##### Parameters
+ * - `objects`: The objects to be merged.
+ *
+ * ##### Return Value
+ * - A new object that is the result of the deep merge of all the passed objects, with arrays concatenated and strings combined.
+ *
+ * ##### Example Usage
+ * ```typescript
+ * const mergedObj = deepMergeSoft(obj1, obj2, obj3);
+ * ```
+ *
+ * The `deepMergeSoft` function can be used to perform a deep merge of multiple objects, where arrays are concatenated and strings are combined.
+ * It uses the `reduce` method to iterate over the passed objects and merge their properties.
+ *
+ * Here is an example of how the `deepMergeSoft` function can be used:
+ *
+ * ```typescript
+ * const obj1 = { a: 1, b: { c: 2 }, d: [1, 2], e: "Hello" };
+ * const obj2 = { b: { d: 3 }, e: "World", d: [3, 4] };
+ * const obj3 = { f: 5 };
+ *
+ * const mergedObj = deepMergeSoft(obj1, obj2, obj3);
+ * console.log(mergedObj);
+ * // Output: { a: 1, b: { c: 2, d: 3 }, d: [1, 2, 3, 4], e: "Hello World", f: 5 }
+ * ```
+ *
+ * In this example, the `deepMergeSoft` function is called with the objects `obj1`, `obj2`, and `obj3`. It creates a new object `mergedObj` that contains all the properties from all the passed objects, with arrays concatenated and strings combined.
+ *
+ * **Note**: The `deepMergeSoft` function can be used to perform a deep merge of multiple objects, with special handling for arrays and strings.
+ */
 export function deepMergeSoft<T extends object | any[]>(...objects: any[]): T {
   const seen = new WeakMap()
 
