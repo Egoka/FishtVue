@@ -24,37 +24,22 @@
     (value) => (isOpen.value = value),
     { immediate: true }
   )
+  const sizes: Record<Size, string> = {
+    xs: "sm:max-w-xs",
+    sm: "sm:max-w-sm",
+    md: "sm:max-w-md",
+    lg: "sm:max-w-lg",
+    xl: "sm:max-w-xl",
+    "2xl": "sm:max-w-2xl",
+    "3xl": "sm:max-w-3xl",
+    "4xl": "sm:max-w-4xl",
+    "5xl": "sm:max-w-5xl",
+    "6xl": "sm:max-w-6xl",
+    "7xl": "sm:max-w-7xl"
+  }
   // ---PROPS-------------------------------
   const toTeleport = computed<DialogProps["toTeleport"]>(() => props.toTeleport ?? options?.toTeleport ?? "body")
-  const size = computed<string>(() => {
-    const size: Size | undefined = props?.size ?? options?.size
-    switch (size) {
-      case "xs":
-        return "sm:max-w-xs"
-      case "sm":
-        return "sm:max-w-sm"
-      case "md":
-        return "sm:max-w-md"
-      case "lg":
-        return "sm:max-w-lg"
-      case "xl":
-        return "sm:max-w-xl"
-      case "2xl":
-        return "sm:max-w-2xl"
-      case "3xl":
-        return "sm:max-w-3xl"
-      case "4xl":
-        return "sm:max-w-4xl"
-      case "5xl":
-        return "sm:max-w-5xl"
-      case "6xl":
-        return "sm:max-w-6xl"
-      case "7xl":
-        return "sm:max-w-7xl"
-      default:
-        return "sm:max-w-2xl"
-    }
-  })
+  const size = computed<string>(() => sizes[props?.size ?? options?.size ?? "2xl"])
   const isCloseButton = computed<NonNullable<DialogProps["closeButton"]>>(
     () => props.closeButton ?? options?.closeButton ?? false
   )
@@ -126,10 +111,10 @@
   const classDialog = computed<StyleClass>(() =>
     Dialog.setStyle([
       "p-6 w-full max-w-xs max-h-full rounded-md bg-white dark:bg-neutral-950",
-      classBodyDialog.value ?? "",
-      classPosition.value ?? "",
       size.value ?? "",
-      "relative"
+      classPosition.value ?? "",
+      classBodyDialog.value ?? "",
+      "absolute"
     ])
   )
   // ---EXPOSE------------------------------
@@ -177,7 +162,7 @@
 </script>
 
 <template>
-  <Teleport defer :to="String(toTeleport)">
+  <Teleport :to="String(toTeleport)">
     <transition
       appear
       leave-active-class="transition-all ease-in-out duration-500"

@@ -1,4 +1,5 @@
 <!-- https://epic-spinners.epicmax.co -->
+<!--https://magecdn.com/tools/svg-loaders -->
 <script setup lang="ts">
   import { computed, onMounted } from "vue"
   import { colors } from "fishtvue/theme/primitive"

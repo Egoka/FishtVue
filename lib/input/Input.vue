@@ -2,7 +2,7 @@
   import type { ComponentInternalInstance } from "vue"
   import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
   import type { InputEmits, InputExpose, InputProps } from "./Input"
-  import type { InputLayoutExpose } from "fishtvue/inputlayout"
+  import type { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
   import { convertToNumber, convertToPhone, onkeydown, toNumber, toPhone } from "fishtvue/utils/numberHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -33,7 +33,11 @@
   const arrayInputType: Array<InputProps["type"]> = ["text", "number", "email", "password"]
   // ---PROPS-------------------------------
   const id = ref<NonNullable<InputProps["id"]>>(String(props?.id ?? instance.value?.uid))
-  const type = ref<InputProps["type"]>(props?.type && arrayInputType.includes(props.type) ? props?.type : "text")
+  const type = computed<InputProps["type"]>(() =>
+    props?.type && !!arrayInputType.find((i) => i === props.type) ? props?.type : "text"
+  )
+  const privateType = ref(type.value)
+  watch(type, (value) => (privateType.value = value))
   const mask = computed<InputProps["maskInput"]>(() => props?.maskInput)
   const mode = computed<NonNullable<InputProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const isValue = computed<boolean>(() => !!modelValue.value || isActiveInput.value)
@@ -71,6 +75,9 @@
     disabled: isDisabled.value,
     help: props.help,
     clear: isClear.value,
+    width: props.width,
+    height: props.height,
+    animation: props.animation,
     classBody: props.classBody,
     class: props.class
   }))
@@ -180,7 +187,7 @@
       ref="inputRef"
       :id="id"
       :name="id"
-      :type="type"
+      :type="privateType"
       :disabled="isDisabled"
       :placeholder="placeholder"
       :autocomplete="autocomplete"
@@ -200,17 +207,17 @@
     <template #after>
       <slot v-if="slots.after" name="after" />
       <Icons
-        v-if="props?.type === 'password' && type === 'password'"
+        v-if="type === 'password' && privateType === 'password'"
         data-eye-slash
         type="EyeSlash"
         class="text-gray-400 dark:text-gray-600 hover:text-cyan-500 hover:dark:text-cyan-700 transition cursor-pointer"
-        @click="type = 'text'" />
+        @click="privateType = 'text'" />
       <Icons
-        v-if="props?.type === 'password' && type === 'text'"
+        v-if="type === 'password' && privateType === 'text'"
         data-eye
         type="Eye"
         class="text-gray-400 dark:text-gray-600 hover:text-cyan-500 hover:dark:text-cyan-700 transition cursor-pointer"
-        @click="type = 'password'" />
+        @click="privateType = 'password'" />
     </template>
   </InputLayout>
 </template>

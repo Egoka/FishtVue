@@ -189,6 +189,8 @@
 
   // ---SET-LISTENER--------------------------
   function addOpenListener() {
+    if (!(isClient() && element.value && element.value instanceof HTMLElement && "addEventListener" in element.value))
+      return
     switch (eventOpen.value) {
       case "hover":
         element.value?.addEventListener("mouseover", open)
@@ -212,6 +214,10 @@
   }
 
   function removeOpenListener() {
+    if (
+      !(isClient() && element.value && element.value instanceof HTMLElement && "removeEventListener" in element.value)
+    )
+      return
     switch (eventOpen.value) {
       case "hover":
         element.value?.removeEventListener("mouseover", open)

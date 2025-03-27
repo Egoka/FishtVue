@@ -1,26 +1,32 @@
 <script setup lang="ts">
-  import { computed, onMounted, reactive, ref, watch } from "vue"
+  import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import { deepCopyObject, deepMergeSoft } from "fishtvue/utils/objectHandler"
   import type { StyleClass } from "fishtvue/types"
   import type { CursorType, Panel, SplitEmits, SplitExpose, SplitProps } from "./Split"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
+
   // ---BASE-COMPONENT----------------------
   const Split = new Component<"Split">()
   const options = Split.getOptions()
+
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<SplitProps>(), {
     separatorNotHoverOpacity: undefined
   })
   const emit = defineEmits<SplitEmits>()
+
   // ---REF-LINK----------------------------
+  let splitObserver: ResizeObserver | undefined
   const resizableGroup = ref<HTMLElement>()
   const resizablePanels = ref<Record<string, HTMLElement>>({})
+
   // ---STATE-------------------------------
   const sizePanels = reactive<Record<Panel["name"], number>>({})
   const cursorPanels = reactive<Record<Panel["name"], CursorType>>({})
   const activeCursorPanel = ref<CursorType>("center")
+
   // ---PROPS-------------------------------
   const units = computed<SplitProps["units"]>(() => props.units ?? "percentages")
   const panels = computed<SplitProps["panels"]>(
@@ -50,10 +56,12 @@
   const separatorNotHoverOpacity = computed<SplitProps["separatorNotHoverOpacity"]>(
     () => props?.separatorNotHoverOpacity ?? options?.separatorNotHoverOpacity
   )
+
   // ---STYLE-------------------------------
   const styles = computed<SplitProps["styles"]>(() =>
     deepMergeSoft<NonNullable<SplitProps["styles"]>>(deepCopyObject(options?.styles), deepCopyObject(props?.styles))
   )
+
   const separatorClass = ref<StyleClass>([
     "relative flex w-px items-center justify-center bg-gray-200 dark:bg-gray-800",
     "touch-none select-none",
@@ -61,42 +69,50 @@
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1",
     "data-[direction=vertical]:h-px data-[direction=vertical]:w-full data-[direction=vertical]:after:left-0 data-[direction=vertical]:after:h-3 data-[direction=vertical]:after:w-full data-[direction=vertical]:after:-translate-y-1/2 data-[direction=vertical]:after:translate-x-0"
   ])
+
   const separatorIconClass = computed<StyleClass>(() => [
     "split z-10 inset-y-0 flex items-center justify-center",
     separatorNotHoverOpacity.value ? "" : "transition-opacity duration-500 opacity-0",
     direction.value === "vertical" ? "rotate-90" : ""
   ])
+
   const classBase = computed<StyleClass>(() =>
     Split.setStyle([
       "h-full w-full",
       options?.class ?? "",
       props?.class ?? "",
-      isStartResize.value ? getStyleCursor(activeCursorPanel.value) : "",
+      isStartResize.value && isClient() ? getStyleCursor(activeCursorPanel.value) : "",
       "flex data-[direction=vertical]:flex-col overflow-hidden dark:text-gray-300 transition-all"
     ])
   )
+
   const classPanelBody = (panel: Panel) =>
     Split.setStyle([
       styles.value && styles.value?.panel ? styles.value?.panel : "",
       panel.class,
       "relative overflow-hidden w-full"
     ])
+
   const classSeparator = (panel: Panel) =>
-    Split.setStyle([separatorClass.value, getStyleCursor(cursorPanels[panel.name]), "group"])
+    Split.setStyle([separatorClass.value, isClient() ? getStyleCursor(cursorPanels[panel.name]) : "", "group"])
+
   const classSeparatorStrip = (panel: Panel) =>
     Split.setStyle([
       separatorIconClass.value,
-      separatorNotHoverOpacity.value ? "" : resizablePanel.value === panel.name ? "opacity-100" : ""
+      separatorNotHoverOpacity.value ? "" : resizablePanel.value === panel.name && isClient() ? "opacity-100" : ""
     ])
+
   const classSeparatorStripStyle = ref(Split.setStyle("h-8 w-1.5 bg-neutral-300 dark:bg-neutral-600 rounded-full"))
   const classSeparatorIcon = (panel: Panel) =>
     Split.setStyle([
       separatorIconClass.value,
-      separatorNotHoverOpacity.value ? "" : resizablePanel.value === panel.name ? "opacity-100" : "",
+      separatorNotHoverOpacity.value ? "" : resizablePanel.value === panel.name && isClient() ? "opacity-100" : "",
       "h-4 w-3 rounded-sm bg-neutral-300 dark:bg-neutral-600"
     ])
+
   const classSeparatorHexagonStyle = ref(Split.setStyle("h-2.5 w-2.5 bg-neutral-300 dark:bg-neutral-600"))
   const classSeparatorDisabled = ref(Split.setStyle([separatorClass.value, "group"]))
+
   // ---EXPOSE------------------------------
   defineExpose<SplitExpose>({
     // ---REF-LINK----------------------------
@@ -117,6 +133,7 @@
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
+    if (!isClient()) return // Skip on server
     Split.initStyle()
     setCursorPanels(panels.value)
     const defaultSize = getDefaultSize(panels.value)
@@ -127,9 +144,26 @@
       )
     )
     if (resizableGroup.value) {
-      splitObserver.observe(resizableGroup.value as HTMLElement)
+      splitObserver = new ResizeObserver(() => {
+        const defaultSize = getDefaultSize(panels.value)
+        Object.assign(
+          sizePanels,
+          Object.fromEntries(
+            new Map(panels.value.map((panel) => [panel.name, sizePanels[panel.name] ?? panel.size ?? defaultSize]))
+          )
+        )
+      })
+      splitObserver.observe(resizableGroup.value)
     }
   })
+
+  onUnmounted(() => {
+    if (isClient() && splitObserver && resizableGroup.value) {
+      splitObserver.unobserve(resizableGroup.value)
+      splitObserver.disconnect()
+    }
+  })
+
   // ---WATCHERS----------------------------
   watch(
     () => props.panels,
@@ -144,7 +178,9 @@
 
   // ---METHODS-----------------------------
   function setItemRef(el: HTMLElement, namePanel: Panel["name"]) {
-    resizablePanels.value[namePanel] = el
+    if (isClient()) {
+      resizablePanels.value[namePanel] = el
+    }
   }
 
   function setCursorPanels(array: SplitProps["panels"]) {
@@ -191,7 +227,7 @@
 
   // ---RESIZE-PANELS-----------------------
   function resizePanel($event: MouseEvent, namePanel: Panel["name"]) {
-    if (!resizableGroup.value && !resizablePanels.value[namePanel]) return
+    if (!isClient() || !resizableGroup.value || !resizablePanels.value[namePanel]) return
     //------------------
     const getNewSize = (panel: Panel, oldSize: number, addedSize: number): number => {
       if (
@@ -317,61 +353,49 @@
     }
   }
 
-  // ---ON-RESIZE-OBSERVER------------------
-  const splitObserver = new ResizeObserver(() => {
-    const defaultSize = getDefaultSize(panels.value)
-    Object.assign(
-      sizePanels,
-      Object.fromEntries(
-        new Map(panels.value.map((panel) => [panel.name, sizePanels[panel.name] ?? panel.size ?? defaultSize]))
-      )
-    )
-  })
   // ---ON-RESIZE-PANELS--------------------
   const resizablePanel = ref<Panel["name"] | null>(null)
   const isStartResize = ref<boolean>(false)
   const isStartMove = ref<boolean>(false)
 
   function moveResizedPanels(ev: MouseEvent) {
-    panels.value.find((panel) => panel.name === resizablePanel.value)
-    resizePanel(ev, resizablePanel.value ?? "")
+    if (!isClient() || !resizablePanel.value) return
+    resizePanel(ev, resizablePanel.value)
     emit("updated-panels", sizePanels)
-    emit("updated-size-panel", sizePanels[resizablePanel.value ?? ""], resizablePanel.value ?? "")
+    emit("updated-size-panel", sizePanels[resizablePanel.value], resizablePanel.value)
   }
 
   function startResizePanel($event: MouseEvent, namePanel: Panel["name"]) {
-    if ($event.stopPropagation) $event.stopPropagation()
-    if ($event.preventDefault) $event.preventDefault()
+    if (!isClient()) return
+    $event.stopPropagation()
+    $event.preventDefault()
     resizablePanel.value = namePanel
     isStartResize.value = true
-    if (isClient()) {
-      document.body.classList.add(getStyleCursor(activeCursorPanel.value))
-      window.addEventListener("mousemove", moveResizedPanels)
-      window.addEventListener("mouseup", stopResizePanel)
-    }
+    document.body.classList.add(getStyleCursor(activeCursorPanel.value))
+    window.addEventListener("mousemove", moveResizedPanels)
+    window.addEventListener("mouseup", stopResizePanel)
     emit("start-resize-panel", $event, namePanel)
   }
 
   function stopResizePanel($event: MouseEvent, namePanel?: Panel["name"]) {
+    if (!isClient()) return
     isStartResize.value = false
-    if (!isStartMove.value) {
-      resizablePanel.value = null
-    }
-    if (isClient()) {
-      document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
-      window.removeEventListener("mousemove", moveResizedPanels)
-      window.removeEventListener("mouseup", stopResizePanel)
-    }
+    if (!isStartMove.value) resizablePanel.value = null
+    document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
+    window.removeEventListener("mousemove", moveResizedPanels)
+    window.removeEventListener("mouseup", stopResizePanel)
     emit("stop-resize-panel", $event, namePanel as Panel["name"])
   }
 
   function moveResizePanel($event: MouseEvent, namePanel: Panel["name"]) {
+    if (!isClient()) return
     isStartMove.value = true
     if (!isStartResize.value) resizablePanel.value = namePanel
     emit("move-resize-panel", $event, namePanel)
   }
 
   function outResizePanel($event: MouseEvent, namePanel: Panel["name"]) {
+    if (!isClient()) return
     isStartMove.value = false
     if (!isStartResize.value) resizablePanel.value = null
     emit("out-resize-panel", $event, namePanel)
@@ -438,7 +462,7 @@
               d="M5.5 4.625C6.12132 4.625 6.625 4.12132 6.625 3.5C6.625 2.87868 6.12132 2.375 5.5 2.375C4.87868 2.375 4.375 2.87868 4.375 3.5C4.375 4.12132 4.87868 4.625 5.5 4.625ZM9.5 4.625C10.1213 4.625 10.625 4.12132 10.625 3.5C10.625 2.87868 10.1213 2.375 9.5 2.375C8.87868 2.375 8.375 2.87868 8.375 3.5C8.375 4.12132 8.87868 4.625 9.5 4.625ZM10.625 7.5C10.625 8.12132 10.1213 8.625 9.5 8.625C8.87868 8.625 8.375 8.12132 8.375 7.5C8.375 6.87868 8.87868 6.375 9.5 6.375C10.1213 6.375 10.625 6.87868 10.625 7.5ZM5.5 8.625C6.12132 8.625 6.625 8.12132 6.625 7.5C6.625 6.87868 6.12132 6.375 5.5 6.375C4.87868 6.375 4.375 6.87868 4.375 7.5C4.375 8.12132 4.87868 8.625 5.5 8.625ZM10.625 11.5C10.625 12.1213 10.1213 12.625 9.5 12.625C8.87868 12.625 8.375 12.1213 8.375 11.5C8.375 10.8787 8.87868 10.375 9.5 10.375C10.1213 10.375 10.625 10.8787 10.625 11.5ZM5.5 12.625C6.12132 12.625 6.625 12.1213 6.625 11.5C6.625 10.8787 6.12132 10.375 5.5 10.375C4.87868 10.375 4.375 10.8787 4.375 11.5C4.375 12.1213 4.87868 12.625 5.5 12.625Z"
               fill="currentColor"
               fill-rule="evenodd"
-              clip-rule="evenodd"></path>
+              clip-rule="evenodd" />
           </svg>
           <Icons
             v-else

@@ -1,3 +1,6 @@
+<!--https://github.com/nuxt/icon -->
+<!--https://icones.js.org/ -->
+<!--https://icon-sets.iconify.design/ -->
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from "vue"
   import type { IconsExpose, IconsProps } from "./Icons"

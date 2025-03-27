@@ -111,6 +111,9 @@
     disabled: isDisabled.value,
     help: props.help,
     clear: props.clear ?? options?.clear,
+    width: props.width,
+    height: props.height,
+    animation: props.animation,
     classBody: props.classBody ?? options?.classBody,
     class: classStyle.value
   }))
@@ -141,9 +144,12 @@
     ready
   })
   // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
+  onMounted(async () => {
     TextEditor.initStyle()
     instance.value = getCurrentInstance()
+    if (isClient()) {
+      QuillEditor = (await import("@vueup/vue-quill")).QuillEditor
+    }
   })
   // ---WATCHERS----------------------------
   watch(theme, (theme) => {
@@ -157,11 +163,6 @@
           ? ` border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700 ${additionalStyles.value}`
           : " " + additionalStyles.value)
       if (!value) changeModelValue(modelValue.value)
-    }
-  })
-  onBeforeMount(async () => {
-    if (isClient()) {
-      QuillEditor = (await import("@vueup/vue-quill")).QuillEditor
     }
   })
   let QuillEditor: any

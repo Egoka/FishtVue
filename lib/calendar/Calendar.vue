@@ -37,13 +37,13 @@
   const slots = useSlots()
   // ---REF-LINK----------------------------
   const layout = ref<InputLayoutExpose>()
-  const dataPicker = ref<HTMLElement>()
+  const datePickerLink = ref<HTMLElement>()
   const picker = ref<HTMLElement>()
   // ---STATE-------------------------------
   const instance = ref<ComponentInternalInstance | null>()
   const isFocus = ref<boolean>(false)
   const isOpenPicker = ref<boolean>(false)
-  const datePicker = computed<Partial<IParamsDatePicker>>(() => ({
+  const datePickerOptions = computed<Partial<IParamsDatePicker>>(() => ({
     borderless: true,
     transparent: true,
     color: "theme",
@@ -107,7 +107,7 @@
     () => props.paramsDatePicker?.separator ?? "arrow"
   )
   const valueLayout = computed<string>(() =>
-    datePicker.value?.isRange
+    datePickerOptions.value?.isRange
       ? (visibleDate.value as IRangeDate)?.start && (visibleDate.value as IRangeDate)?.end
         ? `${(visibleDate.value as IRangeDate)?.start} > ${(visibleDate.value as IRangeDate)?.end}`
         : ""
@@ -137,14 +137,14 @@
   }))
   const classDataPicker = computed(() =>
     Calendar.setStyle([
-      "w-full focus:outline-0 focus:ring-0 items-center",
+      "w-56 focus:outline-0 focus:ring-0 items-center",
       options?.classDataPicker ?? "",
       props?.classDataPicker ?? "",
       "flex min-h-[36px] max-h-16 overflow-auto"
     ])
   )
   const classDateText = computed(() =>
-    datePicker.value?.isRange
+    datePickerOptions.value?.isRange
       ? Calendar.setStyle([
           options?.classDateText ?? "",
           props?.classDateText ?? "",
@@ -187,6 +187,9 @@
     disabled: isDisabled.value,
     help: props.help,
     clear: props.clear,
+    width: props.width,
+    height: props.height,
+    animation: props.animation,
     classBody: props.classBody,
     class: props.class
   }))
@@ -195,12 +198,12 @@
     //---STATE-------------------------
     layout,
     inputLayout,
-    dataPicker,
+    datePickerLink,
     picker,
     calendarPicker,
     isFocus,
     isOpenPicker,
-    datePicker,
+    datePickerOptions,
     value,
     visibleDate,
     // ---PROPS-------------------------------
@@ -271,9 +274,9 @@
   function closeCalendar(event?: MouseEvent) {
     if (isDisabled.value) return
     if (event) {
-      if ((isOpenPicker.value ?? false) && ((dataPicker.value ?? false) || (picker.value ?? false)))
+      if ((isOpenPicker.value ?? false) && ((datePickerLink.value ?? false) || (picker.value ?? false)))
         isOpenPicker.value =
-          event.composedPath().includes(dataPicker.value as HTMLElement) ||
+          event.composedPath().includes(datePickerLink.value as HTMLElement) ||
           event.composedPath().includes(picker.value as HTMLElement)
     } else isOpenPicker.value = false
   }
@@ -308,7 +311,7 @@
 <template>
   <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="clearDataPicker">
     <div
-      ref="dataPicker"
+      ref="datePickerLink"
       :id="id"
       data-calendar
       tabindex="0"
@@ -316,7 +319,7 @@
       @focusin="focus(true)"
       @focusout="focus(false)"
       @click="openCalendar">
-      <div v-if="datePicker?.isRange" :class="classDateText">
+      <div v-if="datePickerOptions?.isRange" :class="classDateText">
         {{ (visibleDate as IRangeValue)?.start }}
         <Icons
           v-if="separator === 'arrow' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
@@ -350,9 +353,9 @@
         @close="(env) => closeCalendar(env)">
         <div data-calendar-picker ref="picker" :class="classPicker">
           <DatePicker
-            v-if="datePicker?.isRange"
+            v-if="datePickerOptions?.isRange"
             v-model.range.string="value"
-            v-bind="fieldsOmit(datePicker, ['isRange'])"
+            v-bind="fieldsOmit(datePickerOptions, ['isRange'])"
             ref="calendarPicker"
             class="vc-primary"
             @update:modelValue="changeDate">
@@ -363,7 +366,7 @@
           <DatePicker
             v-else
             v-model.string="value"
-            v-bind="fieldsOmit(datePicker, ['isRange'])"
+            v-bind="fieldsOmit(datePickerOptions, ['isRange'])"
             ref="calendarPicker"
             class="vc-primary"
             @update:modelValue="changeDate">

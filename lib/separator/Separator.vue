@@ -30,9 +30,9 @@
   const classBase = computed<SeparatorProps["class"]>(() =>
     Separator.setStyle([
       "justify-center",
+      vertical.value ? "flex-col h-full" : "",
       options?.class ?? "",
       props?.class ?? "",
-      vertical.value ? "flex-col h-full" : "",
       "relative flex"
     ])
   )

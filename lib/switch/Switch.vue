@@ -216,7 +216,7 @@
         @input="inputEvent(($event.target as HTMLInputElement).checked)"
         @change="changeModelValue(($event.target as HTMLInputElement).checked)" />
     </div>
-    <div data-switch-label :class="classLabel" @click="inputEvent(!modelValue)">
+    <div v-if="label?.length" data-switch-label :class="classLabel" @click="inputEvent(!modelValue)">
       {{ label }}
     </div>
     <slot />

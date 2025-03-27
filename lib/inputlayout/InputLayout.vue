@@ -53,18 +53,20 @@
   const isInvalid = computed<InputLayoutProps["isInvalid"]>(() => (!isDisabled.value ? props.isInvalid : false))
   const messageInvalid = computed<InputLayoutProps["messageInvalid"]>(() => props.messageInvalid ?? "")
   const help = computed<InputLayoutProps["help"]>(() => String(props.help ?? ""))
-  const width = computed<InputLayoutProps["width"]>(() =>
-    props?.width ? (typeof props?.width === "number" ? `${props?.width}px` : props?.width) : ""
-  )
-  const height = computed<InputLayoutProps["height"]>(() =>
-    props?.height ? (typeof props?.height === "number" ? `${props?.height}px` : props?.height) : `${baseHeight}px`
-  )
+  const widthLayout = computed<string>(() => {
+    const resultWidth: InputLayoutProps["width"] = props?.width ?? options?.height ?? ""
+    return resultWidth ? (typeof resultWidth === "number" ? `${resultWidth}px` : resultWidth) : ""
+  })
+  const heightLayout = computed<string>(() => {
+    const resultHeight: InputLayoutProps["height"] = props?.height ?? options?.height ?? ""
+    return resultHeight ? (typeof resultHeight === "number" ? `${resultHeight}px` : resultHeight) : ""
+  })
   const animation = computed<NonNullable<InputLayoutProps["animation"]>>(() =>
     isTick.value ? (props?.animation ?? options?.animation ?? "transition-all duration-550") : ""
   )
   const classBody = computed(() =>
     InputLayout.setStyle([
-      "inputBody classBody relative mb-6 rounded-md",
+      "inputBody classBody relative rounded-md",
       animation.value ?? "",
       options?.classBody ?? "",
       props?.classBody ?? "",
@@ -73,7 +75,8 @@
   )
   const classBase = computed(() =>
     InputLayout.setStyle([
-      "classLayout rounded-md w-full max-h-20 text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
+      "classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
+      heightLayout.value.length ? "" : "max-h-20",
       mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-950" : "",
       mode.value === "underlined"
         ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
@@ -90,13 +93,13 @@
       isDisabled.value
         ? "bg-neutral-50 dark:bg-neutral-950 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-800 border-dashed shadow-none"
         : "",
-      "block peer overflow-auto"
+      "flex items-center peer overflow-auto"
     ])
   )
   const styleBase = computed(
     () =>
-      (width.value ? `width:${width.value};` : "") +
-      (height.value ? `height:${height.value};` : "") +
+      (widthLayout.value ? `width:${widthLayout.value};` : "") +
+      (heightLayout.value ? `height:${heightLayout.value};` : "") +
       (baseHeight ? `min-height: ${baseHeight}px;` : "") +
       (beforeWidth.value ? `padding-left: ${beforeWidth.value}px;` : "padding-left: 10px;") +
       (afterWidth.value ? `padding-right: ${afterWidth.value}px;` : "padding-right: 10px;")
@@ -109,7 +112,7 @@
   )
   const classAfterInput = computed(() => InputLayout.setStyle("absolute inset-y-0 right-0 flex items-center"))
   const classAfterSlot = computed(() => InputLayout.setStyle("flex pr-2"))
-  const classLoading = computed(() => InputLayout.setStyle("relative mx-2"))
+  const classLoading = computed(() => InputLayout.setStyle("relative mx-4"))
   const classInvalid = computed(() =>
     InputLayout.setStyle(
       "absolute block text-red-600 dark:text-red-400 text-sm truncate ml-1 data-[invalid=true]:visible invisible"
@@ -149,8 +152,8 @@
     isInvalid,
     messageInvalid,
     help,
-    width,
-    height,
+    width: widthLayout,
+    height: heightLayout,
     animation,
     classBody,
     class: classBase,
@@ -220,13 +223,17 @@
 </script>
 
 <template>
-  <div data-input-layout ref="inputBody" :class="classBody" :style="`scroll-margin-top: ${headerHeight + 10}px;`">
+  <div
+    data-input-layout
+    ref="inputBody"
+    :class="classBody"
+    :style="`${widthLayout ? `width:${widthLayout};` : ''}${heightLayout ? `height:${heightLayout};` : ''}scroll-margin-top: ${headerHeight + 10}px;`">
     <div
       v-if="slots.before"
       data-input-layout-before
       ref="beforeInput"
       :class="classBeforeInput"
-      :style="`height: ${height};max-height: 4rem;`">
+      :style="`${heightLayout ? `height:${heightLayout};` : ''}max-height: 4rem;`">
       <slot name="before" />
     </div>
     <div data-input-layout-base ref="input" :class="classBase" :style="styleBase">
@@ -241,7 +248,10 @@
       :is-required="isRequired"
       :translate-x="beforeWidth || 10"
       :max-width="widthInput" />
-    <span ref="afterInput" :class="classAfterInput" :style="`height: ${height};max-height: 4rem;`">
+    <span
+      ref="afterInput"
+      :class="classAfterInput"
+      :style="`${heightLayout ? `height:${heightLayout};` : ''}max-height: 15rem;`">
       <div v-if="slots.after" data-input-layout-after :class="classAfterSlot">
         <slot name="after" />
       </div>
@@ -253,7 +263,7 @@
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
         <div v-if="isLoading" data-loading :class="classLoading">
-          <Loading v-if="isLoading" type="simple" class="absolute" />
+          <Loading v-if="isLoading" type="simple" class="absolute top-[3px] -left-4" />
         </div>
       </transition>
       <div v-if="help?.length" data-input-layout-help :class="classIconBody">
@@ -263,6 +273,7 @@
         <FixWindow
           :mode="mode"
           event-open="click"
+          event-close="hover"
           position="bottom-right"
           :margin-px="12.0"
           :padding-window="40"
@@ -278,6 +289,7 @@
           <FixWindow
             :mode="mode"
             event-open="click"
+            event-close="hover"
             position="bottom-right"
             :margin-px="12.0"
             :padding-window="40"
@@ -320,7 +332,7 @@
       data-input-layout-message-invalid
       :data-invalid="isInvalid"
       :class="classInvalid"
-      :style="`max-width: ${inputBody?.['offsetWidth'] || 10}px`">
+      :style="`max-width: ${inputBody?.['offsetWidth'] ?? 10}px`">
       {{ messageInvalid }}
     </p>
   </div>

@@ -78,6 +78,7 @@
     clear: props.clear,
     width: props.width,
     height: props.height,
+    animation: props.animation,
     classBody: props.classBody,
     class: classStyle.value
   }))

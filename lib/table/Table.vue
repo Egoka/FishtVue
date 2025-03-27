@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, useSlots, watch } from "vue"
-  import * as LD from "lodash"
+  import * as LD from "lodash-es"
   import dayjs from "dayjs"
   import isBetween from "dayjs/plugin/isBetween"
   import {
