@@ -1,8 +1,7 @@
 <script setup lang="ts">
   import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, useSlots, watch } from "vue"
   import * as LD from "lodash-es"
-  import dayjs from "dayjs"
-  import isBetween from "dayjs/plugin/isBetween"
+  import { format, isEqual, isValid, isWithinInterval, startOfDay } from "date-fns"
   import {
     ArrowLongDownIcon,
     ArrowLongUpIcon,
@@ -53,9 +52,11 @@
   import { BaseSelectProps } from "fishtvue/select"
   import { BaseCalendarProps, IRangeValue } from "fishtvue/calendar"
   import { InputLayoutProps } from "fishtvue/inputlayout"
+  import { isClient } from "fishtvue/utils/domHandler"
+  import { formatDate } from "fishtvue/utils/dateHandler"
+  import { generateUUID } from "fishtvue/utils/functionHandler"
   import { convertToNumber, convertToPhone, isNumber } from "fishtvue/utils/numberHandler"
   import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
-  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Table = new Component<"Table">()
   const options = Table.getOptions()
@@ -246,14 +247,16 @@
   const isLoadingRows = computed(() => countVisibleRows.value > 0)
   // ---DATA--------------------------------
   const dataGrouping = computed<DataGrouping>(() => {
-    let data = toRaw(dataSource.value)
+    let data: Array<Record<string, any>> = toRaw(dataSource.value)
     if (isPagination.value) {
-      if (isGroup.value && groupField.value)
-        data = Object.values(LD.groupBy(data, (item) => item[groupField.value as string])).flat()
+      if (isGroup.value && groupField.value) {
+        const grouped = LD.groupBy(data, (item: Record<string, any>) => item[groupField.value as string])
+        data = Object.values(grouped as Record<string, Array<Record<string, any>>>).flat()
+      }
       data = LD.slice(data, sizeTable.value * (pageTable.value - 1), sizeTable.value * pageTable.value)
     }
     return isGroup.value && groupField.value
-      ? LD.groupBy(data, (item) => item[groupField.value as string])
+      ? LD.groupBy(data, (item: Record<string, any>) => item[groupField.value as string])
       : { 0: data }
   })
   const resultDataSource = computed<ResultData>(() => {
@@ -911,7 +914,7 @@
     () => props.dataSource,
     () => {
       allData.value = props.dataSource?.length
-        ? props.dataSource?.map((item) => ({ ...item, _key: crypto.randomUUID() }))
+        ? props.dataSource?.map((item) => ({ ...item, _key: generateUUID() }))
         : []
       updateDataSource()
     },
@@ -1108,18 +1111,18 @@
         else return String(columnValue).includes(value)
       }
       case "date": {
-        if (value instanceof Date)
-          return dayjs(dayjs(columnValue).startOf("day")).isSame(dayjs(value as Date).startOf("day"))
-        else {
-          if (value?.start instanceof Date && value?.end instanceof Date) {
-            dayjs.extend(isBetween)
-            return dayjs(dayjs(columnValue).startOf("day")).isBetween(
-              dayjs((value as IRangeValue)?.start as Date).startOf("day"),
-              dayjs((value as IRangeValue)?.end as Date).startOf("day"),
-              null,
-              "[]"
-            )
-          } else return false
+        if (value instanceof Date) {
+          return isEqual(startOfDay(columnValue), startOfDay(value))
+        } else {
+          const range = value as IRangeValue
+          if (range?.start instanceof Date && range?.end instanceof Date) {
+            return isWithinInterval(startOfDay(columnValue), {
+              start: startOfDay(range.start),
+              end: startOfDay(range.end)
+            })
+          } else {
+            return false
+          }
         }
       }
       default:
@@ -1214,7 +1217,7 @@
           valueCell = toMask()
           break
         case "date":
-          valueCell = dayjs(value).format((column as EditDate).paramsFilter?.paramsDatePicker?.mask)
+          valueCell = formatDate(value, (column as EditDate).paramsFilter?.paramsDatePicker?.mask)
           break
         default:
           valueCell = value
@@ -1312,7 +1315,7 @@
 
   function addRow(data: any): false | number {
     if (data) {
-      const newValueRow: any = { ...data, _key: crypto.randomUUID() }
+      const newValueRow: any = { ...data, _key: generateUUID() }
       const index: number = (allData.value as Array<any>)?.push(newValueRow) - 1
       emit("add-row", { value: data, index, _key: newValueRow._key })
       return index

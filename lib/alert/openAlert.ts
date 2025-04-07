@@ -3,6 +3,7 @@ import Alert from "./Alert.vue"
 import Component from "fishtvue/component"
 import type { BaseAlert } from "./Alert"
 import { isClient } from "fishtvue/utils/domHandler"
+import { generateUUID } from "fishtvue/utils/functionHandler"
 
 const valuesPosition = [
   "top",
@@ -21,7 +22,7 @@ export function openAlert(optionsAlert: BaseAlert) {
   const AlertComponent = new Component<"Alert">("Alert")
   const globalOptions = AlertComponent.getOptions()
   // SET alertId
-  const alertId = `alert-${crypto.randomUUID()}`
+  const alertId = `alert-${generateUUID()}`
   // SET options
   const options: BaseAlert = Object.assign({}, optionsAlert)
   if (!options.position || !(options?.position && valuesPosition.includes(options.position))) {

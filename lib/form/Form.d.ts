@@ -138,6 +138,12 @@ export type FieldUseInputLayout = FieldInput | FieldAria | FieldSelect | FieldCa
  */
 export interface FormStructure {
   /**
+   * Array of fields in the section.
+   * @type {Array<FieldType>}
+   */
+  fields: Array<FieldType>
+
+  /**
    * Indicates whether the section is hidden.
    * @type {boolean | undefined}
    */
@@ -154,12 +160,6 @@ export interface FormStructure {
    * @type {string | undefined}
    */
   classGrid?: "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10" | string
-
-  /**
-   * Array of fields in the section.
-   * @type {Array<FieldType>}
-   */
-  fields: Array<FieldType>
 
   /**
    * Additional custom properties for the section.
@@ -247,8 +247,9 @@ export interface FormProps {
 
 export declare type FormSlots = {
   default(): VNode[]
-  itemTitle(): VNode[]
+  itemTitle(structure: any): VNode[]
   footer(): VNode[]
+  [key: string]: (data: FieldCustom & FormValues) => VNode[]
 }
 
 /**

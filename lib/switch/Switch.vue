@@ -42,7 +42,7 @@
   const classBaseSwitch = computed<StyleClass>(() =>
     switchingType.value === "switch"
       ? Switch.setStyle([
-          "my-4 py-[6px] px-2 rounded-md",
+          "min-w-20 my-4 py-[6px] px-2 rounded-md",
           mode.value === "outlined"
             ? `border border-gray-300 dark:border-gray-600 bg-white dark:bg-black ${isDisabled.value ? "bg-slate-50 dark:bg-stone-950 border-dashed" : ""}`
             : "",
@@ -61,7 +61,7 @@
         ])
       : switchingType.value === "checkbox"
         ? Switch.setStyle([
-            "gap-x-3 my-4 py-[6px] px-2 rounded-md",
+            "min-w-20 gap-x-3 my-4 py-[6px] px-2 rounded-md",
             mode.value === "outlined"
               ? `border border-gray-300 dark:border-gray-600 bg-white dark:bg-black ${isDisabled.value ? "bg-slate-50 dark:bg-stone-950 border-dashed" : ""}`
               : "",
@@ -101,7 +101,7 @@
   const classLabel = computed(() =>
     switchingType.value === "switch"
       ? Switch.setStyle([
-          "font-medium text-sm leading-6 text-gray-900 dark:text-gray-100",
+          "font-medium text-sm leading-6 text-gray-900 dark:text-gray-100 cursor-pointer",
           isDisabled.value ? "pointer-events-none text-slate-800 dark:text-slate-200" : "",
           isRequired.value ? `after:content-['*'] after:text-red-500 after:ml-1` : ""
         ])

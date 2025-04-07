@@ -1,6 +1,7 @@
 import { FormValues } from "fishtvue/form"
 import { email, length, numeric, phone, range, regular, required } from "./rulesMethods"
 import { fieldsPick } from "fishtvue/utils/objectHandler"
+import { isFunction } from "fishtvue/utils/functionHandler"
 
 type message = string
 type ReturnValid = { isInvalid: boolean; message: string }
@@ -33,7 +34,7 @@ export declare type NumericRule = Rule & {
 }
 type Regular = {
   regular: RegExp | string
-}
+} & Rule
 export declare type RegularRule = Rule &
   Regular & {
     type: "regular"
@@ -84,7 +85,7 @@ export declare type CompareRule = Rule &
   }
 
 // ---------------------------------------
-type RulesArray = Array<
+export type RulesArray = Array<
   | RequiredRule
   | EmailRule
   | PhoneRule
@@ -97,7 +98,7 @@ type RulesArray = Array<
   | CompareRule
 >
 type RuleObject = message | boolean | Rule
-type RulesObject = {
+export type RulesObject = {
   required?: RuleObject
   email?: RuleObject
   phone?: RuleObject
@@ -173,7 +174,7 @@ function toRulesArray(rules: RulesArray | RulesObject): RulesArray {
                   ? defaultMessages[rule]
                   : ""
                 : typeof rules[rule] === "object"
-                  ? ((rules[rule] as Rule)?.message ?? "")
+                  ? ((rules[rule] as Rule)?.message ?? defaultMessages[rule] ?? "")
                   : ""
           const isActive =
             typeof rules[rule] === "boolean"
@@ -196,7 +197,7 @@ function toRulesArray(rules: RulesArray | RulesObject): RulesArray {
               type,
               message,
               isActive,
-              compareField: rules[rule]?.compareFields,
+              compareFields: rules[rule]?.compareFields,
               validationCallback: rules[rule]?.validationCallback
             } as CompareRule
         })
@@ -230,13 +231,15 @@ export function getValidate(value: any, rules: Rules, formFields: FormValues): R
         return true
       }
     } else if (rule.type === "compare") {
-      const result = rule?.validationCallback(
-        value,
-        rule?.compareFields && rule?.compareFields?.length ? fieldsPick(formFields, rule?.compareFields) : formFields
-      )
-      if (result !== undefined && result?.isInvalid) {
-        message = result?.message ?? rule?.message ?? ""
-        return true
+      if (isFunction(rule?.validationCallback)) {
+        const result = rule?.validationCallback(
+          value,
+          rule?.compareFields && rule?.compareFields?.length ? fieldsPick(formFields, rule?.compareFields) : formFields
+        )
+        if (result !== undefined && result?.isInvalid) {
+          message = result?.message ?? rule?.message ?? ""
+          return true
+        }
       }
     }
   })

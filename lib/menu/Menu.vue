@@ -17,6 +17,7 @@
   import type { SeparatorProps } from "fishtvue/separator"
   import type { _key, RefLink, StyleClass } from "fishtvue/types"
   import { deepCopyObject, deepMergeSoft, fieldsOmit } from "fishtvue/utils/objectHandler"
+  import { generateUUID } from "fishtvue/utils/functionHandler"
   import Icons from "fishtvue/icons/Icons.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import Separator from "fishtvue/separator/Separator.vue"
@@ -257,7 +258,7 @@
               items: group.items?.map((item): ItemMenuPrivate => {
                 return {
                   ...item,
-                  _key: crypto.randomUUID(),
+                  _key: generateUUID(),
                   menu: item?.menu
                     ? setItems(
                         {

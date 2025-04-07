@@ -1,10 +1,11 @@
 import { mount } from "@vue/test-utils"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
+import { format, addDays } from "date-fns"
+import * as functionHandler from "fishtvue/utils/functionHandler"
 import Table from "fishtvue/table/Table.vue"
 import { TableOption, TableProps } from "fishtvue/table/Table"
 import { nextTick } from "vue"
-
 describe("Table Component", () => {
   beforeAll(() => {
     // @ts-ignore
@@ -499,13 +500,18 @@ describe("Table Component", () => {
       })
     })
     describe("Table Component - Pagination", () => {
-      const generateData = (count: number) =>
-        Array.from({ length: count }, (_, i) => ({
-          id: i + 1,
-          name: `Item ${i + 1}`,
-          date: `2023-10-${String(i + 1).padStart(2, "0")}`,
-          value: i * 10
-        }))
+      const generateData = (count: number) => {
+        const startDate = new Date(2023, 9, 1) // October 1, 2023
+        return Array.from({ length: count }, (_, i) => {
+          const currentDate = addDays(startDate, i)
+          return {
+            id: i + 1,
+            name: `Item ${i + 1}`,
+            date: format(currentDate, "yyyy-MM-dd"),
+            value: i * 10
+          }
+        })
+      }
 
       it("renders table with pagination enabled", () => {
         const wrapper = mount(Table, {
@@ -759,7 +765,7 @@ describe("Table Component", () => {
     })
     describe("Table Component - External Methods", () => {
       it("adds a new row using addRow", async () => {
-        const uuidMock = vi.spyOn(crypto, "randomUUID")
+        const uuidMock = vi.spyOn(functionHandler, "generateUUID")
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
