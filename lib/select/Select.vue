@@ -103,7 +103,7 @@
   const isMultiple = computed<NonNullable<SelectProps["multiple"]>>(() => props?.multiple ?? options?.multiple ?? false)
   const maxVisible = computed<SelectProps["maxVisible"] | undefined>(() => {
     const result = props?.maxVisible ?? options?.maxVisible
-    return result && typeof +result === "number" ? +result : undefined
+    return result !== undefined && typeof +result === "number" ? +result : undefined
   })
   const closeButtonBadge = computed<SelectProps["closeButtonBadge"] | undefined>(
     () => props?.closeButtonBadge ?? options?.closeButtonBadge ?? false

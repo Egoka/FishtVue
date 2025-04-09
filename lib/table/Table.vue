@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, useSlots, watch } from "vue"
   import * as LD from "lodash-es"
-  import { format, isEqual, isValid, isWithinInterval, startOfDay } from "date-fns"
+  import { isEqual, isWithinInterval, startOfDay } from "date-fns"
   import {
     ArrowLongDownIcon,
     ArrowLongUpIcon,
@@ -310,10 +310,10 @@
             case "string": {
               options.paramsFilter = { autocomplete: "off", ...column.paramsFilter } as Partial<BaseInputProps>
               options.edit = {
-                paramsFilter: {
+                editorOptions: {
                   ...options.paramsFilter,
                   autoFocus: true,
-                  ...(column?.edit as EditInput)?.paramsFilter
+                  ...(column?.edit as EditInput)?.editorOptions
                 } as Partial<BaseInputProps>
               }
               break
@@ -325,10 +325,10 @@
                 ...column.paramsFilter
               } as Partial<BaseInputProps>
               options.edit = {
-                paramsFilter: {
+                editorOptions: {
                   ...options.paramsFilter,
                   autoFocus: true,
-                  ...(column?.edit as EditInput)?.paramsFilter
+                  ...(column?.edit as EditInput)?.editorOptions
                 } as Partial<BaseInputProps>
               }
               break
@@ -339,7 +339,11 @@
                 maxVisible: 0,
                 classSelect: "normal-case font-normal max-h-[25rem]",
                 classSelectList: "normal-case font-normal",
-                dataSelect: LD.compact(LD.uniq(LD.map(allData.value, options.dataField ?? ""))) ?? [],
+                dataSelect:
+                  (column?.paramsFilter as Partial<BaseSelectProps>)?.dataSelect ??
+                  LD.compact(LD.uniq(LD.map(allData.value, options.dataField ?? ""))).sort((a, b) =>
+                    String(a).localeCompare(String(b))
+                  ),
                 paramsFixWindow: {
                   position: "bottom",
                   ...(column?.paramsFilter as Partial<BaseSelectProps>)?.paramsFixWindow
@@ -347,15 +351,15 @@
                 ...column.paramsFilter
               } as Partial<BaseSelectProps>
               options.edit = {
-                paramsFilter: (<BaseSelectProps>{
+                editorOptions: (<BaseSelectProps>{
                   ...options.paramsFilter,
                   autoFocus: true,
                   multiple: false,
-                  ...(column?.edit as EditSelect)?.paramsFilter,
+                  ...(column?.edit as EditSelect)?.editorOptions,
                   paramsFixWindow: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...(column?.edit as EditSelect)?.paramsFilter?.paramsFixWindow
+                    ...(column?.edit as EditSelect)?.editorOptions?.paramsFixWindow
                   }
                 }) as Partial<BaseSelectProps>
               }
@@ -389,20 +393,20 @@
                 ...column.paramsFilter
               } as Partial<BaseCalendarProps>
               options.edit = {
-                paramsFilter: {
+                editorOptions: {
                   ...options.paramsFilter,
                   paramsDatePicker: {
                     ...(options?.paramsFilter as Partial<BaseCalendarProps>)?.paramsDatePicker,
                     isRange: false
                   },
                   autoFocus: true,
-                  ...(column?.edit as EditDate)?.paramsFilter,
+                  ...(column?.edit as EditDate)?.editorOptions,
                   label: "",
                   labelMode: "none",
                   paramsFixWindow: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...((column?.edit as EditDate)?.paramsFilter as Partial<BaseCalendarProps>)?.paramsFixWindow
+                    ...((column?.edit as EditDate)?.editorOptions as Partial<BaseCalendarProps>)?.paramsFixWindow
                   }
                 } as Partial<BaseCalendarProps> & Pick<InputLayoutProps, "label" | "labelMode">
               }
@@ -1217,7 +1221,7 @@
           valueCell = toMask()
           break
         case "date":
-          valueCell = formatDate(value, (column as EditDate).paramsFilter?.paramsDatePicker?.mask)
+          valueCell = formatDate(value, (column as EditDate).editorOptions?.paramsDatePicker?.mask)
           break
         default:
           valueCell = value
@@ -1629,9 +1633,9 @@
                               v-if="column.type === 'string' || column.type === 'number'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditInput)?.paramsFilter,
+                                ...(column.edit as EditInput)?.editorOptions,
                                 classInput: `pt-[5px] pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditInput)?.paramsFilter?.classInput
+                                  (column.edit as EditInput)?.editorOptions?.classInput
                                 }`
                               }"
                               :mode="mode"
@@ -1644,13 +1648,13 @@
                               v-else-if="column.type === 'select'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditSelect)?.paramsFilter,
+                                ...(column.edit as EditSelect)?.editorOptions,
                                 paramsFixWindow: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditSelect)?.paramsFilter?.paramsFixWindow
+                                  ...(column.edit as EditSelect)?.editorOptions?.paramsFixWindow
                                 },
                                 classSelect: `pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditSelect)?.paramsFilter?.classSelect
+                                  (column.edit as EditSelect)?.editorOptions?.classSelect
                                 }`
                               }"
                               :mode="mode"
@@ -1667,13 +1671,13 @@
                               v-else-if="column.type === 'date'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditDate)?.paramsFilter,
+                                ...(column.edit as EditDate)?.editorOptions,
                                 paramsFixWindow: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditDate)?.paramsFilter?.paramsFixWindow
+                                  ...(column.edit as EditDate)?.editorOptions?.paramsFixWindow
                                 },
                                 classDateText: `pt-[7px] pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditDate)?.paramsFilter?.classDateText
+                                  (column.edit as EditDate)?.editorOptions?.classDateText
                                 }`
                               }"
                               :mode="mode"
@@ -1747,6 +1751,7 @@
             :is-hidden-navigation-buttons="isHiddenNavigationButtons"
             :class="[
               'classPagination border-t sm:px-2',
+              ((pagination as TablePagination)?.class as string) ?? '',
               styles.class?.pagination as string,
               defaultBorder as string,
               styles.border?.pagination as string

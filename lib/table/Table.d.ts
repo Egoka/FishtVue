@@ -31,7 +31,7 @@ type EditorCell = {
   isEdit?: boolean
 }
 export type EditInput = EditorCell & {
-  paramsFilter?: Partial<BaseInputProps>
+  editorOptions?: Partial<BaseInputProps>
 }
 type InputDataType = {
   type?: "string" | "number"
@@ -39,7 +39,7 @@ type InputDataType = {
   edit?: EditInput | boolean
 }
 export type EditSelect = EditorCell & {
-  paramsFilter?: Partial<BaseSelectProps>
+  editorOptions?: Partial<BaseSelectProps>
 }
 type SelectDataType = {
   type?: "select"
@@ -47,7 +47,7 @@ type SelectDataType = {
   edit?: EditSelect | boolean
 }
 export type EditDate = EditorCell & {
-  paramsFilter?: Partial<BaseCalendarProps>
+  editorOptions?: Partial<BaseCalendarProps>
 }
 type DateDataType = {
   type?: "date"
@@ -716,8 +716,17 @@ export declare type TableSlots = {
   toolbar(): VNode[]
   header(): VNode[]
   group(): VNode[]
-  default(): VNode[]
   footer(): VNode[]
+  [key: string]: (args: {
+    name: string
+    key: string
+    column: IColumn
+    rowData: Record<string, any>
+    value: string
+    valueWithMarker: string
+    isCloseEditor: (isActive: boolean) => boolean
+    editValue: (value: any) => false | any
+  }) => VNode[]
 }
 /**
  * Defines the events emitted by the Table component.

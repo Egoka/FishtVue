@@ -147,21 +147,18 @@
   const classInfoText = ref(Pagination.setStyle("w-28 md:w-40 text-center -mb-4"))
   const classInfoTextContent = ref(Pagination.setStyle("text-sm text-gray-600 dark:text-gray-500"))
   const classInfoTextPage = ref(Pagination.setStyle("font-bold dark:text-gray-400"))
-  const classNav = computed(() =>
-    Pagination.setStyle([
-      "isolate inline-flex rounded-md",
-      isInfoText.value || isPageSizeSelector.value ? "w-full" : ""
-    ])
-  )
+  const classNav = computed(() => Pagination.setStyle(["w-full isolate inline-flex rounded-md"]))
   const classPrevious = computed(() =>
     Pagination.setStyle([
-      isInfoText.value || isPageSizeSelector.value ? "-mt-px flex flex-1 w-12" : "",
+      "flex flex-1",
+      isInfoText.value || isPageSizeSelector.value ? "-mt-px w-12" : "",
       isStyleMode.value ? "pt-3" : ""
     ])
   )
   const classNext = computed(() =>
     Pagination.setStyle([
-      isInfoText.value || isPageSizeSelector.value ? "-mt-px flex flex-1 w-12 justify-end" : "",
+      "flex flex-1 justify-end",
+      isInfoText.value || isPageSizeSelector.value ? "-mt-px w-12" : "",
       isStyleMode.value ? "pt-3" : ""
     ])
   )
