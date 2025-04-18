@@ -244,13 +244,17 @@ export interface FormProps {
    */
   autocomplete?: "on" | "off"
 }
-
-export declare type FormSlots = {
-  default(): VNode[]
-  itemTitle(structure: any): VNode[]
-  footer(): VNode[]
-  [key: string]: (data: FieldCustom & FormValues) => VNode[]
+interface DynamicSlots {
+  [key: string]: (args: {
+    data: FieldCustom & FormValues
+    updateModelValue(value: any): void
+    changeModelValue(value: any): void
+  }) => VNode[]
 }
+export declare type FormSlots = {
+  itemTitle(args: { structure: Omit<FormStructure, "class" | "classGrid" | "fields"> }): VNode[]
+  footer(): VNode[]
+} & DynamicSlots
 
 /**
  * Events emitted by the Form component.

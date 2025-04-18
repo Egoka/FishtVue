@@ -69,7 +69,7 @@ export declare type AccordionProps = {
    * Type of icon displayed in the accordion section.
    * @type {"ChevronDown" | "ArrowDownCircle" | "Plus" | string}
    */
-  typeIcon?: "ChevronDown" | "ArrowDownCircle" | "Plus" | string
+  icon?: "ChevronDown" | "ArrowDownCircle" | "Plus" | string
   /**
    * General CSS class for the root container.
    * @type {StyleClass}
@@ -91,9 +91,12 @@ export declare type AccordionProps = {
    */
   classSubtitle?: StyleClass
 }
-export declare type AccordionSlots = {
-  title(): VNode[]
+interface DynamicSlots {
+  [key: string]: (args: Omit<AccordionItem, "template" | "open">) => VNode[]
 }
+export declare type AccordionSlots = {
+  title(args: { title: string }): VNode[]
+} & DynamicSlots
 /**
  * Events emitted by the Accordion component.
  */
@@ -130,9 +133,9 @@ export declare type AccordionExpose = {
 
   /**
    * Current type of the icon.
-   * @type {ReadRef<AccordionProps["typeIcon"]>}
+   * @type {ReadRef<AccordionProps["icon"]>}
    */
-  typeIcon: ReadRef<AccordionProps["typeIcon"]>
+  icon: ReadRef<AccordionProps["icon"]>
 
   /**
    * CSS class for the root container.
@@ -168,7 +171,7 @@ export declare type AccordionExpose = {
 }
 export declare type AccordionOption = Pick<
   AccordionProps,
-  "multiple" | "animationDuration" | "typeIcon" | "class" | "classItem" | "classTitle" | "classSubtitle"
+  "multiple" | "animationDuration" | "icon" | "class" | "classItem" | "classTitle" | "classSubtitle"
 >
 
 // ---------------------------------------

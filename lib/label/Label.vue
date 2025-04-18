@@ -32,7 +32,7 @@
   })
   const classBase = computed(() =>
     Label.setStyle([
-      "absolute top-[38px] flex pointer-events-none select-none h-5 rounded-md transition-transform duration-200 px-1",
+      "absolute top-[38px] flex pointer-events-none select-none h-5 rounded-md transition-all duration-200 px-1",
       type.value === "dynamic" ? `peer-focus:-translate-y-[60px] peer-focus:translate-x-4 -translate-y-7` : "",
       type.value === "offsetDynamic"
         ? `peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7 bg-gradient-to-t ${background.value}`

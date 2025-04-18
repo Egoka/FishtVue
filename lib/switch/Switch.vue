@@ -113,7 +113,7 @@
           ])
         : ""
   )
-  const classAfterInput = ref(Switch.setStyle("absolute inset-y-0 right-0 flex items-center"))
+  const classAfterInput = ref(Switch.setStyle("relative inset-y-0 right-0 flex items-center"))
   const classIconBody = ref(Switch.setStyle("relative h-5 w-5 mr-2"))
   const classIconContent = ref(
     Switch.setStyle(
@@ -128,7 +128,7 @@
       modelValue.value
         ? "translate-x-3.5 bg-theme-100 dark:bg-theme-900"
         : "translate-x-0 bg-gray-100 dark:bg-gray-950",
-      "h-4 w-4 transform shadow-sm ring-1 ring-gray-900/5 transition duration-200 ease-in-out"
+      "h-4 w-4 shadow-sm ring-1 ring-gray-900/5 transition-all duration-300 ease-in-out"
     ])
   )
   // ---EXPOSE------------------------------
@@ -194,7 +194,7 @@
             modelValue
               ? 'translate-x-3.5 bg-theme-100 dark:bg-theme-900'
               : 'translate-x-0 bg-gray-100 dark:bg-gray-950',
-            'h-4 w-4 transform shadow-sm ring-1 ring-gray-900/5 transition duration-200 ease-in-out text-gray-400 dark:text-gray-600'
+            'h-4 w-4 transform shadow-sm ring-1 ring-gray-900/5 transition-all duration-300 ease-in-out text-gray-400 dark:text-gray-600'
           ]"
           :style="`border-radius: ${rounded - 1}px`" />
         <span v-else aria-hidden="true" :class="classSwitchIcon" :style="`border-radius: ${rounded - 1}px`" />

@@ -137,14 +137,14 @@ export declare type FixWindowEmits = {
    * @param event
    * @param {MouseEvent} env - The mouse event triggering the action.
    */
-  (event: "open", env: MouseEvent): void
+  (event: "open", env: MouseEvent | undefined): void
 
   /**
    * Emitted when the fixed window is closed.
    * @param event
    * @param {MouseEvent} env - The mouse event triggering the action.
    */
-  (event: "close", env: MouseEvent): void
+  (event: "close", env: MouseEvent | undefined): void
 }
 
 /**

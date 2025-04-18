@@ -340,8 +340,8 @@ export declare type MenuProps = {
 } & MenuItem
 
 export declare type MenuSlots = {
-  title(): VNode[]
-  item(): VNode[]
+  title(args: { title: string }): VNode[]
+  item(args: Omit<ItemMenu, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive">): VNode[]
   footer(): VNode[]
 }
 

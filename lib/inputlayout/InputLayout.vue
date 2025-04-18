@@ -277,7 +277,7 @@
           position="bottom-right"
           :margin-px="12.0"
           :padding-window="40"
-          class-body="z-20"
+          class-body="z-30"
           stop-open-propagation
           class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
           <div v-html="help" :class="classIconContent" />
@@ -293,7 +293,7 @@
             position="bottom-right"
             :margin-px="12.0"
             :padding-window="40"
-            class-body="z-20"
+            class-body="z-30"
             stop-open-propagation
             class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
             <div v-html="messageInvalid" :class="classIconContent" />
@@ -311,14 +311,16 @@
               type="XCircle"
               class="text-gray-400 dark:text-gray-600 hover:text-red-600 hover:dark:text-red-500 transition-all duration-300 cursor-pointer"
               @click.stop="emit('clear')" />
-            <FixWindow v-if="slots.default" mode="filled" :delay="10" :padding-window="40">Очистить</FixWindow>
+            <FixWindow v-if="slots.default" mode="filled" :delay="10" :padding-window="40">
+              {{ InputLayout.t("clear") ?? "Clear" }}
+            </FixWindow>
           </div>
         </transition>
       </template>
       <template v-else-if="value?.length">
         <div v-if="!isCopy" data-input-layout-copy :class="classIconBody">
           <Icons
-            type="DocumentDuplicate"
+            type="square-2-stack"
             class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 transition"
             @click.stop="copy" />
           <FixWindow :mode="mode" :delay="10" :padding-window="40">

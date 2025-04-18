@@ -376,7 +376,7 @@
   }
 
   // ---------------------------------------
-  function select(selectValue: BaseDataItem | null) {
+  function select(selectValue: BaseDataItem | null): void {
     if (selectValue && keySelect.value) {
       activeItem.value = dataList.value.findIndex(
         (value) =>

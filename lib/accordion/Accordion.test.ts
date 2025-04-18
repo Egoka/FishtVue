@@ -13,7 +13,7 @@ describe("Accordion Component Tests", () => {
         dataSource: undefined,
         multiple: undefined,
         animationDuration: undefined,
-        typeIcon: undefined,
+        icon: undefined,
         class: undefined,
         classItem: undefined,
         classTitle: undefined,
@@ -70,18 +70,18 @@ describe("Accordion Component Tests", () => {
       expect(region.attributes("style")).toContain("transition-duration: 500ms;")
     })
 
-    it("handles typeIcon prop correctly", async () => {
+    it("handles icon prop correctly", async () => {
       const wrapper: any = mount(Accordion, {
-        props: { typeIcon: "ChevronDown", dataSource: [{ title: "Item 1", subtitle: "Subtitle 1", open: false }] }
+        props: { icon: "ChevronDown", dataSource: [{ title: "Item 1", subtitle: "Subtitle 1", open: false }] }
       })
       let icon = wrapper.find("svg.ChevronDownIcon")
       expect(icon.exists()).toBe(true)
 
-      await wrapper.setProps({ typeIcon: "ArrowDownCircle" })
+      await wrapper.setProps({ icon: "ArrowDownCircle" })
       icon = wrapper.find("svg.ArrowDownCircleIcon")
       expect(icon.exists()).toBe(true)
 
-      await wrapper.setProps({ typeIcon: "Plus" })
+      await wrapper.setProps({ icon: "Plus" })
       icon = wrapper.find("svg.PlusIcon")
       expect(icon.exists()).toBe(true)
     })
@@ -160,7 +160,7 @@ describe("Accordion Component Tests", () => {
 
     it("applies global component-specific options to Accordion", () => {
       const localVue = createAppWithFishtVue({
-        typeIcon: "Plus",
+        icon: "Plus",
         animationDuration: 300,
         multiple: true
       })
@@ -175,26 +175,26 @@ describe("Accordion Component Tests", () => {
         }
       })
 
-      expect(wrapper.vm.typeIcon).toBe("Plus")
+      expect(wrapper.vm.icon).toBe("Plus")
       expect(wrapper.vm.animationDuration).toBe(300)
       expect(wrapper.vm.multiple).toBe(true)
     })
 
     it("overrides global Accordion options with local props", () => {
       const localVue = createAppWithFishtVue({
-        typeIcon: "ArrowDownCircle",
+        icon: "ArrowDownCircle",
         animationDuration: 200
       })
 
       const wrapper = mount(Accordion, {
         localVue,
         props: {
-          typeIcon: "ChevronDown",
+          icon: "ChevronDown",
           animationDuration: 1000
         }
       })
 
-      expect(wrapper.vm.typeIcon).toBe("ChevronDown")
+      expect(wrapper.vm.icon).toBe("ChevronDown")
       expect(wrapper.vm.animationDuration).toBe(1000)
     })
 
@@ -245,7 +245,7 @@ describe("Accordion Component Tests", () => {
       })
 
       expect(wrapper.vm.animationDuration).toBe(500)
-      expect(wrapper.vm.typeIcon).toBe("Plus") // Default value
+      expect(wrapper.vm.icon).toBe("Plus") // Default value
     })
 
     it("emits toggle event correctly with options initialized multiple", async () => {

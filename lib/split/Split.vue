@@ -31,12 +31,13 @@
   const units = computed<SplitProps["units"]>(() => props.units ?? "percentages")
   const panels = computed<SplitProps["panels"]>(
     () =>
-      props?.panels.map((item) => {
+      props.panels?.map((item) => {
         if (item?.size && (typeof item?.size as string) === "string" && +item?.size > 0) item.size = +item.size
         if (item?.minSize && (typeof item?.minSize as string) === "string" && +item?.minSize > 0)
           item.minSize = +item.minSize
         if (item?.maxSize && (typeof item?.maxSize as string) === "string" && +item?.maxSize > 0)
           item.maxSize = +item.maxSize
+        if (item?.minSize && item?.maxSize && item?.minSize > item?.maxSize) item.maxSize = item?.minSize
         if (item?.minSize || item?.maxSize) {
           if (item?.size && item?.maxSize && item?.size > item?.maxSize) {
             item.size = item?.maxSize

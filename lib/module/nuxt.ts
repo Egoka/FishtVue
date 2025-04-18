@@ -14,7 +14,7 @@ export default defineNuxtModule<FishtVueOptions>({
     }
   },
   defaults: {
-    prefix: "F",
+    prefix: "",
     autoImport: true,
     disableGlobalStyles: false
   },

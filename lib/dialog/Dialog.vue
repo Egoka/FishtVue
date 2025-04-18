@@ -11,7 +11,6 @@
   const options = Dialog.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<DialogProps>(), {
-    // notAnimate: undefined,
     closeButton: undefined,
     withoutMargin: undefined,
     notCloseBackground: undefined
@@ -19,6 +18,7 @@
   const emit = defineEmits<DialogEmits>()
   // ---STATE-------------------------------
   const isOpen = ref<boolean>(props.modelValue ?? false)
+  let escapeListener: ((event: KeyboardEvent) => void) | null = null
   watch(
     () => props.modelValue,
     (value) => (isOpen.value = value),
@@ -102,7 +102,7 @@
     ])
   )
   const classBackground = ref<StyleClass>(Dialog.setStyle("fixed inset-0"))
-  const classBackgroundBase = ref<StyleClass>(Dialog.setStyle("fixed inset-0 z-[99]"))
+  const classBackgroundBase = ref<StyleClass>(Dialog.setStyle("fixed inset-0 z-[199]"))
   const classBackgroundBaseColor = ref<StyleClass>(
     Dialog.setStyle(
       "fixed inset-0 bg-neutral-500/10 dark:bg-neutral-900/10 backdrop-blur-[3px] transition-all duration-200"
@@ -146,16 +146,27 @@
       if (value) {
         bodyEl.classList.add("overflow-hidden")
         bodyEl.setAttribute("style", `${bodyEl.style.cssText}overflow: hidden;`)
+        escapeListener = (event: KeyboardEvent) => {
+          if (event.key === "Escape") {
+            event.stopPropagation()
+            closeDialog()
+          }
+        }
+        document.addEventListener("keydown", escapeListener)
       } else {
         bodyEl?.classList.remove("overflow-hidden")
         if (bodyEl.style.overflow === "hidden")
           bodyEl.setAttribute("style", bodyEl.style.cssText.replace("overflow: hidden;", ""))
+        if (escapeListener) {
+          document.removeEventListener("keydown", escapeListener)
+          escapeListener = null
+        }
       }
     }
   })
 
   // ---METHODS-----------------------------
-  function closeDialog() {
+  function closeDialog(): void {
     isOpen.value = !isOpen.value
     emit("update:modelValue", false)
   }

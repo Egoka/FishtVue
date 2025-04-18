@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from "vue"
+  import type { Ref } from "vue"
   import {
     ArrowLongLeftIcon,
     ArrowLongRightIcon,
@@ -23,8 +24,13 @@
   })
   const emit = defineEmits<PaginationEmits>()
   // ---STATE-------------------------------
+  const navPreviousLink = ref<HTMLElement>()
+  const navNextLink = ref<HTMLElement>()
   const selectPageSize = ref<SelectExpose>()
   const sizePage = ref<number>()
+  const isShortPrevious = ref(false)
+  const isShortNext = ref(false)
+  const widthNavLink = ref<number>()
   // ---PROPS-------------------------------
   const sizePageProp = computed<NonNullable<PaginationProps["sizePage"]>>(() => {
     const sizePageProp = props.sizePage ?? options?.sizePage
@@ -121,7 +127,7 @@
   }))
   const classBase = ref(
     Pagination.setStyle([
-      "flex items-center justify-between w-full border-t border-gray-200 dark:border-gray-800 pb-3 -mt-px",
+      "flex items-center justify-between w-full overflow-auto border-t border-gray-200 dark:border-gray-800 pb-3 -mt-px",
       options?.class ?? "",
       props?.class ?? ""
     ])
@@ -164,7 +170,7 @@
   )
   const classButtonSpan = ref(Pagination.setStyle("sr-only"))
   const classIcon = ref(Pagination.setStyle("h-5 w-5"))
-  const classIconContent = ref(Pagination.setStyle("mr-3 h-5 w-5 text-gray-400"))
+  const classIconContent = ref(Pagination.setStyle("ml-3 h-5 w-5 text-gray-400"))
   const classIconNotPage = ref(Pagination.setStyle("h-5 w-5 text-gray-400"))
   const classBodyPages = computed(() =>
     Pagination.setStyle(["hidden sm:-mt-px sm:flex", isStyleMode.value ? "pt-3" : ""])
@@ -201,6 +207,13 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Pagination.initStyle()
+    if (navPreviousLink.value && navNextLink.value) {
+      const limitPrevious = (navPreviousLink.value.firstChild as HTMLDivElement)?.offsetWidth + 10 ?? 0
+      const limitNext = (navNextLink.value.firstChild as HTMLDivElement)?.offsetWidth + 10 ?? 0
+      const limit = Math.max(limitPrevious, limitNext)
+      setShortNavigation(navPreviousLink.value, limit, isShortPrevious)
+      setShortNavigation(navNextLink.value, limit, isShortNext)
+    }
   })
   // ---WATCHERS----------------------------
   watch(sizePageProp, (value) => (sizePage.value = value), {
@@ -227,6 +240,13 @@
   function switchSizePage(sizePageValue: PaginationProps["modelValue"]) {
     sizePage.value = sizePageValue
     emit("update:sizePage", sizePageValue)
+  }
+
+  function setShortNavigation(link: HTMLElement, limit: number, refButton: Ref) {
+    if (link)
+      new ResizeObserver((entries) => {
+        for (const entry of entries) refButton.value = (entry as any)?.target["offsetWidth"] < limit
+      }).observe(link)
   }
 </script>
 
@@ -273,13 +293,13 @@
       </div>
       <!-- -------------------------------- -->
       <nav v-if="pages.length" data-pagination-nav :class="classNav" aria-label="Pagination">
-        <div data-pagination-nav-previous :class="classPrevious">
+        <div ref="navPreviousLink" data-pagination-nav-previous :class="classPrevious">
           <Button
             v-if="isNavigationButtons"
             :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
             :disabled="[0, activePage].includes(pages[0])"
             @click="switchPage(pages.slice().reverse())">
-            <template v-if="isInfoText || isPageSizeSelector">
+            <template v-if="isInfoText || isPageSizeSelector || isShortPrevious">
               <span :class="classButtonSpan">{{ Pagination.t("previous") ?? "Previous" }}</span>
               <ChevronLeftIcon :class="classIcon" aria-hidden="true" />
             </template>
@@ -328,13 +348,13 @@
           <span :class="classShortContentSeparator">/</span>
           <span :class="classShortContentCountPages">{{ pages[pages.length - 1] }}</span>
         </div>
-        <div data-pagination-nav-next :class="classNext">
+        <div ref="navNextLink" data-pagination-nav-next :class="classNext">
           <Button
             v-if="isNavigationButtons"
             :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
             :disabled="[0, activePage].includes(pages[pages.length - 1])"
             @click="switchPage(pages)">
-            <template v-if="isInfoText || isPageSizeSelector">
+            <template v-if="isInfoText || isPageSizeSelector || isShortNext">
               <span :class="classButtonSpan">{{ Pagination.t("next") ?? "Next" }}</span>
               <ChevronRightIcon :class="classIcon" aria-hidden="true" />
             </template>

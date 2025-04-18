@@ -9,7 +9,8 @@
     BarsArrowUpIcon,
     FunnelIcon,
     MagnifyingGlassIcon,
-    TableCellsIcon
+    TableCellsIcon,
+    ViewColumnsIcon
   } from "@heroicons/vue/20/solid"
   import {
     DataGrouping,
@@ -237,7 +238,7 @@
     () => (pagination.value as TablePagination)?.isHiddenNavigationButtons ?? false
   )
   // ---CELL--------------------------------
-  const heightCell = computed<number>(() => styles.value?.heightCell ?? 24)
+  const heightCell = computed<number>(() => styles.value?.heightCell ?? 50)
   const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
     () => props?.countVisibleRows ?? options?.countVisibleRows ?? 0
   )
@@ -337,7 +338,7 @@
               options.paramsFilter = {
                 multiple: true,
                 maxVisible: 0,
-                classSelect: "normal-case font-normal max-h-[25rem]",
+                classSelect: "normal-case max-h-[25rem]",
                 classSelectList: "normal-case font-normal",
                 dataSelect:
                   (column?.paramsFilter as Partial<BaseSelectProps>)?.dataSelect ??
@@ -417,8 +418,8 @@
         })
         .filter((i) => i)
     } else {
-      return listFields.map<IColumnPrivate>(
-        (column, index): IColumnPrivate => ({
+      return listFields.map<IColumnPrivate>((column, index): IColumnPrivate => {
+        const options: IColumnPrivate = {
           id: `Col-${column}-${index}`,
           dataField: column,
           name: `Col-${column}`,
@@ -431,8 +432,18 @@
           isSort: isSort.value,
           isResized: resizedColumns.value,
           isEdit: isEditCells.value
-        })
-      )
+        }
+        if (options.isEdit) {
+          options.paramsFilter = { autocomplete: "off" } as Partial<BaseInputProps>
+          options.edit = {
+            editorOptions: {
+              ...options.paramsFilter,
+              autoFocus: true
+            } as Partial<BaseInputProps>
+          }
+        }
+        return options
+      })
     }
   })
   const dataSummary = computed<Array<ISummaryPrivate>>(() => {
@@ -702,7 +713,7 @@
       `td--${indexRow}--${column?.name ?? indexCol}`,
       "first:border-l-0 group-first/tr:border-t-0 last:border-r-0 group-last/tr:border-b-0",
       "text-sm font-medium",
-      "px-6 py-4 text-gray-800 dark:text-gray-300",
+      "px-4 py-1 text-gray-800 dark:text-gray-300",
       column.class?.td,
       styles.value.class?.cellText,
       defaultBorder.value,
@@ -749,14 +760,6 @@
     Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-neutral-100/70 dark:bg-neutral-800/50")
   )
   const classNoData = ref(
-    Table.setStyle(
-      "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500"
-    )
-  )
-  const classNoColumn = ref(
-    Table.setStyle("absolute top-[50%] left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500")
-  )
-  const classNoFilter = ref(
     Table.setStyle(
       "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500"
     )
@@ -1634,8 +1637,8 @@
                               :model-value="data[column.dataField]"
                               v-bind="{
                                 ...(column.edit as EditInput)?.editorOptions,
-                                classInput: `pt-[5px] pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditInput)?.editorOptions?.classInput
+                                classInput: `pt-[3px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                  (column.edit as EditInput)?.editorOptions?.classInput ?? ''
                                 }`
                               }"
                               :mode="mode"
@@ -1653,13 +1656,13 @@
                                   scrollableEl: tableBody,
                                   ...(column.edit as EditSelect)?.editorOptions?.paramsFixWindow
                                 },
-                                classSelect: `pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditSelect)?.editorOptions?.classSelect
+                                classSelect: `pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                  (column.edit as EditSelect)?.editorOptions?.classSelect ?? ''
                                 }`
                               }"
                               :mode="mode"
                               class="border-none font-normal bg-transparent dark:bg-transparent"
-                              class-body="pt-[2px] -my-3 w-full"
+                              class-body="pt-[0px] -my-3 w-full"
                               label-mode="vanishing"
                               @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
                               @update:model-value="
@@ -1676,8 +1679,8 @@
                                   scrollableEl: tableBody,
                                   ...(column.edit as EditDate)?.editorOptions?.paramsFixWindow
                                 },
-                                classDateText: `pt-[7px] pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditDate)?.editorOptions?.classDateText
+                                classDateText: `pt-[6px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                  (column.edit as EditDate)?.editorOptions?.classDateText ?? ''
                                 }`
                               }"
                               :mode="mode"
@@ -1793,11 +1796,10 @@
           enter-active-class="transition ease-in duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div
-            v-if="!isLoading && allData?.length && !dataColumns?.length"
-            data-table-no-column
-            :class="classNoColumn"
-            v-html="noColumn" />
+          <div v-if="!isLoading && allData?.length && !dataColumns?.length" data-table-no-column :class="classNoData">
+            <ViewColumnsIcon aria-hidden="true" :class="classIcon" />
+            <div v-html="noColumn" />
+          </div>
         </transition>
         <transition
           leave-active-class="transition-all ease-in duration-200"
@@ -1809,7 +1811,7 @@
           <div
             v-if="!isLoading && allData?.length && dataColumns?.length && !dataSource.length"
             data-table-no-filter
-            :class="classNoFilter">
+            :class="classNoData">
             <FunnelIcon aria-hidden="true" :class="classIcon" />
             <div v-html="noFilter" />
           </div>

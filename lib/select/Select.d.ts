@@ -118,9 +118,9 @@ export interface SelectProps extends Omit<InputLayoutProps, "value" | "isValue">
 }
 
 export declare type SelectSlots = {
+  values(args: { selected: any; key?: string; deleteSelect?: (selectValue: BaseDataItem | null) => void }): VNode[]
+  item(args: { item: any; key: string; isQuery: boolean }): VNode[]
   default(): VNode[]
-  values(): VNode[]
-  item(): VNode[]
   before(): VNode[]
   after(): VNode[]
 }

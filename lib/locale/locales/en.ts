@@ -11,6 +11,7 @@ export default <DefaultMessages>{
   show: "Show:",
   find: "Find...",
   copy: "Copy",
+  clear: "Clear",
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

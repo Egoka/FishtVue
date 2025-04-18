@@ -45,7 +45,7 @@ describe("FixWindow Component Tests", () => {
 
       await wrapper.vm.close(mockEvent)
       expect(wrapper.emitted("close")).toBeTruthy()
-      expect(wrapper.emitted("close")?.[0]).toEqual([mockEvent])
+      expect(wrapper.emitted("close")?.[1]).toEqual([mockEvent])
     })
 
     it("updates position when updatePosition() is called", async () => {
@@ -199,16 +199,14 @@ describe("FixWindow Component Tests", () => {
         position.includes("left") || position.includes("right") ? "left" : ""
       )
     })
-
     it.each([
       { eventOpen: "hover", expectEvent: "mouseover" },
       { eventOpen: "click", expectEvent: "click" },
-      { eventOpen: "mousedown", expectEvent: "mousedown" },
       { eventOpen: "mouseup", expectEvent: "mouseup" },
       { eventOpen: "dblclick", expectEvent: "dblclick" },
       { eventOpen: "contextmenu", expectEvent: "contextmenu" },
       { eventOpen: "none", expectEvent: undefined }
-    ])("handles eventOpen: $event with onUnmounted cleanup", async ({ eventOpen, expectEvent }) => {
+    ])("handles eventOpen: $eventOpen with onUnmounted cleanup", async ({ eventOpen, expectEvent }) => {
       const wrapper = mount(FixWindow)
       const addOpenListenerSpy = vi.spyOn(wrapper.vm.element, "addEventListener")
       const removeOpenListenerSpy = vi.spyOn(wrapper.vm.element, "removeEventListener")
@@ -218,6 +216,18 @@ describe("FixWindow Component Tests", () => {
         expect(addOpenListenerSpy.mock.lastCall?.[0]).toBe(eventOpen)
       wrapper.unmount()
       expect(removeOpenListenerSpy.mock.lastCall?.[0]).toBe(expectEvent)
+    })
+
+    it("handles eventOpen: mousedown with onUnmounted cleanup", async () => {
+      const wrapper = mount(FixWindow)
+      const addOpenListenerSpy = vi.spyOn(wrapper.vm.element, "addEventListener")
+      const removeOpenListenerSpy = vi.spyOn(wrapper.vm.element, "removeEventListener")
+      await wrapper.setProps({ eventOpen: "mousedown" })
+      expect(addOpenListenerSpy.mock.calls[1]?.[0]).toBe("mousedown")
+      expect(addOpenListenerSpy.mock.calls[2]?.[0]).toBe("mouseup")
+      wrapper.unmount()
+      expect(removeOpenListenerSpy.mock.calls[0]?.[0]).toBe("mousedown")
+      expect(removeOpenListenerSpy.mock.calls[1]?.[0]).toBe("mouseup")
     })
 
     it.each([

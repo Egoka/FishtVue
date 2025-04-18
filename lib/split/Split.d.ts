@@ -65,6 +65,11 @@ export type Panel = {
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+  /**
+   * Any additional properties for the separator item.
+   * @type {any}
+   */
+  [key: string]: any
 }
 
 /**
@@ -125,7 +130,9 @@ export declare type SplitProps = {
   styles?: ISplitStyles
 } & Group
 
-export declare type SplitSlots = { [key: string]: VNode[] }
+export declare type SplitSlots = {
+  [key: string]: (args: { size: number; panel: Panel }) => VNode[]
+}
 
 /**
  * Events emitted by the Split component.

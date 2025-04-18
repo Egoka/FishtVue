@@ -712,13 +712,9 @@ export declare type TableProps = {
    */
   styles?: ITableStyles
 }
-export declare type TableSlots = {
-  toolbar(): VNode[]
-  header(): VNode[]
-  group(): VNode[]
-  footer(): VNode[]
+
+interface DynamicSlots {
   [key: string]: (args: {
-    name: string
     key: string
     column: IColumn
     rowData: Record<string, any>
@@ -728,6 +724,12 @@ export declare type TableSlots = {
     editValue: (value: any) => false | any
   }) => VNode[]
 }
+export declare type TableSlots = {
+  toolbar(): VNode[]
+  header(): VNode[]
+  footer(): VNode[]
+  group(args: { item: string; length: number }): VNode[]
+} & DynamicSlots
 /**
  * Defines the events emitted by the Table component.
  */

@@ -23,20 +23,22 @@
   const instance = ref<ComponentInternalInstance | null>()
   const x = ref<string>("0px")
   const y = ref<string>("0px")
+  const xT = ref<string>("0px")
+  const yT = ref<string>("0px")
   const isOpen = ref<boolean>(false)
   const timer = ref<number | null>(null)
   const countTimer = ref<number>(0)
   const positionMouse = ref<{ x: number; y: number }>()
   // ---PROPS-------------------------------
   const stylePosition = computed<NonNullable<FixWindowProps["stylePosition"]>>(
-    () => props?.stylePosition ?? options?.stylePosition ?? "fixed"
+    () => props?.stylePosition ?? options?.stylePosition ?? (props.scrollableEl ? "absolute" : "fixed")
   )
   const position = computed<NonNullable<FixWindowProps["position"]>>(
     () => props?.position ?? options?.position ?? "top"
   )
   const delay = computed<NonNullable<FixWindowProps["delay"]>>(() => {
     const delay = props?.delay ?? options?.delay
-    return delay && delay > 0 ? delay : 0
+    return delay && !isNaN(delay) ? delay : 0
   })
   const marginPx = computed<NonNullable<FixWindowProps["marginPx"]>>(() => props.marginPx ?? options?.marginPx ?? 10)
   const translatePx = computed<NonNullable<FixWindowProps["translatePx"]>>(
@@ -255,7 +257,11 @@
           window?.addEventListener("mousedown", closeOnClick)
           break
         case "mouseup":
-          window?.addEventListener("mouseup", closeOnClick)
+          if (eventOpen.value === "mousedown") {
+            const el = byCursor.value ? (fixWindow.value as HTMLElement) : element.value
+            el?.addEventListener("mouseup", close)
+            window?.addEventListener("mouseup", closeOnClick)
+          } else window?.addEventListener("mouseup", closeOnClick)
           break
         case "dblclick":
           window?.addEventListener("dblclick", closeOnClick)
@@ -279,7 +285,11 @@
           window?.removeEventListener("mousedown", closeOnClick)
           break
         case "mouseup":
-          window?.removeEventListener("mouseup", closeOnClick)
+          if (eventOpen.value === "mousedown") {
+            const el = byCursor.value ? (fixWindow.value as HTMLElement) : element.value
+            el?.removeEventListener("mouseup", close)
+            window?.removeEventListener("mouseup", closeOnClick)
+          } else window?.removeEventListener("mouseup", closeOnClick)
           break
         case "dblclick":
           window?.removeEventListener("dblclick", closeOnClick)
@@ -291,21 +301,19 @@
   }
 
   function addPositionListener() {
-    if (isClient()) {
-      if (scrollableEl.value) (scrollableEl.value as HTMLElement).addEventListener("scroll", updatePosition)
-      window.addEventListener("scroll", updatePosition)
-      if (scrollableEl.value) (scrollableEl.value as HTMLElement).addEventListener("resize", updatePosition)
-      window.addEventListener("resize", updatePosition)
-    }
+    if (!isClient()) return
+    if (scrollableEl.value) (scrollableEl.value as HTMLElement).addEventListener("scroll", updatePosition)
+    window.addEventListener("scroll", updatePosition)
+    if (scrollableEl.value) (scrollableEl.value as HTMLElement).addEventListener("resize", updatePosition)
+    window.addEventListener("resize", updatePosition)
   }
 
   function removePositionListener() {
-    if (isClient()) {
-      if (scrollableEl.value) (scrollableEl.value as HTMLElement).removeEventListener("scroll", updatePosition)
-      window.removeEventListener("scroll", updatePosition)
-      if (scrollableEl.value) (scrollableEl.value as HTMLElement).removeEventListener("resize", updatePosition)
-      window.removeEventListener("resize", updatePosition)
-    }
+    if (!isClient()) return
+    if (scrollableEl.value) (scrollableEl.value as HTMLElement).removeEventListener("scroll", updatePosition)
+    window.removeEventListener("scroll", updatePosition)
+    if (scrollableEl.value) (scrollableEl.value as HTMLElement).removeEventListener("resize", updatePosition)
+    window.removeEventListener("resize", updatePosition)
   }
 
   // ---OPEN-CLOSE--------------------------
@@ -315,9 +323,7 @@
 
     function setIsOpen() {
       isOpen.value = true
-      if (event) {
-        emit("open", event)
-      }
+      emit("open", event)
     }
 
     if (delay.value === 0) {
@@ -343,7 +349,7 @@
     }
     countTimer.value = 0
     isOpen.value = false
-    if (event) emit("close", event)
+    emit("close", event)
   }
 
   // ---METHODS-----------------------------
@@ -365,7 +371,7 @@
       case "click":
         return "click"
       case "mousedown":
-        return "mousedown"
+        return "mouseup"
       case "mouseup":
         return "mouseup"
       case "dblclick":
@@ -375,6 +381,11 @@
       default:
         return "click"
     }
+  }
+
+  function onCloseButton(event: MouseEvent) {
+    event.stopPropagation()
+    isOpen.value = false
   }
 
   // ---UPDATE-POSITION---------------------
@@ -472,8 +483,15 @@
                   ? body.y - child.height
                   : window.innerHeight - paddingWindow.value - child.height
         }
-        x.value = `${xNum}px`
-        y.value = `${yNum}px`
+        if (stylePosition.value === "absolute") {
+          x.value = `auto`
+          y.value = `auto`
+          xT.value = `${xNum}px`
+          yT.value = `${yNum}px`
+        } else {
+          x.value = `${xNum}px`
+          y.value = `${yNum}px`
+        }
       }
     }
   }
@@ -487,11 +505,20 @@
     enter-active-class="transition-opacity ease-in-out duration-300"
     enter-from-class="opacity-0"
     enter-to-class="opacity-100">
-    <div v-show="isOpen" data-fix-window ref="fixWindow" :class="classBase" :style="`left: ${x}; top: ${y};${border}`">
+    <div
+      v-show="isOpen"
+      data-fix-window
+      ref="fixWindow"
+      :class="classBase"
+      :style="`left: ${x}; top: ${y};${border};translate: ${xT} ${yT};`">
       <div data-fix-window-content :class="classContent">
         <slot />
       </div>
-      <Button v-if="isCloseButton" mode="ghost" class="absolute top-2 right-2 px-[5px] m-0.5 h-9 w-9" @click="close">
+      <Button
+        v-if="isCloseButton"
+        mode="ghost"
+        class="absolute top-2 right-2 px-[5px] m-0.5 h-9 w-9"
+        @click="onCloseButton">
         <XMarkIcon aria-hidden="true" class="h-5 w-5 fill-neutral-500 dark:fill-neutral-500" />
       </Button>
     </div>

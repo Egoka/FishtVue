@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 import { tailwind } from "fishtvue/theme"
-import { baseBackdropFilter, baseFilter, baseTransform, baseTransition } from "fishtvue/theme/unoStyle/unoStatic"
+import {
+  baseBackdropFilter,
+  baseFilter,
+  baseTransform,
+  baseTransition,
+  baseTranslate
+} from "fishtvue/theme/unoStyle/unoStatic"
 
 describe("unoStyle", () => {
   describe("Special tests", () => {
@@ -3926,57 +3932,61 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "translate-0",
-          expected: `.translate-0 {\n  --fv-translate-x: 0px;\n  --fv-translate-y: 0px;\n  ${baseTransform}\n}`
+          expected: `.translate-0 {\n  --fv-translate-x: 0px;\n  --fv-translate-y: 0px;\n  ${baseTranslate}\n}`
         },
-        { classValue: "translate-x-0", expected: `.translate-x-0 {\n  --fv-translate-x: 0px;\n  ${baseTransform}\n}` },
-        { classValue: "translate-y-0", expected: `.translate-y-0 {\n  --fv-translate-y: 0px;\n  ${baseTransform}\n}` },
+        {
+          classValue: "-translate-0",
+          expected: `.-translate-0 {\n  --fv-translate-x: -0px;\n  --fv-translate-y: -0px;\n  ${baseTranslate}\n}`
+        },
+        { classValue: "translate-x-0", expected: `.translate-x-0 {\n  --fv-translate-x: 0px;\n  ${baseTranslate}\n}` },
+        { classValue: "translate-y-0", expected: `.translate-y-0 {\n  --fv-translate-y: 0px;\n  ${baseTranslate}\n}` },
         {
           classValue: "translate-x-px",
-          expected: `.translate-x-px {\n  --fv-translate-x: 1px;\n  ${baseTransform}\n}`
+          expected: `.translate-x-px {\n  --fv-translate-x: 1px;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-px",
-          expected: `.translate-y-px {\n  --fv-translate-y: 1px;\n  ${baseTransform}\n}`
+          expected: `.translate-y-px {\n  --fv-translate-y: 1px;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-0.5",
-          expected: `.translate-x-0\\.5 {\n  --fv-translate-x: 0.125rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-0\\.5 {\n  --fv-translate-x: 0.125rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-0.5",
-          expected: `.translate-y-0\\.5 {\n  --fv-translate-y: 0.125rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-0\\.5 {\n  --fv-translate-y: 0.125rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-1",
-          expected: `.translate-x-1 {\n  --fv-translate-x: 0.25rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-1 {\n  --fv-translate-x: 0.25rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-1",
-          expected: `.translate-y-1 {\n  --fv-translate-y: 0.25rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-1 {\n  --fv-translate-y: 0.25rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-1/2",
-          expected: `.translate-x-1\\/2 {\n  --fv-translate-x: 50%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-1\\/2 {\n  --fv-translate-x: 50%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-3/4",
-          expected: `.translate-x-3\\/4 {\n  --fv-translate-x: 75%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-3\\/4 {\n  --fv-translate-x: 75%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-full",
-          expected: `.translate-x-full {\n  --fv-translate-x: 100%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-full {\n  --fv-translate-x: 100%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-1/2",
-          expected: `.translate-y-1\\/2 {\n  --fv-translate-y: 50%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-1\\/2 {\n  --fv-translate-y: 50%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-3/4",
-          expected: `.translate-y-3\\/4 {\n  --fv-translate-y: 75%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-3\\/4 {\n  --fv-translate-y: 75%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-full",
-          expected: `.translate-y-full {\n  --fv-translate-y: 100%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-full {\n  --fv-translate-y: 100%;\n  ${baseTranslate}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3984,15 +3994,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "translate-[17rem]",
-          expected: `.translate-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  --fv-translate-y: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  --fv-translate-y: 17rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-[17rem]",
-          expected: `.translate-x-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-[17rem]",
-          expected: `.translate-y-\\[17rem\\] {\n  --fv-translate-y: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-\\[17rem\\] {\n  --fv-translate-y: 17rem;\n  ${baseTranslate}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
