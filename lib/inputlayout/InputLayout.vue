@@ -311,7 +311,7 @@
               type="XCircle"
               class="text-gray-400 dark:text-gray-600 hover:text-red-600 hover:dark:text-red-500 transition-all duration-300 cursor-pointer"
               @click.stop="emit('clear')" />
-            <FixWindow v-if="slots.default" mode="filled" :delay="10" :padding-window="40">
+            <FixWindow v-if="slots.default" mode="filled" :delay="1000" :padding-window="40">
               {{ InputLayout.t("clear") ?? "Clear" }}
             </FixWindow>
           </div>
@@ -323,7 +323,7 @@
             type="square-2-stack"
             class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 transition"
             @click.stop="copy" />
-          <FixWindow :mode="mode" :delay="10" :padding-window="40">
+          <FixWindow :mode="mode" :delay="1000" :padding-window="40">
             {{ InputLayout.t("copy") ?? "Copy" }}
           </FixWindow>
         </div>

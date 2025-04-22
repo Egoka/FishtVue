@@ -366,33 +366,34 @@
     emit("updated-size-panel", sizePanels[resizablePanel.value], resizablePanel.value)
   }
 
-  function startResizePanel($event: MouseEvent, namePanel: Panel["name"]) {
+  function startResizePanel($event: PointerEvent, namePanel: Panel["name"]) {
     if (!isClient()) return
-    $event.stopPropagation()
-    $event.preventDefault()
     resizablePanel.value = namePanel
     isStartResize.value = true
+    if ($event.target instanceof HTMLElement && $event?.pointerId)
+      ($event.target as HTMLElement).setPointerCapture($event.pointerId)
     document.body.classList.add(getStyleCursor(activeCursorPanel.value))
-    window.addEventListener("mousemove", moveResizedPanels)
-    window.addEventListener("mouseup", stopResizePanel)
     emit("start-resize-panel", $event, namePanel)
   }
 
-  function stopResizePanel($event: MouseEvent, namePanel?: Panel["name"]) {
+  function stopResizePanel($event: PointerEvent, namePanel?: Panel["name"]) {
     if (!isClient()) return
+    if ($event.target instanceof HTMLElement && $event?.pointerId) $event.target.releasePointerCapture($event.pointerId)
     isStartResize.value = false
     if (!isStartMove.value) resizablePanel.value = null
     document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
-    window.removeEventListener("mousemove", moveResizedPanels)
-    window.removeEventListener("mouseup", stopResizePanel)
     emit("stop-resize-panel", $event, namePanel as Panel["name"])
   }
 
-  function moveResizePanel($event: MouseEvent, namePanel: Panel["name"]) {
+  function moveResizePanel($event: PointerEvent, namePanel: Panel["name"]) {
     if (!isClient()) return
     isStartMove.value = true
     if (!isStartResize.value) resizablePanel.value = namePanel
     emit("move-resize-panel", $event, namePanel)
+    if (!isStartResize.value) return
+    resizePanel($event, namePanel)
+    emit("updated-panels", sizePanels)
+    emit("updated-size-panel", sizePanels[namePanel], namePanel)
   }
 
   function outResizePanel($event: MouseEvent, namePanel: Panel["name"]) {
@@ -443,10 +444,11 @@
         :aria-valuemax="panel.maxSize"
         :aria-valuemin="panel.minSize"
         data-panel-resize-handle-enabled="true"
-        @mousemove="moveResizePanel($event, panel.name)"
-        @mouseout="outResizePanel($event, panel.name)"
-        @mousedown="startResizePanel($event, panel.name)"
-        @mouseup="stopResizePanel($event, panel.name)">
+        @pointerdown="startResizePanel($event, panel.name)"
+        @pointermove="moveResizePanel($event, panel.name)"
+        @pointerup="stopResizePanel($event, panel.name)"
+        @pointercancel="stopResizePanel($event, panel.name)"
+        @pointerout="outResizePanel($event, panel.name)">
         <div v-if="separatorType === 'strip'" data-split-separator-strip :class="classSeparatorStrip(panel)">
           <div :class="classSeparatorStripStyle"></div>
         </div>

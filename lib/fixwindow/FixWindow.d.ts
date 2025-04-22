@@ -37,7 +37,7 @@ export declare type FixWindowProps = {
    * The CSS positioning style for the fixed window.
    * @type {"absolute" | "fixed" | undefined}
    */
-  stylePosition?: "absolute" | "fixed"
+  typePosition?: "absolute" | "fixed"
 
   /**
    * The position of the fixed window relative to the target element.
@@ -77,9 +77,9 @@ export declare type FixWindowProps = {
 
   /**
    * Delay before opening the fixed window (in milliseconds).
-   * @type {number | 1 | 5 | 10 | 15 | 20 | undefined}
+   * @type {number | 100 | 500 | 1000 | 1500 | 2000 | undefined}
    */
-  delay?: number | 1 | 5 | 10 | 15 | 20
+  delay?: number | 100 | 500 | 1000 | 1500 | 2000
 
   /**
    * Margin between the fixed window and the target element (in pixels).
@@ -231,7 +231,7 @@ export declare type FixWindowExpose = {
 }
 export declare type FixWindowOption = Pick<
   FixWindowProps,
-  | "stylePosition"
+  | "typePosition"
   | "position"
   | "class"
   | "classBody"

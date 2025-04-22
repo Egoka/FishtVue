@@ -10,7 +10,7 @@ describe("FixWindow Component Tests", () => {
       expect(wrapper.exists()).toBe(true)
       expect(wrapper.props()).toMatchObject({
         modelValue: false,
-        stylePosition: undefined,
+        typePosition: undefined,
         position: undefined,
         byCursor: undefined,
         eventOpen: undefined,
@@ -89,10 +89,9 @@ describe("FixWindow Component Tests", () => {
       const windowSpy = vi.spyOn(window, "removeEventListener")
 
       wrapper.unmount()
-      expect(elementSpy.mock.lastCall?.[0]).toBe("mouseover")
-      expect(windowSpy.mock.calls?.[0]?.[0]).toBe("mouseleave")
-      expect(windowSpy.mock.calls?.[1]?.[0]).toBe("scroll")
-      expect(windowSpy.mock.calls?.[2]?.[0]).toBe("resize")
+      expect(elementSpy.mock.lastCall?.[0]).toBe("mouseleave")
+      expect(windowSpy.mock.calls?.[0]?.[0]).toBe("scroll")
+      expect(windowSpy.mock.calls?.[1]?.[0]).toBe("resize")
     })
 
     it.each([
@@ -200,12 +199,12 @@ describe("FixWindow Component Tests", () => {
       )
     })
     it.each([
-      { eventOpen: "hover", expectEvent: "mouseover" },
+      { eventOpen: "hover", expectEvent: "mouseleave" },
       { eventOpen: "click", expectEvent: "click" },
       { eventOpen: "mouseup", expectEvent: "mouseup" },
       { eventOpen: "dblclick", expectEvent: "dblclick" },
       { eventOpen: "contextmenu", expectEvent: "contextmenu" },
-      { eventOpen: "none", expectEvent: undefined }
+      { eventOpen: "none", expectEvent: "mouseleave" }
     ])("handles eventOpen: $eventOpen with onUnmounted cleanup", async ({ eventOpen, expectEvent }) => {
       const wrapper = mount(FixWindow)
       const addOpenListenerSpy = vi.spyOn(wrapper.vm.element, "addEventListener")
@@ -226,12 +225,12 @@ describe("FixWindow Component Tests", () => {
       expect(addOpenListenerSpy.mock.calls[1]?.[0]).toBe("mousedown")
       expect(addOpenListenerSpy.mock.calls[2]?.[0]).toBe("mouseup")
       wrapper.unmount()
-      expect(removeOpenListenerSpy.mock.calls[0]?.[0]).toBe("mousedown")
-      expect(removeOpenListenerSpy.mock.calls[1]?.[0]).toBe("mouseup")
+      expect(removeOpenListenerSpy.mock.calls[0]?.[0]).toBe("mouseleave")
+      expect(removeOpenListenerSpy.mock.calls[1]?.[0]).toBe("mouseover")
     })
 
     it.each([
-      { eventClose: "hover", expectEvent: "mouseover" },
+      { eventClose: "hover", expectEvent: "mouseleave" },
       { eventClose: "click", expectEvent: "mouseover" },
       {
         eventClose: "mousedown",
@@ -335,7 +334,7 @@ describe("FixWindow Component Tests", () => {
         props: {
           eventOpen: "click",
           byCursor: true,
-          delay: 5
+          delay: 500
         }
       })
       vi.spyOn(wrapper.vm.element, "getBoundingClientRect").mockReturnValue({
@@ -385,8 +384,8 @@ describe("FixWindow Component Tests", () => {
       // Проверяем, что FixWindow открылся в правильной позиции
       expect(wrapper.vm.isOpen).toBe(true)
       wrapper.vm.updatePosition()
-      expect(wrapper.vm.x).toBe("32px")
-      expect(wrapper.vm.y).toBe("8px")
+      expect(wrapper.vm.x).toBe("37px")
+      expect(wrapper.vm.y).toBe("18px")
       expect(fixWindowElement.exists()).toBe(true)
 
       // Эмитируем клик за пределами FixWindow
@@ -415,10 +414,10 @@ describe("FixWindow Component Tests", () => {
     })
 
     it.each([
-      { delay: 2, expectedDelayMs: 200 },
-      { delay: 4, expectedDelayMs: 400 },
-      { delay: 6, expectedDelayMs: 600 }
-    ])("applies correct delay for value %i (%ims)", async ({ delay, expectedDelayMs }) => {
+      { delay: 200, expectedDelayMs: 200 },
+      { delay: 400, expectedDelayMs: 400 },
+      { delay: 600, expectedDelayMs: 600 }
+    ])("applies correct delay for value $delay ($expectedDelayMs ms)", async ({ delay, expectedDelayMs }) => {
       const wrapper = mount(FixWindow, {
         props: { delay }
       })
@@ -429,7 +428,7 @@ describe("FixWindow Component Tests", () => {
       wrapper.vm.open()
 
       // Проверяем, что setInterval вызывается
-      expect(timerSpy).toHaveBeenCalledWith(expect.any(Function), 100)
+      expect(timerSpy).toHaveBeenCalledWith(expect.any(Function), 1)
 
       // Эмулируем выполнение таймера
       let elapsedTime = 0

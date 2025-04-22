@@ -34,7 +34,6 @@
   const emit = defineEmits<MenuEmits>()
   const slots = useSlots()
   // ---REF-LINK----------------------------
-  const menuRefLink = ref<HTMLElement>()
   // ---STATE-------------------------------
   const selectedItemIndex = ref<_key>()
   const activeItemIndex = ref<_key>()
@@ -57,7 +56,8 @@
   )
   const listGroups = computed<GroupsPrivate>(() => setItems(props as MenuItemPrivate)?.groups ?? [])
   const paramsWindowMenu = computed<MenuProps["paramsWindowMenu"]>(() => ({
-    delay: 2,
+    delay: 200,
+    typePosition: "absolute",
     position: "right-top",
     eventOpen: onlyIcons.value ? "click" : "hover",
     eventClose: "hover",
@@ -142,7 +142,7 @@
       activeItemIndex.value === item?._key ? (styles.value?.activeRows as StyleClass) : "",
       selectedItemIndex.value === item?._key ? `${styles.value?.selectedRows} font-semibold` : "",
       item?.disabled ? "pointer-events-none opacity-50" : "",
-      "relative flex cursor-default select-none outline-none transition-colors"
+      "flex cursor-default select-none outline-none transition-colors"
     ])
   }
   const classItemIcon = computed<StyleClass>(() =>
@@ -175,7 +175,6 @@
   // ---EXPOSE------------------------------
   defineExpose<MenuExpose>({
     // ---STATE-------------------------
-    menuRefLink,
     selectedItemIndex,
     activeItemIndex,
     // ---PROPS-------------------------
@@ -283,13 +282,7 @@
 </script>
 
 <template>
-  <div
-    data-menu
-    ref="menuRefLink"
-    role="menu"
-    :class="classMenu"
-    :style="`width:${styles.width};height:${styles.height};`"
-    tabindex="-1">
+  <div data-menu role="menu" :class="classMenu" :style="`width:${styles.width};height:${styles.height};`" tabindex="-1">
     <div v-if="title.length || slots?.title" data-menu-title :class="classTitle">
       <slot name="title" :title="title">{{ title }}</slot>
     </div>
@@ -319,8 +312,8 @@
           {{ group.title }}
         </div>
         <div
-          v-for="(item, keyItem) in group.items as Array<ItemMenuPrivate>"
-          :key="keyItem"
+          v-for="item in group.items as Array<ItemMenuPrivate>"
+          :key="item._key"
           data-menu-item
           role="menuitem"
           :data-collection-item="item?._key"
@@ -344,13 +337,7 @@
               </span>
               <span :data-info="!!item?.info" :class="classItemInfoOnlyIcons" v-html="item?.info" />
             </template>
-            <FixWindow
-              v-else
-              :position="horizontal ? 'top' : 'right'"
-              :delay="5"
-              :margin-px="10"
-              :scrollable-el="menuRefLink as RefLink"
-              :mode="mode">
+            <FixWindow v-else :position="horizontal ? 'top' : 'right'" :delay="500" :margin-px="10" :mode="mode">
               <span :data-title="!!item?.title" :class="classItemTitleFixWindow">{{ item?.title }}</span>
               <span :data-info="!!item?.info" :class="classItemInfoFixWindow" v-html="item?.info" />
             </FixWindow>
@@ -359,7 +346,6 @@
           <FixWindow
             v-if="!!item?.menu"
             v-bind="(item?.menu?.paramsWindowMenu ?? paramsWindowMenu) as FixWindowProps"
-            :scrollable-el="menuRefLink as RefLink"
             class-body="z-10">
             <Menu
               v-bind="item?.menu as MenuProps"

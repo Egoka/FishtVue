@@ -344,7 +344,7 @@
     <template v-if="type === 'icon'">
       <Icons v-if="icon" :type="icon" :class="classIcon" />
       <Loading v-if="isLoading" type="simple" :size="25" class="absolute" />
-      <FixWindow v-if="slots.default" mode="filled" :class="roundedClasses[rounded]" :delay="10" :padding-window="40">
+      <FixWindow v-if="slots.default" mode="filled" :class="roundedClasses[rounded]" :delay="1000" :padding-window="40">
         <slot name="default" />
       </FixWindow>
     </template>

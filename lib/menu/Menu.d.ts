@@ -380,12 +380,6 @@ export declare type MenuEmits = {
 export declare type MenuExpose = {
   // ---STATE-------------------------
   /**
-   * Reference to the menu container element.
-   * @type {ReadRef<HTMLElement | undefined>}
-   */
-  menuRefLink: ReadRef<HTMLElement | undefined>
-
-  /**
    * The key of the currently selected menu item.
    * @type {Ref<_key | undefined>}
    */
