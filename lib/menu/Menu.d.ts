@@ -126,14 +126,6 @@ export interface GroupMenuPrivate extends Omit<GroupMenu, "items"> {
   items?: Array<ItemMenuPrivate>
 }
 
-/**
- * Represents a collection of menu groups.
- *
- * Each group can contain multiple items and additional configurations.
- */
-export type Groups = Array<GroupMenu> | []
-export type GroupsPrivate = Array<GroupMenuPrivate> | []
-
 // ---------------------------------------
 /**
  * Defines a separator for the Menu component, with optional icon and visibility settings.
@@ -153,6 +145,14 @@ export interface MenuSeparator extends Omit<SeparatorProps, "vertical"> {
 }
 
 /**
+ * Defines a fixWindow for the Menu component, with optional icon and visibility settings.
+ */
+export type MenuFixWindow = Pick<
+  FixWindowProps,
+  "eventOpen" | "eventClose" | "mode" | "delay" | "class" | "classBody" | "marginPx" | "translatePx" | "paddingWindow"
+>
+
+/**
  * Represents a single item in the Menu component.
  */
 export type MenuItem = {
@@ -170,19 +170,19 @@ export type MenuItem = {
 
   /**
    * Configuration options for the fixed window menu.
-   * @type {FixWindowProps | undefined}
+   * @type {MenuFixWindow | undefined}
    */
-  paramsWindowMenu?: FixWindowProps
+  paramsWindowMenu?: MenuFixWindow
 
   /**
    * Nested groups associated with the menu item.
-   * @type {Groups | undefined}
+   * @type {Array<GroupMenu> | undefined}
    */
-  groups?: Groups
+  groups?: Array<GroupMenu>
 }
 
 export interface MenuItemPrivate extends Omit<MenuItem, "groups"> {
-  groups?: GroupsPrivate
+  groups?: Array<GroupMenuPrivate>
 }
 
 // ---------------------------------------
@@ -321,6 +321,13 @@ export declare type MenuProps = {
   horizontal?: boolean
 
   /**
+   * Controls whether the first letter of the menu item's title is displayed when no icon is provided.
+   * If set to `true`, the first letter of the title will be shown with a styled appearance.
+   * If set to `false`, no placeholder will be displayed for items without icons.
+   * @type {boolean | undefined}
+   */
+  useFirstLetter?: boolean
+  /**
    * Displays only icons for the menu items.
    * @type {boolean | undefined}
    */
@@ -341,7 +348,7 @@ export declare type MenuProps = {
 
 export declare type MenuSlots = {
   title(args: { title: string }): VNode[]
-  item(args: Omit<ItemMenu, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive">): VNode[]
+  item(args: { data: Omit<ItemMenu, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive"> }): VNode[]
   footer(): VNode[]
 }
 
@@ -352,18 +359,18 @@ export declare type MenuEmits = {
   /**
    * Emitted when a menu item becomes active.
    * @param e
-   * @param {MouseEvent} event - The mouse event that triggered the activation.
+   * @param {PointerEvent} event - The mouse event that triggered the activation.
    * @param {ItemMenuPrivate} item - The activated menu item.
    */
-  (e: "onActive", event: MouseEvent, item: ItemMenuPrivate): void
+  (e: "onActive", event: PointerEvent, item: ItemMenuPrivate): void
 
   /**
    * Emitted when a menu item becomes inactive.
    * @param e
-   * @param {MouseEvent} event - The mouse event that triggered the deactivation.
+   * @param {PointerEvent} event - The mouse event that triggered the deactivation.
    * @param {ItemMenuPrivate} item - The deactivated menu item.
    */
-  (e: "onInactive", event: MouseEvent, item: ItemMenuPrivate): void
+  (e: "onInactive", event: PointerEvent, item: ItemMenuPrivate): void
 
   /**
    * Emitted when a menu item is clicked.
@@ -411,6 +418,13 @@ export declare type MenuExpose = {
   horizontal: ReadRef<NonNullable<MenuProps["horizontal"]>>
 
   /**
+   * Determines whether the first letter of a menu item's title is displayed in the absence of an icon.
+   * When enabled, the first letter will be styled and shown as a placeholder.
+   * @type {ReadRef<MenuProps["useFirstLetter"]>}
+   */
+  useFirstLetter: ReadRef<MenuProps["useFirstLetter"]>
+
+  /**
    * Indicates whether the menu displays only icons.
    * @type {ReadRef<NonNullable<MenuProps["onlyIcons"]>>}
    */
@@ -436,9 +450,9 @@ export declare type MenuExpose = {
 
   /**
    * List of groups within the menu.
-   * @type {ReadRef<GroupsPrivate>}
+   * @type {ReadRef<Array<GroupMenuPrivate>>}
    */
-  listGroups: ReadRef<GroupsPrivate>
+  listGroups: ReadRef<Array<GroupMenuPrivate>>
 
   /**
    * Parameters for the menu window behavior.
@@ -481,12 +495,6 @@ export declare type MenuExpose = {
    * @type {ReadRef<StyleClass>}
    */
   classSeparatorIcon: ReadRef<StyleClass>
-
-  /**
-   * Custom CSS class for menu groups.
-   * @type {ReadRef<StyleClass>}
-   */
-  classGroup: ReadRef<StyleClass>
 
   /**
    * Custom CSS class for group titles.
@@ -559,7 +567,16 @@ export declare type MenuExpose = {
 }
 export declare type MenuOption = Pick<
   MenuProps,
-  "mode" | "selected" | "horizontal" | "onlyIcons" | "styles" | "class" | "title" | "separator" | "paramsWindowMenu"
+  | "mode"
+  | "selected"
+  | "horizontal"
+  | "useFirstLetter"
+  | "onlyIcons"
+  | "styles"
+  | "class"
+  | "title"
+  | "separator"
+  | "paramsWindowMenu"
 >
 
 // ---------------------------------------

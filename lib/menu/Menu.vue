@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots } from "vue"
   import { ChevronRightIcon } from "@heroicons/vue/20/solid"
-  import type {
+  import {
+    GroupMenu,
     GroupMenuPrivate,
-    GroupsPrivate,
     ItemMenuPrivate,
     MenuEmits,
     MenuExpose,
@@ -15,9 +15,10 @@
   } from "./Menu"
   import type { FixWindowProps } from "fishtvue/fixwindow"
   import type { SeparatorProps } from "fishtvue/separator"
-  import type { _key, RefLink, StyleClass } from "fishtvue/types"
-  import { deepCopyObject, deepMergeSoft, fieldsOmit } from "fishtvue/utils/objectHandler"
+  import type { _key, StyleClass } from "fishtvue/types"
+  import { deepCopyObject, deepMergeSoft, fieldsOmit, fieldsPick } from "fishtvue/utils/objectHandler"
   import { generateUUID } from "fishtvue/utils/functionHandler"
+  import { isArray } from "fishtvue/utils/arrayHandler"
   import Icons from "fishtvue/icons/Icons.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import Separator from "fishtvue/separator/Separator.vue"
@@ -29,11 +30,23 @@
   const props = withDefaults(defineProps<MenuProps>(), {
     selected: undefined,
     horizontal: undefined,
+    useFirstLetter: undefined,
     onlyIcons: undefined
   })
   const emit = defineEmits<MenuEmits>()
   const slots = useSlots()
-  // ---REF-LINK----------------------------
+  // ---STATIC------------------------------
+  const arrayParamsWindowMenu = [
+    "eventOpen",
+    "eventClose",
+    "mode",
+    "delay",
+    "class",
+    "classBody",
+    "marginPx",
+    "translatePx",
+    "paddingWindow"
+  ]
   // ---STATE-------------------------------
   const selectedItemIndex = ref<_key>()
   const activeItemIndex = ref<_key>()
@@ -48,21 +61,24 @@
   const horizontal = computed<NonNullable<MenuProps["horizontal"]>>(
     () => props?.horizontal ?? options?.horizontal ?? false
   )
+  const useFirstLetter = computed<MenuProps["useFirstLetter"]>(
+    () => props?.useFirstLetter ?? options?.useFirstLetter ?? false
+  )
   const onlyIcons = computed<NonNullable<MenuProps["onlyIcons"]>>(() => props?.onlyIcons ?? options?.onlyIcons ?? false)
   const title = computed<NonNullable<MenuProps["title"]>>(() => props?.title ?? options?.title ?? "")
   const iconSeparator = computed<MenuSeparator["icon"]>(() => props.separator?.icon ?? options?.separator?.icon)
   const isSeparator = computed<NonNullable<MenuSeparator["isVisible"]>>(
     () => props.separator?.isVisible ?? options?.separator?.isVisible ?? true
   )
-  const listGroups = computed<GroupsPrivate>(() => setItems(props as MenuItemPrivate)?.groups ?? [])
+  const listGroups = computed<Array<GroupMenuPrivate>>(() => setItems(props as MenuItemPrivate)?.groups ?? [])
   const paramsWindowMenu = computed<MenuProps["paramsWindowMenu"]>(() => ({
     delay: 200,
     typePosition: "absolute",
     position: "right-top",
     eventOpen: onlyIcons.value ? "click" : "hover",
     eventClose: "hover",
-    ...options?.paramsWindowMenu,
-    ...props?.paramsWindowMenu
+    ...fieldsPick(options?.paramsWindowMenu ?? {}, arrayParamsWindowMenu),
+    ...fieldsPick(props?.paramsWindowMenu ?? {}, arrayParamsWindowMenu)
   }))
   const baseSeparator = computed<MenuSeparator>(() => ({
     class: horizontal.value ? "my-1" : "-mx-1",
@@ -117,12 +133,17 @@
   const classSeparatorIcon = computed<StyleClass>(() =>
     MenuComponent.setStyle(["h-4 w-4 text-neutral-200 dark:text-neutral-800", styles.value?.class?.separatorIcon ?? ""])
   )
-  const classGroup = computed<StyleClass>(() =>
-    MenuComponent.setStyle([styles.value?.class?.group ?? "", horizontal.value ? "flex flex-row" : ""])
-  )
+  const classGroup = function (itemClass: GroupMenu["class"]) {
+    return MenuComponent.setStyle([
+      "flex flex-col rounded",
+      styles.value?.class?.group ?? "",
+      itemClass,
+      horizontal.value ? "flex flex-row" : ""
+    ])
+  }
   const classGroupTitle = computed<StyleClass>(() =>
     MenuComponent.setStyle([
-      "mt-2 ml-8 leading-4 text-left text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-bold",
+      "mt-[10px] ml-8 mr-2 leading-4 text-left text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-bold",
       styles.value?.class?.groupTitle ?? ""
     ])
   )
@@ -136,13 +157,14 @@
   const classMenuItem = function (item: ItemMenuPrivate) {
     return MenuComponent.setStyle([
       "items-center rounded mt-0.5 px-2 py-1.5 text-sm",
+      styles.value?.animation ?? "",
       styles.value?.class?.item ?? "",
       item?.class ?? "",
       horizontal.value ? "mr-0.5 last:mr-0" : "",
       activeItemIndex.value === item?._key ? (styles.value?.activeRows as StyleClass) : "",
       selectedItemIndex.value === item?._key ? `${styles.value?.selectedRows} font-semibold` : "",
       item?.disabled ? "pointer-events-none opacity-50" : "",
-      "flex cursor-default select-none outline-none transition-colors"
+      "flex cursor-default select-none outline-none"
     ])
   }
   const classItemIcon = computed<StyleClass>(() =>
@@ -181,6 +203,7 @@
     mode,
     selected,
     horizontal,
+    useFirstLetter,
     onlyIcons,
     title,
     iconSeparator,
@@ -193,7 +216,6 @@
     classMenu,
     classSeparator,
     classSeparatorIcon,
-    classGroup,
     classGroupTitle,
     classTitle,
     classItemIcon,
@@ -213,13 +235,13 @@
   })
 
   // ---METHODS-----------------------------
-  function overItem(event: MouseEvent, item: ItemMenuPrivate) {
+  function enterItem(event: PointerEvent, item: ItemMenuPrivate) {
     setActiveItem(item?._key)
     emit("onActive", event, item)
     if (item?.onActive) item.onActive(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
   }
 
-  function leaveItem(event: MouseEvent, item: ItemMenuPrivate) {
+  function leaveItem(event: PointerEvent, item: ItemMenuPrivate) {
     setActiveItem(undefined)
     emit("onInactive", event, item)
     if (item?.onInactive)
@@ -243,46 +265,56 @@
   function setItems(menu: MenuItemPrivate, depth: number = 0): NonNullable<MenuItemPrivate> {
     return {
       ...menu,
-      groups: menu.groups
-        ? menu.groups?.map(
-            (group): GroupMenuPrivate => ({
-              ...group,
-              separator: {
-                icon: group.separator?.icon ?? iconSeparator.value,
-                isVisible: group.separator?.isVisible ?? isSeparator.value,
-                class: horizontal.value ? "-my-1" : "-mx-1",
-                ...baseSeparator.value,
-                ...group.separator
-              },
-              items: group.items?.map((item): ItemMenuPrivate => {
-                return {
-                  ...item,
-                  _key: generateUUID(),
-                  menu: item?.menu
-                    ? setItems(
-                        {
-                          styles: props.styles,
-                          paramsWindowMenu: {
-                            ...paramsWindowMenu.value,
-                            position: depth ? "right-top" : horizontal.value ? "bottom-left" : "right-top",
-                            ...item?.menu?.paramsWindowMenu
-                          } as FixWindowProps,
-                          ...item?.menu
-                        } as MenuItemPrivate,
-                        depth > 0 ? depth + 1 : 1
-                      )
-                    : null
-                }
+      groups:
+        menu?.groups && isArray(menu.groups)
+          ? menu.groups?.map(
+              (group): GroupMenuPrivate => ({
+                ...group,
+                separator: {
+                  icon: group.separator?.icon ?? iconSeparator.value,
+                  isVisible: group.separator?.isVisible ?? isSeparator.value,
+                  class: horizontal.value ? "-my-1" : "-mx-1",
+                  ...baseSeparator.value,
+                  ...group.separator
+                },
+                items:
+                  group?.items && isArray(group.items)
+                    ? group.items?.map((item): ItemMenuPrivate => {
+                        return {
+                          ...item,
+                          _key: generateUUID(),
+                          menu: item?.menu
+                            ? setItems(
+                                {
+                                  styles: props.styles,
+                                  paramsWindowMenu: {
+                                    ...paramsWindowMenu.value,
+                                    position: depth ? "right-top" : horizontal.value ? "bottom-left" : "right-top",
+                                    ...fieldsPick(item?.menu?.paramsWindowMenu ?? {}, arrayParamsWindowMenu)
+                                  } as FixWindowProps,
+                                  ...item?.menu
+                                } as MenuItemPrivate,
+                                depth > 0 ? depth + 1 : 1
+                              )
+                            : null
+                        }
+                      })
+                    : []
               })
-            })
-          )
-        : []
+            )
+          : []
     }
   }
 </script>
 
 <template>
-  <div data-menu role="menu" :class="classMenu" :style="`width:${styles.width};height:${styles.height};`" tabindex="-1">
+  <div
+    v-if="listGroups.length"
+    data-menu
+    role="menu"
+    :class="classMenu"
+    :style="`${(styles.width as string).length ? `width:${styles.width};` : ''}${(styles.height as string).length ? `height:${styles.height};` : ''}`"
+    tabindex="-1">
     <div v-if="title.length || slots?.title" data-menu-title :class="classTitle">
       <slot name="title" :title="title">{{ title }}</slot>
     </div>
@@ -300,14 +332,13 @@
           :vertical="horizontal">
           <Icons :type="group.separator?.icon ?? iconSeparator ?? ''" :class="classSeparatorIcon" />
         </Separator>
-        <!--not icon-->
         <Separator
           v-else
           v-bind="fieldsOmit(group?.separator ?? baseSeparator, ['isVisible', 'icon']) as SeparatorProps"
           :class="classSeparator"
           :vertical="horizontal" />
       </template>
-      <div data-menu-group role="group" :class="classGroup">
+      <div data-menu-group role="group" :class="classGroup(group.class)">
         <div v-if="!onlyIcons && group.title" data-menu-group-title :class="classGroupTitle">
           {{ group.title }}
         </div>
@@ -319,8 +350,8 @@
           :data-collection-item="item?._key"
           :aria-disabled="item?.disabled ?? false"
           :tabindex="activeItemIndex === item?._key ? 0 : -2"
-          @mouseover="(event) => overItem(event, item)"
-          @mouseleave="(event) => leaveItem(event, item)"
+          @pointerenter="(event) => enterItem(event, item)"
+          @pointerleave="(event) => leaveItem(event, item)"
           @click="(event) => clickItem(event, item)"
           :class="classMenuItem(item)">
           <slot name="item" :data="fieldsOmit(item, notPublicParamsMenu)">
@@ -328,7 +359,7 @@
               v-if="item?.icon"
               :type="item.icon"
               :class="['h-5 w-4 opacity-60', styles?.class?.itemIcon as string]" />
-            <div v-else :class="classItemIcon">
+            <div v-else-if="useFirstLetter" :class="classItemIcon">
               {{ item?.title?.[0] }}
             </div>
             <template v-if="!onlyIcons">
@@ -359,7 +390,9 @@
       </div>
     </template>
     <template v-if="slots?.footer">
-      <Separator v-bind="fieldsOmit(baseSeparator, ['isVisible', 'icon']) as SeparatorProps" class="!px-0 !-mx-1" />
+      <Separator
+        v-bind="fieldsOmit(baseSeparator, ['isVisible', 'icon']) as SeparatorProps"
+        class="py-1.5 !px-0 !-mx-1" />
       <slot name="footer"></slot>
     </template>
   </div>
