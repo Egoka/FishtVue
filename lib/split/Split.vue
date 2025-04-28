@@ -29,7 +29,7 @@
 
   // ---PROPS-------------------------------
   const units = computed<SplitProps["units"]>(() => props.units ?? "percentages")
-  const panels = computed<SplitProps["panels"]>(
+  const panels = computed<Panel[]>(
     () =>
       props.panels?.map((item) => {
         if (item?.size && (typeof item?.size as string) === "string" && +item?.size > 0) item.size = +item.size
@@ -133,27 +133,14 @@
     classBase
   })
   // ---MOUNT-UNMOUNT-----------------------
+  if (!isClient()) updatePanels()
   onMounted(() => {
-    if (!isClient()) return // Skip on server
+    if (!isClient()) return
     Split.initStyle()
     setCursorPanels(panels.value)
-    const defaultSize = getDefaultSize(panels.value)
-    Object.assign(
-      sizePanels,
-      Object.fromEntries(
-        new Map(panels.value.map((panel) => [panel.name, sizePanels[panel.name] ?? panel.size ?? defaultSize]))
-      )
-    )
+    updatePanels()
     if (resizableGroup.value) {
-      splitObserver = new ResizeObserver(() => {
-        const defaultSize = getDefaultSize(panels.value)
-        Object.assign(
-          sizePanels,
-          Object.fromEntries(
-            new Map(panels.value.map((panel) => [panel.name, sizePanels[panel.name] ?? panel.size ?? defaultSize]))
-          )
-        )
-      })
+      splitObserver = new ResizeObserver(() => updatePanels())
       splitObserver.observe(resizableGroup.value)
     }
   })
@@ -178,20 +165,33 @@
   )
 
   // ---METHODS-----------------------------
+  function updatePanels() {
+    Object.assign(
+      sizePanels,
+      Object.fromEntries(
+        new Map(
+          panels.value.map((panel) => [
+            panel.name,
+            sizePanels[panel.name] ?? panel.size ?? getDefaultSize(panels.value)
+          ])
+        )
+      )
+    )
+  }
   function setItemRef(el: HTMLElement, namePanel: Panel["name"]) {
     if (isClient()) {
       resizablePanels.value[namePanel] = el
     }
   }
 
-  function setCursorPanels(array: SplitProps["panels"]) {
+  function setCursorPanels(array: Panel[]) {
     Object.assign(
       cursorPanels,
       Object.fromEntries(new Map(array.map((panel) => [panel.name, cursorPanels[panel.name] ?? "center"])))
     )
   }
 
-  function getDefaultSize(array: SplitProps["panels"]) {
+  function getDefaultSize(array: Panel[]) {
     const fullSizeSplit =
       units.value === "pixels"
         ? direction.value === "horizontal"
@@ -359,13 +359,6 @@
   const isStartResize = ref<boolean>(false)
   const isStartMove = ref<boolean>(false)
 
-  function moveResizedPanels(ev: MouseEvent) {
-    if (!isClient() || !resizablePanel.value) return
-    resizePanel(ev, resizablePanel.value)
-    emit("updated-panels", sizePanels)
-    emit("updated-size-panel", sizePanels[resizablePanel.value], resizablePanel.value)
-  }
-
   function startResizePanel($event: PointerEvent, namePanel: Panel["name"]) {
     if (!isClient()) return
     resizablePanel.value = namePanel
@@ -396,7 +389,7 @@
     emit("updated-size-panel", sizePanels[namePanel], namePanel)
   }
 
-  function outResizePanel($event: MouseEvent, namePanel: Panel["name"]) {
+  function outResizePanel($event: PointerEvent, namePanel: Panel["name"]) {
     if (!isClient()) return
     isStartMove.value = false
     if (!isStartResize.value) resizablePanel.value = null

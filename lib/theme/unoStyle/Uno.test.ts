@@ -2783,6 +2783,21 @@ describe("unoStyle", () => {
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
+      // it.each<{ classValue: string; expected: string }>([
+      //   { classValue: "border-x-red-400/0", expected: ".border-x-red-400\\/0 {\n  border-inline-color: #f8717100;\n}" },
+      //   {
+      //     classValue: "border-y-red-400/50",
+      //     expected: ".border-y-red-400\\/50 {\n  border-block-color: #f8717180;\n}"
+      //   },
+      //   { classValue: "border-t-red-400/100", expected: ".border-t-red-400\\/100 {\n  border-top-color: #f87171;\n}" },
+      //   {
+      //     classValue: "border-r-red-400/[.06]",
+      //     expected: ".border-red-400\\/\\[\\.06\\] {\n  border-color: #f871710f;\n}"
+      //   },
+      //   { classValue: "border-[#50d71e]/25", expected: ".border-\\[\\#50d71e\\]\\/25 {\n  border-color: #50d71e40;\n}" }
+      // ])(`tailwind($classValue)`, ({ classValue, expected }) => {
+      //   expect(tailwind(classValue)).toBe(expected)
+      // })
     })
     describe("Border Style", () => {
       it.each<{ classValue: string; expected: string }>([

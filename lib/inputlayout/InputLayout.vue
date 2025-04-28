@@ -263,7 +263,7 @@
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
         <div v-if="isLoading" data-loading :class="classLoading">
-          <Loading v-if="isLoading" type="simple" class="absolute top-[3px] -left-4" />
+          <Loading v-if="isLoading" type="simple" class="absolute -top-[8px] -left-4" />
         </div>
       </transition>
       <div v-if="help?.length" data-input-layout-help :class="classIconBody">

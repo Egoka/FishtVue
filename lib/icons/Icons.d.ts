@@ -1,4 +1,5 @@
 import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { CSSProperties } from "vue"
 
 /**
  * ## Icons
@@ -27,9 +28,9 @@ export declare type IconsProps = {
 
   /**
    * Custom inline styles for the icon.
-   * @type {string | undefined}
+   * @type {CSSProperties | undefined}
    */
-  style?: string
+  style?: CSSProperties
 }
 export declare type IconsSlots = null
 export declare type IconsEmits = null

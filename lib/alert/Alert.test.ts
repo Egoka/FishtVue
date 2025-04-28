@@ -392,15 +392,15 @@ describe("Alert Component", () => {
        */
       function getExpectedClassesForPosition(position: string): string[] {
         const positionClasses: Record<string, string[]> = {
-          top: ["top-0", "mt-5", "items-center"],
-          bottom: ["bottom-0", "mb-5", "items-center", "flex-col-reverse"],
-          left: ["left-0", "ml-5", "top-1/2", "-translate-y-1/2"],
-          right: ["right-0", "mr-5", "top-1/2", "-translate-y-1/2"],
+          top: ["top-0", "pt-5", "items-center"],
+          bottom: ["bottom-0", "pb-5", "items-center", "flex-col-reverse"],
+          left: ["left-0", "pl-5", "top-1/2", "-translate-y-1/2"],
+          right: ["right-0", "pr-5", "top-1/2", "-translate-y-1/2"],
           center: ["top-1/2", "left-1/2", "-translate-y-1/2", "-translate-x-1/2"],
-          "bottom-left": ["bottom-0", "mb-5", "left-0", "ml-5", "flex-col-reverse"],
-          "top-left": ["top-0", "mt-5", "left-0", "ml-5"],
-          "bottom-right": ["bottom-0", "mb-5", "right-0", "mr-5", "flex-col-reverse"],
-          "top-right": ["top-0", "mt-5", "right-0", "mr-5"]
+          "bottom-left": ["bottom-0", "pb-5", "left-0", "pl-5", "flex-col-reverse"],
+          "top-left": ["top-0", "pt-5", "left-0", "pl-5"],
+          "bottom-right": ["bottom-0", "pb-5", "right-0", "pr-5", "flex-col-reverse"],
+          "top-right": ["top-0", "pt-5", "right-0", "pr-5"]
         }
 
         return positionClasses[position] || []

@@ -1772,7 +1772,7 @@
           enter-to-class="opacity-100">
           <div v-if="isLoading" data-table-loading :class="classIsLoading">
             <div :class="classIsLoadingBody">
-              <Loading type="Fingerprint" :size="100" :color="isDark ? 'theme.600' : 'theme.500'" />
+              <Loading type="FingerprintSpinner" :size="100" :color="isDark ? 'theme.600' : 'theme.500'" />
             </div>
           </div>
         </transition>

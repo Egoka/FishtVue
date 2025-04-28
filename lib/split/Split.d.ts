@@ -87,7 +87,7 @@ export type Group = {
    * The list of panels in the group.
    * @type {Array<Panel>}
    */
-  panels: Array<Panel>
+  panels: Panel[]
 
   /**
    * The direction of panel resizing (`vertical` or `horizontal`).
