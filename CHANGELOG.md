@@ -1,5 +1,12 @@
 # CHANGELOG
 
+# [0.1.0](https://github.com/Egoka/FishtVue/compare/v0.0.8...v0.1.0) (2025-04-30)
+
+
+### Features
+
+* components ([db0027a](https://github.com/Egoka/FishtVue/commit/db0027a044b3168d906ee3f399913c4a02c72b3f))
+
 ## [0.0.8](https://github.com/Egoka/FishtVue/compare/v0.0.7...v0.0.8) (2025-02-09)
 
 ## [0.0.7](https://github.com/Egoka/FishtVue/compare/v0.0.6...v0.0.7) (2025-02-07)
