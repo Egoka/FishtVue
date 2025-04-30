@@ -39,11 +39,15 @@
   const id = ref<NonNullable<AriaProps["id"]>>(String(props.id ?? instance.value?.uid))
   const placeholder = computed<NonNullable<AriaProps["placeholder"]>>(() => String(props?.placeholder ?? ""))
   const autocomplete = computed<NonNullable<AriaProps["autocomplete"]>>(
-    () => props?.autocomplete ?? options?.autocomplete ?? "on"
+    () => (props?.autocomplete as AriaProps["autocomplete"]) ?? options?.autocomplete ?? "on"
   )
-  const wrap = computed<NonNullable<AriaProps["wrap"]>>(() => props?.wrap ?? options?.wrap ?? "soft")
-  const rows = computed<NonNullable<AriaProps["rows"]>>(() => props?.rows ?? options?.rows ?? 3)
-  const maxLength = computed<NonNullable<AriaProps["maxLength"]>>(() => props?.maxLength ?? options?.maxLength ?? 9999)
+  const wrap = computed<NonNullable<AriaProps["wrap"]>>(
+    () => (props?.wrap as AriaProps["wrap"]) ?? options?.wrap ?? "soft"
+  )
+  const rows = computed<NonNullable<AriaProps["rows"]>>(() => (props?.rows as AriaProps["rows"]) ?? options?.rows ?? 3)
+  const maxLength = computed<NonNullable<AriaProps["maxLength"]>>(
+    () => (props?.maxLength as AriaProps["maxLength"]) ?? options?.maxLength ?? 9999
+  )
   const isValue = computed<boolean>(() => !!modelValue.value || isActiveAria.value)
   const mode = computed<NonNullable<AriaProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const isDisabled = computed<NonNullable<AriaProps["disabled"]>>(() => props.disabled ?? false)

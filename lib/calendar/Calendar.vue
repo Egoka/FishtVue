@@ -64,14 +64,14 @@
   watch(
     () => props.modelValue,
     (modelValue) => {
-      value.value =
-        !!(modelValue as Partial<IRangeValue>)?.start && !!(modelValue as Partial<IRangeValue>)?.end
-          ? props.paramsDatePicker?.isRange
-            ? modelValue
-            : null
-          : !props.paramsDatePicker?.isRange
-            ? (modelValue ?? "")
-            : { start: null, end: null }
+      value.value = modelValue
+      if (!!(modelValue as Partial<IRangeValue>)?.start && !!(modelValue as Partial<IRangeValue>)?.end) {
+        value.value = (props?.paramsDatePicker as CalendarProps["paramsDatePicker"])?.isRange ? modelValue : null
+      } else {
+        value.value = !(props?.paramsDatePicker as CalendarProps["paramsDatePicker"])?.isRange
+          ? (modelValue ?? "")
+          : { start: null, end: null }
+      }
     },
     { immediate: true }
   )

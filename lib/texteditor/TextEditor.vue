@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { ComponentInternalInstance } from "vue"
-  import { computed, getCurrentInstance, onMounted, onBeforeMount, ref, useSlots, watch } from "vue"
+  import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
   import { IQuillEditor, TextEditorEmits, TextEditorExpose, TextEditorProps } from "./TextEditor"
   import "@vueup/vue-quill/dist/vue-quill.snow.css"
   import "@vueup/vue-quill/dist/vue-quill.bubble.css"
@@ -40,13 +40,15 @@
     () => props.modelValue,
     (value) => {
       modelValue.value = value
-      valueLayout.value = htmlToText(value)
+      valueLayout.value = htmlToText<TextEditorProps["modelValue"]>(value)
     },
     { immediate: true }
   )
   // ---PROPS-------------------------------
   const id = ref<NonNullable<TextEditorProps["id"]>>(String(props.id ?? instance.value?.uid))
-  const theme = ref<NonNullable<TextEditorProps["theme"]>>(props?.theme ?? options?.theme ?? "bubble")
+  const theme = ref<NonNullable<TextEditorProps["theme"]>>(
+    (props?.theme as TextEditorProps["theme"]) ?? options?.theme ?? "bubble"
+  )
   const isValue = computed<boolean>(() =>
     Boolean(modelValue.value ? String(modelValue.value).length : (modelValue.value ?? isActiveTextEditor.value))
   )
@@ -94,7 +96,7 @@
       [{ font: [] }],
       [{ align: [] }],
       ["link", "image"],
-      ["clean"] // remove formatting button
+      ["clean"] // remove the formatting button
     ],
     ...options?.paramsTextEditor,
     ...props?.paramsTextEditor

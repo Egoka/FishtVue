@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from "vue"
   import type { Ref } from "vue"
+  import { computed, onMounted, ref, watch } from "vue"
   import {
     ArrowLongLeftIcon,
     ArrowLongRightIcon,
@@ -30,19 +30,21 @@
   const sizePage = ref<number>()
   const isShortPrevious = ref(false)
   const isShortNext = ref(false)
-  const widthNavLink = ref<number>()
   // ---PROPS-------------------------------
   const sizePageProp = computed<NonNullable<PaginationProps["sizePage"]>>(() => {
-    const sizePageProp = props.sizePage ?? options?.sizePage
-    return sizePageProp && sizePageProp > 0 ? sizePageProp : 5
+    const sizePageProp = (props.sizePage as PaginationProps["sizePage"]) ?? options?.sizePage ?? 5
+    return sizePageProp > 0 ? sizePageProp : 5
   })
   const visibleNumberPages = computed<NonNullable<PaginationProps["visibleNumberPages"]>>(() => {
-    const countVisible = props?.visibleNumberPages ?? options?.visibleNumberPages
-    return countVisible && countVisible >= 5 ? countVisible : 5
+    const countVisible =
+      (props?.visibleNumberPages as PaginationProps["visibleNumberPages"]) ?? options?.visibleNumberPages ?? 5
+    return countVisible > 5 ? countVisible : 5
   })
   const total = computed<NonNullable<PaginationProps["total"]>>(() => props.total ?? options?.total ?? 0)
   const isInfoText = computed<PaginationProps["isInfoText"]>(() => props.isInfoText ?? options?.isInfoText ?? false)
-  const sizesSelector = computed<PaginationProps["sizesSelector"]>(() => props?.sizesSelector ?? options?.sizesSelector)
+  const sizesSelector = computed<PaginationProps["sizesSelector"]>(
+    () => (props?.sizesSelector as PaginationProps["sizesSelector"]) ?? options?.sizesSelector
+  )
   const isPageSizeSelector = computed<PaginationProps["isPageSizeSelector"]>(
     () => ((props.isPageSizeSelector ?? options?.isPageSizeSelector) || !!sizesSelector.value?.length) ?? false
   )
@@ -89,12 +91,12 @@
     () => props.modelValue,
     () => {
       activePage.value =
-        typeof (+props.modelValue as any) === "number" && +props.modelValue ? (+props.modelValue ?? pages.value[0]) : 1
+        typeof props.modelValue === "number" && +props.modelValue ? ((+props.modelValue as any) ?? pages.value[0]) : 1
     },
     { immediate: true }
   )
   const mode = computed<NonNullable<PaginationProps["mode"]>>(
-    () => props?.mode ?? options?.mode ?? Pagination.componentsStyle() ?? "outlined"
+    () => (props?.mode as PaginationProps["mode"]) ?? options?.mode ?? Pagination.componentsStyle() ?? "outlined"
   )
   const isStyleMode = computed<boolean>(() => mode.value === "outlined" || mode.value === "filled")
   const modeStyleSelect = computed<string>(() =>
@@ -208,8 +210,8 @@
   onMounted(() => {
     Pagination.initStyle()
     if (navPreviousLink.value && navNextLink.value) {
-      const limitPrevious = (navPreviousLink.value.firstChild as HTMLDivElement)?.offsetWidth + 10 ?? 0
-      const limitNext = (navNextLink.value.firstChild as HTMLDivElement)?.offsetWidth + 10 ?? 0
+      const limitPrevious = ((navPreviousLink.value.firstChild as HTMLDivElement)?.offsetWidth ?? 0) + 10
+      const limitNext = ((navNextLink.value.firstChild as HTMLDivElement)?.offsetWidth ?? 0) + 10
       const limit = Math.max(limitPrevious, limitNext)
       setShortNavigation(navPreviousLink.value, limit, isShortPrevious)
       setShortNavigation(navNextLink.value, limit, isShortNext)

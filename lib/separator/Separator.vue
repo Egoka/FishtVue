@@ -41,7 +41,7 @@
     } else return 0
   })
   const depth = computed<NonNullable<SeparatorProps["depth"]>>(() => {
-    const depth = props?.depth ?? options?.depth ?? 1
+    const depth = (props?.depth as SeparatorProps["depth"]) ?? options?.depth ?? 1
     return depth && depth <= 7 ? depth : 1
   })
   const classBase = computed<SeparatorProps["class"]>(() =>

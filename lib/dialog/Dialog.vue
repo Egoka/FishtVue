@@ -57,13 +57,13 @@
     let returnClass
     const isNotAnimate = props?.notAnimate ?? options?.notAnimate ?? false
     if (!isNotAnimate) {
-      if (position.value.includes("left")) {
+      if ((position.value as string).includes("left")) {
         returnClass = "-translate-x-full"
-      } else if (position.value.includes("right")) {
+      } else if ((position.value as string).includes("right")) {
         returnClass = "translate-x-full"
-      } else if (position.value.includes("top")) {
+      } else if ((position.value as string).includes("top")) {
         returnClass = "-translate-y-full"
-      } else if (position.value.includes("bottom")) {
+      } else if ((position.value as string).includes("bottom")) {
         returnClass = "translate-y-full"
       } else returnClass = "translate-x-0 opacity-0"
     } else returnClass = "translate-x-0 opacity-0"
@@ -75,16 +75,16 @@
     if (position.value === "center") {
       arrayDialog.push("top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2")
     }
-    if (position.value.includes("bottom")) {
+    if ((position.value as string).includes("bottom")) {
       arrayDialog.push(`bottom-0 ${withoutMargin.value ? "" : "mb-5"}`)
-    } else if (position.value.includes("top")) {
+    } else if ((position.value as string).includes("top")) {
       arrayDialog.push(`top-0 ${withoutMargin.value ? "" : "mt-5"}`)
     } else {
       arrayDialog.push("top-1/2 -translate-y-1/2")
     }
-    if (position.value.includes("right")) {
+    if ((position.value as string).includes("right")) {
       arrayDialog.push(`right-0 ${withoutMargin.value ? "" : "mr-5"}`)
-    } else if (position.value.includes("left")) {
+    } else if ((position.value as string).includes("left")) {
       arrayDialog.push(`left-0 ${withoutMargin.value ? "" : "ml-5"}`)
     } else {
       arrayDialog.push("left-1/2 -translate-x-1/2")

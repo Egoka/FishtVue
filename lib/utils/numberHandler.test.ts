@@ -121,7 +121,7 @@ describe("Testing Number handler", () => {
     })
 
     it("should not fail on large numbers", () => {
-      // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
+      // eslint-disable-next-line no-loss-of-precision
       expect(convertToNumber(12345678901234567890, 20, 0)).toBe("12345678901234567000")
     })
   })

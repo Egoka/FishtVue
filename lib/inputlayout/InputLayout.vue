@@ -37,11 +37,11 @@
   const value = computed<InputLayoutProps["value"]>(() => props.value ?? null)
   const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props?.isValue ?? false)
   const mode = computed<NonNullable<InputLayoutProps["mode"]>>(
-    () => props?.mode ?? options?.mode ?? InputLayout.componentsStyle() ?? "outlined"
+    () => (props?.mode as InputLayoutProps["mode"]) ?? options?.mode ?? InputLayout.componentsStyle() ?? "outlined"
   )
   const label = computed<NonNullable<InputLayoutProps["label"]>>(() => String(props?.label ?? ""))
   const labelMode = computed<NonNullable<InputLayoutProps["labelMode"]>>(() => {
-    const labelModeValue = props?.labelMode ?? options?.labelMode ?? "offsetDynamic"
+    const labelModeValue = (props?.labelMode as InputLayoutProps["labelMode"]) ?? options?.labelMode ?? "offsetDynamic"
     return labelModeValue ? labelModeValue : "offsetDynamic"
   })
   const labelType = computed<NonNullable<InputLayoutProps["labelMode"]>>(() =>
@@ -54,15 +54,17 @@
   const messageInvalid = computed<InputLayoutProps["messageInvalid"]>(() => props.messageInvalid ?? "")
   const help = computed<InputLayoutProps["help"]>(() => String(props.help ?? ""))
   const widthLayout = computed<string>(() => {
-    const resultWidth: InputLayoutProps["width"] = props?.width ?? options?.height ?? ""
+    const resultWidth = (props?.width as InputLayoutProps["width"]) ?? options?.height ?? ""
     return resultWidth ? (typeof resultWidth === "number" ? `${resultWidth}px` : resultWidth) : ""
   })
   const heightLayout = computed<string>(() => {
-    const resultHeight: InputLayoutProps["height"] = props?.height ?? options?.height ?? ""
+    const resultHeight = (props?.height as InputLayoutProps["height"]) ?? options?.height ?? ""
     return resultHeight ? (typeof resultHeight === "number" ? `${resultHeight}px` : resultHeight) : ""
   })
   const animation = computed<NonNullable<InputLayoutProps["animation"]>>(() =>
-    isTick.value ? (props?.animation ?? options?.animation ?? "transition-all duration-550") : ""
+    isTick.value
+      ? ((props?.animation as InputLayoutProps["animation"]) ?? options?.animation ?? "transition-all duration-550")
+      : ""
   )
   const classBody = computed(() =>
     InputLayout.setStyle([

@@ -58,7 +58,6 @@
     return Alert.setStyle(classAnimate)
   })
   const classesStyle = computed<Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>>(
-    // eslint-disable-next-line vue/return-in-computed-property
     () => {
       switch (type.value) {
         case "success":
@@ -109,7 +108,7 @@
       }
     }
   )
-  // eslint-disable-next-line vue/return-in-computed-property
+
   const icon = computed(() => {
     switch (type.value) {
       case "success":

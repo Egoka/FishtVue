@@ -24,7 +24,6 @@ export default defineNuxtModule<FishtVueOptions>({
     const { resolve } = createResolver(parentDir)
     const { autoImport } = options
     const runtimeDir = resolve("./")
-    // @ts-ignore
     // nuxt.options.fishtvue = options
     nuxt.options.build.transpile.push(runtimeDir)
     nuxt.options.alias["#fishtvue"] = runtimeDir

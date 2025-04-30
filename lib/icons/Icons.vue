@@ -1,4 +1,3 @@
-<!--https://github.com/nuxt/icon -->
 <!--https://icones.js.org/ -->
 <!--https://icon-sets.iconify.design/ -->
 <script setup lang="ts">

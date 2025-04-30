@@ -2,7 +2,7 @@
   import type { ComponentInternalInstance } from "vue"
   import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
   import type { InputEmits, InputExpose, InputProps } from "./Input"
-  import type { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
+  import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import { convertToNumber, convertToPhone, onkeydown, toNumber, toPhone } from "fishtvue/utils/numberHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -33,17 +33,21 @@
   const arrayInputType: Array<InputProps["type"]> = ["text", "number", "email", "password"]
   // ---PROPS-------------------------------
   const id = ref<NonNullable<InputProps["id"]>>(String(props?.id ?? instance.value?.uid))
-  const type = computed<InputProps["type"]>(() =>
-    props?.type && !!arrayInputType.find((i) => i === props.type) ? props?.type : "text"
+  const type = computed<NonNullable<InputProps["type"]>>(() =>
+    props?.type && !!arrayInputType.find((i) => i === props.type)
+      ? (props.type as "text" | "number" | "email" | "password")
+      : "text"
   )
   const privateType = ref(type.value)
   watch(type, (value) => (privateType.value = value))
-  const mask = computed<InputProps["maskInput"]>(() => props?.maskInput)
+  const mask = computed<InputProps["maskInput"]>(() => props?.maskInput as InputProps["maskInput"])
   const mode = computed<NonNullable<InputProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const isValue = computed<boolean>(() => !!modelValue.value || isActiveInput.value)
   const autoFocus = computed<NonNullable<InputProps["autoFocus"]>>(() => props?.autoFocus ?? false)
   const placeholder = computed<NonNullable<InputProps["placeholder"]>>(() => String(props?.placeholder ?? ""))
-  const autocomplete = computed<NonNullable<InputProps["autocomplete"]>>(() => props?.autocomplete ?? "on")
+  const autocomplete = computed<NonNullable<InputProps["autocomplete"]>>(
+    () => (props?.autocomplete as InputProps["autocomplete"]) ?? "on"
+  )
   const lengthInteger = computed<NonNullable<InputProps["lengthInteger"]>>(() => +(props?.lengthInteger ?? 20))
   const lengthDecimal = computed<NonNullable<InputProps["lengthDecimal"]>>(() => +(props?.lengthDecimal ?? 0))
   const isDisabled = computed<NonNullable<InputProps["disabled"]>>(() => props.disabled ?? false)

@@ -11,13 +11,17 @@
   })
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<LabelProps["mode"]>>(
-    () => props?.mode ?? options?.mode ?? Label.componentsStyle() ?? "outlined"
+    () => (props?.mode as LabelProps["mode"]) ?? options?.mode ?? Label.componentsStyle() ?? "outlined"
   )
-  const type = computed<NonNullable<LabelProps["type"]>>(() => props?.type ?? options?.type ?? "dynamic")
+  const type = computed<NonNullable<LabelProps["type"]>>(
+    () => (props?.type as LabelProps["type"]) ?? options?.type ?? "dynamic"
+  )
   const translateX = computed<NonNullable<LabelProps["translateX"]>>(
-    () => props?.translateX ?? options?.translateX ?? 0
+    () => (props?.translateX as LabelProps["translateX"]) ?? options?.translateX ?? 0
   )
-  const maxWidth = computed<NonNullable<LabelProps["maxWidth"]>>(() => props?.maxWidth ?? options?.maxWidth ?? 0)
+  const maxWidth = computed<NonNullable<LabelProps["maxWidth"]>>(
+    () => (props?.maxWidth as LabelProps["maxWidth"]) ?? options?.maxWidth ?? 0
+  )
   const background = computed(() => {
     switch (mode.value) {
       case "outlined":

@@ -298,10 +298,18 @@
   const iconPosition = computed<ButtonProps["iconPosition"] | null>(() => props.iconPosition ?? "right")
   const isLoading = computed<ButtonProps["loading"]>(() => props.loading)
   const disabled = computed<ButtonProps["disabled"]>(() => props.disabled ?? false)
-  const mode = computed<NonNullable<ButtonProps["mode"]>>(() => props?.mode ?? options?.mode ?? "primary")
-  const size = computed<NonNullable<ButtonProps["size"]>>(() => props?.size ?? options?.size ?? "md")
-  const rounded = computed<NonNullable<ButtonProps["rounded"]>>(() => props?.rounded ?? options?.rounded ?? "md")
-  const color = computed<NonNullable<ButtonProps["color"]>>(() => props?.color ?? options?.color ?? "neutral")
+  const mode = computed<NonNullable<ButtonProps["mode"]>>(
+    () => (props?.mode as ButtonProps["mode"]) ?? options?.mode ?? "primary"
+  )
+  const size = computed<NonNullable<ButtonProps["size"]>>(
+    () => (props?.size as ButtonProps["size"]) ?? options?.size ?? "md"
+  )
+  const rounded = computed<NonNullable<ButtonProps["rounded"]>>(
+    () => (props?.rounded as ButtonProps["rounded"]) ?? options?.rounded ?? "md"
+  )
+  const color = computed<NonNullable<ButtonProps["color"]>>(
+    () => (props?.color as ButtonProps["color"]) ?? options?.color ?? "neutral"
+  )
   const classBase = computed<StyleClass>(() => {
     const classes = [
       baseClasses.value,

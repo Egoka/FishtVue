@@ -59,7 +59,7 @@
     props?.dataSelect && props?.dataSelect.length
       ? typeof props?.dataSelect[0] === "object"
         ? props?.keySelect && Object.keys(props?.dataSelect[0]).includes(props.keySelect)
-          ? props.keySelect
+          ? (props.keySelect as string | "id")
           : Object.keys(props.dataSelect[0])[0]
         : "id"
       : "id"
@@ -68,7 +68,7 @@
     if (props?.dataSelect && props?.dataSelect.length) {
       if (typeof props?.dataSelect[0] === "object") {
         if (props?.valueSelect && Object.keys(props?.dataSelect[0]).includes(props.valueSelect)) {
-          return props?.valueSelect
+          return props?.valueSelect as SelectProps["valueSelect"]
         } else {
           return Object.keys(props?.dataSelect[0])[1]
         }
@@ -85,12 +85,12 @@
           [keySelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[keySelect.value ?? ""] : item,
           [valueSelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[valueSelect.value ?? ""] : item
         }))
-      : (props?.dataSelect ?? [])
+      : ((props?.dataSelect as Array<IDataItem>) ?? [])
   )
   const autoFocus = computed<NonNullable<SelectProps["autoFocus"]>>(
     () => props?.autoFocus ?? options?.autoFocus ?? false
   )
-  const mode = computed<NonNullable<SelectProps["mode"]>>(() => props.mode ?? "outlined")
+  const mode = computed<NonNullable<SelectProps["mode"]>>(() => (props.mode as SelectProps["mode"]) ?? "outlined")
   const isDisabled = computed<NonNullable<SelectProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<SelectProps["loading"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<SelectProps["isInvalid"]>>(() => props.isInvalid ?? false)
@@ -105,17 +105,17 @@
     const result = props?.maxVisible ?? options?.maxVisible
     return result !== undefined && typeof +result === "number" ? +result : undefined
   })
-  const closeButtonBadge = computed<SelectProps["closeButtonBadge"] | undefined>(
-    () => props?.closeButtonBadge ?? options?.closeButtonBadge ?? false
+  const closeButtonBadge = computed<SelectProps["closeButtonBadge"]>(
+    () => (props?.closeButtonBadge as SelectProps["closeButtonBadge"]) ?? options?.closeButtonBadge ?? false
   )
   const noData = computed<NonNullable<SelectProps["noData"]>>(
-    () => props?.noData ?? options?.noData ?? Select.t("noData") ?? "No data available"
+    () => (props?.noData as SelectProps["noData"]) ?? options?.noData ?? Select.t("noData") ?? "No data available"
   )
   const isQuery = computed<NonNullable<SelectProps["noQuery"]>>(() => !(props?.noQuery ?? options?.noQuery))
   const classMaskQuery = computed<NonNullable<SelectProps["classMaskQuery"]>>(() =>
     Select.setStyle(props?.classMaskQuery ?? options?.classMaskQuery ?? "font-bold text-theme-700 dark:text-theme-300")
   )
-  const dataList = computed<Array<any>>(() => {
+  const dataList = computed(() => {
     if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
       return LD.map(
         LD.filter(dataSelect.value, (item) =>

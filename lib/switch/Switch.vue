@@ -20,25 +20,31 @@
   const modelValue = ref<SwitchProps["modelValue"]>()
   watch(
     () => props.modelValue,
-    (value) => (modelValue.value = Boolean(value)),
+    (value) => (modelValue.value = value as SwitchProps["modelValue"]),
     { immediate: true }
   )
   const isActiveSwitch = ref<boolean>(false)
   // ---PROPS-------------------------------
   const id = ref(props.id ?? instance.value?.uid)
   const switchingType = computed<SwitchProps["switchingType"]>(
-    () => props?.switchingType ?? options?.switchingType ?? "checkbox"
+    () => (props?.switchingType as SwitchProps["switchingType"]) ?? options?.switchingType ?? "checkbox"
   )
-  const mode = computed<SwitchProps["mode"]>(() => props?.mode ?? options?.mode ?? Switch.componentsStyle() ?? "none")
+  const mode = computed<SwitchProps["mode"]>(
+    () => (props?.mode as SwitchProps["mode"]) ?? options?.mode ?? Switch.componentsStyle() ?? "none"
+  )
   const label = computed<SwitchProps["label"]>(() => String(props.label ?? ""))
   const isDisabled = computed<NonNullable<SwitchProps["disabled"]>>(() => props.disabled ?? false)
   const isRequired = computed<SwitchProps["required"]>(() => props.required ?? false)
   const rounded = computed<number>(() => {
-    const valueRounded = props?.rounded ?? options?.rounded
+    const valueRounded = (props?.rounded as SwitchProps["rounded"]) ?? options?.rounded
     return valueRounded === "full" ? 9999 : (valueRounded ?? 9999)
   })
-  const iconActive = computed<SwitchProps["iconActive"]>(() => props?.iconActive ?? options?.iconActive ?? "")
-  const iconInactive = computed<SwitchProps["iconInactive"]>(() => props?.iconInactive ?? options?.iconInactive ?? "")
+  const iconActive = computed<SwitchProps["iconActive"]>(
+    () => (props?.iconActive as SwitchProps["iconActive"]) ?? options?.iconActive ?? ""
+  )
+  const iconInactive = computed<SwitchProps["iconInactive"]>(
+    () => (props?.iconInactive as SwitchProps["iconInactive"]) ?? options?.iconInactive ?? ""
+  )
   const classBaseSwitch = computed<StyleClass>(() =>
     switchingType.value === "switch"
       ? Switch.setStyle([
@@ -196,7 +202,7 @@
               : 'translate-x-0 bg-gray-100 dark:bg-gray-950',
             'h-4 w-4 transform shadow-sm ring-1 ring-gray-900/5 transition-all duration-300 ease-in-out text-gray-400 dark:text-gray-600'
           ]"
-          :style="`border-radius: ${rounded - 1}px`" />
+          :style="{ borderRadius: `${rounded}px` }" />
         <span v-else aria-hidden="true" :class="classSwitchIcon" :style="`border-radius: ${rounded - 1}px`" />
       </button>
       <input

@@ -31,25 +31,33 @@
   const positionMouse = ref<{ x: number; y: number }>()
   // ---PROPS-------------------------------
   const typePosition = computed<NonNullable<FixWindowProps["typePosition"]>>(
-    () => props?.typePosition ?? options?.typePosition ?? (props.scrollableEl ? "absolute" : "fixed")
+    () =>
+      (props?.typePosition as FixWindowProps["typePosition"]) ??
+      options?.typePosition ??
+      (props.scrollableEl ? "absolute" : "fixed")
   )
   const position = computed<NonNullable<FixWindowProps["position"]>>(
-    () => props?.position ?? options?.position ?? (byCursor.value ? "center-bottom" : "top")
+    () =>
+      (props?.position as FixWindowProps["position"]) ?? options?.position ?? (byCursor.value ? "center-bottom" : "top")
   )
   const delay = computed<NonNullable<FixWindowProps["delay"]>>(() => {
-    const delay = props?.delay ?? options?.delay
+    const delay = (props?.delay as FixWindowProps["delay"]) ?? options?.delay
     return delay && !isNaN(delay) ? delay : 0
   })
-  const marginPx = computed<NonNullable<FixWindowProps["marginPx"]>>(() => props.marginPx ?? options?.marginPx ?? 10)
-  const translatePx = computed<NonNullable<FixWindowProps["translatePx"]>>(
-    () => props.translatePx ?? options?.translatePx ?? 0
+  const marginPx = computed<NonNullable<FixWindowProps["marginPx"]>>(
+    () => (props?.marginPx as FixWindowProps["marginPx"]) ?? options?.marginPx ?? 10
   )
-  const eventOpen = computed<FixWindowEvent>(() => props.eventOpen ?? options?.eventOpen ?? "hover")
+  const translatePx = computed<NonNullable<FixWindowProps["translatePx"]>>(
+    () => (props?.translatePx as FixWindowProps["translatePx"]) ?? options?.translatePx ?? 0
+  )
+  const eventOpen = computed<FixWindowEvent>(
+    () => (props?.eventOpen as FixWindowEvent) ?? options?.eventOpen ?? "hover"
+  )
   const eventClose = computed<FixWindowEvent>(
-    () => props.eventClose ?? defaultCloseEvent(eventOpen.value) ?? options?.eventClose ?? "hover"
+    () => (props?.eventClose as FixWindowEvent) ?? defaultCloseEvent(eventOpen.value) ?? options?.eventClose ?? "hover"
   )
   const paddingWindow = computed<NonNullable<FixWindowProps["paddingWindow"]>>(
-    () => props.paddingWindow ?? options?.paddingWindow ?? 0
+    () => (props.paddingWindow as FixWindowProps["paddingWindow"]) ?? options?.paddingWindow ?? 0
   )
   const byCursor = computed<NonNullable<FixWindowProps["byCursor"]>>(() => props.byCursor ?? options?.byCursor ?? false)
   const isStopOpenPropagation = computed<FixWindowProps["stopOpenPropagation"]>(
@@ -71,9 +79,9 @@
   })
   const border = computed<string>(() => {
     if (marginPx.value > 0) {
-      if (position.value.match("^(left|right)")) {
+      if ((position.value as string).match("^(left|right)")) {
         return `border-left: ${marginPx.value}px solid transparent;border-right: ${marginPx.value}px solid transparent;`
-      } else if (position.value.match("^(top|bottom)")) {
+      } else if ((position.value as string).match("^(top|bottom)")) {
         return `border-top: ${marginPx.value}px solid transparent;border-bottom: ${marginPx.value}px solid transparent;`
       }
     }
@@ -278,10 +286,11 @@
   function removeCloseListener(event?: FixWindowEvent) {
     if (isClient())
       switch (event ?? eventClose.value) {
-        case "hover":
+        case "hover": {
           const el = byCursor.value ? (fixWindow.value as HTMLElement) : element.value
           el?.removeEventListener("mouseleave", close)
           break
+        }
         case "click":
           window?.removeEventListener("click", closeOnClick)
           break
@@ -494,17 +503,25 @@
           el.xTranslate = body.width / 2 + child.width / 2
           el.yTranslate = body.height / 2 + child.height / 2
 
-          el.xPositionIndex = position.value.match("^left") ? -1 : position.value.match("^right") ? 1 : 0
-          el.yPositionIndex = position.value.match("^top") ? -1 : position.value.match("^bottom") ? 1 : 0
+          el.xPositionIndex = (position.value as string).match("^left")
+            ? -1
+            : (position.value as string).match("^right")
+              ? 1
+              : 0
+          el.yPositionIndex = (position.value as string).match("^top")
+            ? -1
+            : (position.value as string).match("^bottom")
+              ? 1
+              : 0
 
-          el.xValue = position.value.match("-left$")
+          el.xValue = (position.value as string).match("-left$")
             ? body.x
-            : position.value.match("-right$")
+            : (position.value as string).match("-right$")
               ? body.x + body.width - child.width
               : 0
-          el.yValue = position.value.match("-top$")
+          el.yValue = (position.value as string).match("-top$")
             ? body.y
-            : position.value.match("-bottom$")
+            : (position.value as string).match("-bottom$")
               ? body.y + body.height - child.height
               : 0
           //
@@ -523,7 +540,7 @@
             const viewportPadding = paddingWindow.value
             const viewportWidth = window.innerWidth
             const viewportHeight = window.innerHeight
-            const isCenter = position.value.match("^center")
+            const isCenter = (position.value as string).match("^center")
             // Корректировка по X
             if (typePosition.value === "fixed") {
               if (xNum < viewportPadding) {
@@ -581,17 +598,25 @@
           el.xTranslate = body.width / 2 + child.width / 2
           el.yTranslate = body.height / 2 + child.height / 2
 
-          el.xPositionIndex = position.value.match("^left") ? -1 : position.value.match("^right") ? 1 : 0
-          el.yPositionIndex = position.value.match("^top") ? -1 : position.value.match("^bottom") ? 1 : 0
+          el.xPositionIndex = (position.value as string).match("^left")
+            ? -1
+            : (position.value as string).match("^right")
+              ? 1
+              : 0
+          el.yPositionIndex = (position.value as string).match("^top")
+            ? -1
+            : (position.value as string).match("^bottom")
+              ? 1
+              : 0
 
-          el.xValue = position.value.match("-left$")
+          el.xValue = (position.value as string).match("-left$")
             ? -(body.width / 2 - child.width / 2)
-            : position.value.match("-right$")
+            : (position.value as string).match("-right$")
               ? body.width / 2 - child.width / 2
               : 0
-          el.yValue = position.value.match("-top$")
+          el.yValue = (position.value as string).match("-top$")
             ? -(body.height / 2 - child.height / 2)
-            : position.value.match("-bottom$")
+            : (position.value as string).match("-bottom$")
               ? body.height / 2 - child.height / 2
               : 0
 
@@ -614,7 +639,7 @@
             const viewportPadding = paddingWindow.value
             const viewportWidth = window.innerWidth - viewportPadding
             const viewportHeight = window.innerHeight - viewportPadding
-            const isCenter = position.value.match("^center")
+            const isCenter = (position.value as string).match("^center")
             // Корректировка по X
             const bodyCenterX = body.x + body.width / 2
             if (bodyCenterX + (xNum - child.width / 2) < viewportPadding) {

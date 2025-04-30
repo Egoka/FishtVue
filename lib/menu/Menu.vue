@@ -55,7 +55,7 @@
   >)
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<MenuProps["mode"]>>(
-    () => props?.mode ?? options?.mode ?? MenuComponent.componentsStyle() ?? "outlined"
+    () => (props?.mode as MenuProps["mode"]) ?? options?.mode ?? MenuComponent.componentsStyle() ?? "outlined"
   )
   const selected = computed<NonNullable<MenuProps["selected"]>>(() => props?.selected ?? options?.selected ?? false)
   const horizontal = computed<NonNullable<MenuProps["horizontal"]>>(
@@ -65,7 +65,9 @@
     () => props?.useFirstLetter ?? options?.useFirstLetter ?? false
   )
   const onlyIcons = computed<NonNullable<MenuProps["onlyIcons"]>>(() => props?.onlyIcons ?? options?.onlyIcons ?? false)
-  const title = computed<NonNullable<MenuProps["title"]>>(() => props?.title ?? options?.title ?? "")
+  const title = computed<NonNullable<MenuProps["title"]>>(
+    () => (props?.title as MenuProps["title"]) ?? options?.title ?? ""
+  )
   const iconSeparator = computed<MenuSeparator["icon"]>(() => props.separator?.icon ?? options?.separator?.icon)
   const isSeparator = computed<NonNullable<MenuSeparator["isVisible"]>>(
     () => props.separator?.isVisible ?? options?.separator?.isVisible ?? true

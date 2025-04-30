@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { LoadingProps } from "fishtvue/loading"
 
-  const props = withDefaults(defineProps<LoadingProps>(), {
+  withDefaults(defineProps<LoadingProps>(), {
     animationDuration: 1000,
     size: 18,
     color: "currentColor"

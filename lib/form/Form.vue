@@ -66,7 +66,7 @@
   )
   const isDisabled = computed<NonNullable<FormProps["disabled"]>>(() => props.disabled ?? false)
   const autocomplete = computed<NonNullable<FormProps["autocomplete"]>>(
-    () => props?.autocomplete ?? options?.autocomplete ?? "on"
+    () => (props?.autocomplete as FormProps["autocomplete"]) ?? options?.autocomplete ?? "on"
   )
   const modeValidate = computed<NonNullable<FormProps["modeValidate"]>>(
     () => props.modeValidate ?? options?.modeValidate ?? "onChange"

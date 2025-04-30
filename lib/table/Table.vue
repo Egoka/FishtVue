@@ -100,11 +100,11 @@
   const filterColumns = reactive<Filters>({})
   const widthsColumns = reactive<Widths>({})
   // ---
-  const allData = ref<NonNullable<TableProps["dataSource"]>>()
+  const allData = ref<any[]>()
   const dataSource = ref<DataSource>([])
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<TableProps["mode"]>>(
-    () => props?.mode ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
+    () => (props?.mode as TableProps["mode"]) ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
   )
   const toolbar = computed<TableProps["toolbar"]>(
     () => deepMerge(options?.toolbar, props?.toolbar) as TableProps["toolbar"]
@@ -117,7 +117,7 @@
   const pagination = computed<TableProps["pagination"]>(
     () => deepMerge(options?.pagination, props?.pagination) as TableProps["pagination"]
   )
-  const columns = computed<TableProps["columns"]>(() => props?.columns)
+  const columns = computed<TableProps["columns"]>(() => props?.columns as TableProps["columns"])
   // -----------
   const isVisibleToolbar = computed<boolean>(
     () => (isSearch.value || !!toolbar.value) && ((toolbar.value as IToolbar)?.visible ?? true)
@@ -137,7 +137,7 @@
     typeof props.summary === "boolean" ? props.summary : Array.isArray(props.summary)
   )
   const countDataOnLoading = computed<NonNullable<TableProps["countDataOnLoading"]>>(
-    () => props?.countDataOnLoading ?? options?.countDataOnLoading ?? 1000
+    () => (props?.countDataOnLoading as TableProps["countDataOnLoading"]) ?? options?.countDataOnLoading ?? 1000
   )
   const classMaskQuery = computed<NonNullable<ITableStyles["maskQuery"]>>(() =>
     Table.setStyle(styles.value?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400")
@@ -240,10 +240,10 @@
   // ---CELL--------------------------------
   const heightCell = computed<number>(() => styles.value?.heightCell ?? 50)
   const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
-    () => props?.countVisibleRows ?? options?.countVisibleRows ?? 0
+    () => (props?.countVisibleRows as TableProps["countVisibleRows"]) ?? options?.countVisibleRows ?? 0
   )
   const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
-    () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
+    () => (props?.sizeLoadingRows as TableProps["sizeLoadingRows"]) ?? options?.sizeLoadingRows ?? 5
   )
   const isLoadingRows = computed(() => countVisibleRows.value > 0)
   // ---DATA--------------------------------
@@ -281,9 +281,9 @@
     return resultData
   })
   const dataColumns = computed<Array<IColumnPrivate>>(() => {
-    const listFields: Array<string> = LD.uniq(LD.flatten(LD.map(allData.value, LD.keys))).filter(
-      (field) => field !== "_key"
-    )
+    const listFields: Array<string> = LD.uniq(
+      LD.flatMap(allData.value, (item) => Object.keys(item)) as string[]
+    ).filter((field) => field !== "_key")
     const columnsValue = columns.value
     if (Array.isArray(columnsValue) && columnsValue?.length) {
       return <Array<IColumnPrivate>>columnsValue
@@ -1323,7 +1323,7 @@
   function addRow(data: any): false | number {
     if (data) {
       const newValueRow: any = { ...data, _key: generateUUID() }
-      const index: number = (allData.value as Array<any>)?.push(newValueRow) - 1
+      const index: number = allData.value?.push(newValueRow) - 1
       emit("add-row", { value: data, index, _key: newValueRow._key })
       return index
     }
@@ -1332,7 +1332,7 @@
 
   function deleteRow(_key: string): false | any {
     if (_key && Array.isArray(allData.value)) {
-      const index = allData.value.findIndex((i) => i._key === _key)
+      const index = allData.value?.findIndex((i) => i._key === _key)
       if (index && index >= 0) {
         emit("delete-row", { value: allData.value[index], index, _key })
         return allData.value?.splice(index, 1)
