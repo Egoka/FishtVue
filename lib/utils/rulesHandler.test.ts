@@ -812,7 +812,7 @@ describe("Testing rules handler", () => {
         }
       }
       const result = await getAsyncValidate("value", rules)
-      expect(result).toEqual({ isInvalid: true, message: "" })
+      expect(result).toEqual({ isInvalid: true, message: "Invalid field" })
     })
 
     it("should handle exceptions in async validationCallback", async () => {

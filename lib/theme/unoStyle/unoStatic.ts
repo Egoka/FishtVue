@@ -4,6 +4,7 @@ export const baseFilter = `filter: var(--fv-blur) var(--fv-brightness) var(--fv-
 export const baseBackdropFilter = `-webkit-backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);\n  backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);`
 export const baseTransition = `transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n  transition-duration: 150ms;`
 export const baseTransform = `transform: translate(var(--fv-translate-x), var(--fv-translate-y)) rotate(var(--fv-rotate)) skewX(var(--fv-skew-x)) skewY(var(--fv-skew-y)) scaleX(var(--fv-scale-x)) scaleY(var(--fv-scale-y));`
+export const baseTranslate = `translate: var(--fv-translate-x) var(--fv-translate-y);`
 export const specialSelectors: Record<string, string> = {
   divide: " > :not([hidden]) ~ :not([hidden])"
 }
@@ -457,9 +458,9 @@ export const scale: Record<string, (value: string) => string> = {
   y: (value) => `--fv-scale-y: ${value};\n  ${baseTransform}`
 }
 export const translate: Record<string, (value: string) => string> = {
-  undefined: (value) => `--fv-translate-x: ${value};\n  --fv-translate-y: ${value};\n  ${baseTransform}`,
-  x: (value) => `--fv-translate-x: ${value};\n  ${baseTransform}`,
-  y: (value) => `--fv-translate-y: ${value};\n  ${baseTransform}`
+  undefined: (value) => `--fv-translate-x: ${value};\n  --fv-translate-y: ${value};\n  ${baseTranslate}`,
+  x: (value) => `--fv-translate-x: ${value};\n  ${baseTranslate}`,
+  y: (value) => `--fv-translate-y: ${value};\n  ${baseTranslate}`
 }
 export const skew: Record<string, (value: string) => string> = {
   x: (value) => `--fv-skew-x: ${value};\n  ${baseTransform}`,

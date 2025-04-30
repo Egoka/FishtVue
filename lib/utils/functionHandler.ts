@@ -38,3 +38,32 @@
 export function isFunction<T>(value: T): boolean {
   return !!(value && value.constructor === Function && value instanceof Function && value.apply)
 }
+
+/**
+ #### `generateUUID` Function Documentation
+
+ The `generateUUID` function generates a random UUID (Universally Unique Identifier) version 4 using `Math.random()`.
+
+ ##### Syntax
+ ```typescript
+ function generateUUID(): string
+ ```
+
+ ##### Return Value
+ - A string representing a randomly generated UUID v4.
+
+ ##### Example Usage
+ ```typescript
+ const uuid = generateUUID();
+ console.log(uuid); // Example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+ ```
+
+ The `generateUUID` function replaces characters in a template string with randomly generated hexadecimal values, ensuring compliance with UUID v4 format.
+ */
+export function generateUUID(): string {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    const v = c === "x" ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}

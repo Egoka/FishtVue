@@ -1,7 +1,8 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from "vue"
   import { ArrowDownCircleIcon, ChevronDownIcon } from "@heroicons/vue/20/solid"
-  import { AccordionEmits, AccordionExpose, AccordionProps } from "./Accordion"
+  import { AccordionEmits, AccordionExpose, AccordionItem, AccordionProps } from "./Accordion"
+  import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
   // ---BASE-COMPONENT----------------------
@@ -13,7 +14,7 @@
   })
   const emit = defineEmits<AccordionEmits>()
   // ---STATE-------------------------------
-  const dataItems = ref(props.dataSource)
+  const dataItems = ref<AccordionItem[]>(props.dataSource)
   watch(
     () => props.dataSource,
     (value) => {
@@ -26,9 +27,7 @@
   const animationDuration = computed<NonNullable<AccordionProps["animationDuration"]>>(
     () => props.animationDuration ?? options?.animationDuration ?? 300
   )
-  const typeIcon = computed<NonNullable<AccordionProps["typeIcon"]>>(
-    () => props.typeIcon ?? options?.typeIcon ?? "Plus"
-  )
+  const icon = computed<NonNullable<AccordionProps["icon"]>>(() => props.icon ?? options?.icon ?? "Plus")
   Accordion.setStyle("rotate-0")
   Accordion.setStyle("rotate-90")
   Accordion.setStyle("rotate-180")
@@ -69,7 +68,7 @@
     // ---PROPS-------------------------
     multiple,
     animationDuration,
-    typeIcon,
+    icon,
     classBody,
     classItem,
     classTitle,
@@ -103,7 +102,12 @@
 
 <template>
   <div v-if="dataItems?.length" :class="classBody" data-accordion>
-    <div v-for="(item, key) in dataItems" :key="key" :class="classItem" role="group" data-accordion-group>
+    <div
+      v-for="(item, key) in dataItems as AccordionItem[]"
+      :key="key"
+      :class="classItem"
+      role="group"
+      data-accordion-group>
       <h2>
         <button
           type="button"
@@ -113,16 +117,8 @@
           @click="toggle(key)">
           <slot name="title" :title="item.title">
             <span :class="classTitle">{{ item.title }}</span>
-            <ChevronDownIcon
-              v-if="typeIcon === 'ChevronDown'"
-              aria-hidden="true"
-              :class="['ChevronDownIcon', styleIcon, item.open ? 'rotate-180' : '']" />
-            <ArrowDownCircleIcon
-              v-else-if="typeIcon === 'ArrowDownCircle'"
-              aria-hidden="true"
-              :class="['ArrowDownCircleIcon', styleIcon, item.open ? 'rotate-180' : '']" />
             <svg
-              v-else-if="typeIcon === 'Plus'"
+              v-if="icon === 'Plus'"
               class="PlusIcon"
               :class="classPlus"
               width="10"
@@ -141,6 +137,15 @@
                 rx="1"
                 :class="[classRect, item.open ? 'rotate-180' : 'rotate-90']"></rect>
             </svg>
+            <ChevronDownIcon
+              v-else-if="icon === 'ChevronDown'"
+              aria-hidden="true"
+              :class="['ChevronDownIcon', styleIcon, item.open ? 'rotate-180' : '']" />
+            <ArrowDownCircleIcon
+              v-else-if="icon === 'ArrowDownCircle'"
+              aria-hidden="true"
+              :class="['ArrowDownCircleIcon', styleIcon, item.open ? 'rotate-180' : '']" />
+            <Icons v-else :type="icon" :class="[styleIcon, item.open ? 'rotate-180' : '']" />
           </slot>
         </button>
       </h2>

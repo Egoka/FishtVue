@@ -1,12 +1,10 @@
 <script setup lang="ts">
-  import type { ComponentInternalInstance } from "vue"
-  import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, onMounted, ref, useSlots, watch } from "vue"
   import type { AriaEmits, AriaExpose, AriaProps } from "./Aria"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import { onkeydown } from "fishtvue/utils/numberHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Component from "fishtvue/component"
-  import type { InputProps } from "fishtvue/input"
   // ---BASE-COMPONENT----------------------
   const Aria = new Component<"Aria">()
   const options = Aria.getOptions()
@@ -25,25 +23,28 @@
   const layout = ref<InputLayoutExpose>()
   const inputRef = ref<HTMLElement>()
   // ---STATE-------------------------------
-  const instance = ref<ComponentInternalInstance | null>()
   const isActiveAria = ref<boolean>(false)
   const additionalStyles = ref<string>("max-h-max")
   const classLayout = ref<AriaProps["class"]>()
-  const modelValue = ref<InputProps["modelValue"]>()
+  const modelValue = ref<AriaProps["modelValue"]>()
   watch(
     () => props.modelValue,
     (value) => (modelValue.value = String(value ?? "")),
     { immediate: true }
   )
   // ---PROPS-------------------------------
-  const id = ref<NonNullable<AriaProps["id"]>>(String(props.id ?? instance.value?.uid))
+  const id = ref<AriaProps["id"] | undefined>((props?.id as AriaProps["id"]) ?? undefined)
   const placeholder = computed<NonNullable<AriaProps["placeholder"]>>(() => String(props?.placeholder ?? ""))
   const autocomplete = computed<NonNullable<AriaProps["autocomplete"]>>(
-    () => props?.autocomplete ?? options?.autocomplete ?? "on"
+    () => (props?.autocomplete as AriaProps["autocomplete"]) ?? options?.autocomplete ?? "on"
   )
-  const wrap = computed<NonNullable<AriaProps["wrap"]>>(() => props?.wrap ?? options?.wrap ?? "soft")
-  const rows = computed<NonNullable<AriaProps["rows"]>>(() => props?.rows ?? options?.rows ?? 3)
-  const maxLength = computed<NonNullable<AriaProps["maxLength"]>>(() => props?.maxLength ?? options?.maxLength ?? 9999)
+  const wrap = computed<NonNullable<AriaProps["wrap"]>>(
+    () => (props?.wrap as AriaProps["wrap"]) ?? options?.wrap ?? "soft"
+  )
+  const rows = computed<NonNullable<AriaProps["rows"]>>(() => (props?.rows as AriaProps["rows"]) ?? options?.rows ?? 3)
+  const maxLength = computed<NonNullable<AriaProps["maxLength"]>>(
+    () => (props?.maxLength as AriaProps["maxLength"]) ?? options?.maxLength ?? 9999
+  )
   const isValue = computed<boolean>(() => !!modelValue.value || isActiveAria.value)
   const mode = computed<NonNullable<AriaProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const isDisabled = computed<NonNullable<AriaProps["disabled"]>>(() => props.disabled ?? false)
@@ -78,6 +79,7 @@
     clear: props.clear,
     width: props.width,
     height: props.height,
+    animation: props.animation,
     classBody: props.classBody,
     class: classStyle.value
   }))
@@ -109,7 +111,6 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Aria.initStyle()
-    instance.value = getCurrentInstance()
   })
   // ---WATCHERS----------------------------
   watch(isActiveAria, (value) => {

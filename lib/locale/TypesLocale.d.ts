@@ -34,6 +34,7 @@ export declare type Locales = Partial<{
   messages: Messages
 }>
 
+// eslint-disable-next-line no-redeclare
 declare let Locales: Messages
 
 export default Locales

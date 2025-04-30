@@ -1,0 +1,54 @@
+<template>
+  <svg fill="currentColor" viewBox="0 -10 40 28" xmlns="http://www.w3.org/2000/svg">
+    <circle class="first" cx="8" cy="12" r="3" />
+    <circle cx="16" cy="12" r="3" />
+    <circle cx="24" cy="12" r="3" />
+    <circle class="second" cx="32" cy="12" r="3" />
+  </svg>
+</template>
+<style scoped>
+  @keyframes swing {
+    0% {
+      transform: rotate(0deg);
+      animation-timing-function: ease-out;
+    }
+
+    25% {
+      transform: rotate(50deg);
+      animation-timing-function: ease-in;
+    }
+
+    50% {
+      transform: rotate(0deg);
+      animation-timing-function: linear;
+    }
+  }
+
+  @keyframes swing2 {
+    0% {
+      transform: rotate(0deg);
+      animation-timing-function: linear;
+    }
+
+    50% {
+      transform: rotate(0deg);
+      animation-timing-function: ease-out;
+    }
+
+    75% {
+      transform: rotate(-50deg);
+      animation-timing-function: ease-in;
+    }
+  }
+
+  .first {
+    animation: swing 1.2s linear infinite;
+    transform-origin: center top;
+  }
+
+  .second {
+    animation: swing2 1.2s linear infinite;
+    transform-origin: center top;
+  }
+</style>
+<script setup></script>

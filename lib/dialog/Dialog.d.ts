@@ -76,7 +76,7 @@ export declare type DialogProps = {
 }
 
 export declare type DialogSlots = {
-  default(): VNode[]
+  default(args: { closeDialog(): void }): VNode[]
   background(): VNode[]
 }
 

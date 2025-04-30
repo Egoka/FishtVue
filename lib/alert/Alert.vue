@@ -38,10 +38,10 @@
   const startEnterAndLeaveClass = computed<StyleClass>(() => {
     let classAnimate
     if (!notAnimate.value) {
-      if (position.value.includes("left")) classAnimate = "-translate-x-[200%] opacity-0"
-      else if (position.value.includes("right")) classAnimate = "translate-x-[200%] opacity-0"
-      else if (position.value.includes("top")) classAnimate = "-translate-y-[200%] opacity-0"
-      else if (position.value.includes("bottom")) classAnimate = "translate-y-[200%] opacity-0"
+      if ((position.value as string).includes("left")) classAnimate = "-translate-x-[200%] opacity-0"
+      else if ((position.value as string).includes("right")) classAnimate = "translate-x-[200%] opacity-0"
+      else if ((position.value as string).includes("top")) classAnimate = "-translate-y-[200%] opacity-0"
+      else if ((position.value as string).includes("bottom")) classAnimate = "translate-y-[200%] opacity-0"
       else classAnimate = "opacity-0"
     } else classAnimate = "opacity-0"
     return Alert.setStyle(classAnimate)
@@ -49,16 +49,15 @@
   const endEnterAndLeaveClass = computed<StyleClass>(() => {
     let classAnimate
     if (!notAnimate.value) {
-      if (position.value.includes("left")) classAnimate = "translate-x-0 opacity-100"
-      else if (position.value.includes("right")) classAnimate = "translate-x-0 opacity-100"
-      else if (position.value.includes("top")) classAnimate = "translate-y-0 opacity-100"
-      else if (position.value.includes("bottom")) classAnimate = "translate-y-0 opacity-100"
+      if ((position.value as string).includes("left")) classAnimate = "translate-x-0 opacity-100"
+      else if ((position.value as string).includes("right")) classAnimate = "translate-x-0 opacity-100"
+      else if ((position.value as string).includes("top")) classAnimate = "translate-y-0 opacity-100"
+      else if ((position.value as string).includes("bottom")) classAnimate = "translate-y-0 opacity-100"
       else classAnimate = "opacity-100"
     } else classAnimate = "opacity-100"
     return Alert.setStyle(classAnimate)
   })
   const classesStyle = computed<Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>>(
-    // eslint-disable-next-line vue/return-in-computed-property
     () => {
       switch (type.value) {
         case "success":
@@ -109,7 +108,7 @@
       }
     }
   )
-  // eslint-disable-next-line vue/return-in-computed-property
+
   const icon = computed(() => {
     switch (type.value) {
       case "success":

@@ -8,6 +8,7 @@ import { IconsProps } from "fishtvue/icons"
  * Split - a component for creating resizable, adjustable panels.
  *
  * Supports horizontal and vertical layouts, customizable styles, and panel-specific configurations.
+ * Works with both mouse and touch screen interactions.
  */
 declare class Split extends ClassComponent<SplitProps, SplitSlots, SplitEmits, SplitExpose> {}
 
@@ -65,6 +66,11 @@ export type Panel = {
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+  /**
+   * Any additional properties for the separator item.
+   * @type {any}
+   */
+  [key: string]: any
 }
 
 /**
@@ -81,7 +87,7 @@ export type Group = {
    * The list of panels in the group.
    * @type {Array<Panel>}
    */
-  panels: Array<Panel>
+  panels: Panel[]
 
   /**
    * The direction of panel resizing (`vertical` or `horizontal`).
@@ -125,7 +131,9 @@ export declare type SplitProps = {
   styles?: ISplitStyles
 } & Group
 
-export declare type SplitSlots = { [key: string]: VNode[] }
+export declare type SplitSlots = {
+  [key: string]: (args: { size: number; panel: Panel }) => VNode[]
+}
 
 /**
  * Events emitted by the Split component.
@@ -149,34 +157,34 @@ export declare type SplitEmits = {
   /**
    * Emitted when resizing starts for a panel.
    * @param event
-   * @param {MouseEvent | undefined} $event - The mouse event triggering the resize.
+   * @param {PointerEvent | undefined} $event - The pointer event triggering the resize.
    * @param {Panel["name"] | undefined} namePanel - The name of the panel being resized.
    */
-  (event: "start-resize-panel", $event?: MouseEvent, namePanel?: Panel["name"]): void
+  (event: "start-resize-panel", $event?: PointerEvent, namePanel?: Panel["name"]): void
 
   /**
    * Emitted when resizing stops for a panel.
    * @param event
-   * @param {MouseEvent | undefined} $event - The mouse event triggering the stop action.
+   * @param {PointerEvent | undefined} $event - The pointer event triggering the stop action.
    * @param {Panel["name"] | undefined} namePanel - The name of the panel being resized.
    */
-  (event: "stop-resize-panel", $event?: MouseEvent, namePanel?: Panel["name"]): void
+  (event: "stop-resize-panel", $event?: PointerEvent, namePanel?: Panel["name"]): void
 
   /**
    * Emitted when a panel is actively being resized.
    * @param event
-   * @param {MouseEvent} $event - The mouse event during resizing.
+   * @param {PointerEvent} $event - The pointer event during resizing.
    * @param {Panel["name"]} namePanel - The name of the panel being resized.
    */
-  (event: "move-resize-panel", $event: MouseEvent, namePanel: Panel["name"]): void
+  (event: "move-resize-panel", $event: PointerEvent, namePanel: Panel["name"]): void
 
   /**
-   * Emitted when the resize action exits a panel boundary.
+   * Emitted when the pointer exits the panel boundary during resize.
    * @param event
-   * @param {MouseEvent} $event - The mouse event during the action.
+   * @param {PointerEvent} $event - The pointer event during the action.
    * @param {Panel["name"]} namePanel - The name of the affected panel.
    */
-  (event: "out-resize-panel", $event: MouseEvent, namePanel: Panel["name"]): void
+  (event: "out-resize-panel", $event: PointerEvent, namePanel: Panel["name"]): void
 }
 
 /**

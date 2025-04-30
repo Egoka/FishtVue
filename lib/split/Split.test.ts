@@ -45,13 +45,13 @@ describe("Split Component", () => {
       })
 
       const separator = wrapper.find("[data-split-separator]")
-      await separator.trigger("mousedown")
+      await separator.trigger("pointerdown")
       expect(wrapper.emitted("start-resize-panel")?.[0][1]).toBe("panel1")
-      await separator.trigger("mousemove", { clientX: 100 })
+      await separator.trigger("pointermove", { clientX: 100 })
       expect(wrapper.emitted("move-resize-panel")?.[0][1]).toBe("panel1")
-      await separator.trigger("mouseout")
+      await separator.trigger("pointerout")
       expect(wrapper.emitted("out-resize-panel")?.[0][1]).toBe("panel1")
-      await separator.trigger("mouseup")
+      await separator.trigger("pointerup")
       expect(wrapper.emitted("stop-resize-panel")?.[0][1]).toBe("panel1")
 
       expect(wrapper.emitted()).toHaveProperty("updated-size-panel")

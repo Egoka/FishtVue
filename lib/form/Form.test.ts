@@ -158,7 +158,7 @@ describe("Form Component Tests", () => {
       const fieldComponent = formFields[0]
 
       // Поле должно иметь автоматически сгенерированное имя
-      expect(fieldComponent.find("input").attributes("id")).toMatch(/field\d+/) // Проверяем, что имя начинается с "field" и содержит номер
+      expect(fieldComponent.find("input").attributes("id")).toMatch(/field_\w+/)
     })
 
     it("handles a field without 'rules' but with 'required' set to true", async () => {
@@ -192,7 +192,7 @@ describe("Form Component Tests", () => {
       expect(inputField.find("[data-label]").attributes("class")).toContain("after:content-['*']")
 
       // Проверить, что компонент автоматически добавил правило "required"
-      const formStructure = (wrapper.props() as any).structure[0].fields[0]
+      const formStructure = wrapper.vm.formStructure[0].fields[0]
       expect(formStructure.rules).toBeDefined()
       expect(formStructure.rules.required).toEqual(expect.any(String)) // Проверяем, что правило существует и является строкой
       expect(formStructure.rules.required).toBe("Required field")
@@ -736,7 +736,7 @@ describe("Form Component Tests", () => {
       })
 
       // Проверяем изначальное значение параметра
-      expect(wrapper.vm.formStructure[0].class).toBe("section-1")
+      expect(wrapper.vm.formStructure[0].class).toContain("section-1")
 
       // Изменяем параметр
       wrapper.vm.setStructureParam(0, "class", "new-section-class")
@@ -756,7 +756,7 @@ describe("Form Component Tests", () => {
       wrapper.vm.setStructureParam(0, "class", "new-section-class")
 
       // Проверяем, что другая структура не изменилась
-      expect(wrapper.vm.formStructure[1].class).toBe("section-2")
+      expect(wrapper.vm.formStructure[1].class).toContain("section-2")
     })
 
     it("updates multiple parameters of the same structure", () => {

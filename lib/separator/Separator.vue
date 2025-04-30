@@ -13,26 +13,43 @@
   const slots = useSlots()
   // ---PROPS-------------------------------
   const vertical = computed<NonNullable<SeparatorProps["vertical"]>>(() => props.vertical)
-  const content = computed<NonNullable<SeparatorProps["content"]>>(() => props.content ?? options?.content ?? "center")
+  const content = computed<NonNullable<SeparatorProps["contentPosition"]>>(
+    () => props.contentPosition ?? options?.contentPosition ?? "center"
+  )
   const gradient = computed<number>(() => {
     let gradient = props?.gradient ?? options?.gradient
-    if (Array.isArray(gradient)) gradient = gradient[0]
-    return typeof gradient === "boolean" ? 20 : gradient && gradient > 0 && gradient <= 100 ? +gradient : 0
+    if (typeof gradient === "boolean") return gradient ? 20 : 0
+    else if (typeof gradient === "number") {
+      if (gradient >= 100) return 90
+      return gradient
+    } else if (Array.isArray(gradient)) {
+      if (gradient[0] >= 100) return 90
+      return gradient[0]
+    } else return 0
   })
   const gradientLength = computed<number>(() => {
-    const gradient = props?.gradient ?? options?.gradient
-    return Array.isArray(gradient) ? gradient[1] : 30
+    let gradient = props?.gradient ?? options?.gradient
+    if (typeof gradient === "boolean") return gradient ? 20 + 10 : 0
+    else if (typeof gradient === "number") {
+      if (gradient >= 100) return 100
+      return gradient + 10
+    } else if (Array.isArray(gradient)) {
+      if (gradient[0] >= 100) return 95
+      if (gradient[0] > gradient[1]) return gradient[0] + 10
+      if (gradient[1] >= 100) return 95
+      return gradient[1]
+    } else return 0
   })
   const depth = computed<NonNullable<SeparatorProps["depth"]>>(() => {
-    const depth = props?.depth ?? options?.depth
+    const depth = (props?.depth as SeparatorProps["depth"]) ?? options?.depth ?? 1
     return depth && depth <= 7 ? depth : 1
   })
   const classBase = computed<SeparatorProps["class"]>(() =>
     Separator.setStyle([
-      "justify-center",
+      "w-auto justify-center",
+      vertical.value ? "flex-col h-full" : "",
       options?.class ?? "",
       props?.class ?? "",
-      vertical.value ? "flex-col h-full" : "",
       "relative flex"
     ])
   )
@@ -51,6 +68,7 @@
     Separator.setStyle([
       vertical.value ? "bg-gradient-to-b" : "bg-gradient-to-r",
       "from-transparent via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800",
+      "rounded-[2px]",
       options?.classLine ?? "",
       props?.classLine ?? "",
       options?.classLineLeft ?? "",
@@ -81,6 +99,7 @@
     Separator.setStyle([
       vertical.value ? "bg-gradient-to-t" : "bg-gradient-to-l",
       "from-transparent via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800",
+      "rounded-[2px]",
       options?.classLine ?? "",
       props?.classLine ?? "",
       options?.classLineRight ?? "",
@@ -115,7 +134,7 @@
         :class="classLineLeft"
         :style="[
           vertical ? `height: 100%;width: ${depth}px;` : `width: 100%;height: ${depth}px;`,
-          `--fv-gradient-from-position: ${gradient}%;--fv-gradient-via-position: ${gradient > 0 ? gradient + gradientLength : 0}%`
+          `--fv-gradient-from-position: ${gradient}%;--fv-gradient-via-position: ${gradient > 0 ? gradientLength : 0}%`
         ]" />
     </div>
     <span v-if="slots?.default" data-separator-content :class="classContent"><slot /></span>
@@ -128,7 +147,7 @@
         :class="classLineRight"
         :style="[
           vertical ? `height: 100%;width: ${depth}px;` : `width: 100%;height: ${depth}px;`,
-          `--fv-gradient-from-position: ${gradient}%;--fv-gradient-via-position: ${gradient > 0 ? gradient + gradientLength : 0}%`
+          `--fv-gradient-from-position: ${gradient}%;--fv-gradient-via-position: ${gradient > 0 ? gradientLength : 0}%`
         ]" />
     </div>
   </div>

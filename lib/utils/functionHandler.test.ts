@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isFunction } from "fishtvue/utils/functionHandler"
+import { isFunction, generateUUID } from "fishtvue/utils/functionHandler"
 
 describe("Testing function handler", () => {
   describe("isFunction function", () => {
@@ -35,6 +35,24 @@ describe("Testing function handler", () => {
         apply: () => {}
       }
       expect(isFunction(objWithApply)).toBe(false)
+    })
+  })
+  describe("generateUUID function", () => {
+    it("should return a string", () => {
+      const uuid = generateUUID()
+      expect(typeof uuid).toBe("string")
+    })
+
+    it("should return a valid UUID v4 format", () => {
+      const uuid = generateUUID()
+      const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      expect(uuid).toMatch(uuidV4Regex)
+    })
+
+    it("should return different values on multiple calls", () => {
+      const uuid1 = generateUUID()
+      const uuid2 = generateUUID()
+      expect(uuid1).not.toBe(uuid2)
     })
   })
 })
