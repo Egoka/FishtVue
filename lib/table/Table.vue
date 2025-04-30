@@ -1320,28 +1320,29 @@
     })
   }
 
-  function addRow(data: any): false | number {
+  function addRow(data: any): number | null {
     if (data) {
       const newValueRow: any = { ...data, _key: generateUUID() }
-      const index: number = allData.value?.push(newValueRow) - 1
+      let index: number | null = null
+      if (allData.value?.length) index = allData.value?.push(newValueRow) - 1
       emit("add-row", { value: data, index, _key: newValueRow._key })
       return index
     }
-    return false
+    return null
   }
 
-  function deleteRow(_key: string): false | any {
+  function deleteRow(_key: string): any | null {
     if (_key && Array.isArray(allData.value)) {
-      const index = allData.value?.findIndex((i) => i._key === _key)
+      const index = allData.value?.findIndex((i) => i._key === _key) ?? null
       if (index && index >= 0) {
         emit("delete-row", { value: allData.value[index], index, _key })
         return allData.value?.splice(index, 1)
       }
     }
-    return false
+    return null
   }
 
-  function updateRow(_key: string, data: any): false | any {
+  function updateRow(_key: string, data: any): any | null {
     if (_key && Array.isArray(allData.value)) {
       const index = allData.value?.findIndex((i) => i._key === _key)
       if (index && index >= 0) {
@@ -1352,10 +1353,10 @@
         return allData.value[index]
       }
     }
-    return false
+    return null
   }
 
-  function updateCell(_key: string, column: IColumnPrivate, value: any): false | any {
+  function updateCell(_key: string, column: IColumnPrivate, value: any): any | null {
     if (_key && Array.isArray(allData.value) && column && column?.dataField) {
       const index = allData.value?.findIndex((i) => i._key === _key)
       if (index >= 0 && column.dataField in allData.value[index]) {
@@ -1365,7 +1366,7 @@
         return value
       }
     }
-    return false
+    return null
   }
 
   function startLastRowVisibleObserver() {

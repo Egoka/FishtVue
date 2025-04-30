@@ -421,7 +421,7 @@
         :class="classPanelBody(panel)"
         :data-name="panel.name"
         :data-size="sizePanels[panel.name]"
-        :style="`flex: ${units === 'percentages' ? sizePanels[panel.name] : '0'} 1 ${units === 'pixels' ? sizePanels[panel.name] + 'px' : '0px'}`">
+        :style="`flex: ${units === 'percentages' ? (sizePanels?.[panel.name] ?? '0') : '0'} 1 ${units === 'pixels' ? sizePanels[panel.name] + 'px' : '0px'}`">
         <slot :name="panel.name" :size="sizePanels[panel.name]" :panel="panel" />
       </div>
       <div

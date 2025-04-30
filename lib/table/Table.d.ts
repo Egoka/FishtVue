@@ -830,7 +830,7 @@ export declare type TableEmits = {
    * @param {number} payload.index - The index where the row is added.
    * @param {string} payload._key - The key identifying the new row.
    */
-  (event: "add-row", payload: { value: any; index: number; _key: string }): void
+  (event: "add-row", payload: { value: any; index: number | null; _key: string }): void
 
   /**
    * Emitted when a row is deleted.
@@ -840,7 +840,7 @@ export declare type TableEmits = {
    * @param {number} payload.index - The index of the deleted row.
    * @param {string} payload._key - The key identifying the deleted row.
    */
-  (event: "delete-row", payload: { value: any; index: number; _key: string }): void
+  (event: "delete-row", payload: { value: any; index: number | null; _key: string }): void
 
   /**
    * Emitted when a row is clicked.
@@ -1186,14 +1186,14 @@ export declare type TableExpose = {
    * @param {any} data - The data for the new row.
    * @returns {number} - The index of the added row.
    */
-  addRow(data: any): false | number
+  addRow(data: any): number | null
 
   /**
    * Deletes a row from the table.
    * @param {string} _key - The key identifying the row to delete.
    * @returns {false | any} - The deleted row data or `false` if not found.
    */
-  deleteRow(_key: string): false | any
+  deleteRow(_key: string): any | null
 
   /**
    * Updates a row in the table.
@@ -1201,7 +1201,7 @@ export declare type TableExpose = {
    * @param {any} data - The new data for the row.
    * @returns {false | any} - The updated row data or `false` if not found.
    */
-  updateRow(_key: string, data: any): false | any
+  updateRow(_key: string, data: any): any | null
 
   /**
    * Updates a specific cell in the table.
@@ -1210,7 +1210,7 @@ export declare type TableExpose = {
    * @param {any} value - The new value for the cell.
    * @returns {false | any} - The updated cell data or `false` if not found.
    */
-  updateCell(_key: string, column: IColumnPrivate, value: any): false | any
+  updateCell(_key: string, column: IColumnPrivate, value: any): any | null
 
   /**
    * Retrieves a column by its data field.

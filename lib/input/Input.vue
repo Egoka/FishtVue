@@ -1,6 +1,5 @@
 <script setup lang="ts">
-  import type { ComponentInternalInstance } from "vue"
-  import { computed, getCurrentInstance, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, onMounted, ref, useSlots, watch } from "vue"
   import type { InputEmits, InputExpose, InputProps } from "./Input"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import { convertToNumber, convertToPhone, onkeydown, toNumber, toPhone } from "fishtvue/utils/numberHandler"
@@ -26,13 +25,12 @@
   const layout = ref<InputLayoutExpose>()
   const inputRef = ref<HTMLElement | undefined>()
   // ---STATE-------------------------------
-  const instance = ref<ComponentInternalInstance | null>()
   const classLayout = ref<InputProps["class"]>()
   const isActiveInput = ref<boolean>(false)
   const modelValue = ref<InputProps["modelValue"]>()
   const arrayInputType: Array<InputProps["type"]> = ["text", "number", "email", "password"]
   // ---PROPS-------------------------------
-  const id = ref<NonNullable<InputProps["id"]>>(String(props?.id ?? instance.value?.uid))
+  const id = ref<InputProps["id"] | undefined>((props?.id as InputProps["id"]) ?? undefined)
   const type = computed<NonNullable<InputProps["type"]>>(() =>
     props?.type && !!arrayInputType.find((i) => i === props.type)
       ? (props.type as "text" | "number" | "email" | "password")
@@ -119,7 +117,6 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Input.initStyle()
-    instance.value = getCurrentInstance()
     if (autoFocus.value) {
       inputRef.value?.focus()
     }

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-  import type { ComponentInternalInstance } from "vue"
-  import { computed, getCurrentInstance, nextTick, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, nextTick, onMounted, ref, useSlots, watch } from "vue"
   import type {
     CalendarEmits,
     CalendarExpose,
@@ -40,7 +39,6 @@
   const datePickerLink = ref<HTMLElement>()
   const picker = ref<HTMLElement>()
   // ---STATE-------------------------------
-  const instance = ref<ComponentInternalInstance | null>()
   const isFocus = ref<boolean>(false)
   const isOpenPicker = ref<boolean>(false)
   const datePickerOptions = computed<Partial<IParamsDatePicker>>(() => ({
@@ -76,7 +74,7 @@
     { immediate: true }
   )
   // ---PROPS-------------------------------
-  const id = ref<NonNullable<CalendarProps["id"]>>(String(String(props.id ?? instance.value?.uid)))
+  const id = ref<CalendarProps["id"] | undefined>((props?.id as CalendarProps["id"]) ?? undefined)
   const isValue = computed<boolean>(() => {
     if (props.paramsDatePicker?.isRange) {
       return (
@@ -234,7 +232,6 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Calendar.initStyle()
-    instance.value = getCurrentInstance()
     if (autoFocus.value) openCalendar()
     nextTick(() => {
       visibleDate.value = <ICalendarPicker["inputValue"]>(

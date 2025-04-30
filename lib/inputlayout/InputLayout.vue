@@ -79,6 +79,9 @@
     InputLayout.setStyle([
       "classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
       heightLayout.value.length ? "" : "max-h-20",
+      isDisabled.value
+        ? "bg-neutral-50 dark:bg-neutral-950 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-800 border-dashed shadow-none"
+        : "",
       mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-950" : "",
       mode.value === "underlined"
         ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
@@ -91,9 +94,6 @@
       props?.class ?? "",
       isInvalid.value
         ? "border-red-500 dark:border-red-500 ring-1 ring-inset ring-red-500 dark:ring-red-500 scroll-mt-10"
-        : "",
-      isDisabled.value
-        ? "bg-neutral-50 dark:bg-neutral-950 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-800 border-dashed shadow-none"
         : "",
       "flex items-center peer overflow-auto"
     ])
@@ -265,7 +265,7 @@
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
         <div v-if="isLoading" data-loading :class="classLoading">
-          <Loading v-if="isLoading" type="simple" class="absolute -top-[8px] -left-4" />
+          <Loading v-if="isLoading" type="simple" class="absolute -top-[10px] -left-4" />
         </div>
       </transition>
       <div v-if="help?.length" data-input-layout-help :class="classIconBody">
@@ -277,7 +277,7 @@
           event-open="click"
           event-close="hover"
           position="bottom-right"
-          :margin-px="12.0"
+          :margin-px="12"
           :padding-window="40"
           class-body="z-30"
           stop-open-propagation
@@ -293,7 +293,7 @@
             event-open="click"
             event-close="hover"
             position="bottom-right"
-            :margin-px="12.0"
+            :margin-px="12"
             :padding-window="40"
             class-body="z-30"
             stop-open-propagation

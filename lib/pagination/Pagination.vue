@@ -91,7 +91,7 @@
     () => props.modelValue,
     () => {
       activePage.value =
-        typeof props.modelValue === "number" && +props.modelValue ? ((+props.modelValue as any) ?? pages.value[0]) : 1
+        props.modelValue && typeof props.modelValue === "number" ? (props.modelValue ?? pages.value[0]) : 1
     },
     { immediate: true }
   )

@@ -772,7 +772,7 @@ describe("Table Component", () => {
             columns: [{ dataField: "name" }, { dataField: "color" }, { dataField: "shape" }]
           }
         })
-        expect(wrapper.vm.addRow()).toBe(false)
+        expect(wrapper.vm.addRow()).toBeNull()
 
         const instance = wrapper.vm as any
 
@@ -800,7 +800,7 @@ describe("Table Component", () => {
             columns: [{ dataField: "name" }, { dataField: "color" }, { dataField: "shape" }]
           }
         })
-        expect(wrapper.vm.deleteRow()).toBe(false)
+        expect(wrapper.vm.deleteRow()).toBeNull()
 
         const instance = wrapper.vm as any
 
@@ -824,7 +824,7 @@ describe("Table Component", () => {
             columns: [{ dataField: "name" }, { dataField: "color" }, { dataField: "shape" }]
           }
         })
-        expect(wrapper.vm.updateRow()).toBe(false)
+        expect(wrapper.vm.updateRow()).toBeNull()
 
         const instance = wrapper.vm as any
 
@@ -853,7 +853,7 @@ describe("Table Component", () => {
             ]
           }
         })
-        expect(wrapper.vm.updateCell()).toBe(false)
+        expect(wrapper.vm.updateCell()).toBeNull()
 
         const instance = wrapper.vm as any
 

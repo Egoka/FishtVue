@@ -105,9 +105,7 @@
   FixWindow.setStyle(`transition-opacity ease-in-out duration-300 opacity-100 opacity-0`)
   const classBase = computed(() => {
     const classes = `text-neutral-800 dark:text-neutral-300 text-sm z-5`
-    return FixWindow.setStyle([classes, options?.classBody ?? "", props?.classBody ?? "", typePosition.value], {
-      isBaseClasses: true
-    })
+    return FixWindow.setStyle([classes, options?.classBody ?? "", props?.classBody ?? "", typePosition.value])
   })
   const classContent = computed(() => FixWindow.setStyle([mode.value ?? "", options?.class ?? "", props?.class ?? ""]))
   // ---EXPOSE------------------------------

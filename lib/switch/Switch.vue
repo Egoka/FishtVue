@@ -1,6 +1,5 @@
 <script setup lang="ts">
-  import type { ComponentInternalInstance } from "vue"
-  import { computed, getCurrentInstance, onMounted, ref, watch } from "vue"
+  import { computed, onMounted, ref, watch } from "vue"
   import type { SwitchEmits, SwitchExpose, SwitchProps } from "./Switch"
   import type { StyleClass, StyleMode } from "fishtvue/types"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -16,7 +15,6 @@
   })
   const emit = defineEmits<SwitchEmits>()
   // ---STATE-------------------------------
-  const instance = ref<ComponentInternalInstance | null>()
   const modelValue = ref<SwitchProps["modelValue"]>()
   watch(
     () => props.modelValue,
@@ -25,7 +23,7 @@
   )
   const isActiveSwitch = ref<boolean>(false)
   // ---PROPS-------------------------------
-  const id = ref(props.id ?? instance.value?.uid)
+  const id = ref<SwitchProps["id"] | undefined>((props?.id as SwitchProps["id"]) ?? undefined)
   const switchingType = computed<SwitchProps["switchingType"]>(
     () => (props?.switchingType as SwitchProps["switchingType"]) ?? options?.switchingType ?? "checkbox"
   )
@@ -157,7 +155,6 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Switch.initStyle()
-    instance.value = getCurrentInstance()
   })
 
   // ---METHODS-----------------------------
@@ -180,11 +177,13 @@
     <div :class="classInputDiv">
       <button
         v-if="switchingType === 'switch'"
+        :id="id"
+        :name="id"
         data-input-switch
         role="switch"
         type="button"
         tabindex="0"
-        :disabled="isDisabled"
+        :disabled="isDisabled as any"
         :aria-checked="modelValue"
         :data-headlessui-state="modelValue ? 'checked' : ''"
         :class="classSwitch"
@@ -208,7 +207,7 @@
       <input
         v-else-if="switchingType === 'checkbox'"
         data-input-checkbox
-        :id="id"
+        :id="id as string"
         :name="id"
         tabindex="0"
         :checked="modelValue"

@@ -51,6 +51,7 @@
     { immediate: true }
   )
   // ---PROPS-------------------------------
+  const id = ref<SelectProps["id"] | undefined>((props?.id as SelectProps["id"]) ?? undefined)
   const visibleValue = ref<any[]>([])
   const valueKeys = computed<any[]>(() => {
     return keySelect.value ? visibleValue.value.map((item) => item[keySelect.value ?? ""]) : []
@@ -149,7 +150,7 @@
   Select.setStyle(`transition ease-in-out duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`)
   const classBase = computed<SelectProps["classSelect"]>(() => {
     return Select.setStyle([
-      "selectBody w-56 min-h-[36px] max-h-16 focus:outline-0 focus:ring-0",
+      "selectBody w-46 min-h-[36px] max-h-16 focus:outline-0 focus:ring-0",
       options?.classSelect ?? "",
       props?.classSelect ?? "",
       "classSelect flex overflow-auto cursor-pointer"
@@ -433,6 +434,7 @@
     <div
       data-select
       ref="selectBody"
+      :id="id"
       tabindex="0"
       :class="classBase"
       @focusin="focusSelect(true)"
