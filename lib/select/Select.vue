@@ -4,7 +4,7 @@
   import type { BaseDataItem, IDataItem, SelectEmits, SelectExpose, SelectProps } from "./Select"
   import type { FixWindowExpose } from "fishtvue/fixwindow"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
-  import * as LD from "lodash"
+  import * as LD from "lodash-es"
   import gsap from "gsap"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Input from "fishtvue/input/Input.vue"
@@ -51,6 +51,7 @@
     { immediate: true }
   )
   // ---PROPS-------------------------------
+  const id = ref<SelectProps["id"] | undefined>((props?.id as SelectProps["id"]) ?? undefined)
   const visibleValue = ref<any[]>([])
   const valueKeys = computed<any[]>(() => {
     return keySelect.value ? visibleValue.value.map((item) => item[keySelect.value ?? ""]) : []
@@ -59,7 +60,7 @@
     props?.dataSelect && props?.dataSelect.length
       ? typeof props?.dataSelect[0] === "object"
         ? props?.keySelect && Object.keys(props?.dataSelect[0]).includes(props.keySelect)
-          ? props.keySelect
+          ? (props.keySelect as string | "id")
           : Object.keys(props.dataSelect[0])[0]
         : "id"
       : "id"
@@ -68,7 +69,7 @@
     if (props?.dataSelect && props?.dataSelect.length) {
       if (typeof props?.dataSelect[0] === "object") {
         if (props?.valueSelect && Object.keys(props?.dataSelect[0]).includes(props.valueSelect)) {
-          return props?.valueSelect
+          return props?.valueSelect as SelectProps["valueSelect"]
         } else {
           return Object.keys(props?.dataSelect[0])[1]
         }
@@ -85,12 +86,12 @@
           [keySelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[keySelect.value ?? ""] : item,
           [valueSelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[valueSelect.value ?? ""] : item
         }))
-      : (props?.dataSelect ?? [])
+      : ((props?.dataSelect as Array<IDataItem>) ?? [])
   )
   const autoFocus = computed<NonNullable<SelectProps["autoFocus"]>>(
     () => props?.autoFocus ?? options?.autoFocus ?? false
   )
-  const mode = computed<NonNullable<SelectProps["mode"]>>(() => props.mode ?? "outlined")
+  const mode = computed<NonNullable<SelectProps["mode"]>>(() => (props.mode as SelectProps["mode"]) ?? "outlined")
   const isDisabled = computed<NonNullable<SelectProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<SelectProps["loading"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<SelectProps["isInvalid"]>>(() => props.isInvalid ?? false)
@@ -101,18 +102,21 @@
     )
   )
   const isMultiple = computed<NonNullable<SelectProps["multiple"]>>(() => props?.multiple ?? options?.multiple ?? false)
-  const maxVisible = computed<SelectProps["maxVisible"] | undefined>(() => props?.maxVisible ?? options?.maxVisible)
-  const closeButtonBadge = computed<SelectProps["closeButtonBadge"] | undefined>(
-    () => props?.closeButtonBadge ?? options?.closeButtonBadge ?? false
+  const maxVisible = computed<SelectProps["maxVisible"] | undefined>(() => {
+    const result = props?.maxVisible ?? options?.maxVisible
+    return result !== undefined && typeof +result === "number" ? +result : undefined
+  })
+  const closeButtonBadge = computed<SelectProps["closeButtonBadge"]>(
+    () => (props?.closeButtonBadge as SelectProps["closeButtonBadge"]) ?? options?.closeButtonBadge ?? false
   )
   const noData = computed<NonNullable<SelectProps["noData"]>>(
-    () => props?.noData ?? options?.noData ?? Select.t("noData") ?? "No data available"
+    () => (props?.noData as SelectProps["noData"]) ?? options?.noData ?? Select.t("noData") ?? "No data available"
   )
   const isQuery = computed<NonNullable<SelectProps["noQuery"]>>(() => !(props?.noQuery ?? options?.noQuery))
   const classMaskQuery = computed<NonNullable<SelectProps["classMaskQuery"]>>(() =>
     Select.setStyle(props?.classMaskQuery ?? options?.classMaskQuery ?? "font-bold text-theme-700 dark:text-theme-300")
   )
-  const dataList = computed<Array<any>>(() => {
+  const dataList = computed(() => {
     if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
       return LD.map(
         LD.filter(dataSelect.value, (item) =>
@@ -146,7 +150,7 @@
   Select.setStyle(`transition ease-in-out duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`)
   const classBase = computed<SelectProps["classSelect"]>(() => {
     return Select.setStyle([
-      "selectBody w-full min-h-[36px] max-h-16 focus:outline-0 focus:ring-0",
+      "selectBody w-46 min-h-[36px] max-h-16 focus:outline-0 focus:ring-0",
       options?.classSelect ?? "",
       props?.classSelect ?? "",
       "classSelect flex overflow-auto cursor-pointer"
@@ -205,23 +209,24 @@
   const classItemSelectValue = computed(() =>
     Select.setStyle("text-gray-600 dark:text-gray-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200")
   )
-  const inputLayout = computed(() => {
-    return {
-      isValue: isValue.value,
-      mode: mode.value,
-      classBody: props.classBody,
-      class: props.class,
-      label: props.label,
-      labelMode: props.labelMode,
-      isInvalid: isInvalid.value,
-      messageInvalid: messageInvalid.value,
-      required: props.required,
-      loading: isLoading.value,
-      disabled: isDisabled.value,
-      help: props.help,
-      clear: props.clear
-    }
-  })
+  const inputLayout = computed(() => ({
+    isValue: isValue.value,
+    mode: mode.value,
+    label: props.label,
+    labelMode: props.labelMode,
+    isInvalid: isInvalid.value,
+    messageInvalid: messageInvalid.value,
+    required: props.required,
+    loading: isLoading.value,
+    disabled: isDisabled.value,
+    help: props.help,
+    clear: props.clear,
+    width: props.width,
+    height: props.height,
+    animation: props.animation,
+    classBody: props.classBody,
+    class: props.class
+  }))
   // ---EXPOSE------------------------------
   defineExpose<SelectExpose>({
     // ---STATE-------------------------
@@ -372,7 +377,7 @@
   }
 
   // ---------------------------------------
-  function select(selectValue: BaseDataItem | null) {
+  function select(selectValue: BaseDataItem | null): void {
     if (selectValue && keySelect.value) {
       activeItem.value = dataList.value.findIndex(
         (value) =>
@@ -429,6 +434,7 @@
     <div
       data-select
       ref="selectBody"
+      :id="id"
       tabindex="0"
       :class="classBase"
       @focusin="focusSelect(true)"
@@ -464,7 +470,7 @@
                 <Badge
                   mode="neutral"
                   :close-button="closeButtonBadge"
-                  class="m-1 mb-0 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500"
+                  class="m-1 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500"
                   class-content="fill-theme-500"
                   @delete="select(null)">
                   <Icons type="Funnel" class="h-3 w-3 mr-1 text-theme-400 dark:text-theme-600" />

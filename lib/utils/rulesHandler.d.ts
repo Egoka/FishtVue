@@ -28,7 +28,7 @@ export declare type NumericRule = Rule & {
 }
 type Regular = {
   regular: RegExp | string
-}
+} & Rule
 export declare type RegularRule = Rule &
   Regular & {
     type: "regular"
@@ -70,7 +70,7 @@ export declare type CustomRule = Rule &
   }
 
 type Compare = {
-  compareField: any
+  compareFields: any
 } & Rule
 export declare type CompareRule = Rule &
   Compare & {

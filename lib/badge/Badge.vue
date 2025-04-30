@@ -37,12 +37,11 @@
     !(mode.value === "primary") || arrayClasses.push("fill-theme-100 dark:fill-theme-300")
     !(mode.value === "secondary") || arrayClasses.push("fill-theme-600 dark:fill-theme-300")
     !(mode.value === "outline") || arrayClasses.push("fill-theme-500 dark:fill-theme-600")
-    !(mode.value === "neutral") || arrayClasses.push((props.classContent ?? options?.classContent) as string)
     return arrayClasses
   })
   const classBase = computed(() =>
     Badge.setStyle([
-      "items-center m-[2px] px-2 py-1 text-xs font-medium rounded-md",
+      "items-center w-max h-max m-[2px] px-2 py-1 text-xs font-medium rounded-md",
       isPoint.value || isButton.value ? "gap-x-[2px]" : "",
       isPoint.value && isButton.value
         ? "px-1"
@@ -57,8 +56,9 @@
       "inline-flex"
     ])
   )
-  const classIcon = computed(() => Badge.setStyle(["h-1.5 w-1.5 mx-1", classBadgeContent.value]))
-  const classButtonIcon = computed(() => Badge.setStyle(["h-4 w-4", classBadgeContent.value]))
+  const classContent = computed(() => props.classContent ?? options?.classContent)
+  const classIcon = computed(() => Badge.setStyle(["h-1.5 w-1.5 mx-1", classBadgeContent.value, classContent.value]))
+  const classButtonIcon = computed(() => Badge.setStyle(["h-4 w-4", classBadgeContent.value, classContent.value]))
   // ---EXPOSE------------------------------
   defineExpose<BadgeExpose>({
     // ---PROPS-------------------------
@@ -84,7 +84,9 @@
     <svg v-if="isPoint" data-badge-point :class="classIcon" viewBox="0 0 6 6" aria-hidden="true">
       <circle cx="3" cy="3" r="3"></circle>
     </svg>
-    <slot />
+    <div :class="classContent">
+      <slot />
+    </div>
     <Button v-if="isButton" mode="ghost" class="m-0 rounded-[5px] h-4 w-4 px-0" @click="deleteBadge">
       <Icons type="XMark" :class="classButtonIcon" />
     </Button>

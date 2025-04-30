@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils"
 import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Menu from "fishtvue/menu/Menu.vue"
-import { Groups, ItemMenuPrivate, MenuOption, MenuProps } from "fishtvue/menu/Menu"
+import { GroupMenu, ItemMenuPrivate, MenuOption, MenuProps } from "fishtvue/menu/Menu"
 
 describe("Menu Component", () => {
   describe("Menu Component - Without Library Initialization", () => {
@@ -158,7 +158,7 @@ describe("Menu Component", () => {
     describe("Menu Component - Methods overItem and leaveItem", () => {
       it("emits 'onActive', 'onInactive' and 'onClick' event on menu item", async () => {
         const consoleMock = vi.spyOn(console, "log")
-        const mockGroups: Groups = [
+        const mockGroups: Array<GroupMenu> = [
           {
             title: "Group 1",
             items: [
@@ -189,10 +189,10 @@ describe("Menu Component", () => {
         expect(menuItem.exists()).toBe(true)
 
         // Наведение на элемент
-        await menuItem.trigger("mouseover")
+        await menuItem.trigger("pointerenter")
         expect(consoleMock.mock.lastCall?.[0]).toBe("onActive Profile")
         expect((wrapper.emitted("onActive")?.[0]?.[1] as any).title).toBe("Profile")
-        await menuItem.trigger("mouseleave")
+        await menuItem.trigger("pointerleave")
         expect(consoleMock.mock.lastCall?.[0]).toBe("onInactive Profile")
         expect((wrapper.emitted("onActive")?.[0]?.[1] as any).title).toBe("Profile")
         await menuItem.trigger("click")
@@ -209,7 +209,8 @@ describe("Menu Component", () => {
       // Монтируем компонент с текущим значением mode
       const wrapper = mount(Menu, {
         props: {
-          mode
+          mode,
+          groups: [{}]
         }
       })
 
@@ -219,7 +220,11 @@ describe("Menu Component", () => {
     })
 
     it("should fall back to default mode if none provided", () => {
-      const wrapper = mount(Menu)
+      const wrapper = mount(Menu, {
+        props: {
+          groups: [{}]
+        }
+      })
       expect((wrapper as any).vm.mode).toBe("outlined")
       expect(wrapper.find("[data-menu]").classes().join(" ")).toContain("bg-white dark:bg-neutral-950 rounded-md")
     })
@@ -250,7 +255,7 @@ describe("Menu Component", () => {
 
         // Симулируем установку активного элемента
         const menuElement = wrapper.find("[data-menu-item]")
-        await menuElement.trigger("mouseover")
+        await menuElement.trigger("pointerenter")
 
         // Проверяем, что применяется класс activeRows
         expect(menuElement.classes().join(" ")).toContain("active-rows-class")

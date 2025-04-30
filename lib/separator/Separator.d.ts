@@ -11,8 +11,8 @@ import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from 
 declare class Separator extends ClassComponent<SeparatorProps, SeparatorSlots, SeparatorEmits, SeparatorExpose> {}
 
 // ---------------------------------------
-export type Gradient = 0 | 5 | 10 | 20 | 30 | 40 | 50
-export type GradientLength = 0 | 5 | 10 | 20 | 30 | 40 | 50
+export type Gradient = 0 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100
+export type GradientLength = 0 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100
 export type Depth = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 /**
@@ -29,7 +29,7 @@ export declare type SeparatorProps = {
    * Alignment of the content within the separator.
    * @type {"right" | "left" | "center" | "full" | undefined}
    */
-  content?: "right" | "left" | "center" | "full"
+  contentPosition?: "right" | "left" | "center" | "full"
 
   /**
    * Gradient applied to the separator lines.
@@ -113,7 +113,7 @@ export declare type SeparatorExpose = {
    * Alignment of the content within the separator.
    * @type {ReadRef<NonNullable<SeparatorProps["content"]>>}
    */
-  content: ReadRef<NonNullable<SeparatorProps["content"]>>
+  content: ReadRef<NonNullable<SeparatorProps["contentPosition"]>>
 
   /**
    * The applied gradient value for the separator.
@@ -171,7 +171,7 @@ export declare type SeparatorExpose = {
 }
 export declare type SeparatorOption = Pick<
   SeparatorProps,
-  | "content"
+  | "contentPosition"
   | "gradient"
   | "depth"
   | "class"

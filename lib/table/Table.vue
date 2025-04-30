@@ -1,8 +1,7 @@
 <script setup lang="ts">
   import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, useSlots, watch } from "vue"
-  import * as LD from "lodash"
-  import dayjs from "dayjs"
-  import isBetween from "dayjs/plugin/isBetween"
+  import * as LD from "lodash-es"
+  import { isEqual, isWithinInterval, startOfDay } from "date-fns"
   import {
     ArrowLongDownIcon,
     ArrowLongUpIcon,
@@ -10,7 +9,8 @@
     BarsArrowUpIcon,
     FunnelIcon,
     MagnifyingGlassIcon,
-    TableCellsIcon
+    TableCellsIcon,
+    ViewColumnsIcon
   } from "@heroicons/vue/20/solid"
   import {
     DataGrouping,
@@ -53,9 +53,11 @@
   import { BaseSelectProps } from "fishtvue/select"
   import { BaseCalendarProps, IRangeValue } from "fishtvue/calendar"
   import { InputLayoutProps } from "fishtvue/inputlayout"
+  import { isClient } from "fishtvue/utils/domHandler"
+  import { formatDate } from "fishtvue/utils/dateHandler"
+  import { generateUUID } from "fishtvue/utils/functionHandler"
   import { convertToNumber, convertToPhone, isNumber } from "fishtvue/utils/numberHandler"
   import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
-  import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Table = new Component<"Table">()
   const options = Table.getOptions()
@@ -98,11 +100,11 @@
   const filterColumns = reactive<Filters>({})
   const widthsColumns = reactive<Widths>({})
   // ---
-  const allData = ref<NonNullable<TableProps["dataSource"]>>()
+  const allData = ref<any[]>()
   const dataSource = ref<DataSource>([])
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<TableProps["mode"]>>(
-    () => props?.mode ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
+    () => (props?.mode as TableProps["mode"]) ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
   )
   const toolbar = computed<TableProps["toolbar"]>(
     () => deepMerge(options?.toolbar, props?.toolbar) as TableProps["toolbar"]
@@ -115,7 +117,7 @@
   const pagination = computed<TableProps["pagination"]>(
     () => deepMerge(options?.pagination, props?.pagination) as TableProps["pagination"]
   )
-  const columns = computed<TableProps["columns"]>(() => props?.columns)
+  const columns = computed<TableProps["columns"]>(() => props?.columns as TableProps["columns"])
   // -----------
   const isVisibleToolbar = computed<boolean>(
     () => (isSearch.value || !!toolbar.value) && ((toolbar.value as IToolbar)?.visible ?? true)
@@ -135,7 +137,7 @@
     typeof props.summary === "boolean" ? props.summary : Array.isArray(props.summary)
   )
   const countDataOnLoading = computed<NonNullable<TableProps["countDataOnLoading"]>>(
-    () => props?.countDataOnLoading ?? options?.countDataOnLoading ?? 1000
+    () => (props?.countDataOnLoading as TableProps["countDataOnLoading"]) ?? options?.countDataOnLoading ?? 1000
   )
   const classMaskQuery = computed<NonNullable<ITableStyles["maskQuery"]>>(() =>
     Table.setStyle(styles.value?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400")
@@ -236,24 +238,26 @@
     () => (pagination.value as TablePagination)?.isHiddenNavigationButtons ?? false
   )
   // ---CELL--------------------------------
-  const heightCell = computed<number>(() => styles.value?.heightCell ?? 24)
+  const heightCell = computed<number>(() => styles.value?.heightCell ?? 50)
   const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
-    () => props?.countVisibleRows ?? options?.countVisibleRows ?? 0
+    () => (props?.countVisibleRows as TableProps["countVisibleRows"]) ?? options?.countVisibleRows ?? 0
   )
   const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
-    () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
+    () => (props?.sizeLoadingRows as TableProps["sizeLoadingRows"]) ?? options?.sizeLoadingRows ?? 5
   )
   const isLoadingRows = computed(() => countVisibleRows.value > 0)
   // ---DATA--------------------------------
   const dataGrouping = computed<DataGrouping>(() => {
-    let data = toRaw(dataSource.value)
+    let data: Array<Record<string, any>> = toRaw(dataSource.value)
     if (isPagination.value) {
-      if (isGroup.value && groupField.value)
-        data = Object.values(LD.groupBy(data, (item) => item[groupField.value as string])).flat()
+      if (isGroup.value && groupField.value) {
+        const grouped = LD.groupBy(data, (item: Record<string, any>) => item[groupField.value as string])
+        data = Object.values(grouped as Record<string, Array<Record<string, any>>>).flat()
+      }
       data = LD.slice(data, sizeTable.value * (pageTable.value - 1), sizeTable.value * pageTable.value)
     }
     return isGroup.value && groupField.value
-      ? LD.groupBy(data, (item) => item[groupField.value as string])
+      ? LD.groupBy(data, (item: Record<string, any>) => item[groupField.value as string])
       : { 0: data }
   })
   const resultDataSource = computed<ResultData>(() => {
@@ -277,9 +281,9 @@
     return resultData
   })
   const dataColumns = computed<Array<IColumnPrivate>>(() => {
-    const listFields: Array<string> = LD.uniq(LD.flatten(LD.map(allData.value, LD.keys))).filter(
-      (field) => field !== "_key"
-    )
+    const listFields: Array<string> = LD.uniq(
+      LD.flatMap(allData.value, (item) => Object.keys(item)) as string[]
+    ).filter((field) => field !== "_key")
     const columnsValue = columns.value
     if (Array.isArray(columnsValue) && columnsValue?.length) {
       return <Array<IColumnPrivate>>columnsValue
@@ -307,10 +311,10 @@
             case "string": {
               options.paramsFilter = { autocomplete: "off", ...column.paramsFilter } as Partial<BaseInputProps>
               options.edit = {
-                paramsFilter: {
+                editorOptions: {
                   ...options.paramsFilter,
                   autoFocus: true,
-                  ...(column?.edit as EditInput)?.paramsFilter
+                  ...(column?.edit as EditInput)?.editorOptions
                 } as Partial<BaseInputProps>
               }
               break
@@ -322,10 +326,10 @@
                 ...column.paramsFilter
               } as Partial<BaseInputProps>
               options.edit = {
-                paramsFilter: {
+                editorOptions: {
                   ...options.paramsFilter,
                   autoFocus: true,
-                  ...(column?.edit as EditInput)?.paramsFilter
+                  ...(column?.edit as EditInput)?.editorOptions
                 } as Partial<BaseInputProps>
               }
               break
@@ -334,9 +338,13 @@
               options.paramsFilter = {
                 multiple: true,
                 maxVisible: 0,
-                classSelect: "normal-case font-normal max-h-[25rem]",
+                classSelect: "normal-case max-h-[25rem]",
                 classSelectList: "normal-case font-normal",
-                dataSelect: LD.compact(LD.uniq(LD.map(allData.value, options.dataField ?? ""))) ?? [],
+                dataSelect:
+                  (column?.paramsFilter as Partial<BaseSelectProps>)?.dataSelect ??
+                  LD.compact(LD.uniq(LD.map(allData.value, options.dataField ?? ""))).sort((a, b) =>
+                    String(a).localeCompare(String(b))
+                  ),
                 paramsFixWindow: {
                   position: "bottom",
                   ...(column?.paramsFilter as Partial<BaseSelectProps>)?.paramsFixWindow
@@ -344,15 +352,15 @@
                 ...column.paramsFilter
               } as Partial<BaseSelectProps>
               options.edit = {
-                paramsFilter: (<BaseSelectProps>{
+                editorOptions: (<BaseSelectProps>{
                   ...options.paramsFilter,
                   autoFocus: true,
                   multiple: false,
-                  ...(column?.edit as EditSelect)?.paramsFilter,
+                  ...(column?.edit as EditSelect)?.editorOptions,
                   paramsFixWindow: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...(column?.edit as EditSelect)?.paramsFilter?.paramsFixWindow
+                    ...(column?.edit as EditSelect)?.editorOptions?.paramsFixWindow
                   }
                 }) as Partial<BaseSelectProps>
               }
@@ -386,20 +394,20 @@
                 ...column.paramsFilter
               } as Partial<BaseCalendarProps>
               options.edit = {
-                paramsFilter: {
+                editorOptions: {
                   ...options.paramsFilter,
                   paramsDatePicker: {
                     ...(options?.paramsFilter as Partial<BaseCalendarProps>)?.paramsDatePicker,
                     isRange: false
                   },
                   autoFocus: true,
-                  ...(column?.edit as EditDate)?.paramsFilter,
+                  ...(column?.edit as EditDate)?.editorOptions,
                   label: "",
                   labelMode: "none",
                   paramsFixWindow: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...((column?.edit as EditDate)?.paramsFilter as Partial<BaseCalendarProps>)?.paramsFixWindow
+                    ...((column?.edit as EditDate)?.editorOptions as Partial<BaseCalendarProps>)?.paramsFixWindow
                   }
                 } as Partial<BaseCalendarProps> & Pick<InputLayoutProps, "label" | "labelMode">
               }
@@ -410,8 +418,8 @@
         })
         .filter((i) => i)
     } else {
-      return listFields.map<IColumnPrivate>(
-        (column, index): IColumnPrivate => ({
+      return listFields.map<IColumnPrivate>((column, index): IColumnPrivate => {
+        const options: IColumnPrivate = {
           id: `Col-${column}-${index}`,
           dataField: column,
           name: `Col-${column}`,
@@ -424,8 +432,18 @@
           isSort: isSort.value,
           isResized: resizedColumns.value,
           isEdit: isEditCells.value
-        })
-      )
+        }
+        if (options.isEdit) {
+          options.paramsFilter = { autocomplete: "off" } as Partial<BaseInputProps>
+          options.edit = {
+            editorOptions: {
+              ...options.paramsFilter,
+              autoFocus: true
+            } as Partial<BaseInputProps>
+          }
+        }
+        return options
+      })
     }
   })
   const dataSummary = computed<Array<ISummaryPrivate>>(() => {
@@ -695,7 +713,7 @@
       `td--${indexRow}--${column?.name ?? indexCol}`,
       "first:border-l-0 group-first/tr:border-t-0 last:border-r-0 group-last/tr:border-b-0",
       "text-sm font-medium",
-      "px-6 py-4 text-gray-800 dark:text-gray-300",
+      "px-4 py-1 text-gray-800 dark:text-gray-300",
       column.class?.td,
       styles.value.class?.cellText,
       defaultBorder.value,
@@ -742,14 +760,6 @@
     Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-neutral-100/70 dark:bg-neutral-800/50")
   )
   const classNoData = ref(
-    Table.setStyle(
-      "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500"
-    )
-  )
-  const classNoColumn = ref(
-    Table.setStyle("absolute top-[50%] left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500")
-  )
-  const classNoFilter = ref(
     Table.setStyle(
       "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500"
     )
@@ -911,7 +921,7 @@
     () => props.dataSource,
     () => {
       allData.value = props.dataSource?.length
-        ? props.dataSource?.map((item) => ({ ...item, _key: crypto.randomUUID() }))
+        ? props.dataSource?.map((item) => ({ ...item, _key: generateUUID() }))
         : []
       updateDataSource()
     },
@@ -1108,18 +1118,18 @@
         else return String(columnValue).includes(value)
       }
       case "date": {
-        if (value instanceof Date)
-          return dayjs(dayjs(columnValue).startOf("day")).isSame(dayjs(value as Date).startOf("day"))
-        else {
-          if (value?.start instanceof Date && value?.end instanceof Date) {
-            dayjs.extend(isBetween)
-            return dayjs(dayjs(columnValue).startOf("day")).isBetween(
-              dayjs((value as IRangeValue)?.start as Date).startOf("day"),
-              dayjs((value as IRangeValue)?.end as Date).startOf("day"),
-              null,
-              "[]"
-            )
-          } else return false
+        if (value instanceof Date) {
+          return isEqual(startOfDay(columnValue), startOfDay(value))
+        } else {
+          const range = value as IRangeValue
+          if (range?.start instanceof Date && range?.end instanceof Date) {
+            return isWithinInterval(startOfDay(columnValue), {
+              start: startOfDay(range.start),
+              end: startOfDay(range.end)
+            })
+          } else {
+            return false
+          }
         }
       }
       default:
@@ -1214,7 +1224,7 @@
           valueCell = toMask()
           break
         case "date":
-          valueCell = dayjs(value).format((column as EditDate).paramsFilter?.paramsDatePicker?.mask)
+          valueCell = formatDate(value, (column as EditDate).editorOptions?.paramsDatePicker?.mask)
           break
         default:
           valueCell = value
@@ -1310,28 +1320,29 @@
     })
   }
 
-  function addRow(data: any): false | number {
+  function addRow(data: any): number | null {
     if (data) {
-      const newValueRow: any = { ...data, _key: crypto.randomUUID() }
-      const index: number = (allData.value as Array<any>)?.push(newValueRow) - 1
+      const newValueRow: any = { ...data, _key: generateUUID() }
+      let index: number | null = null
+      if (allData.value?.length) index = allData.value?.push(newValueRow) - 1
       emit("add-row", { value: data, index, _key: newValueRow._key })
       return index
     }
-    return false
+    return null
   }
 
-  function deleteRow(_key: string): false | any {
+  function deleteRow(_key: string): any | null {
     if (_key && Array.isArray(allData.value)) {
-      const index = allData.value.findIndex((i) => i._key === _key)
+      const index = allData.value?.findIndex((i) => i._key === _key) ?? null
       if (index && index >= 0) {
         emit("delete-row", { value: allData.value[index], index, _key })
         return allData.value?.splice(index, 1)
       }
     }
-    return false
+    return null
   }
 
-  function updateRow(_key: string, data: any): false | any {
+  function updateRow(_key: string, data: any): any | null {
     if (_key && Array.isArray(allData.value)) {
       const index = allData.value?.findIndex((i) => i._key === _key)
       if (index && index >= 0) {
@@ -1342,10 +1353,10 @@
         return allData.value[index]
       }
     }
-    return false
+    return null
   }
 
-  function updateCell(_key: string, column: IColumnPrivate, value: any): false | any {
+  function updateCell(_key: string, column: IColumnPrivate, value: any): any | null {
     if (_key && Array.isArray(allData.value) && column && column?.dataField) {
       const index = allData.value?.findIndex((i) => i._key === _key)
       if (index >= 0 && column.dataField in allData.value[index]) {
@@ -1355,7 +1366,7 @@
         return value
       }
     }
-    return false
+    return null
   }
 
   function startLastRowVisibleObserver() {
@@ -1626,9 +1637,9 @@
                               v-if="column.type === 'string' || column.type === 'number'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditInput)?.paramsFilter,
-                                classInput: `pt-[5px] pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditInput)?.paramsFilter?.classInput
+                                ...(column.edit as EditInput)?.editorOptions,
+                                classInput: `pt-[3px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                  (column.edit as EditInput)?.editorOptions?.classInput ?? ''
                                 }`
                               }"
                               :mode="mode"
@@ -1641,18 +1652,18 @@
                               v-else-if="column.type === 'select'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditSelect)?.paramsFilter,
+                                ...(column.edit as EditSelect)?.editorOptions,
                                 paramsFixWindow: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditSelect)?.paramsFilter?.paramsFixWindow
+                                  ...(column.edit as EditSelect)?.editorOptions?.paramsFixWindow
                                 },
-                                classSelect: `pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditSelect)?.paramsFilter?.classSelect
+                                classSelect: `pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                  (column.edit as EditSelect)?.editorOptions?.classSelect ?? ''
                                 }`
                               }"
                               :mode="mode"
                               class="border-none font-normal bg-transparent dark:bg-transparent"
-                              class-body="pt-[2px] -my-3 w-full"
+                              class-body="pt-[0px] -my-3 w-full"
                               label-mode="vanishing"
                               @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
                               @update:model-value="
@@ -1664,13 +1675,13 @@
                               v-else-if="column.type === 'date'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditDate)?.paramsFilter,
+                                ...(column.edit as EditDate)?.editorOptions,
                                 paramsFixWindow: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditDate)?.paramsFilter?.paramsFixWindow
+                                  ...(column.edit as EditDate)?.editorOptions?.paramsFixWindow
                                 },
-                                classDateText: `pt-[7px] pl-[10px] text-sm font-medium ${styles.class?.cellText} ${
-                                  (column.edit as EditDate)?.paramsFilter?.classDateText
+                                classDateText: `pt-[6px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                  (column.edit as EditDate)?.editorOptions?.classDateText ?? ''
                                 }`
                               }"
                               :mode="mode"
@@ -1744,6 +1755,7 @@
             :is-hidden-navigation-buttons="isHiddenNavigationButtons"
             :class="[
               'classPagination border-t sm:px-2',
+              ((pagination as TablePagination)?.class as string) ?? '',
               styles.class?.pagination as string,
               defaultBorder as string,
               styles.border?.pagination as string
@@ -1761,7 +1773,7 @@
           enter-to-class="opacity-100">
           <div v-if="isLoading" data-table-loading :class="classIsLoading">
             <div :class="classIsLoadingBody">
-              <Loading type="Fingerprint" :size="100" :color="isDark ? 'theme.600' : 'theme.500'" />
+              <Loading type="FingerprintSpinner" :size="100" :color="isDark ? 'theme.600' : 'theme.500'" />
             </div>
           </div>
         </transition>
@@ -1785,11 +1797,10 @@
           enter-active-class="transition ease-in duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div
-            v-if="!isLoading && allData?.length && !dataColumns?.length"
-            data-table-no-column
-            :class="classNoColumn"
-            v-html="noColumn" />
+          <div v-if="!isLoading && allData?.length && !dataColumns?.length" data-table-no-column :class="classNoData">
+            <ViewColumnsIcon aria-hidden="true" :class="classIcon" />
+            <div v-html="noColumn" />
+          </div>
         </transition>
         <transition
           leave-active-class="transition-all ease-in duration-200"
@@ -1801,7 +1812,7 @@
           <div
             v-if="!isLoading && allData?.length && dataColumns?.length && !dataSource.length"
             data-table-no-filter
-            :class="classNoFilter">
+            :class="classNoData">
             <FunnelIcon aria-hidden="true" :class="classIcon" />
             <div v-html="noFilter" />
           </div>

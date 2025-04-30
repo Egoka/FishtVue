@@ -20,8 +20,10 @@
   import Button from "fishtvue/button/Button.vue"
   import Badge from "fishtvue/badge/Badge.vue"
   import Component from "fishtvue/component"
+  import type { RulesObject } from "fishtvue/utils/rulesHandler"
   import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
-  import { fieldsOmit } from "fishtvue/utils/objectHandler"
+  import { deepCopy, fieldsOmit } from "fishtvue/utils/objectHandler"
+  import { generateUUID } from "fishtvue/utils/functionHandler"
   import { isClient } from "fishtvue/utils/domHandler"
   // ---BASE-COMPONENT----------------------
   const Form = new Component<"Form">()
@@ -55,6 +57,7 @@
     TextEditor,
     Switch
   }
+  const formStructure = ref<FormStructure[]>()
   // ---PROPS-------------------------------
   const name = computed<FormProps["name"]>(() => props.name ?? "")
   const modeStyle = computed<FormProps["modeStyle"]>(() => props.modeStyle ?? options?.modeStyle)
@@ -63,7 +66,7 @@
   )
   const isDisabled = computed<NonNullable<FormProps["disabled"]>>(() => props.disabled ?? false)
   const autocomplete = computed<NonNullable<FormProps["autocomplete"]>>(
-    () => props?.autocomplete ?? options?.autocomplete ?? "on"
+    () => (props?.autocomplete as FormProps["autocomplete"]) ?? options?.autocomplete ?? "on"
   )
   const modeValidate = computed<NonNullable<FormProps["modeValidate"]>>(
     () => props.modeValidate ?? options?.modeValidate ?? "onChange"
@@ -71,13 +74,27 @@
   // ---------------------------------------
   const formFields = reactive<FormValues>({})
   const formInvalidFields = reactive<{ [key: string]: boolean }>({})
-  const formStructure = computed<Array<FormStructure>>(() => getStructure(props.structure))
+  const structure = computed<FormProps["structure"]>(() => props.structure)
   const submitButton = computed<FormProps["submitButton"]>(
     () => props.submitButton ?? options?.submitButton ?? Form.t("save") ?? "Save"
   )
   // ---------------------------------------
   Form.setStyle("transition ease-in-out duration-500 opacity-100 opacity-0")
   const classBase = computed(() => Form.setStyle([options?.class ?? "", props.class ?? ""]))
+  const classStructure = computed(() =>
+    Form.setStyle([
+      "border-b border-gray-900/10 dark:border-gray-100/10 pb-6",
+      options?.structureClass ?? "",
+      props?.structureClass ?? ""
+    ])
+  )
+  const classStructureGrid = computed(() =>
+    Form.setStyle([
+      "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10",
+      options?.structureClassGrid ?? "",
+      props?.structureClassGrid ?? ""
+    ])
+  )
   const classItemGrid = ref(Form.setStyle("grid transition"))
   const classBeforeSlot = ref(Form.setStyle("flex select-none items-center text-gray-500 sm:text-sm"))
   const classAfterSlot = ref(Form.setStyle("ml-1 mr-3 text-gray-400 dark:text-gray-600 select-none"))
@@ -85,7 +102,7 @@
     Form.setStyle("text-gray-600 dark:text-gray-300 group-hover:text-theme-700 dark:group-hover:text-theme-400")
   )
   const classSelectItemNotQuery = ref(Form.setStyle("text-gray-500 dark:text-gray-300"))
-  const classFooter = ref(Form.setStyle("mt-6 flex items-center justify-end gap-x-6"))
+  const classFooter = ref(Form.setStyle("mt-3 flex items-center justify-end gap-x-6"))
   // ---EXPOSE------------------------------
   defineExpose<FormExpose>({
     // ---PROPS-------------------------------
@@ -101,7 +118,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Form.initStyle()
-    props.structure?.forEach((item) =>
+    structure.value?.forEach((item) =>
       item.fields?.forEach((field: FieldType) => {
         formFields[field.name] = props.formFields?.[field.name] ?? field.modelValue
       })
@@ -115,7 +132,19 @@
     },
     { deep: true }
   )
-
+  watch(
+    () => [
+      structure.value,
+      classStructure.value,
+      classStructureGrid.value,
+      modeStyle.value,
+      modeLabel.value,
+      autocomplete.value,
+      isDisabled.value
+    ],
+    () => (formStructure.value = getStructure()),
+    { immediate: true }
+  )
   // ---METHODS-----------------------------
   function setFieldValue(fieldName: string, value: any): unknown | undefined {
     if (fieldName in formFields) {
@@ -127,16 +156,16 @@
   }
 
   function setFieldParam(fieldName: string, param: keyof FieldType, value: any): void {
-    formStructure.value.forEach((structure, i: number) => {
+    formStructure.value?.forEach((structure, i: number) => {
       structure.fields?.forEach((item: FieldType, j: number) => {
-        if (item.name === fieldName) (formStructure.value[i].fields[j] as any)[param] = value
+        if (item.name === fieldName) (formStructure.value?.[i].fields[j] as any)[param] = value
       })
     })
   }
 
   function getField(fieldName: string): FieldType | null {
     let field: FieldType | null = null
-    formStructure.value.forEach((structure) => {
+    formStructure.value?.forEach((structure) => {
       structure.fields?.forEach((item: FieldType) => {
         if (item.name === fieldName) field = item
       })
@@ -153,53 +182,62 @@
   }
 
   function setStructureParam(indexStructure: number, param: keyof FormStructure, value: any): void {
-    formStructure.value.some((_, index: number) => {
-      if (index === indexStructure) (formStructure.value[index] as any)[param] = value
+    formStructure.value?.some((_, index: number) => {
+      if (index === indexStructure) (formStructure.value?.[index] as any)[param] = value
     })
   }
 
   // ---------------------------------------
-  function getStructure(structures: Array<FormStructure>): Array<FormStructure> {
-    return structures.map((structure) => {
-      if (!structure?.class?.length)
-        structure.class = Form.setStyle([
-          "border-b border-gray-900/10",
-          options?.structureClass ?? "",
-          props?.structureClass ?? ""
-        ])
-      if (!structure?.classGrid?.length)
-        structure.classGrid = Form.setStyle([
-          "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10",
-          options?.structureClassGrid ?? "",
-          props?.structureClassGrid ?? ""
-        ])
-      if (structure.fields) {
-        structure.fields = structure.fields.map((field: FieldType) => {
-          if (!field.name) {
-            field.name = "field" + Math.floor(Math.random() * 100)
-            console.error(`There is no name field. Temporary name ${field.name} is set.`)
-          }
-          if (arrayFieldsValidate.includes(field.typeComponent)) {
-            field = field as FieldUseInputLayout
-            if ("rules" in field && field?.rules) {
-              field.required = !!field.rules["required"] || field?.required || false
-              if (field.required && (!field.rules["required"] || typeof field.rules["required"] === "boolean")) {
-                field.rules["required"] = Form.t("requiredField") ?? "Required field"
-              }
-            } else if (field?.required) {
-              field.rules = { required: Form.t("requiredField") ?? "Required field" }
+  function getStructure(): Array<FormStructure> {
+    return (
+      structure.value?.map((structureItem) => {
+        let resultStructure: FormStructure = deepCopy(structureItem)
+        resultStructure.class = `${classStructure.value} ${resultStructure.class}`
+        resultStructure.classGrid = `${classStructureGrid.value} ${resultStructure.classGrid}`
+        if (resultStructure.fields) {
+          resultStructure.fields = resultStructure.fields.map((field: FieldType) => {
+            let resultField: FieldType = deepCopy(field)
+            if (!resultField.name) {
+              resultField.name = "field_" + generateUUID()
+              console.error(`There is no name field. Temporary name ${resultField.name} is set.`)
             }
-            field.labelMode = field.labelMode ?? modeLabel.value
-          }
-          field.classCol = Form.setStyle([field.classCol ?? "col-span-full"])
-          if (modeStyle.value)
-            (field as FieldUseInputLayout).mode = (field as FieldUseInputLayout).mode || modeStyle.value
-          field.disabled = field.disabled ?? isDisabled.value
-          return field
-        })
-      }
-      return structure
-    })
+            if (
+              resultField.typeComponent === "Input" ||
+              resultField.typeComponent === "Aria" ||
+              resultField.typeComponent === "Select" ||
+              resultField.typeComponent === "Calendar" ||
+              resultField.typeComponent === "TextEditor"
+            ) {
+              if ("rules" in resultField) {
+                resultField.required = !!(resultField.rules as RulesObject)?.required || resultField?.required || false
+                if (
+                  resultField.required &&
+                  (!(resultField.rules as RulesObject)?.required ||
+                    typeof (resultField.rules as RulesObject).required === "boolean")
+                ) {
+                  ;(resultField.rules as RulesObject).required = Form.t("requiredField") ?? "Required field"
+                }
+              } else if (resultField?.required) {
+                resultField.rules = { required: Form.t("requiredField") ?? "Required field" }
+              }
+              resultField.labelMode ??= modeLabel.value
+              if (
+                resultField.typeComponent !== "TextEditor" &&
+                resultField.typeComponent !== "Calendar" &&
+                resultField.typeComponent !== "Select"
+              ) {
+                resultField.autocomplete ??= autocomplete.value
+              }
+            }
+            resultField.classCol = Form.setStyle(["col-span-full", resultField.classCol])
+            if (modeStyle.value) resultField.mode = resultField.mode ?? modeStyle.value
+            resultField.disabled = resultField.disabled ?? isDisabled.value
+            return resultField
+          })
+        }
+        return resultStructure
+      }) ?? []
+    )
   }
 
   // ---------------------------------------
@@ -222,7 +260,7 @@
   }
 
   function validateFields(nameField?: Array<string> | string): boolean {
-    props.structure?.forEach((item) =>
+    formStructure.value?.forEach((item) =>
       item.fields?.forEach((field) => {
         if (nameField && [nameField].flat().find((item: string) => item === field.name)) validateField(field)
         else if (!formInvalidFields[field.name]) validateField(field)
@@ -259,7 +297,7 @@
 <template>
   <form data-form :name="name" :autocomplete="autocomplete" :class="classBase" @submit.prevent="submit">
     <div ref="formRef">
-      <template v-for="(structure, key) in formStructure" :key="key">
+      <template v-for="(structure, key) in formStructure as FormStructure[]" :key="key">
         <transition
           leave-active-class="transition ease-in-out duration-500"
           leave-from-class="opacity-100"
@@ -297,9 +335,7 @@
                         </span>
                       </template>
                       <template #after>
-                        <p
-                          v-if="(field as FieldUseInputLayout)?.insert?.afterText && formFields[field.name]"
-                          :class="classAfterSlot">
+                        <p v-if="(field as FieldUseInputLayout)?.insert?.afterText" :class="classAfterSlot">
                           {{ (field as FieldUseInputLayout)?.insert?.afterText }}
                         </p>
                         <Icons

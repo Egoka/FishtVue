@@ -11,7 +11,6 @@
   const options = Dialog.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<DialogProps>(), {
-    // notAnimate: undefined,
     closeButton: undefined,
     withoutMargin: undefined,
     notCloseBackground: undefined
@@ -19,42 +18,28 @@
   const emit = defineEmits<DialogEmits>()
   // ---STATE-------------------------------
   const isOpen = ref<boolean>(props.modelValue ?? false)
+  let escapeListener: ((event: KeyboardEvent) => void) | null = null
   watch(
     () => props.modelValue,
     (value) => (isOpen.value = value),
     { immediate: true }
   )
+  const sizes: Record<Size, string> = {
+    xs: "sm:max-w-xs",
+    sm: "sm:max-w-sm",
+    md: "sm:max-w-md",
+    lg: "sm:max-w-lg",
+    xl: "sm:max-w-xl",
+    "2xl": "sm:max-w-2xl",
+    "3xl": "sm:max-w-3xl",
+    "4xl": "sm:max-w-4xl",
+    "5xl": "sm:max-w-5xl",
+    "6xl": "sm:max-w-6xl",
+    "7xl": "sm:max-w-7xl"
+  }
   // ---PROPS-------------------------------
   const toTeleport = computed<DialogProps["toTeleport"]>(() => props.toTeleport ?? options?.toTeleport ?? "body")
-  const size = computed<string>(() => {
-    const size: Size | undefined = props?.size ?? options?.size
-    switch (size) {
-      case "xs":
-        return "sm:max-w-xs"
-      case "sm":
-        return "sm:max-w-sm"
-      case "md":
-        return "sm:max-w-md"
-      case "lg":
-        return "sm:max-w-lg"
-      case "xl":
-        return "sm:max-w-xl"
-      case "2xl":
-        return "sm:max-w-2xl"
-      case "3xl":
-        return "sm:max-w-3xl"
-      case "4xl":
-        return "sm:max-w-4xl"
-      case "5xl":
-        return "sm:max-w-5xl"
-      case "6xl":
-        return "sm:max-w-6xl"
-      case "7xl":
-        return "sm:max-w-7xl"
-      default:
-        return "sm:max-w-2xl"
-    }
-  })
+  const size = computed<string>(() => sizes[props?.size ?? options?.size ?? "2xl"])
   const isCloseButton = computed<NonNullable<DialogProps["closeButton"]>>(
     () => props.closeButton ?? options?.closeButton ?? false
   )
@@ -72,13 +57,13 @@
     let returnClass
     const isNotAnimate = props?.notAnimate ?? options?.notAnimate ?? false
     if (!isNotAnimate) {
-      if (position.value.includes("left")) {
+      if ((position.value as string).includes("left")) {
         returnClass = "-translate-x-full"
-      } else if (position.value.includes("right")) {
+      } else if ((position.value as string).includes("right")) {
         returnClass = "translate-x-full"
-      } else if (position.value.includes("top")) {
+      } else if ((position.value as string).includes("top")) {
         returnClass = "-translate-y-full"
-      } else if (position.value.includes("bottom")) {
+      } else if ((position.value as string).includes("bottom")) {
         returnClass = "translate-y-full"
       } else returnClass = "translate-x-0 opacity-0"
     } else returnClass = "translate-x-0 opacity-0"
@@ -90,16 +75,16 @@
     if (position.value === "center") {
       arrayDialog.push("top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2")
     }
-    if (position.value.includes("bottom")) {
+    if ((position.value as string).includes("bottom")) {
       arrayDialog.push(`bottom-0 ${withoutMargin.value ? "" : "mb-5"}`)
-    } else if (position.value.includes("top")) {
+    } else if ((position.value as string).includes("top")) {
       arrayDialog.push(`top-0 ${withoutMargin.value ? "" : "mt-5"}`)
     } else {
       arrayDialog.push("top-1/2 -translate-y-1/2")
     }
-    if (position.value.includes("right")) {
+    if ((position.value as string).includes("right")) {
       arrayDialog.push(`right-0 ${withoutMargin.value ? "" : "mr-5"}`)
-    } else if (position.value.includes("left")) {
+    } else if ((position.value as string).includes("left")) {
       arrayDialog.push(`left-0 ${withoutMargin.value ? "" : "ml-5"}`)
     } else {
       arrayDialog.push("left-1/2 -translate-x-1/2")
@@ -117,7 +102,7 @@
     ])
   )
   const classBackground = ref<StyleClass>(Dialog.setStyle("fixed inset-0"))
-  const classBackgroundBase = ref<StyleClass>(Dialog.setStyle("fixed inset-0 z-[99]"))
+  const classBackgroundBase = ref<StyleClass>(Dialog.setStyle("fixed inset-0 z-[199]"))
   const classBackgroundBaseColor = ref<StyleClass>(
     Dialog.setStyle(
       "fixed inset-0 bg-neutral-500/10 dark:bg-neutral-900/10 backdrop-blur-[3px] transition-all duration-200"
@@ -126,10 +111,10 @@
   const classDialog = computed<StyleClass>(() =>
     Dialog.setStyle([
       "p-6 w-full max-w-xs max-h-full rounded-md bg-white dark:bg-neutral-950",
-      classBodyDialog.value ?? "",
-      classPosition.value ?? "",
       size.value ?? "",
-      "relative"
+      classPosition.value ?? "",
+      classBodyDialog.value ?? "",
+      "absolute"
     ])
   )
   // ---EXPOSE------------------------------
@@ -161,23 +146,34 @@
       if (value) {
         bodyEl.classList.add("overflow-hidden")
         bodyEl.setAttribute("style", `${bodyEl.style.cssText}overflow: hidden;`)
+        escapeListener = (event: KeyboardEvent) => {
+          if (event.key === "Escape") {
+            event.stopPropagation()
+            closeDialog()
+          }
+        }
+        document.addEventListener("keydown", escapeListener)
       } else {
         bodyEl?.classList.remove("overflow-hidden")
         if (bodyEl.style.overflow === "hidden")
           bodyEl.setAttribute("style", bodyEl.style.cssText.replace("overflow: hidden;", ""))
+        if (escapeListener) {
+          document.removeEventListener("keydown", escapeListener)
+          escapeListener = null
+        }
       }
     }
   })
 
   // ---METHODS-----------------------------
-  function closeDialog() {
+  function closeDialog(): void {
     isOpen.value = !isOpen.value
     emit("update:modelValue", false)
   }
 </script>
 
 <template>
-  <Teleport defer :to="String(toTeleport)">
+  <Teleport :to="String(toTeleport)">
     <transition
       appear
       leave-active-class="transition-all ease-in-out duration-500"

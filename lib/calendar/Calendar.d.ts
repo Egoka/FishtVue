@@ -349,7 +349,7 @@ export declare type CalendarExpose = {
    * Reference to the data picker HTML element.
    * @type {ReadRef<HTMLElement | undefined>}
    */
-  dataPicker: ReadRef<HTMLElement | undefined>
+  datePickerLink: ReadRef<HTMLElement | undefined>
 
   /**
    * Reference to the calendar picker HTML element.
@@ -379,7 +379,7 @@ export declare type CalendarExpose = {
    * Parameters for the date picker.
    * @type {ReadRef<Partial<IParamsDatePicker>>}
    */
-  datePicker: ReadRef<Partial<IParamsDatePicker>>
+  datePickerOptions: ReadRef<Partial<IParamsDatePicker>>
 
   /**
    * Current value of the calendar.

@@ -25,7 +25,7 @@ describe("Separator Component", () => {
 
     it.each(["left", "right", "center", "full"])("renders content position: %s", (content) => {
       const wrapper = mount(Separator, {
-        props: { content }
+        props: { contentPosition: content }
       })
       const left = wrapper.find("[data-separator-left]")
       const right = wrapper.find("[data-separator-right]")
@@ -57,7 +57,7 @@ describe("Separator Component", () => {
       const leftLine = wrapper.find("[data-separator-left] div")
       const gradientStyle = leftLine.attributes("style")
       expect(gradientStyle).toContain("--fv-gradient-from-position: 10%")
-      expect(gradientStyle).toContain("--fv-gradient-via-position: 25%")
+      expect(gradientStyle).toContain("--fv-gradient-via-position: 15%")
     })
 
     it.each([

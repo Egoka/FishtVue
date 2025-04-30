@@ -193,4 +193,6 @@ declare module "vue" {
   }
 }
 
+export function openAlert(optionsAlert: BaseAlert): void
+
 export default Alert

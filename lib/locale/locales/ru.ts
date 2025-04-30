@@ -11,6 +11,7 @@ export default <DefaultMessages>{
   show: "Показать:",
   find: "Найти...",
   copy: "Копировать",
+  clear: "Очистить",
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

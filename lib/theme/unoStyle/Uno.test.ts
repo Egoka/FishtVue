@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 import { tailwind } from "fishtvue/theme"
-import { baseBackdropFilter, baseFilter, baseTransform, baseTransition } from "fishtvue/theme/unoStyle/unoStatic"
+import {
+  baseBackdropFilter,
+  baseFilter,
+  baseTransform,
+  baseTransition,
+  baseTranslate
+} from "fishtvue/theme/unoStyle/unoStatic"
 
 describe("unoStyle", () => {
   describe("Special tests", () => {
@@ -1273,46 +1279,46 @@ describe("unoStyle", () => {
     })
     describe("Max-Width", () => {
       it.each<{ classValue: string; expected: string }>([
-        // { classValue: "max-w-0", expected: ".max-w-0 {\n  max-width: 0px;\n}" },
-        // { classValue: "max-w-px", expected: ".max-w-px {\n  max-width: 1px;\n}" },
-        // { classValue: "max-w-0.5", expected: ".max-w-0\\.5 {\n  max-width: 0.125rem;\n}" },
-        // { classValue: "max-w-1", expected: ".max-w-1 {\n  max-width: 0.25rem;\n}" },
-        // { classValue: "max-w-1.5", expected: ".max-w-1\\.5 {\n  max-width: 0.375rem;\n}" },
-        // { classValue: "max-w-96", expected: ".max-w-96 {\n  max-width: 24rem;\n}" },
-        // { classValue: "max-w-none", expected: ".max-w-none {\n  max-width: none;\n}" },
-        // { classValue: "max-w-xs", expected: ".max-w-xs {\n  max-width: 20rem;\n}" },
+        { classValue: "max-w-0", expected: ".max-w-0 {\n  max-width: 0px;\n}" },
+        { classValue: "max-w-px", expected: ".max-w-px {\n  max-width: 1px;\n}" },
+        { classValue: "max-w-0.5", expected: ".max-w-0\\.5 {\n  max-width: 0.125rem;\n}" },
+        { classValue: "max-w-1", expected: ".max-w-1 {\n  max-width: 0.25rem;\n}" },
+        { classValue: "max-w-1.5", expected: ".max-w-1\\.5 {\n  max-width: 0.375rem;\n}" },
+        { classValue: "max-w-96", expected: ".max-w-96 {\n  max-width: 24rem;\n}" },
+        { classValue: "max-w-none", expected: ".max-w-none {\n  max-width: none;\n}" },
+        { classValue: "max-w-xs", expected: ".max-w-xs {\n  max-width: 20rem;\n}" },
 
-        // { classValue: "max-w-sm", expected: ".max-w-sm {\n  max-width: 24rem;\n}" },
-        // { classValue: "max-w-md", expected: ".max-w-md {\n  max-width: 28rem;\n}" },
-        // { classValue: "max-w-lg", expected: ".max-w-lg {\n  max-width: 32rem;\n}" },
-        // { classValue: "max-w-xl", expected: ".max-w-xl {\n  max-width: 36rem;\n}" },
+        { classValue: "max-w-sm", expected: ".max-w-sm {\n  max-width: 24rem;\n}" },
+        { classValue: "max-w-md", expected: ".max-w-md {\n  max-width: 28rem;\n}" },
+        { classValue: "max-w-lg", expected: ".max-w-lg {\n  max-width: 32rem;\n}" },
+        { classValue: "max-w-xl", expected: ".max-w-xl {\n  max-width: 36rem;\n}" },
         { classValue: "max-w-2xl", expected: ".max-w-2xl {\n  max-width: 42rem;\n}" },
         { classValue: "max-w-3xl", expected: ".max-w-3xl {\n  max-width: 48rem;\n}" },
         { classValue: "max-w-4xl", expected: ".max-w-4xl {\n  max-width: 56rem;\n}" },
         { classValue: "max-w-5xl", expected: ".max-w-5xl {\n  max-width: 64rem;\n}" },
         { classValue: "max-w-6xl", expected: ".max-w-6xl {\n  max-width: 72rem;\n}" },
-        { classValue: "max-w-7xl", expected: ".max-w-7xl {\n  max-width: 80rem;\n}" }
-        // { classValue: "max-w-full", expected: ".max-w-full {\n  max-width: 100%;\n}" },
-        // { classValue: "max-w-min", expected: ".max-w-min {\n  max-width: min-content;\n}" },
-        // { classValue: "max-w-max", expected: ".max-w-max {\n  max-width: max-content;\n}" },
-        // { classValue: "max-w-fit", expected: ".max-w-fit {\n  max-width: fit-content;\n}" },
-        // { classValue: "max-w-prose", expected: ".max-w-prose {\n  max-width: 65ch;\n}" },
-        // { classValue: "max-w-screen-sm", expected: ".max-w-screen-sm {\n  max-width: 640px;\n}" },
-        // { classValue: "max-w-screen-md", expected: ".max-w-screen-md {\n  max-width: 768px;\n}" },
-        // { classValue: "max-w-screen-lg", expected: ".max-w-screen-lg {\n  max-width: 1024px;\n}" },
-        // { classValue: "max-w-screen-xl", expected: ".max-w-screen-xl {\n  max-width: 1280px;\n}" },
-        // { classValue: "max-w-screen-2xl", expected: ".max-w-screen-2xl {\n  max-width: 1536px;\n}" },
+        { classValue: "max-w-7xl", expected: ".max-w-7xl {\n  max-width: 80rem;\n}" },
+        { classValue: "max-w-full", expected: ".max-w-full {\n  max-width: 100%;\n}" },
+        { classValue: "max-w-min", expected: ".max-w-min {\n  max-width: min-content;\n}" },
+        { classValue: "max-w-max", expected: ".max-w-max {\n  max-width: max-content;\n}" },
+        { classValue: "max-w-fit", expected: ".max-w-fit {\n  max-width: fit-content;\n}" },
+        { classValue: "max-w-prose", expected: ".max-w-prose {\n  max-width: 65ch;\n}" },
+        { classValue: "max-w-screen-sm", expected: ".max-w-screen-sm {\n  max-width: 640px;\n}" },
+        { classValue: "max-w-screen-md", expected: ".max-w-screen-md {\n  max-width: 768px;\n}" },
+        { classValue: "max-w-screen-lg", expected: ".max-w-screen-lg {\n  max-width: 1024px;\n}" },
+        { classValue: "max-w-screen-xl", expected: ".max-w-screen-xl {\n  max-width: 1280px;\n}" },
+        { classValue: "max-w-screen-2xl", expected: ".max-w-screen-2xl {\n  max-width: 1536px;\n}" },
 
-        // { classValue: "max-w-full", expected: ".max-w-full {\n  max-width: 100%;\n}" },
-        // { classValue: "max-w-min", expected: ".max-w-min {\n  max-width: min-content;\n}" },
-        // { classValue: "max-w-max", expected: ".max-w-max {\n  max-width: max-content;\n}" },
-        // { classValue: "max-w-fit", expected: ".max-w-fit {\n  max-width: fit-content;\n}" },
-        // { classValue: "max-w-prose", expected: ".max-w-prose {\n  max-width: 65ch;\n}" },
-        // { classValue: "max-w-screen-sm", expected: ".max-w-screen-sm {\n  max-width: 640px;\n}" },
-        // { classValue: "max-w-screen-md", expected: ".max-w-screen-md {\n  max-width: 768px;\n}" },
-        // { classValue: "max-w-screen-lg", expected: ".max-w-screen-lg {\n  max-width: 1024px;\n}" },
-        // { classValue: "max-w-screen-xl", expected: ".max-w-screen-xl {\n  max-width: 1280px;\n}" },
-        // { classValue: "max-w-screen-2xl", expected: ".max-w-screen-2xl {\n  max-width: 1536px;\n}" }
+        { classValue: "max-w-full", expected: ".max-w-full {\n  max-width: 100%;\n}" },
+        { classValue: "max-w-min", expected: ".max-w-min {\n  max-width: min-content;\n}" },
+        { classValue: "max-w-max", expected: ".max-w-max {\n  max-width: max-content;\n}" },
+        { classValue: "max-w-fit", expected: ".max-w-fit {\n  max-width: fit-content;\n}" },
+        { classValue: "max-w-prose", expected: ".max-w-prose {\n  max-width: 65ch;\n}" },
+        { classValue: "max-w-screen-sm", expected: ".max-w-screen-sm {\n  max-width: 640px;\n}" },
+        { classValue: "max-w-screen-md", expected: ".max-w-screen-md {\n  max-width: 768px;\n}" },
+        { classValue: "max-w-screen-lg", expected: ".max-w-screen-lg {\n  max-width: 1024px;\n}" },
+        { classValue: "max-w-screen-xl", expected: ".max-w-screen-xl {\n  max-width: 1280px;\n}" },
+        { classValue: "max-w-screen-2xl", expected: ".max-w-screen-2xl {\n  max-width: 1536px;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -2777,6 +2783,21 @@ describe("unoStyle", () => {
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
+      // it.each<{ classValue: string; expected: string }>([
+      //   { classValue: "border-x-red-400/0", expected: ".border-x-red-400\\/0 {\n  border-inline-color: #f8717100;\n}" },
+      //   {
+      //     classValue: "border-y-red-400/50",
+      //     expected: ".border-y-red-400\\/50 {\n  border-block-color: #f8717180;\n}"
+      //   },
+      //   { classValue: "border-t-red-400/100", expected: ".border-t-red-400\\/100 {\n  border-top-color: #f87171;\n}" },
+      //   {
+      //     classValue: "border-r-red-400/[.06]",
+      //     expected: ".border-red-400\\/\\[\\.06\\] {\n  border-color: #f871710f;\n}"
+      //   },
+      //   { classValue: "border-[#50d71e]/25", expected: ".border-\\[\\#50d71e\\]\\/25 {\n  border-color: #50d71e40;\n}" }
+      // ])(`tailwind($classValue)`, ({ classValue, expected }) => {
+      //   expect(tailwind(classValue)).toBe(expected)
+      // })
     })
     describe("Border Style", () => {
       it.each<{ classValue: string; expected: string }>([
@@ -3926,57 +3947,61 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "translate-0",
-          expected: `.translate-0 {\n  --fv-translate-x: 0px;\n  --fv-translate-y: 0px;\n  ${baseTransform}\n}`
+          expected: `.translate-0 {\n  --fv-translate-x: 0px;\n  --fv-translate-y: 0px;\n  ${baseTranslate}\n}`
         },
-        { classValue: "translate-x-0", expected: `.translate-x-0 {\n  --fv-translate-x: 0px;\n  ${baseTransform}\n}` },
-        { classValue: "translate-y-0", expected: `.translate-y-0 {\n  --fv-translate-y: 0px;\n  ${baseTransform}\n}` },
+        {
+          classValue: "-translate-0",
+          expected: `.-translate-0 {\n  --fv-translate-x: -0px;\n  --fv-translate-y: -0px;\n  ${baseTranslate}\n}`
+        },
+        { classValue: "translate-x-0", expected: `.translate-x-0 {\n  --fv-translate-x: 0px;\n  ${baseTranslate}\n}` },
+        { classValue: "translate-y-0", expected: `.translate-y-0 {\n  --fv-translate-y: 0px;\n  ${baseTranslate}\n}` },
         {
           classValue: "translate-x-px",
-          expected: `.translate-x-px {\n  --fv-translate-x: 1px;\n  ${baseTransform}\n}`
+          expected: `.translate-x-px {\n  --fv-translate-x: 1px;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-px",
-          expected: `.translate-y-px {\n  --fv-translate-y: 1px;\n  ${baseTransform}\n}`
+          expected: `.translate-y-px {\n  --fv-translate-y: 1px;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-0.5",
-          expected: `.translate-x-0\\.5 {\n  --fv-translate-x: 0.125rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-0\\.5 {\n  --fv-translate-x: 0.125rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-0.5",
-          expected: `.translate-y-0\\.5 {\n  --fv-translate-y: 0.125rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-0\\.5 {\n  --fv-translate-y: 0.125rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-1",
-          expected: `.translate-x-1 {\n  --fv-translate-x: 0.25rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-1 {\n  --fv-translate-x: 0.25rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-1",
-          expected: `.translate-y-1 {\n  --fv-translate-y: 0.25rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-1 {\n  --fv-translate-y: 0.25rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-1/2",
-          expected: `.translate-x-1\\/2 {\n  --fv-translate-x: 50%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-1\\/2 {\n  --fv-translate-x: 50%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-3/4",
-          expected: `.translate-x-3\\/4 {\n  --fv-translate-x: 75%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-3\\/4 {\n  --fv-translate-x: 75%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-full",
-          expected: `.translate-x-full {\n  --fv-translate-x: 100%;\n  ${baseTransform}\n}`
+          expected: `.translate-x-full {\n  --fv-translate-x: 100%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-1/2",
-          expected: `.translate-y-1\\/2 {\n  --fv-translate-y: 50%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-1\\/2 {\n  --fv-translate-y: 50%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-3/4",
-          expected: `.translate-y-3\\/4 {\n  --fv-translate-y: 75%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-3\\/4 {\n  --fv-translate-y: 75%;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-full",
-          expected: `.translate-y-full {\n  --fv-translate-y: 100%;\n  ${baseTransform}\n}`
+          expected: `.translate-y-full {\n  --fv-translate-y: 100%;\n  ${baseTranslate}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3984,15 +4009,15 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "translate-[17rem]",
-          expected: `.translate-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  --fv-translate-y: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  --fv-translate-y: 17rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-[17rem]",
-          expected: `.translate-x-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-x-\\[17rem\\] {\n  --fv-translate-x: 17rem;\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-[17rem]",
-          expected: `.translate-y-\\[17rem\\] {\n  --fv-translate-y: 17rem;\n  ${baseTransform}\n}`
+          expected: `.translate-y-\\[17rem\\] {\n  --fv-translate-y: 17rem;\n  ${baseTranslate}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)

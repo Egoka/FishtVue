@@ -36,3 +36,26 @@
  In this example, the `isFunction` function is called with a function `func`. It returns `true`, indicating that the value is of type function.
  */
 export declare function isFunction<T>(value: T): boolean
+
+/**
+ #### `generateUUID` Function Documentation
+
+ The `generateUUID` function generates a random UUID (Universally Unique Identifier) version 4 using `Math.random()`.
+
+ ##### Syntax
+ ```typescript
+ function generateUUID(): string
+ ```
+
+ ##### Return Value
+ - A string representing a randomly generated UUID v4.
+
+ ##### Example Usage
+ ```typescript
+ const uuid = generateUUID();
+ console.log(uuid); // Example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+ ```
+
+ The `generateUUID` function replaces characters in a template string with randomly generated hexadecimal values, ensuring compliance with UUID v4 format.
+ */
+export declare function generateUUID(): string

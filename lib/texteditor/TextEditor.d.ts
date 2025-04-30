@@ -164,7 +164,7 @@ export declare type TextEditorExpose = {
    * The unique identifier for the editor.
    * @type {ReadRef<NonNullable<TextEditorProps["id"]>>}
    */
-  id: ReadRef<NonNullable<TextEditorProps["id"]>>
+  id: Ref<string | undefined>
 
   /**
    * The theme of the Quill editor.

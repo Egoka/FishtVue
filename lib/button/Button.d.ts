@@ -97,7 +97,7 @@ export type IconButtonProps = BaseButtonProps & {
    * Indicates the button is icon-only.
    * @type {"icon"}
    */
-  type: "icon"
+  type?: "icon"
 }
 /**
  * Props for the Button component.
