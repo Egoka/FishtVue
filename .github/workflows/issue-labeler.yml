@@ -6,6 +6,9 @@ on:
       - opened
       - edited
 
+permissions:
+  issues: write
+
 jobs:
   labeler:
     runs-on: ubuntu-latest
