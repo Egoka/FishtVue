@@ -1,0 +1,73 @@
+name: 🚀 Feature request
+description: Suggest an idea for improving FishtVue.
+title: '[Feature Request]: '
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before You Start...**
+
+        Make sure to:
+
+        - Check if your feature request has already been proposed.
+        - Search for discussions [here](https://github.com/Egoka/FishtVue/discussions).
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: "Component"
+      description: "Select the component related to the feature. If the feature affects the entire library, select 'General'."
+      options:
+        - General
+        - Accordion
+        - Alert
+        - Aria
+        - Badge
+        - Button
+        - Calendar
+        - Dialog
+        - FixWindow
+        - Icons
+        - Input
+        - InputLayout
+        - Label
+        - Loading
+        - Menu
+        - Pagination
+        - Select
+        - Separator
+        - Split
+        - Switch
+        - Table
+        - TextEditor
+        - Form
+    validations:
+      required: true
+
+  - type: input
+    id: feature-title
+    attributes:
+      label: Feature title
+      description: Provide a concise title for your feature request.
+      placeholder: Feature title
+    validations:
+      required: true
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Description
+      description: Describe your feature request in detail. Provide use-cases, benefits, and any additional context.
+      placeholder: Feature description
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Describe any alternative solutions or features you've considered.
+      placeholder: Alternatives
+    validations:
+      required: false

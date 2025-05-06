@@ -1,0 +1,62 @@
+name: "Issue Labeler"
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Check for Component Header
+        id: check_component
+        run: |
+          COMPONENTS=("Accordion" "Alert" "Aria" "Badge" "Button" "Calendar" "Dialog" "FixWindow" "Icons" "Input" "InputLayout" "Label" "Loading" "Menu" "Pagination" "Select" "Separator" "Split" "Switch" "Table" "TextEditor" "Form")
+          ISSUE_BODY=$(echo "${{ github.event.issue.body }}" | tr -d '\r')
+          COMPONENT_NAME=$(echo "$ISSUE_BODY" | awk '/^### Component/{flag=1; next} /^###/{flag=0} flag && NF {print $0}' | xargs)
+
+          echo "Извлечён компонент: '$COMPONENT_NAME'"
+
+          # Если General, то ничего не делаем
+          if [[ "$COMPONENT_NAME" == "General" ]]; then
+            echo "General — пропускаем добавление метки."
+            exit 0
+          fi
+
+          # Проверка на наличие в списке допустимых компонентов
+          for COMPONENT in "${COMPONENTS[@]}"; do
+            if [[ "$COMPONENT_NAME" == "$COMPONENT" ]]; then
+              echo "Найден компонент: $COMPONENT"
+              echo "component=$COMPONENT" >> $GITHUB_ENV
+              exit 0
+            fi
+          done
+
+          echo "No matching component found."
+          exit 0  # Не ошибка — просто не найден
+
+      - name: Add Label to Issue
+        if: env.component != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const component = process.env.component;
+            const issueNumber = context.issue.number;
+
+            console.log(`Добавление метки "${component}" к issue #${issueNumber}`);
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: [component]
+            });
+        env:
+          component: ${{ env.component }}
