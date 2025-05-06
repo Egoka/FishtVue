@@ -1,0 +1,20 @@
+name: 🌀 Custom issue
+description: Create a custom issue for FishtVue.
+title: '[Custom]: '
+labels: [custom]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Custom Issue Template**
+
+        Use this template for any kind of issue that doesn't fit into the other categories.
+
+  - type: textarea
+    id: custom-details
+    attributes:
+      label: Details
+      description: Provide all relevant details about your issue.
+      placeholder: Issue details
+    validations:
+      required: true
