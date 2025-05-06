@@ -12,7 +12,6 @@ body:
         or are unsure if this is really a bug, make sure to:
 
         - Read the [docs](#)
-        - Ask on [Discord Chat](#) (if available)
         - Ask on [GitHub Discussions](https://github.com/Egoka/FishtVue/discussions)
 
         Also try to search for your issue - it may have already been answered or even fixed.
@@ -77,13 +76,7 @@ body:
         Please provide a link to a minimal reproduction of the bug.
         A minimal reproduction is a CodeSandbox, CodePen, or a StackBlitz that contains the bare minimum amount of code needed to show the bug.
         A minimal reproduction is required unless you are absolutely sure that the issue is obvious and the provided information is enough to understand the problem.
-
-        This is **required** for us to be able to triage your issue in a timely manner.
-
-        Please do not just fill in a random link. The issue will be closed if no valid reproduction is provided.
       placeholder: Reproduction Link
-    validations:
-      required: true
 
   - type: textarea
     id: steps-to-reproduce
