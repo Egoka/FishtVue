@@ -16,9 +16,18 @@ declare class Icons extends ClassComponent<IconsProps, IconsSlots, IconsEmits, I
 export declare type IconsProps = {
   /**
    * The type of the icon to render.
+   * You can find the icon type names on the following websites:
+   * @see https://heroicons.com
+   * @see https://icon-sets.iconify.design
    * @type {string}
    */
   type: string
+
+  /**
+   * The style of the icon to render.
+   * @type {"outline" | "solid"}
+   */
+  stileIcon?: "outline" | "solid"
 
   /**
    * Custom CSS class for the icon.

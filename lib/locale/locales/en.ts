@@ -7,6 +7,7 @@ export default <DefaultMessages>{
   previous: "Previous",
   next: "Next",
   save: "Save",
+  rows: "rows",
   increase: "Increase",
   show: "Show:",
   find: "Find...",

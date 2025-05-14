@@ -24,7 +24,12 @@ export type ISplitStyles = {
    * Custom CSS class for the panel elements.
    * @type {StyleClass}
    */
-  panel: StyleClass
+  panel?: StyleClass
+  /**
+   * Custom CSS class for the separator elements between panels.
+   * @type {StyleClass}
+   */
+  separator?: StyleClass
 }
 
 /**
@@ -66,6 +71,7 @@ export type Panel = {
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
   /**
    * Any additional properties for the separator item.
    * @type {any}

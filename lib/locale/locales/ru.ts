@@ -7,6 +7,7 @@ export default <DefaultMessages>{
   previous: "Предыдущий",
   next: "Следующий",
   save: "Сохранить",
+  rows: "строк",
   increase: "Увеличить",
   show: "Показать:",
   find: "Найти...",

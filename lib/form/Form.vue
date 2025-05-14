@@ -229,6 +229,8 @@
                 resultField.autocomplete ??= autocomplete.value
               }
             }
+            if (resultField.typeComponent === "Select")
+              resultField.closeButtonBadge = resultField.closeButtonBadge ?? true
             resultField.classCol = Form.setStyle(["col-span-full", resultField.classCol])
             if (modeStyle.value) resultField.mode = resultField.mode ?? modeStyle.value
             resultField.disabled = resultField.disabled ?? isDisabled.value
@@ -342,16 +344,6 @@
                           v-if="(field as FieldUseInputLayout)?.insert?.afterIcon"
                           :type="(field as FieldUseInputLayout)?.insert?.afterIcon ?? ''"
                           class="mr-2 h-5 w-5 text-gray-400 dark:text-gray-600" />
-                      </template>
-                      <template #values="{ selected, key, deleteSelect }">
-                        <Badge
-                          mode="neutral"
-                          close-button
-                          class-content="fill-theme-500"
-                          @delete="deleteSelect(selected)"
-                          class="m-1 mb-0 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20">
-                          {{ selected[key] }}
-                        </Badge>
                       </template>
                       <template #item="{ item, key, isQuery }">
                         <div v-if="!isQuery" v-html="item?.marker ?? item[key]" :class="classSelectItemIsQuery" />

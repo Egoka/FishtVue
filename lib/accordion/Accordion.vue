@@ -57,7 +57,7 @@
       "h-5 w-5 shrink-0 ml-8 text-slate-400 dark:text-slate-500 group-hover/item:text-slate-500 group-hover/item:dark:text-slate-400 transition-all duration-200 ease-out"
     )
   )
-  const classPlus = ref(Accordion.setStyle("fill-slate-200 dark:fill-slate-500 shrink-0 ml-8"))
+  const classPlus = ref(Accordion.setStyle("fill-slate-600 dark:fill-slate-500 shrink-0 ml-8"))
   const classRect = ref(Accordion.setStyle("transform origin-center transition duration-200 ease-out"))
   const classTemplate = ref(Accordion.setStyle("overflow-hidden"))
   const classNotTemplate = ref(Accordion.setStyle("pb-3"))

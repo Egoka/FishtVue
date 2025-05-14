@@ -1,4 +1,4 @@
-import { Plugin } from "vue"
+import { Plugin, InjectionKey } from "vue"
 import { StyleMode } from "../types"
 
 import { Locales, type NameLocale } from "fishtvue/locale/TypesLocale"
@@ -26,20 +26,61 @@ import { PaginationOption } from "fishtvue/pagination"
 import { SplitOption } from "fishtvue/split"
 import { TableOption } from "fishtvue/table"
 
+/**
+ * Main FishtVue instance type that provides core functionality and configuration
+ * @interface FishtVue
+ */
 export declare type FishtVue = {
+  /** Reactive configuration object containing all FishtVue settings */
   config: FishtVueConfiguration
+  /**
+   * Returns a readonly copy of the FishtVue instance
+   * @returns {Readonly<FishtVue> | undefined} Readonly FishtVue instance or undefined if not installed
+   */
   useFishtVue(): Readonly<FishtVue> | undefined
+  /**
+   * Gets component options either for a specific component or all components
+   * @template T - Component key type
+   * @param {T} [component] - Optional component key to get specific component options
+   * @returns {keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>}
+   * Readonly component options
+   */
   getOptions<T extends keyof ComponentsOptions>(
     component?: T
   ): keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>
+  /**
+   * Gets the currently active locale
+   * @returns {string | undefined} Active locale code or undefined if not set
+   */
   getActiveLocale(): string | undefined
+  /**
+   * Sets the active locale
+   * @param {NameLocale} activeLocale - Locale code to set as active
+   * @returns {string | boolean | undefined} New active locale, false if failed, or undefined if not installed
+   */
   setActiveLocale(activeLocale: NameLocale): string | boolean | undefined
-  getActiveLocale(): string | undefined
+  /**
+   * Gets the default locale
+   * @returns {string | undefined} Default locale code or undefined if not set
+   */
   getDefaultLocale(): string | undefined
 }
-
+/** Injection key symbol used for dependency injection of FishtVue instance in Vue components */
+export let FishtVueSymbol: InjectionKey<string>
+/**
+ * Global function to get a readonly copy of the FishtVue instance
+ * @template T - FishtVue type
+ * @returns {Readonly<T> | undefined} Readonly FishtVue instance or undefined if not installed
+ */
 export declare function useFishtVue<T extends FishtVue>(): Readonly<T> | undefined
 
+/**
+ * Global function to get component options
+ * @template T - Component key type
+ * @param {T} [component] - Optional component key to get specific component options
+ * @returns {keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>}
+ * Readonly component options
+ */
 export declare function getOptions<T extends keyof ComponentsOptions>(
   component?: T
 ): keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>
@@ -59,48 +100,50 @@ declare module "@vue/runtime-core" {
   }
 }
 
+/**
+ * Configuration interface for FishtVue instance
+ * @interface FishtVueConfiguration
+ */
 export declare interface FishtVueConfiguration {
+  /** Style mode for components: "filled", "outlined", or "underlined" */
   componentsStyle?: StyleMode
+  /** Whether to use unstyled components */
+  unstyled?: boolean
+  /** Locale configuration for internationalization */
   locale?: Locales
+  /** Theme configuration for styling */
   theme?: Theme
+  /** Additional theme options */
   optionsTheme?: OptionsTheme
+  /** Global configuration object that maps component names to their default options and behavior settings */
   componentsOptions?: ComponentsOptions
 }
 
+/**
+ * Theme configuration options
+ * @interface OptionsTheme
+ */
 export type OptionsTheme = Partial<{
-  /**
-   * ## Available theme names `NamesTheme`
-   *
-   * Aurora => (заря)
-   *
-   * Larimar => (ларимар)
-   *
-   * Nimbus => (нимбус)
-   *
-   * Celestia => (селестия)
-   *
-   * Velvet => (бархат)
-   *
-   * Harmony => (гармония)
-   *
-   * Serenity => (безмятежность)
-   *
-   * Sapphire => (сапфир)
-   *
-   * Eclipse => (затмение)
-   *
-   * Iris => (ирис)
-   *
-   */
+  /** Name of the theme to use (Aurora, Harmony, or Sapphire) */
   nameTheme: keyof typeof NamesTheme
-  /** ## PROPS-EMITS-SLOTS */
+  /** Prefix for theme-related CSS classes */
   prefix: string
+  /** CSS selector for light mode */
   lightModeSelector: string
+  /** CSS selector for dark mode */
   darkModeSelector: string
+  /** CSS layer configuration */
   layers: string | "fishtvue"
+  /** Whether to minify CSS output */
   isNotMinifyCSS: boolean
 }>
 
+/**
+ * Global configuration object for all FishtVue components
+ * Maps component names to their specific configuration options
+ * Allows setting default properties and behavior for each component type
+ * @interface ComponentsOptions
+ */
 export type ComponentsOptions = Partial<{
   Form: FormOption
   Input: InputOption

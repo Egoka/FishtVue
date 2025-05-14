@@ -71,7 +71,7 @@
         if (props?.valueSelect && Object.keys(props?.dataSelect[0]).includes(props.valueSelect)) {
           return props?.valueSelect as SelectProps["valueSelect"]
         } else {
-          return Object.keys(props?.dataSelect[0])[1]
+          return Object.keys(props?.dataSelect?.[0])[1]
         }
       } else {
         return "value"
@@ -106,9 +106,7 @@
     const result = props?.maxVisible ?? options?.maxVisible
     return result !== undefined && typeof +result === "number" ? +result : undefined
   })
-  const closeButtonBadge = computed<SelectProps["closeButtonBadge"]>(
-    () => (props?.closeButtonBadge as SelectProps["closeButtonBadge"]) ?? options?.closeButtonBadge ?? false
-  )
+  const closeButtonBadge = computed<boolean>(() => props?.closeButtonBadge ?? options?.closeButtonBadge ?? false)
   const noData = computed<NonNullable<SelectProps["noData"]>>(
     () => (props?.noData as SelectProps["noData"]) ?? options?.noData ?? Select.t("noData") ?? "No data available"
   )
@@ -207,7 +205,9 @@
     ])
   )
   const classItemSelectValue = computed(() =>
-    Select.setStyle("text-gray-600 dark:text-gray-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200")
+    Select.setStyle(
+      "text-left text-gray-600 dark:text-gray-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200"
+    )
   )
   const inputLayout = computed(() => ({
     isValue: isValue.value,
@@ -471,7 +471,7 @@
                   mode="neutral"
                   :close-button="closeButtonBadge"
                   class="m-1 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500"
-                  class-content="fill-theme-500"
+                  class-content="fill-theme-500 flex items-center"
                   @delete="select(null)">
                   <Icons type="Funnel" class="h-3 w-3 mr-1 text-theme-400 dark:text-theme-600" />
                   {{ visibleValue.length }}
