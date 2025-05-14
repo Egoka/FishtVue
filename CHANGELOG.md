@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.1.1](https://github.com/Egoka/FishtVue/compare/v0.1.0...v0.1.1) (2025-05-14)
+
+
+### Bug Fixes
+
+* update styles and improve component functionality ([afe7a6e](https://github.com/Egoka/FishtVue/commit/afe7a6eafc5c6520e2f157bd999f109770d4d744))
+
 # [0.1.0](https://github.com/Egoka/FishtVue/compare/v0.0.8...v0.1.0) (2025-04-30)
 
 
