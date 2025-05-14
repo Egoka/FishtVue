@@ -70,7 +70,8 @@
     "touch-none select-none",
     "after:absolute after:inset-y-0 after:left-1/2 after:w-2 after:-translate-x-1/2 after:z-10",
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1",
-    "data-[direction=vertical]:h-px data-[direction=vertical]:w-full data-[direction=vertical]:after:left-0 data-[direction=vertical]:after:h-3 data-[direction=vertical]:after:w-full data-[direction=vertical]:after:-translate-y-1/2 data-[direction=vertical]:after:translate-x-0"
+    "data-[direction=vertical]:h-px data-[direction=vertical]:w-full data-[direction=vertical]:after:left-0 data-[direction=vertical]:after:h-3 data-[direction=vertical]:after:w-full data-[direction=vertical]:after:-translate-y-1/2 data-[direction=vertical]:after:translate-x-0",
+    styles.value?.separator ? (styles.value.separator as string) : ""
   ])
 
   const separatorIconClass = computed<StyleClass>(() => [
@@ -81,19 +82,20 @@
 
   const classBase = computed<StyleClass>(() =>
     Split.setStyle([
-      "h-full w-full",
+      "h-full w-full transition-all",
       options?.class ?? "",
       props?.class ?? "",
       isStartResize.value && isClient() ? getStyleCursor(activeCursorPanel.value) : "",
-      "flex data-[direction=vertical]:flex-col overflow-hidden dark:text-gray-300 transition-all"
+      "flex data-[direction=vertical]:flex-col"
     ])
   )
 
   const classPanelBody = (panel: Panel) =>
     Split.setStyle([
+      "overflow-hidden w-full",
       styles.value && styles.value?.panel ? styles.value?.panel : "",
       panel.class,
-      "relative overflow-hidden w-full"
+      "relative"
     ])
 
   const classSeparator = (panel: Panel) =>

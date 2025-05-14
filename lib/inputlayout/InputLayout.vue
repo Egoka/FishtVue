@@ -271,6 +271,7 @@
       <div v-if="help?.length" data-input-layout-help :class="classIconBody">
         <Icons
           type="QuestionMarkCircle"
+          stile-icon="solid"
           class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 transition cursor-help" />
         <FixWindow
           :mode="mode"
@@ -287,7 +288,10 @@
       </div>
       <template v-if="!isDisabled">
         <div v-if="isInvalid && messageInvalid" data-input-layout-invalid :class="classIconBody">
-          <Icons type="ExclamationCircle" class="text-red-500 dark:text-red-500 transition cursor-pointer" />
+          <Icons
+            type="ExclamationCircle"
+            stile-icon="solid"
+            class="text-red-500 dark:text-red-500 transition cursor-pointer" />
           <FixWindow
             :mode="mode"
             event-open="click"
@@ -311,6 +315,7 @@
           <div v-if="clear && (value?.length || value > 0)" data-input-layout-clear :class="classIconBody">
             <Icons
               type="XCircle"
+              stile-icon="solid"
               class="text-gray-400 dark:text-gray-600 hover:text-red-600 hover:dark:text-red-500 transition-all duration-300 cursor-pointer"
               @click.stop="emit('clear')" />
             <FixWindow v-if="slots.default" mode="filled" :delay="1000" :padding-window="40">
@@ -323,13 +328,14 @@
         <div v-if="!isCopy" data-input-layout-copy :class="classIconBody">
           <Icons
             type="square-2-stack"
+            stile-icon="solid"
             class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 transition"
             @click.stop="copy" />
           <FixWindow :mode="mode" :delay="1000" :padding-window="40">
             {{ InputLayout.t("copy") ?? "Copy" }}
           </FixWindow>
         </div>
-        <Icons v-else type="Check" class="mr-2 text-emerald-400 dark:text-emerald-600" />
+        <Icons v-else type="Check" stile-icon="solid" class="mr-2 text-emerald-400 dark:text-emerald-600" />
       </template>
     </span>
     <p

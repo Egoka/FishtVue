@@ -54,7 +54,7 @@
   const arraySizesSelector = computed<Array<{ key: number; value: string }>>(() =>
     ((sizesSelector.value ?? [...new Set([+(sizePage.value ?? 5), 5, 15, 20, 50, 100, 150])]) as Array<number>)
       .sort((a, b) => a - b)
-      .map((size) => ({ key: size, value: `${size} rows` }))
+      .map((size) => ({ key: size, value: `${size} ${Pagination.t("rows") ?? "rows"}` }))
   )
   const pages = computed(() => {
     const countPages = Math.ceil(total.value / (sizePage.value ?? 5))

@@ -904,6 +904,9 @@
       updateHeightTable()
       startLastRowVisibleObserver()
     })
+    setTimeout(() => {
+      updateHeightTable()
+    }, 10)
   })
   onUnmounted(() => {
     if (isClient() && tableObserver) tableObserver.disconnect()
@@ -962,28 +965,41 @@
         let sum = 0
         tagTrs.forEach((item) => (sum += item?.offsetHeight ?? 0))
         return sum
-      } else return countVisibleRows.value * (32 + heightCell.value + 1)
+      } else return countVisibleRows.value * (4 * 2 + heightCell.value + 1)
     }
     return 0
   }
 
   function updateHeightTable(): void {
     if (styles.value.height) {
-      const componentTableHeight =
-        (componentTable.value?.clientHeight ?? 0) -
-        parseFloat(getComputedStyle(componentTable.value as HTMLElement).paddingTop) -
-        parseFloat(getComputedStyle(componentTable.value as HTMLElement).paddingBottom)
+      function getHeight(el: HTMLElement | undefined): number {
+        let height = 0
+        if (el)
+          height =
+            (el?.clientHeight ?? 0) +
+            parseFloat(getComputedStyle(el).marginTop) +
+            parseFloat(getComputedStyle(el).marginBottom)
+        return height
+      }
+
+      let componentTableHeight = 0
+      if (componentTable.value)
+        componentTableHeight = componentTable.value?.clientHeight
+          ? (componentTable.value?.clientHeight ?? 0) -
+            parseFloat(getComputedStyle(componentTable.value).paddingTop) -
+            parseFloat(getComputedStyle(componentTable.value).paddingBottom) -
+            3
+          : 0
       const height =
         (componentTableHeight ?? 0) -
-        (tableToolbar.value?.clientHeight ?? 0) -
-        (tableHeader.value?.clientHeight ?? 0) -
-        (pager.value?.clientHeight ?? 0) -
-        (tableFooter.value?.clientHeight ?? 0)
+        (getHeight(tableToolbar.value) ?? 0) -
+        (getHeight(tableHeader.value) ?? 0) -
+        (getHeight(pager.value) ?? 0) -
+        (getHeight(tableFooter.value) ?? 0)
       clientHeightTable.value = height >= 0 ? height : 0
       heightTable.value = `height:${height >= 0 ? height : 0}px;`
     } else if (countVisibleRows.value) {
-      const resultHeight =
-        (thead.value?.clientHeight ?? 0) + (tfoot.value?.clientHeight ?? 0) + getHeightVisibleRows() - 1
+      const resultHeight = (thead.value?.clientHeight ?? 0) + (tfoot.value?.clientHeight ?? 0) + getHeightVisibleRows()
       clientHeightTable.value = resultHeight > 0 ? resultHeight : baseTableHeight
       heightTable.value = `height: ${resultHeight > 0 ? resultHeight : baseTableHeight}px;`
     } else {

@@ -24,9 +24,8 @@ declare class Menu extends ClassComponent<MenuProps, MenuSlots, MenuEmits, MenuE
 // ---------------------------------------
 
 /**
- * Represents a single menu item with optional actions and nested menus.
- *
- * Each item can have a title, icon, info, actions, and nested menus.
+ * Represents a menu item with customizable properties and event handlers.
+ * Provides options for styling, nested menus, and event-based interactions.
  */
 export interface ItemMenu {
   /**
@@ -85,6 +84,12 @@ export interface ItemMenu {
    * @type {MenuItem | null | undefined}
    */
   menu?: MenuItem | null
+
+  /**
+   * Additional custom properties that can be added to the menu item.
+   * @type {unknown}
+   */
+  [key: string]: any
 }
 
 export interface ItemMenuPrivate extends ItemMenu {
@@ -452,7 +457,7 @@ export declare type MenuExpose = {
    * List of groups within the menu.
    * @type {ReadRef<Array<GroupMenuPrivate>>}
    */
-  listGroups: ReadRef<Array<GroupMenuPrivate>>
+  listGroups: Array<GroupMenuPrivate>
 
   /**
    * Parameters for the menu window behavior.

@@ -13,7 +13,7 @@ import Sapphire from "fishtvue/theme/themes/Sapphire"
 import baseStyle from "./baseStyle"
 import type { ComponentsOptions, FishtVue, FishtVueConfiguration, OptionsTheme } from "fishtvue/config/FishtVue"
 
-let FishtVueSymbol = Symbol()
+export let FishtVueSymbol = Symbol()
 
 export function useFishtVue(): Readonly<FishtVue> | undefined {
   return isExistFishtVue<Readonly<FishtVue>>((FishtVue) => {

@@ -145,7 +145,7 @@
   }
   const classGroupTitle = computed<StyleClass>(() =>
     MenuComponent.setStyle([
-      "mt-[10px] ml-8 mr-2 leading-4 text-left text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-bold",
+      "mt-[10px] ml-4 mr-2 leading-4 text-left text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-bold",
       styles.value?.class?.groupTitle ?? ""
     ])
   )
@@ -166,7 +166,7 @@
       activeItemIndex.value === item?._key ? (styles.value?.activeRows as StyleClass) : "",
       selectedItemIndex.value === item?._key ? `${styles.value?.selectedRows} font-semibold` : "",
       item?.disabled ? "pointer-events-none opacity-50" : "",
-      "flex cursor-default select-none outline-none"
+      "flex cursor-pointer select-none outline-none"
     ])
   }
   const classItemIcon = computed<StyleClass>(() =>
@@ -210,7 +210,7 @@
     title,
     iconSeparator,
     isSeparator,
-    listGroups,
+    listGroups: listGroups.value,
     paramsWindowMenu,
     baseSeparator,
     styles,

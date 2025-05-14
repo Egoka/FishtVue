@@ -5,7 +5,8 @@
   import type { IconsExpose, IconsProps } from "./Icons"
   import { convertToCamelCase } from "fishtvue/utils/stringHandler"
   // ---------------------------------------
-  import * as HeroIcons from "@heroicons/vue/24/solid"
+  import * as HeroIconsOutline from "@heroicons/vue/24/outline"
+  import * as HeroIconsSolid from "@heroicons/vue/24/solid"
   // ---------------------------------------
   // https://icon-sets.iconify.design/
   import { Icon, type IconifyIconName, loadIcons } from "@iconify/vue"
@@ -17,10 +18,14 @@
   // ---PROPS-EMITS-SLOTS-------------------
   const props = defineProps<IconsProps>()
   // ---REF-LINK----------------------------
-  const heroIcons: any = HeroIcons
+  const heroIcons: Record<NonNullable<IconsProps["stileIcon"]>, any> = {
+    outline: HeroIconsOutline,
+    solid: HeroIconsSolid
+  }
   const isViewIcon = ref(false)
   // ---PROPS-------------------------------
   const type = computed(() => props.type)
+  const stileIcon = computed(() => props.stileIcon ?? "outline")
   const style = computed(() => props.style)
   const classIcon = computed(() =>
     Icons.setStyle([
@@ -63,7 +68,7 @@
   watch(
     () => type.value,
     async () => {
-      if (!heroIcons[convertToCamelCase(type.value) + "Icon"]) {
+      if (!heroIcons[stileIcon.value][convertToCamelCase(type.value) + "Icon"]) {
         isViewIcon.value = await isIcon(type.value)
       }
     },
@@ -81,8 +86,8 @@
 <template>
   <i data-icon>
     <component
-      v-if="heroIcons[convertToCamelCase(type) + 'Icon']"
-      :is="heroIcons[convertToCamelCase(type) + 'Icon']"
+      v-if="heroIcons[stileIcon][convertToCamelCase(type) + 'Icon']"
+      :is="heroIcons[stileIcon][convertToCamelCase(type) + 'Icon']"
       :class="classIcon"
       :style="style"
       aria-hidden="true" />

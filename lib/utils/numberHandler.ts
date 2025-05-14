@@ -95,7 +95,7 @@ export function toPhone(e: any): void {
   e.target.value = newValue
   if (keyup !== "Backspace") pos += newValue.length - lengthValue
   setTimeout(() => {
-    e.target.setSelectionRange(pos, pos)
+    if ("setSelectionRange" in e.target && e.target.type !== "number") e.target.setSelectionRange(pos, pos)
   }, 1)
 }
 
@@ -120,7 +120,7 @@ export function toNumber(e: any, separator = "", lengthInteger = 20, lengthDecim
     pos = pos + (newValue?.length - value?.length) + (degree > 0 ? degree : 0)
   }
   setTimeout(() => {
-    e.target.setSelectionRange(pos, pos)
+    if ("setSelectionRange" in e.target && e.target.type !== "number") e.target.setSelectionRange(pos, pos)
   }, 1)
 }
 
