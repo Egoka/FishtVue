@@ -28,7 +28,7 @@ const config = {
           { type: "build", release: false }, // Сборка
           { type: "ci", release: false }, // Непрерывная интеграция
           { type: "test", release: false }, // Добавление или исправление тестов
-          { type: "docs", release: "patch" }, // Документация
+          { type: "docs", release: false }, // Документация
           { type: "refactor", release: "patch" }, // Рефакторинг кода
           { type: "chore", release: "patch" }, // Внутренние изменения
           { type: "revert", release: "patch" }, // Отмена предыдущего коммита
