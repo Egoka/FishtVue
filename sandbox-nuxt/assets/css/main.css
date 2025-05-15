@@ -1,1 +1,48 @@
 @import "tailwindcss";
+
+
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+    --theme-my: 150;
+    --theme-contrast-my: 85%;
+    --color-theme-50: hsl(var(--theme-my) var(--theme-contrast-my) 95.1%);
+    --color-theme-100: hsl(var(--theme-my) var(--theme-contrast-my) 93.1%);
+    --color-theme-200: hsl(var(--theme-my) var(--theme-contrast-my) 86%);
+    --color-theme-300: hsl(var(--theme-my) var(--theme-contrast-my) 74.4%);
+    --color-theme-400: hsl(var(--theme-my) var(--theme-contrast-my) 60.1%);
+    --color-theme-500: hsl(var(--theme-my) var(--theme-contrast-my) 46.9%);
+    --color-theme-600: hsl(var(--theme-my) var(--theme-contrast-my) 39.5%);
+    --color-theme-700: hsl(var(--theme-my) var(--theme-contrast-my) 30.5%);
+    --color-theme-800: hsl(var(--theme-my) var(--theme-contrast-my) 20.5%);
+    --color-theme-900: hsl(var(--theme-my) var(--theme-contrast-my) 9.2%);
+    --color-theme-950: hsl(var(--theme-my) var(--theme-contrast-my) 6%);
+    --color-background: var(--color-theme-50);
+    --primary: 142.1 76.2% 36.3%;
+    --font-asap: "Asap", sans-serif;
+}
+@layer base {
+    html.dark {
+        transition: background-color 1s, color 1s;
+        --color-background: var(--color-neutral-950);
+    }
+    html {
+        transition: background-color 1s, color 1s;
+        --color-background: var(--color-neutral-50);
+        scroll-behavior: smooth;
+        --scroll-duration: 1000ms;
+        --scroll-timing: cubic-bezier(0.4, 0, 0, 1);
+    }
+}
+
+/* Применяем настройки к smooth scroll */
+html[style*="scroll-behavior: smooth"] {
+    scroll-behavior: smooth !important;
+    transition: scroll-position var(--scroll-duration) var(--scroll-timing) !important;
+}
+
+/* Отключаем плавный скролл при предпочтении уменьшенного движения */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}

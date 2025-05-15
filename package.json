@@ -21,7 +21,8 @@
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:unit": "vitest --ui",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "husky:init": "husky"
   },
   "repository": {
     "type": "git",

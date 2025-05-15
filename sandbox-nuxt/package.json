@@ -7,12 +7,19 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "start": "nuxt start",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@iconify/vue": "^5.0.0",
+    "@nuxtjs/color-mode": "^3.5.2",
     "@tailwindcss/vite": "^4.1.4",
-    "fishtvue": "file:../fishtvue-0.0.8.tgz",
+    "@vueuse/core": "^13.2.0",
+    "clsx": "^2.1.1",
+    "fishtvue": "^0.1.1",
     "nuxt": "^3.15.4",
+    "p5i": "^0.6.0",
+    "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.4",
     "vue": "latest",
     "vue-router": "latest"

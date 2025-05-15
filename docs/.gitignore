@@ -4,6 +4,7 @@ package-lock.json
 # Vite
 node_modules
 .DS_Store
+.vercel
 dist
 dist_types
 dist-ssr

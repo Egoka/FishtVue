@@ -4,6 +4,7 @@ lib/pnpm-lock.yaml
 # Vite
 node_modules
 .DS_Store
+.vercel
 dist
 dist_types
 dist-ssr
