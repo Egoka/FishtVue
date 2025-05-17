@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Menu from "fishtvue/menu/Menu.vue"
 import { GroupMenu, ItemMenuPrivate, MenuOption, MenuProps } from "fishtvue/menu/Menu"
+import { StyleMode } from "fishtvue/types"
 
 describe("Menu Component", () => {
   describe("Menu Component - Without Library Initialization", () => {
@@ -209,7 +210,7 @@ describe("Menu Component", () => {
       // Монтируем компонент с текущим значением mode
       const wrapper = mount(Menu, {
         props: {
-          mode,
+          mode: mode as StyleMode,
           groups: [{}]
         }
       })
@@ -232,6 +233,7 @@ describe("Menu Component", () => {
     it("should throw a warning for invalid mode value", () => {
       const wrapper = mount(Menu, {
         props: {
+          // @ts-ignore
           mode: "invalid-mode" // Некорректное значение
         }
       })

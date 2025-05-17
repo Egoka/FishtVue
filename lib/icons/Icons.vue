@@ -1,5 +1,3 @@
-<!--https://icones.js.org/ -->
-<!--https://icon-sets.iconify.design/ -->
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from "vue"
   import type { IconsExpose, IconsProps } from "./Icons"
@@ -36,6 +34,7 @@
     ])
   )
 
+  const heroIcon = ref<any | undefined>(heroIcons[stileIcon.value][convertToCamelCase(type.value) + "Icon"])
   // ---------------------------------------
   function loadTestIcons(icons: (IconifyIconName | string)[]) {
     return new Promise((fulfill, reject) => {
@@ -67,10 +66,10 @@
   })
   watch(
     () => type.value,
-    async () => {
-      if (!heroIcons[stileIcon.value][convertToCamelCase(type.value) + "Icon"]) {
-        isViewIcon.value = await isIcon(type.value)
-      }
+    async (value) => {
+      const heroI = heroIcons[stileIcon.value][convertToCamelCase(value) + "Icon"]
+      if (!heroI) isViewIcon.value = await isIcon(value)
+      else heroIcon.value = heroI
     },
     { immediate: true }
   )
@@ -85,12 +84,7 @@
 
 <template>
   <i data-icon>
-    <component
-      v-if="heroIcons[stileIcon][convertToCamelCase(type) + 'Icon']"
-      :is="heroIcons[stileIcon][convertToCamelCase(type) + 'Icon']"
-      :class="classIcon"
-      :style="style"
-      aria-hidden="true" />
+    <component v-if="heroIcon" :is="heroIcon" :class="classIcon" :style="style" aria-hidden="true" />
     <Icon v-else-if="isViewIcon" :icon="type" :class="classIcon" :style="style" aria-hidden="true" />
   </i>
 </template>

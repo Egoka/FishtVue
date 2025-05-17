@@ -24,6 +24,8 @@ const globals = {
   IntersectionObserver: "readonly",
   ResizeObserver: "readonly",
   Node: "readonly",
+  NodeJS: "readonly",
+  location: "readonly",
   NodeListOf: "readonly",
   Event: "readonly",
   TouchEvent: "readonly",
@@ -43,7 +45,46 @@ const globals = {
   InputEvent: "readonly",
   ShadowRoot: "readonly",
   DOMException: "readonly",
-  defineNuxtConfig: "readonly"
+  HTMLCanvasElement: "readonly",
+  HTMLAnchorElement: "readonly",
+  HTMLHeadElement: "readonly",
+  crypto: "readonly",
+  // Vue and Nuxt
+  defineAppConfig: "readonly",
+  defineNuxtConfig: "readonly",
+  useLocalePath: "readonly",
+  useAsyncData: "readonly",
+  useAppConfig: "readonly",
+  ref: "readonly",
+  Ref: "readonly",
+  toRefs: "readonly",
+  computed: "readonly",
+  reactive: "readonly",
+  watch: "readonly",
+  inject: "readonly",
+  onMounted: "readonly",
+  onUnmounted: "readonly",
+  nextTick: "readonly",
+  useSlots: "readonly",
+  FishtVue: "readonly",
+  useI18n: "readonly",
+  localStorage: "readonly",
+  shallowRef: "readonly",
+  useColorMode: "readonly",
+  navigateTo: "readonly",
+  history: "readonly",
+  getHeaders: "readonly",
+  useState: "readonly",
+  useNuxtApp: "readonly",
+  useScrollTo: "readonly",
+  useEditLink: "readonly",
+  useActiveAnchor: "readonly",
+  definePageMeta: "readonly",
+  queryCollection: "readonly",
+  queryCollectionNavigation: "readonly",
+  queryCollectionSearchSections: "readonly",
+  queryCollectionItemSurroundings: "readonly",
+  requestAnimationFrame: "readonly"
 }
 export default defineConfig([
   js.configs.recommended,
@@ -138,5 +179,12 @@ export default defineConfig([
       "no-unused-vars": "off"
     }
   },
-  globalIgnores(["dist/**/*", "node_modules/**/*", "coverage/**/*", "**/.nuxt/**/*"])
+  globalIgnores([
+    "dist/**/*",
+    "node_modules/**/*",
+    "coverage/**/*",
+    "**/dist/**/*",
+    "**/node_modules/**/*",
+    "**/.nuxt/**/*"
+  ])
 ])
