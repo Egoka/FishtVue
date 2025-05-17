@@ -74,6 +74,7 @@ const globals = {
   navigateTo: "readonly",
   history: "readonly",
   getHeaders: "readonly",
+  useState: "readonly",
   useNuxtApp: "readonly",
   useScrollTo: "readonly",
   useEditLink: "readonly",

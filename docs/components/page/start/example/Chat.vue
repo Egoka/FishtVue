@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { activeChat, chatPanels, chatsData } from "~/components/app/start/dataExemple"
+  import { activeChat, chatPanels, chatsData } from "~/components/page/start/dataExemple"
   import { useI18n } from "vue-i18n"
 
   const { t } = useI18n()

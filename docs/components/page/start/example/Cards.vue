@@ -13,17 +13,17 @@
     <div class="mt-6 flex flex-wrap gap-2 gap-y-5 justify-around items-center">
       <div
         class="rounded-xl p-5 max-w-full md:max-w-4/12 border border-black/10 dark:border-white/5 bg-stone-100 dark:bg-stone-900">
-        <AppStartExampleCardForm />
+        <PageStartExampleCardForm />
       </div>
       <div class="rounded-xl max-w-full md:max-w-7/12 bg-stone-100 dark:bg-stone-900">
-        <AppStartExampleCardTable />
+        <PageStartExampleCardTable />
       </div>
       <div class="max-w-full min-w-[448px] md:max-w-5/12 rounded-lg bg-stone-100 dark:bg-stone-900">
-        <AppStartExampleCardSplit />
+        <PageStartExampleCardSplit />
       </div>
       <div
         class="rounded-xl p-5 max-w-full md:max-w-6/12 border border-black/10 dark:border-white/5 bg-stone-100 dark:bg-stone-900">
-        <AppStartExampleCardFAQ />
+        <PageStartExampleCardFAQ />
       </div>
       <div class="rounded-xl p-5 min-w-[21rem] max-w-full md:max-w-4/12 bg-stone-100 dark:bg-stone-900">
         <DemoMenuItemsGroupInfo />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { features, type Features } from "~/components/app/start/dataExemple"
+  import { features, type Features } from "~/components/page/start/dataExemple"
   const localePath = useLocalePath()
 
   const { t } = useI18n()

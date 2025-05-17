@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { columnsCustomers, dataCustomers } from "~/components/app/start/dataExemple"
+  import { columnsCustomers, dataCustomers } from "~/components/page/start/dataExemple"
   import { useI18n } from "vue-i18n"
 
   const { t } = useI18n()

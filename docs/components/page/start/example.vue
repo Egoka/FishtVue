@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import { menuGroups } from "~/components/app/start/dataExemple"
-  // import Home from "@/components/app/start/example/Home.vue";
-  import Cards from "@/components/app/start/example/Cards.vue"
-  import Chat from "@/components/app/start/example/Chat.vue"
-  import Inbox from "@/components/app/start/example/Inbox.vue"
-  import Customers from "@/components/app/start/example/Customers.vue"
+  import { menuGroups } from "~/components/page/start/dataExemple"
+  // import Home from "@/components/page/start/example/Home.vue";
+  import Cards from "@/components/page/start/example/Cards.vue"
+  import Chat from "@/components/page/start/example/Chat.vue"
+  import Inbox from "@/components/page/start/example/Inbox.vue"
+  import Customers from "@/components/page/start/example/Customers.vue"
   import type { ItemMenu, MenuExpose } from "#fishtvue/menu"
   const menuApp = ref<MenuExpose>()
   const activePage = ref("")

@@ -1,5 +1,6 @@
 <template>
-  <AppStartIntro />
-  <AppStartExample />
-  <AppStartFeatures />
+  <PageStartIntro />
+  <PageStartExample />
+  <PageStartFeatures />
+  <PageStartCTA />
 </template>

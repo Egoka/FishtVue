@@ -17,7 +17,7 @@ export default defineConfig({
       reportsDirectory: "./coverage",
       reporter: ["text", "json", "html"],
       include: ["lib/**/*.ts", "lib/**/*.vue"],
-      exclude: ["node_modules", "dist", "**/*.d.ts", "**/*.test.ts"]
+      exclude: ["node_modules", "dist", "**/*.d.ts", "**/*.test.ts", "lib/loading/epic/*", "lib/loading/svg/*"]
     },
     setupFiles: ["./.tests/setup/setupTests.ts"],
     ui: false,

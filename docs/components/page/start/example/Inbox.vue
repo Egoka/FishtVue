@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { useI18n } from "vue-i18n"
-  import { dataMails, mailsPanels, menuMails } from "~/components/app/start/dataExemple"
+  import { dataMails, mailsPanels, menuMails } from "~/components/page/start/dataExemple"
   import type { Panel } from "fishtvue/split"
   import type { MenuExpose } from "fishtvue/menu"
   import { openAlert } from "fishtvue/alert"

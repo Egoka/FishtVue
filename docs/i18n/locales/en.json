@@ -891,6 +891,10 @@
       "getStarted": "Get started",
       "exploreComponent": "Explore components"
     },
+    "CTA": {
+      "title": "Start with Fisht today!",
+      "subtitle": "Kickstart your UI projects with fast, reusable components."
+    },
     "features": {
       "title": "Advantages",
       "subtitle": "Fisht UI is a modern and flexible component library for rapid interface development.",
