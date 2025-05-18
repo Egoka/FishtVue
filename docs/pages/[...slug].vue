@@ -48,7 +48,7 @@
   const { data: page } = await useAsyncData(`path-${path.value}`, () =>
     queryCollection(locale.value).path(path.value).first()
   )
-
+  if (page.value?.id) provide("pageId", page.value.id)
   let tabMenu = ref<PageCollectionItemBase[]>()
   let surround = ref()
 
@@ -124,10 +124,11 @@
   </div>
 
   <div
-    v-if="page"
+    v-if="page?.body.toc?.links?.length"
     class="hidden lg:flex w-64 flex-shrink-0 py-12 pl-2 sticky top-[5.25rem] overflow-y-auto md:overflow-x-hidden h-[calc(100vh-5rem)] flex-col space-y-6 no-scrollbar">
-    <DocOutline v-if="page?.body.toc?.links?.length" :headers="page?.body.toc?.links" />
+    <DocOutline :headers="page?.body.toc?.links" />
     <DocCommunity />
     <div class="fixed bottom-0 z-10 w-64 h-12 bg-gradient-to-b from-transparent to-neutral-100 dark:to-neutral-900" />
   </div>
+  <div v-else class="w-10"></div>
 </template>

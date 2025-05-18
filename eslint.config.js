@@ -62,6 +62,7 @@ const globals = {
   reactive: "readonly",
   watch: "readonly",
   inject: "readonly",
+  provide: "readonly",
   onMounted: "readonly",
   onUnmounted: "readonly",
   nextTick: "readonly",

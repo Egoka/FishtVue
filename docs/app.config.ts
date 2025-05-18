@@ -37,7 +37,7 @@ export default defineAppConfig({
       //     ],
       // },
     ],
-    editLink: "https://github.com/Egoka/FishtVue/docs/content/:path",
+    editLink: "https://github.com/Egoka/FishtVue/blob/lib/docs/content/:path",
     publisherLink: "https://github.com/Egoka"
   },
   theme: {
