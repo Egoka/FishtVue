@@ -39,6 +39,7 @@ const globals = {
   HTMLInputElement: "readonly",
   HTMLButtonElement: "readonly",
   HTMLStyleElement: "readonly",
+  Response: "readonly",
   MouseEvent: "readonly",
   FocusEvent: "readonly",
   KeyboardEvent: "readonly",
@@ -85,6 +86,7 @@ const globals = {
   queryCollectionNavigation: "readonly",
   queryCollectionSearchSections: "readonly",
   queryCollectionItemSurroundings: "readonly",
+  defineEventHandler: "readonly",
   requestAnimationFrame: "readonly"
 }
 export default defineConfig([
