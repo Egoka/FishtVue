@@ -20,6 +20,7 @@ export interface TocLink {
 export default defineAppConfig({
   site: {
     title: "Fisht",
+    url: "https://fisht.org",
     github: "https://github.com/Egoka/FishtVue",
     logo: {
       light: "/logo-light.svg",
@@ -42,9 +43,6 @@ export default defineAppConfig({
   },
   theme: {
     socialLinks: [{ icon: "github", link: "https://github.com/Egoka/FishtVue" }]
-  },
-  seo: {
-    siteName: "Fisht Vue - Docs"
   },
   header: {},
   footer: {}

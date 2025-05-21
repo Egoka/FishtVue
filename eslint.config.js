@@ -8,6 +8,7 @@ import prettier from "eslint-config-prettier"
 import pluginPrettier from "eslint-plugin-prettier"
 
 const globals = {
+  import: "readonly",
   global: "readonly",
   process: "readonly",
   document: "readonly",
@@ -76,6 +77,7 @@ const globals = {
   navigateTo: "readonly",
   history: "readonly",
   getHeaders: "readonly",
+  useHead: "readonly",
   useState: "readonly",
   useNuxtApp: "readonly",
   useScrollTo: "readonly",

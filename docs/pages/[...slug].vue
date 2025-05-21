@@ -4,6 +4,7 @@
   import { useI18n } from "vue-i18n"
   import { computed, onMounted, ref } from "vue"
   import type { PageCollectionItemBase } from "@nuxt/content"
+  import { useSeoMetaFromDoc } from "~/composables/seo"
 
   definePageMeta({ layout: "docs" })
   const { locale, t } = useI18n()
@@ -34,7 +35,7 @@
       }
     })
 
-    nuxtApp.hook("page:error", () => {
+    nuxtApp.hook("app:error", () => {
       isNavigating.value = false
       showLoading.value = false
       if (loadingTimeout) {
@@ -70,6 +71,8 @@
     tabMenu.value = result.data.value?.tabMenu
     surround.value = result.data.value?.surround
   }
+
+  useSeoMetaFromDoc(page.value)
 
   const tabMenuItems = computed(() =>
     tabMenu.value?.map((item) => {

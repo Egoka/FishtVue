@@ -1172,5 +1172,15 @@
         "Q5": "Absolutely! FishtVue components are designed to be highly customizable. You can adjust styles, classes, and other properties to match your application's design."
       }
     }
+  },
+  "seo": {
+    "start": {
+      "title": "UI",
+      "description": "Beautifully designed, artfully crafted components created by the makers of FishtVue. The perfect starting point for your next project."
+    },
+    "doc": {
+      "title": "FishtVue",
+      "description": "Documentation for FishtVue UI components."
+    }
   }
 }
