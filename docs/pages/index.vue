@@ -4,7 +4,6 @@
 
   const { t } = useI18n()
   useSeoMetaFromDoc({
-    title: t("seo.start.title"),
     description: t("seo.start.description")
   } as any)
 </script>

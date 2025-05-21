@@ -9,7 +9,7 @@ export const useSeoMetaFromDoc = (doc: PageCollection | null) => {
   const { site } = useAppConfig()
   const route = useRoute()
 
-  const title = doc?.title ?? site.title ?? t("seo.doc.title")
+  const title = doc?.title
   const description = doc?.description ?? t("seo.doc.description")
   const image = `${site.url}${doc?.image ?? "/og/banner.png"}`
   const ogType = doc?.ogType ?? "website"

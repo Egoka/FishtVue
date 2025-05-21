@@ -122,7 +122,7 @@
         </template>
       </template>
     </article>
-    <DocFooter v-if="page" :control="surround" />
+    <DocFooter v-if="page" :control="surround" :lastUpdated="page.meta?.date as any" />
     <AppFooter class="w-[93vw] md:w-full md:px-8" />
   </div>
 
