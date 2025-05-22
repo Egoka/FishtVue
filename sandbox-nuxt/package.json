@@ -1,7 +1,28 @@
 {
-  "name": "nuxt-app",
+  "name": "@fishtvue/sandbox-nuxt",
+  "description": "A sandbox environment for testing and developing FishtVue components within a Nuxt.js application.",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
+  "author": "Egor Bondarenko",
+  "license": "ISC",
+  "homepage": "https://www.fisht.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Egoka/FishtVue.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Egoka/FishtVue/issues"
+  },
+  "keywords": [
+    "fishtvue",
+    "vue",
+    "vue.js",
+    "vue3",
+    "ui",
+    "ui library",
+    "component library"
+  ],
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
