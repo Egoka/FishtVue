@@ -5,7 +5,7 @@
   "author": "Egor Bondarenco",
   "type": "module",
   "description": "Beautiful components that you can use in your applications. Available. Customizable. Open source.",
-  "homepage": "https://github.com/Egoka/FishtVue",
+  "homepage": "https://www.fisht.org",
   "repository": {
     "type": "git",
     "url": "https://github.com/Egoka/FishtVue.git"
@@ -21,6 +21,7 @@
     "vue",
     "vue.js",
     "vue3",
+    "ui",
     "ui library",
     "component library"
   ],

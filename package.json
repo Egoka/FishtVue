@@ -1,9 +1,28 @@
 {
   "name": "@fishtvue/monorepo",
+  "description": "A monorepo setup for managing multiple FishTVue related packages and applications.",
   "version": "0.0.0",
-  "description": "My package",
   "private": false,
   "type": "module",
+  "author": "Egor Bondarenko",
+  "license": "ISC",
+  "homepage": "https://www.fisht.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Egoka/FishtVue.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Egoka/FishtVue/issues"
+  },
+  "keywords": [
+    "fishtvue",
+    "vue",
+    "vue.js",
+    "vue3",
+    "ui",
+    "ui library",
+    "component library"
+  ],
   "scripts": {
     "doc:build": "pnpm --filter doc build",
     "doc:dev": "pnpm --filter doc dev",
@@ -24,19 +43,6 @@
     "coverage": "vitest run --coverage",
     "husky:init": "husky"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Egoka/FishtVue.git"
-  },
-  "keywords": [
-    "npm"
-  ],
-  "author": "Egor Bondarenko",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Egoka/FishtVue/issues"
-  },
-  "homepage": "https://github.com/Egoka/FishtVue#readme",
   "devDependencies": {
     "@babel/eslint-parser": "^7.25.7",
     "@babel/preset-env": "^7.25.7",
