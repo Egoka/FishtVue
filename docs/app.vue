@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { SpeedInsights } from "@vercel/speed-insights/nuxt"
+
   const { site } = useAppConfig()
   const classes = ref<string[]>([
     "dark:text-neutral-100 text-neutral-900",
@@ -21,5 +23,6 @@
         <NuxtPage />
       </NuxtLayout>
     </AppMain>
+    <SpeedInsights />
   </Body>
 </template>

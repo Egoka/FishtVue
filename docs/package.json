@@ -17,6 +17,7 @@
     "@nuxtjs/i18n": "^9.2.1",
     "@nuxtjs/sitemap": "^7.2.10",
     "@tailwindcss/vite": "^4.0.8",
+    "@vercel/speed-insights": "^1.2.0",
     "@vueuse/core": "^12.7.0",
     "@vueuse/integrations": "^12.8.1",
     "better-sqlite3": "^11.8.1",
