@@ -6,10 +6,6 @@
     headline?: string
     title?: string
     description?: string
-    /**
-     * Display a list of Button next to the title.
-     * `{ color: 'neutral', variant: 'outline' }`{lang="ts-type"}
-     */
     links?: Array<
       ButtonProps & {
         label?: string
@@ -61,9 +57,10 @@
         <div v-if="links?.length || !!slots.links" class="flex flex-wrap items-center gap-1.5">
           <slot name="links">
             <NuxtLink v-for="(link, index) in links" :key="index" :to="link.to" :target="link.target ?? '_blank'">
-              <Button color="neutral" variant="outline" :classIcon="link?.icon" v-bind="link">
+              <Button v-if="link.label" :icon="link?.icon" color="neutral" mode="primary" v-bind="link">
                 {{ link.label }}
               </Button>
+              <Button v-else :icon="link?.icon" color="neutral" mode="primary" type="icon" v-bind="link" />
             </NuxtLink>
           </slot>
         </div>

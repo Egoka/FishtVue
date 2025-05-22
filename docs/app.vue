@@ -1,10 +1,18 @@
 <script setup lang="ts">
+  import { SpeedInsights } from "@vercel/speed-insights/nuxt"
+
+  const { site } = useAppConfig()
   const classes = ref<string[]>([
     "dark:text-neutral-100 text-neutral-900",
     "bg-neutral-100 dark:bg-neutral-900",
     "selection:bg-theme-300 selection:text-theme-900 dark:selection:bg-theme-900 dark:selection:text-theme-200",
     "transition-colors"
   ])
+  useHead({
+    titleTemplate: (titleChunk) => {
+      return titleChunk ? `${site.title} – ${titleChunk}` : site.title
+    }
+  })
 </script>
 <template>
   <Body :class="classes">
@@ -15,5 +23,6 @@
         <NuxtPage />
       </NuxtLayout>
     </AppMain>
+    <SpeedInsights />
   </Body>
 </template>

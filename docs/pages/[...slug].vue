@@ -4,6 +4,7 @@
   import { useI18n } from "vue-i18n"
   import { computed, onMounted, ref } from "vue"
   import type { PageCollectionItemBase } from "@nuxt/content"
+  import { useSeoMetaFromDoc } from "~/composables/seo"
 
   definePageMeta({ layout: "docs" })
   const { locale, t } = useI18n()
@@ -34,7 +35,7 @@
       }
     })
 
-    nuxtApp.hook("page:error", () => {
+    nuxtApp.hook("app:error", () => {
       isNavigating.value = false
       showLoading.value = false
       if (loadingTimeout) {
@@ -48,7 +49,7 @@
   const { data: page } = await useAsyncData(`path-${path.value}`, () =>
     queryCollection(locale.value).path(path.value).first()
   )
-
+  if (page.value?.id) provide("pageId", page.value.id)
   let tabMenu = ref<PageCollectionItemBase[]>()
   let surround = ref()
 
@@ -70,6 +71,8 @@
     tabMenu.value = result.data.value?.tabMenu
     surround.value = result.data.value?.surround
   }
+
+  useSeoMetaFromDoc(page.value)
 
   const tabMenuItems = computed(() =>
     tabMenu.value?.map((item) => {
@@ -119,15 +122,16 @@
         </template>
       </template>
     </article>
-    <DocFooter v-if="page" :control="surround" />
+    <DocFooter v-if="page" :control="surround" :lastUpdated="page.meta?.date as any" />
     <AppFooter class="w-[93vw] md:w-full md:px-8" />
   </div>
 
   <div
-    v-if="page"
+    v-if="page?.body.toc?.links?.length"
     class="hidden lg:flex w-64 flex-shrink-0 py-12 pl-2 sticky top-[5.25rem] overflow-y-auto md:overflow-x-hidden h-[calc(100vh-5rem)] flex-col space-y-6 no-scrollbar">
-    <DocOutline v-if="page?.body.toc?.links?.length" :headers="page?.body.toc?.links" />
+    <DocOutline :headers="page?.body.toc?.links" />
     <DocCommunity />
     <div class="fixed bottom-0 z-10 w-64 h-12 bg-gradient-to-b from-transparent to-neutral-100 dark:to-neutral-900" />
   </div>
+  <div v-else class="w-10"></div>
 </template>

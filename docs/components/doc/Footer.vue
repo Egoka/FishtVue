@@ -1,9 +1,9 @@
 <script setup lang="ts">
   import { useI18n } from "vue-i18n"
 
-  const { t } = useI18n()
+  const { localeProperties, t } = useI18n()
   const localePath = useLocalePath()
-  const props = defineProps<{ control: any }>()
+  const props = defineProps<{ control: any; lastUpdated?: string }>()
   const editLink = useEditLink()
   const control = computed(() => ({
     prev: props.control?.[0],
@@ -18,6 +18,7 @@
       control.value?.prev ||
       control.value?.next
   )
+  const date = computed(() => convertToDate(props.lastUpdated))
   const classTransition = ref("transition-colors duration-500")
   const classTextControl = ref("text-neutral-500 dark:text-neutral-400")
   const classButtonControl = ref([
@@ -28,6 +29,15 @@
     "rounded-lg border border-neutral-200 dark:border-neutral-700 hover:border-theme-400 dark:hover:border-theme-700",
     "w-full px-4 py-6"
   ])
+
+  function convertToDate(dateString: string | undefined) {
+    if (!dateString) return
+    const parts = dateString.split("/")
+    const day = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10) - 1 // Месяцы в JavaScript начинаются с 0
+    const year = parseInt(parts[2], 10)
+    return new Date(year, month, day)
+  }
 </script>
 
 <template>
@@ -41,6 +51,12 @@
           <AppIcons icon="lucide:pencil-line" />
           {{ editLink.text }}
         </a>
+      </div>
+      <div v-if="date" class="text-sm text-neutral-700 dark:text-neutral-400">
+        <p>
+          {{ t("lastUpdated") }}
+          <time :datetime="date?.toISOString()">{{ date.toLocaleDateString(localeProperties?.iso as string) }}</time>
+        </p>
       </div>
     </div>
 

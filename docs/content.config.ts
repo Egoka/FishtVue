@@ -1,5 +1,36 @@
-import { defineCollection, defineContentConfig, z } from "@nuxt/content"
+import { defineCollection, defineContentConfig, type PageCollectionItemBase, z } from "@nuxt/content"
+import type { OgType, RobotsDirective } from "~/composables/seo"
 
+export type PageCollection = PageCollectionItemBase & {
+  name: string
+  description: string
+  icon?: string
+  image?: string
+  ogType?: OgType
+  robots?: RobotsDirective | RobotsDirective[]
+  links?: {
+    label: string
+    icon: string
+    to: string
+    target?: string
+  }[]
+}
+const schema = z.object({
+  name: z.string(),
+  description: z.string(),
+  icon: z.string(),
+  image: z.string(),
+  links: z
+    .array(
+      z.object({
+        label: z.string(),
+        icon: z.string(),
+        to: z.string(),
+        target: z.string().optional()
+      })
+    )
+    .optional()
+})
 export default defineContentConfig({
   collections: {
     en: defineCollection({
@@ -8,21 +39,7 @@ export default defineContentConfig({
         include: "en/**",
         prefix: "/"
       },
-      schema: z.object({
-        name: z.string(),
-        description: z.string(),
-        icon: z.string(),
-        links: z
-          .array(
-            z.object({
-              label: z.string(),
-              icon: z.string(),
-              to: z.string(),
-              target: z.string().optional()
-            })
-          )
-          .optional()
-      })
+      schema
     }),
     ru: defineCollection({
       type: "page",
@@ -30,21 +47,7 @@ export default defineContentConfig({
         include: "ru/**",
         prefix: "/"
       },
-      schema: z.object({
-        name: z.string(),
-        description: z.string(),
-        icon: z.string(),
-        links: z
-          .array(
-            z.object({
-              label: z.string(),
-              icon: z.string(),
-              to: z.string(),
-              target: z.string().optional()
-            })
-          )
-          .optional()
-      })
+      schema
     })
   }
 })

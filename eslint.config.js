@@ -8,6 +8,7 @@ import prettier from "eslint-config-prettier"
 import pluginPrettier from "eslint-plugin-prettier"
 
 const globals = {
+  import: "readonly",
   global: "readonly",
   process: "readonly",
   document: "readonly",
@@ -39,6 +40,7 @@ const globals = {
   HTMLInputElement: "readonly",
   HTMLButtonElement: "readonly",
   HTMLStyleElement: "readonly",
+  Response: "readonly",
   MouseEvent: "readonly",
   FocusEvent: "readonly",
   KeyboardEvent: "readonly",
@@ -62,6 +64,7 @@ const globals = {
   reactive: "readonly",
   watch: "readonly",
   inject: "readonly",
+  provide: "readonly",
   onMounted: "readonly",
   onUnmounted: "readonly",
   nextTick: "readonly",
@@ -74,6 +77,7 @@ const globals = {
   navigateTo: "readonly",
   history: "readonly",
   getHeaders: "readonly",
+  useHead: "readonly",
   useState: "readonly",
   useNuxtApp: "readonly",
   useScrollTo: "readonly",
@@ -84,6 +88,7 @@ const globals = {
   queryCollectionNavigation: "readonly",
   queryCollectionSearchSections: "readonly",
   queryCollectionItemSurroundings: "readonly",
+  defineEventHandler: "readonly",
   requestAnimationFrame: "readonly"
 }
 export default defineConfig([
