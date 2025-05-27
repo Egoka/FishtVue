@@ -1,11 +1,12 @@
 export default defineEventHandler(async (event) => {
-  console.log("defineEventHandler")
-  const items = await queryCollection(event, "en").where("extension", "=", "md").all()
-  const urls = items
+  const itemsEn = await queryCollection(event, "en").where("extension", "=", "md").all()
+  const itemsRu = await queryCollection(event, "ru").where("extension", "=", "md").all()
+
+  const urls = [...itemsEn, ...itemsRu]
     .map(
       (doc) => `
     <url>
-      <loc>https://fisht.org${doc.path}</loc>
+      <loc>https://fisht.org${doc.id?.startsWith("ru") ? "/ru" : ""}${doc.path}</loc>
     </url>
   `
     )

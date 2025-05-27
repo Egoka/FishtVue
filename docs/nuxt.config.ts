@@ -2,11 +2,6 @@ import tailwindcss from "@tailwindcss/vite"
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  app: {
-    head: {
-      link: [{ rel: "icon", type: "image/png", href: "/favicon.png" }]
-    }
-  },
   modules: ["@nuxt/content", "@nuxtjs/i18n", "@nuxtjs/color-mode", "@nuxt/image", "fishtvue/module"],
   fishtvue: {
     prefix: "",
