@@ -1183,5 +1183,9 @@
       "title": "FishtVue",
       "description": "Documentation for FishtVue UI components."
     }
+  },
+  "404": {
+    "title": "404 - Page Not Found",
+    "description": "Sorry, the page you are looking for could not be found. Please check the URL or try navigating back to the homepage."
   }
 }

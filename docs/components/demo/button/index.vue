@@ -2,7 +2,9 @@
   import type { DemoOption } from "~/components/demo/index.vue"
   import type { ButtonProps } from "#fishtvue/button"
   import { layoutConfigOptions } from "~/components/demo/configOptions"
+  import { useI18n } from "vue-i18n"
 
+  const { t } = useI18n()
   const optionsValues = ref<ButtonProps>({})
   const options = computed<DemoOption[]>(() =>
     layoutConfigOptions<ButtonProps>(optionsValues.value, [

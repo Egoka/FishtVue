@@ -49,6 +49,22 @@
   const { data: page } = await useAsyncData(`path-${path.value}`, () =>
     queryCollection(locale.value).path(path.value).first()
   )
+  // const { data: page } = await useAsyncData(`path-${path.value}`, async () => {
+  //   const pageData = await queryCollection(locale.value).path(path.value).first()
+  //   console.log("pageData", pageData, locale.value, path.value)
+  //   // Устанавливаем SEO-метаданные внутри useAsyncData
+  //   if (!pageData) {
+  //     useSeoMetaFromDoc({
+  //       title: t("404.title"),
+  //       description: t("404.description"),
+  //       robots: "noindex, nofollow"
+  //     } as any)
+  //   } else {
+  //     useSeoMetaFromDoc(pageData)
+  //   }
+  //
+  //   return pageData
+  // })
   if (page.value?.id) provide("pageId", page.value.id)
   let tabMenu = ref<PageCollectionItemBase[]>()
   let surround = ref()

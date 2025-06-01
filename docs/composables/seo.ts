@@ -3,9 +3,15 @@ import { useI18n } from "vue-i18n"
 import type { PageCollection } from "~/content.config"
 
 export const useSeoMetaFromDoc = (doc: PageCollection | null) => {
-  if (!doc) return
-
   const { t, locale, defaultLocale, locales, localeProperties } = useI18n()
+  if (!doc) {
+    useHead({
+      title: t("404.title"),
+      meta: [{ name: "robots", content: "noindex, nofollow" }]
+    })
+    return
+  }
+
   const { site } = useAppConfig()
   const route = useRoute()
 
@@ -14,8 +20,9 @@ export const useSeoMetaFromDoc = (doc: PageCollection | null) => {
   const image = `${site.url}${doc?.image ?? "/og/banner.png"}`
   const ogType = doc?.ogType ?? "website"
   const robots = doc?.robots ?? "index, follow"
-  const url = route ? `${site.url}${route.fullPath}` : site.url
-  console.log("locale", locale, defaultLocale, locales, localeProperties)
+  const baseUrl = site.url?.endsWith("/") ? site.url.slice(0, -1) : site.url
+  const path = route?.fullPath?.startsWith("/") ? route.fullPath : `/${route?.fullPath}`
+  const url = route ? `${baseUrl}${path}` : baseUrl
   useHead({
     title,
     description,

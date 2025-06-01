@@ -91,105 +91,107 @@ const globals = {
   defineEventHandler: "readonly",
   requestAnimationFrame: "readonly"
 }
+
+const baseConfig = {
+  languageOptions: {
+    globals
+  },
+  rules: {
+    "no-unused-vars": "off"
+  }
+}
+
+const typescriptConfig = {
+  files: ["**/*.ts", "**/*.tsx"],
+  languageOptions: {
+    ...baseConfig.languageOptions,
+    parser: tsParser,
+    parserOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module"
+    }
+  },
+  plugins: {
+    "@typescript-eslint": typescript
+  },
+  rules: {
+    ...baseConfig.rules,
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/no-unused-vars": "off"
+  }
+}
+
+const vueConfig = {
+  files: ["**/*.vue"],
+  languageOptions: {
+    parser: vueParser,
+    parserOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parser: tsParser
+    },
+    globals
+  },
+  plugins: {
+    vue
+  },
+  rules: {
+    ...baseConfig.rules,
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "vue/multi-word-component-names": "off"
+  }
+}
+
+const prettierConfig = {
+  plugins: {
+    prettier: pluginPrettier
+  },
+  rules: {
+    "prettier/prettier": [
+      "warn",
+      {
+        endOfLine: "auto"
+      }
+    ]
+  }
+}
+
+const testConfig = {
+  files: [".tests/setup/setupTests.ts", "**/*.test.ts", "**/*.spec.ts"],
+  ...baseConfig,
+  rules: {
+    ...baseConfig.rules,
+    "@typescript-eslint/no-unused-vars": "off"
+  }
+}
+
+const declarationConfig = {
+  files: ["**/*.d.ts"],
+  rules: {
+    ...baseConfig.rules,
+    "@typescript-eslint/no-unused-vars": "off"
+  }
+}
+
 export default defineConfig([
   js.configs.recommended,
-  {
-    files: ["**/*.js"],
-    languageOptions: {
-      globals
-    },
-    rules: {
-      "no-unused-vars": "off"
-    }
-  },
-  {
-    files: ["**/*.ts", "**/*.tsx"],
-    languageOptions: {
-      globals,
-      parser: tsParser,
-      parserOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module"
-      }
-    },
-    plugins: {
-      "@typescript-eslint": typescript
-    },
-    rules: {
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/ban-ts-comment": "off",
-      "@typescript-eslint/no-unused-vars": "off"
-    }
-  },
-  {
-    files: ["**/*.vue"],
-    languageOptions: {
-      parser: vueParser,
-      parserOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module",
-        parser: tsParser
-      },
-      globals
-    },
-    plugins: {
-      vue
-    },
-    rules: {
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/ban-ts-comment": "off",
-      "@typescript-eslint/no-unused-vars": "off",
-      "vue/multi-word-component-names": "off"
-    }
-  },
-  {
-    plugins: {
-      prettier: pluginPrettier
-    },
-    rules: {
-      "prettier/prettier": [
-        "warn",
-        {
-          endOfLine: "auto"
-        }
-      ]
-    }
-  },
+  baseConfig,
+  typescriptConfig,
+  vueConfig,
+  prettierConfig,
   prettier,
-  {
-    files: [".tests/setup/setupTests.ts", "**/*.test.ts", "**/*.spec.ts"],
-    languageOptions: {
-      globals
-    },
-    rules: {
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": "off"
-    }
-  },
-  {
-    files: ["**/*.d.ts"],
-    rules: {
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": "off"
-    }
-  },
-  {
-    files: ["**/*.js"],
-    languageOptions: {
-      globals
-    },
-    rules: {
-      "no-unused-vars": "off"
-    }
-  },
+  testConfig,
+  declarationConfig,
   globalIgnores([
     "dist/**/*",
     "node_modules/**/*",
     "coverage/**/*",
     "**/dist/**/*",
     "**/node_modules/**/*",
-    "**/.nuxt/**/*"
+    "**/.nuxt/**/*",
+    "**/.output/**/*"
   ])
 ])
