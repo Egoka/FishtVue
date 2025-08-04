@@ -3,14 +3,29 @@ import { fileURLToPath } from "node:url"
 import { dirname, join } from "path"
 import { toFlatCase } from "fishtvue/utils/stringHandler"
 import { fieldsOmit } from "fishtvue/utils/objectHandler"
+import { createRequire } from "module"
 import type { FishtVueOptions } from "fishtvue/module"
+
+const require = createRequire(import.meta.url)
+const getNuxtVersion = () => {
+  try {
+    const nuxtPackage = require("nuxt/package.json")
+    return nuxtPackage.version
+  } catch {
+    return "4.0.0"
+  }
+}
+const isNuxt4 = () => {
+  const version = getNuxtVersion()
+  return version.startsWith("4")
+}
 
 export default defineNuxtModule<FishtVueOptions>({
   meta: {
     name: "fishtvue",
     configKey: "fishtvue",
     compatibility: {
-      nuxt: "^3.0.0"
+      nuxt: ">=3.0.0"
     }
   },
   defaults: {
@@ -24,10 +39,8 @@ export default defineNuxtModule<FishtVueOptions>({
     const { resolve } = createResolver(parentDir)
     const { autoImport } = options
     const runtimeDir = resolve("./")
-    // nuxt.options.fishtvue = options
-    nuxt.options.build.transpile.push(runtimeDir)
-    nuxt.options.alias["#fishtvue"] = runtimeDir
-
+    if (nuxt.options.build?.transpile) nuxt.options.build.transpile.push(runtimeDir)
+    if (nuxt.options.alias) nuxt.options.alias["#fishtvue"] = runtimeDir
     if (autoImport)
       FISHT_VUE_COMPONENTS.forEach((componentName) =>
         addComponent({
@@ -45,8 +58,11 @@ export default defineNuxtModule<FishtVueOptions>({
       filename: "fishtvue.all.mjs",
       mode: "all",
       getContents({ options }) {
+        const isV4 = isNuxt4()
+        const importPath = isV4 ? "#app" : "#app"
+
         return `
-import { defineNuxtPlugin } from '#app'
+import { defineNuxtPlugin } from '${importPath}'
 import FishtVue from "fishtvue/config"
 export default defineNuxtPlugin((nuxtApp) => {
   const options = ${JSON.stringify(options)}
