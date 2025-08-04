@@ -1,5 +1,12 @@
 # CHANGELOG
 
+# [0.2.0](https://github.com/Egoka/FishtVue/compare/v0.1.1...v0.2.0) (2025-08-04)
+
+
+### Features
+
+* **nuxt:** updated support to nuxt 4.0.0 ([db3d1d7](https://github.com/Egoka/FishtVue/commit/db3d1d760aaed399e9772bfa48b48f64cd9c0603))
+
 ## [0.1.1](https://github.com/Egoka/FishtVue/compare/v0.1.0...v0.1.1) (2025-05-14)
 
 
