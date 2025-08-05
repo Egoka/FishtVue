@@ -12,7 +12,7 @@ export default defineNuxtPlugin((nuxtApp: NuxtApp) => {
               // @ts-ignore
               type: "text/css",
               "data-fishtvue-style-id": component,
-              children: style
+              innerHTML: style
             }
           })
         })
