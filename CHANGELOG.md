@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.2.1](https://github.com/Egoka/FishtVue/compare/v0.2.0...v0.2.1) (2025-08-05)
+
+
+### Bug Fixes
+
+* **plugin:** fixed NuxtPlugin ([622a9a1](https://github.com/Egoka/FishtVue/commit/622a9a10335331285abf55fe81587813359df7e6))
+
 # [0.2.0](https://github.com/Egoka/FishtVue/compare/v0.1.1...v0.2.0) (2025-08-04)
 
 
