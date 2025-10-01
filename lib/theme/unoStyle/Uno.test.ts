@@ -751,36 +751,42 @@ describe("unoStyle", () => {
       })
       it.each<{ classValue: string; expected: string }>([
         { classValue: "inset-auto", expected: ".inset-auto {\n  inset: auto;\n}" },
-        { classValue: "inset-1/2", expected: ".inset-1\\/2 {\n  inset: 50%;\n}" },
-        { classValue: "inset-1/3", expected: ".inset-1\\/3 {\n  inset: 33.3333%;\n}" },
-        { classValue: "inset-2/3", expected: ".inset-2\\/3 {\n  inset: 66.6667%;\n}" },
-        { classValue: "inset-1/4", expected: ".inset-1\\/4 {\n  inset: 25%;\n}" },
-        { classValue: "inset-2/4", expected: ".inset-2\\/4 {\n  inset: 50%;\n}" },
-        { classValue: "inset-3/4", expected: ".inset-3\\/4 {\n  inset: 75%;\n}" },
+        { classValue: "inset-1/2", expected: ".inset-1\\/2 {\n  inset: calc(1 / 2 * 100%);\n}" },
+        { classValue: "inset-1/3", expected: ".inset-1\\/3 {\n  inset: calc(1 / 3 * 100%);\n}" },
+        { classValue: "inset-2/3", expected: ".inset-2\\/3 {\n  inset: calc(2 / 3 * 100%);\n}" },
+        { classValue: "inset-1/4", expected: ".inset-1\\/4 {\n  inset: calc(1 / 4 * 100%);\n}" },
+        { classValue: "inset-2/4", expected: ".inset-2\\/4 {\n  inset: calc(2 / 4 * 100%);\n}" },
+        { classValue: "inset-3/4", expected: ".inset-3\\/4 {\n  inset: calc(3 / 4 * 100%);\n}" },
         { classValue: "inset-full", expected: ".inset-full {\n  inset: 100%;\n}" },
         { classValue: "inset-x-auto", expected: ".inset-x-auto {\n  left: auto;\n  right: auto;\n}" },
-        { classValue: "inset-x-1/2", expected: ".inset-x-1\\/2 {\n  left: 50%;\n  right: 50%;\n}" },
+        {
+          classValue: "inset-x-1/2",
+          expected: ".inset-x-1\\/2 {\n  left: calc(1 / 2 * 100%);\n  right: calc(1 / 2 * 100%);\n}"
+        },
         { classValue: "inset-x-full", expected: ".inset-x-full {\n  left: 100%;\n  right: 100%;\n}" },
         { classValue: "inset-y-auto", expected: ".inset-y-auto {\n  top: auto;\n  bottom: auto;\n}" },
-        { classValue: "inset-y-1/2", expected: ".inset-y-1\\/2 {\n  top: 50%;\n  bottom: 50%;\n}" },
+        {
+          classValue: "inset-y-1/2",
+          expected: ".inset-y-1\\/2 {\n  top: calc(1 / 2 * 100%);\n  bottom: calc(1 / 2 * 100%);\n}"
+        },
         { classValue: "inset-y-full", expected: ".inset-y-full {\n  top: 100%;\n  bottom: 100%;\n}" },
         { classValue: "start-auto", expected: ".start-auto {\n  inset-inline-start: auto;\n}" },
-        { classValue: "start-1/2", expected: ".start-1\\/2 {\n  inset-inline-start: 50%;\n}" },
+        { classValue: "start-1/2", expected: ".start-1\\/2 {\n  inset-inline-start: calc(1 / 2 * 100%);\n}" },
         { classValue: "start-full", expected: ".start-full {\n  inset-inline-start: 100%;\n}" },
         { classValue: "end-auto", expected: ".end-auto {\n  inset-inline-end: auto;\n}" },
-        { classValue: "end-1/2", expected: ".end-1\\/2 {\n  inset-inline-end: 50%;\n}" },
+        { classValue: "end-1/2", expected: ".end-1\\/2 {\n  inset-inline-end: calc(1 / 2 * 100%);\n}" },
         { classValue: "end-full", expected: ".end-full {\n  inset-inline-end: 100%;\n}" },
         { classValue: "top-auto", expected: ".top-auto {\n  top: auto;\n}" },
-        { classValue: "top-1/2", expected: ".top-1\\/2 {\n  top: 50%;\n}" },
+        { classValue: "top-1/2", expected: ".top-1\\/2 {\n  top: calc(1 / 2 * 100%);\n}" },
         { classValue: "top-full", expected: ".top-full {\n  top: 100%;\n}" },
         { classValue: "right-auto", expected: ".right-auto {\n  right: auto;\n}" },
-        { classValue: "right-1/2", expected: ".right-1\\/2 {\n  right: 50%;\n}" },
+        { classValue: "right-1/2", expected: ".right-1\\/2 {\n  right: calc(1 / 2 * 100%);\n}" },
         { classValue: "right-full", expected: ".right-full {\n  right: 100%;\n}" },
         { classValue: "bottom-auto", expected: ".bottom-auto {\n  bottom: auto;\n}" },
-        { classValue: "bottom-1/2", expected: ".bottom-1\\/2 {\n  bottom: 50%;\n}" },
+        { classValue: "bottom-1/2", expected: ".bottom-1\\/2 {\n  bottom: calc(1 / 2 * 100%);\n}" },
         { classValue: "bottom-full", expected: ".bottom-full {\n  bottom: 100%;\n}" },
         { classValue: "left-auto", expected: ".left-auto {\n  left: auto;\n}" },
-        { classValue: "left-1/2", expected: ".left-1\\/2 {\n  left: 50%;\n}" },
+        { classValue: "left-1/2", expected: ".left-1\\/2 {\n  left: calc(1 / 2 * 100%);\n}" },
         { classValue: "left-full", expected: ".left-full {\n  left: 100%;\n}" }
       ])("tailwind($classValue)", ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -832,8 +838,8 @@ describe("unoStyle", () => {
         { classValue: "basis-px", expected: ".basis-px {\n  flex-basis: 1px;\n}" },
         { classValue: "basis-0.5", expected: ".basis-0\\.5 {\n  flex-basis: 0.125rem;\n}" },
         { classValue: "basis-1.5", expected: ".basis-1\\.5 {\n  flex-basis: 0.375rem;\n}" },
-        { classValue: "basis-1/2", expected: ".basis-1\\/2 {\n  flex-basis: 50%;\n}" },
-        { classValue: "basis-11/12", expected: ".basis-11\\/12 {\n  flex-basis: 91.6667%;\n}" },
+        { classValue: "basis-1/2", expected: ".basis-1\\/2 {\n  flex-basis: calc(1 / 2 * 100%);\n}" },
+        { classValue: "basis-11/12", expected: ".basis-11\\/12 {\n  flex-basis: calc(11 / 12 * 100%);\n}" },
         { classValue: "basis-full", expected: ".basis-full {\n  flex-basis: 100%;\n}" },
         { classValue: "basis-[14.2857143%]", expected: ".basis-\\[14\\.2857143\\%\\] {\n  flex-basis: 14.2857143%;\n}" }
       ])("tailwind($classValue)", ({ classValue, expected }) => {
@@ -1205,16 +1211,18 @@ describe("unoStyle", () => {
         { classValue: "w-1", expected: ".w-1 {\n  width: 0.25rem;\n}" },
         { classValue: "w-1.5", expected: ".w-1\\.5 {\n  width: 0.375rem;\n}" },
         { classValue: "w-4", expected: ".w-4 {\n  width: 1rem;\n}" },
+        { classValue: "w-3xs", expected: ".w-3xs {\n  width: 16rem;\n}" },
+        { classValue: "w-2xs", expected: ".w-2xs {\n  width: 18rem;\n}" },
         { classValue: "w-[96rem]", expected: ".w-\\[96rem\\] {\n  width: 96rem;\n}" },
         { classValue: "w-auto", expected: ".w-auto {\n  width: auto;\n}" },
-        { classValue: "w-1/2", expected: ".w-1\\/2 {\n  width: 50%;\n}" },
-        { classValue: "w-1/3", expected: ".w-1\\/3 {\n  width: 33.3333%;\n}" },
-        { classValue: "w-2/3", expected: ".w-2\\/3 {\n  width: 66.6667%;\n}" },
+        { classValue: "w-1/2", expected: ".w-1\\/2 {\n  width: calc(1 / 2 * 100%);\n}" },
+        { classValue: "w-1/3", expected: ".w-1\\/3 {\n  width: calc(1 / 3 * 100%);\n}" },
+        { classValue: "w-2/3", expected: ".w-2\\/3 {\n  width: calc(2 / 3 * 100%);\n}" },
         { classValue: "w-full", expected: ".w-full {\n  width: 100%;\n}" },
         { classValue: "w-screen", expected: ".w-screen {\n  width: 100vw;\n}" },
-        { classValue: "w-svw", expected: ".w-svw {\n  width: 1svw;\n}" },
-        { classValue: "w-lvw", expected: ".w-lvw {\n  width: 1lvw;\n}" },
-        { classValue: "w-dvw", expected: ".w-dvw {\n  width: 1dvw;\n}" },
+        { classValue: "w-svw", expected: ".w-svw {\n  width: 100svw;\n}" },
+        { classValue: "w-lvw", expected: ".w-lvw {\n  width: 100lvw;\n}" },
+        { classValue: "w-dvw", expected: ".w-dvw {\n  width: 100dvw;\n}" },
         { classValue: "w-min", expected: ".w-min {\n  width: min-content;\n}" },
         { classValue: "w-max", expected: ".w-max {\n  width: max-content;\n}" },
         { classValue: "w-fit", expected: ".w-fit {\n  width: fit-content;\n}" }
@@ -1232,14 +1240,17 @@ describe("unoStyle", () => {
         { classValue: "h-4", expected: ".h-4 {\n  height: 1rem;\n}" },
         { classValue: "h-[96rem]", expected: ".h-\\[96rem\\] {\n  height: 96rem;\n}" },
         { classValue: "h-auto", expected: ".h-auto {\n  height: auto;\n}" },
-        { classValue: "h-1/2", expected: ".h-1\\/2 {\n  height: 50%;\n}" },
-        { classValue: "h-1/3", expected: ".h-1\\/3 {\n  height: 33.3333%;\n}" },
-        { classValue: "h-2/3", expected: ".h-2\\/3 {\n  height: 66.6667%;\n}" },
+        { classValue: "h-1/2", expected: ".h-1\\/2 {\n  height: calc(1 / 2 * 100%);\n}" },
+        { classValue: "h-1/3", expected: ".h-1\\/3 {\n  height: calc(1 / 3 * 100%);\n}" },
+        { classValue: "h-2/3", expected: ".h-2\\/3 {\n  height: calc(2 / 3 * 100%);\n}" },
         { classValue: "h-full", expected: ".h-full {\n  height: 100%;\n}" },
         { classValue: "h-screen", expected: ".h-screen {\n  height: 100vh;\n}" },
-        { classValue: "h-svw", expected: ".h-svw {\n  height: 1svw;\n}" },
-        { classValue: "h-lvw", expected: ".h-lvw {\n  height: 1lvw;\n}" },
-        { classValue: "h-dvw", expected: ".h-dvw {\n  height: 1dvw;\n}" },
+        { classValue: "h-svw", expected: ".h-svw {\n  height: 100svw;\n}" },
+        { classValue: "h-svh", expected: ".h-svh {\n  height: 100svh;\n}" },
+        { classValue: "h-lvw", expected: ".h-lvw {\n  height: 100lvw;\n}" },
+        { classValue: "h-lvh", expected: ".h-lvh {\n  height: 100lvh;\n}" },
+        { classValue: "h-dvw", expected: ".h-dvw {\n  height: 100dvw;\n}" },
+        { classValue: "h-dvh", expected: ".h-dvh {\n  height: 100dvh;\n}" },
         { classValue: "h-min", expected: ".h-min {\n  height: min-content;\n}" },
         { classValue: "h-max", expected: ".h-max {\n  height: max-content;\n}" },
         { classValue: "h-fit", expected: ".h-fit {\n  height: fit-content;\n}" }
@@ -1286,8 +1297,9 @@ describe("unoStyle", () => {
         { classValue: "max-w-1.5", expected: ".max-w-1\\.5 {\n  max-width: 0.375rem;\n}" },
         { classValue: "max-w-96", expected: ".max-w-96 {\n  max-width: 24rem;\n}" },
         { classValue: "max-w-none", expected: ".max-w-none {\n  max-width: none;\n}" },
+        { classValue: "max-w-3xs", expected: ".max-w-3xs {\n  max-width: 16rem;\n}" },
+        { classValue: "max-w-2xs", expected: ".max-w-2xs {\n  max-width: 18rem;\n}" },
         { classValue: "max-w-xs", expected: ".max-w-xs {\n  max-width: 20rem;\n}" },
-
         { classValue: "max-w-sm", expected: ".max-w-sm {\n  max-width: 24rem;\n}" },
         { classValue: "max-w-md", expected: ".max-w-md {\n  max-width: 28rem;\n}" },
         { classValue: "max-w-lg", expected: ".max-w-lg {\n  max-width: 32rem;\n}" },
@@ -1354,9 +1366,18 @@ describe("unoStyle", () => {
         { classValue: "size-96", expected: ".size-96 {\n  width: 24rem;\n  height: 24rem;\n}" },
         { classValue: "size-[14px]", expected: ".size-\\[14px\\] {\n  width: 14px;\n  height: 14px;\n}" },
         { classValue: "size-auto", expected: ".size-auto {\n  width: auto;\n  height: auto;\n}" },
-        { classValue: "size-1/2", expected: ".size-1\\/2 {\n  width: 50%;\n  height: 50%;\n}" },
-        { classValue: "size-1/3", expected: ".size-1\\/3 {\n  width: 33.3333%;\n  height: 33.3333%;\n}" },
-        { classValue: "size-11/12", expected: ".size-11\\/12 {\n  width: 91.6667%;\n  height: 91.6667%;\n}" },
+        {
+          classValue: "size-1/2",
+          expected: ".size-1\\/2 {\n  width: calc(1 / 2 * 100%);\n  height: calc(1 / 2 * 100%);\n}"
+        },
+        {
+          classValue: "size-1/3",
+          expected: ".size-1\\/3 {\n  width: calc(1 / 3 * 100%);\n  height: calc(1 / 3 * 100%);\n}"
+        },
+        {
+          classValue: "size-11/12",
+          expected: ".size-11\\/12 {\n  width: calc(11 / 12 * 100%);\n  height: calc(11 / 12 * 100%);\n}"
+        },
         { classValue: "size-full", expected: ".size-full {\n  width: 100%;\n  height: 100%;\n}" },
         { classValue: "size-min", expected: ".size-min {\n  width: min-content;\n  height: min-content;\n}" },
         { classValue: "size-max", expected: ".size-max {\n  width: max-content;\n  height: max-content;\n}" },
@@ -3981,11 +4002,11 @@ describe("unoStyle", () => {
         },
         {
           classValue: "translate-x-1/2",
-          expected: `.translate-x-1\\/2 {\n  --fv-translate-x: 50%;\n  ${baseTranslate}\n}`
+          expected: `.translate-x-1\\/2 {\n  --fv-translate-x: calc(1 / 2 * 100%);\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-3/4",
-          expected: `.translate-x-3\\/4 {\n  --fv-translate-x: 75%;\n  ${baseTranslate}\n}`
+          expected: `.translate-x-3\\/4 {\n  --fv-translate-x: calc(3 / 4 * 100%);\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-x-full",
@@ -3993,11 +4014,11 @@ describe("unoStyle", () => {
         },
         {
           classValue: "translate-y-1/2",
-          expected: `.translate-y-1\\/2 {\n  --fv-translate-y: 50%;\n  ${baseTranslate}\n}`
+          expected: `.translate-y-1\\/2 {\n  --fv-translate-y: calc(1 / 2 * 100%);\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-3/4",
-          expected: `.translate-y-3\\/4 {\n  --fv-translate-y: 75%;\n  ${baseTranslate}\n}`
+          expected: `.translate-y-3\\/4 {\n  --fv-translate-y: calc(3 / 4 * 100%);\n  ${baseTranslate}\n}`
         },
         {
           classValue: "translate-y-full",

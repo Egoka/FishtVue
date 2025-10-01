@@ -67,6 +67,12 @@ export type Panel = {
   disabled?: boolean
 
   /**
+   * Hides the panel when set to true.
+   * @type {boolean | undefined}
+   */
+  hidden?: boolean
+
+  /**
    * Custom CSS class for the panel container.
    * @type {StyleClass | undefined}
    */

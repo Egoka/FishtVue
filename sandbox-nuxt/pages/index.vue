@@ -7,7 +7,7 @@
     <div class="text-center my-[35vh]">
       <h1
         class="font-asap sm:leading-22 text-center text-4xl font-bold sm:text-6xl sm:font-extrabold md:text-7xl text-foreground text-stone-800 dark:text-neutral-300">
-        Welcome to the sandbox <br /><span class="font-asap text-theme-900 dark:text-theme-300">FishtVue</span>
+        Welcome to the sandbox <br /><span class="font-asap text-theme-900 dark:text-theme-300">FishtVue in Nuxt</span>
       </h1>
       <p class="text-xl mb-8">Your new favorite UI library for Vue.js</p>
       <button

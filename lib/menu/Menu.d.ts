@@ -54,24 +54,24 @@ export interface ItemMenu {
 
   /**
    * Event triggered when the menu item becomes active (e.g., hovered).
-   * @param {MouseEvent} event - The event object.
+   * @param {MouseEvent | TouchEvent} event - The event object.
    * @param {ItemMenuPrivate} item - The menu item instance.
    */
-  onActive?(event: MouseEvent, item: ItemMenuPrivate): void
+  onActive?(event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
 
   /**
    * Event triggered when the menu item becomes inactive (e.g., unhovered).
-   * @param {MouseEvent} event - The event object.
+   * @param {MouseEvent | TouchEvent} event - The event object.
    * @param {ItemMenuPrivate} item - The menu item instance.
    */
-  onInactive?(event: MouseEvent, item: ItemMenuPrivate): void
+  onInactive?(event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
 
   /**
    * Event triggered when the menu item is clicked.
-   * @param {PointerEvent} event - The event object.
+   * @param {MouseEvent | TouchEvent} event - The event object.
    * @param {ItemMenuPrivate} item - The menu item instance.
    */
-  onClick?(event: PointerEvent, item: ItemMenuPrivate): void
+  onClick?(event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
 
   /**
    * Custom CSS class for the menu item.
@@ -353,7 +353,12 @@ export declare type MenuProps = {
 
 export declare type MenuSlots = {
   title(args: { title: string }): VNode[]
-  item(args: { data: Omit<ItemMenu, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive"> }): VNode[]
+  item(args: {
+    data: Omit<ItemMenu, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive"> & {
+      isActive: boolean
+      isSelected: boolean
+    }
+  }): VNode[]
   footer(): VNode[]
 }
 
@@ -364,26 +369,26 @@ export declare type MenuEmits = {
   /**
    * Emitted when a menu item becomes active.
    * @param e
-   * @param {PointerEvent} event - The mouse event that triggered the activation.
+   * @param {MouseEvent | TouchEvent} event - The event that triggered the activation.
    * @param {ItemMenuPrivate} item - The activated menu item.
    */
-  (e: "onActive", event: PointerEvent, item: ItemMenuPrivate): void
+  (e: "onActive", event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
 
   /**
    * Emitted when a menu item becomes inactive.
    * @param e
-   * @param {PointerEvent} event - The mouse event that triggered the deactivation.
+   * @param {MouseEvent | TouchEvent} event - The event that triggered the deactivation.
    * @param {ItemMenuPrivate} item - The deactivated menu item.
    */
-  (e: "onInactive", event: PointerEvent, item: ItemMenuPrivate): void
+  (e: "onInactive", event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
 
   /**
    * Emitted when a menu item is clicked.
    * @param e
-   * @param {PointerEvent} event - The pointer event that triggered the click.
+   * @param {MouseEvent | TouchEvent} event - The event that triggered the click.
    * @param {ItemMenuPrivate} item - The clicked menu item.
    */
-  (e: "onClick", event: PointerEvent, item: ItemMenuPrivate): void
+  (e: "onClick", event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
 }
 
 /**

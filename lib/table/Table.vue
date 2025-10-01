@@ -539,7 +539,7 @@
   })
   const defaultBorder = computed(() =>
     typeof styles.value?.border === "object"
-      ? styles.value?.border.table
+      ? (styles.value?.border.default ?? "border-neutral-200 dark:border-neutral-800")
       : (styles.value?.border ?? "border-neutral-200 dark:border-neutral-800")
   )
   const tableBodyStyle = computed<string>(() => {
@@ -637,6 +637,10 @@
     !widthsColumns[column.dataField]
       ? (styles.value?.defaultWidthColumn ?? "max-width: 600px;min-width:100px;width:auto")
       : `width: ${widthsColumns[column.dataField]}px;min-width: ${widthsColumns[column.dataField]}px;max-width: ${widthsColumns[column.dataField]}px;`
+  const styleThFilter = (column: IColumnPrivate) => {
+    const width = widthsColumns[column.dataField] - ((column?.isSort ?? isSort.value) ? 28 : 18)
+    return `width: ${width}px;min-width: ${width}px;max-width: ${width}px;`
+  }
   const classBodyFilter = computed(() =>
     Table.setStyle([
       "group relative flex w-full",
@@ -1539,7 +1543,7 @@
                           :mode="mode"
                           :class="['border-none font-normal', column.class?.colFilterClass as string]"
                           :class-body="['tm-0 my-1', column.class?.colFilterClassBody as string]"
-                          :style="`min-width: ${column.minWidth || 70}px`"
+                          :style="`min-width: ${column.minWidth || 70}px;${styleThFilter(column)}`"
                           label-mode="offsetDynamic"
                           clear
                           @change:model-value="(v) => filtering(column?.dataField, v)"
@@ -1553,7 +1557,7 @@
                           :mode="mode"
                           :class="['border-none font-normal', column.class?.colFilterClass as string]"
                           :class-body="['tm-0 my-1', column.class?.colFilterClassBody as string]"
-                          :style="`min-width: ${column.width || column.minWidth || 50}px`"
+                          :style="`min-width: ${column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
                           clear
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                         <Calendar
@@ -1565,7 +1569,7 @@
                           label-mode="offsetDynamic"
                           :class="['border-none font-normal', column.class?.colFilterClass as string]"
                           :class-body="['tm-0 my-1', column.class?.colFilterClassBody as string]"
-                          :style="`min-width: ${widthsColumns[column.dataField] ? widthsColumns[column.dataField] - 30 : column.width || column.minWidth || 50}px`"
+                          :style="`min-width: ${widthsColumns[column.dataField] ? widthsColumns[column.dataField] - 30 : column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
                           clear
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                       </div>
@@ -1720,8 +1724,8 @@
                             :rowData="data"
                             :value="setCell(column, data[column.dataField], data)"
                             :value-with-marker="setMarker(column, setCell(column, data[column.dataField], data))"
-                            :is-close-editor="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
-                            :edit-valiue="(value) => updateCell(data?._key, column, value)" />
+                            :is-close-editor="(isActive: boolean) => isActive || clearEditableCell(indexRow, indexCol)"
+                            :edit-valiue="(value: any) => updateCell(data?._key, column, value)" />
                         </div>
                       </td>
                     </template>

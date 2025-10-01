@@ -106,15 +106,16 @@ export const specialValues: Record<string, string> = {
   full: "100%",
   screen: "100vw",
   prose: "65ch",
-  svw: "1svw",
-  lvw: "1lvw",
-  dvw: "1dvw",
-  svh: "1svh",
-  lvh: "1lvh",
-  dvh: "1dvh",
+  svw: "100svw",
+  svh: "100svh",
+  lvw: "100lvw",
+  lvh: "100lvh",
+  dvw: "100dvw",
+  dvh: "100dvh",
   min: "min-content",
   max: "max-content",
-  fit: "fit-content"
+  fit: "fit-content",
+  lh: "1lh"
 }
 
 export const attachmentBackground = {

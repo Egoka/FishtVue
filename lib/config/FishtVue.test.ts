@@ -386,15 +386,11 @@ describe("Testing config", () => {
 
     it("should warn and return undefined when accessing getDefaultLocale without plugin", () => {
       const warnSpy = vi.spyOn(console, "warn")
-
-      const wrapper = mount(App)
-      const fishtVueInstance = wrapper?.vm?.$?.appContext.config.globalProperties.$fishtVue
-
-      if (!(fishtVueInstance && fishtVueInstance.getDefaultLocale)) {
-        const defaultLocale = getDefaultLocale()
-        expect(defaultLocale).toBeUndefined()
-        expect(warnSpy).toHaveBeenCalledWith("FishtVue is not installed!")
-      }
+      // @ts-ignore
+      delete window.FishtVue
+      const defaultLocale = getDefaultLocale()
+      expect(defaultLocale).toBeUndefined()
+      expect(warnSpy).toHaveBeenCalledWith("FishtVue is not installed!")
 
       warnSpy.mockRestore()
     })

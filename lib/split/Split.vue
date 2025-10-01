@@ -31,24 +31,28 @@
   const units = computed<SplitProps["units"]>(() => props.units ?? "percentages")
   const panels = computed<Panel[]>(
     () =>
-      props.panels?.map((item) => {
-        if (item?.size && (typeof item?.size as string) === "string" && +item?.size > 0) item.size = +item.size
-        if (item?.minSize && (typeof item?.minSize as string) === "string" && +item?.minSize > 0)
-          item.minSize = +item.minSize
-        if (item?.maxSize && (typeof item?.maxSize as string) === "string" && +item?.maxSize > 0)
-          item.maxSize = +item.maxSize
-        if (item?.minSize && item?.maxSize && item?.minSize > item?.maxSize) item.maxSize = item?.minSize
-        if (item?.minSize || item?.maxSize) {
-          if (item?.size && item?.maxSize && item?.size > item?.maxSize) {
-            item.size = item?.maxSize
-          } else if (item?.size && item?.minSize && item?.size < item?.minSize) {
-            item.size = item?.minSize
-          } else if (item?.maxSize && item?.minSize && !item.size) {
-            item.size = item?.minSize + (item?.maxSize - item?.minSize) / 2
+      props.panels
+        ?.filter((item) => !item?.hidden)
+        ?.map((item) => {
+          if (item?.size && (typeof item?.size as string) === "string" && +item?.size > 0) item.size = +item.size
+          if (item?.minSize && (typeof item?.minSize as string) === "string" && +item?.minSize > 0)
+            item.minSize = +item.minSize
+          if (item?.maxSize && (typeof item?.maxSize as string) === "string" && +item?.maxSize > 0)
+            item.maxSize = +item.maxSize
+          if (item?.minSize && item?.maxSize && item?.minSize > item?.maxSize) item.maxSize = item?.minSize
+          if (item?.minSize || item?.maxSize) {
+            if (item?.size && item?.maxSize && item?.size > item?.maxSize) {
+              item.size = item?.maxSize
+            } else if (item?.size && item?.minSize && item?.size < item?.minSize) {
+              item.size = item?.minSize
+            } else if (item?.maxSize && item?.minSize && !item.size) {
+              if (props.panels?.filter((item) => !item?.hidden)?.length > 1)
+                item.size = item?.minSize + (item?.maxSize - item?.minSize) / 2
+              else item.size = item?.maxSize
+            }
           }
-        }
-        return item
-      }) ?? []
+          return item
+        }) ?? []
   )
   const direction = computed<SplitProps["direction"]>(
     () => (props?.direction as SplitProps["direction"]) ?? "horizontal"
@@ -165,6 +169,9 @@
         sizePanels,
         Object.fromEntries(new Map(array.map((panel) => [panel.name, panel.size ?? defaultSize])))
       )
+    },
+    {
+      deep: true
     }
   )
 
@@ -455,7 +462,6 @@
             width="15"
             height="15"
             viewBox="0 0 15 15"
-            fill="none"
             xmlns="http://www.w3.org/2000/svg"
             :class="classSeparatorHexagonStyle">
             <path
