@@ -1,6 +1,7 @@
 import { specialValues } from "fishtvue/theme/unoStyle/unoStatic"
 
-export function addAlphaToHex(color: string, alpha?: number): string {
+export function addAlphaToHex(color: string | undefined, alpha?: number | undefined): string | undefined {
+  if (!color) return color
   if (color.startsWith("hsl")) return color.replace("<alpha-value>", "100")
   if (typeof alpha !== "number") return color
   if (alpha === 1 || alpha === 100) return color
@@ -19,12 +20,12 @@ export function sizing(value: string): string {
     if (res) {
       const { dividend, divisor } = res.groups as any
       if (dividend && divisor) {
-        return `${parseFloat(((dividend / divisor) * 100).toFixed(4))}%`
+        return `calc(${dividend} / ${divisor} * 100%)`
       }
     }
   }
   if (parseFloat(value) === 0) return "0px"
-  if (/xs|sm|md|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl/.test(value)) return specialValues[value]
+  if (/3xs|2xs|xs|sm|md|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl/.test(value)) return specialValues[value]
   if (parseFloat(value) >= 0) return `${parseFloat(value) * 2 * 0.125}rem`
   return specialValues[value]
 }

@@ -454,6 +454,11 @@ export type ITableStylesBorder = {
    * Border style for the table element.
    * @type {border | "border-0" | undefined}
    */
+  default?: border | "border-0"
+  /**
+   * Border style for the table element.
+   * @type {border | "border-0" | undefined}
+   */
   table?: border | "border-0"
 
   /**

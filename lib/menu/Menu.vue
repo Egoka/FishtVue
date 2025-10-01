@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, useSlots } from "vue"
+  import { computed, onMounted, ref, useSlots, watch } from "vue"
   import { ChevronRightIcon } from "@heroicons/vue/20/solid"
   import {
     GroupMenu,
@@ -72,7 +72,6 @@
   const isSeparator = computed<NonNullable<MenuSeparator["isVisible"]>>(
     () => props.separator?.isVisible ?? options?.separator?.isVisible ?? true
   )
-  const listGroups = computed<Array<GroupMenuPrivate>>(() => setItems(props as MenuItemPrivate)?.groups ?? [])
   const paramsWindowMenu = computed<MenuProps["paramsWindowMenu"]>(() => ({
     delay: 200,
     typePosition: "absolute",
@@ -166,7 +165,7 @@
       activeItemIndex.value === item?._key ? (styles.value?.activeRows as StyleClass) : "",
       selectedItemIndex.value === item?._key ? `${styles.value?.selectedRows} font-semibold` : "",
       item?.disabled ? "pointer-events-none opacity-50" : "",
-      "flex cursor-pointer select-none outline-none"
+      "flex cursor-pointer select-none outline-none touch-manipulation min-h-[44px]"
     ])
   }
   const classItemIcon = computed<StyleClass>(() =>
@@ -196,6 +195,7 @@
   const classItemRightIcon = computed<StyleClass>(() =>
     MenuComponent.setStyle(["h-4 w-4 opacity-60", styles.value?.class?.itemRightIcon ?? ""])
   )
+  const listGroups = ref<Array<GroupMenuPrivate>>([])
   // ---EXPOSE------------------------------
   defineExpose<MenuExpose>({
     // ---STATE-------------------------
@@ -235,22 +235,29 @@
   onMounted(() => {
     MenuComponent.initStyle()
   })
-
+  // ---WATCHERS----------------------------
+  watch(
+    props,
+    (value) => {
+      listGroups.value = setItems(value as MenuItemPrivate)?.groups ?? []
+    },
+    { deep: true, immediate: true }
+  )
   // ---METHODS-----------------------------
-  function enterItem(event: PointerEvent, item: ItemMenuPrivate) {
+  function enterItem(event: MouseEvent | TouchEvent, item: ItemMenuPrivate) {
     setActiveItem(item?._key)
     emit("onActive", event, item)
     if (item?.onActive) item.onActive(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
   }
 
-  function leaveItem(event: PointerEvent, item: ItemMenuPrivate) {
+  function leaveItem(event: MouseEvent | TouchEvent, item: ItemMenuPrivate) {
     setActiveItem(undefined)
     emit("onInactive", event, item)
     if (item?.onInactive)
       item.onInactive(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
   }
 
-  function clickItem(event: PointerEvent, item: ItemMenuPrivate) {
+  function clickItem(event: MouseEvent | TouchEvent, item: ItemMenuPrivate) {
     if (selected.value) setSelectedItem(item?._key)
     emit("onClick", event, item)
     if (item?.onClick) item.onClick(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
@@ -270,7 +277,7 @@
       groups:
         menu?.groups && isArray(menu.groups)
           ? menu.groups?.map(
-              (group): GroupMenuPrivate => ({
+              (group, groupIndex): GroupMenuPrivate => ({
                 ...group,
                 separator: {
                   icon: group.separator?.icon ?? iconSeparator.value,
@@ -281,10 +288,10 @@
                 },
                 items:
                   group?.items && isArray(group.items)
-                    ? group.items?.map((item): ItemMenuPrivate => {
-                        return {
+                    ? group.items?.map(
+                        (item, itemGroupIndex): ItemMenuPrivate => ({
                           ...item,
-                          _key: generateUUID(),
+                          _key: listGroups.value?.[groupIndex]?.items?.[itemGroupIndex]?._key ?? generateUUID(),
                           menu: item?.menu
                             ? setItems(
                                 {
@@ -299,8 +306,8 @@
                                 depth > 0 ? depth + 1 : 1
                               )
                             : null
-                        }
-                      })
+                        })
+                      )
                     : []
               })
             )
@@ -355,8 +362,16 @@
           @pointerenter="(event) => enterItem(event, item)"
           @pointerleave="(event) => leaveItem(event, item)"
           @click="(event) => clickItem(event, item)"
+          @touchstart="(event) => enterItem(event, item)"
+          @touchend="(event) => leaveItem(event, item)"
           :class="classMenuItem(item)">
-          <slot name="item" :data="fieldsOmit(item, notPublicParamsMenu)">
+          <slot
+            name="item"
+            :data="{
+              ...fieldsOmit(item, notPublicParamsMenu),
+              isActive: activeItemIndex === item?._key,
+              isSelected: selectedItemIndex === item?._key
+            }">
             <Icons
               v-if="item?.icon"
               :type="item.icon"

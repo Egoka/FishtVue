@@ -16,6 +16,7 @@ import { UpdateOptions, ValueTarget } from "v-calendar/dist/types/src/use/datePi
 import { MoveOptions, MoveTarget } from "v-calendar/dist/types/src/use/calendar"
 import { DateParts, DatePartsRules } from "v-calendar/dist/types/src/utils/date/helpers"
 import { PopoverEventHandlers, PopoverOptions } from "v-calendar/dist/types/src/utils/popovers"
+import { DatePickerModel } from "v-calendar/src/use/datePicker"
 
 /**
  * ## Calendar
@@ -279,7 +280,7 @@ export interface CalendarProps extends Omit<InputLayoutProps, "value" | "isValue
    * The current value of the calendar, can be a single date or a date range.
    * @type {DateValueCalendar | Partial<IRangeValue>}
    */
-  modelValue?: DateValueCalendar | Partial<IRangeValue>
+  modelValue?: DatePickerModel | undefined //DateValueCalendar | Partial<IRangeValue>
 }
 
 export declare type CalendarSlots = {

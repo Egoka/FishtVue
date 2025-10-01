@@ -79,7 +79,7 @@ export default <Record<string, StyleType>>{
   },
   w: {
     styleName: "width",
-    reg: /(?<![a-zA-Z])(?<style>w)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full|screen|svw|lvw|dvw|min|max|fit)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<![a-zA-Z])(?<style>w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|xs|sm|md|lg|xl|auto|px|full|screen|dvw|dvh|lvw|lvh|svw|svh|min|max|fit)\b|(\[(?<abstract>.*?)]))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return `width: ${groups?.abstract ?? sizing(groups.special)};`
@@ -94,14 +94,14 @@ export default <Record<string, StyleType>>{
     }
   },
   "max-w": {
-    reg: /(?<style>max-w)-((?<special>\d+(\.\d+)?(\/\d+)?(xl)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>max-w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)|(\[(?<abstract>.*?)]))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return `max-width: ${groups?.abstract ?? sizing(groups.special)};`
     }
   },
   h: {
-    reg: /(?<![a-zA-Z])(?<style>h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full|screen|svw|lvw|dvw|min|max|fit)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<![a-zA-Z])(?<style>h)-((?<special>\d+(\.\d+)?(\/\d+)?|auto|px|full|screen|dvw|dvh|lvw|lvh|svw|svh|min|max|fit)|(\[(?<abstract>.*?)]))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return `height: ${groups?.abstract ?? sizing(groups.special)};`

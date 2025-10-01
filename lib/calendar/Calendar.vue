@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, inject, nextTick, onMounted, ref, useSlots, watch } from "vue"
   import type {
     CalendarEmits,
     CalendarExpose,
@@ -18,9 +18,13 @@
   import Component from "fishtvue/component"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
   import { isClient } from "fishtvue/utils/domHandler"
+  import { FishtVueSymbol } from "fishtvue/config/index"
+  import type { FishtVue } from "fishtvue/config"
+  import { DatePickerRangeObject } from "v-calendar/src/use/datePicker"
   // ---BASE-COMPONENT----------------------
   const Calendar = new Component<"Calendar">()
   const options = Calendar.getOptions()
+  const FishtV: FishtVue | undefined = inject(FishtVueSymbol)
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<CalendarProps>(), {
     autoFocus: undefined,
@@ -68,7 +72,7 @@
       } else {
         value.value = !(props?.paramsDatePicker as CalendarProps["paramsDatePicker"])?.isRange
           ? (modelValue ?? "")
-          : { start: null, end: null }
+          : ({ start: null, end: null } as unknown as DatePickerRangeObject)
       }
     },
     { immediate: true }
@@ -91,6 +95,11 @@
   const isNotCloseOnDateChange = computed<NonNullable<CalendarProps["isNotCloseOnDateChange"]>>(
     () => props?.isNotCloseOnDateChange ?? options?.isNotCloseOnDateChange ?? false
   )
+  const isDark = ref<boolean | undefined>(undefined)
+
+  onMounted(() => {
+    initDarkModeObserver()
+  })
   const mode = computed<NonNullable<CalendarProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const placeholder = computed<IParamsDatePicker["placeholder"]>(() =>
     String(props.paramsDatePicker?.placeholder ?? "")
@@ -98,7 +107,7 @@
   const isLoading = computed<NonNullable<CalendarProps["loading"]>>(() => props.loading ?? false)
   const isDisabled = computed<NonNullable<CalendarProps["disabled"]>>(() => props.disabled ?? false)
   const isInvalid = computed<NonNullable<CalendarProps["isInvalid"]>>(() =>
-    !isDisabled.value ? props.isInvalid : false
+    !isDisabled.value ? (props.isInvalid ?? false) : false
   )
   const messageInvalid = computed<NonNullable<CalendarProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
   const separator = computed<NonNullable<IParamsDatePicker["separator"]>>(
@@ -303,6 +312,21 @@
     emit("update:modelValue", null)
     emit("change:modelValue", null)
   }
+
+  function initDarkModeObserver() {
+    const selector = FishtV?.config.optionsTheme?.darkModeSelector ?? ""
+    if (!selector || !isClient()) return
+
+    const checkDarkMode = () => (isDark.value = !!document.querySelector(selector))
+    checkDarkMode()
+    // eslint-disable-next-line no-undef
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+      subtree: true
+    })
+  }
 </script>
 
 <template>
@@ -354,6 +378,7 @@
             v-model.range.string="value"
             v-bind="fieldsOmit(datePickerOptions, ['isRange'])"
             ref="calendarPicker"
+            :is-dark="isDark"
             class="vc-primary"
             @update:modelValue="changeDate">
             <template #footer>
@@ -364,6 +389,7 @@
             v-else
             v-model.string="value"
             v-bind="fieldsOmit(datePickerOptions, ['isRange'])"
+            :is-dark="isDark"
             ref="calendarPicker"
             class="vc-primary"
             @update:modelValue="changeDate">
