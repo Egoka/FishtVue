@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.2.2](https://github.com/Egoka/FishtVue/compare/v0.2.1...v0.2.2) (2025-10-01)
+
+
+### Bug Fixes
+
+* **components:** enhance components with improved typing, touch support, and styling ([ed8e642](https://github.com/Egoka/FishtVue/commit/ed8e642e60c019b91b4ee6665e105b636c85ac00))
+
 ## [0.2.1](https://github.com/Egoka/FishtVue/compare/v0.2.0...v0.2.1) (2025-08-05)
 
 
