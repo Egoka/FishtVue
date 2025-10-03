@@ -1253,7 +1253,19 @@ describe("unoStyle", () => {
         { classValue: "h-dvh", expected: ".h-dvh {\n  height: 100dvh;\n}" },
         { classValue: "h-min", expected: ".h-min {\n  height: min-content;\n}" },
         { classValue: "h-max", expected: ".h-max {\n  height: max-content;\n}" },
-        { classValue: "h-fit", expected: ".h-fit {\n  height: fit-content;\n}" }
+        { classValue: "h-fit", expected: ".h-fit {\n  height: fit-content;\n}" },
+        {
+          classValue: "h-(--custom-property)",
+          expected: ".h-\\(--custom-property\\) {\n  height: var(--custom-property);\n}"
+        },
+        {
+          classValue: "h-[calc(100vh-50px)]",
+          expected: ".h-\\[calc\\(100vh-50px\\)\\] {\n  height: calc(100vh - 50px);\n}"
+        },
+        {
+          classValue: "h-9/99",
+          expected: ".h-9\\/99 {\n  height: calc(9 / 99 * 100%);\n}"
+        }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -1402,7 +1414,11 @@ describe("unoStyle", () => {
           classValue: "font-mono",
           expected: `.font-mono {\n  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;\n}`
         },
-        { classValue: "font-['Open_Sans']", expected: `.font-\\[\\'Open_Sans\\'\\] {\n  font-family: 'Open Sans';\n}` }
+        { classValue: "font-['Open_Sans']", expected: `.font-\\[\\'Open_Sans\\'\\] {\n  font-family: 'Open Sans';\n}` },
+        {
+          classValue: "font-(family-name:--custom-property)",
+          expected: `.font-\\(family-name\\:--custom-property\\) {\n  font-family: var(--custom-property);\n}`
+        }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -2893,7 +2909,11 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         { classValue: "outline-offset-0", expected: ".outline-offset-0 {\n  outline-offset: 0px;\n}" },
         { classValue: "outline-offset-8", expected: ".outline-offset-8 {\n  outline-offset: 8px;\n}" },
-        { classValue: "outline-offset-[3px]", expected: ".outline-offset-\\[3px\\] {\n  outline-offset: 3px;\n}" }
+        { classValue: "outline-offset-[3px]", expected: ".outline-offset-\\[3px\\] {\n  outline-offset: 3px;\n}" },
+        {
+          classValue: "outline-offset-(--custom-property)",
+          expected: ".outline-offset-\\(--custom-property\\) {\n  outline-offset: var(--custom-property);\n}"
+        }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })

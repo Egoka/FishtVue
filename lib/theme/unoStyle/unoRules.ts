@@ -1,4 +1,4 @@
-import { addAlphaToHex, sizing } from "./helpers"
+import { addAlphaToHex, custom, sizing } from "./helpers"
 import type { GroupsRegExp, StyleType } from "./UnoTypes"
 // prettier-ignore
 import {
@@ -56,84 +56,90 @@ import { colors } from "fishtvue/theme/primitive"
 export default <Record<string, StyleType>>{
   m: {
     styleName: "margin",
-    reg: /(?<![a-zA-Z])(?<negative>-)?(?<style>m)(?<axis>[xyserltb])?-((?<special>\d+(\.\d+)?|px|auto)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<![a-zA-Z])(?<negative>-)?(?<style>m)(?<axis>[xyserltb])?-((?<special>\d+(\.\d+)?|px|auto)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups && (groups?.special || groups?.abstract)) {
+      if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
         return positionPaddingOrMargin[groups.axis](
           this.styleName ?? "",
-          `${groups?.negative ?? ""}${groups?.abstract ?? sizing(groups?.special)}`
+          `${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""}`
         )
       }
     }
   },
   p: {
     styleName: "padding",
-    reg: /(?<![a-zA-Z])(?<style>p)(?<axis>[xyserltb])?-((?<special>\d+(\.\d+)?|px)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<![a-zA-Z])(?<style>p)(?<axis>[xyserltb])?-((?<special>\d+(\.\d+)?|px)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups && (groups?.special || groups?.abstract)) {
-        return positionPaddingOrMargin[groups.axis](this.styleName ?? "", groups?.abstract ?? sizing(groups?.special))
+      if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
+        return positionPaddingOrMargin[groups.axis](
+          this.styleName ?? "",
+          custom(groups) ?? sizing(groups?.special) ?? ""
+        )
       }
     }
   },
   w: {
     styleName: "width",
-    reg: /(?<![a-zA-Z])(?<style>w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|xs|sm|md|lg|xl|auto|px|full|screen|dvw|dvh|lvw|lvh|svw|svh|min|max|fit)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<![a-zA-Z])(?<style>w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|xs|sm|md|lg|xl|auto|px|full|screen|dvw|dvh|lvw|lvh|svw|svh|min|max|fit)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `width: ${groups?.abstract ?? sizing(groups.special)};`
+      return `width: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   "min-w": {
     styleName: "min-width",
-    reg: /(?<style>min-w)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>min-w)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `min-width: ${groups?.abstract ?? sizing(groups.special)};`
+      return `min-width: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   "max-w": {
-    reg: /(?<style>max-w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>max-w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `max-width: ${groups?.abstract ?? sizing(groups.special)};`
+      return `max-width: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   h: {
-    reg: /(?<![a-zA-Z])(?<style>h)-((?<special>\d+(\.\d+)?(\/\d+)?|auto|px|full|screen|dvw|dvh|lvw|lvh|svw|svh|min|max|fit)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<![a-zA-Z])(?<style>h)-((?<special>\d+(\.\d+)?(\/\d+)?|auto|px|full|screen|dvw|dvh|lvw|lvh|svw|svh|min|max|fit)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `height: ${groups?.abstract ?? sizing(groups.special)};`
+      return `height: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   "min-h": {
-    reg: /(?<style>min-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>min-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `min-height: ${groups?.abstract ?? sizing(groups.special)};`
+      return `min-height: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   "max-h": {
-    reg: /(?<style>max-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>max-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `max-height: ${groups?.abstract ?? sizing(groups.special)};`
+      return `max-height: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   size: {
-    reg: /(?<axis>size)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full|min|max|fit)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<axis>size)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full|min|max|fit)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups && (groups?.special || groups?.abstract)) {
-        const value = groups?.abstract ?? sizing(groups?.special)
+      if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
+        const value = custom(groups) ?? sizing(groups?.special)
+        if (!value) return
         return `width: ${value};\n  height: ${value};`
       }
     }
   },
   text: {
     reg: {
-      abstract: new RegExp(/(?<style>text)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/),
+      abstract: new RegExp(
+        /(?<style>text)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
+      ),
       size: new RegExp(
         `(?<style>text)-(?<special>xs|sm|base|lg|xl|\\d+xl)\\b\\/?((?<leading>\\d+|${Object.keys(lineHeight).join("|")})?\\b|(\\[(?<abstractLeading>.*?)]))?`
       ),
@@ -150,31 +156,38 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "size" | "align" | "wrap" | "color" | "specialColor", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups?.abstract.startsWith("#"))
-          return `color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
-        else return `font-size: ${groups?.abstract};`
+        if (groups?.abstract?.startsWith("#"))
+          return `color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
+        else return `font-size: ${custom(groups) ?? ""};`
       } else if (reg.size.test(classStyle)) {
         const groups = classStyle.match(reg.size)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return textSize[groups.special](
           groups?.abstractLeading ?? (isNaN(+groups?.leading) ? lineHeight[groups?.leading] : sizing(groups?.leading))
         )
       } else if (reg.align.test(classStyle)) {
         const groups = classStyle.match(reg.align)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `text-align: ${groups.special};`
       } else if (reg.wrap.test(classStyle)) {
         const groups = classStyle.match(reg.wrap)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `text-wrap: ${groups.special};`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       }
     }
@@ -182,7 +195,7 @@ export default <Record<string, StyleType>>{
   decoration: {
     reg: {
       abstract: new RegExp(
-        /(?<style>decoration)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/
+        /(?<style>decoration)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
       ),
       color: new RegExp(
         `(?<style>decoration)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
@@ -195,28 +208,34 @@ export default <Record<string, StyleType>>{
     },
     getValue(classStyle) {
       const reg = this.reg as Record<"abstract" | "color" | "specialColor" | "style" | "thickness", RegExp>
-      if (reg.abstract.test(classStyle)) {
+      if (reg?.abstract?.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `text-decoration-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
-        else return `text-decoration-thickness: ${groups?.abstract};`
+        if (groups?.abstract?.startsWith("#"))
+          return `text-decoration-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
+        else return `text-decoration-thickness: ${custom(groups) ?? ""};`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `text-decoration-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `text-decoration-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.style.test(classStyle)) {
         const groups = classStyle.match(reg.style)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `text-decoration-style: ${groups.special};`
       } else if (reg.thickness.test(classStyle)) {
         const groups = classStyle.match(reg.thickness)?.groups as GroupsRegExp
+        if (!groups?.special) return
         if (!isNaN(+groups.special) && !isNaN(parseFloat(groups.special)))
           return `text-decoration-thickness: ${groups.special}px;`
         return `text-decoration-thickness: ${groups.special};`
@@ -225,52 +244,57 @@ export default <Record<string, StyleType>>{
   },
   "underline-offset": {
     styleName: "text-underline-offset",
-    reg: /(?<style>underline-offset)-((?<special>auto|0|1|2|4|8)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>underline-offset)-((?<special>auto|\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `text-underline-offset: ${groups?.abstract ?? (isNaN(+groups.special) ? groups.special : `${groups.special}px`)};`
+      return `text-underline-offset: ${custom(groups) ?? (isNaN(+groups.special) ? groups.special : `${groups.special}px`)};`
     }
   },
   font: {
     reg: {
-      abstract: new RegExp(/(?<style>font)-(\[(?<abstract>.*?)])/),
-      family: new RegExp(`(?<style>font)-((?<special>${Object.keys(fontFamily).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
-      weight: new RegExp(`(?<style>font)-((?<special>${Object.keys(fontWeights).join("|")})\\b|(\\[(?<abstract>.*?)]))`)
+      abstract: new RegExp(/(?<style>font)-(\[(?<abstract>.*?)])|(\(family-name:(?<custom>.*?)\))/),
+      family: new RegExp(
+        `(?<style>font)-((?<special>${Object.keys(fontFamily).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+      ),
+      weight: new RegExp(
+        `(?<style>font)-((?<special>${Object.keys(fontWeights).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+      )
     },
     getValue(classStyle) {
       const reg = this.reg as Record<"abstract" | "family" | "weight", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (!isNaN(+groups.abstract)) return `font-weight: ${groups?.abstract};`
-        return `font-family: ${groups?.abstract.replace(/_/g, " ")};`
+        if (!isNaN(+groups.abstract)) return `font-weight: ${custom(groups) ?? ""};`
+        return `font-family: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
       } else if (reg.family.test(classStyle)) {
         const groups = classStyle.match(reg.family)?.groups as GroupsRegExp
-        return `font-family: ${groups?.abstract ? groups.abstract.replace(/_/g, " ") : fontFamily[groups.special]};`
+        return `font-family: ${groups?.abstract || groups?.custom ? (custom(groups)?.replace(/_/g, " ") ?? "") : fontFamily[groups?.special]};`
       } else if (reg.weight.test(classStyle)) {
         const groups = classStyle.match(reg.weight)?.groups as GroupsRegExp
-        return `font-weight: ${fontWeights[groups.special]};`
+        return `font-weight: ${custom(groups) ?? fontWeights[groups?.special] ?? ""};`
       }
     }
   },
   indent: {
     styleName: "text-indent",
-    reg: /(?<negative>-)?(?<style>indent)-((?<special>\d+(\.\d+)?(\/\d+)?|px)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<negative>-)?(?<style>indent)-((?<special>\d+(\.\d+)?(\/\d+)?|px)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `text-indent: ${groups?.negative ?? ""}${groups?.abstract ?? sizing(groups?.special)};`
+      return `text-indent: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   align: {
-    reg: /(?<style>align)-((?<special>baseline|top|middle|bottom|text-top|text-bottom|sub|super)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>align)-((?<special>baseline|top|middle|bottom|text-top|text-bottom|sub|super)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `vertical-align: ${groups?.abstract ?? groups.special};`
+      return `vertical-align: ${custom(groups) ?? groups?.special ?? ""};`
     }
   },
   whitespace: {
     reg: /(?<style>whitespace)-(?<special>normal|nowrap|pre-line|pre-wrap|pre|break-spaces)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `white-space: ${groups.special};`
     }
   },
@@ -278,6 +302,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>break-after)-(?<special>auto|all|avoid-page|avoid|page|left|right|column)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `break-after: ${groups.special};\n  -moz-column-break-after: ${groups.special};`
     }
   },
@@ -285,6 +310,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>break-before)-(?<special>auto|all|avoid-page|avoid|page|left|right|column)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `break-before: ${groups.special};\n  -moz-column-break-before: ${groups.special};`
     }
   },
@@ -292,6 +318,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>break-inside)-(?<special>auto|avoid-page|avoid-column|avoid)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `break-inside: ${groups.special};\n  -moz-column-break-inside: ${groups.special};`
     }
   },
@@ -299,6 +326,7 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>break)-(?<special>${Object.keys(wordBreak).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return wordBreak[groups.special]
     }
   },
@@ -306,43 +334,44 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>hyphens)-(?<special>none|manual|auto)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `hyphens: ${groups.special};`
     }
   },
   tracking: {
     reg: new RegExp(
-      `(?<style>tracking)-((?<special>${Object.keys(letterSpacing).join("|")})\\b|(\\[(?<abstract>.*?)]))`
+      `(?<style>tracking)-((?<special>${Object.keys(letterSpacing).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `letter-spacing: ${groups?.abstract ?? letterSpacing[groups.special]};`
+      return `letter-spacing: ${custom(groups) ?? letterSpacing[groups?.special] ?? ""};`
     }
   },
   "line-clamp": {
-    reg: /(?<style>line-clamp)-((?<special>\d+|none)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>line-clamp)-((?<special>\d+|none)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       if (classStyle === "line-clamp-none")
         return "overflow: visible;\n  display: block;\n  -webkit-box-orient: horizontal;\n  -webkit-line-clamp: none;"
       const styleName =
         "-webkit-box-orient: vertical;\n  overflow: hidden;\n  display: -webkit-box;\n  -webkit-line-clamp"
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `${styleName}: ${groups?.abstract ?? groups?.special};`
+      return `${styleName}: ${custom(groups) ?? groups?.special ?? ""};`
     }
   },
   leading: {
     reg: new RegExp(
-      `(?<style>leading)-((?<special>\\d+|${Object.keys(lineHeight).join("|")})\\b|(\\[(?<abstract>.*?)]))`
+      `(?<style>leading)-((?<special>\\d+|${Object.keys(lineHeight).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `line-height: ${groups?.abstract ?? (isNaN(+groups?.special) ? lineHeight[groups?.special] : sizing(groups?.special))};`
+      return `line-height: ${custom(groups) ?? (isNaN(+groups?.special) ? (lineHeight[groups?.special] ?? "") : sizing(groups?.special)) ?? ""};`
     }
   },
   "list-image": {
-    reg: /(?<style>list-image)-((?<special>none)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>list-image)-((?<special>none)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `list-style-image: ${groups?.abstract ?? groups?.special};`
+      return `list-style-image: ${custom(groups) ?? groups?.special ?? ""};`
     }
   },
   list: {
@@ -354,9 +383,11 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"type" | "position", RegExp>
       if (reg.type.test(classStyle)) {
         const groups = classStyle.match(reg.type)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `list-style-type: ${groups?.special};`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `list-style-position: ${groups?.special};`
       }
     }
@@ -365,6 +396,7 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>bg-clip)-(?<special>${Object.keys(bgClip).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `background-clip: ${bgClip[groups?.special]};`
     }
   },
@@ -372,6 +404,7 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>bg-origin)-(?<special>${Object.keys(bgOrigin).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `background-origin: ${bgOrigin[groups?.special]};`
     }
   },
@@ -379,6 +412,7 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>bg-repeat)-(?<special>${Object.keys(bgRepeat).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `background-repeat: ${bgRepeat[groups?.special]};`
     }
   },
@@ -401,12 +435,15 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>bg-blend)-(?<special>${Object.keys(blend).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `background-blend-mode: ${groups.special};`
     }
   },
   bg: {
     reg: {
-      abstract: new RegExp(/(?<style>bg)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/),
+      abstract: new RegExp(
+        /(?<style>bg)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
+      ),
       color: new RegExp(
         `(?<style>bg)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
       ),
@@ -425,42 +462,52 @@ export default <Record<string, StyleType>>{
       >
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `background-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
+        if (groups?.abstract?.startsWith("#"))
+          return `background-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
         else if (groups.abstract.startsWith("length:"))
-          return `background-size: ${groups?.abstract.replace("length:", "").replace(/_/g, " ")};`
-        else if (groups.abstract.startsWith("url")) return `background-image: ${groups?.abstract};`
-        else return `background-position: ${groups?.abstract.replace(/_/g, " ")};`
+          return `background-size: ${custom(groups)?.replace("length:", "")?.replace(/_/g, " ") ?? ""};`
+        else if (groups.abstract.startsWith("url")) return `background-image: ${custom(groups) ?? ""};`
+        else return `background-position: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `background-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `background-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `background-position: ${groups.special.replace("-", " ")};`
       } else if (reg.attachment.test(classStyle)) {
         const groups = classStyle.match(reg.attachment)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `background-attachment: ${groups.special};`
       } else if (reg.sizes.test(classStyle)) {
         const groups = classStyle.match(reg.sizes)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `background-size: ${groups.special};`
       } else if (reg.repeat.test(classStyle)) {
         const groups = classStyle.match(reg.repeat)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `background-repeat: ${groups.special};`
       }
     }
   },
   from: {
     reg: {
-      abstract: new RegExp(/(?<style>from)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/),
+      abstract: new RegExp(
+        /(?<style>from)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
+      ),
       color: new RegExp(
         `(?<style>from)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
       ),
@@ -473,29 +520,36 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "color" | "specialColor" | "position", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `--fv-gradient-from: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${groups?.abstract}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
+        if (groups?.abstract?.startsWith("#"))
+          return `--fv-gradient-from: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          } var(--fv-gradient-from-position);\n  --fv-gradient-to: ${custom(groups) ?? "000000"}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-gradient-from: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone]}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
+        )} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone] ?? "000000"}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
-        return `--fv-gradient-from: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
+        if (!groups?.special) return
+        return `--fv-gradient-from: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined) ?? ""} var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-gradient-from-position: ${groups.special.replace("-", " ")};`
       }
     }
   },
   via: {
     reg: {
-      abstract: new RegExp(/(?<style>via)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/),
+      abstract: new RegExp(
+        /(?<style>via)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
+      ),
       color: new RegExp(
         `(?<style>via)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
       ),
@@ -508,29 +562,37 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "color" | "specialColor" | "position", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `--fv-gradient-to: ${groups?.abstract}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )} var(--fv-gradient-via-position), var(--fv-gradient-to);`
+        if (groups?.abstract?.startsWith("#"))
+          return `--fv-gradient-to: ${custom(groups)}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          } var(--fv-gradient-via-position), var(--fv-gradient-to);`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone]}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )} var(--fv-gradient-via-position), var(--fv-gradient-to);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-gradient-to: rgb(255 255 255 / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--fv-gradient-via-position), var(--fv-gradient-to);`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-gradient-from-position: ${groups.special.replace("-", " ")};`
       }
     }
   },
+  /////////////////////////////////
   to: {
     reg: {
-      abstract: new RegExp(/(?<style>to)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/),
+      abstract: new RegExp(
+        /(?<style>to)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
+      ),
       color: new RegExp(
         `(?<style>to)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
       ),
@@ -543,28 +605,33 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "color" | "specialColor" | "position", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `--fv-gradient-to: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )} var(--fv-gradient-to-position);`
+        if (groups?.abstract?.startsWith("#"))
+          return `--fv-gradient-to: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          } var(--fv-gradient-to-position);`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-gradient-to: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )} var(--fv-gradient-to-position);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-gradient-to: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)} var(--fv-gradient-to-position);`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-gradient-to-position: ${groups.special.replace("-", " ")};`
       }
     }
   },
   "border-spacing": {
-    reg: /(?<style>border-spacing)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>border-spacing)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return borderSpacing[groups.axis](groups.abstract ?? sizing(groups.special))
@@ -572,17 +639,17 @@ export default <Record<string, StyleType>>{
   },
   rounded: {
     reg: new RegExp(
-      `(?<style>rounded)-?(?<axis>${Object.keys(borderLogical).join("|")})?\\b-?((?<special>${Object.keys(borderSize).join("|")})\\b|(\\[(?<abstract>.*?)]))?`
+      `(?<style>rounded)-?(?<axis>${Object.keys(borderLogical).join("|")})?\\b-?((?<special>${Object.keys(borderSize).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))?`
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return borderLogical[groups.axis](groups?.abstract ?? borderSize[groups?.special])
+      return borderLogical[groups.axis](custom(groups) ?? borderSize[groups?.special] ?? "")
     }
   },
   border: {
     reg: {
       sides: new RegExp(
-        `(?<style>border)-?(?<axis>${Object.keys(borderSides).join("|")})?\\b-?((?<special>\\d+)|(\\[(?<abstract>.*?)]\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?))?`
+        `(?<style>border)-?(?<axis>${Object.keys(borderSides).join("|")})?\\b-?((?<special>\\d+)|(\\[(?<abstract>.*?)]\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?)|(\\((?<custom>.*?)\\)))?`
       ),
       style: /(?<style>border)-(?<special>solid|dashed|dotted|double|hidden|none)\b/,
       color: new RegExp(
@@ -597,34 +664,40 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"sides" | "style" | "color" | "specialColor" | "table", RegExp>
       if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `border-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `border-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.style.test(classStyle)) {
         const groups = classStyle.match(reg.style)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `border-style: ${groups.special};`
       } else if (reg.table.test(classStyle)) {
         const groups = classStyle.match(reg.table)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `border-collapse: ${groups.special};`
       } else if (reg.sides.test(classStyle)) {
         const groups = classStyle.match(reg.sides)?.groups as GroupsRegExp
-        if (groups.abstract?.startsWith("#"))
-          return `border-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
-        return borderSides[groups.axis](groups?.abstract ?? (groups?.special ?? 1) + "px")
+        if (groups?.abstract?.startsWith("#"))
+          return `border-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
+        return borderSides[groups.axis](custom(groups) ?? (groups?.special ?? 1) + "px")
       }
     }
   },
   divide: {
     reg: {
       width: new RegExp(
-        `(?<style>divide)-(?<axis>${Object.keys(divideWidth).join("|")})\\b-?((?<special>\\d+|reverse)\\b|(\\[(?<abstract>.*?)]))?`
+        `(?<style>divide)-(?<axis>${Object.keys(divideWidth).join("|")})\\b-?((?<special>\\d+|reverse)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))?`
       ),
       style: new RegExp(/(?<style>divide)-(?<special>solid|dashed|dotted|double|none)\b/),
       color: new RegExp(
@@ -633,34 +706,41 @@ export default <Record<string, StyleType>>{
       specialColor: new RegExp(
         `(?<style>divide)-(?<special>${Object.keys(specialColor).join("|")})\\b\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
       ),
-      abstract: new RegExp(/(?<style>divide)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/)
+      abstract: new RegExp(
+        /(?<style>divide)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
+      )
     },
     getValue(classStyle) {
       const reg = this.reg as Record<"width" | "style" | "color" | "specialColor" | "abstract", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `border-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
-        return `border-color: ${groups?.abstract};`
+        if (groups?.abstract?.startsWith("#"))
+          return `border-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
+        return `border-color: ${custom(groups) ?? ""};`
       } else if (reg.style.test(classStyle)) {
         const groups = classStyle.match(reg.style)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `border-style: ${groups.special};`
       } else if (reg.width.test(classStyle)) {
         const groups = classStyle.match(reg.width)?.groups as GroupsRegExp
         return groups?.special === "reverse"
           ? `--fv-divide-${groups.axis}-reverse: 1;`
-          : divideWidth[groups.axis](groups?.abstract ?? (groups?.special ?? 1) + "px")
+          : divideWidth[groups.axis](custom(groups) ?? (groups?.special ?? 1) + "px")
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `border-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `border-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       }
     }
@@ -668,10 +748,10 @@ export default <Record<string, StyleType>>{
   outline: {
     reg: {
       abstract: new RegExp(
-        /(?<style>outline)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/
+        /(?<style>outline)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)])|(\((?<custom>.*?)\)))?/
       ),
       width: /(?<style>outline)-(?<special>\d+)/,
-      offset: /(?<style>outline-offset)-((?<special>\d+)|(\[(?<abstract>.*?)]))/,
+      offset: /(?<style>outline-offset)-((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
       style: /(?<style>outline)-(?<special>dashed|dotted|double)\b/,
       color: new RegExp(
         `(?<style>outline)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
@@ -684,39 +764,47 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "width" | "offset" | "style" | "color" | "specialColor", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `outline-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
-        return `outline-width: ${groups?.abstract};`
+        if (groups?.abstract?.startsWith("#"))
+          return `outline-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
+        return `outline-width: ${custom(groups) ?? ""};`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `outline-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `outline-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.style.test(classStyle)) {
         const groups = classStyle.match(reg.style)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `outline-style: ${groups.special};`
       } else if (reg.width.test(classStyle)) {
         const groups = classStyle.match(reg.width)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `outline-width: ${groups.special}px;`
       } else if (reg.offset.test(classStyle)) {
         const groups = classStyle.match(reg.offset)?.groups as GroupsRegExp
-        return `outline-offset: ${groups?.abstract ?? `${groups.special}px`};`
+        return `outline-offset: ${custom(groups) ?? (groups.special ? `${groups.special}px` : "")};`
       }
     }
   },
   ring: {
     reg: {
-      abstract: new RegExp(/(?<style>ring)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/),
+      abstract: new RegExp(
+        /(?<style>ring)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)])|(\((?<custom>.*?)\)))?/
+      ),
       width: /(?<style>ring)-(?<special>\d+)/,
       offset:
-        /(?<style>ring-offset)-((?<special>\d+)|(\[(?<abstract>.*?)]))\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/,
+        /(?<style>ring-offset)-((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/,
       color: new RegExp(
         `(?<style>ring)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
       ),
@@ -737,43 +825,53 @@ export default <Record<string, StyleType>>{
       >
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `--fv-ring-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
-        return `--fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(${groups?.abstract} + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);`
+        if (groups?.abstract?.startsWith("#"))
+          return `--fv-ring-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
+        return `--fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(${custom(groups) ?? ""} + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);`
       } else if (reg.colorOffset.test(classStyle)) {
         const groups = classStyle.match(reg.colorOffset)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-ring-offset-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
       } else if (reg.specialColorOffset.test(classStyle)) {
         const groups = classStyle.match(reg.specialColorOffset)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-ring-offset-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-ring-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-ring-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.width.test(classStyle)) {
         const groups = classStyle.match(reg.width)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-ring-offset-shadow: var(--fv-ring-inset) 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color);\n  --fv-ring-shadow: var(--fv-ring-inset) 0 0 0 calc(${groups.special}px + var(--fv-ring-offset-width)) var(--fv-ring-color);\n  box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);`
       } else if (reg.offset.test(classStyle)) {
         const groups = classStyle.match(reg.offset)?.groups as GroupsRegExp
-        if (groups.abstract) {
-          if (groups.abstract.startsWith("#"))
-            return `--fv-ring-offset-color: ${addAlphaToHex(
-              groups?.abstract,
-              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-            )};\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
-          return `--fv-ring-offset-width: ${groups?.abstract};`
+        if (groups?.abstract || groups?.custom) {
+          if (groups?.abstract?.startsWith("#"))
+            return `--fv-ring-offset-color: ${
+              addAlphaToHex(
+                custom(groups),
+                groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+              ) ?? ""
+            };\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
+          return `--fv-ring-offset-width: ${custom(groups) ?? ""};`
         }
+        if (!groups?.special) return
         return `--fv-ring-offset-width: ${groups.special}px;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
       }
     }
@@ -781,7 +879,7 @@ export default <Record<string, StyleType>>{
   shadow: {
     reg: {
       abstract: new RegExp(
-        /(?<style>shadow)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/
+        /(?<style>shadow)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
       ),
       size: new RegExp(`(?<style>shadow)-(?<special>${Object.keys(boxShadow).join("|")})\\b`),
       color: new RegExp(
@@ -795,235 +893,255 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "size" | "color" | "specialColor", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `--fv-shadow-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
-        return `--fv-shadow: ${groups?.abstract.replace(/_/g, " ")};\n  --fv-shadow-colored: ${groups?.abstract.replace(/_(rgb)a?\(.*\)/g, "").replace(/_/g, " ")} var(--fv-shadow-color);\n  box-shadow: var(--fv-ring-offset-shadow, 0 0 #0000), var(--fv-ring-shadow, 0 0 #0000), var(--fv-shadow);`
+        if (groups?.abstract?.startsWith("#"))
+          return `--fv-shadow-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
+        return `--fv-shadow: ${custom(groups)?.replace(/_/g, " ") ?? ""};\n  --fv-shadow-colored: ${
+          custom(groups)
+            ?.replace(/_(rgb)a?\(.*\)/g, "")
+            ?.replace(/_/g, " ") ?? ""
+        } var(--fv-shadow-color);\n  box-shadow: var(--fv-ring-offset-shadow, 0 0 #0000), var(--fv-ring-shadow, 0 0 #0000), var(--fv-shadow);`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-shadow-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `--fv-shadow-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.size.test(classStyle)) {
         const groups = classStyle.match(reg.size)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return boxShadow[groups.special]
       }
     }
   },
   opacity: {
-    reg: /(?<style>opacity)-((?<special>\d+)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>opacity)-((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `opacity: ${groups?.abstract ? +groups.abstract : groups.special ? +groups.special / 100 : 1};`
+      if (groups?.abstract) groups.abstract = `${+groups.abstract}`
+      return `opacity: ${groups?.abstract || groups?.custom ? custom(groups) : groups?.special ? +groups.special / 100 : 1};`
     }
   },
   "mix-blend": {
     reg: new RegExp(`(?<style>mix-blend)-(?<special>${Object.keys(blend).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `mix-blend-mode: ${groups.special};`
     }
   },
   blur: {
-    reg: new RegExp(`(?<style>blur)-((?<special>${Object.keys(blur).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>blur)-((?<special>${Object.keys(blur).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (groups?.special === "none") return `--fv-blur: ;\n  ${baseFilter}`
-      return `--fv-blur: blur(${groups?.abstract ?? `${blur[groups.special]}px`});\n  ${baseFilter}`
+      return `--fv-blur: blur(${custom(groups) ?? (groups?.special ? `${blur[groups.special]}px` : "")});\n  ${baseFilter}`
     }
   },
   brightness: {
-    reg: new RegExp(`(?<style>brightness)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>brightness)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-brightness: brightness(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
+      return `--fv-brightness: brightness(${custom(groups) ?? (groups?.special ? +groups.special / 100 : "")});\n  ${baseFilter}`
     }
   },
   contrast: {
-    reg: new RegExp(`(?<style>contrast)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>contrast)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups) return `--fv-contrast: contrast(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
+      return `--fv-contrast: contrast(${custom(groups) ?? (groups?.special ? +groups.special / 100 : "")});\n  ${baseFilter}`
     }
   },
   "drop-shadow": {
     reg: new RegExp(
-      `(?<style>drop-shadow)-((?<special>${Object.keys(dropShadow).join("|")})\\b|(\\[(?<abstract>.*?)]))`
+      `(?<style>drop-shadow)-((?<special>${Object.keys(dropShadow).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return groups.abstract
-        ? `--fv-drop-shadow: drop-shadow(${groups?.abstract.replace(/_/g, " ")});\n  ${baseFilter}`
-        : `${dropShadow[groups.special]}\n  ${baseFilter}`
+      return groups.abstract || groups?.custom
+        ? `--fv-drop-shadow: drop-shadow(${custom(groups)?.replace(/_/g, " ") ?? ""});\n  ${baseFilter}`
+        : `${dropShadow[groups.special] ?? ""}\n  ${baseFilter}`
     }
   },
   grayscale: {
-    reg: new RegExp(`(?<style>grayscale)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>grayscale)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-grayscale: grayscale(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
+      return `--fv-grayscale: grayscale(${custom(groups) ?? groups?.special ?? ""});\n  ${baseFilter}`
     }
   },
   "hue-rotate": {
-    reg: new RegExp(`(?<style>hue-rotate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>hue-rotate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-hue-rotate: hue-rotate(${groups?.abstract ?? `${groups.special}deg`});\n  ${baseFilter}`
+      return `--fv-hue-rotate: hue-rotate(${custom(groups) ?? (groups?.special ? `${groups.special}deg` : "")});\n  ${baseFilter}`
     }
   },
   invert: {
-    reg: new RegExp(`(?<style>invert)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>invert)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-invert: invert(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
+      return `--fv-invert: invert(${custom(groups) ?? groups?.special ?? ""});\n  ${baseFilter}`
     }
   },
   sepia: {
-    reg: new RegExp(`(?<style>sepia)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>sepia)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-sepia: sepia(${groups?.abstract ?? `${groups.special}`});\n  ${baseFilter}`
+      return `--fv-sepia: sepia(${custom(groups) ?? groups?.special ?? ""});\n  ${baseFilter}`
     }
   },
   saturate: {
-    reg: new RegExp(`(?<style>saturate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>saturate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-saturate: saturate(${groups?.abstract ?? +groups.special / 100});\n  ${baseFilter}`
+      return `--fv-saturate: saturate(${custom(groups) ?? (groups?.special ? +groups.special / 100 : "")});\n  ${baseFilter}`
     }
   },
   "backdrop-blur": {
-    reg: new RegExp(`(?<style>backdrop-blur)-((?<special>${Object.keys(blur).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>backdrop-blur)-((?<special>${Object.keys(blur).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (groups?.special === "none") return `--fv-backdrop-blur: ;\n  ${baseBackdropFilter}`
-      return `--fv-backdrop-blur: blur(${groups?.abstract ?? `${blur[groups.special]}px`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-blur: blur(${custom(groups) ?? (groups?.special ? `${blur[groups.special]}px` : "")});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-brightness": {
-    reg: new RegExp(`(?<style>backdrop-brightness)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>backdrop-brightness)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-backdrop-brightness: brightness(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-brightness: brightness(${custom(groups) ?? (groups?.special ? +groups.special / 100 : "")});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-contrast": {
-    reg: new RegExp(`(?<style>backdrop-contrast)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>backdrop-contrast)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-backdrop-contrast: contrast(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-contrast: contrast(${custom(groups) ?? (groups?.special ? +groups.special / 100 : "")});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-grayscale": {
-    reg: new RegExp(`(?<style>backdrop-grayscale)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>backdrop-grayscale)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-backdrop-grayscale: grayscale(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-grayscale: grayscale(${custom(groups) ?? groups?.special ?? ""});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-hue-rotate": {
-    reg: new RegExp(`(?<style>backdrop-hue-rotate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>backdrop-hue-rotate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-backdrop-hue-rotate: hue-rotate(${groups?.abstract ?? `${groups.special}deg`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-hue-rotate: hue-rotate(${custom(groups) ?? (groups?.special ? `${groups.special}deg` : "")});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-invert": {
-    reg: new RegExp(`(?<style>backdrop-invert)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>backdrop-invert)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-backdrop-invert: invert(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-invert: invert(${custom(groups) ?? groups?.special ?? ""});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-sepia": {
-    reg: new RegExp(`(?<style>backdrop-sepia)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>backdrop-sepia)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-backdrop-sepia: sepia(${groups?.abstract ?? `${groups.special}`});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-sepia: sepia(${custom(groups) ?? groups?.special ?? ""});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-saturate": {
-    reg: new RegExp(`(?<style>backdrop-saturate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(`(?<style>backdrop-saturate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-backdrop-saturate: saturate(${groups?.abstract ?? +groups.special / 100});\n  ${baseBackdropFilter}`
+      return `--fv-backdrop-saturate: saturate(${custom(groups) ?? (groups?.special ? +groups.special / 100 : "")});\n  ${baseBackdropFilter}`
     }
   },
   "backdrop-opacity": {
-    reg: /(?<style>backdrop-opacity)-((?<special>\d+)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>backdrop-opacity)-((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-backdrop-opacity: opacity(${groups?.abstract ? +groups.abstract : groups.special ? +groups.special / 100 : 1});\n  ${baseBackdropFilter}`
+      if (groups?.abstract) groups.abstract = `${+groups.abstract}`
+      return `--fv-backdrop-opacity: opacity(${groups?.abstract || groups?.custom ? custom(groups) : groups?.special ? +groups.special / 100 : 1});\n  ${baseBackdropFilter}`
     }
   },
   transition: {
     reg: new RegExp(
-      `(?<style>transition)-((?<special>${Object.keys(transitionProperty).join("|")})\\b|(\\[(?<abstract>.*?)]))`
+      `(?<style>transition)-((?<special>${Object.keys(transitionProperty).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `transition-property: ${groups?.abstract ?? transitionProperty[groups.special]};\n  ${baseTransition}`
+      return `transition-property: ${custom(groups) ?? (groups?.special ? transitionProperty[groups.special] : "")};\n  ${baseTransition}`
     }
   },
   duration: {
-    reg: /(?<style>duration)-((?<special>\d+)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>duration)-((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `transition-duration: ${groups?.abstract ?? `${groups.special}ms`};`
+      return `transition-duration: ${custom(groups) ?? (groups?.special ? `${groups.special}ms` : "")};`
     }
   },
   ease: {
     reg: new RegExp(
-      `(?<style>ease)-((?<special>${Object.keys(transitionFunction).join("|")})\\b|(\\[(?<abstract>.*?)]))`
+      `(?<style>ease)-((?<special>${Object.keys(transitionFunction).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `transition-timing-function: ${groups?.abstract ?? transitionFunction[groups.special]};`
+      return `transition-timing-function: ${custom(groups) ?? (groups.special ? transitionFunction[groups.special] : "")};`
     }
   },
   delay: {
-    reg: /(?<style>delay)-((?<special>\d+)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>delay)-((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `transition-delay: ${groups?.abstract ?? `${groups.special}ms`};`
+      return `transition-delay: ${custom(groups) ?? (groups.special ? `${groups.special}ms` : "")};`
     }
   },
   scale: {
-    reg: /(?<style>scale)-(?<axis>[xy])?-?((?<special>\d+)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>scale)-(?<axis>[xy])?-?((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return scale[groups.axis](groups.abstract ?? `${+groups.special / 100}`)
+      return scale[groups.axis](custom(groups) ?? (groups.special ? `${+groups.special / 100}` : ""))
     }
   },
   rotate: {
-    reg: /(?<style>rotate)-((?<special>\d+)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>rotate)-((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-rotate: ${groups?.abstract ?? `${groups.special}deg`};\n  ${baseTransform}`
+      return `--fv-rotate: ${custom(groups) ?? (groups.special ? `${groups.special}deg` : "")};\n  ${baseTransform}`
     }
   },
   translate: {
-    reg: /(?<negative>-)?(?<style>translate)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<negative>-)?(?<style>translate)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return translate[groups.axis](`${groups?.negative ?? ""}${groups?.abstract ?? sizing(groups?.special)}`)
+      return translate[groups.axis](`${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""}`)
     }
   },
   skew: {
-    reg: /(?<negative>-)?(?<style>skew)-(?<axis>[xy])?-?((?<special>\d+)|(\[(?<abstract>.*?)]))/,
+    reg: /(?<negative>-)?(?<style>skew)-(?<axis>[xy])?-?((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return skew[groups.axis](`${groups?.negative ?? ""}${groups.abstract ?? groups.special + "deg"}`)
     }
   },
   origin: {
-    reg: /(?<style>origin)-((?<special>top-right|bottom-right|bottom-left|top-left|top|bottom|right|left|center)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>origin)-((?<special>top-right|bottom-right|bottom-left|top-left|top|bottom|right|left|center)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       const value = groups.abstract
@@ -1037,7 +1155,7 @@ export default <Record<string, StyleType>>{
   accent: {
     reg: {
       abstract: new RegExp(
-        /(?<style>accent)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/
+        /(?<style>accent)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
       ),
       color: new RegExp(
         `(?<style>accent)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
@@ -1050,19 +1168,23 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "color" | "specialColor", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `accent-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
+        if (groups?.abstract?.startsWith("#"))
+          return `accent-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `accent-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `accent-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       }
     }
@@ -1071,19 +1193,24 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>appearance)-(?<special>none|auto)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `-webkit-appearance: ${groups.special};\n  -moz-appearance: ${groups.special};\n  appearance: ${groups.special};`
     }
   },
   cursor: {
-    reg: new RegExp(`(?<style>cursor)-((?<special>${cursor.join("|")})\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>cursor)-((?<special>${cursor.join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `cursor: ${groups?.abstract ? groups.abstract.replace(/_/g, " ") : groups.special};`
+      return `cursor: ${groups?.abstract || groups?.custom ? (custom(groups)?.replace(/_/g, " ") ?? "") : (groups?.special ?? "")};`
     }
   },
   caret: {
     reg: {
-      abstract: new RegExp(/(?<style>caret)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/),
+      abstract: new RegExp(
+        /(?<style>caret)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
+      ),
       color: new RegExp(
         `(?<style>caret)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
       ),
@@ -1095,19 +1222,23 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "color" | "specialColor", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `caret-color: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
+        if (groups?.abstract?.startsWith("#"))
+          return `caret-color: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `caret-color: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `caret-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       }
     }
@@ -1116,6 +1247,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>pointer-events)-(?<special>none|auto)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `pointer-events: ${groups.special};`
     }
   },
@@ -1123,6 +1255,7 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>resize)-(?<special>${Object.keys(resize).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `resize: ${resize[groups.special]};`
     }
   },
@@ -1130,26 +1263,28 @@ export default <Record<string, StyleType>>{
     reg: {
       behavior: /(?<style>scroll)-(?<special>smooth|auto)\b/,
       margin:
-        /(?<negative>-)?(?<style>scroll)-m(?<axis>[xyserltb])?-((?<special>\d+(\.\d+)?|px)|(\[(?<abstract>.*?)]))/,
-      padding: /(?<style>scroll)-p(?<axis>[xyserltb])?-((?<special>\d+(\.\d+)?|px)|(\[(?<abstract>.*?)]))/
+        /(?<negative>-)?(?<style>scroll)-m(?<axis>[xyserltb])?-((?<special>\d+(\.\d+)?|px)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+      padding:
+        /(?<style>scroll)-p(?<axis>[xyserltb])?-((?<special>\d+(\.\d+)?|px)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/
     },
     getValue(classStyle) {
       const reg = this.reg as Record<"behavior" | "margin" | "padding", RegExp>
       if (reg.behavior.test(classStyle)) {
         const groups = classStyle.match(reg.behavior)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `scroll-behavior: ${groups.special};`
       } else if (reg.margin.test(classStyle)) {
         const groups = classStyle.match(reg.margin)?.groups as GroupsRegExp
-        if (groups && (groups?.special || groups?.abstract)) {
+        if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
           return positionPaddingOrMargin[groups.axis](
             "scroll-margin",
-            `${groups?.negative ?? ""}${groups?.abstract ?? sizing(groups?.special)}`
+            `${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""}`
           )
         }
       } else if (reg.padding.test(classStyle)) {
         const groups = classStyle.match(reg.padding)?.groups as GroupsRegExp
-        if (groups && (groups?.special || groups?.abstract)) {
-          return positionPaddingOrMargin[groups.axis]("scroll-padding", groups?.abstract ?? sizing(groups?.special))
+        if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
+          return positionPaddingOrMargin[groups.axis]("scroll-padding", custom(groups) ?? sizing(groups?.special) ?? "")
         }
       }
     }
@@ -1164,12 +1299,15 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"align" | "stop" | "type", RegExp>
       if (reg.align.test(classStyle)) {
         const groups = classStyle.match(reg.align)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `scroll-snap-align: ${snapAlign[groups.special]};`
       } else if (reg.stop.test(classStyle)) {
         const groups = classStyle.match(reg.stop)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `scroll-snap-stop: ${groups.special};`
       } else if (reg.type.test(classStyle)) {
         const groups = classStyle.match(reg.type)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return snapType[groups.special]
       }
     }
@@ -1178,6 +1316,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>touch)-(?<special>auto|none|pan-x|pan-left|pan-right|pan-y|pan-up|pan-down|pinch-zoom|manipulation)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return groups.special ? `touch-action: ${groups.special};` : ""
     }
   },
@@ -1185,21 +1324,24 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>select)-(?<special>none|text|all|auto)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return groups?.special ? `user-select: ${groups.special};` : ""
     }
   },
   "will-change": {
     reg: new RegExp(
-      `(?<style>will-change)-((?<special>${Object.keys(willChange).join("|")})\\b|(\\[(?<abstract>.*?)]))`
+      `(?<style>will-change)-((?<special>${Object.keys(willChange).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `will-change: ${groups?.abstract ?? willChange[groups.special]};`
+      return `will-change: ${custom(groups) ?? willChange[groups.special] ?? ""};`
     }
   },
   fill: {
     reg: {
-      abstract: new RegExp(/(?<style>fill)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/),
+      abstract: new RegExp(
+        /(?<style>fill)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
+      ),
       color: new RegExp(
         `(?<style>fill)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
       ),
@@ -1210,24 +1352,29 @@ export default <Record<string, StyleType>>{
     },
     getValue(classStyle) {
       const reg = this.reg as Record<"abstract" | "color" | "specialColor" | "noneColor", RegExp>
-      if (reg.abstract.test(classStyle)) {
+      if (reg?.abstract?.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
         if (groups.abstract.startsWith("#"))
-          return `fill: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
+          return `fill: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `fill: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `fill: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.noneColor.test(classStyle)) {
         const groups = classStyle.match(reg.noneColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `fill: ${groups.special};`
       }
     }
@@ -1235,7 +1382,7 @@ export default <Record<string, StyleType>>{
   stroke: {
     reg: {
       abstract: new RegExp(
-        /(?<style>stroke)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?/
+        /(?<style>stroke)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
       ),
       color: new RegExp(
         `(?<style>stroke)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
@@ -1250,48 +1397,55 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "color" | "specialColor" | "noneColor" | "width", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
-          return `stroke: ${addAlphaToHex(
-            groups?.abstract,
-            groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-          )};`
-        return `stroke-width: ${groups?.abstract};`
+        if (groups?.abstract?.startsWith("#"))
+          return `stroke: ${
+            addAlphaToHex(
+              custom(groups),
+              groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
+            ) ?? ""
+          };`
+        return `stroke-width: ${custom(groups) ?? ""};`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `stroke: ${addAlphaToHex(
           (colors as any)?.[groups.special]?.[groups.tone],
           groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
         )};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `stroke: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       } else if (reg.noneColor.test(classStyle)) {
         const groups = classStyle.match(reg.noneColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `stroke: ${groups.special};`
       } else if (reg.width.test(classStyle)) {
         const groups = classStyle.match(reg.width)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `stroke-width: ${groups.special};`
       }
     }
   },
   aspect: {
-    reg: /(?<style>aspect)-((?<special>auto|square|video)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>aspect)-((?<special>auto|square|video)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `aspect-ratio: ${groups?.abstract ?? aspect[groups.special]};`
+      return `aspect-ratio: ${custom(groups) ?? aspect[groups.special] ?? ""};`
     }
   },
   columns: {
-    reg: /(?<style>columns)-((?<special>\d+|\dxs|xs|sm|md|lg|xl|\dxl|auto)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>columns)-((?<special>\d+|\dxs|xs|sm|md|lg|xl|\dxl|auto)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `columns: ${groups?.abstract ?? (isNaN(+groups.special) ? specialValues[groups.special] : groups.special)};`
+      return `columns: ${custom(groups) ?? (isNaN(+groups.special) ? (specialValues[groups.special] ?? "") : (groups.special ?? ""))};`
     }
   },
   "box-decoration": {
     reg: /(?<style>box-decoration)-(?<special>clone|slice)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `-webkit-box-decoration-break: ${groups.special};\n  box-decoration-break: ${groups.special};`
     }
   },
@@ -1299,6 +1453,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>box)-(?<special>border|content)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `box-sizing: ${groups.special}-box;`
     }
   },
@@ -1319,6 +1474,7 @@ export default <Record<string, StyleType>>{
         return `display: ${classStyle};`
       } else if (reg.layout.test(classStyle)) {
         const groups = classStyle.match(reg.layout)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `table-layout: ${groups.special};`
       }
     }
@@ -1327,6 +1483,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>caption)-(?<special>top|bottom)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `caption-side: ${groups.special};`
     }
   },
@@ -1334,6 +1491,7 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>float)-(?<special>${Object.keys(floatAndClear).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `float: ${floatAndClear[groups.special]};`
     }
   },
@@ -1341,6 +1499,7 @@ export default <Record<string, StyleType>>{
     reg: new RegExp(`(?<style>clear)-(?<special>${Object.keys(floatAndClear).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `clear: ${floatAndClear[groups.special]};`
     }
   },
@@ -1348,20 +1507,23 @@ export default <Record<string, StyleType>>{
     reg: {
       fit: /(?<style>object)-(?<special>contain|cover|fill|none|scale-down)\b/,
       position:
-        /(?<style>object)-((?<special>left-bottom|left-top|right-bottom|right-top|top|bottom|left|right|center)\b|(\[(?<abstract>.*?)]))/
+        /(?<style>object)-((?<special>left-bottom|left-top|right-bottom|right-top|top|bottom|left|right|center)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/
     },
     getValue(classStyle) {
       const reg = this.reg as Record<"fit" | "position", RegExp>
       if (reg.fit.test(classStyle)) {
         const groups = classStyle.match(reg.fit)?.groups as GroupsRegExp
+        if (!groups?.special) return
         return `object-fit: ${groups.special};`
       } else if (reg.position.test(classStyle)) {
         const groups = classStyle.match(reg.position)?.groups as GroupsRegExp
-        const value = groups.abstract
-          ? groups.abstract.replace(/_/g, " ")
-          : groups.special
-            ? groups.special.replace("-", " ")
-            : undefined
+        const value =
+          groups?.abstract || groups?.custom
+            ? (custom(groups)?.replace(/_/g, " ") ?? "")
+            : groups.special
+              ? groups.special?.replace("-", " ")
+              : ""
+        if (!value) return
         return `object-position: ${value};`
       }
     }
@@ -1370,6 +1532,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>overflow)-(?<axis>[xy])?-?(?<special>auto|hidden|clip|visible|scroll)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `overflow${groups.axis ? `-${groups.axis}` : ""}: ${groups.special};`
     }
   },
@@ -1377,173 +1540,185 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>overscroll)-(?<axis>[xy])?-?(?<special>auto|contain|none)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
       return `overscroll-behavior${groups.axis ? `-${groups.axis}` : ""}: ${groups.special};`
     }
   },
   inset: {
-    reg: /(?<style>inset)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>inset)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      const value = groups?.abstract ?? sizing(groups?.special)
+      const value = custom(groups) ?? sizing(groups?.special)
+      if (!value) return
       if (groups?.axis === "x") return `left: ${value};\n  right: ${value};`
       if (groups?.axis === "y") return `top: ${value};\n  bottom: ${value};`
       return `inset: ${value};`
     }
   },
   start: {
-    reg: /(?<style>start)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>start)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `inset-inline-start: ${groups?.abstract ?? sizing(groups?.special)};`
+      return `inset-inline-start: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   end: {
-    reg: /(?<style>end)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>end)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `inset-inline-end: ${groups?.abstract ?? sizing(groups?.special)};`
+      return `inset-inline-end: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   top: {
-    reg: /(?<negative>-)?(?<style>top)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<negative>-)?(?<style>top)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `top: ${groups?.negative ?? ""}${groups?.abstract ?? sizing(groups?.special)};`
+      return `top: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   bottom: {
-    reg: /(?<negative>-)?(?<style>bottom)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<negative>-)?(?<style>bottom)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `bottom: ${groups?.negative ?? ""}${groups?.abstract ?? sizing(groups?.special)};`
+      return `bottom: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   right: {
-    reg: /(?<negative>-)?(?<style>right)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<negative>-)?(?<style>right)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `right: ${groups?.negative ?? ""}${groups?.abstract ?? sizing(groups?.special)};`
+      return `right: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   left: {
-    reg: /(?<negative>-)?(?<style>left)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<negative>-)?(?<style>left)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `left: ${groups?.negative ?? ""}${groups?.abstract ?? sizing(groups?.special)};`
+      return `left: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   z: {
-    reg: /(?<negative>-)?(?<style>z)-((?<special>\d+|auto)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<negative>-)?(?<style>z)-((?<special>\d+|auto)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `z-index: ${groups?.negative ?? ""}${groups?.abstract ?? groups?.special};`
+      return `z-index: ${groups?.negative ?? ""}${custom(groups) ?? groups?.special ?? ""};`
     }
   },
   basis: {
-    reg: /(?<style>basis)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>basis)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `flex-basis: ${groups?.abstract ?? sizing(groups?.special)};`
+      return `flex-basis: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   flex: {
     reg: {
       direction: /(?<style>flex)-(?<special>row-reverse|col-reverse|row|col)\b/,
       wrap: /(?<style>flex)-(?<special>wrap-reverse|wrap|nowrap)\b/,
-      flex: new RegExp(`(?<style>flex)-((?<special>${Object.keys(flex).join("|")})\\b|(\\[(?<abstract>.*?)]))`)
+      flex: new RegExp(
+        `(?<style>flex)-((?<special>${Object.keys(flex).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+      )
     },
     getValue(classStyle) {
       const reg = this.reg as Record<"direction" | "wrap" | "flex", RegExp>
       if (reg.direction.test(classStyle)) {
         const groups = classStyle.match(reg.direction)?.groups as GroupsRegExp
-        return `flex-direction: ${groups?.special.replace("col", "column")};`
+        return `flex-direction: ${groups?.special?.replace("col", "column") ?? ""};`
       } else if (reg.wrap.test(classStyle)) {
         const groups = classStyle.match(reg.wrap)?.groups as GroupsRegExp
-        return `flex-wrap: ${groups?.special};`
+        return `flex-wrap: ${groups?.special ?? ""};`
       } else if (reg.flex.test(classStyle)) {
         const groups = classStyle.match(reg.flex)?.groups as GroupsRegExp
-        return `flex: ${groups?.abstract ? groups.abstract.replace(/_/g, " ") : flex[groups?.special]};`
+        return `flex: ${groups?.abstract || groups?.custom ? (custom(groups)?.replace(/_/g, " ") ?? "") : (flex[groups?.special] ?? "")};`
       }
     }
   },
   grow: {
-    reg: /(?<style>grow)-((?<special>0)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>grow)-((?<special>0)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `flex-grow: ${groups?.abstract ?? groups?.special};`
+      return `flex-grow: ${custom(groups) ?? groups?.special ?? ""};`
     }
   },
   shrink: {
-    reg: /(?<style>shrink)-((?<special>0)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>shrink)-((?<special>0)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `flex-shrink: ${groups?.abstract ?? groups?.special};`
+      return `flex-shrink: ${custom(groups) ?? groups?.special ?? ""};`
     }
   },
   order: {
-    reg: new RegExp(`(?<style>order)-((?<special>\\d+|${Object.keys(order).join("|")})\\b|(\\[(?<abstract>-?\\d+)]))`),
+    reg: new RegExp(
+      `(?<style>order)-((?<special>\\d+|${Object.keys(order).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `order: ${groups?.abstract ?? (isNaN(+groups.special) ? order[groups?.special] : groups.special)};`
+      return `order: ${custom(groups) ?? (isNaN(+groups.special) ? (order[groups?.special] ?? "") : (groups?.special ?? ""))};`
     }
   },
   "grid-cols": {
-    reg: /(?<style>grid-cols)-((?<special>\d+|none|subgrid)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>grid-cols)-((?<special>\d+|none|subgrid)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      const value = groups?.abstract
-        ? groups.abstract.replace(/_/g, " ")
-        : !isNaN(+groups.special)
-          ? `repeat(${groups?.special}, minmax(0, 1fr))`
-          : groups.special
+      const value =
+        groups?.abstract || groups?.custom
+          ? (custom(groups)?.replace(/_/g, " ") ?? "")
+          : !isNaN(+groups.special)
+            ? `repeat(${groups?.special ?? ""}, minmax(0, 1fr))`
+            : groups.special
       return `grid-template-columns: ${value};`
     }
   },
   "grid-rows": {
-    reg: /(?<style>grid-rows)-((?<special>\d+|none|subgrid)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>grid-rows)-((?<special>\d+|none|subgrid)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      const value = groups?.abstract
-        ? groups.abstract.replace(/_/g, " ")
-        : !isNaN(+groups.special)
-          ? `repeat(${groups?.special}, minmax(0, 1fr))`
-          : groups.special
+      const value =
+        groups?.abstract || groups?.custom
+          ? (custom(groups)?.replace(/_/g, " ") ?? "")
+          : !isNaN(+groups.special)
+            ? `repeat(${groups?.special ?? ""}, minmax(0, 1fr))`
+            : groups.special
       return `grid-template-rows: ${value};`
     }
   },
   col: {
-    reg: /(?<style>col)-(((?<span>span)-(?<column>\d+|full)|(?<auto>auto)|(\[(?<abstract>.*?)]))|((?<axis>start|end)-(?<special>\d+|auto)\b))/,
+    reg: /(?<style>col)-(((?<span>span)-(?<column>\d+|full)|(?<auto>auto)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))|((?<axis>start|end)-(?<special>\d+|auto)\b))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (groups?.span) {
         if (!isNaN(+groups?.column)) return `grid-column: span ${groups.column} / span ${groups.column};`
         else if (groups?.column == "full") return `grid-column: 1 / -1;`
       } else if (groups?.axis === "start") {
+        if (!groups?.special) return
         return `grid-column-start: ${groups.special};`
       } else if (groups?.axis === "end") {
+        if (!groups?.special) return
         return `grid-column-end: ${groups.special};`
       } else if (groups?.auto === "auto") {
         return "grid-column: auto;"
-      } else if (groups?.abstract) {
-        return `grid-column: ${groups.abstract.replace(/_/g, " ")};`
+      } else if (groups?.abstract || groups?.custom) {
+        return `grid-column: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
       }
     }
   },
   row: {
-    reg: /(?<style>row)-(((?<span>span)-(?<column>\d+|full)|(?<auto>auto)|(\[(?<abstract>.*?)]))|((?<axis>start|end)-(?<special>\d+|auto)\b))/,
+    reg: /(?<style>row)-(((?<span>span)-(?<column>\d+|full)|(?<auto>auto)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))|((?<axis>start|end)-(?<special>\d+|auto)\b))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (groups?.span) {
         if (!isNaN(+groups?.column)) return `grid-row: span ${groups.column} / span ${groups.column};`
         else if (groups?.column == "full") return `grid-row: 1 / -1;`
       } else if (groups?.axis === "start") {
+        if (!groups?.special) return
         return `grid-row-start: ${groups.special};`
       } else if (groups?.axis === "end") {
+        if (!groups?.special) return
         return `grid-row-end: ${groups.special};`
       } else if (groups?.auto === "auto") {
         return "grid-row: auto;"
-      } else if (groups?.abstract) {
-        return `grid-row: ${groups.abstract.replace(/_/g, " ")};`
+      } else if (groups?.abstract || groups?.custom) {
+        return `grid-row: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
       }
     }
   },
@@ -1551,100 +1726,109 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>grid-flow)-(?<special>dense|row-dense|col-dense|row|col)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `grid-auto-flow: ${groups?.special.replace("-", " ").replace("col", "column")};`
+      return `grid-auto-flow: ${groups?.special?.replace("-", " ")?.replace("col", "column") ?? ""};`
     }
   },
   "auto-cols": {
-    reg: new RegExp(`(?<style>auto-cols)-((?<special>${Object.keys(gridAuto).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>auto-cols)-((?<special>${Object.keys(gridAuto).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `grid-auto-columns: ${groups?.abstract ? groups?.abstract.replace("_", " ") : gridAuto[groups?.special]};`
+      return `grid-auto-columns: ${groups?.abstract || groups?.custom ? (custom(groups)?.replace("_", " ") ?? "") : (gridAuto[groups?.special] ?? "")};`
     }
   },
   "auto-rows": {
-    reg: new RegExp(`(?<style>auto-rows)-((?<special>${Object.keys(gridAuto).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>auto-rows)-((?<special>${Object.keys(gridAuto).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `grid-auto-rows: ${groups?.abstract ? groups?.abstract.replace("_", " ") : gridAuto[groups?.special]};`
+      return `grid-auto-rows: ${groups?.abstract || groups?.custom ? (custom(groups)?.replace("_", " ") ?? "") : (gridAuto[groups?.special] ?? "")};`
     }
   },
   gap: {
-    reg: /(?<style>gap)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?|px)\b|(\[(?<abstract>.*?)]))/,
+    reg: /(?<style>gap)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?|px)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       const value = groups.axis === "x" ? "column-" : groups.axis === "y" ? "row-" : ""
-      return `${value}gap: ${groups?.abstract ?? sizing(groups?.special)};`
+      return `${value}gap: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
     }
   },
   "justify-items": {
     reg: /(?<style>justify-items)-(?<special>start|end|center|stretch)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `justify-items: ${groups?.special};`
+      return `justify-items: ${groups?.special ?? ""};`
     }
   },
   "justify-self": {
     reg: /(?<style>justify-self)-(?<special>auto|start|end|center|stretch)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `justify-self: ${groups?.special};`
+      return `justify-self: ${groups?.special ?? ""};`
     }
   },
   justify: {
     reg: new RegExp(`(?<style>justify)-(?<special>${Object.keys(justifyContent).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `justify-content: ${justifyContent[groups?.special]};`
+      return `justify-content: ${justifyContent[groups?.special] ?? ""};`
     }
   },
   items: {
     reg: /(?<style>items)-(?<special>start|end|center|baseline|stretch)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `align-items: ${groups?.special};`
+      return `align-items: ${groups?.special ?? ""};`
     }
   },
   self: {
     reg: new RegExp(`(?<style>self)-(?<special>${Object.keys(alignSelf).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `align-self: ${alignSelf[groups?.special]};`
+      return `align-self: ${alignSelf[groups?.special] ?? ""};`
     }
   },
   content: {
-    reg: new RegExp(`(?<style>content)-((?<special>${Object.keys(alignContent).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>content)-((?<special>${Object.keys(alignContent).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups.abstract) return `--fv-content: ${groups.abstract};\n  content: var(--fv-content);`
-      return `align-content: ${alignContent[groups?.special]};`
+      if (groups.abstract || groups?.custom)
+        return `--fv-content: ${custom(groups) ?? ""};\n  content: var(--fv-content);`
+      return `align-content: ${alignContent[groups?.special] ?? ""};`
     }
   },
   "place-items": {
     reg: /(?<style>place-items)-(?<special>start|end|center|baseline|stretch)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `place-items: ${groups?.special};`
+      return `place-items: ${groups?.special ?? ""};`
     }
   },
   "place-self": {
     reg: /(?<style>place-self)-(?<special>auto|start|end|center|stretch)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `place-self: ${groups?.special};`
+      return `place-self: ${groups?.special ?? ""};`
     }
   },
   "place-content": {
     reg: new RegExp(`(?<style>place-content)-(?<special>${Object.keys(placeContent).join("|")})\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `place-content: ${placeContent[groups?.special]};`
+      return `place-content: ${placeContent[groups?.special] ?? ""};`
     }
   },
   animate: {
-    reg: new RegExp(`(?<style>animate)-((?<special>${Object.keys(animations).join("|")})\\b|(\\[(?<abstract>.*?)]))`),
+    reg: new RegExp(
+      `(?<style>animate)-((?<special>${Object.keys(animations).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `animation: ${groups?.abstract ? groups.abstract.replace(/_/g, " ") : animations[groups?.special]};`
+      return `animation: ${groups?.abstract || groups?.custom ? (custom(groups)?.replace(/_/g, " ") ?? "") : (animations[groups?.special] ?? "")};`
     }
   }
 }
