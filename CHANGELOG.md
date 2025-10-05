@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [0.2.3](https://github.com/Egoka/FishtVue/compare/v0.2.2...v0.2.3) (2025-10-05)
+
+
+### Bug Fixes
+
+* **types:** fixed types ([bc4faac](https://github.com/Egoka/FishtVue/commit/bc4faaca85a2591f4159a4bdf1cd5e06fb2e57ee))
+* **theme:** updated rules in styles ([a777c40](https://github.com/Egoka/FishtVue/commit/a777c4052adf6e347726dd5d813977aea90e3bdf))
+* **theme:** updated rules in styles ([5101d2e](https://github.com/Egoka/FishtVue/commit/5101d2e266f86c7c2f3a8da744a93cfdefbc1226))
+
 ## [0.2.2](https://github.com/Egoka/FishtVue/compare/v0.2.1...v0.2.2) (2025-10-01)
 
 
