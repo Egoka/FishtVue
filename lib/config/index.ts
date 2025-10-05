@@ -68,15 +68,14 @@ export function getDefaultLocale(): string | undefined {
 }
 
 function isExistFishtVue<T>(func: (FishtVue: FishtVue) => T): T | undefined {
-  const condition = FishtVueSymbol.toString() === Symbol("FishtVue").toString()
-  if (condition) {
-    let fishtVue: FishtVue | undefined
-    if (isClient()) fishtVue = (window as any).FishtVue
-    if (hasInjectionContext()) fishtVue = inject(FishtVueSymbol) ?? (window as any).FishtVue
-    if (fishtVue) return func(fishtVue)
+  if (FishtVueSymbol.toString() === Symbol("FishtVue").toString()) {
+    let FishtVue: any = undefined
+    if (isClient()) FishtVue = (window as any).FishtVue
+    if (hasInjectionContext()) FishtVue = inject(FishtVueSymbol) ?? FishtVue
+    if (FishtVue) return func(FishtVue)
   }
-  console.warn("FishtVue is not installed!")
-  return undefined
+  //console.warn("FishtVue is not installed!");
+  return
 }
 
 function getDefaultOptions(nameTheme: OptionsTheme["nameTheme"]): FishtVueConfiguration {
