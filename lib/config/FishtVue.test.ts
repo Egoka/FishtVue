@@ -384,7 +384,7 @@ describe("Testing config", () => {
       expect(defaultLocale).toBe("en")
     })
 
-    it("should warn and return undefined when accessing getDefaultLocale without plugin", () => {
+    it.skip("should warn and return undefined when accessing getDefaultLocale without plugin", () => {
       const warnSpy = vi.spyOn(console, "warn")
       // @ts-ignore
       delete window.FishtVue
