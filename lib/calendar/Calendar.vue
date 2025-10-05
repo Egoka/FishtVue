@@ -1,12 +1,13 @@
 <script setup lang="ts">
   import { computed, inject, nextTick, onMounted, ref, useSlots, watch } from "vue"
-  import type {
+  import {
     CalendarEmits,
     CalendarProps,
     ICalendarPicker,
     IParamsDatePicker,
     IRangeDate,
-    IRangeValue
+    IRangeValue,
+    SimpleDateRange
   } from "./Calendar"
   import { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
   import { DatePicker } from "v-calendar"
@@ -17,9 +18,8 @@
   import Component from "fishtvue/component"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
   import { isClient } from "fishtvue/utils/domHandler"
-  import { FishtVueSymbol } from "fishtvue/config"
   import type { FishtVue } from "fishtvue/config"
-  import { DatePickerRangeObject } from "v-calendar/src/use/datePicker"
+  import { FishtVueSymbol } from "fishtvue/config"
   // ---BASE-COMPONENT----------------------
   const Calendar = new Component<"Calendar">()
   const options = Calendar.getOptions()
@@ -71,7 +71,7 @@
       } else {
         value.value = !(props?.paramsDatePicker as CalendarProps["paramsDatePicker"])?.isRange
           ? (modelValue ?? "")
-          : ({ start: null, end: null } as unknown as DatePickerRangeObject)
+          : ({ start: null, end: null } as unknown as SimpleDateRange)
       }
     },
     { immediate: true }

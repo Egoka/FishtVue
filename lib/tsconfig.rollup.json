@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "fishtvue/*": ["./*"]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.tsx", "./**/*.vue", "../vue-shim.d.ts", "./types/**/*.d.ts"],
+  "exclude": [
+    "../vite.config.ts",
+    "../**/*.test.ts",
+    "../**/*.spec.ts",
+    "../docs/**",
+    "../sandbox/**",
+    "../sandbox-nuxt/**",
+    "../node_modules/**",
+    "../dist/**"
+  ]
+}
+
+
