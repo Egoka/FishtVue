@@ -1,5 +1,5 @@
-import { Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { VNode } from "vue"
+import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { BadgeProps } from "fishtvue/badge"
 import { FixWindowExpose, FixWindowProps } from "fishtvue/fixwindow"
 import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
@@ -167,196 +167,196 @@ export declare type SelectExpose = {
   // ---STATE-------------------------
   /**
    * Reference to the input layout component.
-   * @type {Ref<InputLayoutExpose | undefined>}
+   * @type {InputLayoutExpose | undefined}
    */
-  layout: Ref<InputLayoutExpose | undefined>
+  layout: InputLayoutExpose | undefined
 
   /**
    * Reference to the dropdown list's window.
-   * @type {Ref<FixWindowExpose | undefined>}
+   * @type {FixWindowExpose | undefined}
    */
-  selectListWindow: Ref<FixWindowExpose | undefined>
+  selectListWindow: FixWindowExpose | undefined
 
   /**
    * Reference to the select container element.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  selectBody: ReadRef<HTMLElement | undefined>
+  selectBody: HTMLElement | undefined
 
   /**
    * Reference to the dropdown list container element.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  selectList: ReadRef<HTMLElement | undefined>
+  selectList: HTMLElement | undefined
 
   /**
    * Reference to the search input element within the dropdown.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  selectSearch: ReadRef<HTMLElement | undefined>
+  selectSearch: HTMLElement | undefined
 
   /**
    * Reference to the list of selectable items.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  selectItems: ReadRef<HTMLElement | undefined>
+  selectItems: HTMLElement | undefined
 
   /**
    * The index of the currently active item.
-   * @type {ReadRef<number>}
+   * @type {number}
    */
-  activeItem: ReadRef<number>
+  activeItem: number
 
   /**
    * The current query string used for filtering items.
-   * @type {ReadRef<string>}
+   * @type {string}
    */
-  query: ReadRef<string>
+  query: string
 
   /**
    * Indicates whether the dropdown list is open.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isOpenList: ReadRef<boolean>
+  isOpenList: boolean
 
   /**
    * Custom CSS class for the layout.
-   * @type {ReadRef<SelectProps["class"]>}
+   * @type {SelectProps["class"]}
    */
-  classLayout: ReadRef<SelectProps["class"]>
+  classLayout: SelectProps["class"]
 
   /**
    * The current value of the select field.
-   * @type {ReadRef<SelectProps["modelValue"]>}
+   * @type {SelectProps["modelValue"]}
    */
-  value: ReadRef<SelectProps["modelValue"]>
+  value: SelectProps["modelValue"]
 
   // ---PROPS-------------------------
   /**
    * The visible value(s) of the select component.
-   * @type {ReadRef<Array<any>>}
+   * @type {Array<any>}
    */
-  visibleValue: ReadRef<Array<any>>
+  visibleValue: Array<any>
 
   /**
    * The keys of the selected values.
-   * @type {ReadRef<Array<any>>}
+   * @type {Array<any>}
    */
-  valueKeys: ReadRef<Array<any>>
+  valueKeys: Array<any>
 
   /**
    * The key used to uniquely identify items.
-   * @type {ReadRef<SelectProps["keySelect"] | null>}
+   * @type {SelectProps["keySelect"] | null}
    */
-  keySelect: ReadRef<SelectProps["keySelect"] | null>
+  keySelect: SelectProps["keySelect"] | null
 
   /**
    * The key used to retrieve item display values.
-   * @type {ReadRef<SelectProps["valueSelect"] | null>}
+   * @type {SelectProps["valueSelect"] | null}
    */
-  valueSelect: ReadRef<SelectProps["valueSelect"] | null>
+  valueSelect: SelectProps["valueSelect"] | null
 
   /**
    * The list of available items.
-   * @type {ReadRef<SelectProps["dataSelect"]>}
+   * @type {SelectProps["dataSelect"]}
    */
-  dataSelect: ReadRef<SelectProps["dataSelect"]>
+  dataSelect: SelectProps["dataSelect"]
 
   /**
    * Indicates whether autofocus is enabled.
-   * @type {ReadRef<NonNullable<SelectProps["autoFocus"]>>}
+   * @type {SelectProps["autoFocus"]}
    */
-  autoFocus: ReadRef<NonNullable<SelectProps["autoFocus"]>>
+  autoFocus: SelectProps["autoFocus"]
 
   /**
    * Indicates the current styling mode.
-   * @type {ReadRef<NonNullable<SelectProps["mode"]>>}
+   * @type {SelectProps["mode"]}
    */
-  mode: ReadRef<NonNullable<SelectProps["mode"]>>
+  mode: SelectProps["mode"]
 
   /**
    * Indicates whether the select is disabled.
-   * @type {ReadRef<NonNullable<SelectProps["disabled"]>>}
+   * @type {SelectProps["disabled"]}
    */
-  isDisabled: ReadRef<NonNullable<SelectProps["disabled"]>>
+  isDisabled: SelectProps["disabled"]
 
   /**
    * Indicates whether the select is in a loading state.
-   * @type {ReadRef<NonNullable<SelectProps["loading"]>>}
+   * @type {SelectProps["loading"]}
    */
-  isLoading: ReadRef<NonNullable<SelectProps["loading"]>>
+  isLoading: SelectProps["loading"]
 
   /**
    * Indicates whether the select is invalid.
-   * @type {ReadRef<NonNullable<SelectProps["isInvalid"]>>}
+   * @type {SelectProps["isInvalid"]}
    */
-  isInvalid: ReadRef<NonNullable<SelectProps["isInvalid"]>>
+  isInvalid: SelectProps["isInvalid"]
 
   /**
    * The validation message for the select component.
-   * @type {ReadRef<SelectProps["messageInvalid"]>}
+   * @type {SelectProps["messageInvalid"]}
    */
-  messageInvalid: ReadRef<SelectProps["messageInvalid"]>
+  messageInvalid: SelectProps["messageInvalid"]
 
   /**
    * Indicates whether the select has a value.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isValue: ReadRef<boolean>
+  isValue: boolean
 
   /**
    * Indicates whether multiple selection is enabled.
-   * @type {ReadRef<NonNullable<SelectProps["multiple"]>>}
+   * @type {SelectProps["multiple"]}
    */
-  isMultiple: ReadRef<NonNullable<SelectProps["multiple"]>>
+  isMultiple: SelectProps["multiple"]
 
   /**
    * The maximum number of items visible in the dropdown list.
-   * @type {ReadRef<SelectProps["maxVisible"] | undefined>}
+   * @type {SelectProps["maxVisible"] | undefined}
    */
-  maxVisible: ReadRef<SelectProps["maxVisible"] | undefined>
+  maxVisible: SelectProps["maxVisible"] | undefined
 
   /**
    * The text displayed when no items are available.
-   * @type {ReadRef<NonNullable<SelectProps["noData"]>>}
+   * @type {SelectProps["noData"]}
    */
-  noData: ReadRef<NonNullable<SelectProps["noData"]>>
+  noData: SelectProps["noData"]
 
   /**
    * Indicates whether query-based filtering is disabled.
-   * @type {ReadRef<NonNullable<SelectProps["noQuery"]>>}
+   * @type {SelectProps["noQuery"]}
    */
-  isQuery: ReadRef<NonNullable<SelectProps["noQuery"]>>
+  isQuery: SelectProps["noQuery"]
 
   /**
    * Custom CSS class for the query text mask.
-   * @type {ReadRef<NonNullable<SelectProps["classMaskQuery"]>>}
+   * @type {SelectProps["classMaskQuery"]}
    */
-  classMaskQuery: ReadRef<NonNullable<SelectProps["classMaskQuery"]>>
+  classMaskQuery: SelectProps["classMaskQuery"]
 
   /**
    * The processed list of data items for rendering.
-   * @type {ReadRef<Array<any>>}
+   * @type {Array<any>}
    */
-  dataList: ReadRef<Array<any>>
+  dataList: Array<any>
 
   /**
    * Configuration for the dropdown's positioning behavior.
-   * @type {ReadRef<NonNullable<SelectProps["paramsFixWindow"]>>}
+   * @type {SelectProps["paramsFixWindow"]}
    */
-  paramsFixWindow: ReadRef<NonNullable<SelectProps["paramsFixWindow"]>>
+  paramsFixWindow: SelectProps["paramsFixWindow"]
 
   /**
    * Custom CSS class for the select base container.
-   * @type {ReadRef<SelectProps["classSelect"]>}
+   * @type {SelectProps["classSelect"]}
    */
-  classBase: ReadRef<SelectProps["classSelect"]>
+  classBase: SelectProps["classSelect"]
 
   /**
    * Custom CSS class for the dropdown list container.
-   * @type {ReadRef<SelectProps["classSelectList"]>}
+   * @type {SelectProps["classSelectList"]}
    */
-  classSelectList: ReadRef<SelectProps["classSelectList"]>
+  classSelectList: SelectProps["classSelectList"]
 
   // ---METHODS-----------------------
   /**

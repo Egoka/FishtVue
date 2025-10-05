@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, useSlots } from "vue"
-  import type { SeparatorExpose, SeparatorProps } from "./Separator"
+  import type { SeparatorProps } from "./Separator"
   import Component from "fishtvue/component"
   import { StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
@@ -107,7 +107,7 @@
     ])
   )
   // ---EXPOSE------------------------------
-  defineExpose<SeparatorExpose>({
+  defineExpose({
     // ---PROPS-------------------------
     vertical,
     content,

@@ -1,5 +1,5 @@
-import { Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode } from "../types"
+import { VNode } from "vue"
+import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import type { BaseSelectProps, SelectExpose } from "fishtvue/select"
 
 /**
@@ -109,76 +109,76 @@ export declare type PaginationExpose = {
   // ---STATE-------------------------
   /**
    * Reference to the page size selector.
-   * @type {Ref<SelectExpose | undefined>}
+   * @type {SelectExpose | undefined}
    */
-  selectPageSize: Ref<SelectExpose | undefined>
+  selectPageSize: SelectExpose | undefined
 
   /**
    * The current page size.
-   * @type {ReadRef<number | undefined>}
+   * @type {number | undefined}
    */
-  sizePage: ReadRef<number | undefined>
+  sizePage: number | undefined
 
   // ---PROPS-------------------------
   /**
    * The number of pages visible in the pagination control.
-   * @type {ReadRef<NonNullable<PaginationProps["visibleNumberPages"]>>}
+   * @type {PaginationProps["visibleNumberPages"]}
    */
-  visibleNumberPages: ReadRef<NonNullable<PaginationProps["visibleNumberPages"]>>
+  visibleNumberPages: PaginationProps["visibleNumberPages"]
 
   /**
    * The total number of items across all pages.
-   * @type {ReadRef<NonNullable<PaginationProps["total"]>>}
+   * @type {PaginationProps["total"]}
    */
-  total: ReadRef<NonNullable<PaginationProps["total"]>>
+  total: PaginationProps["total"]
 
   /**
    * Indicates whether informational text about pagination is enabled.
-   * @type {ReadRef<PaginationProps["isInfoText"]>}
+   * @type {PaginationProps["isInfoText"]}
    */
-  isInfoText: ReadRef<PaginationProps["isInfoText"]>
+  isInfoText: PaginationProps["isInfoText"]
 
   /**
    * Indicates whether the page size selector is enabled.
-   * @type {ReadRef<PaginationProps["isPageSizeSelector"]>}
+   * @type {PaginationProps["isPageSizeSelector"]}
    */
-  isPageSizeSelector: ReadRef<PaginationProps["isPageSizeSelector"]>
+  isPageSizeSelector: PaginationProps["isPageSizeSelector"]
 
   /**
    * Indicates whether navigation buttons are hidden.
-   * @type {ReadRef<PaginationProps["isHiddenNavigationButtons"]>}
+   * @type {PaginationProps["isHiddenNavigationButtons"]}
    */
-  isNavigationButtons: ReadRef<PaginationProps["isHiddenNavigationButtons"]>
+  isNavigationButtons: PaginationProps["isHiddenNavigationButtons"]
 
   /**
    * Array of available sizes for the page size selector.
-   * @type {ReadRef<Array<{ key: number; value: string }>>}
+   * @type {Array<{ key: number; value: string }>}
    */
-  arraySizesSelector: ReadRef<Array<{ key: number; value: string }>>
+  arraySizesSelector: Array<{ key: number; value: string }>
 
   /**
    * Array of page numbers available for navigation.
-   * @type {ReadRef<Array<number>>}
+   * @type {Array<number>}
    */
-  pages: ReadRef<Array<number>>
+  pages: Array<number>
 
   /**
    * The currently active page number.
-   * @type {ReadRef<NonNullable<PaginationProps["modelValue"]>>}
+   * @type {PaginationProps["modelValue"]}
    */
-  activePage: Ref<PaginationProps["modelValue"]>
+  activePage: PaginationProps["modelValue"]
 
   /**
    * The current styling mode of the pagination.
-   * @type {ReadRef<NonNullable<PaginationProps["mode"]>>}
+   * @type {PaginationProps["mode"]}
    */
-  mode: ReadRef<NonNullable<PaginationProps["mode"]>>
+  mode: PaginationProps["mode"]
 
   /**
    * Parameters for the page size selector component.
-   * @type {ReadRef<Partial<BaseSelectProps>>}
+   * @type {Partial<BaseSelectProps>}
    */
-  paramsSelect: ReadRef<Partial<BaseSelectProps>>
+  paramsSelect: Partial<BaseSelectProps>
 
   // ---METHODS-----------------------
   /**

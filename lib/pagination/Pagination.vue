@@ -8,7 +8,7 @@
     ChevronRightIcon,
     EllipsisHorizontalIcon
   } from "@heroicons/vue/20/solid"
-  import type { PaginationEmits, PaginationExpose, PaginationProps } from "./Pagination"
+  import type { PaginationEmits, PaginationProps } from "./Pagination"
   import type { BaseSelectProps, SelectExpose } from "fishtvue/select"
   import Button from "fishtvue/button/Button.vue"
   import Select from "fishtvue/select/Select.vue"
@@ -187,7 +187,7 @@
   )
   const classPageSizeSelectorText = ref(Pagination.setStyle("text-sm text-gray-400 dark:text-gray-500"))
   // ---EXPOSE------------------------------
-  defineExpose<PaginationExpose>({
+  defineExpose({
     // ---STATE-------------------------
     selectPageSize,
     sizePage,

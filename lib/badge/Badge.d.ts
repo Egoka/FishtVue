@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { VNode } from "vue"
 
 /**
@@ -63,21 +63,21 @@ export declare type BadgeExpose = {
   // ---PROPS-------------------------
   /**
    * Current style mode of the badge.
-   * @type {ReadRef<BadgeProps["mode"]>}
+   * @type {BadgeProps["mode"]}
    */
-  mode: ReadRef<BadgeProps["mode"]>
+  mode: BadgeProps["mode"]
 
   /**
    * Indicates whether the point indicator is enabled.
-   * @type {ReadRef<BadgeProps["point"]>}
+   * @type {BadgeProps["point"]}
    */
-  isPoint: ReadRef<BadgeProps["point"]>
+  isPoint: BadgeProps["point"]
 
   /**
    * Indicates whether the close button is enabled.
-   * @type {ReadRef<BadgeProps["closeButton"]>}
+   * @type {BadgeProps["closeButton"]}
    */
-  isCloseButton: ReadRef<BadgeProps["closeButton"]>
+  isCloseButton: BadgeProps["closeButton"]
 
   // ---METHODS-----------------------
   /**

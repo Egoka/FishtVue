@@ -1,5 +1,5 @@
-import { Ref, type VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { VNode } from "vue"
+import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 
 /**
@@ -117,100 +117,100 @@ export declare type AriaExpose = {
   // ---STATE-------------------------
   /**
    * Layout reference for the input field.
-   * @type {Ref<InputLayoutExpose | undefined>}
+   * @type {InputLayoutExpose | undefined}
    */
-  layout: Ref<InputLayoutExpose | undefined>
+  layout: InputLayoutExpose | undefined
 
   /**
    * Reference to the input HTML element.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  inputRef: ReadRef<HTMLElement | undefined>
+  inputRef: HTMLElement | undefined
 
   // ---PROPS-------------------------
   /**
    * Current `id` value of the input field.
-   * @type {ReadRef<AriaProps["id"]>}
+   * @type {AriaProps["id"]}
    */
-  id: ReadRef<AriaProps["id"]>
+  id: AriaProps["id"]
 
   /**
    * Current `modelValue` of the input field.
-   * @type {ReadRef<AriaProps["modelValue"]>}
+   * @type {AriaProps["modelValue"]}
    */
-  modelValue: ReadRef<AriaProps["modelValue"]>
+  modelValue: AriaProps["modelValue"]
 
   /**
    * Current `placeholder` of the input field.
-   * @type {ReadRef<AriaProps["placeholder"]>}
+   * @type {AriaProps["placeholder"]}
    */
-  placeholder: ReadRef<AriaProps["placeholder"]>
+  placeholder: AriaProps["placeholder"]
 
   /**
    * Current autocomplete setting for the input field.
-   * @type {ReadRef<AriaProps["autocomplete"]>}
+   * @type {AriaProps["autocomplete"]}
    */
-  autocomplete: ReadRef<AriaProps["autocomplete"]>
+  autocomplete: AriaProps["autocomplete"]
 
   /**
    * Current wrapping behavior for the input field.
-   * @type {ReadRef<AriaProps["wrap"]>}
+   * @type {AriaProps["wrap"]}
    */
-  wrap: ReadRef<AriaProps["wrap"]>
+  wrap: AriaProps["wrap"]
 
   /**
    * Current number of rows for the input field.
-   * @type {ReadRef<AriaProps["rows"]>}
+   * @type {AriaProps["rows"]}
    */
-  rows: ReadRef<AriaProps["rows"]>
+  rows: AriaProps["rows"]
 
   /**
    * Current maximum length for the input field.
-   * @type {ReadRef<AriaProps["maxLength"]>}
+   * @type {AriaProps["maxLength"]}
    */
-  maxLength: ReadRef<AriaProps["maxLength"]>
+  maxLength: AriaProps["maxLength"]
 
   /**
    * Indicates whether the input has a value.
-   * @type {ReadRef<InputLayoutProps["isValue"]>}
+   * @type {InputLayoutProps["isValue"]}
    */
-  isValue: ReadRef<InputLayoutProps["isValue"]>
+  isValue: InputLayoutProps["isValue"]
 
   /**
    * Current mode of the input field.
-   * @type {ReadRef<AriaProps["mode"]>}
+   * @type {AriaProps["mode"]}
    */
-  mode: ReadRef<AriaProps["mode"]>
+  mode: AriaProps["mode"]
 
   /**
    * Indicates whether the input is disabled.
-   * @type {ReadRef<AriaProps["disabled"]>}
+   * @type {AriaProps["disabled"]}
    */
-  isDisabled: ReadRef<AriaProps["disabled"]>
+  isDisabled: AriaProps["disabled"]
 
   /**
    * Indicates whether the input is in a loading state.
-   * @type {ReadRef<AriaProps["loading"]>}
+   * @type {AriaProps["loading"]}
    */
-  isLoading: ReadRef<AriaProps["loading"]>
+  isLoading: AriaProps["loading"]
 
   /**
    * Indicates whether the input is invalid.
-   * @type {ReadRef<AriaProps["isInvalid"]>}
+   * @type {AriaProps["isInvalid"]}
    */
-  isInvalid: ReadRef<AriaProps["isInvalid"]>
+  isInvalid: AriaProps["isInvalid"]
 
   /**
    * The validation error message for the input field.
-   * @type {ReadRef<AriaProps["messageInvalid"]>}
+   * @type {AriaProps["messageInvalid"]}
    */
-  messageInvalid: ReadRef<AriaProps["messageInvalid"]>
+  messageInvalid: AriaProps["messageInvalid"]
 
   /**
    * CSS class for the input container.
-   * @type {ReadRef<AriaProps["class"]>}
+   * @type {AriaProps["class"]}
    */
-  classStyle: ReadRef<AriaProps["class"]>
+  classStyle: AriaProps["class"]
 
   // ---METHODS-----------------------
   /**

@@ -109,7 +109,7 @@
   })
   const classContent = computed(() => FixWindow.setStyle([mode.value ?? "", options?.class ?? "", props?.class ?? ""]))
   // ---EXPOSE------------------------------
-  defineExpose<FixWindowExpose>({
+  defineExpose({
     // ---STATE-------------------------
     x,
     y,

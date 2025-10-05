@@ -1,4 +1,4 @@
-import { UnwrapNestedRefs, VNode } from "vue"
+import { VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode, THeight, TWidth } from "../types"
 import { BaseInputProps } from "fishtvue/input"
 import { BaseSelectProps } from "fishtvue/select"
@@ -900,222 +900,222 @@ export declare type TableExpose = {
   // ---STATE-------------------------
   /**
    * The current sorting state for all columns.
-   * @type {UnwrapNestedRefs<Sorted>}
+   * @type {Sorted}
    */
-  sortColumns: UnwrapNestedRefs<Sorted>
+  sortColumns: Sorted
 
   /**
    * The current filtering state for all columns.
-   * @type {UnwrapNestedRefs<Filters>}
+   * @type {Filters}
    */
-  filterColumns: UnwrapNestedRefs<Filters>
+  filterColumns: Filters
 
   /**
    * The current widths for all columns.
-   * @type {UnwrapNestedRefs<Widths>}
+   * @type {Widths}
    */
-  widthsColumns: UnwrapNestedRefs<Widths>
+  widthsColumns: Widths
 
   /**
    * The current search query.
-   * @type {ReadRef<Search>}
+   * @type {Search}
    */
-  queryTable: ReadRef<Search>
+  queryTable: Search
 
   /**
    * The current page number.
-   * @type {ReadRef<Page>}
+   * @type {Page}
    */
-  pageTable: ReadRef<Page>
+  pageTable: Page
 
   /**
    * The current page size.
-   * @type {ReadRef<Page>}
+   * @type {Page}
    */
-  sizeTable: ReadRef<Page>
+  sizeTable: Page
 
   /**
    * The entire data source of the table.
-   * @type {ReadRef<TableProps["dataSource"]>}
+   * @type {TableProps["dataSource"]}
    */
-  allData: ReadRef<TableProps["dataSource"]>
+  allData: TableProps["dataSource"]
 
   /**
    * Indicates whether the table is in a loading state.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isLoading: ReadRef<boolean>
+  isLoading: boolean
 
   // ---PROPS-------------------------------
   /**
    * The current styling mode of the table.
-   * @type {ReadRef<TableProps["mode"]>}
+   * @type {TableProps["mode"]}
    */
-  mode: ReadRef<TableProps["mode"]>
+  mode: TableProps["mode"]
 
   /**
    * Indicates whether the toolbar is visible.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isVisibleToolbar: ReadRef<boolean>
+  isVisibleToolbar: boolean
 
   /**
    * Indicates whether search functionality is enabled.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isSearch: ReadRef<boolean>
+  isSearch: boolean
 
   /**
    * Indicates whether the "clear all filters" button is enabled.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isFilterClear: ReadRef<boolean>
+  isFilterClear: boolean
 
   /**
    * Indicates whether columns are defined.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isColumns: ReadRef<boolean>
+  isColumns: boolean
 
   /**
    * Indicates whether summary rows are defined.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isSummary: ReadRef<boolean>
+  isSummary: boolean
 
   /**
    * The number of rows to simulate during data loading.
-   * @type {ReadRef<TableProps["countDataOnLoading"]>}
+   * @type {TableProps["countDataOnLoading"]}
    */
-  countDataOnLoading: ReadRef<TableProps["countDataOnLoading"]>
+  countDataOnLoading: TableProps["countDataOnLoading"]
 
   /**
    * The mask applied to query text.
-   * @type {ReadRef<ITableStyles["maskQuery"]>}
+   * @type {ITableStyles["maskQuery"]}
    */
-  classMaskQuery: ReadRef<ITableStyles["maskQuery"]>
+  classMaskQuery: ITableStyles["maskQuery"]
 
   /**
    * The message displayed when there is no data.
-   * @type {ReadRef<TableProps["noData"]>}
+   * @type {TableProps["noData"]}
    */
-  noData: ReadRef<TableProps["noData"]>
+  noData: TableProps["noData"]
 
   /**
    * The message displayed when no columns are defined.
-   * @type {ReadRef<TableProps["noData"]>}
+   * @type {TableProps["noData"]}
    */
-  noColumn: ReadRef<TableProps["noData"]>
+  noColumn: TableProps["noData"]
 
   /**
    * The message displayed when no filters are applied.
-   * @type {ReadRef<IFilter["noFilter"]>}
+   * @type {IFilter["noFilter"]}
    */
-  noFilter: ReadRef<IFilter["noFilter"]>
+  noFilter: IFilter["noFilter"]
 
   /**
    * The icon used for sorting.
-   * @type {ReadRef<ISort["icon"]>}
+   * @type {ISort["icon"]}
    */
-  iconSort: ReadRef<ISort["icon"]>
+  iconSort: ISort["icon"]
 
   /**
    * Indicates whether column resizing is enabled.
-   * @type {ReadRef<TableProps["resizedColumns"]>}
+   * @type {TableProps["resizedColumns"]}
    */
-  resizedColumns: ReadRef<TableProps["resizedColumns"]>
+  resizedColumns: TableProps["resizedColumns"]
 
   /**
    * The total number of rows in the data source.
-   * @type {ReadRef<number>}
+   * @type {number}
    */
-  lengthData: ReadRef<number>
+  lengthData: number
 
   /**
    * The field used for grouping data.
-   * @type {ReadRef<IGrouping["groupField"] | null>}
+   * @type {IGrouping["groupField"] | null}
    */
-  groupField: ReadRef<IGrouping["groupField"] | null>
+  groupField: IGrouping["groupField"] | null
 
   /**
    * Indicates whether filtering is enabled.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isFilter: ReadRef<boolean>
+  isFilter: boolean
 
   /**
    * Indicates whether sorting is enabled.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isSort: ReadRef<boolean>
+  isSort: boolean
 
   /**
    * Indicates whether grouping is enabled.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isGroup: ReadRef<boolean>
+  isGroup: boolean
 
   /**
    * Indicates whether pagination is enabled.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isPagination: ReadRef<boolean>
+  isPagination: boolean
 
   // ---PAGINATION--------------------------
   /**
    * The starting page for pagination.
-   * @type {ReadRef<TablePagination["startPage"]>}
+   * @type {TablePagination["startPage"]}
    */
-  startPage: ReadRef<TablePagination["startPage"]>
+  startPage: TablePagination["startPage"]
 
   /**
    * The styling mode of the pagination component.
-   * @type {ReadRef<TablePagination["mode"]>}
+   * @type {TablePagination["mode"]}
    */
-  modePagination: ReadRef<TablePagination["mode"]>
+  modePagination: TablePagination["mode"]
 
   /**
    * The current page size for pagination.
-   * @type {ReadRef<TablePagination["sizePage"]>}
+   * @type {TablePagination["sizePage"]}
    */
-  sizePage: ReadRef<TablePagination["sizePage"]>
+  sizePage: TablePagination["sizePage"]
 
   /**
    * The number of visible pages in pagination.
-   * @type {ReadRef<TablePagination["visibleNumberPages"]>}
+   * @type {TablePagination["visibleNumberPages"]}
    */
-  visibleNumberPages: ReadRef<TablePagination["visibleNumberPages"]>
+  visibleNumberPages: TablePagination["visibleNumberPages"]
 
   /**
    * The available sizes for the page size selector.
-   * @type {ReadRef<TablePagination["sizesSelector"]>}
+   * @type {TablePagination["sizesSelector"]}
    */
-  sizesSelector: ReadRef<TablePagination["sizesSelector"]>
+  sizesSelector: TablePagination["sizesSelector"]
 
   /**
    * Indicates whether informational text is displayed in pagination.
-   * @type {ReadRef<TablePagination["isInfoText"]>}
+   * @type {TablePagination["isInfoText"]}
    */
-  isInfoText: ReadRef<TablePagination["isInfoText"]>
+  isInfoText: TablePagination["isInfoText"]
 
   /**
    * Indicates whether the page size selector is visible.
-   * @type {ReadRef<TablePagination["isPageSizeSelector"]>}
+   * @type {TablePagination["isPageSizeSelector"]}
    */
-  isPageSizeSelector: ReadRef<TablePagination["isPageSizeSelector"]>
+  isPageSizeSelector: TablePagination["isPageSizeSelector"]
 
   /**
    * Indicates whether navigation buttons are hidden in pagination.
-   * @type {ReadRef<TablePagination["isHiddenNavigationButtons"]>}
+   * @type {TablePagination["isHiddenNavigationButtons"]}
    */
-  isHiddenNavigationButtons: ReadRef<TablePagination["isHiddenNavigationButtons"]>
+  isHiddenNavigationButtons: TablePagination["isHiddenNavigationButtons"]
 
   // ---CELL--------------------------------
   /**
    * The height of table cells.
-   * @type {ReadRef<number>}
+   * @type {number}
    */
-  heightCell: ReadRef<number>
+  heightCell: number
 
   /**
    * The number of rows visible in the table.
@@ -1125,65 +1125,65 @@ export declare type TableExpose = {
 
   /**
    * The calculated height of the table.
-   * @type {ReadRef<string>}
+   * @type {string}
    */
-  heightTable: ReadRef<string>
+  heightTable: string
 
   // ---DATA--------------------------------
   /**
    * The raw data source of the table.
-   * @type {ReadRef<Array<any>>}
+   * @type {Array<any>}
    */
-  dataSource: ReadRef<Array<any>>
+  dataSource: Array<any>
 
   /**
    * The processed result data.
-   * @type {ReadRef<ResultData>}
+   * @type {ResultData}
    */
-  resultDataSource: ReadRef<ResultData>
+  resultDataSource: ResultData
 
   /**
    * The current column definitions for the table.
-   * @type {ReadRef<Array<IColumnPrivate>>}
+   * @type {Array<IColumnPrivate>}
    */
-  dataColumns: ReadRef<Array<IColumnPrivate>>
+  dataColumns: Array<IColumnPrivate>
 
   /**
    * The current summary configurations for the table.
-   * @type {ReadRef<Array<ISummaryPrivate>>}
+   * @type {Array<ISummaryPrivate>}
    */
-  dataSummary: ReadRef<Array<ISummaryPrivate>>
+  dataSummary: Array<ISummaryPrivate>
 
   /**
    * The computed summary data for the table.
-   * @type {ReadRef<object>}
+   * @type {object}
    */
-  summaryColumns: ReadRef<object>
+  summaryColumns: object
 
   // ---STYLE-------------------------------
   /**
    * The styles applied to the table.
-   * @type {ReadRef<ITableStyles>}
+   * @type {ITableStyles}
    */
-  styles: ReadRef<ITableStyles>
+  styles: ITableStyles
 
   /**
    * The calculated style for the table body.
-   * @type {ReadRef<string>}
+   * @type {string}
    */
-  tableBodyStyle: ReadRef<string>
+  tableBodyStyle: string
 
   /**
    * The styling mode of the table.
-   * @type {ReadRef<string>}
+   * @type {string}
    */
-  modeStyle: ReadRef<string>
+  modeStyle: string
 
   /**
    * Indicates whether dark mode is active.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isDark: ReadRef<boolean>
+  isDark: boolean
 
   // ---METHODS-----------------------------
   /**

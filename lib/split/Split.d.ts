@@ -1,5 +1,5 @@
-import { UnwrapNestedRefs, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { VNode } from "vue"
+import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { IconsProps } from "fishtvue/icons"
 
 /**
@@ -206,77 +206,77 @@ export declare type SplitExpose = {
   // ---REF-LINK----------------------------
   /**
    * Reference to the resizable group container element.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  resizableGroup: ReadRef<HTMLElement | undefined>
+  resizableGroup: HTMLElement | undefined
 
   /**
    * References to the individual resizable panel elements.
-   * @type {ReadRef<Record<string, HTMLElement>>}
+   * @type {Record<string, HTMLElement>}
    */
-  resizablePanels: ReadRef<Record<string, HTMLElement>>
+  resizablePanels: Record<string, HTMLElement>
 
   // ---STATE-------------------------------
   /**
    * The current sizes of the panels.
-   * @type {UnwrapNestedRefs<Record<Panel["name"], number>>}
+   * @type {Record<Panel["name"], number>}
    */
-  sizePanels: UnwrapNestedRefs<Record<Panel["name"], number>>
+  sizePanels: Record<Panel["name"], number>
 
   /**
    * The current cursor type for resizing panels.
-   * @type {UnwrapNestedRefs<Record<Panel["name"], CursorType>>}
+   * @type {Record<Panel["name"], CursorType>}
    */
-  cursorPanels: UnwrapNestedRefs<Record<Panel["name"], CursorType>>
+  cursorPanels: Record<Panel["name"], CursorType>
 
   /**
    * The cursor type currently active during resizing.
-   * @type {ReadRef<CursorType>}
+   * @type {CursorType}
    */
-  activeCursorPanel: ReadRef<CursorType>
+  activeCursorPanel: CursorType
 
   // ---PROPS-------------------------
   /**
    * The units used for panel sizes (`percentages` or `pixels`).
-   * @type {ReadRef<SplitProps["units"]>}
+   * @type {SplitProps["units"]}
    */
-  units: ReadRef<SplitProps["units"]>
+  units: SplitProps["units"]
 
   /**
    * The configuration for all panels in the Split component.
-   * @type {ReadRef<SplitProps["panels"]>}
+   * @type {SplitProps["panels"]}
    */
-  panels: ReadRef<SplitProps["panels"]>
+  panels: SplitProps["panels"]
 
   /**
    * The direction of panel resizing (`vertical` or `horizontal`).
-   * @type {ReadRef<SplitProps["direction"]>}
+   * @type {SplitProps["direction"]}
    */
-  direction: ReadRef<SplitProps["direction"]>
+  direction: SplitProps["direction"]
 
   /**
    * The type of separator used between panels.
-   * @type {ReadRef<NonNullable<SplitProps["separatorType"]>>}
+   * @type {SplitProps["separatorType"]}
    */
-  separatorType: ReadRef<NonNullable<SplitProps["separatorType"]>>
+  separatorType: SplitProps["separatorType"]
 
   /**
    * Indicates whether the separator has reduced opacity when not hovered.
-   * @type {ReadRef<SplitProps["separatorNotHoverOpacity"]>}
+   * @type {SplitProps["separatorNotHoverOpacity"]}
    */
-  separatorNotHoverOpacity: ReadRef<SplitProps["separatorNotHoverOpacity"]>
+  separatorNotHoverOpacity: SplitProps["separatorNotHoverOpacity"]
 
   /**
    * The styles applied to the Split component.
-   * @type {ReadRef<SplitProps["styles"]>}
+   * @type {SplitProps["styles"]}
    */
-  styles: ReadRef<SplitProps["styles"]>
+  styles: SplitProps["styles"]
 
   /**
    * The base CSS class for the Split component.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classBase: ReadRef<StyleClass>
+  classBase: StyleClass
 }
 export declare type SplitOption = Pick<SplitProps, "separatorType" | "separatorNotHoverOpacity" | "class" | "styles">
 

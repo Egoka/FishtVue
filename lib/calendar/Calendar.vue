@@ -2,7 +2,6 @@
   import { computed, inject, nextTick, onMounted, ref, useSlots, watch } from "vue"
   import type {
     CalendarEmits,
-    CalendarExpose,
     CalendarProps,
     ICalendarPicker,
     IParamsDatePicker,
@@ -201,7 +200,7 @@
     class: props.class
   }))
   // ---EXPOSE------------------------------
-  defineExpose<CalendarExpose>({
+  defineExpose({
     //---STATE-------------------------
     layout,
     inputLayout,

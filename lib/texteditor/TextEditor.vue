@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
-  import { IQuillEditor, TextEditorEmits, TextEditorExpose, TextEditorProps } from "./TextEditor"
+  import { IQuillEditor, TextEditorEmits, TextEditorProps } from "./TextEditor"
   import "@vueup/vue-quill/dist/vue-quill.snow.css"
   import "@vueup/vue-quill/dist/vue-quill.bubble.css"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
@@ -55,7 +55,7 @@
   const isDisabled = computed<NonNullable<TextEditorProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<TextEditorProps["isInvalid"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<TextEditorProps["isInvalid"]>>(() =>
-    !isDisabled.value ? props.isInvalid : false
+    !isDisabled.value ? (props.isInvalid ?? false) : false
   )
   const messageInvalid = computed<NonNullable<TextEditorProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
   const classStyle = computed<NonNullable<TextEditorProps["class"]>>(
@@ -119,7 +119,7 @@
     class: classStyle.value
   }))
   // ---EXPOSE------------------------------
-  defineExpose<TextEditorExpose>({
+  defineExpose({
     // ---STATE-------------------------
     layout,
     valueLayout,

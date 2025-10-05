@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, onUnmounted, ref, useSlots } from "vue"
-  import type { InputLayoutEmits, InputLayoutExpose, InputLayoutProps } from "./InputLayout"
+  import type { InputLayoutEmits, InputLayoutProps } from "./InputLayout"
   import Label from "fishtvue/label/Label.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Loading from "fishtvue/loading/Loading.vue"
@@ -131,7 +131,7 @@
   )
   InputLayout.setStyle("transition ease-in duration-200 opacity-100 opacity-0")
   // ---EXPOSE------------------------------
-  defineExpose<InputLayoutExpose>({
+  defineExpose({
     // ---STATE-------------------------
     input,
     inputBody,

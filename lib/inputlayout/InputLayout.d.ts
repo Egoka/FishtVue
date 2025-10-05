@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode, THeight, TWidth } from "../types"
+import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode, THeight, TWidth } from "../types"
 import { LabelMode } from "fishtvue/label"
 
 /**
@@ -147,154 +147,152 @@ export declare type InputLayoutExpose = {
   // ---STATE-------------------------
   /**
    * Reference to the input element within the layout.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  input: ReadRef<HTMLElement | undefined>
+  input: HTMLElement | undefined
 
   /**
    * Reference to the input body container.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  inputBody: ReadRef<HTMLElement | undefined>
+  inputBody: HTMLElement | undefined
 
   /**
    * Reference to the element before the input.
-   * @type {ReadRef<HTMLElement | undefined>}
-   */
-  beforeInput: ReadRef<HTMLElement | undefined>
-
+   * @type {HTMLElement | undefined}*/
+  beforeInput: HTMLElement | undefined
   /**
    * Reference to the element after the input.
-   * @type {ReadRef<HTMLElement | undefined>}
+   * @type {HTMLElement | undefined}
    */
-  afterInput: ReadRef<HTMLElement | undefined>
+  afterInput: HTMLElement | undefined
 
   /**
    * The height of the header in the layout.
-   * @type {ReadRef<number>}
+   * @type {number}
    */
-  headerHeight: ReadRef<number>
+  headerHeight: number
 
   /**
    * Indicates whether the input value is copied.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isCopy: ReadRef<boolean>
+  isCopy: boolean
 
   /**
    * The width of the element before the input.
-   * @type {ReadRef<number | null>}
+   * @type {number | null}
    */
-  beforeWidth: ReadRef<number | null>
+  beforeWidth: number | null
 
   /**
    * The width of the element after the input.
-   * @type {ReadRef<number | null>}
+   * @type {number | null}
    */
-  afterWidth: ReadRef<number | null>
+  afterWidth: number | null
 
   // ---PROPS-------------------------
   /**
    * The current value of the input.
-   * @type {ReadRef<InputLayoutProps["value"]>}
+   * @type {InputLayoutProps["value"]}
    */
-  value: ReadRef<InputLayoutProps["value"]>
+  value: InputLayoutProps["value"]
 
   /**
    * Indicates whether the input has a value.
-   * @type {ReadRef<InputLayoutProps["isValue"]>}
+   * @type {InputLayoutProps["isValue"]}
    */
-  isValue: ReadRef<InputLayoutProps["isValue"]>
+  isValue: InputLayoutProps["isValue"]
 
   /**
    * The current styling mode of the input layout.
-   * @type {ReadRef<InputLayoutProps["mode"]>}
+   * @type {InputLayoutProps["mode"]}
    */
-  mode: ReadRef<InputLayoutProps["mode"]>
+  mode: InputLayoutProps["mode"]
 
   /**
    * The current label text for the input.
-   * @type {ReadRef<InputLayoutProps["label"]>}
+   * @type {InputLayoutProps["label"]}
    */
-  label: ReadRef<InputLayoutProps["label"]>
+  label: InputLayoutProps["label"]
 
   /**
    * The current label display mode.
-   * @type {ReadRef<InputLayoutProps["labelMode"]>}
+   * @type {InputLayoutProps["labelMode"]}
    */
-  labelMode: ReadRef<InputLayoutProps["labelMode"]>
+  labelMode: InputLayoutProps["labelMode"]
   /**
    * The type of label display mode currently applied to the input layout.
    * Derived from the `labelMode` prop.
-   * @type {ReadRef<InputLayoutProps["labelMode"]>}
+   * @type {InputLayoutProps["labelMode"]}
    */
-  labelType: ReadRef<InputLayoutProps["labelMode"]>
+  labelType: InputLayoutProps["labelMode"]
 
   /**
    * Indicates whether the input is required.
-   * @type {ReadRef<InputLayoutProps["required"]>}
+   * @type {InputLayoutProps["required"]}
    */
-  isRequired: ReadRef<InputLayoutProps["required"]>
+  isRequired: InputLayoutProps["required"]
 
   /**
    * Indicates whether the input is in a loading state.
-   * @type {ReadRef<InputLayoutProps["loading"]>}
+   * @type {InputLayoutProps["loading"]}
    */
-  isLoading: ReadRef<InputLayoutProps["loading"]>
+  isLoading: InputLayoutProps["loading"]
 
   /**
    * Indicates whether the input is disabled.
-   * @type {ReadRef<InputLayoutProps["disabled"]>}
+   * @type {InputLayoutProps["disabled"]}
    */
-  isDisabled: ReadRef<InputLayoutProps["disabled"]>
+  isDisabled: InputLayoutProps["disabled"]
 
   /**
    * Indicates whether the input is invalid.
-   * @type {ReadRef<InputLayoutProps["isInvalid"]>}
+   * @type {InputLayoutProps["isInvalid"]}
    */
-  isInvalid: ReadRef<InputLayoutProps["isInvalid"]>
+  isInvalid: InputLayoutProps["isInvalid"]
 
   /**
    * The validation error message for the input.
-   * @type {ReadRef<InputLayoutProps["messageInvalid"]>}
+   * @type {InputLayoutProps["messageInvalid"]}
    */
-  messageInvalid: ReadRef<InputLayoutProps["messageInvalid"]>
+  messageInvalid: InputLayoutProps["messageInvalid"]
 
   /**
    * The help text for the input.
-   * @type {ReadRef<InputLayoutProps["help"]>}
+   * @type {InputLayoutProps["help"]}
    */
-  help: ReadRef<InputLayoutProps["help"]>
+  help: InputLayoutProps["help"]
 
   /**
    * The width of the input layout.
-   * @type {ReadRef<InputLayoutProps["width"]>}
+   * @type {InputLayoutProps["width"]}
    */
-  width: ReadRef<InputLayoutProps["width"]>
+  width: InputLayoutProps["width"]
 
   /**
    * The height of the input layout.
-   * @type {ReadRef<InputLayoutProps["height"]>}
+   * @type {InputLayoutProps["height"]}
    */
-  height: ReadRef<InputLayoutProps["height"]>
+  height: InputLayoutProps["height"]
 
   /**
    * The animation applied to the layout.
-   * @type {ReadRef<InputLayoutProps["animation"]>}
+   * @type {InputLayoutProps["animation"]}
    */
-  animation: ReadRef<InputLayoutProps["animation"]>
+  animation: InputLayoutProps["animation"]
 
   /**
    * Custom CSS class for the layout container.
-   * @type {ReadRef<InputLayoutProps["class"]>}
+   * @type {InputLayoutProps["class"]}
    */
-  class: ReadRef<InputLayoutProps["class"]>
+  class: InputLayoutProps["class"]
 
   /**
    * Custom CSS class for the body of the layout.
-   * @type {ReadRef<InputLayoutProps["classBody"]>}
+   * @type {InputLayoutProps["classBody"]}
    */
-  classBody: ReadRef<InputLayoutProps["classBody"]>
+  classBody: InputLayoutProps["classBody"]
 
   // ---METHODS-----------------------
   /**

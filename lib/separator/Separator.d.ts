@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 
 /**
  * ## Separator
@@ -105,69 +105,69 @@ export declare type SeparatorExpose = {
   // ---PROPS-------------------------
   /**
    * Indicates whether the separator is vertical.
-   * @type {ReadRef<NonNullable<SeparatorProps["vertical"]>>}
+   * @type {SeparatorProps["vertical"]}
    */
-  vertical: ReadRef<NonNullable<SeparatorProps["vertical"]>>
+  vertical: SeparatorProps["vertical"]
 
   /**
    * Alignment of the content within the separator.
-   * @type {ReadRef<NonNullable<SeparatorProps["content"]>>}
+   * @type {SeparatorProps["content"]}
    */
-  content: ReadRef<NonNullable<SeparatorProps["contentPosition"]>>
+  content: SeparatorProps["contentPosition"]
 
   /**
    * The applied gradient value for the separator.
-   * @type {ReadRef<number>}
+   * @type {number}
    */
-  gradient: ReadRef<number>
+  gradient: number
 
   /**
    * The length of the gradient applied to the separator.
-   * @type {ReadRef<number>}
+   * @type {number}
    */
-  gradientLength: ReadRef<number>
+  gradientLength: number
 
   /**
    * The depth effect applied to the separator.
-   * @type {ReadRef<NonNullable<SeparatorProps["depth"]>>}
+   * @type {SeparatorProps["depth"]}
    */
-  depth: ReadRef<NonNullable<SeparatorProps["depth"]>>
+  depth: SeparatorProps["depth"]
 
   /**
    * Custom CSS class for the separator container.
-   * @type {ReadRef<SeparatorProps["class"]>}
+   * @type {SeparatorProps["class"]}
    */
-  classBase: ReadRef<SeparatorProps["class"]>
+  classBase: SeparatorProps["class"]
 
   /**
    * Custom CSS class for the left body line.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classBodyLineLeft: ReadRef<StyleClass>
+  classBodyLineLeft: StyleClass
 
   /**
    * Custom CSS class for the left separator line.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classLineLeft: ReadRef<StyleClass>
+  classLineLeft: StyleClass
 
   /**
    * Custom CSS class for the separator content.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classContent: ReadRef<StyleClass>
+  classContent: StyleClass
 
   /**
    * Custom CSS class for the right body line.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classBodyLineRight: ReadRef<StyleClass>
+  classBodyLineRight: StyleClass
 
   /**
    * Custom CSS class for the right separator line.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classLineRight: ReadRef<StyleClass>
+  classLineRight: StyleClass
 }
 export declare type SeparatorOption = Pick<
   SeparatorProps,

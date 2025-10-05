@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted } from "vue"
-  import type { BadgeEmits, BadgeExpose, BadgeProps } from "./Badge"
+  import type { BadgeEmits, BadgeProps } from "./Badge"
   import Icons from "fishtvue/icons/Icons.vue"
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
@@ -60,7 +60,7 @@
   const classIcon = computed(() => Badge.setStyle(["h-1.5 w-1.5 mx-1", classBadgeContent.value, classContent.value]))
   const classButtonIcon = computed(() => Badge.setStyle(["h-4 w-4", classBadgeContent.value, classContent.value]))
   // ---EXPOSE------------------------------
-  defineExpose<BadgeExpose>({
+  defineExpose({
     // ---PROPS-------------------------
     mode,
     isPoint,

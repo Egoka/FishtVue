@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { VNode } from "vue"
 
 /**
@@ -114,39 +114,39 @@ export declare type ButtonExpose = {
   // ---PROPS-------------------------
   /**
    * Current visual mode of the button.
-   * @type {ReadRef<ButtonProps["mode"]>}
+   * @type {ButtonProps["mode"]}
    */
-  mode: ReadRef<ButtonProps["mode"]>
+  mode: ButtonProps["mode"]
 
   /**
    * Current size of the button.
-   * @type {ReadRef<ButtonProps["size"]>}
+   * @type {ButtonProps["size"]}
    */
-  size: ReadRef<ButtonProps["size"]>
+  size: ButtonProps["size"]
 
   /**
    * Current corner rounding style of the button.
-   * @type {ReadRef<ButtonProps["rounded"]>}
+   * @type {ButtonProps["rounded"]}
    */
-  rounded: ReadRef<ButtonProps["rounded"]>
+  rounded: ButtonProps["rounded"]
 
   /**
    * Current color theme of the button.
-   * @type {ReadRef<ButtonProps["color"]>}
+   * @type {ButtonProps["color"]}
    */
-  color: ReadRef<ButtonProps["color"]>
+  color: ButtonProps["color"]
 
   /**
    * Current CSS class for the button container.
-   * @type {ReadRef<ButtonProps["class"]>}
+   * @type {ButtonProps["class"]}
    */
-  classBase: ReadRef<ButtonProps["class"]>
+  classBase: ButtonProps["class"]
 
   /**
    * Current CSS class for the button's icon.
-   * @type {ReadRef<ButtonProps["classIcon"]>}
+   * @type {ButtonProps["classIcon"]}
    */
-  classIcon: ReadRef<ButtonProps["classIcon"]>
+  classIcon: ButtonProps["classIcon"]
 }
 export declare type ButtonOption = Pick<ButtonProps, "mode" | "size" | "rounded" | "color" | "class" | "classIcon">
 

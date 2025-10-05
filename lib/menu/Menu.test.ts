@@ -1,4 +1,5 @@
 import { mount } from "@vue/test-utils"
+import { nextTick } from "vue"
 import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Menu from "fishtvue/menu/Menu.vue"
@@ -26,10 +27,11 @@ describe("Menu Component", () => {
       }
     ]
 
-    it("renders menu groups and items correctly", () => {
+    it("renders menu groups and items correctly", async () => {
       const wrapper = mount(Menu, {
         props: { groups: mockGroups() }
       })
+      await nextTick()
 
       // Проверяем группы меню
       const groups = wrapper.findAll("[data-menu-group]")
@@ -49,10 +51,11 @@ describe("Menu Component", () => {
       expect(group2Items[1].text()).toContain("API")
     })
 
-    it("applies disabled styles to disabled items", () => {
+    it("applies disabled styles to disabled items", async () => {
       const wrapper = mount(Menu, {
         props: { groups: mockGroups() }
       })
+      await nextTick()
 
       const disabledItem = wrapper.find('[aria-disabled="true"]')
       expect(disabledItem.exists()).toBe(true)
@@ -60,10 +63,11 @@ describe("Menu Component", () => {
       expect(disabledItem.classes()).toContain("opacity-50")
     })
 
-    it("renders separators between groups with icons", () => {
+    it("renders separators between groups with icons", async () => {
       const wrapper = mount(Menu, {
         props: { groups: mockGroups() }
       })
+      await nextTick()
 
       const separators = wrapper.findAll("[data-separator]")
       expect(separators.length).toBe(1)
@@ -96,6 +100,7 @@ describe("Menu Component", () => {
           selected: true
         }
       })
+      await nextTick()
 
       const item = wrapper.findAll("[data-menu-item]")[0]
       await item.trigger("click")
@@ -103,19 +108,20 @@ describe("Menu Component", () => {
       expect(item.classes()).toContain("font-semibold")
     })
 
-    it("renders menu horizontally when 'horizontal' is true", () => {
+    it("renders menu horizontally when 'horizontal' is true", async () => {
       const wrapper = mount(Menu, {
         props: {
           groups: mockGroups(),
           horizontal: true
         }
       })
+      await nextTick()
 
       const menu = wrapper.find("[data-menu]")
       expect(menu.classes()).toContain("flex-row")
     })
 
-    it("renders nested menus correctly", () => {
+    it("renders nested menus correctly", async () => {
       const nestedGroups = [
         {
           title: "Main",
@@ -142,6 +148,7 @@ describe("Menu Component", () => {
       const wrapper = mount(Menu, {
         props: { groups: nestedGroups }
       })
+      await nextTick()
 
       const mainItem = wrapper.find("[data-menu-item]")
       expect(mainItem.text()).toContain("Profile")
@@ -185,6 +192,7 @@ describe("Menu Component", () => {
             groups: mockGroups
           }
         })
+        await nextTick()
 
         const menuItem = wrapper.find("[data-menu-item]")
         expect(menuItem.exists()).toBe(true)
@@ -206,7 +214,7 @@ describe("Menu Component", () => {
       { mode: "filled", expected: "bg-stone-100 dark:bg-stone-900 rounded-md" },
       { mode: "outlined", expected: "bg-white dark:bg-neutral-950 rounded-md" },
       { mode: "underlined", expected: "bg-stone-50 dark:bg-stone-950" }
-    ])(`should apply correct styles for mode: $mode`, ({ mode, expected }) => {
+    ])(`should apply correct styles for mode: $mode`, async ({ mode, expected }) => {
       // Монтируем компонент с текущим значением mode
       const wrapper = mount(Menu, {
         props: {
@@ -214,18 +222,20 @@ describe("Menu Component", () => {
           groups: [{}]
         }
       })
+      await nextTick()
 
       // Проверяем, что prop mode установлен корректно
       expect((wrapper as any).props("mode")).toBe(mode)
       expect(wrapper.find("[data-menu]").classes().join(" ")).toContain(expected)
     })
 
-    it("should fall back to default mode if none provided", () => {
+    it("should fall back to default mode if none provided", async () => {
       const wrapper = mount(Menu, {
         props: {
           groups: [{}]
         }
       })
+      await nextTick()
       expect((wrapper as any).vm.mode).toBe("outlined")
       expect(wrapper.find("[data-menu]").classes().join(" ")).toContain("bg-white dark:bg-neutral-950 rounded-md")
     })
@@ -254,6 +264,7 @@ describe("Menu Component", () => {
             styles: customStyles
           } as MenuProps
         })
+        await nextTick()
 
         // Симулируем установку активного элемента
         const menuElement = wrapper.find("[data-menu-item]")
@@ -271,6 +282,7 @@ describe("Menu Component", () => {
             styles: customStyles
           } as MenuProps
         })
+        await nextTick()
 
         // Симулируем выбор элемента
         const menuElement = wrapper.find("[data-menu-item]")
@@ -280,12 +292,13 @@ describe("Menu Component", () => {
         expect(menuElement.classes().join(" ")).toContain("selected-rows-class")
       })
 
-      it("should not apply custom styles if styles prop is not provided", () => {
+      it("should not apply custom styles if styles prop is not provided", async () => {
         const wrapper = mount(Menu, {
           props: {
             groups: mockGroups()
           }
         })
+        await nextTick()
 
         // Проверяем, что классы activeRows и selectedRows не применяются по умолчанию
         const menuElement = wrapper.find("[data-menu-item]")
@@ -305,7 +318,7 @@ describe("Menu Component", () => {
         })
       }
     })
-    it("renders menu with global options", () => {
+    it("renders menu with global options", async () => {
       const app: any = createAppWithFishtVue({
         styles: {
           class: { body: "custom-body-class" }
@@ -323,13 +336,14 @@ describe("Menu Component", () => {
           ]
         }
       })
+      await nextTick()
 
       const menuBody = wrapper.find("[data-menu]")
       expect(menuBody.exists()).toBe(true)
       expect(menuBody.classes()).toContain("custom-body-class")
     })
 
-    it("overrides global options with props", () => {
+    it("overrides global options with props", async () => {
       const app: any = createAppWithFishtVue({
         styles: {
           class: { body: "global-body-class", title: "global-title-class" }
@@ -351,6 +365,7 @@ describe("Menu Component", () => {
           }
         } as MenuProps
       })
+      await nextTick()
 
       const menuBody = wrapper.find("[data-menu]")
       expect(menuBody.exists()).toBe(true)
@@ -390,7 +405,7 @@ describe("Menu Component", () => {
       }
     })
 
-    it("supports separators based on global options", () => {
+    it("supports separators based on global options", async () => {
       const app: any = createAppWithFishtVue({
         styles: { class: { separatorIcon: "chevron-right" } },
         separator: { icon: "chevron-right" }
@@ -411,13 +426,14 @@ describe("Menu Component", () => {
           ]
         }
       })
+      await nextTick()
 
       const separatorIcons = wrapper.findAll("svg")
       expect(separatorIcons.length).toBeGreaterThan(0)
       expect(separatorIcons[0].classes()).toContain("chevron-right")
     })
 
-    it("renders nested menus with global options", () => {
+    it("renders nested menus with global options", async () => {
       const app: any = createAppWithFishtVue({
         horizontal: true
       })
@@ -445,6 +461,7 @@ describe("Menu Component", () => {
           ]
         }
       })
+      await nextTick()
 
       const nestedMenu = wrapper.findComponent(Menu)
       expect(nestedMenu.exists()).toBe(true)

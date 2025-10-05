@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted } from "vue"
-  import type { LabelExpose, LabelProps } from "./Label"
+  import type { LabelProps } from "./Label"
   import Component from "fishtvue/component"
   // ---BASE-COMPONENT----------------------
   const Label = new Component<"Label">()
@@ -60,7 +60,7 @@
     ])
   )
   // ---EXPOSE------------------------------
-  defineExpose<LabelExpose>({
+  defineExpose({
     // ---PROPS-------------------------
     mode,
     type,

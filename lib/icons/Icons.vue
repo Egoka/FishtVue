@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from "vue"
-  import type { IconsExpose, IconsProps } from "./Icons"
+  import type { IconsProps } from "./Icons"
   import { convertToCamelCase } from "fishtvue/utils/stringHandler"
   // ---------------------------------------
   import * as HeroIconsOutline from "@heroicons/vue/24/outline"
@@ -74,7 +74,7 @@
     { immediate: true }
   )
   // ---------------------------------------
-  defineExpose<IconsExpose>({
+  defineExpose({
     // ---PROPS-------------------------
     type,
     classIcon,
