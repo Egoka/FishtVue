@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode } from "../types"
+import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 
 /**
  * ## Label
@@ -76,27 +76,27 @@ export declare type LabelExpose = {
   // ---PROPS-------------------------
   /**
    * Current styling mode of the label.
-   * @type {ReadRef<LabelProps["mode"]>}
+   * @type {LabelProps["mode"]}
    */
-  mode: ReadRef<LabelProps["mode"]>
+  mode: LabelProps["mode"]
 
   /**
    * Current display mode of the label.
-   * @type {ReadRef<LabelProps["type"]>}
+   * @type {LabelProps["type"]}
    */
-  type: ReadRef<LabelProps["type"]>
+  type: LabelProps["type"]
 
   /**
    * Custom CSS class for the label container.
-   * @type {ReadRef<LabelProps["classBody"]>}
+   * @type {LabelProps["classBody"]}
    */
-  classBase: ReadRef<LabelProps["classBody"]>
+  classBase: LabelProps["classBody"]
 
   /**
    * Custom CSS class for the label content.
-   * @type {ReadRef<LabelProps["class"]>}
+   * @type {LabelProps["class"]}
    */
-  classContent: ReadRef<LabelProps["class"]>
+  classContent: LabelProps["class"]
 }
 export declare type LabelOption = Pick<LabelProps, "type" | "mode" | "translateX" | "maxWidth" | "class" | "classBody">
 

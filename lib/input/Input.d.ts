@@ -1,5 +1,5 @@
-import { Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { VNode } from "vue"
+import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 
 /**
@@ -148,118 +148,118 @@ export declare type InputExpose = {
   // ---STATE-------------------------
   /**
    * Reference to the input layout state.
-   * @type {Ref<InputLayoutExpose | undefined>}
+   * @type {InputLayoutExpose | undefined}
    */
-  layout: Ref<InputLayoutExpose | undefined>
+  layout: InputLayoutExpose | undefined
 
   /**
    * Indicates whether the input is active.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isActiveInput: ReadRef<boolean>
+  isActiveInput: boolean
 
   /**
    * Custom CSS class for the input layout.
-   * @type {ReadRef<InputProps["class"]>}
+   * @type {InputProps["class"]}
    */
-  classLayout: ReadRef<InputProps["class"]>
+  classLayout: InputProps["class"]
 
   // ---PROPS-------------------------------
   /**
    * Current `id` of the input field.
-   * @type {ReadRef<InputProps["id"]>}
+   * @type {InputProps["id"]}
    */
-  id: ReadRef<InputProps["id"]>
+  id: InputProps["id"]
 
   /**
    * Current type of the input field.
-   * @type {ReadRef<InputProps["type"]>}
+   * @type {InputProps["type"]}
    */
-  type: ReadRef<InputProps["type"]>
+  type: InputProps["type"]
 
   /**
    * Current mask type applied to the input field.
-   * @type {ReadRef<InputProps["maskInput"]>}
+   * @type {InputProps["maskInput"]}
    */
-  mask: ReadRef<InputProps["maskInput"]>
+  mask: InputProps["maskInput"]
 
   /**
    * Current value of the input field.
-   * @type {ReadRef<InputProps["modelValue"]>}
+   * @type {InputProps["modelValue"]}
    */
-  modelValue: ReadRef<InputProps["modelValue"]>
+  modelValue: InputProps["modelValue"]
 
   /**
    * Indicates whether autofocus is enabled.
-   * @type {ReadRef<InputProps["autoFocus"]>}
+   * @type {InputProps["autoFocus"]}
    */
-  autoFocus: ReadRef<InputProps["autoFocus"]>
+  autoFocus: InputProps["autoFocus"]
 
   /**
    * Current placeholder text of the input field.
-   * @type {ReadRef<InputProps["placeholder"]>}
+   * @type {InputProps["placeholder"]}
    */
-  placeholder: ReadRef<InputProps["placeholder"]>
+  placeholder: InputProps["placeholder"]
 
   /**
    * Current autocomplete setting of the input field.
-   * @type {ReadRef<InputProps["autocomplete"]>}
+   * @type {InputProps["autocomplete"]}
    */
-  autocomplete: ReadRef<InputProps["autocomplete"]>
+  autocomplete: InputProps["autocomplete"]
 
   /**
    * Maximum length for the integer part of the input value.
-   * @type {ReadRef<InputProps["lengthInteger"]>}
+   * @type {InputProps["lengthInteger"]}
    */
-  lengthInteger: ReadRef<InputProps["lengthInteger"]>
+  lengthInteger: InputProps["lengthInteger"]
 
   /**
    * Maximum length for the decimal part of the input value.
-   * @type {ReadRef<InputProps["lengthDecimal"]>}
+   * @type {InputProps["lengthDecimal"]}
    */
-  lengthDecimal: ReadRef<InputProps["lengthDecimal"]>
+  lengthDecimal: InputProps["lengthDecimal"]
 
   /**
    * Indicates whether the input has a value.
-   * @type {ReadRef<InputLayoutProps["isValue"]>}
+   * @type {InputLayoutProps["isValue"]}
    */
-  isValue: ReadRef<InputLayoutProps["isValue"]>
+  isValue: InputLayoutProps["isValue"]
 
   /**
    * Current mode of the input.
-   * @type {ReadRef<InputProps["mode"]>}
+   * @type {InputProps["mode"]}
    */
-  mode: ReadRef<InputProps["mode"]>
+  mode: InputProps["mode"]
 
   /**
    * Indicates whether the input is disabled.
-   * @type {ReadRef<InputProps["disabled"]>}
+   * @type {InputProps["disabled"]}
    */
-  isDisabled: ReadRef<InputProps["disabled"]>
+  isDisabled: InputProps["disabled"]
 
   /**
    * Indicates whether the input is in a loading state.
-   * @type {ReadRef<InputProps["loading"]>}
+   * @type {InputProps["loading"]}
    */
-  isLoading: ReadRef<InputProps["loading"]>
+  isLoading: InputProps["loading"]
 
   /**
    * Indicates whether the input is invalid.
-   * @type {ReadRef<InputProps["isInvalid"]>}
+   * @type {InputProps["isInvalid"]}
    */
-  isInvalid: ReadRef<InputProps["isInvalid"]>
+  isInvalid: InputProps["isInvalid"]
 
   /**
    * Validation error message for the input field.
-   * @type {ReadRef<InputProps["messageInvalid"]>}
+   * @type {InputProps["messageInvalid"]}
    */
-  messageInvalid: ReadRef<InputProps["messageInvalid"]>
+  messageInvalid: InputProps["messageInvalid"]
 
   /**
    * CSS class for the input base container.
-   * @type {ReadRef<InputProps["class"]>}
+   * @type {InputProps["class"]}
    */
-  classBaseInput: ReadRef<InputProps["class"]>
+  classBaseInput: InputProps["class"]
 
   // ---METHODS-----------------------------
   /**

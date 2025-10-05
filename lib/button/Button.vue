@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots } from "vue"
-  import { ButtonExpose, ButtonProps } from "./Button"
+  import { ButtonProps } from "./Button"
   import Icons from "fishtvue/icons/Icons.vue"
   import Loading from "fishtvue/loading/Loading.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
@@ -333,7 +333,7 @@
       .flat()
       .join(" ")
   )
-  defineExpose<ButtonExpose>({
+  defineExpose({
     // ---PROPS-------------------------
     mode,
     size,

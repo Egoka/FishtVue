@@ -3,7 +3,7 @@
   import { isClient } from "fishtvue/utils/domHandler"
   import { deepCopyObject, deepMergeSoft } from "fishtvue/utils/objectHandler"
   import type { StyleClass } from "fishtvue/types"
-  import type { CursorType, Panel, SplitEmits, SplitExpose, SplitProps } from "./Split"
+  import type { CursorType, Panel, SplitEmits, SplitProps } from "./Split"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
 
@@ -123,7 +123,7 @@
   const classSeparatorDisabled = ref(Split.setStyle([separatorClass.value, "group"]))
 
   // ---EXPOSE------------------------------
-  defineExpose<SplitExpose>({
+  defineExpose({
     // ---REF-LINK----------------------------
     resizableGroup,
     resizablePanels,

@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, Position, ReadRef, RefLink, StyleClass, StyleMode } from "../types"
+import { ClassComponent, GlobalComponentConstructor, Position, RefLink, StyleClass, StyleMode } from "../types"
 
 /**
  * ## FixWindow
@@ -154,64 +154,64 @@ export declare type FixWindowExpose = {
   // ---STATE-------------------------
   /**
    * Current x-coordinate position of the fixed window.
-   * @type {ReadRef<string>}
+   * @type {string}
    */
-  x: ReadRef<string>
+  x: string
 
   /**
    * Current y-coordinate position of the fixed window.
-   * @type {ReadRef<string>}
+   * @type {string}
    */
-  y: ReadRef<string>
+  y: string
 
   /**
    * Indicates whether the fixed window is open.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isOpen: ReadRef<boolean>
+  isOpen: boolean
 
   // ---PROPS-------------------------
   /**
    * Current position of the fixed window.
-   * @type {ReadRef<FixWindowProps["position"]>}
+   * @type {FixWindowProps["position"]}
    */
-  position: ReadRef<FixWindowProps["position"]>
+  position: FixWindowProps["position"]
 
   /**
    * Current delay before opening the fixed window.
-   * @type {ReadRef<FixWindowProps["delay"]>}
+   * @type {FixWindowProps["delay"]}
    */
-  delay: ReadRef<FixWindowProps["delay"]>
+  delay: FixWindowProps["delay"]
 
   /**
    * Current margin between the fixed window and the target element.
-   * @type {ReadRef<FixWindowProps["marginPx"]>}
+   * @type {FixWindowProps["marginPx"]}
    */
-  marginPx: ReadRef<FixWindowProps["marginPx"]>
+  marginPx: FixWindowProps["marginPx"]
 
   /**
    * Indicates whether the close button is enabled.
-   * @type {ReadRef<FixWindowProps["closeButton"]>}
+   * @type {FixWindowProps["closeButton"]}
    */
-  isCloseButton: ReadRef<FixWindowProps["closeButton"]>
+  isCloseButton: FixWindowProps["closeButton"]
 
   /**
    * Event type for opening the fixed window.
-   * @type {ReadRef<FixWindowEvent>}
+   * @type {FixWindowEvent}
    */
-  eventOpen: ReadRef<FixWindowEvent>
+  eventOpen: FixWindowEvent
 
   /**
    * Event type for closing the fixed window.
-   * @type {ReadRef<FixWindowEvent>}
+   * @type {FixWindowEvent}
    */
-  eventClose: ReadRef<FixWindowEvent>
+  eventClose: FixWindowEvent
 
   /**
    * The target HTML element for the fixed window.
-   * @type {ReadRef<HTMLElement>}
+   * @type {HTMLElement}
    */
-  element: ReadRef<HTMLElement>
+  element: HTMLElement
 
   // ---METHODS-----------------------
   /**

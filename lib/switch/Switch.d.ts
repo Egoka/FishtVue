@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode } from "../types"
+import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import { IconsProps } from "fishtvue/icons"
 
 /**
@@ -132,69 +132,69 @@ export declare type SwitchExpose = {
   // ---PROPS-------------------------------
   /**
    * Unique identifier for the switch component.
-   * @type {ReadRef<SwitchProps["id"]>}
+   * @type {SwitchProps["id"]}
    */
-  id: ReadRef<SwitchProps["id"]>
+  id: SwitchProps["id"]
 
   /**
    * The current styling mode of the switch.
-   * @type {ReadRef<SwitchProps["mode"]>}
+   * @type {SwitchProps["mode"]}
    */
-  mode: ReadRef<SwitchProps["mode"]>
+  mode: SwitchProps["mode"]
 
   /**
    * The label displayed next to the switch.
-   * @type {ReadRef<SwitchProps["label"]>}
+   * @type {SwitchProps["label"]}
    */
-  label: ReadRef<SwitchProps["label"]>
+  label: SwitchProps["label"]
 
   /**
    * The rounding of the switch corners.
-   * @type {ReadRef<SwitchProps["rounded"]>}
+   * @type {SwitchProps["rounded"]}
    */
-  rounded: ReadRef<SwitchProps["rounded"]>
+  rounded: SwitchProps["rounded"]
 
   /**
    * Indicates whether the switch is disabled.
-   * @type {ReadRef<SwitchProps["disabled"]>}
+   * @type {SwitchProps["disabled"]}
    */
-  isDisabled: ReadRef<SwitchProps["disabled"]>
+  isDisabled: SwitchProps["disabled"]
 
   /**
    * Indicates whether the switch is required.
-   * @type {ReadRef<SwitchProps["required"]>}
+   * @type {SwitchProps["required"]}
    */
-  isRequired: ReadRef<SwitchProps["required"]>
+  isRequired: SwitchProps["required"]
 
   /**
    * The icon displayed when the switch is active.
-   * @type {ReadRef<SwitchProps["iconActive"]>}
+   * @type {SwitchProps["iconActive"]}
    */
-  iconActive: ReadRef<SwitchProps["iconActive"]>
+  iconActive: SwitchProps["iconActive"]
 
   /**
    * The icon displayed when the switch is inactive.
-   * @type {ReadRef<SwitchProps["iconInactive"]>}
+   * @type {SwitchProps["iconInactive"]}
    */
-  iconInactive: ReadRef<SwitchProps["iconInactive"]>
+  iconInactive: SwitchProps["iconInactive"]
 
   /**
    * The type of switching mechanism (`checkbox` or `switch`).
-   * @type {ReadRef<SwitchProps["switchingType"]>}
+   * @type {SwitchProps["switchingType"]}
    */
-  switchingType: ReadRef<SwitchProps["switchingType"]>
+  switchingType: SwitchProps["switchingType"]
 
   /**
    * Custom CSS class for the base switch container.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classBaseSwitch: ReadRef<StyleClass>
+  classBaseSwitch: StyleClass
 
   /**
    * Custom CSS class for the switch element.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classSwitch: ReadRef<StyleClass>
+  classSwitch: StyleClass
 
   // ---METHODS-----------------------------
   /**

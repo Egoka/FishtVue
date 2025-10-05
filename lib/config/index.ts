@@ -23,7 +23,9 @@ export function useFishtVue(): Readonly<FishtVue> | undefined {
   })
 }
 
-export function getOptions<T extends keyof ComponentsOptions>(component?: T) {
+export function getOptions<T extends keyof ComponentsOptions>(
+  component?: T
+): keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]> {
   return isExistFishtVue((FishtVue) => {
     let options = FishtVue?.config?.componentsOptions
     if (options) {
@@ -32,10 +34,10 @@ export function getOptions<T extends keyof ComponentsOptions>(component?: T) {
       if (component && options?.[component]) return options[component]
       return options
     }
-  })
+  }) as keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>
 }
 
-export function setActiveLocale(activeLocale: NameLocale) {
+export function setActiveLocale(activeLocale: NameLocale): string | boolean | undefined {
   return isExistFishtVue((FishtVue) => {
     const locale = FishtVue?.config?.locale
     if (locale && locale.activeLocale) {

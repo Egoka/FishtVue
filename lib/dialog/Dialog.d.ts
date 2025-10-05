@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, PositionShort, ReadRef, Size, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, PositionShort, Size, StyleClass } from "../types"
 
 /**
  * ## Dialog
@@ -99,69 +99,69 @@ export declare type DialogExpose = {
   // ---PROPS-------------------------
   /**
    * The teleport target for the dialog.
-   * @type {ReadRef<DialogProps["toTeleport"]>}
+   * @type {DialogProps["toTeleport"]}
    */
-  toTeleport: ReadRef<DialogProps["toTeleport"]>
+  toTeleport: DialogProps["toTeleport"]
 
   /**
    * Indicates whether the dialog is open.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isOpen: ReadRef<boolean>
+  isOpen: boolean
 
   /**
    * Current size of the dialog.
-   * @type {ReadRef<string>}
+   * @type {string}
    */
-  size: ReadRef<string>
+  size: string
 
   /**
    * Indicates whether the close button is enabled.
-   * @type {ReadRef<DialogProps["closeButton"]>}
+   * @type {DialogProps["closeButton"]}
    */
-  isCloseButton: ReadRef<DialogProps["closeButton"]>
+  isCloseButton: DialogProps["closeButton"]
 
   /**
    * Indicates whether the background click closes the dialog.
-   * @type {ReadRef<DialogProps["notCloseBackground"]>}
+   * @type {DialogProps["notCloseBackground"]}
    */
-  notCloseBackground: ReadRef<DialogProps["notCloseBackground"]>
+  notCloseBackground: DialogProps["notCloseBackground"]
 
   /**
    * Indicates whether the dialog has margins removed.
-   * @type {ReadRef<DialogProps["withoutMargin"]>}
+   * @type {DialogProps["withoutMargin"]}
    */
-  withoutMargin: ReadRef<DialogProps["withoutMargin"]>
+  withoutMargin: DialogProps["withoutMargin"]
 
   /**
    * Current position of the dialog.
-   * @type {ReadRef<NonNullable<DialogProps["position"]>>}
+   * @type {NonNullable<DialogProps["position"]>}
    */
-  position: ReadRef<NonNullable<DialogProps["position"]>>
+  position: NonNullable<DialogProps["position"]>
 
   /**
    * CSS class for the body of the dialog.
-   * @type {ReadRef<DialogProps["class"]>}
+   * @type {DialogProps["class"]}
    */
-  classBodyDialog: ReadRef<DialogProps["class"]>
+  classBodyDialog: DialogProps["class"]
 
   /**
    * CSS class for the dialog's position styling.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classPosition: ReadRef<StyleClass>
+  classPosition: StyleClass
 
   /**
    * Base CSS class for the dialog container.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classBase: ReadRef<StyleClass>
+  classBase: StyleClass
 
   /**
    * CSS class for the dialog itself.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classDialog: ReadRef<StyleClass>
+  classDialog: StyleClass
 
   // ---METHODS-----------------------
   /**

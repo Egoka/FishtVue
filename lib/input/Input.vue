@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
-  import type { InputEmits, InputExpose, InputProps } from "./Input"
+  import type { InputEmits, InputProps } from "./Input"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import { convertToNumber, convertToPhone, onkeydown, toNumber, toPhone } from "fishtvue/utils/numberHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
@@ -84,7 +84,7 @@
     class: props.class
   }))
   // ---EXPOSE------------------------------
-  defineExpose<InputExpose>({
+  defineExpose({
     //---STATE-------------------------
     layout,
     isActiveInput,

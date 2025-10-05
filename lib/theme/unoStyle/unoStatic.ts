@@ -81,6 +81,28 @@ export const singleStyles: Record<string, string> = {
   "not-sr-only":
     "position: static;\n  width: auto;\n  height: auto;\n  padding: 0;\n  margin: 0;\n  overflow: visible;\n  clip: auto;\n  white-space: normal;"
 }
+
+export const MATH_FUNCTIONS = [
+  "calc",
+  "min",
+  "max",
+  "clamp",
+  "mod",
+  "rem",
+  "sin",
+  "cos",
+  "tan",
+  "asin",
+  "acos",
+  "atan",
+  "atan2",
+  "pow",
+  "sqrt",
+  "hypot",
+  "log",
+  "exp",
+  "round"
+]
 export const specialValues: Record<string, string> = {
   px: "1px",
   "3xs": "16rem",

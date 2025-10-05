@@ -35,7 +35,6 @@
     Sort,
     Sorted,
     TableEmits,
-    TableExpose,
     TablePagination,
     TableProps,
     Widths
@@ -697,7 +696,7 @@
     ])
   )
   const styleGroupText = computed(() => `min-height: ${heightCell.value}px`)
-  const classTr = (data: Record<string, any>, indexRow: number) =>
+  const classTr = (_: Record<string, any>, indexRow: number) =>
     Table.setStyle([
       `tr--${indexRow} group/tr`,
       styles.value.hoverRows ? `${styles.value.hoverRows} transition-colors duration-200` : "",
@@ -711,7 +710,7 @@
               : ""
         : ""
     ])
-  const classColumnTd = (data: Record<string, any>, indexRow: number, column: IColumnPrivate, indexCol: number) =>
+  const classColumnTd = (_: Record<string, any>, indexRow: number, column: IColumnPrivate, indexCol: number) =>
     Table.setStyle([
       "ColumnClassTd",
       `td--${indexRow}--${column?.name ?? indexCol}`,
@@ -813,7 +812,7 @@
     })
   }
   // ---EXPOSE------------------------------
-  defineExpose<TableExpose>({
+  defineExpose({
     //---STATE-------------------------
     sortColumns,
     filterColumns,

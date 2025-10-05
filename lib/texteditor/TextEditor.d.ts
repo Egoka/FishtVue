@@ -1,5 +1,5 @@
-import { Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef } from "../types"
+import { VNode } from "vue"
+import { ClassComponent, GlobalComponentConstructor } from "../types"
 import { Delta } from "@vueup/vue-quill"
 import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 // @ts-ignore
@@ -125,110 +125,110 @@ export declare type TextEditorExpose = {
   // ---STATE-------------------------
   /**
    * Reference to the layout used by the editor.
-   * @type {Ref<InputLayoutExpose | undefined>}
+   * @type {InputLayoutExpose | undefined}
    */
-  layout: Ref<InputLayoutExpose | undefined>
+  layout: InputLayoutExpose | undefined
 
   /**
    * The value displayed in the editor layout.
-   * @type {ReadRef<TextEditorProps["modelValue"]>}
+   * @type {TextEditorProps["modelValue"]}
    */
-  valueLayout: ReadRef<TextEditorProps["modelValue"]>
+  valueLayout: TextEditorProps["modelValue"]
 
   /**
    * The CSS class applied to the editor layout.
-   * @type {ReadRef<TextEditorProps["class"]>}
+   * @type {TextEditorProps["class"]}
    */
-  classLayout: ReadRef<TextEditorProps["class"]>
+  classLayout: TextEditorProps["class"]
 
   /**
    * Indicates whether the editor dialog is open.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  open: ReadRef<boolean>
+  open: boolean
 
   /**
    * Reference to the Quill editor instance.
-   * @type {ReadRef<IQuillEditor | undefined>}
+   * @type {IQuillEditor | undefined}
    */
-  quillEditorLink: ReadRef<IQuillEditor | undefined>
+  quillEditorLink: IQuillEditor | undefined
 
   /**
    * Indicates whether the text editor is active.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isActiveTextEditor: ReadRef<boolean>
+  isActiveTextEditor: boolean
 
   // ---PROPS-------------------------
   /**
    * The unique identifier for the editor.
-   * @type {ReadRef<NonNullable<TextEditorProps["id"]>>}
+   * @type {string | undefined}
    */
-  id: Ref<string | undefined>
+  id: string | undefined
 
   /**
    * The theme of the Quill editor.
-   * @type {ReadRef<NonNullable<TextEditorProps["theme"]>>}
+   * @type {TextEditorProps["theme"]}
    */
-  theme: ReadRef<NonNullable<TextEditorProps["theme"]>>
+  theme: TextEditorProps["theme"]
 
   /**
    * Indicates whether the editor has a value.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isValue: ReadRef<boolean>
+  isValue: boolean
 
   /**
    * The current styling mode of the editor.
-   * @type {ReadRef<NonNullable<TextEditorProps["mode"]>>}
+   * @type {TextEditorProps["mode"]}
    */
-  mode: ReadRef<NonNullable<TextEditorProps["mode"]>>
+  mode: TextEditorProps["mode"]
 
   /**
    * Indicates whether the editor is disabled.
-   * @type {ReadRef<NonNullable<TextEditorProps["disabled"]>>}
+   * @type {TextEditorProps["disabled"]}
    */
-  isDisabled: ReadRef<NonNullable<TextEditorProps["disabled"]>>
+  isDisabled: TextEditorProps["disabled"]
   /**
    * Indicates whether the editor is loading.
-   * @type {ReadRef<NonNullable<TextEditorProps["isInvalid"]>>}
+   * @type {TextEditorProps["isInvalid"]}
    */
-  isLoading: ReadRef<NonNullable<TextEditorProps["isInvalid"]>>
+  isLoading: TextEditorProps["isInvalid"]
   /**
    * Indicates whether the editor is invalid.
-   * @type {ReadRef<NonNullable<TextEditorProps["isInvalid"]>>}
+   * @type {TextEditorProps["isInvalid"]}
    */
-  isInvalid: ReadRef<NonNullable<TextEditorProps["isInvalid"]>>
+  isInvalid: TextEditorProps["isInvalid"]
 
   /**
    * The validation message for the editor.
-   * @type {ReadRef<NonNullable<TextEditorProps["messageInvalid"]>>}
+   * @type {TextEditorProps["messageInvalid"]}
    */
-  messageInvalid: ReadRef<NonNullable<TextEditorProps["messageInvalid"]>>
+  messageInvalid: TextEditorProps["messageInvalid"]
 
   /**
    * The CSS class applied to the editor container.
-   * @type {ReadRef<NonNullable<TextEditorProps["class"]>>}
+   * @type {TextEditorProps["class"]}
    */
-  classStyle: ReadRef<NonNullable<TextEditorProps["class"]>>
+  classStyle: TextEditorProps["class"]
 
   /**
    * Configuration for the dialog used by the editor.
-   * @type {ReadRef<TextEditorProps["paramsDialog"]>}
+   * @type {TextEditorProps["paramsDialog"]}
    */
-  paramsDialog: ReadRef<TextEditorProps["paramsDialog"]>
+  paramsDialog: TextEditorProps["paramsDialog"]
 
   /**
    * Configuration for the Quill editor.
-   * @type {ReadRef<NonNullable<Partial<TextEditorProps["paramsTextEditor"]>>>}
+   * @type {Partial<TextEditorProps["paramsTextEditor"]>}
    */
-  paramsQuillEditor: ReadRef<NonNullable<Partial<TextEditorProps["paramsTextEditor"]>>>
+  paramsQuillEditor: Partial<TextEditorProps["paramsTextEditor"]>
 
   /**
    * The layout configuration for the editor input.
-   * @type {ReadRef<Omit<InputLayoutProps, "value">>}
+   * @type {Omit<InputLayoutProps, "value">}
    */
-  inputLayout: ReadRef<Omit<InputLayoutProps, "value">>
+  inputLayout: Omit<InputLayoutProps, "value">
 
   // ---METHODS-----------------------
   /**

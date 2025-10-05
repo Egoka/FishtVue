@@ -26,8 +26,8 @@
     "component library"
   ],
   "peerDependencies": {
-    "@nuxt/kit": "^3.0.0",
-    "@nuxt/schema": "^3.0.0",
+    "@nuxt/kit": "^4.1.2",
+    "@nuxt/schema": "^4.1.2",
     "nuxt": ">=3.0.0"
   },
   "peerDependenciesMeta": {
@@ -51,7 +51,7 @@
     "gsap": "^3.12.5",
     "lodash-es": "^4.17.21",
     "quill": "^2.0.2",
-    "tailwind-merge": "^2.3.x",
+    "tailwind-merge": "^3.3.1",
     "v-calendar": "^3.1.2",
     "vue": "^3.0.0"
   }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from "vue"
-  import type { SwitchEmits, SwitchExpose, SwitchProps } from "./Switch"
+  import type { SwitchEmits, SwitchProps } from "./Switch"
   import type { StyleClass, StyleMode } from "fishtvue/types"
   import Icons from "fishtvue/icons/Icons.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
@@ -136,7 +136,7 @@
     ])
   )
   // ---EXPOSE------------------------------
-  defineExpose<SwitchExpose>({
+  defineExpose({
     // ---PROPS-------------------------------
     id,
     mode,
@@ -184,7 +184,7 @@
         type="button"
         tabindex="0"
         :disabled="isDisabled as any"
-        :aria-checked="modelValue"
+        :aria-checked="modelValue as boolean | 'mixed' | undefined"
         :data-headlessui-state="modelValue ? 'checked' : ''"
         :class="classSwitch"
         :style="`border-radius: ${rounded}px`"
@@ -210,7 +210,7 @@
         :id="id as string"
         :name="id"
         tabindex="0"
-        :checked="modelValue"
+        :checked="modelValue as any[] | boolean | Set<any> | undefined"
         :disabled="isDisabled"
         type="checkbox"
         :class="classSwitch"

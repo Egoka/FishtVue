@@ -2,7 +2,7 @@
   import { computed, onMounted, ref, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import type { Size, StyleClass } from "fishtvue/types"
-  import type { DialogEmits, DialogExpose, DialogProps } from "./Dialog"
+  import type { DialogEmits, DialogProps } from "./Dialog"
   import Button from "fishtvue/button/Button.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
@@ -118,7 +118,7 @@
     ])
   )
   // ---EXPOSE------------------------------
-  defineExpose<DialogExpose>({
+  defineExpose({
     // ---PROPS-------------------------
     toTeleport,
     isOpen,

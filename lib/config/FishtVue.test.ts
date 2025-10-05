@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
-import type { App } from "vue"
+import { App, Plugin } from "vue"
 import { createApp } from "vue"
 import type { FishtVue as FishtVueType, FishtVueConfiguration } from "fishtvue/config"
 import FishtVue, { useFishtVue } from "fishtvue/config"
-import { getDefaultLocale } from "fishtvue/config/index"
+import { getDefaultLocale } from "fishtvue/config"
 
 describe("Testing config", () => {
   const expectText = "Start use FishtVue"
@@ -29,7 +29,7 @@ describe("Testing config", () => {
       // Монтируем приложение
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
       expect(wrapper.text()).toBe(expectText)
@@ -53,7 +53,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
       expect(wrapper.text()).toBe(expectText)
@@ -74,7 +74,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
 
@@ -96,7 +96,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
       // @ts-ignore Проверяем, что установлена тема по умолчанию (Aurora)
@@ -141,7 +141,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
       expect(wrapper.text()).toBe(expectText)
@@ -161,7 +161,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
 
@@ -236,7 +236,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
 
@@ -265,7 +265,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
 
@@ -323,7 +323,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
 
@@ -370,7 +370,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
 
@@ -409,7 +409,7 @@ describe("Testing config", () => {
       app.use(FishtVue, options)
       const wrapper = mount(App, {
         global: {
-          plugins: [[FishtVue, options]]
+          plugins: [[FishtVue as any, options]]
         }
       })
 

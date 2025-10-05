@@ -2,7 +2,6 @@
   import { computed, inject, nextTick, onMounted, ref, useSlots, watch } from "vue"
   import type {
     CalendarEmits,
-    CalendarExpose,
     CalendarProps,
     ICalendarPicker,
     IParamsDatePicker,
@@ -18,13 +17,13 @@
   import Component from "fishtvue/component"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
   import { isClient } from "fishtvue/utils/domHandler"
-  import { FishtVueSymbol } from "fishtvue/config/index"
+  import { FishtVueSymbol } from "fishtvue/config"
   import type { FishtVue } from "fishtvue/config"
   import { DatePickerRangeObject } from "v-calendar/src/use/datePicker"
   // ---BASE-COMPONENT----------------------
   const Calendar = new Component<"Calendar">()
   const options = Calendar.getOptions()
-  const FishtV: FishtVue | undefined = inject(FishtVueSymbol)
+  const FishtV = inject<FishtVue>(FishtVueSymbol)
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<CalendarProps>(), {
     autoFocus: undefined,
@@ -201,7 +200,7 @@
     class: props.class
   }))
   // ---EXPOSE------------------------------
-  defineExpose<CalendarExpose>({
+  defineExpose({
     //---STATE-------------------------
     layout,
     inputLayout,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, CSSProperties, onMounted, ref, useSlots, watch } from "vue"
-  import type { AlertEmits, AlertExpose, AlertProps } from "./Alert"
+  import type { AlertEmits, AlertProps } from "./Alert"
   import {
     ChatBubbleOvalLeftIcon,
     CheckCircleIcon,
@@ -35,7 +35,7 @@
     () => props.closeButton ?? options?.closeButton ?? false
   )
   const position = computed<NonNullable<AlertProps["position"]>>(() => props.position ?? options?.position ?? "top")
-  const startEnterAndLeaveClass = computed<StyleClass>(() => {
+  const startEnterAndLeaveClass = computed<string>(() => {
     let classAnimate
     if (!notAnimate.value) {
       if ((position.value as string).includes("left")) classAnimate = "-translate-x-[200%] opacity-0"
@@ -46,7 +46,7 @@
     } else classAnimate = "opacity-0"
     return Alert.setStyle(classAnimate)
   })
-  const endEnterAndLeaveClass = computed<StyleClass>(() => {
+  const endEnterAndLeaveClass = computed<string>(() => {
     let classAnimate
     if (!notAnimate.value) {
       if ((position.value as string).includes("left")) classAnimate = "translate-x-0 opacity-100"
@@ -173,7 +173,7 @@
       size.value
     ])
   )
-  const styleBase = computed<CSSProperties>(() => props.style ?? options?.style)
+  const styleBase = computed<CSSProperties | undefined>(() => props.style ?? options?.style)
   const classBody = computed(() => Alert.setStyle("flex"))
   const classDivIcon = computed(() => Alert.setStyle("shrink-0"))
   const classIcon = computed(() => Alert.setStyle(["h-5 w-5", classesStyle.value.icon]))
@@ -187,7 +187,7 @@
   )
   const classDivCloseButton = ref(Alert.setStyle("relative bottom-[2px] ml-auto pl-3"))
   // ---EXPOSE------------------------------
-  defineExpose<AlertExpose>({
+  defineExpose({
     // ---STATE-------------------------
     isVisible,
     // ---PROPS-------------------------

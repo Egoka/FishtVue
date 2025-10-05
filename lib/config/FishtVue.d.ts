@@ -1,4 +1,4 @@
-import { Plugin, InjectionKey } from "vue"
+import { InjectionKey, Plugin } from "vue"
 import { StyleMode } from "../types"
 
 import { Locales, type NameLocale } from "fishtvue/locale/TypesLocale"
@@ -84,6 +84,25 @@ export declare function useFishtVue<T extends FishtVue>(): Readonly<T> | undefin
 export declare function getOptions<T extends keyof ComponentsOptions>(
   component?: T
 ): keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>
+
+/**
+ * Sets the active locale for FishtVue.
+ * @param {NameLocale} activeLocale - The locale code to set as active.
+ * @returns {string | boolean | undefined} The new active locale code, false if the change failed, or undefined if FishtVue is not installed.
+ */
+export declare function setActiveLocale(activeLocale: NameLocale): string | boolean | undefined
+
+/**
+ * Gets the currently active locale code.
+ * @returns {string | undefined} The active locale code, or undefined if not set.
+ */
+export declare function getActiveLocale(): string | undefined
+
+/**
+ * Gets the default locale code.
+ * @returns {string | undefined} The default locale code, or undefined if not set.
+ */
+export declare function getDefaultLocale(): string | undefined
 
 declare const plugin: Plugin
 export default plugin

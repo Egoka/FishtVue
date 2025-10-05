@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
-  import type { BaseDataItem, IDataItem, SelectEmits, SelectExpose, SelectProps } from "./Select"
+  import type { BaseDataItem, IDataItem, SelectEmits, SelectProps } from "./Select"
   import type { FixWindowExpose } from "fishtvue/fixwindow"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import * as LD from "lodash-es"
@@ -228,7 +228,7 @@
     class: props.class
   }))
   // ---EXPOSE------------------------------
-  defineExpose<SelectExpose>({
+  defineExpose({
     // ---STATE-------------------------
     layout,
     selectListWindow,
@@ -319,7 +319,7 @@
   // })
 
   // ---METHODS-----------------------------
-  function changeFocus(currentIndex, direction) {
+  function changeFocus(currentIndex: number, direction: 1 | -1) {
     const listItems = (selectItems.value as any)?.$el.querySelectorAll("li")
     let newIndex = currentIndex + direction
     listItems[currentIndex].setAttribute("tabindex", "-1")
@@ -367,8 +367,8 @@
     isOpenList.value = true
   }
 
-  function closeSelect(event: MouseEvent) {
-    if (isOpenList.value && selectBody.value && selectList) {
+  function closeSelect(event: MouseEvent | undefined): any {
+    if (event && isOpenList.value && selectBody.value && selectList) {
       isOpenList.value =
         event.composedPath().includes(selectBody.value as HTMLElement) ||
         event.composedPath().includes(selectList.value as HTMLElement)

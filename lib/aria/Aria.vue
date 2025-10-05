@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
-  import type { AriaEmits, AriaExpose, AriaProps } from "./Aria"
+  import type { AriaEmits, AriaProps } from "./Aria"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import { onkeydown } from "fishtvue/utils/numberHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
@@ -49,7 +49,9 @@
   const mode = computed<NonNullable<AriaProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
   const isDisabled = computed<NonNullable<AriaProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<AriaProps["isInvalid"]>>(() => props.loading ?? false)
-  const isInvalid = computed<NonNullable<AriaProps["isInvalid"]>>(() => (!isDisabled.value ? props.isInvalid : false))
+  const isInvalid = computed<NonNullable<AriaProps["isInvalid"]>>(() =>
+    !isDisabled.value ? (props.isInvalid ?? false) : false
+  )
   const messageInvalid = computed<NonNullable<AriaProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
   const classStyle = computed<NonNullable<AriaProps["class"]>>(() => {
     return props.class ? props.class + additionalStyles.value : additionalStyles.value
@@ -85,7 +87,7 @@
     class: classStyle.value
   }))
   // ---EXPOSE------------------------------
-  defineExpose<AriaExpose>({
+  defineExpose({
     // ---STATE-------------------------
     layout,
     inputRef,

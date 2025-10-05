@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { CSSProperties } from "vue"
 
 /**
@@ -50,21 +50,21 @@ export declare type IconsExpose = {
   // ---PROPS-------------------------
   /**
    * The current type of the icon.
-   * @type {ReadRef<IconsProps["type"]>}
+   * @type {IconsProps["type"]}
    */
-  type: ReadRef<IconsProps["type"]>
+  type: IconsProps["type"]
 
   /**
    * The current CSS class applied to the icon.
-   * @type {ReadRef<IconsProps["class"]>}
+   * @type {IconsProps["class"]}
    */
-  classIcon: ReadRef<IconsProps["class"]>
+  classIcon: IconsProps["class"]
 
   /**
    * The current inline styles applied to the icon.
-   * @type {ReadRef<IconsProps["style"]>}
+   * @type {IconsProps["style"]}
    */
-  style: ReadRef<IconsProps["style"]>
+  style: IconsProps["style"]
 }
 export declare type IconsOption = Pick<IconsProps, "class">
 

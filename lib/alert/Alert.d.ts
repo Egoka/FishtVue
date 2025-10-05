@@ -1,5 +1,5 @@
 import { CSSProperties, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, PositionShort, ReadRef, Size, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, PositionShort, Size, StyleClass } from "../types"
 
 /**
  * ## Alert
@@ -115,64 +115,64 @@ export declare type AlertExpose = {
   // ---STATE-------------------------
   /**
    * Current visibility state of the alert.
-   * @type {ReadRef<boolean>}
+   * @type {boolean}
    */
-  isVisible: ReadRef<boolean>
+  isVisible: boolean
 
   // ---PROPS-------------------------
   /**
    * Current type of the alert.
-   * @type {ReadRef<NonNullable<AlertProps["type"]>>}
+   * @type {AlertProps["type"]}
    */
-  type: ReadRef<NonNullable<AlertProps["type"]>>
+  type: AlertProps["type"]
 
   /**
    * Current title of the alert.
-   * @type {ReadRef<NonNullable<AlertProps["title"]>>}
+   * @type {AlertProps["title"]}
    */
-  title: ReadRef<NonNullable<AlertProps["title"]>>
+  title: AlertProps["title"]
 
   /**
    * Current subtitle of the alert.
-   * @type {ReadRef<NonNullable<AlertProps["subtitle"]>>}
+   * @type {AlertProps["subtitle"]}
    */
-  subtitle: ReadRef<NonNullable<AlertProps["subtitle"]>>
+  subtitle: AlertProps["subtitle"]
 
   /**
    * Current display duration of the alert (in milliseconds).
-   * @type {ReadRef<number>}
+   * @type {number}
    */
-  displayTime: ReadRef<number>
+  displayTime: number
 
   /**
    * Indicates if the close button is enabled.
-   * @type {ReadRef<NonNullable<AlertProps["closeButton"]>>}
+   * @type {AlertProps["closeButton"]}
    */
-  isCloseButton: ReadRef<NonNullable<AlertProps["closeButton"]>>
+  isCloseButton: AlertProps["closeButton"]
 
   /**
    * Current position of the alert.
-   * @type {ReadRef<NonNullable<AlertProps["position"]>>}
+   * @type {AlertProps["position"]}
    */
-  position: ReadRef<NonNullable<AlertProps["position"]>>
+  position: AlertProps["position"]
 
   /**
    * CSS classes for various parts of the alert.
-   * @type {ReadRef<Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>>}
+   * @type {Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>}
    */
-  classesStyle: ReadRef<Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>>
+  classesStyle: Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>
 
   /**
    * Current size of the alert.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  size: ReadRef<StyleClass>
+  size: StyleClass
 
   /**
    * Base CSS class for the alert.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classBase: ReadRef<StyleClass>
+  classBase: StyleClass
 
   // ---METHODS-----------------------
   /**

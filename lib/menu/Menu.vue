@@ -6,7 +6,6 @@
     GroupMenuPrivate,
     ItemMenuPrivate,
     MenuEmits,
-    MenuExpose,
     MenuItemPrivate,
     MenuProps,
     MenuSeparator,
@@ -197,7 +196,7 @@
   )
   const listGroups = ref<Array<GroupMenuPrivate>>([])
   // ---EXPOSE------------------------------
-  defineExpose<MenuExpose>({
+  defineExpose({
     // ---STATE-------------------------
     selectedItemIndex,
     activeItemIndex,
@@ -210,7 +209,7 @@
     title,
     iconSeparator,
     isSeparator,
-    listGroups: listGroups.value,
+    listGroups,
     paramsWindowMenu,
     baseSeparator,
     styles,
@@ -234,6 +233,7 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     MenuComponent.initStyle()
+    listGroups.value = setItems(props as MenuItemPrivate)?.groups ?? []
   })
   // ---WATCHERS----------------------------
   watch(
@@ -241,7 +241,7 @@
     (value) => {
       listGroups.value = setItems(value as MenuItemPrivate)?.groups ?? []
     },
-    { deep: true, immediate: true }
+    { deep: true }
   )
   // ---METHODS-----------------------------
   function enterItem(event: MouseEvent | TouchEvent, item: ItemMenuPrivate) {
@@ -291,7 +291,7 @@
                     ? group.items?.map(
                         (item, itemGroupIndex): ItemMenuPrivate => ({
                           ...item,
-                          _key: listGroups.value?.[groupIndex]?.items?.[itemGroupIndex]?._key ?? generateUUID(),
+                          _key: listGroups?.value?.[groupIndex]?.items?.[itemGroupIndex]?._key ?? generateUUID(),
                           menu: item?.menu
                             ? setItems(
                                 {

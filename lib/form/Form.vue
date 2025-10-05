@@ -1,15 +1,6 @@
 <script setup lang="ts">
   import { computed, nextTick, onMounted, reactive, ref, watch } from "vue"
-  import {
-    FieldCustom,
-    FieldType,
-    FieldUseInputLayout,
-    FormEmits,
-    FormExpose,
-    FormProps,
-    FormStructure,
-    FormValues
-  } from "./Form"
+  import { FieldCustom, FieldType, FieldUseInputLayout, FormEmits, FormProps, FormStructure, FormValues } from "./Form"
   import Icons from "fishtvue/icons/Icons.vue"
   import Input from "fishtvue/input/Input.vue"
   import Aria from "fishtvue/aria/Aria.vue"
@@ -18,7 +9,6 @@
   import TextEditor from "fishtvue/texteditor/TextEditor.vue"
   import Switch from "fishtvue/switch/Switch.vue"
   import Button from "fishtvue/button/Button.vue"
-  import Badge from "fishtvue/badge/Badge.vue"
   import Component from "fishtvue/component"
   import type { RulesObject } from "fishtvue/utils/rulesHandler"
   import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
@@ -104,7 +94,7 @@
   const classSelectItemNotQuery = ref(Form.setStyle("text-gray-500 dark:text-gray-300"))
   const classFooter = ref(Form.setStyle("mt-3 flex items-center justify-end gap-x-6"))
   // ---EXPOSE------------------------------
-  defineExpose<FormExpose>({
+  defineExpose({
     // ---PROPS-------------------------------
     formFields,
     // ---METHODS-----------------------------

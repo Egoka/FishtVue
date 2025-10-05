@@ -1,14 +1,5 @@
-import { Ref, VNode } from "vue"
-import {
-  _key,
-  ClassComponent,
-  GlobalComponentConstructor,
-  ReadRef,
-  StyleClass,
-  StyleMode,
-  THeight,
-  TWidth
-} from "../types"
+import { VNode } from "vue"
+import { _key, ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode, THeight, TWidth } from "../types"
 import { FixWindowProps } from "fishtvue/fixwindow"
 import { SeparatorProps } from "fishtvue/separator"
 
@@ -398,161 +389,161 @@ export declare type MenuExpose = {
   // ---STATE-------------------------
   /**
    * The key of the currently selected menu item.
-   * @type {Ref<_key | undefined>}
+   * @type {_key | undefined}
    */
-  selectedItemIndex: Ref<_key | undefined>
+  selectedItemIndex: _key | undefined
 
   /**
    * The key of the currently active menu item.
    * @type {Ref<_key | undefined>}
    */
-  activeItemIndex: Ref<_key | undefined>
+  activeItemIndex: _key | undefined
 
   // ---PROPS-------------------------
   /**
    * Current styling mode of the menu.
-   * @type {ReadRef<NonNullable<MenuProps["mode"]>>}
+   * @type {MenuProps["mode"]}
    */
-  mode: ReadRef<NonNullable<MenuProps["mode"]>>
+  mode: MenuProps["mode"]
 
   /**
    * Indicates whether an item is selected.
-   * @type {ReadRef<NonNullable<MenuProps["selected"]>>}
+   * @type {MenuProps["selected"]}
    */
-  selected: ReadRef<NonNullable<MenuProps["selected"]>>
+  selected: MenuProps["selected"]
 
   /**
    * Indicates whether the menu is in horizontal layout.
-   * @type {ReadRef<NonNullable<MenuProps["horizontal"]>>}
+   * @type {MenuProps["horizontal"]}
    */
-  horizontal: ReadRef<NonNullable<MenuProps["horizontal"]>>
+  horizontal: MenuProps["horizontal"]
 
   /**
    * Determines whether the first letter of a menu item's title is displayed in the absence of an icon.
    * When enabled, the first letter will be styled and shown as a placeholder.
-   * @type {ReadRef<MenuProps["useFirstLetter"]>}
+   * @type {MenuProps["useFirstLetter"]}
    */
-  useFirstLetter: ReadRef<MenuProps["useFirstLetter"]>
+  useFirstLetter: MenuProps["useFirstLetter"]
 
   /**
    * Indicates whether the menu displays only icons.
-   * @type {ReadRef<NonNullable<MenuProps["onlyIcons"]>>}
+   * @type {MenuProps["onlyIcons"]}
    */
-  onlyIcons: ReadRef<NonNullable<MenuProps["onlyIcons"]>>
+  onlyIcons: MenuProps["onlyIcons"]
 
   /**
    * The title of the menu.
-   * @type {ReadRef<NonNullable<MenuProps["title"]>>}
+   * @type {MenuProps["title"]}
    */
-  title: ReadRef<NonNullable<MenuProps["title"]>>
+  title: MenuProps["title"]
 
   /**
    * Icon for the separator.
-   * @type {ReadRef<MenuSeparator["icon"]>}
+   * @type {MenuSeparator["icon"]}
    */
-  iconSeparator: ReadRef<MenuSeparator["icon"]>
+  iconSeparator: MenuSeparator["icon"]
 
   /**
    * Indicates whether the separator is visible.
-   * @type {ReadRef<NonNullable<MenuSeparator["isVisible"]>>}
+   * @type {MenuSeparator["isVisible"]}
    */
-  isSeparator: ReadRef<NonNullable<MenuSeparator["isVisible"]>>
+  isSeparator: MenuSeparator["isVisible"]
 
   /**
    * List of groups within the menu.
-   * @type {ReadRef<Array<GroupMenuPrivate>>}
+   * @type {Array<GroupMenuPrivate>}
    */
   listGroups: Array<GroupMenuPrivate>
 
   /**
    * Parameters for the menu window behavior.
-   * @type {ReadRef<MenuProps["paramsWindowMenu"]>}
+   * @type {MenuProps["paramsWindowMenu"]}
    */
-  paramsWindowMenu: ReadRef<MenuProps["paramsWindowMenu"]>
+  paramsWindowMenu: MenuProps["paramsWindowMenu"]
 
   /**
    * Base settings for the separator.
-   * @type {ReadRef<MenuSeparator>}
+   * @type {MenuSeparator}
    */
-  baseSeparator: ReadRef<MenuSeparator>
+  baseSeparator: MenuSeparator
 
   /**
    * Custom styles for the menu.
-   * @type {ReadRef<MenuStylesPrivate>}
+   * @type {MenuStylesPrivate}
    */
-  styles: ReadRef<MenuStylesPrivate>
+  styles: MenuStylesPrivate
 
   /**
    * Mode-specific styles for the menu.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  modeStyle: ReadRef<StyleClass>
+  modeStyle: StyleClass
 
   /**
    * Custom CSS class for the menu container.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classMenu: ReadRef<StyleClass>
+  classMenu: StyleClass
 
   /**
    * Custom CSS class for the separator.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classSeparator: ReadRef<StyleClass>
+  classSeparator: StyleClass
 
   /**
    * Custom CSS class for the separator icon.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classSeparatorIcon: ReadRef<StyleClass>
+  classSeparatorIcon: StyleClass
 
   /**
    * Custom CSS class for group titles.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classGroupTitle: ReadRef<StyleClass>
+  classGroupTitle: StyleClass
 
   /**
    * Custom CSS class for menu titles.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classTitle: ReadRef<StyleClass>
+  classTitle: StyleClass
 
   /**
    * Custom CSS class for item icons.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classItemIcon: ReadRef<StyleClass>
+  classItemIcon: StyleClass
 
   /**
    * Custom CSS class for item titles in icon-only mode.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classItemTitleOnlyIcons: ReadRef<StyleClass>
+  classItemTitleOnlyIcons: StyleClass
 
   /**
    * Custom CSS class for item info in icon-only mode.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classItemInfoOnlyIcons: ReadRef<StyleClass>
+  classItemInfoOnlyIcons: StyleClass
 
   /**
    * Custom CSS class for item titles in fixed window mode.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classItemTitleFixWindow: ReadRef<StyleClass>
+  classItemTitleFixWindow: StyleClass
 
   /**
    * Custom CSS class for item info in fixed window mode.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classItemInfoFixWindow: ReadRef<StyleClass>
+  classItemInfoFixWindow: StyleClass
 
   /**
    * Custom CSS class for right-aligned item icons.
-   * @type {ReadRef<StyleClass>}
+   * @type {StyleClass}
    */
-  classItemRightIcon: ReadRef<StyleClass>
+  classItemRightIcon: StyleClass
 
   // ---METHODS-----------------------
   /**

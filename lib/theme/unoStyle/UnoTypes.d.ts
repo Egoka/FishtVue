@@ -8,6 +8,7 @@ export declare type GroupsRegExp = {
   style: string
   special: string
   abstract: string
+  custom: string
   [key: string]: string
 }
 export declare type PseudoClasses = {
