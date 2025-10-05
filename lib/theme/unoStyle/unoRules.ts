@@ -264,7 +264,7 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "family" | "weight", RegExp>
       if (reg.abstract.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (!isNaN(+groups.abstract)) return `font-weight: ${custom(groups) ?? ""};`
+        if (groups?.abstract && !isNaN(+groups?.abstract)) return `font-weight: ${custom(groups) ?? ""};`
         return `font-family: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
       } else if (reg.family.test(classStyle)) {
         const groups = classStyle.match(reg.family)?.groups as GroupsRegExp
@@ -469,9 +469,9 @@ export default <Record<string, StyleType>>{
               groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
             ) ?? ""
           };`
-        else if (groups.abstract.startsWith("length:"))
+        else if (groups?.abstract?.startsWith("length:"))
           return `background-size: ${custom(groups)?.replace("length:", "")?.replace(/_/g, " ") ?? ""};`
-        else if (groups.abstract.startsWith("url")) return `background-image: ${custom(groups) ?? ""};`
+        else if (groups?.abstract?.startsWith("url")) return `background-image: ${custom(groups) ?? ""};`
         else return `background-position: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
@@ -634,7 +634,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>border-spacing)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return borderSpacing[groups.axis](groups.abstract ?? sizing(groups.special))
+      return borderSpacing[groups.axis](custom(groups) ?? sizing(groups.special) ?? "")
     }
   },
   rounded: {
@@ -969,7 +969,7 @@ export default <Record<string, StyleType>>{
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return groups.abstract || groups?.custom
+      return groups?.abstract || groups?.custom
         ? `--fv-drop-shadow: drop-shadow(${custom(groups)?.replace(/_/g, " ") ?? ""});\n  ${baseFilter}`
         : `${dropShadow[groups.special] ?? ""}\n  ${baseFilter}`
     }
@@ -1137,18 +1137,19 @@ export default <Record<string, StyleType>>{
     reg: /(?<negative>-)?(?<style>skew)-(?<axis>[xy])?-?((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return skew[groups.axis](`${groups?.negative ?? ""}${groups.abstract ?? groups.special + "deg"}`)
+      return skew[groups.axis](`${groups?.negative ?? ""}${custom(groups) ?? groups.special + "deg"}`)
     }
   },
   origin: {
     reg: /(?<style>origin)-((?<special>top-right|bottom-right|bottom-left|top-left|top|bottom|right|left|center)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      const value = groups.abstract
-        ? groups.abstract.replace(/_/g, " ")
-        : groups.special
-          ? groups.special.replace("-", " ")
-          : undefined
+      const value =
+        groups?.abstract || groups?.custom
+          ? custom(groups)?.replace(/_/g, " ")
+          : groups.special
+            ? groups.special.replace("-", " ")
+            : undefined
       return `transform-origin: ${value};`
     }
   },
@@ -1354,7 +1355,7 @@ export default <Record<string, StyleType>>{
       const reg = this.reg as Record<"abstract" | "color" | "specialColor" | "noneColor", RegExp>
       if (reg?.abstract?.test(classStyle)) {
         const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
-        if (groups.abstract.startsWith("#"))
+        if (groups?.abstract?.startsWith("#"))
           return `fill: ${
             addAlphaToHex(
               custom(groups),
@@ -1796,7 +1797,7 @@ export default <Record<string, StyleType>>{
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      if (groups.abstract || groups?.custom)
+      if (groups?.abstract || groups?.custom)
         return `--fv-content: ${custom(groups) ?? ""};\n  content: var(--fv-content);`
       return `align-content: ${alignContent[groups?.special] ?? ""};`
     }
