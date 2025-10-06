@@ -8,6 +8,7 @@ export const menuGroups = (): GroupMenu[] => {
   const { t } = $i18n
   return [
     {
+      class: "h-[calc(85vh-167px)]",
       items: [
         // {
         //     title: t("start.menu.Home"),
@@ -32,7 +33,6 @@ export const menuGroups = (): GroupMenu[] => {
         {
           title: t("start.menu.Chat"),
           icon: "lucide:message-circle",
-          class: "mb-72",
           to: "/chat"
         }
         // {
@@ -338,7 +338,7 @@ export const activeChat = (): Message[] => {
       isMe: false
     },
     {
-      name: t("start.name.logo"),
+      name: t("start.name.Fisht_Team"),
       avatar: "logo.png",
       message: t("start.activeChat.10:10"),
       time: "10:10",
