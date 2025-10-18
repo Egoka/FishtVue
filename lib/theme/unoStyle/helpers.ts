@@ -15,27 +15,33 @@ export function addAlphaToHex(color: string | undefined, alpha?: number | undefi
   return `${color}${alphaHex}`
 }
 
-export function sizing(value: string | undefined): string | undefined {
-  if (value === undefined) return
-  if (/(?<dividend>\d+)\/(?<divisor>\d+)/.test(value)) {
-    const res = value.match(/(?<dividend>\d+)\/(?<divisor>\d+)/)
+export function sizing(groups: GroupsRegExp): string | undefined {
+  if (groups?.special === undefined) return
+  if (/(?<dividend>\d+)\/(?<divisor>\d+)/.test(groups?.special)) {
+    const res = groups?.special.match(/(?<dividend>\d+)\/(?<divisor>\d+)/)
     if (res) {
       const { dividend, divisor } = res.groups as any
       if (dividend && divisor) {
-        return `calc(${dividend} / ${divisor} * 100%)`
+        return negative(groups, `calc(${dividend} / ${divisor} * 100%)`)
       }
     }
   }
-  if (parseFloat(value) === 0) return "0px"
-  if (/3xs|2xs|xs|sm|md|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl/.test(value)) return specialValues[value]
-  if (parseFloat(value) >= 0) return `${parseFloat(value) * 2 * 0.125}rem`
-  return specialValues[value]
+  if (parseFloat(groups?.special) === 0) return "0px"
+  if (/3xs|2xs|xs|sm|md|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl/.test(groups?.special))
+    return negative(groups, specialValues[groups?.special])
+  if (parseFloat(groups?.special) >= 0) return negative(groups, `${parseFloat(groups?.special) * 2 * 0.125}rem`)
+  return negative(groups, specialValues[groups?.special])
 }
 
 export function custom(groups: GroupsRegExp): string | undefined {
-  if (groups?.custom) return `var(${groups?.custom})`
-  if (groups?.abstract) return formatMathFunctions(groups?.abstract)
+  if (groups?.custom) return negative(groups, `var(${groups?.custom})`)
+  if (groups?.abstract) return negative(groups, formatMathFunctions(groups?.abstract))
   return
+}
+
+export function negative(groups: GroupsRegExp, value: string): string | undefined {
+  if (groups?.negative === "-") return `calc(${value} * -1)`
+  return value
 }
 
 const LOWER_A = 0x61

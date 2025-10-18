@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { ref } from "vue"
   import Select from "fishtvue/select/Select.vue"
+
   const data = ref([
     "apple",
     "banana",
@@ -17,5 +18,5 @@
 </script>
 
 <template>
-  <Select label="Fruits" :dataSelect="data" v-model="selectedValues" />
+  <Select label="Fruits" :dataSelect="data" v-model="selectedValues" :paramsFixWindow="{ typePosition: 'fixed' }" />
 </template>

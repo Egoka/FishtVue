@@ -1,4 +1,4 @@
-import { addAlphaToHex, custom, sizing } from "./helpers"
+import { addAlphaToHex, custom, negative, sizing } from "./helpers"
 import type { GroupsRegExp, StyleType } from "./UnoTypes"
 // prettier-ignore
 import {
@@ -60,10 +60,7 @@ export default <Record<string, StyleType>>{
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
-        return positionPaddingOrMargin[groups.axis](
-          this.styleName ?? "",
-          `${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""}`
-        )
+        return positionPaddingOrMargin[groups.axis](this.styleName ?? "", `${custom(groups) ?? sizing(groups) ?? ""}`)
       }
     }
   },
@@ -73,10 +70,7 @@ export default <Record<string, StyleType>>{
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
-        return positionPaddingOrMargin[groups.axis](
-          this.styleName ?? "",
-          custom(groups) ?? sizing(groups?.special) ?? ""
-        )
+        return positionPaddingOrMargin[groups.axis](this.styleName ?? "", custom(groups) ?? sizing(groups) ?? "")
       }
     }
   },
@@ -85,7 +79,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<![a-zA-Z])(?<style>w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|xs|sm|md|lg|xl|auto|px|full|screen|dvw|dvh|lvw|lvh|svw|svh|min|max|fit)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `width: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `width: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   "min-w": {
@@ -93,35 +87,35 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>min-w)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `min-width: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `min-width: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   "max-w": {
     reg: /(?<style>max-w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `max-width: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `max-width: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   h: {
     reg: /(?<![a-zA-Z])(?<style>h)-((?<special>\d+(\.\d+)?(\/\d+)?|auto|px|full|screen|dvw|dvh|lvw|lvh|svw|svh|min|max|fit)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `height: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `height: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   "min-h": {
     reg: /(?<style>min-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `min-height: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `min-height: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   "max-h": {
     reg: /(?<style>max-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `max-height: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `max-height: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   size: {
@@ -129,7 +123,7 @@ export default <Record<string, StyleType>>{
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
-        const value = custom(groups) ?? sizing(groups?.special)
+        const value = custom(groups) ?? sizing(groups)
         if (!value) return
         return `width: ${value};\n  height: ${value};`
       }
@@ -141,7 +135,7 @@ export default <Record<string, StyleType>>{
         /(?<style>text)-(\[(?<abstract>.*?)])\/?((?<opacity>\d+)\b|(\[(?<abstractOpacity>.*?)]))?|(\((?<custom>.*?)\))/
       ),
       size: new RegExp(
-        `(?<style>text)-(?<special>xs|sm|base|lg|xl|\\d+xl)\\b\\/?((?<leading>\\d+|${Object.keys(lineHeight).join("|")})?\\b|(\\[(?<abstractLeading>.*?)]))?`
+        `(?<style>text)-(?<leading>xs|sm|base|lg|xl|\\d+xl)\\b\\/?((?<special>\\d+|${Object.keys(lineHeight).join("|")})?\\b|(\\[(?<abstractLeading>.*?)]))?`
       ),
       align: new RegExp(/(?<style>text)-(?<special>left|center|right|justify|start|end)\b/),
       wrap: new RegExp(/(?<style>text)-(?<special>wrap|nowrap|balance|pretty)\b/),
@@ -166,9 +160,9 @@ export default <Record<string, StyleType>>{
         else return `font-size: ${custom(groups) ?? ""};`
       } else if (reg.size.test(classStyle)) {
         const groups = classStyle.match(reg.size)?.groups as GroupsRegExp
-        if (!groups?.special) return
-        return textSize[groups.special](
-          groups?.abstractLeading ?? (isNaN(+groups?.leading) ? lineHeight[groups?.leading] : sizing(groups?.leading))
+        if (!groups?.leading) return
+        return textSize[groups.leading](
+          groups?.abstractLeading ?? (isNaN(+groups?.special) ? lineHeight[groups?.special] : sizing(groups))
         )
       } else if (reg.align.test(classStyle)) {
         const groups = classStyle.match(reg.align)?.groups as GroupsRegExp
@@ -280,7 +274,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<negative>-)?(?<style>indent)-((?<special>\d+(\.\d+)?(\/\d+)?|px)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `text-indent: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `text-indent: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   align: {
@@ -364,7 +358,7 @@ export default <Record<string, StyleType>>{
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `line-height: ${custom(groups) ?? (isNaN(+groups?.special) ? (lineHeight[groups?.special] ?? "") : sizing(groups?.special)) ?? ""};`
+      return `line-height: ${custom(groups) ?? (isNaN(+groups?.special) ? (lineHeight[groups?.special] ?? "") : sizing(groups)) ?? ""};`
     }
   },
   "list-image": {
@@ -634,7 +628,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>border-spacing)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return borderSpacing[groups.axis](custom(groups) ?? sizing(groups.special) ?? "")
+      return borderSpacing[groups.axis](custom(groups) ?? sizing(groups) ?? "")
     }
   },
   rounded: {
@@ -1130,14 +1124,14 @@ export default <Record<string, StyleType>>{
     reg: /(?<negative>-)?(?<style>translate)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return translate[groups.axis](`${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""}`)
+      return translate[groups.axis](`${custom(groups) ?? sizing(groups) ?? ""}`)
     }
   },
   skew: {
     reg: /(?<negative>-)?(?<style>skew)-(?<axis>[xy])?-?((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return skew[groups.axis](`${groups?.negative ?? ""}${custom(groups) ?? groups.special + "deg"}`)
+      return skew[groups.axis](`${custom(groups) ?? negative(groups, groups.special + "deg")}`)
     }
   },
   origin: {
@@ -1277,15 +1271,12 @@ export default <Record<string, StyleType>>{
       } else if (reg.margin.test(classStyle)) {
         const groups = classStyle.match(reg.margin)?.groups as GroupsRegExp
         if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
-          return positionPaddingOrMargin[groups.axis](
-            "scroll-margin",
-            `${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""}`
-          )
+          return positionPaddingOrMargin[groups.axis]("scroll-margin", `${custom(groups) ?? sizing(groups) ?? ""}`)
         }
       } else if (reg.padding.test(classStyle)) {
         const groups = classStyle.match(reg.padding)?.groups as GroupsRegExp
         if (groups && (groups?.special || groups?.abstract || groups?.custom)) {
-          return positionPaddingOrMargin[groups.axis]("scroll-padding", custom(groups) ?? sizing(groups?.special) ?? "")
+          return positionPaddingOrMargin[groups.axis]("scroll-padding", custom(groups) ?? sizing(groups) ?? "")
         }
       }
     }
@@ -1549,7 +1540,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>inset)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      const value = custom(groups) ?? sizing(groups?.special)
+      const value = custom(groups) ?? sizing(groups)
       if (!value) return
       if (groups?.axis === "x") return `left: ${value};\n  right: ${value};`
       if (groups?.axis === "y") return `top: ${value};\n  bottom: ${value};`
@@ -1560,56 +1551,56 @@ export default <Record<string, StyleType>>{
     reg: /(?<style>start)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `inset-inline-start: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `inset-inline-start: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   end: {
     reg: /(?<style>end)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `inset-inline-end: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `inset-inline-end: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   top: {
     reg: /(?<negative>-)?(?<style>top)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `top: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `top: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   bottom: {
     reg: /(?<negative>-)?(?<style>bottom)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `bottom: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `bottom: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   right: {
     reg: /(?<negative>-)?(?<style>right)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `right: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `right: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   left: {
     reg: /(?<negative>-)?(?<style>left)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `left: ${groups?.negative ?? ""}${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `left: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   z: {
     reg: /(?<negative>-)?(?<style>z)-((?<special>\d+|auto)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `z-index: ${groups?.negative ?? ""}${custom(groups) ?? groups?.special ?? ""};`
+      return `z-index: ${custom(groups) ?? negative(groups, groups?.special ?? "")};`
     }
   },
   basis: {
     reg: /(?<style>basis)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `flex-basis: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `flex-basis: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   flex: {
@@ -1753,7 +1744,7 @@ export default <Record<string, StyleType>>{
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       const value = groups.axis === "x" ? "column-" : groups.axis === "y" ? "row-" : ""
-      return `${value}gap: ${custom(groups) ?? sizing(groups?.special) ?? ""};`
+      return `${value}gap: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   "justify-items": {

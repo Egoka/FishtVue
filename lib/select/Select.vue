@@ -501,8 +501,12 @@
           ref="selectList"
           :class="classSelectList"
           :style="`width: ${(selectBody as HTMLElement)?.clientWidth ?? 0}px`">
-          <div :class="classGradientSelectListTop" />
-          <div :class="classGradientSelectListButton" />
+          <div :class="Select.setStyle('sticky z-20 w-full h-0 top-0')">
+            <div :class="classGradientSelectListTop" />
+          </div>
+          <div :class="Select.setStyle('sticky z-20 w-full h-0 top-[220px]')">
+            <div :class="classGradientSelectListButton" />
+          </div>
           <Input
             v-if="isQuery"
             ref="selectSearch"
