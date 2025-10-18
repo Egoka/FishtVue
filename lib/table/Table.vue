@@ -341,9 +341,9 @@
                 classSelectList: "normal-case font-normal",
                 dataSelect:
                   (column?.paramsFilter as Partial<BaseSelectProps>)?.dataSelect ??
-                  LD.compact(LD.uniq(LD.map(allData.value, options.dataField ?? ""))).sort((a, b) =>
-                    String(a).localeCompare(String(b))
-                  ),
+                  LD.uniq(LD.map(allData.value, options.dataField ?? ""))
+                    .filter((v) => v !== null && v !== undefined)
+                    .sort((a, b) => String(a).localeCompare(String(b))),
                 paramsFixWindow: {
                   position: "bottom",
                   ...(column?.paramsFilter as Partial<BaseSelectProps>)?.paramsFixWindow
@@ -373,13 +373,11 @@
                     {
                       highlight: { fillMode: "light" },
                       dates:
-                        LD.compact(
-                          LD.uniq(
-                            LD.map(allData.value, (item) =>
-                              item[options.dataField] ? String(item[options.dataField]) : null
-                            )
+                        LD.uniq(
+                          LD.map(allData.value, (item) =>
+                            item[options.dataField] ? String(item[options.dataField]) : null
                           )
-                        ) ?? []
+                        ).filter((v) => v !== null && v !== undefined) ?? []
                     }
                   ],
                   mask:
@@ -1162,7 +1160,10 @@
     switch (summary.type) {
       case "sum": {
         if ((["number"] as Array<DataType>).includes(summary.dataType))
-          result = LD.sumBy(LD.compact(columnData), (i) => (!isNaN(Number(i)) ? Number(i) : 0))
+          result = LD.sumBy(
+            columnData.filter((v) => v !== null && v !== undefined),
+            (i) => (!isNaN(Number(i)) ? Number(i) : 0)
+          )
         break
       }
       case "count": {

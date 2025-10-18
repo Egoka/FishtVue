@@ -1192,10 +1192,10 @@ describe("unoStyle", () => {
         { classValue: "m-auto", expected: ".m-auto {\n  margin: auto;\n}" },
         { classValue: "mx-auto", expected: ".mx-auto {\n  margin-left: auto;\n  margin-right: auto;\n}" },
         { classValue: "mx-[32rem]", expected: ".mx-\\[32rem\\] {\n  margin-left: 32rem;\n  margin-right: 32rem;\n}" },
-        { classValue: "-m-px", expected: ".-m-px {\n  margin: -1px;\n}" },
+        { classValue: "-m-px", expected: ".-m-px {\n  margin: calc(1px * -1);\n}" },
         {
           classValue: "-mx-[32rem]",
-          expected: ".-mx-\\[32rem\\] {\n  margin-left: -32rem;\n  margin-right: -32rem;\n}"
+          expected: ".-mx-\\[32rem\\] {\n  margin-left: calc(32rem * -1);\n  margin-right: calc(32rem * -1);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3992,7 +3992,7 @@ describe("unoStyle", () => {
         },
         {
           classValue: "-translate-0",
-          expected: `.-translate-0 {\n  --fv-translate-x: -0px;\n  --fv-translate-y: -0px;\n  ${baseTranslate}\n}`
+          expected: `.-translate-0 {\n  --fv-translate-x: 0px;\n  --fv-translate-y: 0px;\n  ${baseTranslate}\n}`
         },
         { classValue: "translate-x-0", expected: `.translate-x-0 {\n  --fv-translate-x: 0px;\n  ${baseTranslate}\n}` },
         { classValue: "translate-y-0", expected: `.translate-y-0 {\n  --fv-translate-y: 0px;\n  ${baseTranslate}\n}` },
@@ -4059,6 +4059,14 @@ describe("unoStyle", () => {
         {
           classValue: "translate-y-[17rem]",
           expected: `.translate-y-\\[17rem\\] {\n  --fv-translate-y: 17rem;\n  ${baseTranslate}\n}`
+        },
+        {
+          classValue: "-translate-x-1/2",
+          expected: `.-translate-x-1\\/2 {\n  --fv-translate-x: calc(calc(1 / 2 * 100%) * -1);\n  ${baseTranslate}\n}`
+        },
+        {
+          classValue: "-translate-y-[17rem]",
+          expected: `.-translate-y-\\[17rem\\] {\n  --fv-translate-y: calc(17rem * -1);\n  ${baseTranslate}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
