@@ -65,7 +65,34 @@ export default defineNuxtConfig({
   nitro: {
     prerender: {
       routes: ["/en", "/ru", "/sitemap.xml", "/components/components", "/ru/components/components"],
-      crawlLinks: true
+      crawlLinks: true,
+      // Увеличиваем количество одновременных запросов для более быстрого пререндера
+      concurrency: 10,
+      // Указываем игнорируемые маршруты
+      ignore: ["/api/", "/_nuxt/"]
+    },
+    // Добавляем заголовки для SEO
+    routeRules: {
+      "/**": {
+        headers: {
+          "X-Robots-Tag": "index, follow",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Referrer-Policy": "strict-origin-when-cross-origin"
+        }
+      },
+      "/sitemap.xml": {
+        headers: {
+          "Content-Type": "application/xml",
+          "Cache-Control": "public, max-age=3600, s-maxage=3600"
+        }
+      },
+      "/robots.txt": {
+        headers: {
+          "Content-Type": "text/plain",
+          "Cache-Control": "public, max-age=86400, s-maxage=86400"
+        }
+      }
     }
   }
 })
