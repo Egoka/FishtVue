@@ -28,7 +28,10 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "seo:check": "node scripts/check-seo.js",
+    "seo:validate": "npm run generate && node scripts/validate-sitemap.js",
+    "seo:all": "npm run seo:check && npm run seo:validate"
   },
   "dependencies": {
     "@iconify/vue": "^4.3.0",
@@ -72,6 +75,8 @@
   "devDependencies": {
     "@types/lodash": "^4.17.16",
     "@types/sanitize-html": "^2.15.0",
+    "fast-xml-parser": "^4.5.0",
+    "gray-matter": "^4.0.3",
     "shiki": "^3.2.1"
   }
 }

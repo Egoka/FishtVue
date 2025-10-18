@@ -1,4 +1,23 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /_nuxt/
+Disallow: /.nuxt/
+
+# Crawl delay for specific bots
+User-agent: Googlebot
+Crawl-delay: 0
+
+User-agent: Bingbot
+Crawl-delay: 0
+
+User-agent: Yandex
+Crawl-delay: 1
+
+# Block AI scrapers (optional - uncomment if you want to block them)
+# User-agent: GPTBot
+# Disallow: /
+# User-agent: ChatGPT-User
+# Disallow: /
 
 Sitemap: https://fisht.org/sitemap.xml
