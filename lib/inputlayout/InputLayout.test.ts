@@ -37,17 +37,17 @@ describe("InputLayout Component", () => {
       {
         mode: "outlined",
         expected:
-          "fv fishtvue-input-layout classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-950 flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border border-gray-300 dark:border-gray-600 flex items-center peer overflow-auto"
       },
       {
         mode: "underlined",
         expected:
-          "fv fishtvue-input-layout classLayout w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950 flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout classLayout w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 rounded-none border-0 border-gray-300 dark:border-gray-700 border-b flex items-center peer overflow-auto"
       },
       {
         mode: "filled",
         expected:
-          "fv fishtvue-input-layout classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border-0 border-transparent bg-stone-100 dark:bg-stone-900 flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border-0 border-transparent flex items-center peer overflow-auto"
       }
     ])("applies mode: %s", ({ mode, expected }) => {
       const wrapper = mount(InputLayout, {

@@ -64,14 +64,24 @@ describe("Icons Component Tests", () => {
 
     describe("Label Component - Mode Variants", () => {
       it.each([
-        ["outlined", "from-white dark:from-neutral-950"],
-        ["underlined", "from-stone-50 dark:from-stone-950"],
-        ["filled", "from-stone-100 dark:from-stone-900"]
+        [
+          "outlined",
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 transition-all duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+        ],
+        [
+          "underlined",
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 transition-all duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+        ],
+        [
+          "filled",
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 transition-all duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+        ]
       ])('applies correct background style for mode "%s"', (mode, expectedBackground) => {
         const wrapper = mount(Label, {
           props: {
             title: "Test Label",
             type: "offsetDynamic",
+            // @ts-ignore
             mode
           }
         })
@@ -93,6 +103,7 @@ describe("Icons Component Tests", () => {
         const wrapper = mount(Label, {
           props: {
             title: "Test Label",
+            // @ts-ignore
             type
           }
         })

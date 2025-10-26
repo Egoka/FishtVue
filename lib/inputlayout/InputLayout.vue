@@ -47,7 +47,7 @@
   const labelType = computed<NonNullable<InputLayoutProps["labelMode"]>>(() =>
     getLabelType(isValue.value, label.value, labelMode.value)
   )
-  const isRequired = computed<NonNullable<InputLayoutProps["required"]>>(() => props.required)
+  const isRequired = computed<NonNullable<InputLayoutProps["required"]>>(() => props.required ?? false)
   const isLoading = computed<InputLayoutProps["loading"]>(() => props.loading ?? false)
   const isDisabled = computed<InputLayoutProps["disabled"]>(() => props.disabled ?? false)
   const isInvalid = computed<InputLayoutProps["isInvalid"]>(() => (!isDisabled.value ? props.isInvalid : false))
@@ -66,9 +66,19 @@
       ? ((props?.animation as InputLayoutProps["animation"]) ?? options?.animation ?? "transition-all duration-550")
       : ""
   )
+  const background = computed(() =>
+    mode.value === "outlined"
+      ? "bg-white dark:bg-neutral-950"
+      : mode.value === "underlined"
+        ? "bg-stone-50 dark:bg-stone-950"
+        : mode.value === "filled"
+          ? "bg-stone-100 dark:bg-stone-900"
+          : ""
+  )
   const classBody = computed(() =>
     InputLayout.setStyle([
       "inputBody classBody relative rounded-md",
+      background.value,
       animation.value ?? "",
       options?.classBody ?? "",
       props?.classBody ?? "",
@@ -82,12 +92,10 @@
       isDisabled.value
         ? "bg-neutral-50 dark:bg-neutral-950 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-800 border-dashed shadow-none"
         : "",
-      mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-950" : "",
-      mode.value === "underlined"
-        ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
-        : "",
+      mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600" : "",
+      mode.value === "underlined" ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b" : "",
       mode.value === "filled"
-        ? `${isDisabled.value ? "border-dotted border-2 border-slate-200" : "border-0 border-transparent"} bg-stone-100 dark:bg-stone-900`
+        ? `${isDisabled.value ? "border-dotted border-2 border-slate-200" : "border-0 border-transparent"} `
         : "",
       animation.value ?? "",
       options?.class ?? "",
