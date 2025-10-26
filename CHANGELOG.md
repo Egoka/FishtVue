@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.2.6](https://github.com/Egoka/FishtVue/compare/v0.2.5...v0.2.6) (2025-10-26)
+
+
+### Bug Fixes
+
+* **label:** updated visual Label ([3254a20](https://github.com/Egoka/FishtVue/commit/3254a201c15f260738f27a649bd611a80e4d4701))
+
 ## [0.2.5](https://github.com/Egoka/FishtVue/compare/v0.2.4...v0.2.5) (2025-10-18)
 
 
