@@ -620,11 +620,13 @@
   const classTHead = computed(() =>
     Table.setStyle(["classTHead sticky top-0 z-20", styles.value.class?.thead || modeStyle.value])
   )
+  const classHeadTr = computed(() => Table.setStyle("bg-inherit dark:bg-inherit"))
   const classTh = (column: IColumnPrivate) =>
     Table.setStyle([
       column.id,
       column.class?.th,
       "group/th",
+      "bg-inherit dark:bg-inherit",
       column.isFilter ? "pl-1 pr-0 py-2" : "pl-6 py-5",
       "border-b",
       defaultBorder.value,
@@ -640,14 +642,18 @@
   }
   const classBodyFilter = computed(() =>
     Table.setStyle([
-      "group relative flex w-full",
+      "group relative flex w-full bg-inherit dark:bg-inherit",
       styles.value.filterLines ? "border-r group-last/th:border-r-0" : "",
       defaultBorder.value,
       styles.value.border?.filter
     ])
   )
   const classIsFilter = (column: IColumnPrivate) =>
-    Table.setStyle(["w-full cursor-pointer", column.class?.colFilter, column.isSort || isSort.value ? "" : "px-1"])
+    Table.setStyle([
+      "w-full cursor-pointer bg-inherit dark:bg-inherit",
+      column.class?.colFilter,
+      column.isSort || isSort.value ? "" : "px-1"
+    ])
   const classNotFilter = (column: IColumnPrivate) =>
     Table.setStyle([
       "block text-sm font-medium truncate",
@@ -1525,7 +1531,7 @@
           <table data-table ref="table" :class="classTable">
             <!-- -------------------------------- -->
             <thead v-if="isColumns" data-table-thead ref="thead" :class="classTHead">
-              <tr>
+              <tr :class="classHeadTr">
                 <template v-for="(column, key) in dataColumns" :key="column.id">
                   <th
                     v-if="column.visible"
@@ -1542,7 +1548,10 @@
                           :label="column.caption"
                           :mode="mode"
                           :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="['tm-0 my-1', column.class?.colFilterClassBody as string]"
+                          :class-body="[
+                            'tm-0 my-1 bg-inherit dark:bg-inherit',
+                            column.class?.colFilterClassBody as string
+                          ]"
                           :style="`min-width: ${column.minWidth || 70}px;${styleThFilter(column)}`"
                           label-mode="offsetDynamic"
                           clear
@@ -1556,7 +1565,10 @@
                           :label="column.caption"
                           :mode="mode"
                           :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="['tm-0 my-1', column.class?.colFilterClassBody as string]"
+                          :class-body="[
+                            'tm-0 my-1 bg-inherit dark:bg-inherit',
+                            column.class?.colFilterClassBody as string
+                          ]"
                           :style="`min-width: ${column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
                           clear
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
@@ -1568,7 +1580,10 @@
                           :mode="mode"
                           label-mode="offsetDynamic"
                           :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="['tm-0 my-1', column.class?.colFilterClassBody as string]"
+                          :class-body="[
+                            'tm-0 my-1 bg-inherit dark:bg-inherit',
+                            column.class?.colFilterClassBody as string
+                          ]"
                           :style="`min-width: ${widthsColumns[column.dataField] ? widthsColumns[column.dataField] - 30 : column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
                           clear
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
