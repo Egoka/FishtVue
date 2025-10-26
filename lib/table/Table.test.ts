@@ -1,11 +1,12 @@
 import { mount } from "@vue/test-utils"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
-import { format, addDays } from "date-fns"
+import { addDays, format } from "date-fns"
 import * as functionHandler from "fishtvue/utils/functionHandler"
 import Table from "fishtvue/table/Table.vue"
 import { TableOption, TableProps } from "fishtvue/table/Table"
 import { nextTick } from "vue"
+
 describe("Table Component", () => {
   beforeAll(() => {
     // @ts-ignore
@@ -1125,6 +1126,7 @@ describe("Table Component", () => {
       expect(wrapper.vm.countDataOnLoading).toBe(1000)
       expect(wrapper.vm.classBaseTable).toContain("optionClass")
       expect(wrapper.vm.styles).toEqual({
+        activeRow: "",
         animation: "transition-all duration-500",
         borderRadiusPx: 7,
         class: {

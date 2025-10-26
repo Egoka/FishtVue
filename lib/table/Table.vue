@@ -515,11 +515,25 @@
   })
   // ---STYLE-------------------------------
   const baseTableHeight = 288 // 18rem
+  /**
+   * Stores the unique identifier of the currently active (selected) row.
+   * Format: `{_key}-{indexRow}` where _key is the row's unique key and indexRow is its position.
+   * Used to apply active styles to the clicked row via classTr function.
+   */
+  const activeRow = ref<string | null>()
   const heightTable = ref<string>(countVisibleRows.value ? `height: ${baseTableHeight}px` : "height: auto")
-  const styles = computed<Omit<ITableStyles, "border"> & { border?: ITableStylesBorder }>((): any => {
+  const styles = computed<
+    Omit<ITableStyles, "border" | "activeRow"> & { border?: ITableStylesBorder; activeRow: string }
+  >((): any => {
     const s = deepMergeSoft<ITableStyles>(deepCopyObject(options?.styles), deepCopyObject(props?.styles))
     return {
       ...s,
+      activeRow:
+        typeof s?.activeRow === "string"
+          ? (s?.activeRow as string)
+          : typeof s?.activeRow === "boolean" && s?.activeRow
+            ? "bg-neutral-100/90 dark:bg-neutral-900/50"
+            : "",
       hoverRows:
         typeof s?.hoverRows === "string"
           ? (s?.hoverRows as string)
@@ -700,9 +714,17 @@
     ])
   )
   const styleGroupText = computed(() => `min-height: ${heightCell.value}px`)
-  const classTr = (_: Record<string, any>, indexRow: number) =>
+  /**
+   * Generates CSS classes for table rows.
+   * Applies active row styles, hover effects, and striped row styling based on configuration.
+   * @param {Record<string, any>} data - Row data object containing the row's unique _key
+   * @param {number} indexRow - Index of the row in the current table view
+   * @returns {string} Combined CSS class string for the row
+   */
+  const classTr = (data: Record<string, any>, indexRow: number) =>
     Table.setStyle([
       `tr--${indexRow} group/tr`,
+      activeRow.value === `${data?._key}-${indexRow}` ? `active-row ${styles.value.activeRow}` : "",
       styles.value.hoverRows ? `${styles.value.hoverRows} transition-colors duration-200` : "",
       styles.value.isStripedRows
         ? mode.value === "filled"
@@ -818,6 +840,7 @@
   // ---EXPOSE------------------------------
   defineExpose({
     //---STATE-------------------------
+    activeRow,
     sortColumns,
     filterColumns,
     widthsColumns,
@@ -1318,7 +1341,17 @@
     emit("loading", isLoading.value)
   }
 
+  /**
+   * Handles row click event.
+   * Sets the clicked row as active by storing its unique identifier (`{_key}-{indexRow}`).
+   * This triggers automatic style updates for all table rows via Vue's reactivity system.
+   * @param {string} key - CSS class selector for the row element (format: `tr--{indexRow}`)
+   * @param {any} data - Row data object containing the row's values
+   * @param {number} indexRow - Index of the clicked row
+   * @emits click-row - Emitted with row element, data, and index
+   */
   function clickRow(key: string, data: any, indexRow: number) {
+    activeRow.value = `${data?._key}-${indexRow}`
     emit("click-row", {
       eventEl: ((tbody.value as HTMLElement)?.querySelector(`.${key}`) as HTMLElement) ?? null,
       data,

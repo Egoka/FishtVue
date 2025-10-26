@@ -533,6 +533,15 @@ export interface ITableStyles {
   animation?: "transition-all duration-500" | "transition-none" | string
 
   /**
+   * Стили для активной (выбранной) строки таблицы.
+   * - `true` - применяет стили по умолчанию
+   * - `string` - применяет кастомные CSS классы
+   * - `false` или `undefined` - отключает стили активной строки
+   * @default "bg-neutral-100/90 dark:bg-neutral-900/50"
+   */
+  activeRow?: string | "bg-neutral-100/90 dark:bg-neutral-900/50" | boolean
+
+  /**
    * Hover styles for table rows.
    * @type {string | "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50" | boolean | undefined}
    */
@@ -898,6 +907,12 @@ export declare type TableEmits = {
  */
 export declare type TableExpose = {
   // ---STATE-------------------------
+  /**
+   * Уникальный идентификатор текущей активной (выбранной) строки.
+   * Формат: `{_key}-{indexRow}`, где _key - уникальный ключ строки, indexRow - её позиция.
+   * @type {string | null}
+   */
+  activeRow: string
   /**
    * The current sorting state for all columns.
    * @type {Sorted}
