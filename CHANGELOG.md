@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.2.7](https://github.com/Egoka/FishtVue/compare/v0.2.6...v0.2.7) (2025-10-26)
+
+
+### Bug Fixes
+
+* **table:** added an active row in the table ([1181116](https://github.com/Egoka/FishtVue/commit/1181116fd776a9055d50e73c4c71eeecc6822a66))
+
 ## [0.2.6](https://github.com/Egoka/FishtVue/compare/v0.2.5...v0.2.6) (2025-10-26)
 
 
