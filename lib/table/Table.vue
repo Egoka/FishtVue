@@ -721,7 +721,7 @@
    * @param {number} indexRow - Index of the row in the current table view
    * @returns {string} Combined CSS class string for the row
    */
-  const classTr = (data: Record<string, any>, indexRow: number) =>
+  const classTr = (data: Record<string, any>, indexRow: number): string =>
     Table.setStyle([
       `tr--${indexRow} group/tr`,
       activeRow.value === `${data?._key}-${indexRow}` ? `active-row ${styles.value.activeRow}` : "",
@@ -1368,7 +1368,8 @@
     indexRow: number,
     indexCol: number
   ) {
-    if ((column as IColumnPrivate)?.isEdit) editableCell.value = { indexRow, indexCol }
+    if (column.isEdit) editableCell.value = { indexRow, indexCol }
+    if (typeof column.onClick === "function") column.onClick(column, data, indexRow)
     emit("click-cell", {
       eventEl: ((tbody.value as HTMLElement)?.querySelector(`.${key}`) as HTMLElement) ?? null,
       column,

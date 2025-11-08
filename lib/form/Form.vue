@@ -122,6 +122,23 @@
     },
     { deep: true }
   )
+
+  watch(
+    () => props.formFields,
+    (newFormFields) => {
+      if (newFormFields) {
+        structure.value?.forEach((item) =>
+          item.fields?.forEach((field: FieldType) => {
+            if (field.name in newFormFields) {
+              formFields[field.name] = newFormFields[field.name]
+            }
+          })
+        )
+      }
+    },
+    { deep: true, immediate: false }
+  )
+
   watch(
     () => [
       structure.value,
@@ -132,7 +149,18 @@
       autocomplete.value,
       isDisabled.value
     ],
-    () => (formStructure.value = getStructure()),
+    () => {
+      formStructure.value = getStructure()
+      if (props.formFields) {
+        structure.value?.forEach((item) =>
+          item.fields?.forEach((field: FieldType) => {
+            if (!(field.name in formFields)) {
+              formFields[field.name] = props.formFields?.[field.name] ?? field.modelValue
+            }
+          })
+        )
+      }
+    },
     { immediate: true }
   )
   // ---METHODS-----------------------------

@@ -248,6 +248,14 @@ export type IColumn = {
   setCellValue?(column: IColumn, value: any, data?: any): any
 
   /**
+   * Callback that is invoked when the column cell is clicked.
+   * @param {IColumn} column - The column configuration.
+   * @param {any} data - The row data for the clicked cell.
+   * @param {number} indexRow - The index of the clicked row.
+   */
+  onClick?(column: IColumn, data: any, indexRow: number): void
+
+  /**
    * Custom CSS classes for the column.
    */
   class?: {
