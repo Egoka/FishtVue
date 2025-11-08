@@ -196,19 +196,23 @@
         ? groupingValue
         : null
   })
-  const isPagination = computed<boolean>(() => {
-    const paginationValue = pagination.value
-    return (
-      countVisibleRows.value > 0 &&
-      (typeof paginationValue === "object"
-        ? typeof paginationValue?.visible === "boolean"
-          ? paginationValue.visible
-          : true
-        : typeof paginationValue === "boolean"
-          ? paginationValue
-          : false)
-    )
-  })
+  const isPagination = computed<boolean>(() =>
+    typeof pagination.value === "object"
+      ? typeof pagination.value?.visible === "boolean"
+        ? pagination.value.visible
+        : true
+      : typeof pagination.value === "boolean"
+        ? pagination.value
+        : false
+  )
+  // ---CELL--------------------------------
+  const heightCell = computed<number>(() => styles.value?.heightCell ?? 50)
+  const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
+    () => props?.countVisibleRows ?? options?.countVisibleRows ?? 0
+  )
+  const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
+    () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
+  )
   // ---PAGINATION--------------------------
   const startPage = computed<NonNullable<TablePagination["startPage"]>>(() =>
     isNumber((pagination.value as TablePagination)?.startPage as number) ? +(pagination.value as any).startPage : 1
@@ -219,7 +223,7 @@
   const sizePage = computed<NonNullable<TablePagination["sizePage"]>>(() =>
     isNumber((pagination.value as TablePagination)?.sizePage as number)
       ? +(pagination.value as any).sizePage
-      : countVisibleRows.value
+      : countVisibleRows.value || sizeTable.value
   )
   const visibleNumberPages = computed<TablePagination["visibleNumberPages"]>(
     () => (pagination.value as TablePagination)?.visibleNumberPages
@@ -236,15 +240,6 @@
   const isHiddenNavigationButtons = computed<TablePagination["isHiddenNavigationButtons"]>(
     () => (pagination.value as TablePagination)?.isHiddenNavigationButtons ?? false
   )
-  // ---CELL--------------------------------
-  const heightCell = computed<number>(() => styles.value?.heightCell ?? 50)
-  const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
-    () => (props?.countVisibleRows as TableProps["countVisibleRows"]) ?? options?.countVisibleRows ?? 0
-  )
-  const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
-    () => (props?.sizeLoadingRows as TableProps["sizeLoadingRows"]) ?? options?.sizeLoadingRows ?? 5
-  )
-  const isLoadingRows = computed(() => countVisibleRows.value > 0)
   // ---DATA--------------------------------
   const dataGrouping = computed<DataGrouping>(() => {
     let data: Array<Record<string, any>> = toRaw(dataSource.value)
@@ -262,7 +257,7 @@
   const resultDataSource = computed<ResultData>(() => {
     let resultData: Record<string, any> = toRaw(dataGrouping.value)
     let limit = countVisibleRows.value + sizeLoadedRows.value
-    if (resultData && isLoadingRows.value) {
+    if (resultData && countVisibleRows.value > 0) {
       const result: Record<string, any> = {}
       for (const item of Object.keys(resultData)) {
         if (limit > resultData[item]?.length) {
@@ -1141,14 +1136,14 @@
     }, timeout)
   }
 
-  function switchPage(page: Page) {
-    pageTable.value = page
+  function switchPage(page: Page | undefined) {
+    pageTable.value = page ?? 1
     emit("switch-page", pageTable.value)
   }
 
-  function switchSizePage(sizePage: Page) {
+  function switchSizePage(sizePage: Page | undefined) {
     switchPage(1)
-    sizeTable.value = sizePage
+    sizeTable.value = sizePage ?? 5
     emit("switch-size-page", sizeTable.value)
   }
 
@@ -1430,7 +1425,7 @@
   }
 
   function startLastRowVisibleObserver() {
-    if (tbody.value && isLoadingRows.value) {
+    if (tbody.value && countVisibleRows.value > 0) {
       const el = (tbody.value as HTMLElement)?.querySelector(rowSelector)
       if (el) lastRowVisibleObserver.unobserve(el)
       sizeLoadedRows.value =
