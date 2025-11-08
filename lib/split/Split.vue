@@ -26,6 +26,7 @@
   const sizePanels = reactive<Record<Panel["name"], number>>({})
   const cursorPanels = reactive<Record<Panel["name"], CursorType>>({})
   const activeCursorPanel = ref<CursorType>("center")
+  const previousContainerSize = ref<number>(0)
 
   // ---PROPS-------------------------------
   const units = computed<SplitProps["units"]>(() => props.units ?? "percentages")
@@ -177,17 +178,160 @@
 
   // ---METHODS-----------------------------
   function updatePanels() {
-    Object.assign(
-      sizePanels,
-      Object.fromEntries(
-        new Map(
-          panels.value.map((panel) => [
-            panel.name,
-            sizePanels[panel.name] ?? panel.size ?? getDefaultSize(panels.value)
-          ])
+    if (units.value === "pixels" && resizableGroup.value) {
+      // Get current container size
+      const currentContainerSize =
+        direction.value === "horizontal" ? resizableGroup.value.offsetWidth : resizableGroup.value.offsetHeight
+
+      // Calculate sum of current sizes of all panels (not hidden and not disabled)
+      const totalCurrentSize = panels.value
+        .filter((panel) => !panel.hidden && !panel.disabled)
+        .reduce((sum, panel) => sum + (sizePanels[panel.name] ?? panel.size ?? 0), 0)
+
+      // If previous size was saved and current total size is greater than 0
+      if (
+        previousContainerSize.value > 0 &&
+        totalCurrentSize > 0 &&
+        currentContainerSize !== previousContainerSize.value
+      ) {
+        const sizeDifference = currentContainerSize - previousContainerSize.value
+
+        // Get list of panels that can be recalculated
+        const resizablePanelsList = panels.value.filter((panel) => {
+          if (panel.hidden || panel.disabled) return false
+
+          const currentSize = sizePanels[panel.name] ?? panel.size ?? 0
+
+          // On increase: exclude panels that reached maxSize
+          if (sizeDifference > 0) {
+            if (typeof panel.maxSize === "number" && panel.maxSize > 0) {
+              if (currentSize >= panel.maxSize) return false
+            }
+          }
+          // On decrease: exclude panels that reached minSize (already at minimum)
+          else if (sizeDifference < 0) {
+            if (typeof panel.minSize === "number" && panel.minSize > 0) {
+              if (currentSize <= panel.minSize) return false
+            }
+          }
+
+          return true
+        })
+
+        // Calculate sum of sizes of panels that can be recalculated
+        const resizableTotalSize = resizablePanelsList.reduce(
+          (sum, panel) => sum + (sizePanels[panel.name] ?? panel.size ?? 0),
+          0
+        )
+
+        // If there are panels to recalculate and their sum is greater than 0
+        if (resizablePanelsList.length > 0 && resizableTotalSize > 0) {
+          // Recalculate sizes proportionally
+          resizablePanelsList.forEach((panel) => {
+            const currentSize = sizePanels[panel.name] ?? panel.size ?? 0
+            const proportionalSize = (currentSize / resizableTotalSize) * sizeDifference
+            let newSize = currentSize + proportionalSize
+
+            // Apply minSize and maxSize constraints
+            if (typeof panel.minSize === "number" && panel.minSize > 0) {
+              newSize = Math.max(newSize, panel.minSize)
+            }
+            if (typeof panel.maxSize === "number" && panel.maxSize > 0) {
+              newSize = Math.min(newSize, panel.maxSize)
+            }
+
+            sizePanels[panel.name] = newSize
+          })
+
+          // Check and adjust sum of sizes of all panels
+          const newTotalSize = panels.value
+            .filter((panel) => !panel.hidden && !panel.disabled)
+            .reduce((sum, panel) => sum + (sizePanels[panel.name] ?? 0), 0)
+
+          const sizeDiscrepancy = currentContainerSize - newTotalSize
+
+          // If there is a discrepancy, distribute it among panels that can still be adjusted
+          if (Math.abs(sizeDiscrepancy) > 0.1 && resizablePanelsList.length > 0) {
+            const adjustablePanels = resizablePanelsList.filter((panel) => {
+              const currentSize = sizePanels[panel.name] ?? 0
+              if (sizeDiscrepancy > 0) {
+                // On increase: exclude panels that reached maxSize
+                if (typeof panel.maxSize === "number" && panel.maxSize > 0) {
+                  return currentSize < panel.maxSize
+                }
+              } else {
+                // On decrease: exclude panels that reached minSize
+                if (typeof panel.minSize === "number" && panel.minSize > 0) {
+                  return currentSize > panel.minSize
+                }
+              }
+              return true
+            })
+
+            if (adjustablePanels.length > 0) {
+              const adjustableTotalSize = adjustablePanels.reduce(
+                (sum, panel) => sum + (sizePanels[panel.name] ?? 0),
+                0
+              )
+
+              if (adjustableTotalSize > 0) {
+                adjustablePanels.forEach((panel) => {
+                  const currentSize = sizePanels[panel.name] ?? 0
+                  const proportionalAdjustment = (currentSize / adjustableTotalSize) * sizeDiscrepancy
+                  let adjustedSize = currentSize + proportionalAdjustment
+
+                  // Apply minSize and maxSize constraints
+                  if (typeof panel.minSize === "number" && panel.minSize > 0) {
+                    adjustedSize = Math.max(adjustedSize, panel.minSize)
+                  }
+                  if (typeof panel.maxSize === "number" && panel.maxSize > 0) {
+                    adjustedSize = Math.min(adjustedSize, panel.maxSize)
+                  }
+
+                  sizePanels[panel.name] = adjustedSize
+                })
+              }
+            }
+          }
+        }
+
+        // Update previous container size
+        previousContainerSize.value = currentContainerSize
+      } else {
+        // First initialization or initialization for panels without sizes
+        Object.assign(
+          sizePanels,
+          Object.fromEntries(
+            new Map(
+              panels.value.map((panel) => [
+                panel.name,
+                sizePanels[panel.name] ?? panel.size ?? getDefaultSize(panels.value)
+              ])
+            )
+          )
+        )
+        // Save current container size
+        previousContainerSize.value = currentContainerSize
+      }
+    } else {
+      // For percentages - standard logic
+      Object.assign(
+        sizePanels,
+        Object.fromEntries(
+          new Map(
+            panels.value.map((panel) => [
+              panel.name,
+              sizePanels[panel.name] ?? panel.size ?? getDefaultSize(panels.value)
+            ])
+          )
         )
       )
-    )
+      // For percentages also save size for consistency
+      if (resizableGroup.value) {
+        previousContainerSize.value =
+          direction.value === "horizontal" ? resizableGroup.value.offsetWidth : resizableGroup.value.offsetHeight
+      }
+    }
   }
   function setItemRef(el: HTMLElement, namePanel: Panel["name"]) {
     if (isClient()) {
