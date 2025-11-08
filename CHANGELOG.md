@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.2.8](https://github.com/Egoka/FishtVue/compare/v0.2.7...v0.2.8) (2025-11-08)
+
+
+### Bug Fixes
+
+* **form:** form synchronicity has been fixed ([21f1c01](https://github.com/Egoka/FishtVue/commit/21f1c0148841f945ba891a5b191d7ca8470cd5fd))
+
 ## [0.2.7](https://github.com/Egoka/FishtVue/compare/v0.2.6...v0.2.7) (2025-10-26)
 
 
