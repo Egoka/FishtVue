@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.2.9](https://github.com/Egoka/FishtVue/compare/v0.2.8...v0.2.9) (2025-11-08)
+
+
+### Bug Fixes
+
+* **split:** the panel calculation logic has been changed ([c48bf9d](https://github.com/Egoka/FishtVue/commit/c48bf9d8e143cf1bec719106a988514ca6707471))
+
 ## [0.2.8](https://github.com/Egoka/FishtVue/compare/v0.2.7...v0.2.8) (2025-11-08)
 
 
