@@ -550,10 +550,10 @@
   )
   const tableBodyStyle = computed<string>(() => {
     const borderTop = !slots.header
-      ? `border-top-left-radius: ${styles.value.borderRadiusPx}px;border-top-right-radius: ${styles.value.borderRadiusPx}px;`
+      ? `border-top-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-top-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
       : ""
     const borderBottom = !(isPagination.value || slots.footer)
-      ? `border-bottom-left-radius: ${styles.value.borderRadiusPx}px;border-bottom-right-radius: ${styles.value.borderRadiusPx}px;`
+      ? `border-bottom-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-bottom-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
       : ""
     return `${borderTop}${borderBottom}`
   })
@@ -581,12 +581,11 @@
   )
   const classBaseToolbar = computed(() =>
     Table.setStyle([
-      "classToolbar toolbar flex mb-2 justify-end items-end",
+      "classToolbar toolbar flex mb-2 justify-between items-end",
       styles.value?.animation,
       styles.value.class?.toolbar
     ])
   )
-  const classSlotToolbar = ref(Table.setStyle("w-full"))
   const classSearch = ref(Table.setStyle("ml-1"))
   const classIcon = ref(Table.setStyle("h-5 w-5 text-gray-400 dark:text-gray-600"))
   const classIconClearFilter = ref(
@@ -604,7 +603,7 @@
   )
   const styleHeader = computed(
     () =>
-      `border-top-left-radius: ${styles.value.borderRadiusPx}px;border-top-right-radius: ${styles.value.borderRadiusPx}px;`
+      `border-top-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-top-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
   )
   const classSlotHeader = computed(() =>
     Table.setStyle([
@@ -774,7 +773,7 @@
   const classIsPagination = computed(() => Table.setStyle([isSummary.value ? "relative sm:px-5" : "", modeStyle.value]))
   const styleIsPagination = computed(() =>
     !slots.footer
-      ? `border-bottom-left-radius: ${styles.value.borderRadiusPx}px;border-bottom-right-radius: ${styles.value.borderRadiusPx}px;`
+      ? `border-bottom-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-bottom-right-radius: ${(styles.value.borderRadiusPx ?? 1) - 1}px;`
       : ""
   )
   const classIsLoading = ref(
@@ -1512,9 +1511,7 @@
     :class="classBaseTable"
     :style="`width:${styles.width};height:${styles.height};`">
     <div v-if="isVisibleToolbar" data-table-toolbar ref="tableToolbar" :class="classBaseToolbar">
-      <div v-if="slots.toolbar" data-table-toolbar-slot :class="classSlotToolbar">
-        <slot name="toolbar" />
-      </div>
+      <slot v-if="slots.toolbar" data-table-toolbar-slot name="toolbar" />
       <div v-if="isSearch" data-table-search :class="classSearch">
         <Input
           :model-value="queryTable"
@@ -1824,6 +1821,7 @@
               defaultBorder as string,
               styles.border?.pagination as string
             ]"
+            :style="styleIsPagination"
             @update:model-value="switchPage"
             @update:size-page="switchSizePage" />
         </div>
