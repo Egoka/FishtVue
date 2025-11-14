@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [0.2.10](https://github.com/Egoka/FishtVue/compare/v0.2.9...v0.2.10) (2025-11-14)
+
+
+### Bug Fixes
+
+* **style:** fixed table styles ([2506a29](https://github.com/Egoka/FishtVue/commit/2506a298bd574f1df0b3f3f0b9c431c28812d0c0))
+
 ## [0.2.9](https://github.com/Egoka/FishtVue/compare/v0.2.8...v0.2.9) (2025-11-08)
 
 
