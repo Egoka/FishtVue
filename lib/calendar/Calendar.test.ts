@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils"
 import { describe, expect, it, vi } from "vitest"
 import Calendar from "fishtvue/calendar/Calendar.vue"
+import { CalendarProps } from "fishtvue/calendar/Calendar"
 import "v-calendar/style.css"
 import { nextTick } from "vue"
 
@@ -82,7 +83,7 @@ describe("Calendar Component", () => {
     })
 
     describe("Calendar Component - Mode Variants", () => {
-      const modes = ["outlined", "filled", "underlined"]
+      const modes: CalendarProps["mode"][] = ["outlined", "filled", "underlined"]
 
       it.each(modes)("renders correctly with mode: %s", (mode) => {
         const wrapper = mount(Calendar, {

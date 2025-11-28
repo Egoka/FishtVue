@@ -1,6 +1,15 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, reactive, ref, watch } from "vue"
-  import { FieldCustom, FieldType, FieldUseInputLayout, FormEmits, FormProps, FormStructure, FormValues } from "./Form"
+  import { computed, nextTick, onMounted, reactive, ref, unref, watch } from "vue"
+  import {
+    FieldComponentType,
+    FieldCustom,
+    FieldType,
+    FieldUseInputLayout,
+    FormEmits,
+    FormProps,
+    FormStructure,
+    FormValues
+  } from "./Form"
   import Icons from "fishtvue/icons/Icons.vue"
   import Input from "fishtvue/input/Input.vue"
   import Aria from "fishtvue/aria/Aria.vue"
@@ -46,7 +55,8 @@
     Calendar,
     TextEditor,
     Switch
-  }
+  } as const
+  type BaseInputKey = keyof typeof baseInputs
   const formStructure = ref<FormStructure[]>()
   // ---PROPS-------------------------------
   const name = computed<FormProps["name"]>(() => props.name ?? "")
@@ -64,7 +74,7 @@
   // ---------------------------------------
   const formFields = reactive<FormValues>({})
   const formInvalidFields = reactive<{ [key: string]: boolean }>({})
-  const structure = computed<FormProps["structure"]>(() => props.structure)
+  const structure = computed<Array<FormStructure>>(() => unref(props.structure))
   const submitButton = computed<FormProps["submitButton"]>(
     () => props.submitButton ?? options?.submitButton ?? Form.t("save") ?? "Save"
   )
@@ -97,6 +107,8 @@
   defineExpose({
     // ---PROPS-------------------------------
     formFields,
+    formInvalidFields,
+    formStructure,
     // ---METHODS-----------------------------
     setFieldValue,
     setFieldParam,
@@ -109,8 +121,9 @@
   onMounted(() => {
     Form.initStyle()
     structure.value?.forEach((item) =>
-      item.fields?.forEach((field: FieldType) => {
-        formFields[field.name] = props.formFields?.[field.name] ?? field.modelValue
+      item.fields?.forEach((field) => {
+        const formFieldsValue = unref(props.formFields)
+        formFields[field.name] = formFieldsValue?.[field.name] ?? field.modelValue
       })
     )
   })
@@ -126,11 +139,12 @@
   watch(
     () => props.formFields,
     (newFormFields) => {
-      if (newFormFields) {
+      const formFieldsValue = unref(newFormFields)
+      if (formFieldsValue) {
         structure.value?.forEach((item) =>
-          item.fields?.forEach((field: FieldType) => {
-            if (field.name in newFormFields) {
-              formFields[field.name] = newFormFields[field.name]
+          item.fields?.forEach((field) => {
+            if (field.name in formFieldsValue) {
+              formFields[field.name] = formFieldsValue[field.name]
             }
           })
         )
@@ -151,11 +165,12 @@
     ],
     () => {
       formStructure.value = getStructure()
-      if (props.formFields) {
+      const formFieldsValue = unref(props.formFields)
+      if (formFieldsValue) {
         structure.value?.forEach((item) =>
-          item.fields?.forEach((field: FieldType) => {
+          item.fields?.forEach((field) => {
             if (!(field.name in formFields)) {
-              formFields[field.name] = props.formFields?.[field.name] ?? field.modelValue
+              formFields[field.name] = formFieldsValue[field.name] ?? field.modelValue
             }
           })
         )
@@ -173,22 +188,20 @@
     return
   }
 
-  function setFieldParam(fieldName: string, param: keyof FieldType, value: any): void {
+  function setFieldParam<T extends FieldComponentType>(fieldName: string, param: keyof FieldType<T>, value: any): void {
     formStructure.value?.forEach((structure, i: number) => {
-      structure.fields?.forEach((item: FieldType, j: number) => {
+      structure.fields?.forEach((item, j: number) => {
         if (item.name === fieldName) (formStructure.value?.[i].fields[j] as any)[param] = value
       })
     })
   }
 
-  function getField(fieldName: string): FieldType | null {
-    let field: FieldType | null = null
-    formStructure.value?.forEach((structure) => {
-      structure.fields?.forEach((item: FieldType) => {
-        if (item.name === fieldName) field = item
-      })
-    })
-    return field
+  function getField<T extends FieldComponentType>(fieldName: string): FieldType<T> | null {
+    for (const structure of formStructure.value ?? []) {
+      const field = structure.fields?.find((item) => item.name === fieldName)
+      if (field) return field as FieldType<T>
+    }
+    return null
   }
 
   function isFieldInvalid(fieldName: string): boolean | undefined {
@@ -213,8 +226,8 @@
         resultStructure.class = `${classStructure.value} ${resultStructure.class}`
         resultStructure.classGrid = `${classStructureGrid.value} ${resultStructure.classGrid}`
         if (resultStructure.fields) {
-          resultStructure.fields = resultStructure.fields.map((field: FieldType) => {
-            let resultField: FieldType = deepCopy(field)
+          resultStructure.fields = resultStructure.fields.map((field) => {
+            let resultField = deepCopy(field)
             if (!resultField.name) {
               resultField.name = "field_" + generateUUID()
               console.error(`There is no name field. Temporary name ${resultField.name} is set.`)
@@ -339,7 +352,7 @@
                   <div v-show="!field.isHidden" data-form-group-item>
                     <component
                       v-if="Object.keys(baseInputs).includes(field.typeComponent)"
-                      :is="baseInputs[field.typeComponent]"
+                      :is="baseInputs[field.typeComponent as BaseInputKey]"
                       v-model:model-value="formFields[field.name]"
                       v-model:is-invalid="formInvalidFields[field.name]"
                       v-bind="{ ...fieldsOmit(field, calculatedFieldsInput), id: field.name }"
@@ -388,13 +401,13 @@
                         } as FieldCustom & FormValues
                       "
                       :updateModelValue="
-                        (value) => {
+                        (value: unknown) => {
                           formFields[field.name] = value
                           inputField(field)
                         }
                       "
                       :changeModelValue="
-                        (value) => {
+                        (value: unknown) => {
                           formFields[field.name] = value
                           changeField(field)
                         }

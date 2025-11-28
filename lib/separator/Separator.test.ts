@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils"
 import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Separator from "fishtvue/separator/Separator.vue"
+import { SeparatorProps } from "fishtvue/separator/Separator"
 
 describe("Separator Component", () => {
   describe("Without Library Initialization", () => {
@@ -23,25 +24,28 @@ describe("Separator Component", () => {
       }
     })
 
-    it.each(["left", "right", "center", "full"])("renders content position: %s", (content) => {
-      const wrapper = mount(Separator, {
-        props: { contentPosition: content }
-      })
-      const left = wrapper.find("[data-separator-left]")
-      const right = wrapper.find("[data-separator-right]")
-      if (content === "left") {
-        expect(left.exists()).toBe(false)
-        expect(right.exists()).toBe(true)
-      } else if (content === "right") {
-        expect(right.exists()).toBe(false)
-        expect(left.exists()).toBe(true)
-      } else if (content === "center" || content === "full") {
-        expect(left.exists()).toBe(content === "center")
-        expect(right.exists()).toBe(content === "center")
+    it.each(["left", "right", "center", "full"] as SeparatorProps["contentPosition"][])(
+      "renders content position: %s",
+      (content) => {
+        const wrapper = mount(Separator, {
+          props: { contentPosition: content }
+        })
+        const left = wrapper.find("[data-separator-left]")
+        const right = wrapper.find("[data-separator-right]")
+        if (content === "left") {
+          expect(left.exists()).toBe(false)
+          expect(right.exists()).toBe(true)
+        } else if (content === "right") {
+          expect(right.exists()).toBe(false)
+          expect(left.exists()).toBe(true)
+        } else if (content === "center" || content === "full") {
+          expect(left.exists()).toBe(content === "center")
+          expect(right.exists()).toBe(content === "center")
+        }
       }
-    })
+    )
 
-    it.each([0, 5, 10, 20, 30, 40, 50])("renders with gradient: %s", (gradient) => {
+    it.each([0, 5, 10, 20, 30, 40, 50] as SeparatorProps["gradient"][])("renders with gradient: %s", (gradient) => {
       const wrapper = mount(Separator, {
         props: { gradient }
       })
@@ -52,12 +56,12 @@ describe("Separator Component", () => {
 
     it("renders with gradient array", () => {
       const wrapper = mount(Separator, {
-        props: { gradient: [10, 15] }
+        props: { gradient: [10, 20] }
       })
       const leftLine = wrapper.find("[data-separator-left] div")
       const gradientStyle = leftLine.attributes("style")
       expect(gradientStyle).toContain("--fv-gradient-from-position: 10%")
-      expect(gradientStyle).toContain("--fv-gradient-via-position: 15%")
+      expect(gradientStyle).toContain("--fv-gradient-via-position: 20%")
     })
 
     it.each([
@@ -69,7 +73,7 @@ describe("Separator Component", () => {
       { depth: 5, expected: 5 },
       { depth: 6, expected: 6 },
       { depth: 7, expected: 7 }
-    ])("renders with depth: %s", ({ depth, expected }) => {
+    ] as { depth: SeparatorProps["depth"]; expected: number }[])("renders with depth: %s", ({ depth, expected }) => {
       const wrapper = mount(Separator, {
         props: { depth }
       })

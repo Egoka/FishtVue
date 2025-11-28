@@ -139,6 +139,7 @@ describe("Accordion Component Tests", () => {
 
     it("handles invalid prop values gracefully", () => {
       const wrapper: any = mount(Accordion, {
+        // @ts-ignore
         props: { animationDuration: "invalid" }
       })
       expect(wrapper.props("animationDuration")).toBe("invalid")

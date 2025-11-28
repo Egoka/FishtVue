@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import { computed, defineAsyncComponent, onMounted, watch } from "vue"
   import Component from "fishtvue/component"
-  import { type LoadingExpose, LoadingProps } from "fishtvue/loading/Loading"
+  import { EpicLoading, type LoadingExpose, LoadingProps, SvgLoading } from "fishtvue/loading/Loading"
   import { get } from "fishtvue/utils/objectHandler"
   import { colors } from "fishtvue/theme/primitive"
   import { isClient } from "fishtvue/utils/domHandler"
@@ -17,7 +17,7 @@
   const props = defineProps<LoadingProps>()
 
   let ComponentLoad = defineAsyncComponent({
-    loader: () => loadComponent(props.type ?? "simple"),
+    loader: () => loadComponent(props.type ?? "simple") as Promise<any>,
     errorComponent: SimpleLoading,
     loadingComponent: SimpleLoading,
     delay: 200,
@@ -29,9 +29,9 @@
    * @param type - The type of loading animation.
    * @returns A promise that resolves to the imported component.
    */
-  function loadComponent(type: string) {
-    if (componentsMapEpic[type]) return componentsMapEpic[type]()
-    if (componentsMapSvg[type]) return componentsMapSvg[type]()
+  function loadComponent(type: EpicLoading | SvgLoading) {
+    if (type in componentsMapEpic) return componentsMapEpic[type as EpicLoading]()
+    if (type in componentsMapSvg) return componentsMapSvg[type as SvgLoading]()
     console.warn(`Unknown loading type: ${type}. Falling back to 'simple'.`)
     return componentsMapSvg["simple"]()
   }
@@ -45,7 +45,7 @@
       (newType, oldType) => {
         if (newType !== oldType) {
           ComponentLoad = defineAsyncComponent({
-            loader: () => loadComponent(newType ?? "simple"),
+            loader: () => loadComponent(newType ?? "simple") as Promise<any>,
             errorComponent: SimpleLoading,
             loadingComponent: SimpleLoading,
             delay: 200,
@@ -94,8 +94,9 @@
   }))
 
   // ---EXPOSE------------------------------
+  const type = computed(() => props.type)
   defineExpose<LoadingExpose>({
-    type: props.type,
+    type,
     animationDuration,
     size,
     color,

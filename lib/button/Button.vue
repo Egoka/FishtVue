@@ -348,7 +348,13 @@
   })
 </script>
 <template>
-  <button ref="buttonRef" data-button :type="type" :class="classBase" :data-loading="isLoading" v-bind="{ disabled }">
+  <button
+    ref="buttonRef"
+    data-button
+    :type="type === 'icon' ? 'button' : type"
+    :class="classBase"
+    :data-loading="isLoading"
+    v-bind="{ disabled }">
     <template v-if="type === 'icon'">
       <Icons v-if="icon" :type="icon" :class="classIcon" />
       <Loading v-if="isLoading" type="simple" :size="25" class="absolute" />

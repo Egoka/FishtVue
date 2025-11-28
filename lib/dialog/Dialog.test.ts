@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Dialog from "fishtvue/dialog/Dialog.vue"
+import { DialogProps } from "fishtvue/dialog/Dialog"
 
 describe("Dialog Component Tests", () => {
   beforeEach(() => {
@@ -96,7 +97,7 @@ describe("Dialog Component Tests", () => {
       expect(dialogContent!.classList).toContain("right-0")
     })
 
-    const sizes = [
+    const sizes: { size: DialogProps["size"]; expectedClass: string }[] = [
       { size: "xs", expectedClass: "sm:max-w-xs" },
       { size: "sm", expectedClass: "sm:max-w-sm" },
       { size: "md", expectedClass: "sm:max-w-md" },
@@ -123,7 +124,7 @@ describe("Dialog Component Tests", () => {
       expect(dialogContent!.classList).toContain(expectedClass)
     })
 
-    const positions = [
+    const positions: { position: DialogProps["position"]; expectedClasses: string[] }[] = [
       { position: "center", expectedClasses: ["top-1/2", "left-1/2", "-translate-y-1/2", "-translate-x-1/2"] },
       { position: "top", expectedClasses: ["top-0", "-translate-x-1/2"] },
       { position: "bottom", expectedClasses: ["bottom-0", "-translate-x-1/2"] },

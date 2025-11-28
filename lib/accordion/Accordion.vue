@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from "vue"
+  import { computed, onMounted, ref, unref, watch } from "vue"
   import { ArrowDownCircleIcon, ChevronDownIcon } from "@heroicons/vue/20/solid"
   import { AccordionEmits, AccordionExpose, AccordionItem, AccordionProps } from "./Accordion"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -14,11 +14,11 @@
   })
   const emit = defineEmits<AccordionEmits>()
   // ---STATE-------------------------------
-  const dataItems = ref<AccordionItem[]>(props.dataSource)
+  const dataItems = ref<AccordionItem[]>(unref(props.dataSource) ?? [])
   watch(
     () => props.dataSource,
     (value) => {
-      dataItems.value = value ?? []
+      dataItems.value = unref(value) ?? []
     },
     { deep: true, immediate: true }
   )
@@ -84,17 +84,17 @@
   watch(
     () => props.dataSource,
     (value) => {
-      dataItems.value = value ?? []
+      dataItems.value = unref(value) ?? []
     },
     { deep: true }
   )
 
   // ---METHODS-----------------------------
   function toggle(key: string | number) {
-    if (dataItems.value && dataItems.value?.[key]) {
-      if (!multiple.value && !dataItems.value?.[key].open)
-        (dataItems.value as AccordionProps["dataSource"])?.forEach((item) => (item.open = false))
-      dataItems.value[key].open = !dataItems.value?.[key].open
+    const index = typeof key === "string" ? Number(key) : key
+    if (dataItems.value && dataItems.value[index]) {
+      if (!multiple.value && !dataItems.value[index].open) dataItems.value.forEach((item) => (item.open = false))
+      dataItems.value[index].open = !dataItems.value[index].open
       emit("toggle", dataItems.value)
     }
   }

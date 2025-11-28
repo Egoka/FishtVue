@@ -8,7 +8,6 @@ import { Theme } from "v-calendar/dist/types/src/utils/theme"
 import { DateRange } from "v-calendar/dist/types/src/utils/date/range"
 import { Attribute } from "v-calendar/dist/types/src/utils/attribute"
 import { LocaleConfig } from "v-calendar/src/utils/locale"
-import { AttributeConfig } from "v-calendar/src/utils/attribute"
 import { DateRangeSource } from "v-calendar/src/utils/date/range"
 import { DateRepeatConfig } from "v-calendar/dist/types/src/utils/date/repeat"
 import { CalendarDay } from "v-calendar/dist/types/src/utils/page"
@@ -16,7 +15,9 @@ import { UpdateOptions, ValueTarget } from "v-calendar/dist/types/src/use/datePi
 import { MoveOptions, MoveTarget } from "v-calendar/dist/types/src/use/calendar"
 import { DateParts, DatePartsRules } from "v-calendar/dist/types/src/utils/date/helpers"
 import { PopoverEventHandlers, PopoverOptions } from "v-calendar/dist/types/src/utils/popovers"
-import { DatePickerModel } from "v-calendar/src/use/datePicker"
+import { DateSource, SimpleDateParts } from "v-calendar/src/utils/date/helpers"
+import { PopoverVisibility } from "v-calendar/src/utils/popovers"
+import { Placement } from "@popperjs/core"
 
 /**
  * ## Calendar
@@ -73,6 +74,74 @@ export interface IRangeDate {
   start: Date | string
   end: Date | string
 }
+
+export interface Profile<T> {
+  start: T
+  base: T
+  end: T
+  startEnd?: T
+}
+
+export interface Glyph {
+  key: string | number
+  color: string
+  class: string | any[]
+  style: Record<string, any>
+}
+
+export type Content = Glyph
+export type ContentConfig = string | Partial<Content | Profile<Partial<Content>>>
+
+export type DatePickerDate = DateSource | Partial<SimpleDateParts> | null
+export type DatePickerRangeObject = {
+  start: Exclude<DatePickerDate, null>
+  end: Exclude<DatePickerDate, null>
+}
+export type DatePickerModel = DatePickerDate | DatePickerRangeObject
+
+export type HighlightFillMode = "solid" | "light" | "outline"
+export interface Highlight extends Glyph {
+  fillMode: HighlightFillMode
+  wrapperClass: string | any[]
+  contentClass: string | any[]
+  contentStyle: Record<string, any>
+}
+export type HighlightConfig = boolean | string | Partial<Highlight | Profile<Partial<Highlight>>>
+
+// Dots
+export type Dot = Glyph
+export type DotConfig = boolean | string | Partial<Dot | Profile<Partial<Dot>>>
+
+// Bars
+export type Bar = Glyph
+export type BarConfig = boolean | string | Partial<Bar | Profile<Partial<Bar>>>
+
+export type EventConfig = Partial<{
+  label: string
+}>
+
+export type PopoverConfig = Partial<{
+  label: string
+  visibility: PopoverVisibility
+  placement: Placement
+  hideIndicator: boolean
+  isInteractive: boolean
+}>
+
+export type AttributeConfig = Partial<{
+  key: string | number
+  hashcode: string
+  content: ContentConfig
+  highlight: HighlightConfig
+  dot: DotConfig
+  bar: BarConfig
+  popover: PopoverConfig
+  event: EventConfig
+  dates: DateRangeSource[]
+  customData: any
+  order: number
+  pinPage: boolean
+}>
 
 export interface ICalendarPicker {
   showCalendar: boolean

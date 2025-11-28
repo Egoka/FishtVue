@@ -310,28 +310,22 @@ export declare function fieldsPick<Structure extends Record<string | number, any
 /**
  #### `deepMerge` Function Documentation
 
- The `deepMerge` function is a utility function that performs a deep merge of multiple objects. It takes any number of objects as arguments and returns a new object that is the result of merging all the passed objects.
+ The `deepMerge` function is a utility function that performs a deep merge of multiple objects. It takes any number of objects as arguments and returns a new object that is the result of merging all the passed objects. The function also supports primitive types (boolean, string, number, etc.) - if all arguments are primitives, it returns the last non-empty value; if there are both objects and primitives, primitives are ignored and only objects are merged.
 
  ##### Syntax
  ```typescript
- export function deepMerge(...objects: any[]): object
+ export function deepMerge<T extends object | any[]>(...objects: any[]): T
  ```
 
  ##### Parameters
- - `objects`: The objects to be merged.
+ - `objects`: The objects or primitive values to be merged.
 
  ##### Return Value
- - A new object that is the result of the deep merge of all the passed objects.
+ - A new object that is the result of the deep merge of all the passed objects, or the last non-empty primitive value if all arguments are primitives.
 
  ##### Example Usage
- ```typescript
- const mergedObj = deepMerge(obj1, obj2, obj3);
- ```
 
- The `deepMerge` function can be used to perform a deep merge of multiple objects. It uses the `reduce` method to iterate over the passed objects and merge their properties.
-
- Here is an example of how the `deepMerge` function can be used:
-
+ **Merging objects:**
  ```typescript
  const obj1 = { a: 1, b: { c: 2 } };
  const obj2 = { b: { d: 3 }, e: 4 };
@@ -339,13 +333,31 @@ export declare function fieldsPick<Structure extends Record<string | number, any
 
  const mergedObj = deepMerge(obj1, obj2, obj3);
  console.log(mergedObj);
+ // Output: { a: 1, b: { c: 2, d: 3 }, e: 4, f: 5 }
  ```
 
- In this example, the `deepMerge` function is called with the objects `obj1`, `obj2`, and `obj3`. It creates a new object `mergedObj` that contains all the properties from all the passed objects, taking into account the deep merge.
+ **Merging primitive types (boolean):**
+ ```typescript
+ const result = deepMerge(true, false);
+ console.log(result); // false (returns the last non-empty value)
+ ```
 
- **Note**: The `deepMerge` function can be used to perform a deep merge of multiple objects.
+ **Merging primitive types (string):**
+ ```typescript
+ const result = deepMerge("hello", "world");
+ console.log(result); // "world" (returns the last non-empty value)
+ ```
+
+ **Merging objects with primitive types (primitives are ignored):**
+ ```typescript
+ const obj1 = { a: 1 };
+ const result = deepMerge(obj1, true, { b: 2 });
+ console.log(result); // { a: 1, b: 2 } (primitive true is ignored)
+ ```
+
+ **Note**: The `deepMerge` function can be used to perform a deep merge of multiple objects. When primitive types are mixed with objects, only objects are merged and primitives are ignored. If all arguments are primitives, the function returns the last non-empty value.
  */
-export declare function deepMerge<T extends object>(...objects: any[]): T
+export declare function deepMerge<T extends object | any[]>(...objects: any[]): T
 /**
  #### `deepEquals` Function Documentation
 

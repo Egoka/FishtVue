@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils"
 import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Select from "fishtvue/select/Select.vue"
+import { SelectProps } from "fishtvue/select/Select"
 
 describe("Select Component Tests", () => {
   describe("Select Component - Without Library Initialization", () => {
@@ -98,7 +99,7 @@ describe("Select Component Tests", () => {
     })
 
     describe("Select Component - mode variations", () => {
-      const modes = ["outlined", "underlined", "filled"]
+      const modes: SelectProps["mode"][] = ["outlined", "underlined", "filled"]
 
       it.each(modes)("applies correct styles for mode '%s'", (mode) => {
         const wrapper = mount(Select, {

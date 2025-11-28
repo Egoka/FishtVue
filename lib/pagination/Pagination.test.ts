@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Pagination from "fishtvue/pagination/Pagination.vue"
 import { nextTick } from "vue"
+import { PaginationProps } from "fishtvue/pagination/Pagination"
 
 describe("Pagination Component Tests", () => {
   describe("Pagination Component - Without Library Initialization", () => {
@@ -70,17 +71,20 @@ describe("Pagination Component Tests", () => {
         ["filled", "bg-stone-100 dark:bg-stone-900 rounded-lg", "bg-stone-100 dark:bg-stone-900"], // Expected class for "filled"
         ["underlined", "border-t-2 border-transparent", ""], // Expected class for "underlined"
         ["custom", "", ""] // Default or fallback class for custom modes
-      ])('renders correctly with mode="%s"', (mode, expectedClass, expectedModeStyleSelect) => {
-        const wrapper = mount(Pagination, {
-          props: { mode }
-        })
+      ] as [PaginationProps["mode"], string, string][])(
+        'renders correctly with mode="%s"',
+        (mode, expectedClass, expectedModeStyleSelect) => {
+          const wrapper = mount(Pagination, {
+            props: { mode }
+          })
 
-        const paginationButtons = wrapper.findAll("[data-pagination-nav-pages] button")
-        paginationButtons.forEach((button) => {
-          expect(button.classes().join(" ")).toContain(expectedClass)
-        })
-        expect(wrapper.vm.modeStyleSelect).toBe(expectedModeStyleSelect)
-      })
+          const paginationButtons = wrapper.findAll("[data-pagination-nav-pages] button")
+          paginationButtons.forEach((button) => {
+            expect(button.classes().join(" ")).toContain(expectedClass)
+          })
+          expect(wrapper.vm.modeStyleSelect).toBe(expectedModeStyleSelect)
+        }
+      )
 
       it("applies default mode when mode is not provided", () => {
         const wrapper = mount(Pagination)
@@ -262,6 +266,7 @@ describe("Pagination Component Tests", () => {
 
       const wrapper = mount(Pagination, {
         global: { plugins: [app] },
+        // @ts-ignore
         props: { visibleNumberPages: 3, total: 200, sizePage: 10 }
       })
 

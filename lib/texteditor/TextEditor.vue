@@ -77,7 +77,7 @@
     ...props?.paramsDialog
   }))
   const paramsQuillEditor = computed<NonNullable<Partial<TextEditorProps["paramsTextEditor"]>>>(() => ({
-    content: modelValue.value,
+    content: typeof modelValue.value === "number" ? String(modelValue.value) : modelValue.value,
     readOnly: isDisabled.value,
     contentType: "html",
     toolbar: [

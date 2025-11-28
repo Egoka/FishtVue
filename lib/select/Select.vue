@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, onMounted, ref, unref, useSlots, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import type { BaseDataItem, IDataItem, SelectEmits, SelectProps } from "./Select"
   import type { FixWindowExpose } from "fishtvue/fixwindow"
@@ -56,22 +56,24 @@
   const valueKeys = computed<any[]>(() => {
     return keySelect.value ? visibleValue.value.map((item) => item[keySelect.value ?? ""]) : []
   })
-  const keySelect = computed<NonNullable<SelectProps["keySelect"]>>(() =>
-    props?.dataSelect && props?.dataSelect.length
-      ? typeof props?.dataSelect[0] === "object"
-        ? props?.keySelect && Object.keys(props?.dataSelect[0]).includes(props.keySelect)
+  const keySelect = computed<NonNullable<SelectProps["keySelect"]>>(() => {
+    const data = unref(props?.dataSelect) ?? []
+    return data && data.length
+      ? typeof data[0] === "object"
+        ? props?.keySelect && Object.keys(data[0]).includes(props.keySelect)
           ? (props.keySelect as string | "id")
-          : Object.keys(props.dataSelect[0])[0]
+          : Object.keys(data[0])[0]
         : "id"
       : "id"
-  )
+  })
   const valueSelect = computed<SelectProps["valueSelect"] | null>(() => {
-    if (props?.dataSelect && props?.dataSelect.length) {
-      if (typeof props?.dataSelect[0] === "object") {
-        if (props?.valueSelect && Object.keys(props?.dataSelect[0]).includes(props.valueSelect)) {
+    const dataSelectValue = unref(props?.dataSelect)
+    if (dataSelectValue && dataSelectValue.length) {
+      if (typeof dataSelectValue[0] === "object") {
+        if (props?.valueSelect && Object.keys(dataSelectValue[0]).includes(props.valueSelect)) {
           return props?.valueSelect as SelectProps["valueSelect"]
         } else {
-          return Object.keys(props?.dataSelect?.[0])[1]
+          return Object.keys(dataSelectValue[0])[1]
         }
       } else {
         return "value"
@@ -80,14 +82,15 @@
       return null
     }
   })
-  const dataSelect = computed<SelectProps["dataSelect"]>(() =>
-    !!keySelect.value && !!valueSelect.value
-      ? (props?.dataSelect as Array<IDataItem>).map((item) => ({
+  const dataSelect = computed<Array<BaseDataItem>>(() => {
+    const dataSelectValue = unref(props?.dataSelect) as Array<IDataItem> | undefined
+    return !!keySelect.value && !!valueSelect.value
+      ? (dataSelectValue ?? []).map((item) => ({
           [keySelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[keySelect.value ?? ""] : item,
           [valueSelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[valueSelect.value ?? ""] : item
         }))
-      : ((props?.dataSelect as Array<IDataItem>) ?? [])
-  )
+      : (dataSelectValue ?? [])
+  })
   const autoFocus = computed<NonNullable<SelectProps["autoFocus"]>>(
     () => props?.autoFocus ?? options?.autoFocus ?? false
   )

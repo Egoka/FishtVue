@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import Input from "fishtvue/input/Input.vue"
 import FishtVue from "fishtvue/config"
 import { createApp } from "vue"
+import { InputProps } from "fishtvue/input/Input"
 
 describe("Input Component Tests", () => {
   describe("Without Library Initialization", () => {
@@ -148,11 +149,12 @@ describe("Input Component Tests", () => {
     })
 
     describe("Input Component - mask functionality", () => {
-      const testCases = [
+      const testCases: { mask: InputProps["maskInput"]; input: string; expected: string }[] = [
         { mask: "phone", input: "1234567890", expected: "+1 (234) 567-89-0" },
         { mask: "number", input: "1234.567", expected: "1234" },
         { mask: "price", input: "1234.567", expected: "1 234" },
         { mask: "custom", input: "CustomText123", expected: "CustomText123" }, // Assuming no specific transformation
+        // @ts-ignore
         { mask: null, input: "Text123", expected: "Text123" } // No mask applied
       ]
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue"
+  import { computed, onMounted, onUnmounted, reactive, ref, unref, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import { deepCopyObject, deepMergeSoft } from "fishtvue/utils/objectHandler"
   import type { StyleClass } from "fishtvue/types"
@@ -30,9 +30,10 @@
 
   // ---PROPS-------------------------------
   const units = computed<SplitProps["units"]>(() => props.units ?? "percentages")
-  const panels = computed<Panel[]>(
-    () =>
-      props.panels
+  const panels = computed<Panel[]>(() => {
+    const panelsValue = unref(props.panels) ?? []
+    return (
+      panelsValue
         ?.filter((item) => !item?.hidden)
         ?.map((item) => {
           if (item?.size && (typeof item?.size as string) === "string" && +item?.size > 0) item.size = +item.size
@@ -47,14 +48,15 @@
             } else if (item?.size && item?.minSize && item?.size < item?.minSize) {
               item.size = item?.minSize
             } else if (item?.maxSize && item?.minSize && !item.size) {
-              if (props.panels?.filter((item) => !item?.hidden)?.length > 1)
+              if (panelsValue?.filter((item) => !item?.hidden)?.length > 1)
                 item.size = item?.minSize + (item?.maxSize - item?.minSize) / 2
               else item.size = item?.maxSize
             }
           }
           return item
         }) ?? []
-  )
+    )
+  })
   const direction = computed<SplitProps["direction"]>(
     () => (props?.direction as SplitProps["direction"]) ?? "horizontal"
   )
@@ -163,7 +165,7 @@
 
   // ---WATCHERS----------------------------
   watch(
-    () => props.panels,
+    () => unref(props.panels),
     (array) => {
       const defaultSize = getDefaultSize(panels.value)
       Object.assign(

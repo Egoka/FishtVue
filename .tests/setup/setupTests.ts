@@ -1,5 +1,6 @@
 import { config } from "@vue/test-utils"
 import ResizeObserver from "resize-observer-polyfill"
+import { vi } from "vitest"
 import { mockFishtvueTheme } from "./mocks/fishtvueThemeMock"
 
 global.ResizeObserver = ResizeObserver
@@ -18,4 +19,10 @@ Object.defineProperty(window, "matchMedia", {
     removeEventListener: () => {}, // новый стандарт
     dispatchEvent: () => false
   })
+})
+
+Object.defineProperty(window, "scrollTo", {
+  writable: true,
+  configurable: true,
+  value: vi.fn()
 })

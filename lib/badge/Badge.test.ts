@@ -45,6 +45,7 @@ describe("Badge Component Tests", () => {
     it("handles props correctly only tag", () => {
       const wrapper = mount(Badge, {
         props: {
+          // @ts-ignore
           mode: "",
           point: true,
           closeButton: false

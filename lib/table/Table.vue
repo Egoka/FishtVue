@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, useSlots, watch } from "vue"
+  import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, unref, useSlots, watch } from "vue"
   import * as LD from "lodash-es"
   import { isEqual, isWithinInterval, startOfDay } from "date-fns"
   import {
@@ -105,18 +105,14 @@
   const mode = computed<NonNullable<TableProps["mode"]>>(
     () => (props?.mode as TableProps["mode"]) ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
   )
-  const toolbar = computed<TableProps["toolbar"]>(
-    () => deepMerge(options?.toolbar, props?.toolbar) as TableProps["toolbar"]
+  const toolbar = computed<IToolbar | boolean>(() => deepMerge(options?.toolbar, unref(props?.toolbar)) ?? false)
+  const sort = computed<ISort | boolean>(() => deepMerge(options?.sort, unref(props?.sort)) ?? false)
+  const filter = computed<IFilter | boolean>(() => deepMerge(options?.filter, unref(props?.filter)) ?? false)
+  const grouping = computed<IGrouping | string>(() => deepMerge(options?.grouping, unref(props?.grouping)))
+  const pagination = computed<TablePagination | boolean>(
+    () => deepMerge(options?.pagination, unref(props?.pagination)) ?? false
   )
-  const sort = computed<TableProps["sort"]>(() => deepMerge(options?.sort, props?.sort) as TableProps["sort"])
-  const filter = computed<TableProps["filter"]>(() => deepMerge(options?.filter, props?.filter) as TableProps["filter"])
-  const grouping = computed<TableProps["grouping"]>(
-    () => deepMerge(options?.grouping, props?.grouping) as TableProps["grouping"]
-  )
-  const pagination = computed<TableProps["pagination"]>(
-    () => deepMerge(options?.pagination, props?.pagination) as TableProps["pagination"]
-  )
-  const columns = computed<TableProps["columns"]>(() => props?.columns as TableProps["columns"])
+  const columns = computed<boolean | Array<IColumn>>(() => unref(props?.columns) ?? false)
   // -----------
   const isVisibleToolbar = computed<boolean>(
     () => (isSearch.value || !!toolbar.value) && ((toolbar.value as IToolbar)?.visible ?? true)
@@ -132,9 +128,10 @@
   const isColumns = computed<boolean>(() =>
     typeof columns.value === "boolean" ? columns.value : Array.isArray(columns.value)
   )
-  const isSummary = computed<boolean>(() =>
-    typeof props.summary === "boolean" ? props.summary : Array.isArray(props.summary)
-  )
+  const isSummary = computed<boolean>(() => {
+    const summaryValue = unref(props.summary)
+    return typeof summaryValue === "boolean" ? summaryValue : Array.isArray(summaryValue)
+  })
   const countDataOnLoading = computed<NonNullable<TableProps["countDataOnLoading"]>>(
     () => (props?.countDataOnLoading as TableProps["countDataOnLoading"]) ?? options?.countDataOnLoading ?? 1000
   )
@@ -156,52 +153,48 @@
   )
   const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props?.edit ?? options?.edit ?? false)
   const lengthData = computed<number>(() => props.totalCount ?? dataSource.value.length)
-  const isFilter = computed<boolean>(() => {
-    const filterValue = filter.value
-    return typeof filterValue === "object"
-      ? typeof filterValue?.visible === "boolean"
-        ? filterValue.visible
+  const isFilter = computed<boolean>(() =>
+    typeof filter.value === "object"
+      ? typeof filter.value?.visible === "boolean"
+        ? filter.value.visible
         : true
-      : typeof filterValue === "boolean"
-        ? filterValue
+      : typeof (filter.value as unknown) === "boolean"
+        ? filter.value
         : false
-  })
-  const isSort = computed<boolean>(() => {
-    const sortValue = sort.value
-    return typeof sortValue === "object"
-      ? typeof sortValue?.visible === "boolean"
-        ? sortValue.visible
+  )
+  const isSort = computed<boolean>(() =>
+    typeof sort.value === "object"
+      ? typeof sort.value?.visible === "boolean"
+        ? sort.value.visible
         : true
-      : typeof sortValue === "boolean"
-        ? sortValue
+      : typeof (sort.value as unknown) === "boolean"
+        ? sort.value
         : false
-  })
-  const isGroup = computed<boolean>(() => {
-    const groupingValue = grouping.value
-    return typeof groupingValue === "object"
-      ? typeof groupingValue?.visible === "boolean"
-        ? groupingValue.visible
+  )
+  const isGroup = computed<boolean>(() =>
+    typeof grouping.value === "object"
+      ? typeof grouping.value?.visible === "boolean"
+        ? grouping.value.visible
         : true
-      : typeof groupingValue === "string"
-        ? !!groupingValue.length
+      : typeof (grouping.value as unknown) === "string"
+        ? !!grouping.value.length
         : false
-  })
-  const groupField = computed<IGrouping["groupField"] | null>(() => {
-    const groupingValue = grouping.value
-    return typeof groupingValue === "object"
-      ? typeof groupingValue?.groupField === "string"
-        ? groupingValue.groupField
+  )
+  const groupField = computed<IGrouping["groupField"] | null>(() =>
+    typeof grouping.value === "object"
+      ? typeof grouping.value?.groupField === "string"
+        ? grouping.value.groupField
         : null
-      : typeof groupingValue === "string"
-        ? groupingValue
+      : typeof (grouping.value as unknown) === "string"
+        ? grouping.value
         : null
-  })
+  )
   const isPagination = computed<boolean>(() =>
     typeof pagination.value === "object"
       ? typeof pagination.value?.visible === "boolean"
         ? pagination.value.visible
         : true
-      : typeof pagination.value === "boolean"
+      : typeof (pagination.value as unknown) === "boolean"
         ? pagination.value
         : false
   )
@@ -440,8 +433,9 @@
   })
   const dataSummary = computed<Array<ISummaryPrivate>>(() => {
     if (!isSummary.value) return []
-    if (Array.isArray(props.summary) && props.summary?.length) {
-      return <Array<ISummaryPrivate>>props.summary.map((summary, index) => {
+    const summaryValue = unref(props.summary)
+    if (Array.isArray(summaryValue) && summaryValue?.length) {
+      return <Array<ISummaryPrivate>>summaryValue.map((summary, index) => {
         const column = getColumn(summary.dataField, index)
         if (column) {
           const summaryName = summary.dataField ?? column.dataField
@@ -461,12 +455,11 @@
                       ? "Avg: {0}"
                       : summary.type === "count"
                         ? "Count: {0}"
-                        : "Count: {0}") ??
-              (["string", "date"].includes(column.type as string)
-                ? "Кол. {0}"
-                : ["number", "select"].includes(column.type as string)
-                  ? "Сум. {0}"
-                  : "Кол. {0}"),
+                        : ["string", "date"].includes(column.type as string)
+                          ? "Кол. {0}"
+                          : ["number", "select"].includes(column.type as string)
+                            ? "Сум. {0}"
+                            : "Кол. {0}"),
             // todo added locale
             type:
               summary.type ??
@@ -520,7 +513,7 @@
   const styles = computed<
     Omit<ITableStyles, "border" | "activeRow"> & { border?: ITableStylesBorder; activeRow: string }
   >((): any => {
-    const s = deepMergeSoft<ITableStyles>(deepCopyObject(options?.styles), deepCopyObject(props?.styles))
+    const s = deepMergeSoft<ITableStyles>(deepCopyObject(options?.styles), deepCopyObject(unref(props?.styles)))
     return {
       ...s,
       activeRow:
@@ -831,6 +824,9 @@
       colorSchemeQueryList.removeEventListener("change", setColorScheme)
     })
   }
+
+  const resizableColumn = ref<string | null>(null)
+
   // ---EXPOSE------------------------------
   defineExpose({
     //---STATE-------------------------
@@ -843,6 +839,8 @@
     sizeTable,
     allData,
     isLoading,
+    editableCell,
+    resizableColumn,
     // ---PROPS-------------------------------
     mode,
     isVisibleToolbar,
@@ -857,6 +855,7 @@
     noFilter,
     iconSort,
     resizedColumns,
+    isEditCells,
     lengthData,
     groupField,
     isFilter,
@@ -887,6 +886,7 @@
     tableBodyStyle,
     modeStyle,
     isDark,
+    classBaseTable,
     // ---METHODS-----------------------------
     addRow,
     deleteRow,
@@ -947,9 +947,8 @@
   watch(
     () => props.dataSource,
     () => {
-      allData.value = props.dataSource?.length
-        ? props.dataSource?.map((item) => ({ ...item, _key: generateUUID() }))
-        : []
+      const dataSourceValue = unref(props.dataSource)
+      allData.value = dataSourceValue?.length ? dataSourceValue?.map((item) => ({ ...item, _key: generateUUID() })) : []
       updateDataSource()
     },
     { immediate: true }
@@ -1374,7 +1373,7 @@
     })
   }
 
-  function addRow(data: any): number | null {
+  function addRow(data?: any): number | null {
     if (data) {
       const newValueRow: any = { ...data, _key: generateUUID() }
       let index: number | null = null
@@ -1385,7 +1384,7 @@
     return null
   }
 
-  function deleteRow(_key: string): any | null {
+  function deleteRow(_key?: string): any | null {
     if (_key && Array.isArray(allData.value)) {
       const index = allData.value?.findIndex((i) => i._key === _key) ?? null
       if (index && index >= 0) {
@@ -1396,8 +1395,8 @@
     return null
   }
 
-  function updateRow(_key: string, data: any): any | null {
-    if (_key && Array.isArray(allData.value)) {
+  function updateRow(_key?: string, data?: any): any | null {
+    if (_key && data && Array.isArray(allData.value)) {
       const index = allData.value?.findIndex((i) => i._key === _key)
       if (index && index >= 0) {
         const newValueRow = { ...allData.value[index], ...data }
@@ -1410,7 +1409,7 @@
     return null
   }
 
-  function updateCell(_key: string, column: IColumnPrivate, value: any): any | null {
+  function updateCell(_key?: string, column?: IColumnPrivate, value?: any): any | null {
     if (_key && Array.isArray(allData.value) && column && column?.dataField) {
       const index = allData.value?.findIndex((i) => i._key === _key)
       if (index >= 0 && column.dataField in allData.value[index]) {
@@ -1478,8 +1477,6 @@
       widthsColumns[column.dataField] = Math.round(newW)
     }
   }
-
-  const resizableColumn = ref<string | null>(null)
 
   function moveResizedColumns(ev: MouseEvent) {
     resizeColumn(ev, resizableColumn.value ?? "")

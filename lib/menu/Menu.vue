@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, onMounted, ref, unref, useSlots, watch } from "vue"
   import { ChevronRightIcon } from "@heroicons/vue/20/solid"
   import {
     GroupMenu,
@@ -86,7 +86,7 @@
     ...props.separator
   }))
   const styles = computed<MenuStylesPrivate>(() => {
-    const s = deepMergeSoft<MenuStyles>(deepCopyObject(options?.styles), deepCopyObject(props?.styles))
+    const s = deepMergeSoft<MenuStyles>(deepCopyObject(options?.styles), deepCopyObject(unref(props?.styles)))
     return {
       class: s?.class,
       width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
@@ -233,13 +233,15 @@
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     MenuComponent.initStyle()
-    listGroups.value = setItems(props as MenuItemPrivate)?.groups ?? []
+    const groupsValue = unref(props.groups)
+    listGroups.value = setItems({ ...props, groups: groupsValue } as MenuItemPrivate)?.groups ?? []
   })
   // ---WATCHERS----------------------------
   watch(
     props,
     (value) => {
-      listGroups.value = setItems(value as MenuItemPrivate)?.groups ?? []
+      const groupsValue = unref(value.groups)
+      listGroups.value = setItems({ ...value, groups: groupsValue } as MenuItemPrivate)?.groups ?? []
     },
     { deep: true }
   )
@@ -276,7 +278,7 @@
       ...menu,
       groups:
         menu?.groups && isArray(menu.groups)
-          ? menu.groups?.map(
+          ? unref(menu.groups)?.map(
               (group, groupIndex): GroupMenuPrivate => ({
                 ...group,
                 separator: {

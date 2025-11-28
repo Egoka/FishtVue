@@ -1,4 +1,4 @@
-import { VNode } from "vue"
+import { MaybeRef, VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
 
 /**
@@ -52,9 +52,10 @@ export type AccordionItem = {
 export declare type AccordionProps = {
   /**
    * The data source for the accordion.
-   * @type {Array<AccordionItem>}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<Array<AccordionItem>> | undefined}
    */
-  dataSource?: Array<AccordionItem>
+  dataSource?: MaybeRef<Array<AccordionItem>>
   /**
    * Enables multiple sections to be open simultaneously.
    * @type {boolean}

@@ -356,28 +356,22 @@ export function fieldsPick<Structure extends Record<string | number, any>>(
 /**
  #### `deepMerge` Function Documentation
 
- The `deepMerge` function is a utility function that performs a deep merge of multiple objects. It takes any number of objects as arguments and returns a new object that is the result of merging all the passed objects.
+ The `deepMerge` function is a utility function that performs a deep merge of multiple objects. It takes any number of objects as arguments and returns a new object that is the result of merging all the passed objects. The function also supports primitive types (boolean, string, number, etc.) - if all arguments are primitives, it returns the last non-empty value; if there are both objects and primitives, primitives are ignored and only objects are merged.
 
  ##### Syntax
  ```typescript
- export function deepMerge(...objects: any[]): object
+ export function deepMerge<T extends object | any[]>(...objects: any[]): T
  ```
 
  ##### Parameters
- - `objects`: The objects to be merged.
+ - `objects`: The objects or primitive values to be merged.
 
  ##### Return Value
- - A new object that is the result of the deep merge of all the passed objects.
+ - A new object that is the result of the deep merge of all the passed objects, or the last non-empty primitive value if all arguments are primitives.
 
  ##### Example Usage
- ```typescript
- const mergedObj = deepMerge(obj1, obj2, obj3);
- ```
 
- The `deepMerge` function can be used to perform a deep merge of multiple objects. It uses the `reduce` method to iterate over the passed objects and merge their properties.
-
- Here is an example of how the `deepMerge` function can be used:
-
+ **Merging objects:**
  ```typescript
  const obj1 = { a: 1, b: { c: 2 } };
  const obj2 = { b: { d: 3 }, e: 4 };
@@ -385,13 +379,62 @@ export function fieldsPick<Structure extends Record<string | number, any>>(
 
  const mergedObj = deepMerge(obj1, obj2, obj3);
  console.log(mergedObj);
+ // Output: { a: 1, b: { c: 2, d: 3 }, e: 4, f: 5 }
  ```
 
- In this example, the `deepMerge` function is called with the objects `obj1`, `obj2`, and `obj3`. It creates a new object `mergedObj` that contains all the properties from all the passed objects, taking into account the deep merge.
+ **Merging primitive types (boolean):**
+ ```typescript
+ const result = deepMerge(true, false);
+ console.log(result); // false (returns the last non-empty value)
+ ```
 
- **Note**: The `deepMerge` function can be used to perform a deep merge of multiple objects.
+ **Merging primitive types (string):**
+ ```typescript
+ const result = deepMerge("hello", "world");
+ console.log(result); // "world" (returns the last non-empty value)
+ ```
+
+ **Merging objects with primitive types (primitives are ignored):**
+ ```typescript
+ const obj1 = { a: 1 };
+ const result = deepMerge(obj1, true, { b: 2 });
+ console.log(result); // { a: 1, b: 2 } (primitive true is ignored)
+ ```
+
+ **Note**: The `deepMerge` function can be used to perform a deep merge of multiple objects. When primitive types are mixed with objects, only objects are merged and primitives are ignored. If all arguments are primitives, the function returns the last non-empty value.
  */
-export function deepMerge<T extends object | any[]>(...objects: any[]): T {
+export function deepMerge<T extends any | object | any[]>(...objects: any[]): T {
+  // Handle case when no arguments provided
+  if (objects.length === 0) {
+    return {} as T
+  }
+
+  // Check if value is a primitive type (not object, not array)
+  const isPrimitive = (obj: any): boolean => {
+    return obj === null || obj === undefined || (typeof obj !== "object" && !isObject(obj) && !Array.isArray(obj))
+  }
+
+  // Handle case when all arguments are primitive types
+  const allPrimitives = objects.every(isPrimitive)
+
+  if (allPrimitives) {
+    // Return the last non-empty value, or the last value if all are empty
+    for (let i = objects.length - 1; i >= 0; i--) {
+      if (!isEmpty(objects[i])) {
+        return objects[i] as T
+      }
+    }
+    return objects[objects.length - 1] as T
+  }
+
+  // Filter out primitive types - only merge objects and arrays
+  const validObjects = objects.filter((obj) => !isPrimitive(obj))
+
+  // If after filtering no valid objects remain, return the last primitive
+  if (validObjects.length === 0) {
+    return objects[objects.length - 1] as T
+  }
+
   const seen = new WeakMap()
 
   function merge(prev: Record<string, any>, obj: Record<string, any>): Record<string, any> {
@@ -431,8 +474,8 @@ export function deepMerge<T extends object | any[]>(...objects: any[]): T {
     return prev
   }
 
-  // Reduce over all objects, merging them sequentially
-  return objects.reduce((prev, obj) => merge(prev, obj), undefined)
+  // Reduce over all valid objects, merging them sequentially
+  return validObjects.reduce((prev, obj) => merge(prev, obj), undefined)
 }
 
 /**

@@ -9,7 +9,7 @@
     EllipsisHorizontalIcon
   } from "@heroicons/vue/20/solid"
   import type { PaginationEmits, PaginationProps } from "./Pagination"
-  import type { BaseSelectProps, SelectExpose } from "fishtvue/select"
+  import { BaseSelectProps, SelectExpose, SelectProps } from "fishtvue/select"
   import Button from "fishtvue/button/Button.vue"
   import Select from "fishtvue/select/Select.vue"
   import Component from "fishtvue/component"
@@ -201,6 +201,7 @@
     pages,
     activePage,
     mode,
+    modeStyleSelect,
     paramsSelect,
     // ---METHODS-----------------------
     switchPage,
@@ -239,9 +240,14 @@
     emit("update:modelValue", activePage.value)
   }
 
-  function switchSizePage(sizePageValue: PaginationProps["modelValue"]) {
-    sizePage.value = sizePageValue
-    emit("update:sizePage", sizePageValue)
+  function switchSizePage(sizePageValue: SelectProps["modelValue"] | null, _?: Array<any>) {
+    sizePage.value =
+      typeof sizePageValue === "number"
+        ? sizePageValue
+        : typeof sizePageValue === "string"
+          ? Number(sizePageValue)
+          : undefined
+    emit("update:sizePage", sizePage.value)
   }
 
   function setShortNavigation(link: HTMLElement, limit: number, refButton: Ref) {
