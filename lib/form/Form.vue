@@ -55,8 +55,8 @@
     Calendar,
     TextEditor,
     Switch
-  } as const
-  type BaseInputKey = keyof typeof baseInputs
+  }
+  type BaseInputKey = "Input" | "Aria" | "Select" | "Calendar" | "TextEditor" | "Switch"
   const formStructure = ref<FormStructure[]>()
   // ---PROPS-------------------------------
   const name = computed<FormProps["name"]>(() => props.name ?? "")
