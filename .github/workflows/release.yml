@@ -35,6 +35,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Lint library
         run: pnpm lint
+      - name: Type check
+        run: pnpm typecheck
       - name: Test library
         run: pnpm test
       - name: Build library

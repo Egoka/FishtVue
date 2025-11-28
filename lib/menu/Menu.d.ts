@@ -1,4 +1,4 @@
-import { VNode } from "vue"
+import { MaybeRef, VNode } from "vue"
 import { _key, ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode, THeight, TWidth } from "../types"
 import { FixWindowProps } from "fishtvue/fixwindow"
 import { SeparatorProps } from "fishtvue/separator"
@@ -331,16 +331,24 @@ export declare type MenuProps = {
 
   /**
    * Custom styles for the menu and its components.
-   * @type {MenuStyles | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<MenuStyles> | undefined}
    */
-  styles?: MenuStyles
+  styles?: MaybeRef<MenuStyles>
 
   /**
    * Custom CSS class for the menu container.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
-} & MenuItem
+} & Omit<MenuItem, "groups"> & {
+    /**
+     * Nested groups associated with the menu item.
+     * Can be passed as a constant value or as a ref.
+     * @type {MaybeRef<Array<GroupMenu>> | undefined}
+     */
+    groups?: MaybeRef<Array<GroupMenu>>
+  }
 
 export declare type MenuSlots = {
   title(args: { title: string }): VNode[]

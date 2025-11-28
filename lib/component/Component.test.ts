@@ -68,7 +68,7 @@ describe("Testing class Component", () => {
     app.use<FishtVueConfiguration>(FishtVue, options)
     const wrapper = mount(App, {
       global: {
-        plugins: [[FishtVue, options]]
+        plugins: [[FishtVue, options] as any]
       }
     })
     expect(wrapper.text()).toBe(expectText)
@@ -148,7 +148,7 @@ describe("Testing class Component", () => {
     beforeEach(() => {
       const app = createApp({})
       app.use<FishtVueConfiguration>(FishtVue, options)
-      mount({}, { global: { plugins: [[FishtVue, options]] } })
+      mount({}, { global: { plugins: [[FishtVue, options] as any] } })
       component = new Component<"FixWindow">()
     })
 

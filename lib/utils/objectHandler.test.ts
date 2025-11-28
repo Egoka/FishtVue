@@ -485,6 +485,63 @@ describe("Testing object handler", () => {
       expect(result).toEqual("string2") // Non-object types are overridden
     })
 
+    it("should return last non-empty boolean value when merging only booleans", () => {
+      expect(deepMerge(true, false)).toBe(false)
+      expect(deepMerge(false, true)).toBe(true)
+      expect(deepMerge(true, true)).toBe(true)
+      expect(deepMerge(false, false)).toBe(false)
+    })
+
+    it("should return last non-empty string value when merging only strings", () => {
+      expect(deepMerge("hello", "world")).toBe("world")
+      expect(deepMerge("", "world")).toBe("world")
+      expect(deepMerge("hello", "")).toBe("hello") // Empty string is considered empty, so returns previous
+      expect(deepMerge("a", "b", "c")).toBe("c")
+    })
+
+    it("should return last non-empty number value when merging only numbers", () => {
+      expect(deepMerge(1, 2)).toBe(2)
+      expect(deepMerge(0, 5)).toBe(5)
+      expect(deepMerge(10, 0)).toBe(0)
+      expect(deepMerge(1, 2, 3)).toBe(3)
+    })
+
+    it("should return last non-empty value when merging different primitive types", () => {
+      expect(deepMerge(true, "string")).toBe("string")
+      expect(deepMerge("string", 42)).toBe(42)
+      expect(deepMerge(1, true)).toBe(true)
+      expect(deepMerge(false, "hello", 100)).toBe(100)
+    })
+
+    it("should ignore primitive types when merging with objects", () => {
+      const obj1 = { a: 1 }
+      const result1 = deepMerge(obj1, true, { b: 2 })
+      expect(result1).toEqual({ a: 1, b: 2 })
+
+      const obj2 = { x: 10 }
+      const result2 = deepMerge("string", obj2, 42, { y: 20 })
+      expect(result2).toEqual({ x: 10, y: 20 })
+
+      const obj3 = { name: "John" }
+      const result3 = deepMerge(true, false, obj3, "ignored", { age: 30 })
+      expect(result3).toEqual({ name: "John", age: 30 })
+    })
+
+    it("should handle empty string as empty value when merging primitives", () => {
+      expect(deepMerge("hello", "")).toBe("hello") // Empty string is empty, returns previous
+      expect(deepMerge("", "world")).toBe("world")
+      expect(deepMerge("", "")).toBe("") // Both empty, returns last
+    })
+
+    it("should handle null and undefined when merging primitives", () => {
+      expect(deepMerge(null, "value")).toBe("value")
+      expect(deepMerge("value", null)).toBe("value") // null is empty, returns previous
+      expect(deepMerge(undefined, "value")).toBe("value")
+      expect(deepMerge("value", undefined)).toBe("value") // undefined is empty, returns previous
+      expect(deepMerge(null, null)).toBe(null)
+      expect(deepMerge(undefined, undefined)).toBe(undefined)
+    })
+
     it("should merge objects containing functions", () => {
       const obj1 = { a: 1, func: () => "hello" }
       const obj2 = { b: 2, func: () => "world" }

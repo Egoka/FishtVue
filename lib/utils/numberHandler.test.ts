@@ -139,12 +139,12 @@ describe("Testing Number handler", () => {
       const event = {
         key: "Backspace",
         target: { value: "+1 (234) 567-8901" }
-      }
+      } as unknown as KeyboardEvent
 
       onkeydown(event)
 
       expect(event.key).toBe("Backspace")
-      expect(event.target.value).toBe("+1 (234) 567-8901")
+      expect((event.target as HTMLInputElement).value).toBe("+1 (234) 567-8901")
     })
 
     it("should format phone number correctly in toPhone", () => {
@@ -152,213 +152,233 @@ describe("Testing Number handler", () => {
         target: {
           value: "12345678901",
           selectionStart: 11,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       toPhone(event)
       vi.advanceTimersByTime(1)
+      const target = event.target as HTMLInputElement
       // Проверяем, что значение обновлено
-      expect(event.target.value).toBe("+1 (234) 567-89-01")
+      expect(target.value).toBe("+1 (234) 567-89-01")
       // Проверяем, что позиция курсора обновлена
-      expect(event.target.setSelectionRange).toHaveBeenCalledWith(11, 11)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(11, 11)
     })
 
     it("should handle Backspace and special characters correctly", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "+1 (234) 567-8901" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "+1 (234) 567-8901",
           selectionStart: 8,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что номер отформатирован корректно после Backspace
-      expect(eventToPhone.target.value).toBe("+1 (235) 678-90-1")
+      expect(target.value).toBe("+1 (235) 678-90-1")
       // Проверяем, что позиция курсора обновлена корректно
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(7, 7)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(7, 7)
     })
 
     it("should not modify input if Backspace is pressed at position 0", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "+1 (234) 567-8901" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "+1 (234) 567-8901",
           selectionStart: 0,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что номер не изменился
-      expect(eventToPhone.target.value).toBe("+1 (234) 567-89-01")
+      expect(target.value).toBe("+1 (234) 567-89-01")
       // Проверяем, что позиция курсора осталась на месте
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(0, 0)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(0, 0)
     })
 
     it("should handle empty input gracefully", () => {
       const eventKeydown = {
         key: "",
         target: { value: "" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "",
           selectionStart: 0,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что пустое значение не вызывает ошибок
-      expect(eventToPhone.target.value).toBe("")
+      expect(target.value).toBe("")
       // Проверяем, что позиция курсора осталась на месте
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(0, 0)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(0, 0)
     })
 
     it("should handle input with only special characters gracefully", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "+()-" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "+()-",
           selectionStart: 5,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что пустое значение не вызывает ошибок
-      expect(eventToPhone.target.value).toBe("+")
+      expect(target.value).toBe("+")
       // Проверяем, что позиция курсора установлена корректно
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(5, 5)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(5, 5)
     })
     it("should not delete a space but move the cursor correctly", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "+1 (234) 567-8901" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "+1 (234) 567-8901",
           selectionStart: 4, // Курсор стоит после "+1 "
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что значение остается неизменным
-      expect(eventToPhone.target.value).toBe("+1 (234) 567-89-01")
+      expect(target.value).toBe("+1 (234) 567-89-01")
       // Проверяем, что курсор переместился назад
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(4, 4)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(4, 4)
     })
 
     it("should not delete a plus sign but move the cursor correctly", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "+1 (234) 567-8901" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "+1 (234) 567-8901",
           selectionStart: 1, // Курсор стоит после "+"
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что значение остается неизменным
-      expect(eventToPhone.target.value).toBe("+1 (234) 567-89-01")
+      expect(target.value).toBe("+1 (234) 567-89-01")
       // Проверяем, что курсор переместился назад
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(1, 1)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(1, 1)
     })
 
     it("should not delete an opening parenthesis but move the cursor correctly", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "+1 (234) 567-8901" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "+1 (234) 567-8901",
           selectionStart: 5, // Курсор стоит после "("
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что значение остается неизменным
-      expect(eventToPhone.target.value).toBe("+1 (234) 567-89-01")
+      expect(target.value).toBe("+1 (234) 567-89-01")
       // Проверяем, что курсор переместился назад
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(5, 5)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(5, 5)
     })
 
     it("should not delete a closing parenthesis but move the cursor correctly", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "+1 (234) 567-8901" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "+1 (234) 567-8901",
           selectionStart: 9, // Курсор стоит после ")"
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что значение остается неизменным
-      expect(eventToPhone.target.value).toBe("+1 (234) 567-89-01")
+      expect(target.value).toBe("+1 (234) 567-89-01")
       // Проверяем, что курсор переместился назад
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(9, 9)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(9, 9)
     })
 
     it("should not delete a hyphen but move the cursor correctly", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "+1 (234) 567-8901" }
-      }
+      } as unknown as KeyboardEvent
       const eventToPhone = {
         target: {
           value: "+1 (234) 567-8901",
           selectionStart: 14, // Курсор стоит после "-"
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toPhone(eventToPhone)
       vi.advanceTimersByTime(1)
+      const target = eventToPhone.target as HTMLInputElement
       // Проверяем, что значение остается неизменным
-      expect(eventToPhone.target.value).toBe("+1 (234) 567-89-01")
+      expect(target.value).toBe("+1 (234) 567-89-01")
       // Проверяем, что курсор переместился назад
-      expect(eventToPhone.target.setSelectionRange).toHaveBeenCalledWith(14, 14)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(14, 14)
     })
   })
 
@@ -376,12 +396,12 @@ describe("Testing Number handler", () => {
       const event = {
         key: "Backspace",
         target: { value: "123.45" }
-      }
+      } as unknown as KeyboardEvent
 
       onkeydown(event)
 
       expect(event.key).toBe("Backspace")
-      expect(event.target.value).toBe("123.45")
+      expect((event.target as HTMLInputElement).value).toBe("123.45")
     })
 
     it("should format number correctly in toNumber", () => {
@@ -389,132 +409,138 @@ describe("Testing Number handler", () => {
         target: {
           value: "12345.67",
           selectionStart: 7,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       toNumber(event, ".", 10, 2)
       vi.advanceTimersByTime(1)
-
+      const target = event.target as HTMLInputElement
       // Проверяем, что значение обновлено
-      expect(event.target.value).toBe("12.345.67")
+      expect(target.value).toBe("12.345.67")
       // Проверяем, что позиция курсора обновлена
-      expect(event.target.setSelectionRange).toHaveBeenCalledWith(8, 8)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(8, 8)
     })
 
     it("should handle Backspace deleting a space correctly", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "12 34.56" }
-      }
+      } as unknown as KeyboardEvent
       const eventToNumber = {
         target: {
           value: "12 34.56",
           selectionStart: 2,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toNumber(eventToNumber, ".", 10, 2)
       vi.advanceTimersByTime(1)
-
+      const target = eventToNumber.target as HTMLInputElement
       // Проверяем, что значение остается неизменным
-      expect(eventToNumber.target.value).toBe("134.56")
+      expect(target.value).toBe("134.56")
       // Проверяем, что позиция курсора переместилась назад
-      expect(eventToNumber.target.setSelectionRange).toHaveBeenCalledWith(-1, -1)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(-1, -1)
     })
 
     it("should handle Backspace deleting a dot correctly", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "123.45" }
-      }
+      } as unknown as KeyboardEvent
       const eventToNumber = {
         target: {
           value: "123.45",
           selectionStart: 4,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toNumber(eventToNumber, ".", 10, 2)
       vi.advanceTimersByTime(1)
-
+      const target = eventToNumber.target as HTMLInputElement
       // Проверяем, что значение остается неизменным
-      expect(eventToNumber.target.value).toBe("123.45")
+      expect(target.value).toBe("123.45")
       // Проверяем, что позиция курсора переместилась назад
-      expect(eventToNumber.target.setSelectionRange).toHaveBeenCalledWith(4, 4)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(4, 4)
     })
 
     it("should not modify input if Backspace is pressed at position 0", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "123.45" }
-      }
+      } as unknown as KeyboardEvent
       const eventToNumber = {
         target: {
           value: "123.45",
           selectionStart: 0,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toNumber(eventToNumber, ".", 10, 2)
       vi.advanceTimersByTime(1)
-
+      const target = eventToNumber.target as HTMLInputElement
       // Проверяем, что значение не изменилось
-      expect(eventToNumber.target.value).toBe("123.45")
+      expect(target.value).toBe("123.45")
       // Проверяем, что позиция курсора осталась на месте
-      expect(eventToNumber.target.setSelectionRange).toHaveBeenCalledWith(0, 0)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(0, 0)
     })
 
     it("should handle empty input gracefully", () => {
       const eventKeydown = {
         key: "",
         target: { value: "" }
-      }
+      } as unknown as KeyboardEvent
       const eventToNumber = {
         target: {
           value: "",
           selectionStart: 0,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toNumber(eventToNumber, ".", 10, 2)
       vi.advanceTimersByTime(1)
-
+      const target = eventToNumber.target as HTMLInputElement
       // Проверяем, что пустое значение не вызывает ошибок
-      expect(eventToNumber.target.value).toBe("")
+      expect(target.value).toBe("")
       // Проверяем, что позиция курсора осталась на месте
-      expect(eventToNumber.target.setSelectionRange).toHaveBeenCalledWith(0, 0)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(0, 0)
     })
 
     it("should handle input with only special characters gracefully", () => {
       const eventKeydown = {
         key: "Backspace",
         target: { value: "12 ." }
-      }
+      } as unknown as KeyboardEvent
       const eventToNumber = {
         target: {
           value: "12 .",
           selectionStart: 4,
-          setSelectionRange: vi.fn()
+          setSelectionRange: vi.fn(),
+          type: "text"
         }
-      }
+      } as unknown as InputEvent
 
       onkeydown(eventKeydown)
       toNumber(eventToNumber, ".", 10, 2)
       vi.advanceTimersByTime(1)
-
+      const target = eventToNumber.target as HTMLInputElement
       // Проверяем, что значение не изменилось
-      expect(eventToNumber.target.value).toBe("12.00")
+      expect(target.value).toBe("12.00")
       // Проверяем, что позиция курсора корректно перемещена
-      expect(eventToNumber.target.setSelectionRange).toHaveBeenCalledWith(5, 5)
+      expect(target.setSelectionRange).toHaveBeenCalledWith(5, 5)
     })
   })
 

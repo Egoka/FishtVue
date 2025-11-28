@@ -129,6 +129,13 @@ export declare type SwitchEmits = {
  * Methods and states exposed via `ref` for the Switch component.
  */
 export declare type SwitchExpose = {
+  // ---STATE-------------------------------
+  /**
+   * Indicates whether the switch is currently focused/active.
+   * @type {boolean}
+   */
+  isActiveSwitch: boolean
+
   // ---PROPS-------------------------------
   /**
    * Unique identifier for the switch component.

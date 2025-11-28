@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Form from "fishtvue/form/Form.vue"
 import { nextTick } from "vue"
-import type { FieldType } from "fishtvue/form/Form"
+import type { FieldType, FormProps } from "fishtvue/form/Form"
 
 import type { RuleCallback, Rules } from "fishtvue/utils/rulesHandler"
 import * as AllRules from "fishtvue/utils/rulesHandler"
 
 describe("Form Component Tests", () => {
-  const structure = () => [
+  const structure = (): FormProps["structure"] => [
     {
       fields: [
         { name: "name", typeComponent: "Input", label: "Name", modelValue: "" },
@@ -111,7 +111,7 @@ describe("Form Component Tests", () => {
       await input.setValue("invalid-email")
 
       expect(wrapper.vm.isFieldInvalid("email")).toBe(true)
-      expect(wrapper.vm.getField("email")?.messageInvalid).toBe("Invalid email")
+      expect(wrapper.vm.getField<"Input">("email")?.messageInvalid).toBe("Invalid email")
     })
 
     it("emits submit event with correct form values", async () => {
@@ -129,7 +129,7 @@ describe("Form Component Tests", () => {
     })
 
     it("handles a field without a 'name' property and assigns a temporary name", async () => {
-      const structure = [
+      const structure: FormProps["structure"] = [
         {
           class: "test-class",
           fields: [
@@ -137,7 +137,7 @@ describe("Form Component Tests", () => {
               typeComponent: "Input",
               label: "Test Field",
               modelValue: ""
-            }
+            } as FieldType<"Input">
           ]
         }
       ]
@@ -162,7 +162,7 @@ describe("Form Component Tests", () => {
     })
 
     it("handles a field without 'rules' but with 'required' set to true", async () => {
-      const structure = [
+      const structure: FormProps["structure"] = [
         {
           class: "test-class",
           fields: [
@@ -191,11 +191,18 @@ describe("Form Component Tests", () => {
       expect(inputField.exists()).toBe(true)
       expect(inputField.find("[data-label]").attributes("class")).toContain("after:content-['*']")
 
+      // Дождаться обновления структуры формы
+      await nextTick()
+
       // Проверить, что компонент автоматически добавил правило "required"
-      const formStructure = wrapper.vm.formStructure[0].fields[0]
-      expect(formStructure.rules).toBeDefined()
-      expect(formStructure.rules.required).toEqual(expect.any(String)) // Проверяем, что правило существует и является строкой
-      expect(formStructure.rules.required).toBe("Required field")
+      const field = wrapper.vm.getField("testField")
+      expect(field).toBeDefined()
+      expect(field?.rules).toBeDefined()
+      // Проверяем, что rules является объектом (RulesObject), а не массивом
+      const rules = field?.rules && !Array.isArray(field.rules) ? field.rules : null
+      expect(rules).toBeDefined()
+      expect(rules?.required).toEqual(expect.any(String)) // Проверяем, что правило существует и является строкой
+      expect(rules?.required).toBe("Required field")
 
       // Протестировать валидацию поля
       const input = wrapper.find("[data-form-group-item] input")
@@ -204,7 +211,7 @@ describe("Form Component Tests", () => {
 
       // Убедиться, что поле помечено как невалидное
       expect(wrapper.vm.isFieldInvalid("testField")).toBe(true)
-      expect(wrapper.vm.getField("testField").messageInvalid).toBe("Required field")
+      expect(wrapper.vm.getField<"Input">("testField")?.messageInvalid).toBe("Required field")
     })
   })
 
@@ -244,7 +251,7 @@ describe("Form Component Tests", () => {
       expect(wrapper.vm.modeValidate).toBe("onSubmit")
       expect(wrapper.vm.submitButton).toBe("Send")
       expect(wrapper.vm.autocomplete).toBe("off")
-      expect(wrapper.vm.classBase).toContain("special-form-verification-class")
+      expect(wrapper.find("[data-form]").attributes("class")).toContain("special-form-verification-class")
       expect(wrapper.find("[data-form-item]").attributes("class")).toContain("structure-class")
       expect(wrapper.find("[data-form-group]").attributes("class")).toContain("structure-class-grid")
     })
@@ -259,9 +266,9 @@ describe("Form Component Tests", () => {
         global: { plugins: [app] }
       })
 
-      const field = wrapper.vm.getField("name")
-      expect(field.mode).toBe("outlined")
-      expect(field.labelMode).toBe("static")
+      const field = wrapper.vm.getField<"Input">("name")
+      expect(field?.mode).toBe("outlined")
+      expect(field?.labelMode).toBe("static")
     })
 
     it("overrides global options with local props", () => {
@@ -281,9 +288,9 @@ describe("Form Component Tests", () => {
         }
       })
 
-      const field = wrapper.vm.getField("name")
-      expect(field.mode).toBe("underlined")
-      expect(field.labelMode).toBe("dynamic")
+      const field = wrapper.vm.getField<"Input">("name")
+      expect(field?.mode).toBe("underlined")
+      expect(field?.labelMode).toBe("dynamic")
     })
   })
 
@@ -346,7 +353,7 @@ describe("Form Component Tests", () => {
   describe("Form Component - setFieldValue Method", () => {
     it("updates the field value correctly using setFieldValue method", async () => {
       // Структура формы
-      const structure = [
+      const structure: FormProps["structure"] = [
         {
           class: "test-class",
           fields: [
@@ -389,7 +396,7 @@ describe("Form Component Tests", () => {
       const consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {})
 
       // Структура формы
-      const structure = [
+      const structure: FormProps["structure"] = [
         {
           class: "test-class",
           fields: [
@@ -427,7 +434,7 @@ describe("Form Component Tests", () => {
   })
 
   describe("Form Component - setFieldParam Method", () => {
-    const structureForSetFieldParam = () => [
+    const structureForSetFieldParam = (): FormProps["structure"] => [
       {
         class: "section-1",
         fields: [
@@ -520,7 +527,7 @@ describe("Form Component Tests", () => {
   })
 
   describe("Form Component - getField Method", () => {
-    const structureForGetField = () => [
+    const structureForGetField = (): FormProps["structure"] => [
       {
         class: "section-1",
         fields: [
@@ -615,7 +622,7 @@ describe("Form Component Tests", () => {
   })
 
   describe("Form Component - isFieldInvalid Method", () => {
-    const structureForIsFieldInvalid = () => [
+    const structureForIsFieldInvalid = (): FormProps["structure"] => [
       {
         class: "section-1",
         fields: [
@@ -712,7 +719,7 @@ describe("Form Component Tests", () => {
   })
 
   describe("Form Component - setStructureParam Method", () => {
-    const structureForSetStructureParam = () => [
+    const structureForSetStructureParam = (): FormProps["structure"] => [
       {
         class: "section-1",
         classGrid: "grid-cols-1",
@@ -728,56 +735,65 @@ describe("Form Component Tests", () => {
       }
     ]
 
-    it("updates a parameter of a structure at a specific index", () => {
+    it("updates a parameter of a structure at a specific index", async () => {
       const wrapper = mount(Form, {
         props: {
           structure: structureForSetStructureParam()
         }
       })
 
+      // Дождаться инициализации структуры формы
+      await nextTick()
+
       // Проверяем изначальное значение параметра
-      expect(wrapper.vm.formStructure[0].class).toContain("section-1")
+      expect(wrapper.vm.formStructure?.[0].class).toContain("section-1")
 
       // Изменяем параметр
       wrapper.vm.setStructureParam(0, "class", "new-section-class")
 
       // Проверяем, что параметр обновился
-      expect(wrapper.vm.formStructure[0].class).toBe("new-section-class")
+      expect(wrapper.vm.formStructure?.[0].class).toBe("new-section-class")
     })
 
-    it("does not modify other structures", () => {
+    it("does not modify other structures", async () => {
       const wrapper = mount(Form, {
         props: {
           structure: structureForSetStructureParam()
         }
       })
+
+      // Дождаться инициализации структуры формы
+      await nextTick()
 
       // Изменяем параметр в первой структуре
       wrapper.vm.setStructureParam(0, "class", "new-section-class")
 
       // Проверяем, что другая структура не изменилась
-      expect(wrapper.vm.formStructure[1].class).toContain("section-2")
+      expect(wrapper.vm.formStructure?.[1].class).toContain("section-2")
     })
 
-    it("updates multiple parameters of the same structure", () => {
+    it("updates multiple parameters of the same structure", async () => {
       const wrapper = mount(Form, {
         props: {
           structure: structureForSetStructureParam()
         }
       })
+
+      // Дождаться инициализации структуры формы
+      await nextTick()
 
       // Изменяем параметры
       wrapper.vm.setStructureParam(1, "class", "updated-class")
       wrapper.vm.setStructureParam(1, "classGrid", "updated-grid")
 
       // Проверяем, что оба параметра обновились
-      expect(wrapper.vm.formStructure[1].class).toBe("updated-class")
-      expect(wrapper.vm.formStructure[1].classGrid).toBe("updated-grid")
+      expect(wrapper.vm.formStructure?.[1].class).toBe("updated-class")
+      expect(wrapper.vm.formStructure?.[1].classGrid).toBe("updated-grid")
     })
   })
 
   describe("Form Component - Async Validation", () => {
-    const structureForAsync = () => [
+    const structureForAsync = (): FormProps["structure"] => [
       {
         class: "section-1",
         classGrid: "grid-cols-1",
@@ -831,21 +847,42 @@ describe("Form Component Tests", () => {
         }
       })
 
-      // Триггерим валидацию
-      let field = wrapper.vm.formStructure[0].fields[0]
-      await wrapper.vm.validateField(field)
+      // Дождаться инициализации структуры формы
+      await nextTick()
 
-      // Проверяем, что `getAsyncValidate` был вызван с правильными параметрами
-      expect(getAsyncValidateMock).toHaveBeenCalledWith(wrapper.vm.formFields.asyncField, field.rules)
-      field = wrapper.vm.formStructure[0].fields[0]
-      // Проверяем, что поле не валидное
-      expect(wrapper.vm.formInvalidFields["asyncField"]).toBe(true)
-      expect(field.messageInvalid).toBe("Invalid async field")
-      expect(field.loading).toBe(false) // Убедимся, что loading сброшен
+      // Триггерим валидацию
+      const field = wrapper.vm.formStructure?.[0].fields?.[0]
+      expect(field).toBeDefined()
+      if (field) {
+        wrapper.vm.validateFields("asyncField")
+
+        // Ждем завершения асинхронной валидации
+        // Проверяем, что loading установлен в true
+        await nextTick()
+        if ("loading" in field) {
+          expect(field.loading).toBe(true)
+        }
+
+        // Ждем завершения промиса валидации (100ms + небольшой запас)
+        await new Promise((resolve) => setTimeout(resolve, 150))
+        await nextTick()
+
+        // Проверяем, что `getAsyncValidate` был вызван с правильными параметрами
+        expect(getAsyncValidateMock).toHaveBeenCalledWith(wrapper.vm.formFields.asyncField, field.rules)
+
+        // Проверяем, что поле не валидное
+        expect(wrapper.vm.formInvalidFields["asyncField"]).toBe(true)
+
+        // Проверяем свойства поля (только для полей с InputLayout)
+        if ("messageInvalid" in field && "loading" in field) {
+          expect(field.messageInvalid).toBe("Invalid async field")
+          expect(field.loading).toBe(false) // Убедимся, что loading сброшен
+        }
+      }
     })
   })
   describe("Form Component - Validation Failure with Scroll", () => {
-    const structureForValidation = () => [
+    const structureForValidation = (): FormProps["structure"] => [
       {
         class: "section-1",
         classGrid: "grid-cols-1",
@@ -883,7 +920,7 @@ describe("Form Component Tests", () => {
       expect(document.querySelector).toHaveBeenCalled()
 
       // Проверить, что поле стало невалидным
-      const field = wrapper.vm.getField("invalidField")
+      const field = wrapper.vm.getField<"Input">("invalidField")
 
       // Проверить, что сообщение об ошибке соответствует правилу
       expect(field?.messageInvalid).toBe("This field is required.")

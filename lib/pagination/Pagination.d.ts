@@ -175,6 +175,12 @@ export declare type PaginationExpose = {
   mode: PaginationProps["mode"]
 
   /**
+   * The CSS class string for the select component based on the current mode.
+   * @type {string}
+   */
+  modeStyleSelect: string
+
+  /**
    * Parameters for the page size selector component.
    * @type {Partial<BaseSelectProps>}
    */

@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils"
 import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
+import { InputProps } from "fishtvue/input"
 
 describe("InputLayout Component", () => {
   describe("Without Library Initialization", () => {
@@ -49,7 +50,7 @@ describe("InputLayout Component", () => {
         expected:
           "fv fishtvue-input-layout classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border-0 border-transparent flex items-center peer overflow-auto"
       }
-    ])("applies mode: %s", ({ mode, expected }) => {
+    ] as { mode: InputProps["mode"]; expected: string }[])("applies mode: %s", ({ mode, expected }) => {
       const wrapper = mount(InputLayout, {
         props: { value: "", mode }
       })
@@ -144,7 +145,7 @@ describe("InputLayout Component", () => {
       consoleErrorMock.mockRestore()
     })
     describe("InputLayout - labelMode behavior when isValue is true", () => {
-      const testCases = [
+      const testCases: { labelMode: InputProps["labelMode"]; expected: string }[] = [
         { labelMode: "offsetDynamic", expected: "offsetStatic" },
         { labelMode: "offsetStatic", expected: "offsetStatic" },
         { labelMode: "vanishing", expected: "none" },

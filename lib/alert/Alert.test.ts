@@ -5,6 +5,7 @@ import { createApp } from "vue"
 import Alert from "fishtvue/alert/Alert.vue"
 import { openAlert } from "fishtvue/alert/openAlert"
 import { PositionShort } from "fishtvue/types"
+import { AlertProps } from "fishtvue/alert/Alert"
 
 describe("Alert Component", () => {
   describe("Without Library Initialization", () => {
@@ -103,7 +104,7 @@ describe("Alert Component", () => {
       })
 
       expect(wrapper.vm.isVisible).toBe(true)
-      await wrapper.vm.close()
+      wrapper.vm.close()
       expect(wrapper.vm.isVisible).toBe(false)
     })
   })
@@ -119,26 +120,32 @@ describe("Alert Component", () => {
         },
         { type: "error", expectClass: "bg-red-50 dark:bg-red-950" },
         { type: "neutral", expectClass: "bg-neutral-100 dark:bg-neutral-800" }
-      ])("should render alert with type '%s'", ({ type, expectClass }) => {
-        const wrapper = mount(Alert, {
-          props: { type }
-        })
-        expect(wrapper.vm.classesStyle.body).toBe(expectClass)
-      })
+      ] as { type: AlertProps["type"]; expectClass: string }[])(
+        "should render alert with type '%s'",
+        ({ type, expectClass }) => {
+          const wrapper = mount(Alert, {
+            props: { type }
+          })
+          expect(wrapper.vm.classesStyle.body).toBe(expectClass)
+        }
+      )
     })
 
     describe("Each test for position", () => {
-      it.each(["top", "bottom", "left", "right", "center"])("should render alert with position '%s'", (position) => {
-        const wrapper = mount(Alert, {
-          props: { position }
-        })
+      it.each(["top", "bottom", "left", "right", "center"] as AlertProps["position"][])(
+        "should render alert with position '%s'",
+        (position) => {
+          const wrapper = mount(Alert, {
+            props: { position }
+          })
 
-        expect(wrapper.vm.position).toBe(position)
-      })
+          expect(wrapper.vm.position).toBe(position)
+        }
+      )
     })
 
     describe("Each test for size", () => {
-      it.each(["xs", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl", "6xl", "7xl"])(
+      it.each(["xs", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl", "6xl", "7xl"] as AlertProps["size"][])(
         "should render alert with size '%s'",
         (size) => {
           const wrapper = mount(Alert, {
@@ -233,13 +240,16 @@ describe("Alert Component", () => {
 </svg>`
     }
 
-    it.each(Object.entries(iconMap))("should render correct icon for type '%s'", (type, expectedIcon) => {
-      const wrapper = mount(Alert, {
-        props: { type, modelValue: true }
-      })
+    it.each(Object.entries(iconMap) as [AlertProps["type"], string][])(
+      "should render correct icon for type '%s'",
+      (type, expectedIcon) => {
+        const wrapper = mount(Alert, {
+          props: { type, modelValue: true }
+        })
 
-      expect(wrapper.find("[data-alert-icon] svg").html()).toBe(expectedIcon)
-    })
+        expect(wrapper.find("[data-alert-icon] svg").html()).toBe(expectedIcon)
+      }
+    )
   })
 
   describe("openAlert Function", () => {

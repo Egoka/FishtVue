@@ -53,7 +53,7 @@
   const classBodyDialog = computed<DialogProps["class"]>(() =>
     Dialog.setStyle([options?.class ?? "", props?.class ?? ""])
   )
-  const enterAndLeaveClass = computed<StyleClass>(() => {
+  const enterAndLeaveClass = computed<string>(() => {
     let returnClass
     const isNotAnimate = props?.notAnimate ?? options?.notAnimate ?? false
     if (!isNotAnimate) {

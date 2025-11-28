@@ -2,6 +2,8 @@ import { mount } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
+import { FixWindowProps } from "fishtvue/fixwindow/FixWindow"
+import { RefLink } from "fishtvue/types"
 
 describe("FixWindow Component Tests", () => {
   describe("Without Library Initialization", () => {
@@ -148,15 +150,18 @@ describe("FixWindow Component Tests", () => {
           "dark:bg-stone-950"
         ]
       }
-    ])("applies correct class for mode: $mode", ({ mode, expectedClass }) => {
-      const wrapper = mount(FixWindow, {
-        props: {
-          mode
-        }
-      })
-      const content = wrapper.find("[data-fix-window-content]")
-      expect(content.classes()).toEqual(expectedClass)
-    })
+    ] as { mode: FixWindowProps["mode"]; expectedClass: string[] }[])(
+      "applies correct class for mode: $mode",
+      ({ mode, expectedClass }) => {
+        const wrapper = mount(FixWindow, {
+          props: {
+            mode
+          }
+        })
+        const content = wrapper.find("[data-fix-window-content]")
+        expect(content.classes()).toEqual(expectedClass)
+      }
+    )
 
     it.each([
       { el: "#element-id", description: "as string selector" },
@@ -181,7 +186,16 @@ describe("FixWindow Component Tests", () => {
       expect(wrapper.vm.element).toBe(expectedElement)
     })
 
-    const positions = ["top", "bottom", "left", "right", "top-left", "top-right", "bottom-left", "bottom-right"]
+    const positions: NonNullable<FixWindowProps["position"]>[] = [
+      "top",
+      "bottom",
+      "left",
+      "right",
+      "top-left",
+      "top-right",
+      "bottom-left",
+      "bottom-right"
+    ]
 
     it.each(positions)("applies correct position style for position: %s", (position) => {
       const wrapper = mount(FixWindow, {
@@ -205,17 +219,20 @@ describe("FixWindow Component Tests", () => {
       { eventOpen: "dblclick", expectEvent: "dblclick" },
       { eventOpen: "contextmenu", expectEvent: "contextmenu" },
       { eventOpen: "none", expectEvent: "mouseleave" }
-    ])("handles eventOpen: $eventOpen with onUnmounted cleanup", async ({ eventOpen, expectEvent }) => {
-      const wrapper = mount(FixWindow)
-      const addOpenListenerSpy = vi.spyOn(wrapper.vm.element, "addEventListener")
-      const removeOpenListenerSpy = vi.spyOn(wrapper.vm.element, "removeEventListener")
-      await wrapper.setProps({ eventOpen: eventOpen })
+    ] as { eventOpen: FixWindowProps["eventOpen"]; expectEvent: string }[])(
+      "handles eventOpen: $eventOpen with onUnmounted cleanup",
+      async ({ eventOpen, expectEvent }) => {
+        const wrapper = mount(FixWindow)
+        const addOpenListenerSpy = vi.spyOn(wrapper.vm.element, "addEventListener")
+        const removeOpenListenerSpy = vi.spyOn(wrapper.vm.element, "removeEventListener")
+        await wrapper.setProps({ eventOpen: eventOpen })
 
-      if (!(eventOpen === "hover" || eventOpen === "none"))
-        expect(addOpenListenerSpy.mock.lastCall?.[0]).toBe(eventOpen)
-      wrapper.unmount()
-      expect(removeOpenListenerSpy.mock.lastCall?.[0]).toBe(expectEvent)
-    })
+        if (!(eventOpen === "hover" || eventOpen === "none"))
+          expect(addOpenListenerSpy.mock.lastCall?.[0]).toBe(eventOpen)
+        wrapper.unmount()
+        expect(removeOpenListenerSpy.mock.lastCall?.[0]).toBe(expectEvent)
+      }
+    )
 
     it("handles eventOpen: mousedown with onUnmounted cleanup", async () => {
       const wrapper = mount(FixWindow)
@@ -246,13 +263,16 @@ describe("FixWindow Component Tests", () => {
         eventClose: "none",
         expectEvent: "mouseover"
       }
-    ])("handles eventClose: %s with onUnmounted cleanup", async ({ eventClose, expectEvent }) => {
-      const wrapper = mount(FixWindow)
-      const removeOpenListenerSpy = vi.spyOn(wrapper.vm.element, "removeEventListener")
-      await wrapper.setProps({ eventClose })
-      wrapper.unmount()
-      expect(removeOpenListenerSpy.mock.lastCall?.[0]).toBe(expectEvent)
-    })
+    ] as { eventClose: FixWindowProps["eventClose"]; expectEvent: string }[])(
+      "handles eventClose: %s with onUnmounted cleanup",
+      async ({ eventClose, expectEvent }) => {
+        const wrapper = mount(FixWindow)
+        const removeOpenListenerSpy = vi.spyOn(wrapper.vm.element, "removeEventListener")
+        await wrapper.setProps({ eventClose })
+        wrapper.unmount()
+        expect(removeOpenListenerSpy.mock.lastCall?.[0]).toBe(expectEvent)
+      }
+    )
     it("applies correct styles when marginPx is 0", () => {
       const wrapper = mount(FixWindow, {
         props: {
@@ -275,6 +295,7 @@ describe("FixWindow Component Tests", () => {
   `
 
       const scrollableElement = document.getElementById("scrollable")
+      expect(scrollableElement).not.toBeNull()
 
       const wrapper = mount(FixWindow, {
         props: {
@@ -292,12 +313,14 @@ describe("FixWindow Component Tests", () => {
       expect(wrapper.vm.scrollableEl).toBe(scrollableElement)
 
       // Изменяем scrollableEl на HTMLElement
-      await wrapper.setProps({ scrollableEl: scrollableElement })
+      await wrapper.setProps({ scrollableEl: scrollableElement as RefLink })
 
       // Проверяем, что scrollableEl правильно указывает на элемент
       expect(wrapper.vm.scrollableEl).toBe(scrollableElement)
 
-      const scrollableElSpy = vi.spyOn(wrapper.vm.scrollableEl, "removeEventListener")
+      const scrollableEl = wrapper.vm.scrollableEl as HTMLElement | Element | undefined
+      expect(scrollableEl).toBeDefined()
+      const scrollableElSpy = vi.spyOn(scrollableEl!, "removeEventListener")
       wrapper.unmount()
       expect(scrollableElSpy.mock.lastCall?.[0]).toBe("resize")
     })
@@ -345,9 +368,11 @@ describe("FixWindow Component Tests", () => {
         top: 400,
         right: 700,
         bottom: 650,
-        left: 500
-      })
-      vi.spyOn(wrapper.vm.fixWindow, "getBoundingClientRect").mockReturnValue({
+        left: 500,
+        toJSON: () => ({})
+      } as DOMRect)
+      const fixWindowEl = (wrapper.vm as any).fixWindow as HTMLElement
+      vi.spyOn(fixWindowEl, "getBoundingClientRect").mockReturnValue({
         x: 890,
         y: 540,
         width: 35,
@@ -355,8 +380,9 @@ describe("FixWindow Component Tests", () => {
         top: 538,
         right: 925,
         bottom: 580,
-        left: 890
-      })
+        left: 890,
+        toJSON: () => ({})
+      } as DOMRect)
 
       const fixWindowElement = wrapper.find("[data-fix-window]")
 

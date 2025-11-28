@@ -50,7 +50,9 @@
   const lengthDecimal = computed<NonNullable<InputProps["lengthDecimal"]>>(() => +(props?.lengthDecimal ?? 0))
   const isDisabled = computed<NonNullable<InputProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<InputProps["loading"]>>(() => props.loading ?? false)
-  const isInvalid = computed<NonNullable<InputProps["isInvalid"]>>(() => (!isDisabled.value ? props.isInvalid : false))
+  const isInvalid = computed<NonNullable<InputProps["isInvalid"]>>(() =>
+    !isDisabled.value ? (props.isInvalid ?? false) : false
+  )
   const isClear = computed<NonNullable<InputProps["clear"]>>(() => props?.clear ?? options?.clear ?? false)
   const messageInvalid = computed<NonNullable<InputProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
   const classBaseInput = computed(() =>
@@ -145,10 +147,11 @@
   }
 
   // ---------------------------------------
-  function inputEvent($event: InputEvent) {
-    if (mask.value === "phone") toPhone($event)
-    if (mask.value === "number") toNumber($event, "", lengthInteger.value, lengthDecimal.value)
-    if (mask.value === "price") toNumber($event, " ", lengthInteger.value, lengthDecimal.value)
+  function inputEvent($event: Event) {
+    const inputEvent = $event as InputEvent
+    if (mask.value === "phone") toPhone(inputEvent)
+    if (mask.value === "number") toNumber(inputEvent, "", lengthInteger.value, lengthDecimal.value)
+    if (mask.value === "price") toNumber(inputEvent, " ", lengthInteger.value, lengthDecimal.value)
     inputModelValue(($event.target as HTMLInputElement).value)
   }
 

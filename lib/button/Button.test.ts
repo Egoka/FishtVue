@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils"
 import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Button from "fishtvue/button/Button.vue"
+import type { ButtonExpose } from "fishtvue/button/Button"
 
 describe("Button Component Tests", () => {
   describe("Without Library Initialization", () => {
@@ -196,10 +197,10 @@ describe("Button Component Tests", () => {
         }
       })
 
-      expect(wrapper.vm.mode).toBe("primary")
-      expect(wrapper.vm.size).toBe("xl")
-      expect(wrapper.vm.rounded).toBe("full")
-      expect(wrapper.vm.color).toBe("theme")
+      expect((wrapper.vm as unknown as ButtonExpose).mode).toBe("primary")
+      expect((wrapper.vm as unknown as ButtonExpose).size).toBe("xl")
+      expect((wrapper.vm as unknown as ButtonExpose).rounded).toBe("full")
+      expect((wrapper.vm as unknown as ButtonExpose).color).toBe("theme")
     })
 
     it("overrides global options with local props", () => {
@@ -222,10 +223,10 @@ describe("Button Component Tests", () => {
         }
       })
 
-      expect(wrapper.vm.mode).toBe("outline")
-      expect(wrapper.vm.size).toBe("sm")
-      expect(wrapper.vm.rounded).toBe("none")
-      expect(wrapper.vm.color).toBe("creative")
+      expect((wrapper.vm as unknown as ButtonExpose).mode).toBe("outline")
+      expect((wrapper.vm as unknown as ButtonExpose).size).toBe("sm")
+      expect((wrapper.vm as unknown as ButtonExpose).rounded).toBe("none")
+      expect((wrapper.vm as unknown as ButtonExpose).color).toBe("creative")
     })
 
     it("inherits global styles correctly", () => {

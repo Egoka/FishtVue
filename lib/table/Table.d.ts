@@ -1,4 +1,4 @@
-import { VNode } from "vue"
+import { VNode, MaybeRef } from "vue"
 import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode, THeight, TWidth } from "../types"
 import { BaseInputProps } from "fishtvue/input"
 import { BaseSelectProps } from "fishtvue/select"
@@ -622,15 +622,17 @@ export declare type TableProps = {
 
   /**
    * The data source for the table.
-   * @type {Array<any> | [] | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<Array<any> | []> | undefined}
    */
-  dataSource?: Array<any> | []
+  dataSource?: MaybeRef<Array<any> | []>
 
   /**
    * Toolbar configuration or visibility toggle.
-   * @type {IToolbar | boolean | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<IToolbar | boolean> | undefined}
    */
-  toolbar?: IToolbar | boolean
+  toolbar?: MaybeRef<IToolbar | boolean>
 
   /**
    * Enables inline editing for table cells.
@@ -640,21 +642,24 @@ export declare type TableProps = {
 
   /**
    * Sorting configuration or visibility toggle.
-   * @type {ISort | boolean | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<ISort | boolean> | undefined}
    */
-  sort?: ISort | boolean
+  sort?: MaybeRef<ISort | boolean>
 
   /**
    * Filtering configuration or visibility toggle.
-   * @type {IFilter | boolean | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<IFilter | boolean> | undefined}
    */
-  filter?: IFilter | boolean
+  filter?: MaybeRef<IFilter | boolean>
 
   /**
    * Grouping configuration or group field name.
-   * @type {IGrouping | string | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<IGrouping | string> | undefined}
    */
-  grouping?: IGrouping | string
+  grouping?: MaybeRef<IGrouping | string>
 
   /**
    * Enables column resizing.
@@ -664,9 +669,10 @@ export declare type TableProps = {
 
   /**
    * Pagination configuration or visibility toggle.
-   * @type {TablePagination | boolean | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<TablePagination | boolean> | undefined}
    */
-  pagination?: TablePagination | boolean
+  pagination?: MaybeRef<TablePagination | boolean>
 
   /**
    * Enables search functionality.
@@ -676,15 +682,17 @@ export declare type TableProps = {
 
   /**
    * Configuration for table columns.
-   * @type {boolean | Array<IColumn> | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<boolean | Array<IColumn>> | undefined}
    */
-  columns?: boolean | Array<IColumn>
+  columns?: MaybeRef<boolean | Array<IColumn>>
 
   /**
    * Configuration for summary rows.
-   * @type {boolean | Array<ISummary> | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<boolean | Array<ISummary>> | undefined}
    */
-  summary?: boolean | Array<ISummary>
+  summary?: MaybeRef<boolean | Array<ISummary>>
 
   /**
    * Number of rows visible in the table.
@@ -730,9 +738,10 @@ export declare type TableProps = {
 
   /**
    * Custom styles configuration for the table.
-   * @type {ITableStyles | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<ITableStyles> | undefined}
    */
-  styles?: ITableStyles
+  styles?: MaybeRef<ITableStyles>
 }
 
 interface DynamicSlots {
@@ -969,6 +978,18 @@ export declare type TableExpose = {
    */
   isLoading: boolean
 
+  /**
+   * The ID of the column currently being resized.
+   * @type {string | null}
+   */
+  resizableColumn: string | null
+
+  /**
+   * The currently editable cell coordinates.
+   * @type {{ indexRow: number; indexCol: number } | null}
+   */
+  editableCell: { indexRow: number; indexCol: number } | null
+
   // ---PROPS-------------------------------
   /**
    * The current styling mode of the table.
@@ -1047,6 +1068,12 @@ export declare type TableExpose = {
    * @type {TableProps["resizedColumns"]}
    */
   resizedColumns: TableProps["resizedColumns"]
+
+  /**
+   * Indicates whether cell editing is enabled.
+   * @type {TableProps["edit"]}
+   */
+  isEditCells: TableProps["edit"]
 
   /**
    * The total number of rows in the data source.
@@ -1197,6 +1224,12 @@ export declare type TableExpose = {
   tableBodyStyle: string
 
   /**
+   * The base CSS class for the table component.
+   * @type {StyleClass}
+   */
+  classBaseTable: StyleClass
+
+  /**
    * The styling mode of the table.
    * @type {string}
    */
@@ -1212,33 +1245,36 @@ export declare type TableExpose = {
   /**
    * Adds a new row to the table.
    * @param {any} data - The data for the new row.
-   * @returns {number} - The index of the added row.
+   * @returns {number | null} - The index of the added row, or null if the addition fails.
+   * @remarks
+   * When running tests or table row addition logic in a jsdom environment, ensure the table's container is properly initialized.
+   * Some features may require updating jsdom to the latest version for full compatibility.
    */
-  addRow(data: any): number | null
+  addRow(data?: any): number | null
 
   /**
-   * Deletes a row from the table.
-   * @param {string} _key - The key identifying the row to delete.
-   * @returns {false | any} - The deleted row data or `false` if not found.
+   * Removes a row from the table by its key.
+   * @param {string} [_key] - The key of the row to be removed.
+   * @returns {any | null} The data of the deleted row, or null if no row was found.
    */
-  deleteRow(_key: string): any | null
+  deleteRow(_key?: string): any | null
 
   /**
-   * Updates a row in the table.
-   * @param {string} _key - The key identifying the row to update.
-   * @param {any} data - The new data for the row.
-   * @returns {false | any} - The updated row data or `false` if not found.
+   * Updates the values of a row in the table.
+   * @param {string} [_key] - The key identifying which row to update.
+   * @param {any} [data] - The new data to update the row with.
+   * @returns {any | null} The updated row data, or null if no row was found.
    */
-  updateRow(_key: string, data: any): any | null
+  updateRow(_key?: string, data?: any): any | null
 
   /**
-   * Updates a specific cell in the table.
-   * @param {string} _key - The key identifying the row.
-   * @param {IColumnPrivate} column - The column containing the cell.
-   * @param {any} value - The new value for the cell.
-   * @returns {false | any} - The updated cell data or `false` if not found.
+   * Updates the value of a specific cell in the table.
+   * @param {string} _key - The unique key identifying the row containing the cell to update.
+   * @param {IColumnPrivate} column - The column definition that identifies the cell to update.
+   * @param {any} value - The new value to set for the cell.
+   * @returns {any | null} - The updated cell data if successful, or null if the cell or row was not found.
    */
-  updateCell(_key: string, column: IColumnPrivate, value: any): any | null
+  updateCell(_key?: string, column?: IColumnPrivate, value?: any): any | null
 
   /**
    * Retrieves a column by its data field.

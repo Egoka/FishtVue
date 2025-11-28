@@ -50,6 +50,7 @@ const globals = {
   HTMLCanvasElement: "readonly",
   HTMLAnchorElement: "readonly",
   HTMLHeadElement: "readonly",
+  DOMRect: "readonly",
   crypto: "readonly",
   // Vue and Nuxt
   defineAppConfig: "readonly",

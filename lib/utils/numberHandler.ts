@@ -71,17 +71,21 @@ export function convertToNumber(
 const phoneSpecialCharacters = [" ", "+", "(", ")", "-"]
 const numberSpecialCharacters = [" ", "."]
 let oldValue = ""
-let keyup = {}
+let keyup: string = ""
 
-export function onkeydown(e: any): void {
+export function onkeydown(e: KeyboardEvent): void {
   keyup = e.key
-  oldValue = e.target.value
+  const target = e.target as HTMLInputElement
+  oldValue = target.value
 }
 
-export function toPhone(e: any): void {
-  let value = e.target.value
-  let pos = e.target.selectionStart
-  const lengthValue = e.target.value.length
+export function toPhone(e: InputEvent): void {
+  const target = e.target as HTMLInputElement
+  if (!target) return
+
+  let value = target.value
+  let pos = target.selectionStart ?? 0
+  const lengthValue = target.value.length
   if (keyup === "Backspace" && pos !== 0) {
     if (phoneSpecialCharacters.includes(oldValue.substring(pos, pos + 1))) {
       const deleteIndex = value.substring(0, pos).replace(/\D/g, "").length - 1
@@ -92,19 +96,24 @@ export function toPhone(e: any): void {
     }
   }
   const newValue = convertToPhone(value)
-  e.target.value = newValue
+  target.value = newValue
   if (keyup !== "Backspace") pos += newValue.length - lengthValue
   setTimeout(() => {
-    if ("setSelectionRange" in e.target && e.target.type !== "number") e.target.setSelectionRange(pos, pos)
+    if (target.type !== "number") {
+      target.setSelectionRange(pos, pos)
+    }
   }, 1)
 }
 
 //////////////////////////////////////////////////////
 /////////////////NUMBER///////////////////////////////
 //////////////////////////////////////////////////////
-export function toNumber(e: any, separator = "", lengthInteger = 20, lengthDecimal = 0): void {
-  let value = e.target.value
-  let pos = e.target.selectionStart
+export function toNumber(e: InputEvent, separator = "", lengthInteger = 20, lengthDecimal = 0): void {
+  const target = e.target as HTMLInputElement
+  if (!target) return
+
+  let value = target.value
+  let pos = target.selectionStart ?? 0
   if (keyup === "Backspace" && pos !== 0) {
     if (numberSpecialCharacters.includes(oldValue.substring(pos, pos + 1))) {
       const arrValue = [...value]
@@ -114,13 +123,15 @@ export function toNumber(e: any, separator = "", lengthInteger = 20, lengthDecim
     }
   }
   const newValue = String(convertToNumber(value, lengthInteger, lengthDecimal, separator))
-  e.target.value = newValue
+  target.value = newValue
   if (oldValue) {
     const degree = String(Math.trunc(Number(String(value).replace(/[^0-9.]/g, "")))).length - lengthInteger
     pos = pos + (newValue?.length - value?.length) + (degree > 0 ? degree : 0)
   }
   setTimeout(() => {
-    if ("setSelectionRange" in e.target && e.target.type !== "number") e.target.setSelectionRange(pos, pos)
+    if (target.type !== "number") {
+      target.setSelectionRange(pos, pos)
+    }
   }, 1)
 }
 

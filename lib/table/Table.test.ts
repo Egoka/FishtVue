@@ -202,7 +202,7 @@ describe("Table Component", () => {
           }
         ]
 
-        const columns = [
+        const columns: TableProps["columns"] = [
           {
             dataField: "name",
             caption: "Название",
@@ -424,7 +424,7 @@ describe("Table Component", () => {
         // Проверяем, что summary отображает информацию для указанных полей
         const summaryFields = wrapper.findAll("[data-table-tfoot-th]")
         expect(summaryFields.length).toBeGreaterThan(0)
-        expect(summaryFields[0].text()).toContain("Count")
+        expect(summaryFields[0].text()).toContain("Кол. 5")
       })
 
       it("renders table with typed summary", () => {
@@ -608,12 +608,12 @@ describe("Table Component", () => {
           props: {
             dataSource: generateData(5),
             columns: [
-              { dataField: "name", id: "col-name", width: 120, minWidth: 100, maxWidth: 200 },
-              { dataField: "date", id: "col-date", type: "date", width: 130, minWidth: 120, maxWidth: 250 },
-              { dataField: "value", id: "col-value", type: "number", width: 150 }
+              { dataField: "name", width: 120, minWidth: 100, maxWidth: 200 },
+              { dataField: "date", type: "date", width: 130, minWidth: 120, maxWidth: 250 },
+              { dataField: "value", type: "number", width: 150 }
             ],
             resizedColumns: true
-          }
+          } as TableProps
         })
 
         const resizeHandle = wrapper.find("[data-table-thead-col-resized] div")
@@ -806,7 +806,7 @@ describe("Table Component", () => {
         const instance = wrapper.vm as any
 
         // Вызываем метод deleteRow
-        const keyToDelete = wrapper.vm.allData[2]?.["_key"] // Удаляем вторую строку
+        const keyToDelete = wrapper.vm.allData?.[2]?.["_key"] // Удаляем вторую строку
         const deletedRow = instance.deleteRow(keyToDelete)
         await nextTick()
 
@@ -830,7 +830,7 @@ describe("Table Component", () => {
         const instance = wrapper.vm as any
 
         // Вызываем метод updateRow
-        const keyToUpdate = wrapper.vm.allData[3]?.["_key"]
+        const keyToUpdate = wrapper.vm.allData?.[3]?.["_key"]
         const updatedData = { color: "green" }
         const updatedRow = instance.updateRow(keyToUpdate, updatedData)
         await nextTick()
@@ -859,7 +859,7 @@ describe("Table Component", () => {
         const instance = wrapper.vm as any
 
         // Вызываем метод updateCell
-        const keyToUpdate = wrapper.vm.allData[0]?.["_key"]
+        const keyToUpdate = wrapper.vm.allData?.[0]?.["_key"]
         const columnToUpdate = { dataField: "color" }
         const newValue = "blue"
         const updatedCell = instance.updateCell(keyToUpdate, columnToUpdate, newValue)

@@ -1,4 +1,4 @@
-import { VNode } from "vue"
+import { MaybeRef, VNode } from "vue"
 import { Rules } from "fishtvue/utils/rulesHandler"
 import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import { LabelMode } from "fishtvue/label"
@@ -49,44 +49,133 @@ export type Field = {
    */
   rules?: Rules
 }
+/**
+ * Additional field properties for inserting icons and text before or after the field
+ */
 export type FieldAdditional = {
+  /**
+   * Configuration for inserting content before or after the field
+   */
   insert?: {
+    /**
+     * Icon to display before the field
+     */
     beforeIcon?: string
+    /**
+     * Text to display before the field
+     */
     beforeText?: string
+    /**
+     * Icon to display after the field
+     */
     afterIcon?: string
+    /**
+     * Text to display after the field
+     */
     afterText?: string
   }
 }
+
+/**
+ * Field configuration for Input component
+ *
+ * Inherits from InputLayoutProps (via InputProps) which provides common properties like:
+ * label, labelMode, mode, isInvalid, messageInvalid, required, loading, disabled, help, clear, etc.
+ *
+ * @property {typeComponent} typeComponent - Must be "Input" to identify this field type
+ */
 export type FieldInput = Field &
   FieldAdditional &
   InputProps & {
+    /**
+     * The type of component, must be "Input"
+     */
     typeComponent: "Input"
   }
+
+/**
+ * Field configuration for Aria component
+ *
+ * Inherits from InputLayoutProps (via AriaProps) which provides common properties like:
+ * label, labelMode, mode, isInvalid, messageInvalid, required, loading, disabled, help, clear, etc.
+ *
+ * @property {typeComponent} typeComponent - Must be "Aria" to identify this field type
+ */
 export type FieldAria = Field &
   FieldAdditional &
   AriaProps & {
+    /**
+     * The type of component, must be "Aria"
+     */
     typeComponent: "Aria"
   }
+
+/**
+ * Field configuration for Select component
+ *
+ * Inherits from InputLayoutProps (via SelectProps) which provides common properties like:
+ * label, labelMode, mode, isInvalid, messageInvalid, required, loading, disabled, help, clear, etc.
+ *
+ * @property {typeComponent} typeComponent - Must be "Select" to identify this field type
+ */
 export type FieldSelect = Field &
   FieldAdditional &
   SelectProps & {
+    /**
+     * The type of component, must be "Select"
+     */
     typeComponent: "Select"
     // rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
   }
+
+/**
+ * Field configuration for Calendar component
+ *
+ * Inherits from InputLayoutProps (via CalendarProps) which provides common properties like:
+ * label, labelMode, mode, isInvalid, messageInvalid, required, loading, disabled, help, clear, etc.
+ *
+ * @property {typeComponent} typeComponent - Must be "Calendar" to identify this field type
+ */
 export type FieldCalendar = Field &
   FieldAdditional &
   CalendarProps & {
+    /**
+     * The type of component, must be "Calendar"
+     */
     typeComponent: "Calendar"
     // rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
   }
+
+/**
+ * Field configuration for TextEditor component
+ *
+ * Inherits from InputLayoutProps (via TextEditorProps) which provides common properties like:
+ * label, labelMode, mode, isInvalid, messageInvalid, required, loading, disabled, help, clear, etc.
+ *
+ * @property {typeComponent} typeComponent - Must be "TextEditor" to identify this field type
+ */
 export type FieldTextEditor = Field &
   FieldAdditional &
   TextEditorProps & {
+    /**
+     * The type of component, must be "TextEditor"
+     */
     typeComponent: "TextEditor"
     // rules?: Omit<Rules, "email" | "phone" | "numeric" | "regular">
   }
+
+/**
+ * Field configuration for Switch component
+ *
+ * Note: Switch does NOT inherit from InputLayoutProps, it has its own props structure.
+ *
+ * @property {typeComponent} typeComponent - Must be "Switch" to identify this field type
+ */
 export type FieldSwitch = Field &
   SwitchProps & {
+    /**
+     * The type of component, must be "Switch"
+     */
     typeComponent: "Switch"
   }
 /**
@@ -123,14 +212,44 @@ export type FieldCustom = Field & {
    */
   [key: string]: unknown
 }
-export type FieldType =
-  | FieldInput
-  | FieldAria
-  | FieldSelect
-  | FieldCalendar
-  | FieldTextEditor
-  | FieldSwitch
-  | FieldCustom
+/**
+ * Type of component that determines which fields are available in the field object
+ */
+export type FieldComponentType = "Input" | "Aria" | "Select" | "Calendar" | "TextEditor" | "Switch" | "Custom"
+
+/**
+ * Generic field type that determines available properties based on the component type
+ * @template T - The type of component, which determines which fields are available
+ */
+export type FieldType<T extends FieldComponentType = FieldComponentType> = T extends "Input"
+  ? FieldInput
+  : T extends "Aria"
+    ? FieldAria
+    : T extends "Select"
+      ? FieldSelect
+      : T extends "Calendar"
+        ? FieldCalendar
+        : T extends "TextEditor"
+          ? FieldTextEditor
+          : T extends "Switch"
+            ? FieldSwitch
+            : T extends "Custom"
+              ? FieldCustom
+              : any
+// : FieldInput | FieldAria | FieldSelect | FieldCalendar | FieldTextEditor | FieldSwitch | FieldCustom
+
+/**
+ * Union type for fields that use InputLayout component
+ *
+ * Includes only field types that inherit from InputLayoutProps:
+ * - FieldInput
+ * - FieldAria
+ * - FieldSelect
+ * - FieldCalendar
+ * - FieldTextEditor
+ *
+ * Excludes FieldSwitch (does not use InputLayout) and FieldCustom (custom implementation)
+ */
 export type FieldUseInputLayout = FieldInput | FieldAria | FieldSelect | FieldCalendar | FieldTextEditor
 
 /**
@@ -180,15 +299,17 @@ export interface FormProps {
 
   /**
    * The structure of the form, including fields and layout settings.
-   * @type {Array<FormStructure>}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<Array<FormStructure>>}
    */
-  structure: Array<FormStructure>
+  structure: MaybeRef<Array<FormStructure>>
 
   /**
    * The current values of the form fields.
-   * @type {FormValues | undefined}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<FormValues> | undefined}
    */
-  formFields?: FormValues
+  formFields?: MaybeRef<FormValues>
 
   /**
    * Custom CSS class for the form container.
@@ -285,6 +406,18 @@ export declare type FormExpose = {
    */
   formFields: FormValues
 
+  /**
+   * Object containing the invalid state for each field.
+   * @type {{ [key: string]: boolean }}
+   */
+  formInvalidFields: { [key: string]: boolean }
+
+  /**
+   * The processed form structure with all computed values and defaults applied.
+   * @type {Array<FormStructure> | undefined}
+   */
+  formStructure: Array<FormStructure> | undefined
+
   // ---METHODS-----------------------------
   /**
    * Sets the value for a specific field in the form.
@@ -301,7 +434,7 @@ export declare type FormExpose = {
    * @param {keyof FieldType} param - The parameter to update.
    * @param {any} value - The value to set.
    */
-  setFieldParam(fieldName: string, param: keyof FieldType, value: any): void
+  setFieldParam<T extends FieldComponentType>(fieldName: string, param: keyof FieldType<T>, value: any): void
 
   /**
    * Retrieves the configuration for a specific field.
@@ -309,7 +442,7 @@ export declare type FormExpose = {
    * @param {string} fieldName - The name of the field.
    * @returns {FieldType | null} - The field configuration or `null` if not found.
    */
-  getField(fieldName: string): FieldType | null
+  getField<T extends FieldComponentType>(fieldName: string): FieldType<T> | null
   /**
    * Checks if a specific field is in an invalid state.
    *

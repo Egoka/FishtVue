@@ -1,4 +1,4 @@
-import { VNode } from "vue"
+import { MaybeRef, VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { IconsProps } from "fishtvue/icons"
 
@@ -97,9 +97,10 @@ export type Group = {
 
   /**
    * The list of panels in the group.
-   * @type {Array<Panel>}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<Array<Panel>>}
    */
-  panels: Panel[]
+  panels: MaybeRef<Panel[]>
 
   /**
    * The direction of panel resizing (`vertical` or `horizontal`).

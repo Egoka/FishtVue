@@ -1,4 +1,4 @@
-import { VNode } from "vue"
+import { MaybeRef, VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
 import { BadgeProps } from "fishtvue/badge"
 import { FixWindowExpose, FixWindowProps } from "fishtvue/fixwindow"
@@ -23,9 +23,10 @@ export type BaseDataItem = string | number | IDataItem
 export declare type BaseSelectProps = {
   /**
    * The data items available for selection.
-   * @type {Array<BaseDataItem>}
+   * Can be passed as a constant value or as a ref.
+   * @type {MaybeRef<Array<BaseDataItem>>}
    */
-  dataSelect: Array<BaseDataItem>
+  dataSelect: MaybeRef<Array<BaseDataItem>>
 
   /**
    * Automatically focuses the select input on mount.

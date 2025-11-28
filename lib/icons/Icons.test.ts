@@ -34,7 +34,7 @@ describe("Icons Component Tests", () => {
         props: {
           type: "Check",
           class: "custom-class",
-          style: "color: red;"
+          style: { color: "red" }
         }
       })
 
