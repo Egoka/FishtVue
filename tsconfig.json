@@ -18,7 +18,6 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
       "fishtvue/*": ["./lib/*"]
     },
     "declaration": false

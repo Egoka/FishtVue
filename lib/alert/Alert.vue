@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, CSSProperties, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, onMounted, ref, useSlots, watch } from "vue"
   import type { AlertEmits, AlertProps } from "./Alert"
   import {
     ChatBubbleOvalLeftIcon,
@@ -173,7 +173,7 @@
       size.value
     ])
   )
-  const styleBase = computed<CSSProperties | undefined>(() => props.style ?? options?.style)
+  const styleBase = computed(() => (props.style ?? options?.style) as any)
   const classBody = computed(() => Alert.setStyle("flex"))
   const classDivIcon = computed(() => Alert.setStyle("shrink-0"))
   const classIcon = computed(() => Alert.setStyle(["h-5 w-5", classesStyle.value.icon]))
