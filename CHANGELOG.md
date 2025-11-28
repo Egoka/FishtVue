@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [0.2.11](https://github.com/Egoka/FishtVue/compare/v0.2.10...v0.2.11) (2025-11-28)
+
+
+### Bug Fixes
+
+* **bugs:** fixed bugs ([c32e0c3](https://github.com/Egoka/FishtVue/commit/c32e0c36f6dd9ef5ed4a09f837fe55e46d6c1e4d))
+* **bugs:** fixed bugs ([d4848ba](https://github.com/Egoka/FishtVue/commit/d4848ba906453b412558b629fdc0732eaf612942))
+* **typecheck:** improved typing ([8d63583](https://github.com/Egoka/FishtVue/commit/8d63583f9854739a9f676d901a03bc1ce985752c))
+* **accordion:** unnecessary code has been removed ([922a48e](https://github.com/Egoka/FishtVue/commit/922a48eaaafc5db4b32ae75d5a7ce41e645c37df))
+
 ## [0.2.10](https://github.com/Egoka/FishtVue/compare/v0.2.9...v0.2.10) (2025-11-14)
 
 
