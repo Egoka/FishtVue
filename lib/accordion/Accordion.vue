@@ -80,15 +80,6 @@
   onMounted(() => {
     Accordion.initStyle()
   })
-  // ---WATCHERS----------------------------
-  watch(
-    () => props.dataSource,
-    (value) => {
-      dataItems.value = unref(value) ?? []
-    },
-    { deep: true }
-  )
-
   // ---METHODS-----------------------------
   function toggle(key: string | number) {
     const index = typeof key === "string" ? Number(key) : key
