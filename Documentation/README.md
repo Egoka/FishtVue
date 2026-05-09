@@ -35,7 +35,16 @@
 
 ## Components
 
-*Заполняется по мере написания (commits C6–C11).*
+### Form-controls
+
+- [components/button.md](./components/button.md) — Button (modes, color, size, rounded, icon, loading).
+- [components/label.md](./components/label.md) — Label с пятью режимами поведения.
+- [components/switch.md](./components/switch.md) — Switch / checkbox с v-model.
+- *components/input.md, components/select.md, components/calendar.md, components/text-editor.md — будут добавлены в C7.*
+
+### Data display, Layout, Disclosure, Feedback, A11y
+
+*Заполняется по мере написания (commits C8–C11).*
 
 ## Misc
 
