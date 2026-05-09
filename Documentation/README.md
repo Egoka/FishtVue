@@ -45,9 +45,15 @@
 - [components/calendar.md](./components/calendar.md) — Calendar (v-calendar) — date/dateTime/time, range. **beta**.
 - [components/text-editor.md](./components/text-editor.md) — Quill-редактор внутри Dialog. **experimental**.
 
-### Data display, Layout, Disclosure, Feedback, A11y
+### Data display
 
-*Заполняется по мере написания (commits C8–C11).*
+- [components/table.md](./components/table.md) — Table с sort/filter/group/search/pagination/edit, asyncData (4 режима), summary.
+- [components/pagination.md](./components/pagination.md) — Pagination с size-selector и info-text.
+- [components/badge.md](./components/badge.md) — Badge с modes/point/closeButton.
+
+### Layout, Disclosure, Feedback, A11y
+
+*Заполняется по мере написания (commits C9–C11).*
 
 ## Misc
 

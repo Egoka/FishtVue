@@ -1,0 +1,351 @@
+---
+title: Table
+summary: Полнофункциональная таблица: sort/filter/group/search/pagination, edit, summary, asyncData (4 режима).
+updated: 2026-05-09
+stability: stable
+since: 0.2.11
+---
+
+# Table
+
+## 1. Overview
+
+`Table` — самый объёмный компонент библиотеки (~1900 LOC SFC + 1471 LOC `.d.ts`). Поддерживает: sort, filter, search, grouping, summary rows, inline edit (Input/Select/Calendar editors), 4 режима асинхронной загрузки данных (`true`-flag, URL string, config object, custom function), column resizing, кастомные cell templates, dynamic slots по `dataField`.
+
+Stability: `stable` — 66 кейсов, coverage `Table.vue` 85.93%. Тесты покрывают core flow; edge cases в edit/group remain.
+
+Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.d.ts), [Table.test.ts](../../lib/table/Table.test.ts).
+
+## 2. How it's organized
+
+```
+lib/table/
+├── Table.vue            # SFC ~1900 строк
+├── Table.d.ts           # 1471 строка
+├── Table.test.ts        # 66 кейсов
+└── package.json
+```
+
+Зависимости:
+- [Input](./input.md), [Select](./select.md), [Calendar](./calendar.md) — для filter и edit ячеек.
+- [Pagination](./pagination.md) — нижний пейджер.
+- [Component class](../architecture/component-class.md).
+- [arrayHandler](../utilities/arrayHandler.md), [objectHandler](../utilities/objectHandler.md) — для sort/filter/get.
+- [stringHandler](../utilities/stringHandler.md), [numberHandler](../utilities/numberHandler.md), [dateHandler](../utilities/dateHandler.md) — для типизированных filter editors.
+
+Внешних UI-зависимостей нет (всё своё).
+
+## 3. How it works
+
+- **Lifecycle:** `Component.__hooks()` инжектит стили; `onMounted` запускает asyncData (если включено).
+- **Поток данных:**
+  1. `dataSource` (или результат asyncData) → `allData`.
+  2. На client-side применяются: `filterColumns`, `sortColumns`, `queryTable`, `pageTable`/`sizeTable`. (При `asyncData: true` — отключено, обработка на стороне пользователя через events.)
+  3. Результат — `resultData`-payload, эмитится events `result-data`.
+  4. `dataSource` рендерится с поддержкой `IColumn[]` определения колонок (auto-detect если опущено или `true`).
+- **AsyncData (4 режима):**
+  - `true` — async-mode, client-side processing выключен; пользователь сам обрабатывает sort/filter/search/pagination через events и обновляет `dataSource`.
+  - `string` — URL для одноразового fetch на mount. Все client-side фичи активны.
+  - `IAsyncDataConfig` — `{ url, headers?, query? }` — то же, с доп. опциями fetch.
+  - `(params: IAsyncDataParams) => Promise<IAsyncDataResult>` — function mode: callback вызывается на mount + при изменении filters/sort/search/pagination. Возвращает `{ dataSource, totalCount }`.
+- **Стили:** через `Table.setStyle()` для контейнера; кастомизация — через `styles: ITableStyles`.
+- **Конфиг:** `componentsOptions.Table` — см. §10.
+- **Локализация:** `Table.t()` для default messages (`noData`, `noColumn`, `noDataForQuery`, `clearAllFilters`, `find`, `of`, `items`).
+- **SSR:** SSR-safe в client-side mode; для asyncData function mode на сервере — нужен fallback `dataSource`.
+- **Animation:** transitions на open/close edit; sort-icon rotate.
+
+## 4. Quick Start
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import Table from "fishtvue/table"
+
+const data = ref([
+  { id: 1, name: "Alice", age: 30 },
+  { id: 2, name: "Bob", age: 25 }
+])
+</script>
+
+<template>
+  <Table :data-source="data" />
+</template>
+```
+
+Без `columns` — auto-detect из объекта первой строки.
+
+## 5. Props
+
+`TableProps` ([Table.d.ts:688–837](../../lib/table/Table.d.ts#L688-L837)):
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `mode` | `StyleMode` | — | Визуальный режим. |
+| `dataSource` | `MaybeRef<Array<any>>` | — | Массив строк. Может быть ref или константой. |
+| `toolbar` | `MaybeRef<IToolbar \| boolean>` | — | Конфиг toolbar или `true/false`. |
+| `edit` | `boolean` | `false` | Inline-редактирование. |
+| `sort` | `MaybeRef<ISort \| boolean>` | — | Sort-конфиг. |
+| `filter` | `MaybeRef<IFilter \| boolean>` | — | Filter-конфиг. |
+| `grouping` | `MaybeRef<IGrouping \| string>` | — | Группировка по полю. |
+| `resizedColumns` | `boolean` | — | Resize колонок. |
+| `pagination` | `MaybeRef<TablePagination \| boolean>` | — | Pagination-конфиг. |
+| `search` | `boolean` | — | Поиск во всех колонках. |
+| `columns` | `MaybeRef<boolean \| Array<IColumn>>` | auto | Конфиг колонок. |
+| `summary` | `MaybeRef<boolean \| Array<ISummary>>` | — | Summary rows (sum/min/max/avg/count). |
+| `countVisibleRows` | `number` | — | Лимит видимых строк. |
+| `sizeLoadingRows` | `number` | — | Сколько skeleton-строк показывать. |
+| `noData` / `noColumn` | `string` | (locale) | Сообщения. |
+| `countDataOnLoading` | `number` | — | Симулированное количество строк при loading. |
+| `totalCount` | `number` | — | Общий count для server-side pagination. |
+| `asyncData` | `true \| string \| IAsyncDataConfig \| ((params) => Promise<IAsyncDataResult>)` | — | См. §3. |
+| `class` | `StyleClass` | — | Класс контейнера. |
+| `styles` | `MaybeRef<ITableStyles>` | — | Полный override стилей. |
+
+`IColumn` ([Table.d.ts:228–388](../../lib/table/Table.d.ts#L228-L388)) — большой объект на колонку: `dataField`, `name`, `caption`, `visible`, `width`/`minWidth`/`maxWidth`, `isFilter`, `isSort`, `isResized`, `defaultFilter`, `defaultSort`, `mask`, `cellTemplate`, `setCellValue`, `onClick`, `class.{th,colFilter,colText,td,cellText,tf,sumText}`, `type` (`string`/`number`/`select`/`date`), `paramsFilter` (для filter editor), `edit` (`boolean | EditInput | EditSelect | EditDate`).
+
+## 6. Events / Emits + v-model contract
+
+| Event | Payload | When fired |
+|---|---|---|
+| `sort` | `{ dataColumns, sortedFields }` | На toggle sort. |
+| `filter` | `{ dataColumns, filteredFields }` | На filter input change. |
+| `search` | `Search` (string) | На toolbar search. |
+| `result-data` | `ResultData` | После client-side processing. |
+| `switch-page` | `Page` | При смене страницы. |
+| `switch-size-page` | `Page` | При смене page-size. |
+| `before-edit-cell` / `after-edit-cell` | `{ newValue, oldValue, _key, column }` | До/после inline-edit. |
+| `before-edit-row` / `after-edit-row` | `{ newValue, oldValue, _key }` | Row-level edit. |
+| `add-row` | `{ value, index, _key }` | При добавлении. |
+| `delete-row` | `{ value, index, _key }` | При удалении. |
+| `click-row` | `{ eventEl, data, indexRow }` | На клик строки. |
+| `click-cell` | `{ eventEl, column, value, valueWithMarker, data, indexRow }` | На клик ячейки. |
+| `loading` | `boolean` | Loading on/off. |
+| `clear-filter` | — | На clear all. |
+
+v-model contract — не применимо: Table не имеет одного `modelValue`.
+
+## 7. Slots
+
+| Slot | Slot props | Description |
+|---|---|---|
+| `toolbar` | — | Override toolbar. |
+| `header` | — | Слот выше table (под toolbar). |
+| `footer` | — | Слот ниже table (над pagination). |
+| `group` | `{ item, length }` | Override row группы. |
+| `[dataField]` | `{ key, column, rowData, value, valueWithMarker, isCloseEditor, editValue }` | Dynamic slot — кастомная отрисовка ячейки в колонке `dataField`. Имя slot'а = значение `dataField`. |
+
+Пример dynamic slot:
+
+```vue
+<Table :data-source="data">
+  <template #status="{ value }">
+    <span :class="value === 'active' ? 'text-green-600' : 'text-red-600'">
+      {{ value }}
+    </span>
+  </template>
+</Table>
+```
+
+## 8. Exposed methods
+
+`TableExpose` ([Table.d.ts:1017–1442](../../lib/table/Table.d.ts#L1017-L1442)) — большой:
+
+| Name | Description |
+|---|---|
+| `activeRow`, `sortColumns`, `filterColumns`, `widthsColumns`, `queryTable`, `pageTable`, `sizeTable`, `allData`, `isLoading`, `resizableColumn` | Reactive state. |
+| Программные методы: `switchPage`, `switchSizePage`, `setQuery`, `clearFilter`, `addRow`, `deleteRow`, `editRow`, `editCell`, `setColumnWidth`, `reloadData()` (только для function-mode asyncData) | Управление. |
+
+См. полный список в [Table.d.ts:1017–1442](../../lib/table/Table.d.ts#L1017-L1442).
+
+## 9. Examples
+
+### 9.1 Базовый
+
+```vue
+<Table :data-source="rows" />
+```
+
+### 9.2 С filter/sort/search/pagination
+
+```vue
+<Table
+  :data-source="rows"
+  :columns="[
+    { dataField: 'name', caption: 'Name', isSort: true, isFilter: true },
+    { dataField: 'age', caption: 'Age', type: 'number', isSort: true }
+  ]"
+  :toolbar="{ visible: true, search: true }"
+  :pagination="{ visible: true, sizePage: 20 }" />
+```
+
+### 9.3 AsyncData (function mode)
+
+```vue
+<script setup lang="ts">
+import Table from "fishtvue/table"
+import type { IAsyncDataParams, IAsyncDataResult } from "fishtvue/table"
+import { api } from "@/api"
+
+async function load(params: IAsyncDataParams): Promise<IAsyncDataResult> {
+  const { dataSource, totalCount } = await api.users.list(params)
+  return { dataSource, totalCount }
+}
+</script>
+
+<template>
+  <Table :async-data="load" :pagination="{ visible: true, sizePage: 20 }" />
+</template>
+```
+
+### 9.4 Edit с типизированными editors
+
+```vue
+<Table
+  :data-source="users"
+  :edit="true"
+  :columns="[
+    { dataField: 'name', edit: { editorOptions: { autoFocus: true } } },
+    { dataField: 'role', type: 'select', edit: { editorOptions: { dataSelect: roles } } },
+    { dataField: 'birthday', type: 'date', edit: true }
+  ]"
+  @after-edit-cell="(p) => api.update(p._key, { [p.column.dataField]: p.newValue })" />
+```
+
+## 10. Configuration & Customization
+
+### 10.1 Global
+
+`TableOption = Pick<TableProps, "mode" | "toolbar" | "edit" | "sort" | "filter" | "grouping" | "resizedColumns" | "pagination" | "search" | "countVisibleRows" | "sizeLoadingRows" | "noData" | "noColumn" | "countDataOnLoading" | "class" | "styles">`.
+
+### 10.2 Per-instance
+
+Через props.
+
+### 10.3 Theming
+
+- Цвета через `theme.semantic`.
+- Custom borders: `styles.border` ([Table.d.ts:532–585](../../lib/table/Table.d.ts#L532-L585)).
+- Custom classes per-section: `styles.class.{toolbar, table, thead, tbody, tfoot, group, pagination, ...}`.
+
+### 10.4 CSS layer override
+
+Root класс — `fv fishtvue-table`. См. [01-getting-started §10.4](../01-getting-started.md#104-css-layer-override).
+
+## 11. Form integration & validation
+
+Не применимо в стандартном смысле. Edit-mode принимает `editorOptions` для Input/Select/Calendar — туда можно передать `rules` для валидации значения ячейки.
+
+## 12. Accessibility & Security
+
+### A11y
+
+- Семантика `<table>`/`<thead>`/`<tbody>`/`<tfoot>` нативная.
+- `aria-sort` на колонках с sort'ом — проверь по DOM.
+- Keyboard: Tab/Shift+Tab по интерактивным элементам; ArrowKeys для sort-икон не привязаны.
+- Focus management в edit-mode: при открытии cell editor — focus автоматический.
+- `prefers-reduced-motion` не учтён в transitions.
+
+### Security
+
+- `cellTemplate` рендерит подстановку через template-string (не v-html). Безопасно для plain text.
+- `setCellValue` — пользовательский callback. Если возвращает HTML — потенциальный XSS; используй sanitization.
+- `asyncData` URL/config — fetch на стороне клиента; не передавай credentials в URL.
+
+## 13. TypeScript
+
+```ts
+import type {
+  TableProps, TableEmits, TableSlots, TableExpose,
+  IColumn, ISummary, ITableStyles,
+  IAsyncDataParams, IAsyncDataResult,
+  Sorted, Filters, Search, Page
+} from "fishtvue/table"
+import Table from "fishtvue/table"
+import { useTemplateRef } from "vue"
+
+const t = useTemplateRef<InstanceType<typeof Table>>("t")
+t.value?.reloadData()
+```
+
+## 14. Compatibility & Stability
+
+- **Vue:** `^3.5.x`.
+- **Stability flag:** `stable`.
+- **Breaking changes:** на 2026-05-09 не зафиксировано.
+- **Deprecations:** нет.
+- В commit `7393c9a` (`fix(table): repair asyncData tests and behavior`) были стабилизированы asyncData-тесты — учитывай при ревизии.
+
+## 15. Testing recipes
+
+```ts
+import { mount } from "@vue/test-utils"
+import { describe, expect, it } from "vitest"
+import FishtVue from "fishtvue/config"
+import Table from "fishtvue/table/Table.vue"
+
+describe("Table", () => {
+  it("рендерит data", () => {
+    const wrapper = mount(Table, {
+      props: { dataSource: [{ id: 1, name: "A" }] },
+      global: { plugins: [[FishtVue, {}]] }
+    })
+    expect(wrapper.text()).toContain("A")
+  })
+})
+```
+
+Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (66 кейсов).
+
+## 16. Troubleshooting / FAQ
+
+| Проблема | Причина | Решение |
+|---|---|---|
+| Колонки не появляются | Не указаны `columns` и `dataSource[0]` пуст. | Передай `columns` явно. |
+| Sort/filter не работают при `asyncData: true` | По дизайну: client-side processing выключен. | Подпишись на events `sort`/`filter`/`search` и обновляй dataSource сам. |
+| `reloadData()` не работает | Метод доступен только при `asyncData` в function-режиме. | Используй function-mode. |
+| Custom slot per-column не рендерится | Имя slot'а должно совпадать с `dataField`. | Проверь spelling: `<template #fieldName>`. |
+| `summary` показывает ошибку формата | `displayFormat` ожидает `{0}` plaхolder. | Используй `"Sum: {0}"` или custom `customizeText`. |
+| `edit` не активирует editor | `edit: true` нужно на TableProps **и** на column. | Передай оба. |
+
+## 17. Related
+
+- [Pagination](./pagination.md) — встроенная.
+- [Input](./input.md), [Select](./select.md), [Calendar](./calendar.md) — editors для ячеек.
+- [Badge](./badge.md), [Loading](./loading.md), [Icons](./icons.md).
+- [utilities/arrayHandler.md](../utilities/arrayHandler.md), [utilities/objectHandler.md](../utilities/objectHandler.md), [utilities/dateHandler.md](../utilities/dateHandler.md).
+
+## 18. Known issues & limitations
+
+### TODO / FIXME / HACK / XXX
+
+На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [Table.vue](../../lib/table/Table.vue) и [Table.d.ts](../../lib/table/Table.d.ts) не зафиксировано.
+
+### Incomplete or stubbed behavior
+
+- Coverage 85.93% statements / 67.74% branch — большая часть веток покрыта, но edge cases в edit/group/asyncData ([Table.vue:1762, 1857–1916](../../lib/table/Table.vue#L1762)) не покрыты тестами.
+- `IColumnPrivate.isEdit: boolean` ([Table.d.ts:393](../../lib/table/Table.d.ts#L393)) — внутренний флаг, expose'ится через TableExpose.
+
+### Skipped tests
+
+Нет.
+
+### API inconsistencies
+
+- `Filters = Record<DataField, any>` ([Table.d.ts:25](../../lib/table/Table.d.ts#L25)) — `any` в публичном типе.
+- `IColumn.defaultFilter?: any` ([Table.d.ts:293](../../lib/table/Table.d.ts#L293)) — `any`.
+- `IColumn.setCellValue(column, value: any, data?: any): any` — `any`-цепочка.
+- `dataSource?: MaybeRef<Array<any> | []>` — `Array<any>` нивелирует TS-проверки на форму строк.
+- `class.colFilterClass: StyleClass | "border-none font-normal"` — литерал среди свободных классов в нескольких полях `IColumn.class.*` — путаница.
+- `TableOption` **не включает** `dataSource`, `columns`, `summary`, `asyncData`, `totalCount`, `countDataOnLoading` — глобальная конфигурация ограничена визуальными настройками.
+
+### Behavioral caveats
+
+- `MaybeRef` повсюду — `dataSource`, `toolbar`, `sort`, `filter`, `grouping`, `pagination`, `columns`, `summary`, `styles`. Может быть ref или константа. Type-system не отличит, какое поведение применяется в данный момент — потребитель должен помнить о реактивности.
+- `asyncData: true` отключает client-side processing; большинство ивентов всё равно эмитится — пользователь должен обработать.
+- `grouping` отключает pagination и sort на сгруппированных полях (поведение определено в реализации).
+- `summary` суммирует только числовые поля; для типов `string`/`date` — count единственная разумная опция.
+- При `pagination.startPage` — соглашение «1-indexed», не 0.
+
+### Bug report format
+
+См. [01-getting-started §18](../01-getting-started.md#18-known-issues--limitations).
