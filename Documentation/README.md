@@ -59,9 +59,16 @@
 - [components/split.md](./components/split.md) — Split resizable panels с persistence. **beta**.
 - [components/fix-window.md](./components/fix-window.md) — FixWindow popover/tooltip с 12 позициями.
 
-### Disclosure, Feedback, A11y
+### Disclosure
 
-*Заполняется по мере написания (commits C10–C11).*
+- [components/accordion.md](./components/accordion.md) — Accordion с multiple, custom иконками, animationDuration.
+- [components/dialog.md](./components/dialog.md) — модальный Dialog с Teleport, 11 размерами, позиционированием.
+- [components/menu.md](./components/menu.md) — Menu с группами, подменю через FixWindow, separators.
+- [components/alert.md](./components/alert.md) — Alert (5 типов) + programmatic `openAlert()`.
+
+### Feedback, A11y
+
+*Заполняется по мере написания (commit C11).*
 
 ## Misc
 
