@@ -17,7 +17,7 @@
 - [architecture/config.md](./architecture/config.md) — Vue plugin, `FishtVueConfiguration`, `useFishtVue`/`getOptions`.
 - [architecture/theme.md](./architecture/theme.md) — токены, темы Aurora/Harmony/Sapphire, uno-engine.
 - [architecture/locale.md](./architecture/locale.md) — встроенные `en`/`ru`, `setActiveLocale`, расширение.
-- *architecture/nuxt-module.md — будет добавлен в C4.*
+- [architecture/nuxt-module.md](./architecture/nuxt-module.md) — Nuxt module (auto-import, generated plugin) + server plugin для SSR-инжекции CSS.
 
 ## Utilities
 
