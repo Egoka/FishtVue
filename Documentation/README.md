@@ -66,9 +66,14 @@
 - [components/menu.md](./components/menu.md) — Menu с группами, подменю через FixWindow, separators.
 - [components/alert.md](./components/alert.md) — Alert (5 типов) + programmatic `openAlert()`.
 
-### Feedback, A11y
+### Feedback
 
-*Заполняется по мере написания (commit C11).*
+- [components/loading.md](./components/loading.md) — Loading с EpicLoading/SvgLoading/simple типами. **beta**.
+- [components/icons.md](./components/icons.md) — Icons (Heroicons + Iconify).
+
+### A11y
+
+- [components/aria.md](./components/aria.md) — Aria (textarea-аналог) с InputLayout-обёрткой.
 
 ## Misc
 
