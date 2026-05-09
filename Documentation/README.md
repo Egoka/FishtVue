@@ -78,7 +78,7 @@
 ## Misc
 
 - [dev-patterns.md](./dev-patterns.md) — конституция разработки + регламенты документирования (§11). Прочти перед правкой любого `.md` или нового компонента.
-- *playgrounds.md — будет добавлен в C12.*
+- [playgrounds.md](./playgrounds.md) — назначение `sandbox` и `sandbox-nuxt`, workflow для регрессионного репро.
 
 ## Соглашения
 
