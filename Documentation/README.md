@@ -40,7 +40,10 @@
 - [components/button.md](./components/button.md) — Button (modes, color, size, rounded, icon, loading).
 - [components/label.md](./components/label.md) — Label с пятью режимами поведения.
 - [components/switch.md](./components/switch.md) — Switch / checkbox с v-model.
-- *components/input.md, components/select.md, components/calendar.md, components/text-editor.md — будут добавлены в C7.*
+- [components/input.md](./components/input.md) — Input с masks, focus/blur/clear, валидацией.
+- [components/select.md](./components/select.md) — Select single/multiple с фильтрацией и кастомными slot'ами.
+- [components/calendar.md](./components/calendar.md) — Calendar (v-calendar) — date/dateTime/time, range. **beta**.
+- [components/text-editor.md](./components/text-editor.md) — Quill-редактор внутри Dialog. **experimental**.
 
 ### Data display, Layout, Disclosure, Feedback, A11y
 
