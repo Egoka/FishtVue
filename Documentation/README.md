@@ -13,7 +13,11 @@
 
 ## Architecture
 
-*Заполняется по мере написания (commits C3, C4).*
+- [architecture/component-class.md](./architecture/component-class.md) — базовый класс `Component<T>`, lifecycle, инжекция стилей.
+- [architecture/config.md](./architecture/config.md) — Vue plugin, `FishtVueConfiguration`, `useFishtVue`/`getOptions`.
+- [architecture/theme.md](./architecture/theme.md) — токены, темы Aurora/Harmony/Sapphire, uno-engine.
+- [architecture/locale.md](./architecture/locale.md) — встроенные `en`/`ru`, `setActiveLocale`, расширение.
+- *architecture/nuxt-module.md — будет добавлен в C4.*
 
 ## Utilities
 
