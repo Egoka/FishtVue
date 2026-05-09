@@ -21,7 +21,17 @@
 
 ## Utilities
 
-*Заполняется по мере написания (commit C5).*
+- [utilities/arrayHandler.md](./utilities/arrayHandler.md) — `isArray`, `contains`, `sort`/`filter`, `reorderArray`, `findLast*`, `deepCopyArray`, `nestedKeys`.
+- [utilities/colorsHandler.md](./utilities/colorsHandler.md) — `hslToHex`.
+- [utilities/dateHandler.md](./utilities/dateHandler.md) — `isDate`, `formatDate`, `convertMask` (dayjs → date-fns).
+- [utilities/domHandler.md](./utilities/domHandler.md) — `isClient`, `isElement`, `getParentNode`, `setAttribute(s)`, `minifyCSS`.
+- [utilities/functionHandler.md](./utilities/functionHandler.md) — `isFunction`, `generateUUID`.
+- [utilities/numberHandler.md](./utilities/numberHandler.md) — `convertToPhone`/`convertToNumber`, input-handlers.
+- [utilities/objectHandler.md](./utilities/objectHandler.md) — `get`, `fieldsOmit`/`Pick`, `deepMerge`/`Equals`/`Copy`, `freeze`.
+- [utilities/rulesHandler.md](./utilities/rulesHandler.md) — `Rules`, `getValidate`, `getAsyncValidate`.
+- [utilities/stringHandler.md](./utilities/stringHandler.md) — `isString`, `toFlatCase`/`toKebabCase`/`toCapitalCase`, `stringify`.
+- [utilities/tailwindHandler.md](./utilities/tailwindHandler.md) — `cn` (clsx + tailwind-merge).
+- [utilities/uniqueCollection.md](./utilities/uniqueCollection.md) — `UniqueKeySetCollection<K, V>`.
 
 ## Components
 
