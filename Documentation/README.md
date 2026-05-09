@@ -51,9 +51,17 @@
 - [components/pagination.md](./components/pagination.md) — Pagination с size-selector и info-text.
 - [components/badge.md](./components/badge.md) — Badge с modes/point/closeButton.
 
-### Layout, Disclosure, Feedback, A11y
+### Layout
 
-*Заполняется по мере написания (commits C9–C11).*
+- [components/form.md](./components/form.md) — Form с FormStructure, валидацией, custom slots.
+- [components/input-layout.md](./components/input-layout.md) — обёртка для form-controls, label/help/error/clear/copy.
+- [components/separator.md](./components/separator.md) — Separator с gradient/depth/contentPosition.
+- [components/split.md](./components/split.md) — Split resizable panels с persistence. **beta**.
+- [components/fix-window.md](./components/fix-window.md) — FixWindow popover/tooltip с 12 позициями.
+
+### Disclosure, Feedback, A11y
+
+*Заполняется по мере написания (commits C10–C11).*
 
 ## Misc
 
