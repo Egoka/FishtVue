@@ -20,6 +20,9 @@
     EditInput,
     EditSelect,
     Filters,
+    IAsyncDataConfig,
+    IAsyncDataParams,
+    IAsyncDataResult,
     IColumn,
     IColumnPrivate,
     IFilter,
@@ -101,6 +104,7 @@
   // ---
   const allData = ref<any[]>()
   const dataSource = ref<DataSource>([])
+  const totalCountAsync = ref<number | undefined>(undefined)
   // ---PROPS-------------------------------
   const mode = computed<NonNullable<TableProps["mode"]>>(
     () => (props?.mode as TableProps["mode"]) ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
@@ -152,7 +156,7 @@
     () => props?.resizedColumns ?? options?.resizedColumns ?? false
   )
   const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props?.edit ?? options?.edit ?? false)
-  const lengthData = computed<number>(() => props.totalCount ?? dataSource.value.length)
+  const lengthData = computed<number>(() => totalCountAsync.value ?? props.totalCount ?? dataSource.value.length)
   const isFilter = computed<boolean>(() =>
     typeof filter.value === "object"
       ? typeof filter.value?.visible === "boolean"
@@ -198,6 +202,29 @@
         ? pagination.value
         : false
   )
+  // ---ASYNCDATA---------------------------
+  const asyncData = computed<TableProps["asyncData"]>(() => props?.asyncData)
+  const asyncDataMode = computed<"none" | "boolean" | "url" | "config" | "function">(() => {
+    const asyncDataValue = asyncData.value
+    if (!asyncDataValue) return "none"
+    if (asyncDataValue === true) return "boolean"
+    if (typeof asyncDataValue === "string") return "url"
+    if (typeof asyncDataValue === "object" && "url" in asyncDataValue) return "config"
+    if (typeof asyncDataValue === "function") return "function"
+    return "none"
+  })
+  const isAsyncDataBoolean = computed<boolean>(() => asyncDataMode.value === "boolean")
+  const isAsyncDataUrl = computed<boolean>(() => asyncDataMode.value === "url" || asyncDataMode.value === "config")
+  const isAsyncDataFunction = computed<boolean>(() => asyncDataMode.value === "function")
+  const asyncDataUrl = computed<string | null>(() => {
+    if (asyncDataMode.value === "url") return asyncData.value as string
+    if (asyncDataMode.value === "config") return (asyncData.value as IAsyncDataConfig)?.url ?? null
+    return null
+  })
+  const asyncDataConfig = computed<IAsyncDataConfig | null>(() => {
+    if (asyncDataMode.value === "config") return asyncData.value as IAsyncDataConfig
+    return null
+  })
   // ---CELL--------------------------------
   const heightCell = computed<number>(() => styles.value?.heightCell ?? 50)
   const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
@@ -236,7 +263,7 @@
   // ---DATA--------------------------------
   const dataGrouping = computed<DataGrouping>(() => {
     let data: Array<Record<string, any>> = toRaw(dataSource.value)
-    if (isPagination.value) {
+    if (isPagination.value && !isAsyncDataBoolean.value && !isAsyncDataFunction.value) {
       if (isGroup.value && groupField.value) {
         const grouped = LD.groupBy(data, (item: Record<string, any>) => item[groupField.value as string])
         data = Object.values(grouped as Record<string, Array<Record<string, any>>>).flat()
@@ -902,12 +929,14 @@
     clearFilter,
     startLoading,
     stopLoading,
-    updateHeightTable
+    updateHeightTable,
+    reloadData: loadDataFromFunction
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(() => {
     Table.initStyle()
     if (isClient() && tbody.value) tableObserver.observe(tbody.value as Element)
+    suppressLoadFromFunctionInWatchers = true
     Object.assign(
       sortColumns,
       Object.fromEntries(new Map(dataColumns.value.map((column) => [column.dataField, column.defaultSort ?? null])))
@@ -924,6 +953,11 @@
         )
       )
     )
+    // Reset suppression flag after the queued sortColumns/filterColumns watchers
+    // process the initial Object.assign batch.
+    Promise.resolve().then(() => {
+      suppressLoadFromFunctionInWatchers = false
+    })
     nextTick(() => {
       updateHeightTable()
       startLastRowVisibleObserver()
@@ -931,11 +965,19 @@
     setTimeout(() => {
       updateHeightTable()
     }, 10)
+
+    if (isAsyncDataUrl.value) loadDataFromUrl()
+    // Function mode: initial load triggered by sizePage/startPage immediate watchers
   })
   onUnmounted(() => {
     if (isClient() && tableObserver) tableObserver.disconnect()
   })
   // ---WATCHERS----------------------------
+  let loadDataFromFunctionPending = false
+  // Suppresses watcher-triggered loadDataFromFunction calls during the initial
+  // onMounted column-state initialization (Object.assign on sortColumns/filterColumns).
+  // Emits still fire so that tests/external listeners see the initial sort/filter state.
+  let suppressLoadFromFunctionInWatchers = false
   watch(
     () => [countVisibleRows.value, styles.value.height],
     (value, oldValue) => {
@@ -957,6 +999,10 @@
     () => sortColumns,
     () => {
       emit("sort", { dataColumns: dataColumns.value, sortedFields: getSorted(sortColumns) })
+      if (suppressLoadFromFunctionInWatchers) return
+      if (isAsyncDataFunction.value) {
+        loadDataFromFunction()
+      }
     },
     { deep: true }
   )
@@ -965,6 +1011,10 @@
     () => {
       switchPage(1)
       emit("filter", { dataColumns: dataColumns.value, filteredFields: getFilters(filterColumns) })
+      if (suppressLoadFromFunctionInWatchers) return
+      if (isAsyncDataFunction.value) {
+        loadDataFromFunction()
+      }
     },
     { deep: true }
   )
@@ -973,6 +1023,9 @@
     (query) => {
       switchPage(1)
       emit("search", query)
+      if (isAsyncDataFunction.value) {
+        loadDataFromFunction()
+      }
     }
   )
   watch(startPage, (numberPage: number) => setTimeout(() => switchPage(numberPage), 1), { immediate: true })
@@ -1038,32 +1091,34 @@
   function updateDataSource(): Array<Record<string, any>> {
     if (!(allData.value && allData.value?.length)) return []
     let data = toRaw(allData.value) as Array<Record<string, any>>
-    // Sort
-    if (data && Object.keys(sortColumns).filter((i) => sortColumns[i] !== null).length) {
-      const sortedFields = getSorted(sortColumns) as any
-      data = LD.orderBy(data, Object.keys(sortedFields), Object.values(sortedFields))
-    }
-    // Filter
-    if (data && noEmptyFilters(filterColumns).length) {
-      const filter = getFilters(filterColumns)
-      data = LD.filter(
-        data,
-        (row) =>
-          Object.keys(filter).filter((item) => {
-            const column = dataColumns.value.find((col) => col.dataField === item)
-            if (column) return isEqualsValue(column, row[column.dataField], filter[column.dataField])
-          }).length === Object.keys(filter).length
-      )
-    }
-    // Search
-    if (data && queryTable.value.length) {
-      data = LD.filter(
-        data,
-        (row) =>
-          !!dataColumns.value
-            .filter((item) => item.visible)
-            .filter((item) => isEqualsValue(item, row[item.dataField], queryTable.value)).length
-      )
+    if (!isAsyncDataBoolean.value && !isAsyncDataFunction.value) {
+      // Sort
+      if (data && Object.keys(sortColumns).filter((i) => sortColumns[i] !== null).length) {
+        const sortedFields = getSorted(sortColumns) as any
+        data = LD.orderBy(data, Object.keys(sortedFields), Object.values(sortedFields))
+      }
+      // Filter
+      if (data && noEmptyFilters(filterColumns).length) {
+        const filter = getFilters(filterColumns)
+        data = LD.filter(
+          data,
+          (row) =>
+            Object.keys(filter).filter((item) => {
+              const column = dataColumns.value.find((col) => col.dataField === item)
+              if (column) return isEqualsValue(column, row[column.dataField], filter[column.dataField])
+            }).length === Object.keys(filter).length
+        )
+      }
+      // Search
+      if (data && queryTable.value.length) {
+        data = LD.filter(
+          data,
+          (row) =>
+            !!dataColumns.value
+              .filter((item) => item.visible)
+              .filter((item) => isEqualsValue(item, row[item.dataField], queryTable.value)).length
+        )
+      }
     }
     stopLoading()
     dataSource.value = data ?? []
@@ -1135,14 +1190,22 @@
   }
 
   function switchPage(page: Page | undefined) {
-    pageTable.value = page ?? 1
+    const newPage = page ?? 1
+    const pageChanged = pageTable.value !== newPage
+    pageTable.value = newPage
     emit("switch-page", pageTable.value)
+    if (isAsyncDataFunction.value && pageChanged) {
+      loadDataFromFunction()
+    }
   }
 
   function switchSizePage(sizePage: Page | undefined) {
-    switchPage(1)
     sizeTable.value = sizePage ?? 5
+    switchPage(1)
     emit("switch-size-page", sizeTable.value)
+    if (isAsyncDataFunction.value) {
+      loadDataFromFunction()
+    }
   }
 
   function isEqualsValue(column: IColumnPrivate, columnValue: any, value: any): boolean {
@@ -1497,6 +1560,93 @@
     if (isClient()) {
       window.removeEventListener("mousemove", moveResizedColumns)
       window.removeEventListener("mouseup", stopResizeColumn)
+    }
+  }
+
+  // ---ASYNC-DATA----------------------------
+  async function loadDataFromUrl(): Promise<void> {
+    const url = asyncDataUrl.value
+    if (!url) return
+
+    startLoading()
+    try {
+      const config = asyncDataConfig.value
+      const requestHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(config?.headers ?? {})
+      }
+
+      let requestUrl = url
+      if (config?.query) {
+        const queryParams = new URLSearchParams()
+        Object.keys(config.query).forEach((key) => {
+          if (config.query![key] !== undefined && config.query![key] !== null) {
+            queryParams.append(key, String(config.query![key]))
+          }
+        })
+        const queryString = queryParams.toString()
+        if (queryString) {
+          requestUrl = `${url}${url.includes("?") ? "&" : "?"}${queryString}`
+        }
+      }
+
+      const response = await fetch(requestUrl, {
+        method: "GET",
+        headers: requestHeaders
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const dataArray = Array.isArray(data) ? data : []
+
+      allData.value = dataArray.map((item) => ({ ...item, _key: generateUUID() }))
+      updateDataSource()
+    } catch (error) {
+      console.error("Error loading data from URL:", error)
+      allData.value = []
+      dataSource.value = []
+      stopLoading()
+    }
+  }
+
+  async function loadDataFromFunction(): Promise<void> {
+    if (!isAsyncDataFunction.value || typeof asyncData.value !== "function") return
+    if (loadDataFromFunctionPending) return
+    loadDataFromFunctionPending = true
+
+    startLoading()
+    try {
+      const params: IAsyncDataParams = {
+        filters: getFilters(filterColumns),
+        sort: getSorted(sortColumns),
+        search: queryTable.value,
+        pagination: {
+          page: pageTable.value,
+          size: sizeTable.value
+        }
+      }
+
+      const result = await (asyncData.value as (params: IAsyncDataParams) => Promise<IAsyncDataResult>)(params)
+
+      if (result && Array.isArray(result.dataSource)) {
+        allData.value = result.dataSource.map((item) => ({ ...item, _key: generateUUID() }))
+        totalCountAsync.value = typeof (result.totalCount as unknown) === "number" ? result.totalCount : undefined
+        updateDataSource()
+      } else {
+        allData.value = []
+        dataSource.value = []
+        totalCountAsync.value = undefined
+      }
+    } catch (error) {
+      console.error("Error loading data from function:", error)
+      allData.value = []
+      dataSource.value = []
+    } finally {
+      stopLoading()
+      loadDataFromFunctionPending = false
     }
   }
 </script>

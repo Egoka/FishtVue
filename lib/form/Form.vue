@@ -223,8 +223,8 @@
     return (
       structure.value?.map((structureItem) => {
         let resultStructure: FormStructure = deepCopy(structureItem)
-        resultStructure.class = `${classStructure.value} ${resultStructure.class}`
-        resultStructure.classGrid = `${classStructureGrid.value} ${resultStructure.classGrid}`
+        resultStructure.class = Form.setStyle([classStructure.value, resultStructure.class])
+        resultStructure.classGrid = Form.setStyle([classStructureGrid.value, resultStructure.classGrid])
         if (resultStructure.fields) {
           resultStructure.fields = resultStructure.fields.map((field) => {
             let resultField = deepCopy(field)

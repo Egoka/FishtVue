@@ -20,6 +20,8 @@ const globals = {
   setInterval: "readonly",
   clearInterval: "readonly",
   URL: "readonly",
+  fetch: "readonly",
+  URLSearchParams: "readonly",
   console: "readonly",
   getComputedStyle: "readonly",
   IntersectionObserver: "readonly",

@@ -149,6 +149,78 @@ export interface TablePagination extends Omit<PaginationProps, "total" | "modelV
 }
 
 /**
+ * Configuration object for async data loading (mode 3: object).
+ */
+export interface IAsyncDataConfig {
+  /**
+   * URL endpoint for fetching data.
+   * @type {string}
+   */
+  url: string
+
+  /**
+   * Optional headers for the fetch request.
+   * @type {Record<string, string> | undefined}
+   */
+  headers?: Record<string, string>
+
+  /**
+   * Optional query parameters for the fetch request.
+   * @type {Record<string, any> | undefined}
+   */
+  query?: Record<string, any>
+}
+
+/**
+ * Parameters passed to async data function (mode 4: function).
+ */
+export interface IAsyncDataParams {
+  /**
+   * Current filter values applied to columns.
+   * @type {Filters}
+   */
+  filters: Filters
+
+  /**
+   * Current sorting configuration.
+   * @type {Sorted}
+   */
+  sort: Sorted
+
+  /**
+   * Current search query.
+   * @type {Search}
+   */
+  search: Search
+
+  /**
+   * Current pagination state.
+   * @type {{ page: Page; size: Page }}
+   */
+  pagination: {
+    page: Page
+    size: Page
+  }
+}
+
+/**
+ * Result returned by async data function (mode 4: function).
+ */
+export interface IAsyncDataResult {
+  /**
+   * Array of data records for the current page.
+   * @type {DataSource}
+   */
+  dataSource: DataSource
+
+  /**
+   * Total count of all records (for pagination calculation).
+   * @type {number}
+   */
+  totalCount: number
+}
+
+/**
  * Represents a column configuration for the Table component.
  *
  * Supports features like sorting, filtering, resizing, templates, and custom styles.
@@ -729,6 +801,26 @@ export declare type TableProps = {
    * @type {number | undefined}
    */
   totalCount?: number
+
+  /**
+   * Configuration for asynchronous data loading.
+   *
+   * Supports four modes:
+   * - `true` (boolean) - Async mode: disables client-side filtering, sorting, searching, and pagination calculations.
+   *   User handles data loading via events. dataSource is still required.
+   *
+   * - `string` - URL mode: fetches all data once on mount from the specified URL.
+   *   Returns array of data. All standard features (filters, sort, search, pagination) work on client-side.
+   *
+   * - `IAsyncDataConfig` (object) - Config mode: same as URL mode but with additional fetch options
+   *   (headers, query parameters).
+   *
+   * - `(params: IAsyncDataParams) => Promise<IAsyncDataResult>` (function) - Function mode: user-defined async function.
+   *   Called on mount and when filters/sort/search/pagination change. Must return dataSource and totalCount.
+   *
+   * @type {true | string | IAsyncDataConfig | ((params: IAsyncDataParams) => Promise<IAsyncDataResult>) | undefined}
+   */
+  asyncData?: true | string | IAsyncDataConfig | ((params: IAsyncDataParams) => Promise<IAsyncDataResult>)
 
   /**
    * Custom CSS class for the table container.
@@ -1341,6 +1433,12 @@ export declare type TableExpose = {
    * Updates the height of the table dynamically.
    */
   updateHeightTable(): void
+
+  /**
+   * Reloads data from asyncData function (mode 4).
+   * Only works when asyncData is configured as a function.
+   */
+  reloadData(): Promise<void>
 }
 export declare type TableOption = Pick<
   TableProps,

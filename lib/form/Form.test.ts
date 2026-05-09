@@ -899,7 +899,7 @@ describe("Form Component Tests", () => {
     ]
 
     it("fails validation and calls scrollIntoView", async () => {
-      document.querySelector = vi.fn()
+      const querySelectorSpy = vi.spyOn(document, "querySelector").mockReturnValue(null)
       const wrapper = mount(Form, {
         props: {
           structure: structureForValidation()
@@ -917,7 +917,7 @@ describe("Form Component Tests", () => {
       await nextTick()
 
       // Проверить вызов scrollIntoView
-      expect(document.querySelector).toHaveBeenCalled()
+      expect(querySelectorSpy).toHaveBeenCalled()
 
       // Проверить, что поле стало невалидным
       const field = wrapper.vm.getField<"Input">("invalidField")
@@ -925,7 +925,7 @@ describe("Form Component Tests", () => {
       // Проверить, что сообщение об ошибке соответствует правилу
       expect(field?.messageInvalid).toBe("This field is required.")
       expect(wrapper.vm.isFieldInvalid("invalidField")).toBe(true)
-      vi.restoreAllMocks()
+      querySelectorSpy.mockRestore()
     })
   })
 })

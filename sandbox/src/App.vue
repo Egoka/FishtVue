@@ -14,6 +14,7 @@
   import DemoPagination from "@/components/demo/Pagination.vue"
   import DemoAccordion from "@/components/demo/Accordion.vue"
   import DemoSplit from "@/components/demo/Split.vue"
+  import Split from "fishtvue/split/Split.vue"
   import DemoSeparator from "@/components/demo/Separator.vue"
   import DemoDialog from "@/components/demo/Dialog.vue"
   import DemoFixWindow from "@/components/demo/FixWindow.vue"
@@ -21,11 +22,80 @@
   import DemoAlert from "@/components/demo/Alert.vue"
   import DemoBadge from "@/components/demo/Badge.vue"
   import DemoLoading from "@/components/demo/Loading.vue"
+  import { ref } from "vue"
+  import Body from "@/components/demo/body.vue"
+  import Test from "@/components/demo/test.vue"
 
   const { scrollToPosition } = useScrollTo()
+  const panels = ref([
+    {
+      name: "table",
+      minSize: 10
+    },
+    {
+      name: "item",
+      minSize: 10,
+      size: 30,
+      hidden: true
+    }
+  ])
+  const panelsNew = ref([
+    {
+      name: "menu",
+      size: 75,
+      minSize: 75,
+      maxSize: 200
+    },
+    {
+      name: "main"
+    }
+  ])
 </script>
 <template>
   <div class="w-full h-full grow">
+    <Split
+      :panels="panelsNew"
+      units="pixels"
+      :styles="{ separator: 'bg-transparent dark:bg-transparent' }"
+      class="overflow-auto bg-white dark:bg-zinc-800 sm:p-3">
+      <template #menu><div class="bg-red-600">test</div></template>
+      <template #main><div class="bg-blue-600">item</div></template>
+    </Split>
+    <Split
+      :panels="[
+        {
+          name: 'table',
+          minSize: 10
+        },
+        {
+          name: 'item',
+          minSize: 10,
+          size: 30
+          // hidden: true
+        }
+      ]"
+      units="pixels">
+      <template #table><div class="bg-red-600">test</div></template>
+      <template #item><div class="bg-blue-600">item</div></template>
+    </Split>
+    <!--    <Split-->
+    <!--      :panels="[{ name: 'right' }, { name: 'left' }]"-->
+    <!--      class="relative rounded-lg overflow-auto border dark:border-gray-800"-->
+    <!--      units="percentages">-->
+    <!--      <template #right>-->
+    <!--        <div class="relative overflow-hidden w-full h-full flex justify-center items-center">-->
+    <!--          <div class="absolute left-0 max-w-[246px] w-[250px] text-center font-asap font-bold text-6xl">Fisht</div>-->
+    <!--        </div>-->
+    <!--      </template>-->
+    <!--      <template #left>-->
+    <!--        <div class="relative overflow-hidden w-full h-full flex justify-center items-center">-->
+    <!--          <div-->
+    <!--            class="absolute right-0 max-w-[250px] w-[250px] text-center font-asap font-bold text-6xl text-theme-600 dark:text-theme-400">-->
+    <!--            Fisht-->
+    <!--          </div>-->
+    <!--        </div>-->
+    <!--      </template>-->
+    <!--    </Split>-->
     <div class="w-full">
       <div
         class="-z-1 w-full h-max absolute top-0 left-0 inset-0 pointer-events-none flex justify-center overflow-hidden">
@@ -80,43 +150,32 @@
             <div class="px-2 md:px-18 pb-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <DocComponent
                 title="Layout"
-                subtitle="A wrapper component used to render labels, validation, and layout structure for form inputs. Commonly used internally by input-related components to ensure consistent styling and behavior."
-                link="/components/form/layout">
+                subtitle="A wrapper component used to render labels, validation, and layout structure for form inputs. Commonly used internally by input-related components to ensure consistent styling and behavior.">
               </DocComponent>
               <DocComponent
                 title="Input"
-                subtitle="Standard text input field with additional features like validation and masking."
-                link="/components/form/input">
+                subtitle="Standard text input field with additional features like validation and masking.">
                 <DemoInput />
               </DocComponent>
               <DocComponent
                 title="Select"
-                subtitle="Dropdown select component with support for multiple selection and custom options."
-                link="/components/form/select">
+                subtitle="Dropdown select component with support for multiple selection and custom options.">
                 <DemoSelect />
               </DocComponent>
-              <DocComponent
-                title="Calendar"
-                subtitle="Date and time picker component with various modes."
-                link="/components/form/calendar">
+              <DocComponent title="Calendar" subtitle="Date and time picker component with various modes.">
                 <DemoCalendar />
               </DocComponent>
-              <DocComponent
-                title="Switch"
-                subtitle="Toggle component for binary input with accessibility features."
-                link="/components/form/switch">
+              <DocComponent title="Switch" subtitle="Toggle component for binary input with accessibility features.">
                 <DemoSwitch />
               </DocComponent>
               <DocComponent
                 title="Aria"
-                subtitle="Utility component to assist with ARIA attributes for form accessibility.  "
-                link="/components/form/aria">
+                subtitle="Utility component to assist with ARIA attributes for form accessibility.  ">
                 <DemoAria />
               </DocComponent>
               <DocComponent
                 title="Form"
                 subtitle="A powerful and flexible form container component designed to manage the structure, validation, and submission of form elements. It provides a unified interface for working with form inputs, integrates with validation libraries, and supports scoped slots for custom layout and field rendering. The Form component ensures consistency across form elements and simplifies the process of building complex, interactive forms."
-                link="/components/form/form"
                 class="sm:col-span-2">
                 <DemoForm />
               </DocComponent>
@@ -135,7 +194,6 @@
               <DocComponent
                 title="Button"
                 subtitle="Versatile button component with multiple styling options and states."
-                link="/components/button/button"
                 class="sm:col-span-2">
                 <DemoButton />
               </DocComponent>
@@ -155,14 +213,12 @@
               <DocComponent
                 title="Table"
                 subtitle="A flexible data table component with support for sorting, filtering, pagination, and custom cell content. Designed for responsive layouts and interactive data display."
-                link="/components/data/table"
                 class="sm:col-span-2">
                 <DemoTable />
               </DocComponent>
               <DocComponent
                 title="Pagination"
                 subtitle="Component for paginating large datasets with navigation controls."
-                link="/components/data/pagination"
                 class="sm:col-span-2">
                 <DemoPagination />
               </DocComponent>
@@ -180,22 +236,15 @@
               Layout containers and visual separation components.
             </p>
             <div class="px-2 md:px-18 pb-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <DocComponent
-                title="Accordion"
-                subtitle="Expandable sections to show or hide content interactively."
-                link="/components/panel/accordion">
+              <DocComponent title="Accordion" subtitle="Expandable sections to show or hide content interactively.">
                 <DemoAccordion />
               </DocComponent>
-              <DocComponent
-                title="Split"
-                subtitle="Split view layout component for resizable panels."
-                link="/components/panel/split">
+              <DocComponent title="Split" subtitle="Split view layout component for resizable panels.">
                 <DemoSplit />
               </DocComponent>
               <DocComponent
                 title="Separator"
                 subtitle="Visual divider for separating content areas."
-                link="/components/panel/separator"
                 class="sm:col-span-2">
                 <DemoSeparator />
               </DocComponent>
@@ -215,14 +264,12 @@
             <div class="px-2 md:px-18 pb-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <DocComponent
                 title="Dialog"
-                subtitle="Modal dialog component for confirmations, messages, and embedded forms."
-                link="/components/overlay/dialog">
+                subtitle="Modal dialog component for confirmations, messages, and embedded forms.">
                 <DemoDialog class="mt-8" />
               </DocComponent>
               <DocComponent
                 title="Fix window"
-                subtitle="Fixed position window that remains on screen regardless of scroll."
-                link="/components/overlay/fixwindow">
+                subtitle="Fixed position window that remains on screen regardless of scroll.">
                 <DemoFixWindow />
               </DocComponent>
             </div>
@@ -242,7 +289,6 @@
               <DocComponent
                 title="Menu"
                 subtitle="Dropdown menu with nested submenu support and keyboard navigation."
-                link="/components/menu/menu"
                 class="sm:col-span-2">
                 <DemoMenu />
               </DocComponent>
@@ -263,7 +309,6 @@
               <DocComponent
                 title="Alert"
                 subtitle="Displays alerts, warnings, and success/error messages."
-                link="/components/messages/alert"
                 class="sm:col-span-2">
                 <DemoAlert />
               </DocComponent>
@@ -281,22 +326,17 @@
               Various utility components that enhance the user interface.
             </p>
             <div class="px-2 md:px-18 pb-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <DocComponent
-                title="Badge"
-                subtitle="Status label used to show counts, states, or categories."
-                link="/components/misc/badge">
+              <DocComponent title="Badge" subtitle="Status label used to show counts, states, or categories.">
                 <DemoBadge class="mt-8" />
               </DocComponent>
               <DocComponent
                 title="Loading"
-                subtitle="Loading spinner to indicate asynchronous actions or pending state."
-                link="/components/misc/loading">
+                subtitle="Loading spinner to indicate asynchronous actions or pending state.">
                 <DemoLoading />
               </DocComponent>
               <DocComponent
                 title="Icons"
                 subtitle="Icon system supporting multiple icon packs and dynamic rendering."
-                link="/components/misc/icons"
                 class="sm:col-span-2">
               </DocComponent>
             </div>
