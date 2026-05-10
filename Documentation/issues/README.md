@@ -32,10 +32,10 @@ updated: 2026-05-10
 | Separator | [separator.md](./separator.md) | 0 | 3 | 2 | 2 |
 | Split | [split.md](./split.md) | 0 | 5 | 5 | 3 |
 | FixWindow | [fixwindow.md](./fixwindow.md) | 0 | 7 | 5 | 3 |
-| Accordion | _pending audit_ | — | — | — | — |
-| Dialog | _pending audit_ | — | — | — | — |
-| Menu | _pending audit_ | — | — | — | — |
-| Alert | _pending audit_ | — | — | — | — |
+| Accordion | [accordion.md](./accordion.md) | 1 | 5 | 3 | 3 |
+| Dialog | [dialog.md](./dialog.md) | 2 | 5 | 4 | 3 |
+| Menu | [menu.md](./menu.md) | 1 | 6 | 4 | 3 |
+| Alert | [alert.md](./alert.md) | 2 | 5 | 4 | 3 |
 | Loading | _pending audit_ | — | — | — | — |
 | Icons | _pending audit_ | — | — | — | — |
 | Component class | _pending audit_ | — | — | — | — |
