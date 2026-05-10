@@ -11,12 +11,12 @@ related-doc: ../components/pagination.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 1 | H41 (anonymous ResizeObserver leak) |
-| high | 4 | A2, A4-5, C17, L53 |
-| medium | 4 | E29.1, E29.5, F31, G34 |
-| low | 3 | E29.7, B10, N59 |
+| Severity | Count | Categories                          |
+| -------- | ----- | ----------------------------------- |
+| critical | 1     | H41 (anonymous ResizeObserver leak) |
+| high     | 4     | A2, A4-5, C17, L53                  |
+| medium   | 4     | E29.1, E29.5, F31, G34              |
+| low      | 3     | E29.7, B10, N59                     |
 
 ## Issue 1: CRITICAL — Анонимный ResizeObserver без cleanup
 
@@ -136,19 +136,19 @@ Pagination не expose'д ref на корневой `<nav>`. Пользоват�
 
 ## Issue 8: prefers-reduced-motion / print / colors
 
-См. [button.md Issue 10, 15](./button.md), [switch.md Issue 12](./switch.md).
+См. [done/button.md Issue 10](./done/button.md) (motion-safe pattern, resolved), [button.md Issue 15](./button.md) (print — open), [switch.md Issue 12](./switch.md).
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Pagination` | ✅ | mode, sizePage, и др. |
-| `componentsStyle` global | ✅ | через `Pagination.componentsStyle()` |
-| `unstyled: true` | ❌ | Issue 3 |
-| Theme tokens vs hardcode | ⚠️ | gray-* hardcode в Button-инстансах; theme-* — OK |
-| Runtime theme switch | ✅ | через CSS-переменные |
-| `t()` для текста | ✅ | `Pagination.t("previous")`, `Pagination.t("next")` ([Pagination.vue:269, 283](../../lib/pagination/Pagination.vue#L269)) |
-| Runtime locale switch | ✅ | реагирует, т. к. использует `t()` |
+| Настройка                      | Поддержано? | Комментарий                                                                                                              |
+| ------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `componentsOptions.Pagination` | ✅          | mode, sizePage, и др.                                                                                                    |
+| `componentsStyle` global       | ✅          | через `Pagination.componentsStyle()`                                                                                     |
+| `unstyled: true`               | ❌          | Issue 3                                                                                                                  |
+| Theme tokens vs hardcode       | ⚠️          | gray-_ hardcode в Button-инстансах; theme-_ — OK                                                                         |
+| Runtime theme switch           | ✅          | через CSS-переменные                                                                                                     |
+| `t()` для текста               | ✅          | `Pagination.t("previous")`, `Pagination.t("next")` ([Pagination.vue:269, 283](../../lib/pagination/Pagination.vue#L269)) |
+| Runtime locale switch          | ✅          | реагирует, т. к. использует `t()`                                                                                        |
 
 ## Dual-API gap
 

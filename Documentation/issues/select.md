@@ -11,12 +11,12 @@ related-doc: ../components/select.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 2 | C13 (XSS v-html × 3), H41 (memory leaks) |
-| high | 6 | A2, A4-5, C17, L53, P (dual-API), H43 (virtualization) |
-| medium | 4 | E29.5, F31, F32, G34 |
-| low | 3 | E29.7, B10, N59 |
+| Severity | Count | Categories                                             |
+| -------- | ----- | ------------------------------------------------------ |
+| critical | 2     | C13 (XSS v-html × 3), H41 (memory leaks)               |
+| high     | 6     | A2, A4-5, C17, L53, P (dual-API), H43 (virtualization) |
+| medium   | 4     | E29.5, F31, F32, G34                                   |
+| low      | 3     | E29.7, B10, N59                                        |
 
 ## Issue 1: CRITICAL — XSS через `v-html` в `marker` и `noData`
 
@@ -46,6 +46,7 @@ related-doc: ../components/select.md
 ### Что нужно сделать
 
 **Опция A — slot вместо v-html (рекомендуется):**
+
 1. В [Select.vue:553](../../lib/select/Select.vue#L553) заменить `v-html="item?.marker"` на:
    ```vue
    <slot name="marker" :item="item" :query="query" :class="classItemSelectValue">
@@ -100,6 +101,7 @@ watch(isOpenList, (value) => {
 ```
 
 Проблемы:
+
 1. `new ResizeObserver(...)` — instance создан, но не сохранён в ref → нельзя disconnect. **Утечка observer + closure**.
 2. Если компонент unmount'ится в момент `isFocus === true` — listener `openSelectOnEnter` остаётся на `document` навсегда.
 3. То же для `keydownSelect` если unmount во время `isOpenList === true`.
@@ -129,9 +131,9 @@ watch(isOpenList, (value) => {
 2. Альтернативно — использовать VueUse `useResizeObserver(target, callback)` — auto-cleanup.
 3. Тест:
    ```ts
-   const wrapper = mount(Select, { props: { dataSelect: [{id:1,value:'a'}] }, attachTo: document.body })
-   wrapper.find('input').trigger('focus')
-   const beforeUnmount = document.querySelectorAll('*').length
+   const wrapper = mount(Select, { props: { dataSelect: [{ id: 1, value: "a" }] }, attachTo: document.body })
+   wrapper.find("input").trigger("focus")
+   const beforeUnmount = document.querySelectorAll("*").length
    wrapper.unmount()
    // assert listeners removed (sniff via spy or check that triggering keydown after unmount doesn't crash)
    ```
@@ -152,8 +154,15 @@ watch(isOpenList, (value) => {
 ### Что найдено
 
 API только schema-driven:
+
 ```vue
-<Select :data-select="[{ id: 1, value: 'A' }, { id: 2, value: 'B' }]" key-select="id" value-select="value" />
+<Select
+  :data-select="[
+    { id: 1, value: 'A' },
+    { id: 2, value: 'B' }
+  ]"
+  key-select="id"
+  value-select="value" />
 ```
 
 Custom rendering каждого option возможен только через единый slot `selectItem` для всего списка. Нет per-option конфигурации (disabled, group, custom icon, custom render per item) через template-уровень.
@@ -180,10 +189,10 @@ Custom rendering каждого option возможен только через 
 1. Создать `lib/select/SelectOption.vue`:
    ```vue
    <script setup lang="ts">
-   import { inject } from "vue"
-   const ctx = inject(SELECT_CONTEXT)
-   const props = defineProps<{ value: any; disabled?: boolean; label?: string }>()
-   ctx?.registerOption({ value: props.value, disabled: props.disabled, label: props.label, slot: useSlots().default })
+     import { inject } from "vue"
+     const ctx = inject(SELECT_CONTEXT)
+     const props = defineProps<{ value: any; disabled?: boolean; label?: string }>()
+     ctx?.registerOption({ value: props.value, disabled: props.disabled, label: props.label, slot: useSlots().default })
    </script>
    <template><!-- not rendered directly; rendered via parent context --></template>
    ```
@@ -240,6 +249,7 @@ Custom rendering каждого option возможен только через 
 ### Что найдено
 
 Все `dataList` items рендерятся в DOM одновременно. При `dataSelect` с >500 элементами:
+
 - Скролл лагает.
 - Initial open — задержка 200-500ms.
 - Memory растёт (каждый item — несколько DOM узлов + reactive computed).
@@ -311,19 +321,19 @@ Custom rendering каждого option возможен только через 
 - **Категория:** E29.7, N59, B10
 - **Severity:** low
 
-См. [button.md Issue 10, 15](./button.md), [switch.md Issue 12](./switch.md).
+См. [done/button.md Issue 10](./done/button.md) (motion-safe pattern, resolved), [button.md Issue 15](./button.md) (print — open), [switch.md Issue 12](./switch.md).
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Select` | ✅ | mode, autoFocus, valueSelect, keySelect, и др. |
-| `componentsStyle` global | ❌ | Issue 5 |
-| `unstyled: true` | ❌ | Issue 6 |
-| Theme tokens vs hardcode | ⚠️ | через theme-* tokens частично |
-| Runtime theme switch | ⚠️ | через CSS-vars OK |
-| `t()` для текста | ❌ | `noData` хардкоден prop, нет fallback к `t("select.noData")` |
-| Runtime locale switch | ❌ | search-filter не использует locale (Issue 10) |
+| Настройка                  | Поддержано? | Комментарий                                                  |
+| -------------------------- | ----------- | ------------------------------------------------------------ |
+| `componentsOptions.Select` | ✅          | mode, autoFocus, valueSelect, keySelect, и др.               |
+| `componentsStyle` global   | ❌          | Issue 5                                                      |
+| `unstyled: true`           | ❌          | Issue 6                                                      |
+| Theme tokens vs hardcode   | ⚠️          | через theme-\* tokens частично                               |
+| Runtime theme switch       | ⚠️          | через CSS-vars OK                                            |
+| `t()` для текста           | ❌          | `noData` хардкоден prop, нет fallback к `t("select.noData")` |
+| Runtime locale switch      | ❌          | search-filter не использует locale (Issue 10)                |
 
 ## Dual-API gap
 

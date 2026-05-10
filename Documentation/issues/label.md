@@ -11,12 +11,12 @@ related-doc: ../components/label.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 4 | A2, A4-5, C17, E29.1 |
-| medium | 3 | F31, L53, B11 |
-| low | 2 | E29.7, G37 |
+| Severity | Count | Categories           |
+| -------- | ----- | -------------------- |
+| critical | 0     | —                    |
+| high     | 4     | A2, A4-5, C17, E29.1 |
+| medium   | 3     | F31, L53, B11        |
+| low      | 2     | E29.7, G37           |
 
 ## Issue 1: Нет атрибута `for` — Label не связан с input через DOM
 
@@ -168,7 +168,7 @@ Label корректно подбирает global `componentsStyle` ✅. Но `
 - **Severity:** low
 - **Где:** [Label.vue:27](../../lib/label/Label.vue#L27)
 
-`transition-all duration-200` без `motion-safe:` guard. См. [button.md Issue 10](./button.md).
+`transition-all duration-200` без `motion-safe:` guard. См. [done/button.md Issue 10](./done/button.md) — там готовый pattern (`motion-safe:transition-*`), применить здесь.
 
 ## Issue 9: RTL — `translate-x-4` и `after:ml-0.5` буквальны
 
@@ -216,15 +216,15 @@ Title рендерится как text node из prop. Невозможно вс
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Label` | ✅ | через `Label.getOptions()` (mode/type/translateX/maxWidth/class/classBody) |
-| `componentsStyle` global | ✅ | через `Label.componentsStyle()` fallback на mode |
-| `unstyled: true` | ❌ | Issue 7 |
-| Theme tokens vs hardcode | ⚠️ | px-смещения хардкодны (Issue 5); `text-red-500` для required-маркера хардкоден |
-| Runtime theme switch | ⚠️ | через Tailwind, OK для color-токенов |
-| `t()` для текста | N/A | title — пользовательский текст |
-| Runtime locale switch | N/A | — |
+| Настройка                 | Поддержано? | Комментарий                                                                    |
+| ------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `componentsOptions.Label` | ✅          | через `Label.getOptions()` (mode/type/translateX/maxWidth/class/classBody)     |
+| `componentsStyle` global  | ✅          | через `Label.componentsStyle()` fallback на mode                               |
+| `unstyled: true`          | ❌          | Issue 7                                                                        |
+| Theme tokens vs hardcode  | ⚠️          | px-смещения хардкодны (Issue 5); `text-red-500` для required-маркера хардкоден |
+| Runtime theme switch      | ⚠️          | через Tailwind, OK для color-токенов                                           |
+| `t()` для текста          | N/A         | title — пользовательский текст                                                 |
+| Runtime locale switch     | N/A         | —                                                                              |
 
 ## Dual-API gap
 

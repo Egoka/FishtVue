@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-10
-last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; severity matrix пересчитана; добавлен fix roadmap с чекбоксами.
+last-changes: button — Issues 2, 4, 10, 11, 12 закрыты (a11y, ref forwarding, motion-safe, typed click, start/end slots) и перемещены в [done/button.md](./done/button.md); active button.md содержит 11 открытых (нумерация с gaps); severity matrix Button пересчитана 0/5/5/1; TOTAL high 141→140, medium 107→106, low 74→71; roadmap Wave 4.2 + Wave 10.3 чекбоксы отмечены; cross-references в label/split/input/alert/pagination/menu/fixwindow/select/dialog/separator/switch/badge на «button.md Issue 10» перенаправлены на done/button.md (motion-safe pattern); switch на «button.md Issue 4» аналогично.
 ---
 
 # Issues — Index
@@ -13,50 +13,52 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 
 ## Сводка по компонентам
 
-| Target | File | Critical | High | Medium | Low |
-|---|---|---|---|---|---|
-| Button | [button.md](./button.md) | 0 | 6 | 6 | 4 |
-| Label | [label.md](./label.md) | 0 | 4 | 3 | 2 |
-| Switch | [switch.md](./switch.md) | 1 | 5 | 4 | 3 |
-| Input | [input.md](./input.md) | 0 | 4 | 5 | 3 |
-| Aria | [aria.md](./aria.md) | 0 | 4 | 4 | 3 |
-| Select | [select.md](./select.md) | 2 | 6 | 4 | 3 |
-| Calendar | [calendar.md](./calendar.md) | 1 | 6 | 4 | 3 |
-| TextEditor | [texteditor.md](./texteditor.md) | 0 | 7 | 5 | 3 |
-| Table | [table.md](./table.md) | 2 | 8 | 5 | 4 |
-| Pagination | [pagination.md](./pagination.md) | 1 | 4 | 4 | 3 |
-| Badge | [badge.md](./badge.md) | 0 | 4 | 2 | 3 |
-| Form | [form.md](./form.md) | 1 | 6 | 4 | 3 |
-| InputLayout | [inputlayout.md](./inputlayout.md) | 2 | 4 | 4 | 3 |
-| Separator | [separator.md](./separator.md) | 0 | 3 | 2 | 2 |
-| Split | [split.md](./split.md) | 0 | 5 | 5 | 3 |
-| FixWindow | [fixwindow.md](./fixwindow.md) | 0 | 7 | 5 | 3 |
-| Accordion | [accordion.md](./accordion.md) | 1 | 5 | 3 | 3 |
-| Dialog | [dialog.md](./dialog.md) | 2 | 5 | 4 | 3 |
-| Menu | [menu.md](./menu.md) | 1 | 6 | 4 | 3 |
-| Alert | [alert.md](./alert.md) | 2 | 5 | 4 | 3 |
-| Loading | [loading.md](./loading.md) | 0 | 5 | 4 | 3 |
-| Icons | [icons.md](./icons.md) | 0 | 5 | 4 | 3 |
-| Component class | [component-class.md](./component-class.md) | 0 | 4 | 4 | 2 |
-| Config | [config.md](./config.md) | 1 | 5 | 4 | 2 |
-| Theme | [theme.md](./theme.md) | 0 | 6 | 4 | 2 |
-| Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
-| Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
-| Utilities | [_utilities.md](./done/_utilities.md) | 0 | 1 | 0 | 1 |
-| **TOTAL** | **28 files** | **17** | **141** | **107** | **74** |
+| Target          | File                                       | Critical | High    | Medium  | Low    |
+| --------------- | ------------------------------------------ | -------- | ------- | ------- | ------ |
+| Button          | [button.md](./button.md)                   | 0        | 5       | 5       | 1      |
+| Label           | [label.md](./label.md)                     | 0        | 4       | 3       | 2      |
+| Switch          | [switch.md](./switch.md)                   | 1        | 5       | 4       | 3      |
+| Input           | [input.md](./input.md)                     | 0        | 4       | 5       | 3      |
+| Aria            | [aria.md](./aria.md)                       | 0        | 4       | 4       | 3      |
+| Select          | [select.md](./select.md)                   | 2        | 6       | 4       | 3      |
+| Calendar        | [calendar.md](./calendar.md)               | 1        | 6       | 4       | 3      |
+| TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 7       | 5       | 3      |
+| Table           | [table.md](./table.md)                     | 2        | 8       | 5       | 4      |
+| Pagination      | [pagination.md](./pagination.md)           | 1        | 4       | 4       | 3      |
+| Badge           | [badge.md](./badge.md)                     | 0        | 4       | 2       | 3      |
+| Form            | [form.md](./form.md)                       | 1        | 6       | 4       | 3      |
+| InputLayout     | [inputlayout.md](./inputlayout.md)         | 2        | 4       | 4       | 3      |
+| Separator       | [separator.md](./separator.md)             | 0        | 3       | 2       | 2      |
+| Split           | [split.md](./split.md)                     | 0        | 5       | 5       | 3      |
+| FixWindow       | [fixwindow.md](./fixwindow.md)             | 0        | 7       | 5       | 3      |
+| Accordion       | [accordion.md](./accordion.md)             | 1        | 5       | 3       | 3      |
+| Dialog          | [dialog.md](./dialog.md)                   | 2        | 5       | 4       | 3      |
+| Menu            | [menu.md](./menu.md)                       | 1        | 6       | 4       | 3      |
+| Alert           | [alert.md](./alert.md)                     | 2        | 5       | 4       | 3      |
+| Loading         | [loading.md](./loading.md)                 | 0        | 5       | 4       | 3      |
+| Icons           | [icons.md](./icons.md)                     | 0        | 5       | 4       | 3      |
+| Component class | [component-class.md](./component-class.md) | 0        | 4       | 4       | 2      |
+| Config          | [config.md](./config.md)                   | 1        | 5       | 4       | 2      |
+| Theme           | [theme.md](./theme.md)                     | 0        | 6       | 4       | 2      |
+| Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
+| Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
+| Utilities       | [\_utilities.md](./done/_utilities.md)     | 0        | 1       | 0       | 1      |
+| **TOTAL**       | **28 files**                               | **17**   | **140** | **106** | **71** |
 
-Всего **339 issues** распределены по 28 documentов аудита (9 закрыты в [_utilities.md](./done/_utilities.md) 2026-05-10: Issues 1, 2, 3, 5, 6, 7, 8, 10, 11).
+Всего **334 issues** активных. Закрыто 14 issues — 9 в [done/\_utilities.md](./done/_utilities.md) 2026-05-10 (utilities 1, 2, 3, 5, 6, 7, 8, 10, 11) + 5 в [done/button.md](./done/button.md) 2026-05-10 (button 2, 4, 10, 11, 12). Активный [button.md](./button.md) содержит 11 открытых issues (нумерация исходная с gaps, чтобы cross-references из соседних файлов не ломались).
 
 ## Fix roadmap (live tracker)
 
 Карта исправлений по волнам. Каждая волна — самодостаточная единица доставки (1-3 sprint'а). Внутри волны задачи сгруппированы по unified fix-pattern: один patch закрывает множество issues одновременно. Чекбоксы — единственный source-of-truth прогресса.
 
 **Соглашения по чекбоксам:**
+
 - `[ ]` — не сделано
 - `[~]` — в работе (укажи assignee/PR в комментарии справа от чекбокса)
 - `[x]` — сделано + PR смёрджен + acceptance criteria закрыты в issue файле
 
 **Workflow закрытия issue:**
+
 1. Чекни `[x]` в roadmap'е.
 2. В соответствующем `<issue>.md` помечай `~~текст~~` зачёркнутым + `✅ resolved YYYY-MM-DD (PR #N)` рядом.
 3. Если ВСЕ issues файла закрыты — переместить файл в [`./done/`](./done/) и обновить ссылку в таблице сводки выше.
@@ -230,7 +232,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 4.2 ARIA roles + attributes
 
-- [ ] [Button.vue:351](../../lib/button/Button.vue#L351) — `aria-label` для icon-кнопок (с dev-warning если type="icon" без label) · [button.md Issue 2](./button.md)
+- [x] [Button.vue:382–390](../../lib/button/Button.vue#L382-L390) — `aria-label` для icon-кнопок (с dev-warning если type="icon" без label) · [done/button.md Issue 2](./done/button.md) · resolved 2026-05-10
 - [ ] [Label.vue:60](../../lib/label/Label.vue#L60) — корень `<div>` → `<label :for="forId">` + новый prop `forId` · [label.md Issue 1](./label.md)
 - [ ] [Pagination.vue:262](../../lib/pagination/Pagination.vue#L262) — `<nav role="navigation" aria-label>` + `aria-current="page"` · [pagination.md Issue 4](./pagination.md)
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — `role="status"` + `aria-live="polite"` + `aria-label="Loading"` (с локализацией) · [loading.md Issue 3](./loading.md)
@@ -387,7 +389,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.1 prefers-reduced-motion
 
-- [ ] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting [button.md Issue 10](./button.md)
+- [ ] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([done/button.md Issue 10](./done/button.md)) — pattern готов к применению на остальных 21 компонента
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — статичный fallback (loader-circle outline) в reduced-motion mode · [loading.md Issue 6](./loading.md)
 
 #### 10.2 Print styles
@@ -397,8 +399,8 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 #### 10.3 Polymorphic & composition
 
 - [ ] [Button.vue](../../lib/button/Button.vue) — `as?: string | Component` (default `"button"`, поддержка `<NuxtLink>`) · [button.md Issue 5](./button.md)
-- [ ] [Button.vue](../../lib/button/Button.vue) — slots `start` + `end` + `prepend`/`append` · [button.md Issue 12](./button.md)
-- [ ] [Button.vue](../../lib/button/Button.vue) — expose `buttonRef` + `focus()` / `blur()` методы · [button.md Issue 4](./button.md)
+- [x] [Button.vue:400–407](../../lib/button/Button.vue#L400-L407) — slots `start` + `end` · [done/button.md Issue 12](./done/button.md) · resolved 2026-05-10 (slot names `start`/`end` выбраны для logical-writing-order)
+- [x] [Button.vue:344–366](../../lib/button/Button.vue#L344-L366) — expose `buttonRef` + `focus()` / `blur()` методы · [done/button.md Issue 4](./done/button.md) · resolved 2026-05-10
 - [ ] [Switch.vue](../../lib/switch/Switch.vue) — expose `inputRef` · [switch.md Issue 11](./switch.md)
 - [ ] [Pagination.vue](../../lib/pagination/Pagination.vue) — expose root ref · [pagination.md Issue 7](./pagination.md)
 
@@ -431,7 +433,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [Switch.vue:232-234](../../lib/switch/Switch.vue#L232) — help-icon contrast (`text-gray-400` → `text-gray-500` light) · [switch.md Issue 6](./switch.md)
 - [ ] [Badge.vue:32](../../lib/badge/Badge.vue#L32) — `ring-neutral-500/30` → `ring-neutral-300` · [badge.md Issue 4](./badge.md)
 - [ ] [calendar.md Issue 9 — Floating UI](./calendar.md) (закрывается через Wave 5).
-- [ ] [_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./done/_utilities.md) — низкий приоритет.
+- [ ] [\_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./done/_utilities.md) — низкий приоритет.
 
 **Acceptance:** axe-core CI без contrast violations. Codemods для deprecated aliases (Aria→Textarea, stileIcon→variant, iconPosition left→start, delete→close emit).
 
@@ -487,6 +489,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 ### 🔴 Critical cross-cutting
 
 **XSS через v-html (всего 14 sites в 9 компонентах):**
+
 - [Switch.vue:244](../../lib/switch/Switch.vue#L244) (help) — [switch.md Issue 1](./switch.md)
 - [InputLayout.vue:294, 313](../../lib/inputlayout/InputLayout.vue#L294) (help, messageInvalid) — affects ALL form-controls — [inputlayout.md Issue 1](./inputlayout.md)
 - [Select.vue:553, 562, 564](../../lib/select/Select.vue#L553) (marker, noData ×2) — [select.md Issue 1](./select.md)
@@ -497,6 +500,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [Alert.vue:253](../../lib/alert/Alert.vue#L253) (subtitle) — [alert.md Issue 1](./alert.md)
 
 **Memory leaks (observers/listeners без cleanup):**
+
 - Select ResizeObserver + keydown listeners ([select.md Issue 2](./select.md))
 - Calendar MutationObserver на documentElement ([calendar.md Issue 1](./calendar.md))
 - Pagination anonymous ResizeObserver ([pagination.md Issue 1](./pagination.md))
@@ -682,11 +686,11 @@ related-doc: ../components/{name}.md
 ## Сводка
 
 | Severity | Count | Categories |
-|---|---|---|
-| critical | N | C14 |
-| high | N | A2, E29.3 |
-| medium | N | … |
-| low | N | … |
+| -------- | ----- | ---------- |
+| critical | N     | C14        |
+| high     | N     | A2, E29.3  |
+| medium   | N     | …          |
+| low      | N     | …          |
 
 ## Issue 1: <название>
 
@@ -695,23 +699,27 @@ related-doc: ../components/{name}.md
 - **Где:** [{File}:{line}](../../lib/{name}/{File}#L{line})
 
 ### Что найдено
+
 …
 
 ### Почему это проблема
+
 …
 
 ### Что нужно сделать
+
 …
 
 ### Acceptance criteria
+
 - [ ] …
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.{Name}` | ✅ / ❌ | … |
-| ... | ... | ... |
+| Настройка                  | Поддержано? | Комментарий |
+| -------------------------- | ----------- | ----------- |
+| `componentsOptions.{Name}` | ✅ / ❌     | …           |
+| ...                        | ...         | ...         |
 
 ## Dual-API gap (если применимо)
 

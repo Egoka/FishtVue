@@ -11,12 +11,12 @@ related-doc: ../components/switch.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 1 | C13/security (XSS via v-html) |
-| high | 5 | A2, A4-5, C17, D26, M54 |
-| medium | 4 | E29.6, F31, L53, G34 |
-| low | 3 | E29.7, B10, N59 |
+| Severity | Count | Categories                    |
+| -------- | ----- | ----------------------------- |
+| critical | 1     | C13/security (XSS via v-html) |
+| high     | 5     | A2, A4-5, C17, D26, M54       |
+| medium   | 4     | E29.6, F31, L53, G34          |
+| low      | 3     | E29.7, B10, N59               |
 
 ## Issue 1: CRITICAL — XSS через `v-html` в `help` prop
 
@@ -41,6 +41,7 @@ related-doc: ../components/switch.md
 ### Что нужно сделать
 
 **Опция A (быстрый фикс) — заменить v-html на текст или slot:**
+
 1. В [Switch.vue:244](../../lib/switch/Switch.vue#L244) поменять `<div v-html="help">` на `<div>{{ help }}</div>` — текст без HTML.
 2. Если нужна разметка — заменить prop `help: string` на slot `<template #help>...</template>`:
    ```vue
@@ -49,6 +50,7 @@ related-doc: ../components/switch.md
 3. Type `SwitchSlots` дополнить `help?(): VNode[]`.
 
 **Опция B (если HTML-content критичен для UX) — санитизация:**
+
 1. Добавить `dompurify` в peer-dependencies.
 2. В [Switch.vue](../../lib/switch/Switch.vue) перед v-html: `:v-html="DOMPurify.sanitize(help)"` через computed.
 3. Документировать ограничения санитизации.
@@ -124,8 +126,8 @@ function inputModelValue(value: any) {
 3. Тест:
    ```ts
    const form = mount(`<form><Switch v-model="x" id="enabled" /><button type="submit"/></form>`)
-   const data = new FormData(form.find('form').element)
-   expect(data.get('enabled')).toBe('on')
+   const data = new FormData(form.find("form").element)
+   expect(data.get("enabled")).toBe("on")
    ```
 
 ### Acceptance criteria
@@ -158,7 +160,8 @@ function inputModelValue(value: any) {
 ### Что найдено
 
 ```vue
-<Icons type="QuestionMarkCircle"
+<Icons
+  type="QuestionMarkCircle"
   class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 transition cursor-help" />
 ```
 
@@ -186,7 +189,7 @@ Help icon `text-gray-400` (#9ca3af) на body `bg-stone-50` (#fafaf9) → contra
 - **Severity:** low
 - **Где:** [Switch.vue:92](../../lib/switch/Switch.vue#L92), [Switch.vue:135](../../lib/switch/Switch.vue#L135), [Switch.vue:204](../../lib/switch/Switch.vue#L204)
 
-См. [button.md Issue 10](./button.md). Switch имеет `transition-all duration-300` без guard.
+См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern. Switch имеет `transition-all duration-300` без guard.
 
 ## Issue 8: RTL — left/right специфичные классы (`right-0`, `mr-2`, `translate-x-3.5`)
 
@@ -248,7 +251,7 @@ switchingType: "checkbox" | "switch" | string
 - **Severity:** medium
 - **Где:** [Switch.vue:139-156](../../lib/switch/Switch.vue#L139-L156)
 
-`expose` не возвращает ref на native `<input>`/`<button>`. Аналогично [button.md Issue 4](./button.md) — fix-план идентичен.
+`expose` не возвращает ref на native `<input>`/`<button>`. Аналогично [done/button.md Issue 4](./done/button.md) — там есть готовый pattern (resolved 2026-05-10).
 
 ## Issue 12: Хардкод цветов `gray-*`/`green-*`/`red-*` вместо semantic tokens
 
@@ -296,15 +299,15 @@ switchingType: "checkbox" | "switch" | string
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Switch` | ✅ | mode/rounded/iconActive/iconInactive/switchingType/class |
-| `componentsStyle` global | ✅ | через `Switch.componentsStyle()` |
-| `unstyled: true` | ❌ | Issue 10 |
-| Theme tokens vs hardcode | ❌ | Issue 12 — Tailwind primitives, не semantic tokens |
-| Runtime theme switch | ⚠️ | через theme-* token, OK; gray/stone — НЕ реагируют |
-| `t()` для текста | N/A | label — пользовательский |
-| Runtime locale switch | N/A | — |
+| Настройка                  | Поддержано? | Комментарий                                              |
+| -------------------------- | ----------- | -------------------------------------------------------- |
+| `componentsOptions.Switch` | ✅          | mode/rounded/iconActive/iconInactive/switchingType/class |
+| `componentsStyle` global   | ✅          | через `Switch.componentsStyle()`                         |
+| `unstyled: true`           | ❌          | Issue 10                                                 |
+| Theme tokens vs hardcode   | ❌          | Issue 12 — Tailwind primitives, не semantic tokens       |
+| Runtime theme switch       | ⚠️          | через theme-\* token, OK; gray/stone — НЕ реагируют      |
+| `t()` для текста           | N/A         | label — пользовательский                                 |
+| Runtime locale switch      | N/A         | —                                                        |
 
 ## Dual-API gap
 

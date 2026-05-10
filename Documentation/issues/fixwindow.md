@@ -11,12 +11,12 @@ related-doc: ../components/fix-window.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 7 | A2, A4-5, C16 (no Teleport), C17, H39 (Floating UI), H40 (click-outside), J46 (coverage 77%) |
-| medium | 5 | E29.1, E29.3 (focus trap), E29.4 (focus return), F31, G34 |
-| low | 3 | E29.7, B10, N57 |
+| Severity | Count | Categories                                                                                   |
+| -------- | ----- | -------------------------------------------------------------------------------------------- |
+| critical | 0     | —                                                                                            |
+| high     | 7     | A2, A4-5, C16 (no Teleport), C17, H39 (Floating UI), H40 (click-outside), J46 (coverage 77%) |
+| medium   | 5     | E29.1, E29.3 (focus trap), E29.4 (focus return), F31, G34                                    |
+| low      | 3     | E29.7, B10, N57                                                                              |
 
 ## Issue 1: Нет Teleport — popover/tooltip overflow обрезается scroll-parent
 
@@ -61,6 +61,7 @@ FixWindow рендерится inline (внутри родительского �
 ### Что найдено
 
 Позиционирование рассчитывается вручную через `getBoundingClientRect()`. Не учитывает:
+
 - Auto-flip (если `top` overflow viewport → swap to `bottom`).
 - Auto-shift (smart положение в пределах viewport).
 - Scroll/resize tracking.
@@ -71,10 +72,11 @@ FixWindow рендерится inline (внутри родительского �
 1. Интегрировать `@floating-ui/vue`:
    ```ts
    import { useFloating, autoUpdate, offset, flip, shift, arrow } from "@floating-ui/vue"
-   const { floatingStyles, placement, middlewareData } = useFloating(
-     reference, floating,
-     { placement: position.value, middleware: [offset(8), flip(), shift()], whileElementsMounted: autoUpdate }
-   )
+   const { floatingStyles, placement, middlewareData } = useFloating(reference, floating, {
+     placement: position.value,
+     middleware: [offset(8), flip(), shift()],
+     whileElementsMounted: autoUpdate
+   })
    ```
 2. Cross-cutting: Calendar, Select dropdown, Menu, Dialog (если popover-mode) — все используют ту же логику.
 
@@ -153,6 +155,7 @@ Coverage statements 77.27%, branch 65.36%, **lines 568-661 не покрыты**
 ### Что нужно сделать
 
 Audit uncovered lines 568-661. Добавить тесты для:
+
 - 12 позиций × open/close events × edge cases.
 - Teleport mode (после фикса Issue 1).
 - Click-outside через Teleport.
@@ -184,19 +187,19 @@ const ariaRole = computed(() => {
 
 ## Issue 10: prefers-reduced-motion / colors / mobile touch
 
-Cross-cutting. См. [button.md Issue 10](./button.md), [switch.md Issue 12](./switch.md).
+Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern, плюс [switch.md Issue 12](./switch.md).
 
 Mobile: `mouseover` event не работает на touch — нужен fallback на `touchstart`.
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.FixWindow` | ✅ | mode, position, padding и др. |
-| `componentsStyle` global | ✅ | через `FixWindow.componentsStyle()` ([FixWindow.vue:93](../../lib/fixwindow/FixWindow.vue#L93)) |
-| `unstyled: true` | ❌ | Issue 6 |
-| Theme tokens vs hardcode | ⚠️ | через theme-* частично |
-| `t()` для текста | N/A | контент через slot |
+| Настройка                     | Поддержано? | Комментарий                                                                                     |
+| ----------------------------- | ----------- | ----------------------------------------------------------------------------------------------- |
+| `componentsOptions.FixWindow` | ✅          | mode, position, padding и др.                                                                   |
+| `componentsStyle` global      | ✅          | через `FixWindow.componentsStyle()` ([FixWindow.vue:93](../../lib/fixwindow/FixWindow.vue#L93)) |
+| `unstyled: true`              | ❌          | Issue 6                                                                                         |
+| Theme tokens vs hardcode      | ⚠️          | через theme-\* частично                                                                         |
+| `t()` для текста              | N/A         | контент через slot                                                                              |
 
 ## Dual-API gap
 

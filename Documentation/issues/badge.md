@@ -11,12 +11,12 @@ related-doc: ../components/badge.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 4 | A2, A4-5, C17, L53 |
-| medium | 2 | E29.6 (contrast outline mode), D26 (close emit naming) |
-| low | 3 | E29.7, B10, F31 |
+| Severity | Count | Categories                                             |
+| -------- | ----- | ------------------------------------------------------ |
+| critical | 0     | —                                                      |
+| high     | 4     | A2, A4-5, C17, L53                                     |
+| medium   | 2     | E29.6 (contrast outline mode), D26 (close emit naming) |
+| low      | 3     | E29.7, B10, F31                                        |
 
 ## Issue 1: SSR styles + sideEffects/exports map
 
@@ -93,19 +93,19 @@ function deleteBadge() {
 - **Категория:** E29.7, F31, B10
 - **Severity:** low
 
-Cross-cutting. См. [button.md Issue 10](./button.md), [switch.md Issue 8, 12](./switch.md). Badge имеет `transition` через children Button.
+Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern, плюс [switch.md Issue 8, 12](./switch.md). Badge имеет `transition` через children Button.
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Badge` | ✅ | mode, point, closeButton, class, classContent |
-| `componentsStyle` global | ❌ | Issue 2 |
-| `unstyled: true` | ❌ | Issue 3 |
-| Theme tokens vs hardcode | ⚠️ | theme-*/neutral-* через Tailwind; контрол через design tokens частичный |
-| Runtime theme switch | ✅ | через CSS-переменные theme-* |
-| `t()` для текста | N/A | контент через slot |
-| Runtime locale switch | N/A | — |
+| Настройка                 | Поддержано? | Комментарий                                                             |
+| ------------------------- | ----------- | ----------------------------------------------------------------------- |
+| `componentsOptions.Badge` | ✅          | mode, point, closeButton, class, classContent                           |
+| `componentsStyle` global  | ❌          | Issue 2                                                                 |
+| `unstyled: true`          | ❌          | Issue 3                                                                 |
+| Theme tokens vs hardcode  | ⚠️          | theme-_/neutral-_ через Tailwind; контрол через design tokens частичный |
+| Runtime theme switch      | ✅          | через CSS-переменные theme-\*                                           |
+| `t()` для текста          | N/A         | контент через slot                                                      |
+| Runtime locale switch     | N/A         | —                                                                       |
 
 ## Dual-API gap
 

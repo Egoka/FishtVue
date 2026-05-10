@@ -13,12 +13,14 @@ related-doc: ../components/button.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 6 | A2, A4, A5, C17, E29.1, L53 |
-| medium | 6 | F31, G34, G36, I44, I45, N59 |
-| low | 4 | D26, E29.7, G37, B11 |
+| Severity | Count | Categories              |
+| -------- | ----- | ----------------------- |
+| critical | 0     | —                       |
+| high     | 5     | A2, A4, A5, C17, L53    |
+| medium   | 5     | F31, G36, I44, I45, N59 |
+| low      | 1     | B11                     |
+
+**Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots) — вынесены в [done/button.md](./done/button.md). Здесь оставлены только открытые issues; нумерация исходная (с gaps), чтобы cross-references из соседних issue-доков не ломались.
 
 ## Issue 1: Стили инжектятся только после client mount — пустой first paint при SSR
 
@@ -47,7 +49,7 @@ onMounted(() => {
 
 1. В [Component.setStyle](../../lib/component/index.ts) добавить SSR-ветку: на server вызвать `useSSRContext()` и накопить CSS в `ssrContext.modules` (Vue API) либо через [lib/plugins/nuxt.ts](../../lib/plugins/nuxt.ts) серверный коллектор.
 2. На клиенте оставить отложенную инжекцию через `onMounted` для не-SSR случаев.
-3. Альтернатива минимальной правки: вызывать `Button.initStyle()` **синхронно** во время setup() (как [Component.__hooks](../../lib/component/index.ts) делает для других компонентов) — на server это попадёт в SSR string через `<style>` в DOM до hydration.
+3. Альтернатива минимальной правки: вызывать `Button.initStyle()` **синхронно** во время setup() (как [Component.\_\_hooks](../../lib/component/index.ts) делает для других компонентов) — на server это попадёт в SSR string через `<style>` в DOM до hydration.
 4. Проверить, что в Nuxt server plugin ([lib/plugins/nuxt.ts](../../lib/plugins/nuxt.ts)) собранный CSS попадает в `<head>` SSR-ответа.
 5. Проверить, что компоненты, импортирующие Button (FixWindow inside icon-button, Loading), также наследуют корректную SSR-инжекцию — иначе вложенный layout не получит стилей.
 
@@ -56,43 +58,6 @@ onMounted(() => {
 - [ ] При `nuxt build && nuxt generate` сгенерированный HTML содержит inline `<style>` с правилами Button.
 - [ ] Lighthouse `unused-css` не показывает Button-CSS как «not yet loaded».
 - [ ] В тесте `lib/button/Button.test.ts` добавить case `renderToString(Button)` — assert что вывод включает классы из `baseClasses`.
-
-## Issue 2: Icon-кнопки без aria-label — screen reader озвучивает «button» без назначения
-
-- **Категория:** E29.1 (ARIA-роли и атрибуты)
-- **Severity:** high
-- **Где:** [Button.vue:351-357](../../lib/button/Button.vue#L351-L357), [Button.vue:358-370](../../lib/button/Button.vue#L358-L370)
-
-### Что найдено
-
-```vue
-<button ref="buttonRef" data-button :type="type === 'icon' ? 'button' : type" ...>
-  <template v-if="type === 'icon'">
-    <Icons v-if="icon" :type="icon" :class="classIcon" />
-    ...
-  </template>
-```
-
-Когда `type="icon"`, у `<button>` нет текстового slot, нет `aria-label`, `aria-labelledby`, и `<Icons>` рендерит SVG без `aria-label`. Screen reader озвучивает кнопку как «button» без указания назначения.
-
-### Почему это проблема
-
-- WCAG 2.1 SC 4.1.2 (Name, Role, Value) — нарушение.
-- Пользователи скрин-ридеров не могут идентифицировать кнопку.
-- Documentation [components/button.md](../components/button.md) §12.1 это уже отметил, но не было фикса.
-
-### Что нужно сделать
-
-1. Добавить prop `ariaLabel?: string` в [Button.d.ts](../../lib/button/Button.d.ts) (BaseButtonProps).
-2. В шаблоне [Button.vue:351](../../lib/button/Button.vue#L351) добавить `:aria-label="ariaLabel ?? (type === 'icon' ? icon : undefined)"` — fallback на имя иконки если ariaLabel не задан (лучше чем ничего).
-3. В runtime warning: если `type === 'icon'` и нет `ariaLabel` и нет `slots.default` (tooltip даёт хоть какой-то контекст) — `console.warn("Icon button without aria-label is inaccessible")`.
-4. В [Documentation/components/button.md](../components/button.md) §12.1 обновить рекомендацию.
-
-### Acceptance criteria
-
-- [ ] Тест: `mount(Button, { props: { type: "icon", icon: "trash", ariaLabel: "Delete user" } })` — assert `wrapper.attributes('aria-label')` is `"Delete user"`.
-- [ ] Тест dev-warning: без ariaLabel и без default slot — emitted `console.warn`.
-- [ ] axe-core lint в `Button.test.ts` (если будет добавлен) проходит для icon-кнопки.
 
 ## Issue 3: iconPosition использует left/right вместо logical start/end — RTL ломается
 
@@ -132,50 +97,6 @@ iconPosition?: "left" | "right"
 - [ ] Существующие тесты с `iconPosition: "left"|"right"` продолжают работать (deprecation soft).
 - [ ] Новый тест: `iconPosition: "start"` в `dir="rtl"` показывает иконку справа от текста.
 - [ ] Console warning при использовании deprecated значения.
-
-## Issue 4: buttonRef не exposed — пользователь не может programmatically focus/blur
-
-- **Категория:** G34 (Ref на корневой элемент)
-- **Severity:** medium
-- **Где:** [Button.vue:336-344](../../lib/button/Button.vue#L336-L344), [Button.vue:19](../../lib/button/Button.vue#L19)
-
-### Что найдено
-
-```ts
-const buttonRef = ref<HTMLButtonElement>()
-...
-defineExpose({
-  mode, size, rounded, color, classBase, classIcon  // нет buttonRef
-})
-```
-
-Reactive ref `buttonRef` определён, но не возвращён через `defineExpose`. Пользователь не может через `useTemplateRef<typeof Button>` дотянуться до DOM-узла для `.focus()`, `.click()`, `.scrollIntoView()`.
-
-### Почему это проблема
-
-- Form-флоу с auto-focus on error: «после submit-валидации сфокусироваться на первой невалидной кнопке/поле» — невозможно без хака `document.querySelector`.
-- Nuxt Auto-focus плагины не работают.
-- Сейчас вынуждены делать `document.querySelector("[data-button]")` — fragile + collide при множественных кнопках.
-
-### Что нужно сделать
-
-1. В [Button.vue:336](../../lib/button/Button.vue#L336) добавить `buttonRef` в `defineExpose`.
-2. Добавить convenience-методы `focus()` и `blur()` (как в [Aria.vue:111](../../lib/aria/Aria.vue#L111), [Input.vue:116](../../lib/input/Input.vue#L116)) — паритет с form-controls.
-3. Обновить [Button.d.ts](../../lib/button/Button.d.ts) `ButtonExpose` тип:
-   ```ts
-   export declare type ButtonExpose = {
-     buttonRef: Readonly<Ref<HTMLButtonElement | undefined>>
-     focus(): void
-     blur(): void
-     // ...existing
-   }
-   ```
-4. В [Documentation/components/button.md](../components/button.md) §8 Exposed methods обновить.
-
-### Acceptance criteria
-
-- [ ] `useTemplateRef<typeof Button>("btn").value?.focus()` фокусирует кнопку.
-- [ ] Тест: `wrapper.vm.focus()` → `expect(document.activeElement).toBe(wrapper.find('button').element)`.
 
 ## Issue 5: Нет polymorphic `as` prop — Button нельзя превратить в `<a>`
 
@@ -221,6 +142,7 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 ```
 
 Эти импорты статичны. Если пользователь не использует `loading` prop и не использует Button с `type="icon"` + tooltip — Loading и FixWindow всё равно попадают в client-бандл потому что:
+
 - Корневой `lib/package.json` без `sideEffects: false` — tree-shaker не уверен в чистоте импортов.
 - Loading тянет `loadingTypes.ts` (~131 строка с компонентами Epic/SVG).
 - FixWindow тянет позиционирование, click-outside, gsap (через transitive — да-да, gsap из root deps).
@@ -359,114 +281,6 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - [ ] `import Button from "fishtvue/button"` работает в Nuxt 3 + Vite + TS strict.
 - [ ] Если CJS — `require("fishtvue/button")` тоже работает.
 
-## Issue 10: Анимации без `prefers-reduced-motion` guard
-
-- **Категория:** E29.7 (prefers-reduced-motion)
-- **Severity:** low
-- **Где:** [Button.vue:26](../../lib/button/Button.vue#L26)
-
-### Что найдено
-
-```ts
-"transition-colors duration-200"
-```
-
-`transition-colors` всегда применяется. Пользователи с `@media (prefers-reduced-motion: reduce)` ожидают мгновенные переходы.
-
-### Почему это проблема
-
-- Пользователи с вестибулярными расстройствами / эпилепсией могут испытывать дискомфорт.
-- WCAG 2.3.3 (Animation from Interactions) — требование уровня AAA.
-
-### Что нужно сделать
-
-1. Добавить в `baseClasses` Tailwind-вариант `motion-safe:transition-colors motion-safe:duration-200` (Tailwind 3 встроен). И уберать unconditional `transition-*`.
-2. Альтернатива через CSS:
-   ```css
-   @media (prefers-reduced-motion: reduce) {
-     [data-button] { transition: none !important; }
-   }
-   ```
-3. Cross-cutting: применить ко всем компонентам с transitions (Switch, Dialog, Accordion, FixWindow и т. д.).
-
-### Acceptance criteria
-
-- [ ] DevTools → Rendering → Emulate CSS `prefers-reduced-motion: reduce` — Button hover не показывает transition.
-- [ ] axe-core a11y-тест проходит.
-
-## Issue 11: ButtonEmits = null — нет нативного click эмита
-
-- **Категория:** D26 (консистентность событий)
-- **Severity:** low
-- **Где:** [Button.d.ts:109](../../lib/button/Button.d.ts#L109)
-
-### Что найдено
-
-```ts
-export declare type ButtonEmits = null
-```
-
-Нативный click event пробрасывается через `$attrs` (default Vue behavior), но это не задокументировано в типах. Пользователь не получает type-hint про `@click`.
-
-### Почему это проблема
-
-- Volar/vue-tsc предупреждает «could not declare event 'click'» в редких сценариях.
-- Документация [components/button.md](../components/button.md) §6 Events явно указывает «нет emits» — но `@click` всё-таки доступен (через native `<button>`).
-
-### Что нужно сделать
-
-1. В [Button.d.ts:109](../../lib/button/Button.d.ts#L109) явно объявить:
-   ```ts
-   export declare type ButtonEmits = {
-     (event: "click", payload: MouseEvent): void
-   }
-   ```
-2. В [Button.vue:13](../../lib/button/Button.vue#L13) добавить `defineEmits<ButtonEmits>()` (даже без явного `emit("click", ...)` — Vue пробросит native).
-3. Альтернатива — оставить null, но добавить `inheritAttrs: true` пометку и в [Documentation/components/button.md](../components/button.md) §6 объяснить.
-
-### Acceptance criteria
-
-- [ ] `<Button @click="handler" />` — `handler` получает корректно типизированный `MouseEvent` в Volar.
-
-## Issue 12: Нет именованных слотов `before`/`after`/`start`/`end`
-
-- **Категория:** G37 (композиция через slots)
-- **Severity:** low
-- **Где:** [Button.vue:368](../../lib/button/Button.vue#L368), [Button.vue:373](../../lib/button/Button.vue#L373)
-
-### Что найдено
-
-Шаблон поддерживает только `<slot name="default" />`. Все индикаторы (icon, loading) встроены через props, нет возможности кастомизировать левый/правый блок (например, badge counter, status dot).
-
-### Почему это проблема
-
-- Use-case: «Save (12 unsaved)» — кнопка с badge — невозможно без обёртки.
-- Element Plus, Naive UI, PrimeVue — поддерживают `prepend`/`append` слоты.
-
-### Что нужно сделать
-
-1. Добавить slots `prepend` и `append` (или `start`/`end` для RTL-совместимости — см. Issue 3).
-2. В [Button.vue](../../lib/button/Button.vue) внутри template:
-   ```vue
-   <slot name="start" />
-   <Icons v-if="icon && iconPosition === 'start'" ... />
-   <slot name="default" />
-   <Icons v-if="icon && iconPosition === 'end'" ... />
-   <slot name="end" />
-   ```
-3. В [Button.d.ts](../../lib/button/Button.d.ts) `ButtonSlots`:
-   ```ts
-   export declare type ButtonSlots = {
-     default(): VNode[]
-     start?(): VNode[]
-     end?(): VNode[]
-   }
-   ```
-
-### Acceptance criteria
-
-- [ ] `<Button><template #end><Badge>12</Badge></template>Save</Button>` рендерит корректно.
-
 ## Issue 13: Не реагирует на componentsStyle ("filled"|"outlined"|"underlined") из global config
 
 - **Категория:** L53 (Configuration support)
@@ -491,12 +305,13 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 1. Решить: либо unify `mode` Button с `componentsStyle` (mapping `"primary"→"filled"`, `"outline"→"outlined"`, `"ghost"→"underlined"`), либо добавить `Button.componentsStyle()` fallback (как Label делает).
 2. Минимальный фикс — fallback chain:
    ```ts
-   const mode = computed(() => (
-     props?.mode as ButtonProps["mode"]
-     ?? options?.mode
-     ?? mapComponentsStyleToButtonMode(Button.componentsStyle())
-     ?? "primary"
-   ))
+   const mode = computed(
+     () =>
+       (props?.mode as ButtonProps["mode"]) ??
+       options?.mode ??
+       mapComponentsStyleToButtonMode(Button.componentsStyle()) ??
+       "primary"
+   )
    ```
    с явным mapping helper.
 3. Документировать в [Documentation/components/button.md](../components/button.md) §10 связь Button.mode ↔ componentsStyle.
@@ -557,9 +372,15 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 1. В `Component.initStyle` или global stylesheet добавить:
    ```css
    @media print {
-     [data-button] { display: none; }
+     [data-button] {
+       display: none;
+     }
      /* или: */
-     [data-button] { background: white !important; color: black !important; box-shadow: none !important; }
+     [data-button] {
+       background: white !important;
+       color: black !important;
+       box-shadow: none !important;
+     }
    }
    ```
 2. Добавить prop `printable?: boolean` (default false) — если true, не скрывать.
@@ -595,16 +416,16 @@ Tailwind dark variant — `darkMode: "class"` — реагирует на `.dark
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Button` | ✅ | через `Button.getOptions()` (mode/size/rounded/color/class/classIcon) |
-| `componentsStyle` global | ❌ | см. Issue 13 — нет fallback к global enum |
-| `unstyled: true` | ❌ | см. Issue 14 — игнорируется |
-| Theme tokens vs hardcode | ⚠️ | через Tailwind `theme-*`/`neutral-*`/`green-*`/`red-*` классы; design tokens из [theme/themes/Aurora.ts](../../lib/theme/themes/Aurora.ts) НЕ применяются напрямую — только через UnoCSS preset |
-| Runtime theme switch | ⚠️ | работает через CSS-переменные `theme-*`, но смена палитры через `updatePrimaryPalette()` требует регенерации CSS — проверить корректность invalidation |
-| `t()` для текста | N/A | у Button нет UI-текста (slot-based) |
-| Runtime locale switch | N/A | — |
-| Fallback на defaultLocale | N/A | — |
+| Настройка                  | Поддержано? | Комментарий                                                                                                                                                                                     |
+| -------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `componentsOptions.Button` | ✅          | через `Button.getOptions()` (mode/size/rounded/color/class/classIcon — `ariaLabel`/`icon`/`type` не входят)                                                                                     |
+| `componentsStyle` global   | ❌          | см. Issue 13 — нет fallback к global enum                                                                                                                                                       |
+| `unstyled: true`           | ❌          | см. Issue 14 — игнорируется                                                                                                                                                                     |
+| Theme tokens vs hardcode   | ⚠️          | через Tailwind `theme-*`/`neutral-*`/`green-*`/`red-*` классы; design tokens из [theme/themes/Aurora.ts](../../lib/theme/themes/Aurora.ts) НЕ применяются напрямую — только через UnoCSS preset |
+| Runtime theme switch       | ⚠️          | работает через CSS-переменные `theme-*`, но смена палитры через `updatePrimaryPalette()` требует регенерации CSS — проверить корректность invalidation                                          |
+| `t()` для текста           | N/A         | у Button нет UI-текста (slot-based)                                                                                                                                                             |
+| Runtime locale switch      | N/A         | —                                                                                                                                                                                               |
+| Fallback на defaultLocale  | N/A         | —                                                                                                                                                                                               |
 
 ## Dual-API gap
 

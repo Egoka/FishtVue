@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Button from "fishtvue/button/Button.vue"
 import type { ButtonExpose } from "fishtvue/button/Button"
@@ -242,6 +242,147 @@ describe("Button Component Tests", () => {
 
       const button = wrapper.find(".global-button-class")
       expect(button.exists()).toBe(true)
+    })
+  })
+
+  describe("A11y, refs, slots, emits (issues 2/4/10/11/12)", () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    // Vue в DEV пишет в console.warn собственные сообщения (например про missing
+    // inject(FishtVueSymbol), когда тест монтирует Button без плагина). Чтобы наш
+    // assertions считал только specific warning Button'а, фильтруем по prefix.
+    const fishtVueButtonWarns = (spy: { mock: { calls: any[][] } }): any[][] =>
+      spy.mock.calls.filter((call) => typeof call[0] === "string" && call[0].includes("[FishtVue Button]"))
+
+    // ---Issue 2: aria-label--------------------
+    it("sets aria-label when ariaLabel prop is provided", () => {
+      const wrapper = mount(Button, {
+        props: { type: "icon", icon: "trash", ariaLabel: "Delete user" }
+      })
+      expect(wrapper.find("[data-button]").attributes("aria-label")).toBe("Delete user")
+    })
+
+    it("falls back to icon name when type=icon and ariaLabel is omitted", () => {
+      const wrapper = mount(Button, {
+        props: { type: "icon", icon: "trash" }
+      })
+      expect(wrapper.find("[data-button]").attributes("aria-label")).toBe("trash")
+    })
+
+    it("does not set aria-label for non-icon button without ariaLabel", () => {
+      const wrapper = mount(Button, {
+        props: { type: "button", icon: "check" },
+        slots: { default: "Save" }
+      })
+      expect(wrapper.find("[data-button]").attributes("aria-label")).toBeUndefined()
+    })
+
+    it("warns in DEV when type=icon without ariaLabel and without default slot", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+      mount(Button, { props: { type: "icon", icon: "trash" } })
+      const ourWarns = fishtVueButtonWarns(warnSpy)
+      expect(ourWarns).toHaveLength(1)
+      expect(ourWarns[0][0]).toContain("aria-label")
+    })
+
+    it("does not warn when icon button has a default slot (tooltip)", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+      mount(Button, {
+        props: { type: "icon", icon: "trash" },
+        slots: { default: "Delete item" }
+      })
+      expect(fishtVueButtonWarns(warnSpy)).toHaveLength(0)
+    })
+
+    it("does not warn when icon button has ariaLabel", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+      mount(Button, {
+        props: { type: "icon", icon: "trash", ariaLabel: "Delete" }
+      })
+      expect(fishtVueButtonWarns(warnSpy)).toHaveLength(0)
+    })
+
+    // ---Issue 11: typed click emit-------------
+    it("emits click with MouseEvent payload", async () => {
+      const wrapper = mount(Button, { slots: { default: "Save" } })
+      await wrapper.find("[data-button]").trigger("click")
+      const events = wrapper.emitted("click")
+      expect(events).toBeTruthy()
+      expect(events?.[0]?.[0]).toBeInstanceOf(MouseEvent)
+    })
+
+    // ---Issue 4: buttonRef + focus / blur------
+    it("exposes buttonRef pointing to the underlying <button> element", () => {
+      const wrapper = mount(Button, { slots: { default: "X" } })
+      const buttonEl = wrapper.find("[data-button]").element
+      expect((wrapper.vm as unknown as ButtonExpose).buttonRef).toBe(buttonEl)
+    })
+
+    it("focuses the underlying button via exposed focus()", () => {
+      const wrapper = mount(Button, {
+        attachTo: document.body,
+        slots: { default: "X" }
+      })
+      ;(wrapper.vm as unknown as ButtonExpose).focus()
+      expect(document.activeElement).toBe(wrapper.find("[data-button]").element)
+      wrapper.unmount()
+    })
+
+    it("blurs the underlying button via exposed blur()", () => {
+      const wrapper = mount(Button, {
+        attachTo: document.body,
+        slots: { default: "X" }
+      })
+      const expose = wrapper.vm as unknown as ButtonExpose
+      expose.focus()
+      expect(document.activeElement).toBe(wrapper.find("[data-button]").element)
+      expose.blur()
+      expect(document.activeElement).not.toBe(wrapper.find("[data-button]").element)
+      wrapper.unmount()
+    })
+
+    // ---Issue 12: start / end slots------------
+    it("renders start slot before default content", () => {
+      const wrapper = mount(Button, {
+        slots: {
+          start: "<span>S</span>",
+          default: "D"
+        }
+      })
+      expect(wrapper.find("[data-button]").text()).toBe("SD")
+    })
+
+    it("renders end slot after default content", () => {
+      const wrapper = mount(Button, {
+        slots: {
+          default: "D",
+          end: "<span>E</span>"
+        }
+      })
+      expect(wrapper.find("[data-button]").text()).toBe("DE")
+    })
+
+    it("renders start before default before end (ordering)", () => {
+      const wrapper = mount(Button, {
+        slots: {
+          start: "<span>S</span>",
+          default: "D",
+          end: "<span>E</span>"
+        }
+      })
+      expect(wrapper.find("[data-button]").text()).toBe("SDE")
+    })
+
+    // ---Issue 10: motion-safe-----------------
+    it("applies motion-safe transition variants instead of unconditional ones", () => {
+      const wrapper = mount(Button)
+      const cls = wrapper.find("[data-button]").attributes("class") ?? ""
+      expect(cls).toContain("motion-safe:transition-colors")
+      expect(cls).toContain("motion-safe:duration-200")
+      expect(cls).not.toMatch(/(^|\s)transition-colors(\s|$)/)
+      expect(cls).not.toMatch(/(^|\s)duration-200(\s|$)/)
     })
   })
 })
