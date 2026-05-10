@@ -11,12 +11,12 @@ related-doc: ../components/alert.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 2 | C13 (v-html subtitle), C13/C14 (imperative DOM bypass Vue) |
-| high | 5 | A2, A4-5, C17, E29.1, E29.5 |
-| medium | 4 | E29.4 (focus alert), F30, F31, M55 |
-| low | 3 | E29.7, B10, N57 |
+| Severity | Count | Categories                                                 |
+| -------- | ----- | ---------------------------------------------------------- |
+| critical | 2     | C13 (v-html subtitle), C13/C14 (imperative DOM bypass Vue) |
+| high     | 5     | A2, A4-5, C17, E29.1, E29.5                                |
+| medium   | 4     | E29.4 (focus alert), F30, F31, M55                         |
+| low      | 3     | E29.7, B10, N57                                            |
 
 ## Issue 1: CRITICAL — XSS через `subtitle` v-html
 
@@ -69,6 +69,7 @@ const divAlert = document.querySelector(`#${alertId}`)
 ### Что нужно сделать
 
 1. Переписать `openAlert` через Vue programmatic API:
+
    ```ts
    import { createApp, h } from "vue"
    import Alert from "./Alert.vue"
@@ -77,15 +78,20 @@ const divAlert = document.querySelector(`#${alertId}`)
      const container = document.createElement("div")
      document.querySelector(options.toTeleport ?? "body")?.appendChild(container)
      const app = createApp({
-       render: () => h(Alert, { ...options, onClose: () => {
-         app.unmount()
-         container.remove()
-       } })
+       render: () =>
+         h(Alert, {
+           ...options,
+           onClose: () => {
+             app.unmount()
+             container.remove()
+           }
+         })
      })
      app.mount(container)
      if (options.displayTime) setTimeout(() => app.unmount(), options.displayTime)
    }
    ```
+
 2. Или использовать существующий FishtVue plugin context (если установлен app.provide):
    ```ts
    const fishtVue = inject(FishtVueSymbol)
@@ -165,18 +171,18 @@ Alert корень — без `role`. Screen reader не объявит появ
 
 ## Issue 9: prefers-reduced-motion / colors / mobile
 
-Cross-cutting. См. [button.md Issue 10](./button.md).
+Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern.
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Alert` | ✅ | через options |
-| `componentsStyle` global | ❌ | Alert не пересекается |
-| `unstyled: true` | ❌ | cross-cutting |
-| Theme tokens vs hardcode | ⚠️ | severity colors частично хардкоден |
-| `t()` для текста | ⚠️ | проверить Confirm/Cancel labels |
-| Runtime locale switch | ⚠️ | если использует t() |
+| Настройка                 | Поддержано? | Комментарий                        |
+| ------------------------- | ----------- | ---------------------------------- |
+| `componentsOptions.Alert` | ✅          | через options                      |
+| `componentsStyle` global  | ❌          | Alert не пересекается              |
+| `unstyled: true`          | ❌          | cross-cutting                      |
+| Theme tokens vs hardcode  | ⚠️          | severity colors частично хардкоден |
+| `t()` для текста          | ⚠️          | проверить Confirm/Cancel labels    |
+| Runtime locale switch     | ⚠️          | если использует t()                |
 
 ## Dual-API gap
 

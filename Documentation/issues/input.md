@@ -11,12 +11,12 @@ related-doc: ../components/input.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 4 | A2, A4-5, C17, L53 |
-| medium | 5 | B10, F31, F32, M56, D26 |
-| low | 3 | E29.7, G34, N59 |
+| Severity | Count | Categories              |
+| -------- | ----- | ----------------------- |
+| critical | 0     | —                       |
+| high     | 4     | A2, A4-5, C17, L53      |
+| medium   | 5     | B10, F31, F32, M56, D26 |
+| low      | 3     | E29.7, G34, N59         |
 
 ## Issue 1: Стили SSR не инжектятся
 
@@ -81,7 +81,10 @@ const mode = computed(() => props.mode ?? options?.mode ?? "outlined")
 ### Что найдено
 
 ```vue
-<Icons v-if="type === 'password' && privateType === 'password'" data-eye-slash type="EyeSlash"
+<Icons
+  v-if="type === 'password' && privateType === 'password'"
+  data-eye-slash
+  type="EyeSlash"
   class="text-gray-400 dark:text-gray-600 hover:text-cyan-500 hover:dark:text-cyan-700 transition cursor-pointer"
   @click="privateType = 'text'" />
 ```
@@ -108,10 +111,11 @@ const mode = computed(() => props.mode ?? options?.mode ?? "outlined")
 
 ```ts
 const arrayInputType: Array<InputProps["type"]> = ["text", "number", "email", "password"]
-const type = computed(() =>
-  props?.type && arrayInputType.find(i => i === props.type)
-    ? props.type as "text"|"number"|"email"|"password"
-    : "text"  // fallback
+const type = computed(
+  () =>
+    props?.type && arrayInputType.find((i) => i === props.type)
+      ? (props.type as "text" | "number" | "email" | "password")
+      : "text" // fallback
 )
 ```
 
@@ -183,7 +187,7 @@ Default `autocomplete="on"` для всех типов, включая password.
 - **Категория:** E29.7
 - **Severity:** low
 
-См. [button.md Issue 10](./button.md). Input.vue имеет `transition-all` на classBaseInput.
+См. [done/button.md Issue 10](./done/button.md) — там готовый pattern. Input.vue имеет `transition-all` на classBaseInput.
 
 ## Issue 10: `inputRef` exposed, но нет `focus()` метода с argless вариантом
 
@@ -198,6 +202,7 @@ function focus(eventFocus: FocusEvent) { inputRef.value?.focus(); ... }
 ```
 
 Метод `focus(event: FocusEvent)` требует FocusEvent аргумент. Для programmatic focus (`useTemplateRef.value.focus()`) пользователь должен сконструировать event:
+
 ```ts
 input.value?.focus(new FocusEvent("focus"))
 ```
@@ -244,6 +249,7 @@ input.value?.focus(new FocusEvent("focus"))
 ### Что найдено
 
 При каждом input-event эмитятся:
+
 - `update:isInvalid(false)` — сброс
 - `update:modelValue(value)` — sync v-model
 - `change:modelValue(value)` — final value (на change-event ещё раз)
@@ -258,16 +264,16 @@ input.value?.focus(new FocusEvent("focus"))
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Input` | ✅ | mode/clear/class/classInput |
-| `componentsStyle` global | ❌ | Issue 2 — нет fallback |
-| `unstyled: true` | ❌ | Issue 4 |
-| Theme tokens vs hardcode | ⚠️ | caret-theme-500 — design token; gray-*, cyan-* — hardcode |
-| Runtime theme switch | ⚠️ | theme-tokens OK, остальное — Tailwind |
-| `t()` для текста | N/A | placeholder/label — пользовательские |
-| Runtime locale switch | ❌ | phone mask не уважает locale (Issue 7) |
-| Fallback на defaultLocale | N/A | — |
+| Настройка                 | Поддержано? | Комментарий                                               |
+| ------------------------- | ----------- | --------------------------------------------------------- |
+| `componentsOptions.Input` | ✅          | mode/clear/class/classInput                               |
+| `componentsStyle` global  | ❌          | Issue 2 — нет fallback                                    |
+| `unstyled: true`          | ❌          | Issue 4                                                   |
+| Theme tokens vs hardcode  | ⚠️          | caret-theme-500 — design token; gray-_, cyan-_ — hardcode |
+| Runtime theme switch      | ⚠️          | theme-tokens OK, остальное — Tailwind                     |
+| `t()` для текста          | N/A         | placeholder/label — пользовательские                      |
+| Runtime locale switch     | ❌          | phone mask не уважает locale (Issue 7)                    |
+| Fallback на defaultLocale | N/A         | —                                                         |
 
 ## Dual-API gap
 

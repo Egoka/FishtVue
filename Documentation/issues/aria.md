@@ -11,12 +11,12 @@ related-doc: ../components/aria.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 4 | A2, A4-5, C17, L53 |
-| medium | 4 | D22, D26, D25/naming, B10 |
-| low | 3 | E29.7, F31, N59 |
+| Severity | Count | Categories                |
+| -------- | ----- | ------------------------- |
+| critical | 0     | —                         |
+| high     | 4     | A2, A4-5, C17, L53        |
+| medium   | 4     | D22, D26, D25/naming, B10 |
+| low      | 3     | E29.7, F31, N59           |
 
 ## Issue 1: Type bug — `change:modelValue(payload: boolean)` должно быть `string`
 
@@ -190,7 +190,7 @@ export declare type AriaSlots = {
 - **Категория:** E29.7
 - **Severity:** low
 
-См. [button.md Issue 10](./button.md).
+См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern.
 
 ## Issue 10: maxLength enforce только client-side
 
@@ -215,15 +215,15 @@ export declare type AriaSlots = {
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Aria` | ✅ | mode/autocomplete/wrap/rows/maxLength/classInput + InputLayoutOption |
-| `componentsStyle` global | ❌ | Issue 4 |
-| `unstyled: true` | ❌ | Issue 5 |
-| Theme tokens vs hardcode | ⚠️ | через InputLayout (наследует те же проблемы) |
-| Runtime theme switch | ⚠️ | через InputLayout |
-| `t()` для текста | N/A | label/placeholder — пользовательские |
-| Runtime locale switch | N/A | — |
+| Настройка                | Поддержано? | Комментарий                                                          |
+| ------------------------ | ----------- | -------------------------------------------------------------------- |
+| `componentsOptions.Aria` | ✅          | mode/autocomplete/wrap/rows/maxLength/classInput + InputLayoutOption |
+| `componentsStyle` global | ❌          | Issue 4                                                              |
+| `unstyled: true`         | ❌          | Issue 5                                                              |
+| Theme tokens vs hardcode | ⚠️          | через InputLayout (наследует те же проблемы)                         |
+| Runtime theme switch     | ⚠️          | через InputLayout                                                    |
+| `t()` для текста         | N/A         | label/placeholder — пользовательские                                 |
+| Runtime locale switch    | N/A         | —                                                                    |
 
 ## Dual-API gap
 

@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-10
-last-changes: icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2 docs portion, 8 docs portion закрыты, файл перемещён в `./done/`; Wave 4.2 + 10.4 checkboxes отмечены. badge — Issues 2, 4, 5 закрыты (Badge-SFC); Issue 1 C17 закрыт per-SFC; Issues 1 packaging/3/6 — cross-cutting, tracked elsewhere; файл перемещён в `./done/`; Waves 3.2/10.4/10.6 Badge-checkboxes flipped. severity matrix пересчитана. Ранее — utilities Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты.
+last-changes: button — Issues 2, 4, 10, 11, 12 закрыты (a11y, ref forwarding, motion-safe, typed click, start/end slots), часть перемещена в [done/button.md](./done/button.md); active button.md содержит 11 открытых (нумерация с gaps). icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2/8 docs portion закрыты; файл перемещён в `./done/`. badge — Issues 2, 4, 5 закрыты, файл перемещён в `./done/`. utilities — 9 issues ранее закрыты. severity matrix пересчитана 17/138/101/70 (326 issues); roadmap Wave 4.2 + Wave 10.3/10.4 чекбоксы отмечены; cross-references в label/split/input/alert/pagination/menu/fixwindow/select/dialog/separator/switch на «button.md Issue 10» перенаправлены на done/button.md (motion-safe pattern); switch на «button.md Issue 4» аналогично.
 ---
 
 # Issues — Index
@@ -15,7 +15,7 @@ last-changes: icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrow
 
 | Target          | File                                       | Critical | High    | Medium  | Low    |
 | --------------- | ------------------------------------------ | -------- | ------- | ------- | ------ |
-| Button          | [button.md](./button.md)                   | 0        | 6       | 6       | 4      |
+| Button          | [button.md](./button.md)                   | 0        | 5       | 5       | 1      |
 | Label           | [label.md](./label.md)                     | 0        | 4       | 3       | 2      |
 | Switch          | [switch.md](./switch.md)                   | 1        | 5       | 4       | 3      |
 | Input           | [input.md](./input.md)                     | 0        | 4       | 5       | 3      |
@@ -43,13 +43,14 @@ last-changes: icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrow
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
 | Utilities       | [\_utilities.md](./done/_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **17**   | **139** | **102** | **73** |
+| **TOTAL**       | **28 files**                               | **17**   | **138** | **101** | **70** |
 
-Всего **331 issues** распределены по 28 documentов аудита. Закрыты:
+Всего **326 issues** распределены по 28 documentов аудита. Закрыты:
 
 - [\_utilities.md](./done/_utilities.md) 2026-05-10 — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11.
 - [badge.md](./done/badge.md) 2026-05-10 — Issues 2, 4, 5; файл перемещён в `./done/`, остальные пункты Badge — cross-cutting.
 - [icons.md](./done/icons.md) 2026-05-10 — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing); Issues 2/8 — docs portion. Файл перемещён в `done/` (cross-cutting Issue 1/6/9 трекаются через roadmap waves).
+- [button.md](./done/button.md) 2026-05-10 — Issues 2 (a11y aria-label), 4 (buttonRef expose), 10 (motion-safe), 11 (typed click emit), 12 (start/end slots). Активный [button.md](./button.md) содержит 11 открытых issues (нумерация с gaps — cross-references из соседних файлов сохранены).
 
 ## Fix roadmap (live tracker)
 
@@ -236,7 +237,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 4.2 ARIA roles + attributes
 
-- [ ] [Button.vue:351](../../lib/button/Button.vue#L351) — `aria-label` для icon-кнопок (с dev-warning если type="icon" без label) · [button.md Issue 2](./button.md)
+- [x] [Button.vue:382–390](../../lib/button/Button.vue#L382-L390) — `aria-label` для icon-кнопок (с dev-warning если type="icon" без label) · [done/button.md Issue 2](./done/button.md) · resolved 2026-05-10
 - [ ] [Label.vue:60](../../lib/label/Label.vue#L60) — корень `<div>` → `<label :for="forId">` + новый prop `forId` · [label.md Issue 1](./label.md)
 - [ ] [Pagination.vue:262](../../lib/pagination/Pagination.vue#L262) — `<nav role="navigation" aria-label>` + `aria-current="page"` · [pagination.md Issue 4](./pagination.md)
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — `role="status"` + `aria-live="polite"` + `aria-label="Loading"` (с локализацией) · [loading.md Issue 3](./loading.md)
@@ -393,7 +394,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.1 prefers-reduced-motion
 
-- [ ] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting [button.md Issue 10](./button.md)
+- [ ] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([done/button.md Issue 10](./done/button.md)) — pattern готов к применению на остальных 21 компонента
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — статичный fallback (loader-circle outline) в reduced-motion mode · [loading.md Issue 6](./loading.md)
 
 #### 10.2 Print styles
@@ -403,8 +404,8 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 #### 10.3 Polymorphic & composition
 
 - [ ] [Button.vue](../../lib/button/Button.vue) — `as?: string | Component` (default `"button"`, поддержка `<NuxtLink>`) · [button.md Issue 5](./button.md)
-- [ ] [Button.vue](../../lib/button/Button.vue) — slots `start` + `end` + `prepend`/`append` · [button.md Issue 12](./button.md)
-- [ ] [Button.vue](../../lib/button/Button.vue) — expose `buttonRef` + `focus()` / `blur()` методы · [button.md Issue 4](./button.md)
+- [x] [Button.vue:400–407](../../lib/button/Button.vue#L400-L407) — slots `start` + `end` · [done/button.md Issue 12](./done/button.md) · resolved 2026-05-10 (slot names `start`/`end` выбраны для logical-writing-order)
+- [x] [Button.vue:344–366](../../lib/button/Button.vue#L344-L366) — expose `buttonRef` + `focus()` / `blur()` методы · [done/button.md Issue 4](./done/button.md) · resolved 2026-05-10
 - [ ] [Switch.vue](../../lib/switch/Switch.vue) — expose `inputRef` · [switch.md Issue 11](./switch.md)
 - [ ] [Pagination.vue](../../lib/pagination/Pagination.vue) — expose root ref · [pagination.md Issue 7](./pagination.md)
 
