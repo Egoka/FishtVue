@@ -29,6 +29,18 @@ jobs:
         with:
           node-version: '22'
           cache: "pnpm"
+      - name: Allow whitelisted build scripts (pnpm 11)
+        # pnpm-workspace.yaml is gitignored to keep Vercel docs/ deploy
+        # working (Root Directory = docs). Generate it on CI so pnpm 11
+        # doesn't fail with ERR_PNPM_IGNORED_BUILDS. Field name in
+        # workspace.yaml is `allowBuilds` (not `onlyBuiltDependencies`,
+        # which is the package.json field name).
+        run: |
+          cat > pnpm-workspace.yaml <<'EOF'
+          allowBuilds:
+            '@parcel/watcher': true
+            esbuild: true
+          EOF
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Lint library

@@ -49,6 +49,12 @@
     "pnpm": ">=9"
   },
   "packageManager": "pnpm@11.0.9",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild"
+    ]
+  },
   "devDependencies": {
     "@babel/eslint-parser": "^7.25.7",
     "@babel/preset-env": "^7.25.7",
