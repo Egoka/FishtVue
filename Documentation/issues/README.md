@@ -16,11 +16,11 @@ updated: 2026-05-10
 
 | Target | File | Critical | High | Medium | Low |
 |---|---|---|---|---|---|
-| Button | _pending audit_ | — | — | — | — |
-| Label | _pending audit_ | — | — | — | — |
-| Switch | _pending audit_ | — | — | — | — |
-| Input | _pending audit_ | — | — | — | — |
-| Aria | _pending audit_ | — | — | — | — |
+| Button | [button.md](./button.md) | 0 | 6 | 6 | 4 |
+| Label | [label.md](./label.md) | 0 | 4 | 3 | 2 |
+| Switch | [switch.md](./switch.md) | 1 | 5 | 4 | 3 |
+| Input | [input.md](./input.md) | 0 | 4 | 5 | 3 |
+| Aria | [aria.md](./aria.md) | 0 | 4 | 4 | 3 |
 | Select | _pending audit_ | — | — | — | — |
 | Calendar | _pending audit_ | — | — | — | — |
 | TextEditor | _pending audit_ | — | — | — | — |
