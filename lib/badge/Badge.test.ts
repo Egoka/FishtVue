@@ -131,9 +131,10 @@ describe("Badge Component Tests", () => {
   })
 
   describe("With Library Initialization", () => {
-    const createAppWithFishtVue = (options = {}) => {
+    const createAppWithFishtVue = (options = {}, componentsStyle?: "filled" | "outlined" | "underlined") => {
       const app = createApp({})
       app.use(FishtVue, {
+        componentsStyle,
         componentsOptions: {
           Badge: options
         }
@@ -206,6 +207,98 @@ describe("Badge Component Tests", () => {
       const button = wrapper.find("button")
       await button.trigger("click")
       expect(wrapper.emitted("delete")).toBeTruthy()
+    })
+
+    describe("componentsStyle global fallback", () => {
+      it("maps global componentsStyle=filled to mode=primary", () => {
+        const app = createAppWithFishtVue({}, "filled")
+        const wrapper = mount(Badge, { global: { plugins: [app as any] } })
+        expect(wrapper.vm.mode).toBe("primary")
+      })
+
+      it("maps global componentsStyle=outlined to mode=outline", () => {
+        const app = createAppWithFishtVue({}, "outlined")
+        const wrapper = mount(Badge, { global: { plugins: [app as any] } })
+        expect(wrapper.vm.mode).toBe("outline")
+      })
+
+      it("maps global componentsStyle=underlined to mode=neutral", () => {
+        const app = createAppWithFishtVue({}, "underlined")
+        const wrapper = mount(Badge, { global: { plugins: [app as any] } })
+        expect(wrapper.vm.mode).toBe("neutral")
+      })
+
+      it("per-component options override global componentsStyle", () => {
+        const app = createAppWithFishtVue({ mode: "secondary" }, "filled")
+        const wrapper = mount(Badge, { global: { plugins: [app as any] } })
+        expect(wrapper.vm.mode).toBe("secondary")
+      })
+
+      it("props override global componentsStyle and componentsOptions", () => {
+        const app = createAppWithFishtVue({ mode: "secondary" }, "filled")
+        const wrapper = mount(Badge, {
+          global: { plugins: [app as any] },
+          props: { mode: "outline" }
+        })
+        expect(wrapper.vm.mode).toBe("outline")
+      })
+
+      it("falls back to default primary when componentsStyle is unset", () => {
+        const app = createAppWithFishtVue({})
+        const wrapper = mount(Badge, { global: { plugins: [app as any] } })
+        expect(wrapper.vm.mode).toBe("primary")
+      })
+    })
+
+    describe("close event deprecation (Issue 5)", () => {
+      it("emits both delete and close when close button is clicked", async () => {
+        const app = createAppWithFishtVue({ closeButton: true })
+        const wrapper = mount(Badge, { global: { plugins: [app as any] } })
+
+        const button = wrapper.find("button")
+        await button.trigger("click")
+
+        expect(wrapper.emitted("delete")).toBeTruthy()
+        expect(wrapper.emitted("delete")).toHaveLength(1)
+        expect(wrapper.emitted("close")).toBeTruthy()
+        expect(wrapper.emitted("close")).toHaveLength(1)
+      })
+
+      it("emits both delete and close when deleteBadge() is called programmatically", async () => {
+        const wrapper = mount(Badge, { props: { closeButton: true } })
+
+        wrapper.vm.deleteBadge()
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.emitted("delete")).toBeTruthy()
+        expect(wrapper.emitted("delete")).toHaveLength(1)
+        expect(wrapper.emitted("close")).toBeTruthy()
+        expect(wrapper.emitted("close")).toHaveLength(1)
+      })
+    })
+
+    describe("outline+neutral contrast fix (Issue 4)", () => {
+      it("renders ring-neutral-300 with dark variant when outline+point and not closeButton", () => {
+        const wrapper = mount(Badge, {
+          props: { mode: "outline", point: true, closeButton: false }
+        })
+        const badge = wrapper.find("[data-badge]")
+        const classAttr = badge.attributes("class") ?? ""
+        expect(classAttr).toContain("ring-neutral-300")
+        expect(classAttr).toContain("dark:ring-neutral-700")
+        expect(classAttr).not.toContain("ring-neutral-500/30")
+      })
+
+      it("renders ring-neutral-300 with dark variant when outline+closeButton", () => {
+        const wrapper = mount(Badge, {
+          props: { mode: "outline", point: false, closeButton: true }
+        })
+        const badge = wrapper.find("[data-badge]")
+        const classAttr = badge.attributes("class") ?? ""
+        expect(classAttr).toContain("ring-neutral-300")
+        expect(classAttr).toContain("dark:ring-neutral-700")
+        expect(classAttr).not.toContain("ring-neutral-500/30")
+      })
     })
   })
 })

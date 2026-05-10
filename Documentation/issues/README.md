@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-10
-last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; severity matrix пересчитана; добавлен fix roadmap с чекбоксами.
+last-changes: badge — Issues 2, 4, 5 закрыты (Badge-SFC); Issue 1 C17 закрыт per-SFC; Issues 1 packaging/3/6 — cross-cutting, tracked elsewhere; файл перемещён в `./done/`. Roadmap Waves 3.2/10.4/10.6 Badge-checkboxes flipped. utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты.
 ---
 
 # Issues — Index
@@ -13,50 +13,52 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 
 ## Сводка по компонентам
 
-| Target | File | Critical | High | Medium | Low |
-|---|---|---|---|---|---|
-| Button | [button.md](./button.md) | 0 | 6 | 6 | 4 |
-| Label | [label.md](./label.md) | 0 | 4 | 3 | 2 |
-| Switch | [switch.md](./switch.md) | 1 | 5 | 4 | 3 |
-| Input | [input.md](./input.md) | 0 | 4 | 5 | 3 |
-| Aria | [aria.md](./aria.md) | 0 | 4 | 4 | 3 |
-| Select | [select.md](./select.md) | 2 | 6 | 4 | 3 |
-| Calendar | [calendar.md](./calendar.md) | 1 | 6 | 4 | 3 |
-| TextEditor | [texteditor.md](./texteditor.md) | 0 | 7 | 5 | 3 |
-| Table | [table.md](./table.md) | 2 | 8 | 5 | 4 |
-| Pagination | [pagination.md](./pagination.md) | 1 | 4 | 4 | 3 |
-| Badge | [badge.md](./badge.md) | 0 | 4 | 2 | 3 |
-| Form | [form.md](./form.md) | 1 | 6 | 4 | 3 |
-| InputLayout | [inputlayout.md](./inputlayout.md) | 2 | 4 | 4 | 3 |
-| Separator | [separator.md](./separator.md) | 0 | 3 | 2 | 2 |
-| Split | [split.md](./split.md) | 0 | 5 | 5 | 3 |
-| FixWindow | [fixwindow.md](./fixwindow.md) | 0 | 7 | 5 | 3 |
-| Accordion | [accordion.md](./accordion.md) | 1 | 5 | 3 | 3 |
-| Dialog | [dialog.md](./dialog.md) | 2 | 5 | 4 | 3 |
-| Menu | [menu.md](./menu.md) | 1 | 6 | 4 | 3 |
-| Alert | [alert.md](./alert.md) | 2 | 5 | 4 | 3 |
-| Loading | [loading.md](./loading.md) | 0 | 5 | 4 | 3 |
-| Icons | [icons.md](./icons.md) | 0 | 5 | 4 | 3 |
-| Component class | [component-class.md](./component-class.md) | 0 | 4 | 4 | 2 |
-| Config | [config.md](./config.md) | 1 | 5 | 4 | 2 |
-| Theme | [theme.md](./theme.md) | 0 | 6 | 4 | 2 |
-| Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
-| Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
-| Utilities | [_utilities.md](./done/_utilities.md) | 0 | 1 | 0 | 1 |
-| **TOTAL** | **28 files** | **17** | **141** | **107** | **74** |
+| Target          | File                                       | Critical | High    | Medium  | Low    |
+| --------------- | ------------------------------------------ | -------- | ------- | ------- | ------ |
+| Button          | [button.md](./button.md)                   | 0        | 6       | 6       | 4      |
+| Label           | [label.md](./label.md)                     | 0        | 4       | 3       | 2      |
+| Switch          | [switch.md](./switch.md)                   | 1        | 5       | 4       | 3      |
+| Input           | [input.md](./input.md)                     | 0        | 4       | 5       | 3      |
+| Aria            | [aria.md](./aria.md)                       | 0        | 4       | 4       | 3      |
+| Select          | [select.md](./select.md)                   | 2        | 6       | 4       | 3      |
+| Calendar        | [calendar.md](./calendar.md)               | 1        | 6       | 4       | 3      |
+| TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 7       | 5       | 3      |
+| Table           | [table.md](./table.md)                     | 2        | 8       | 5       | 4      |
+| Pagination      | [pagination.md](./pagination.md)           | 1        | 4       | 4       | 3      |
+| Badge           | [badge.md](./done/badge.md)                | 0        | 3       | 0       | 3      |
+| Form            | [form.md](./form.md)                       | 1        | 6       | 4       | 3      |
+| InputLayout     | [inputlayout.md](./inputlayout.md)         | 2        | 4       | 4       | 3      |
+| Separator       | [separator.md](./separator.md)             | 0        | 3       | 2       | 2      |
+| Split           | [split.md](./split.md)                     | 0        | 5       | 5       | 3      |
+| FixWindow       | [fixwindow.md](./fixwindow.md)             | 0        | 7       | 5       | 3      |
+| Accordion       | [accordion.md](./accordion.md)             | 1        | 5       | 3       | 3      |
+| Dialog          | [dialog.md](./dialog.md)                   | 2        | 5       | 4       | 3      |
+| Menu            | [menu.md](./menu.md)                       | 1        | 6       | 4       | 3      |
+| Alert           | [alert.md](./alert.md)                     | 2        | 5       | 4       | 3      |
+| Loading         | [loading.md](./loading.md)                 | 0        | 5       | 4       | 3      |
+| Icons           | [icons.md](./icons.md)                     | 0        | 5       | 4       | 3      |
+| Component class | [component-class.md](./component-class.md) | 0        | 4       | 4       | 2      |
+| Config          | [config.md](./config.md)                   | 1        | 5       | 4       | 2      |
+| Theme           | [theme.md](./theme.md)                     | 0        | 6       | 4       | 2      |
+| Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
+| Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
+| Utilities       | [\_utilities.md](./done/_utilities.md)     | 0        | 1       | 0       | 1      |
+| **TOTAL**       | **28 files**                               | **17**   | **140** | **105** | **74** |
 
-Всего **339 issues** распределены по 28 documentов аудита (9 закрыты в [_utilities.md](./done/_utilities.md) 2026-05-10: Issues 1, 2, 3, 5, 6, 7, 8, 10, 11).
+Всего **336 issues** распределены по 28 documentов аудита (9 закрыты в [\_utilities.md](./done/_utilities.md) 2026-05-10: Issues 1, 2, 3, 5, 6, 7, 8, 10, 11; 3 закрыты в [badge.md](./done/badge.md) 2026-05-10: Issues 2, 4, 5 — файл перемещён в `./done/`, остальные пункты Badge — cross-cutting).
 
 ## Fix roadmap (live tracker)
 
 Карта исправлений по волнам. Каждая волна — самодостаточная единица доставки (1-3 sprint'а). Внутри волны задачи сгруппированы по unified fix-pattern: один patch закрывает множество issues одновременно. Чекбоксы — единственный source-of-truth прогресса.
 
 **Соглашения по чекбоксам:**
+
 - `[ ]` — не сделано
 - `[~]` — в работе (укажи assignee/PR в комментарии справа от чекбокса)
 - `[x]` — сделано + PR смёрджен + acceptance criteria закрыты в issue файле
 
 **Workflow закрытия issue:**
+
 1. Чекни `[x]` в roadmap'е.
 2. В соответствующем `<issue>.md` помечай `~~текст~~` зачёркнутым + `✅ resolved YYYY-MM-DD (PR #N)` рядом.
 3. Если ВСЕ issues файла закрыты — переместить файл в [`./done/`](./done/) и обновить ссылку в таблице сводки выше.
@@ -182,7 +184,7 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 - [ ] [Select.vue](../../lib/select/Select.vue) — добавить `?? Select.componentsStyle()` · [select.md Issue 5](./select.md)
 - [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — добавить `?? Calendar.componentsStyle()` · [calendar.md Issue 6](./calendar.md)
 - [ ] [TextEditor.vue:54](../../lib/texteditor/TextEditor.vue#L54) — добавить `?? TextEditor.componentsStyle()` · [texteditor.md Issue 7](./texteditor.md)
-- [ ] [Badge.vue:17](../../lib/badge/Badge.vue#L17) — добавить mapping (`filled→primary`, etc.) · [badge.md Issue 2](./badge.md)
+- [x] [Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23) — добавить mapping (`filled→primary`, `outlined→outline`, `underlined→neutral`) · [badge.md Issue 2](./done/badge.md) ✅ 2026-05-10
 
 #### 3.3 Theme runtime API (новый файл per function)
 
@@ -410,7 +412,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts) — то же `change:modelValue` type bug fix · [texteditor.md Issue 5](./texteditor.md)
 - [ ] [Icons.d.ts:21](../../lib/icons/Icons.d.ts#L21) — `variant?: "outline"|"solid"` (было `stileIcon` опечатка), deprecation soft · [icons.md Issue 4](./icons.md)
 - [ ] [Icons.d.ts:17](../../lib/icons/Icons.d.ts#L17) — template literal type для `type` (heroicons union + iconify pattern) · [icons.md Issue 5](./icons.md)
-- [ ] [Badge.vue:78](../../lib/badge/Badge.vue#L78) — `delete` emit → `close` (deprecation) · [badge.md Issue 5](./badge.md)
+- [x] [Badge.vue:78–81](../../lib/badge/Badge.vue#L78-L81) — `delete` emit → `close` (soft deprecation, both emit) · [badge.md Issue 5](./done/badge.md) ✅ 2026-05-10
 - [ ] [Switch.vue:244](../../lib/switch/Switch.vue#L244) — `<input type="hidden">` рядом с `<button role="switch">` для native form integration · [switch.md Issue 3](./switch.md)
 - [ ] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — hidden `<input>` для native form submit · [texteditor.md Issue 10](./texteditor.md)
 - [ ] [Form.vue](../../lib/form/Form.vue) — корень `<form>` (после Wave 6.2) · [form.md Issue 4](./form.md)
@@ -429,9 +431,9 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [InputLayout.vue:184](../../lib/inputlayout/InputLayout.vue#L184) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` · [inputlayout.md Issue 5](./inputlayout.md)
 - [ ] [InputLayout.vue:226](../../lib/inputlayout/InputLayout.vue#L226) — `clipboard.writeText` feature-detect + execCommand fallback · [inputlayout.md Issue 3](./inputlayout.md)
 - [ ] [Switch.vue:232-234](../../lib/switch/Switch.vue#L232) — help-icon contrast (`text-gray-400` → `text-gray-500` light) · [switch.md Issue 6](./switch.md)
-- [ ] [Badge.vue:32](../../lib/badge/Badge.vue#L32) — `ring-neutral-500/30` → `ring-neutral-300` · [badge.md Issue 4](./badge.md)
+- [x] [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `ring-neutral-500/30` → `ring-neutral-300 dark:ring-neutral-700` · [badge.md Issue 4](./done/badge.md) ✅ 2026-05-10
 - [ ] [calendar.md Issue 9 — Floating UI](./calendar.md) (закрывается через Wave 5).
-- [ ] [_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./done/_utilities.md) — низкий приоритет.
+- [ ] [\_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./done/_utilities.md) — низкий приоритет.
 
 **Acceptance:** axe-core CI без contrast violations. Codemods для deprecated aliases (Aria→Textarea, stileIcon→variant, iconPosition left→start, delete→close emit).
 
@@ -470,7 +472,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
   - [ ] `Aria` → `Textarea` (rename + import-update) · [aria.md Issue 6](./aria.md)
   - [ ] `iconPosition: "left"|"right"` → `"start"|"end"` · [button.md Issue 3](./button.md)
   - [ ] `stileIcon` → `variant` · [icons.md Issue 4](./icons.md)
-  - [ ] `delete` emit → `close` for Badge · [badge.md Issue 5](./badge.md)
+  - [ ] `delete` emit → `close` for Badge · [badge.md Issue 5](./done/badge.md) (codemod still TODO; soft deprecation already landed)
   - [ ] `change:modelValue` type для Aria/TextEditor · [aria.md Issue 1](./aria.md)
 - [ ] [CHANGELOG.md](../../CHANGELOG.md) (auto-gen) — documentation для каждого breaking change.
 - [ ] [Documentation/issues/migration-guide.md](./migration-guide.md) — пошаговый guide для major-bumps.
@@ -487,6 +489,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 ### 🔴 Critical cross-cutting
 
 **XSS через v-html (всего 14 sites в 9 компонентах):**
+
 - [Switch.vue:244](../../lib/switch/Switch.vue#L244) (help) — [switch.md Issue 1](./switch.md)
 - [InputLayout.vue:294, 313](../../lib/inputlayout/InputLayout.vue#L294) (help, messageInvalid) — affects ALL form-controls — [inputlayout.md Issue 1](./inputlayout.md)
 - [Select.vue:553, 562, 564](../../lib/select/Select.vue#L553) (marker, noData ×2) — [select.md Issue 1](./select.md)
@@ -497,6 +500,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [Alert.vue:253](../../lib/alert/Alert.vue#L253) (subtitle) — [alert.md Issue 1](./alert.md)
 
 **Memory leaks (observers/listeners без cleanup):**
+
 - Select ResizeObserver + keydown listeners ([select.md Issue 2](./select.md))
 - Calendar MutationObserver на documentElement ([calendar.md Issue 1](./calendar.md))
 - Pagination anonymous ResizeObserver ([pagination.md Issue 1](./pagination.md))
@@ -682,11 +686,11 @@ related-doc: ../components/{name}.md
 ## Сводка
 
 | Severity | Count | Categories |
-|---|---|---|
-| critical | N | C14 |
-| high | N | A2, E29.3 |
-| medium | N | … |
-| low | N | … |
+| -------- | ----- | ---------- |
+| critical | N     | C14        |
+| high     | N     | A2, E29.3  |
+| medium   | N     | …          |
+| low      | N     | …          |
 
 ## Issue 1: <название>
 
@@ -695,23 +699,27 @@ related-doc: ../components/{name}.md
 - **Где:** [{File}:{line}](../../lib/{name}/{File}#L{line})
 
 ### Что найдено
+
 …
 
 ### Почему это проблема
+
 …
 
 ### Что нужно сделать
+
 …
 
 ### Acceptance criteria
+
 - [ ] …
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.{Name}` | ✅ / ❌ | … |
-| ... | ... | ... |
+| Настройка                  | Поддержано? | Комментарий |
+| -------------------------- | ----------- | ----------- |
+| `componentsOptions.{Name}` | ✅ / ❌     | …           |
+| ...                        | ...         | ...         |
 
 ## Dual-API gap (если применимо)
 
