@@ -1,8 +1,8 @@
 ---
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
-updated: 2026-05-10
-last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; severity matrix пересчитана; добавлен fix roadmap с чекбоксами.
+updated: 2026-05-11
+last-changes: accordion — Issues 1, 3, 4, 6 закрыты (XSS slot, WAI-ARIA disclosure, keyboard nav, Transition unmount); severity matrix пересчитана.
 ---
 
 # Issues — Index
@@ -31,7 +31,7 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 | Separator | [separator.md](./separator.md) | 0 | 3 | 2 | 2 |
 | Split | [split.md](./split.md) | 0 | 5 | 5 | 3 |
 | FixWindow | [fixwindow.md](./fixwindow.md) | 0 | 7 | 5 | 3 |
-| Accordion | [accordion.md](./accordion.md) | 1 | 5 | 3 | 3 |
+| Accordion | [accordion.md](./done/accordion.md) | 0 | 3 | 2 | 3 |
 | Dialog | [dialog.md](./dialog.md) | 2 | 5 | 4 | 3 |
 | Menu | [menu.md](./menu.md) | 1 | 6 | 4 | 3 |
 | Alert | [alert.md](./alert.md) | 2 | 5 | 4 | 3 |
@@ -43,9 +43,9 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 | Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
 | Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
 | Utilities | [_utilities.md](./done/_utilities.md) | 0 | 1 | 0 | 1 |
-| **TOTAL** | **28 files** | **17** | **141** | **107** | **74** |
+| **TOTAL** | **28 files** | **16** | **139** | **106** | **74** |
 
-Всего **339 issues** распределены по 28 documentов аудита (9 закрыты в [_utilities.md](./done/_utilities.md) 2026-05-10: Issues 1, 2, 3, 5, 6, 7, 8, 10, 11).
+Всего **335 issues** распределены по 28 documentов аудита (9 закрыты в [_utilities.md](./done/_utilities.md) 2026-05-10: Issues 1, 2, 3, 5, 6, 7, 8, 10, 11; 4 закрыты в [accordion.md](./done/accordion.md) 2026-05-11: Issues 1, 3, 4, 6 — файл перемещён в `done/` несмотря на 3 открытых cross-cutting issues 2/5/7, отслеживаемых глобально в roadmap'е).
 
 ## Fix roadmap (live tracker)
 
@@ -89,7 +89,7 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 - [ ] [Table.vue:2026](../../lib/table/Table.vue#L2026) — `noFilter` → `#empty-filter` slot · [table.md Issue 1](./table.md)
 - [ ] [Menu.vue:388](../../lib/menu/Menu.vue#L388) — `item.info` → `#item-info` scoped slot · [menu.md Issue 1](./menu.md)
 - [ ] [Menu.vue:392](../../lib/menu/Menu.vue#L392) — `item.info` (FixWindow ветка) → переиспользует `#item-info` · [menu.md Issue 1](./menu.md)
-- [ ] [Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) — `item.subtitle` → `#item-subtitle` scoped slot · [accordion.md Issue 1](./accordion.md)
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — `item.subtitle` → `#item-subtitle` scoped slot · [accordion.md Issue 1](./done/accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Alert.vue:253](../../lib/alert/Alert.vue#L253) — `subtitle` → `#subtitle` slot · [alert.md Issue 1](./alert.md)
 
 **Acceptance:** payload `<img src=x onerror=alert(1)>` не исполняется ни в одном из 14 сайтов (CI-test). Документация компонентов §12 Security обновлена с примером кастомизации через slot.
@@ -236,7 +236,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — `role="status"` + `aria-live="polite"` + `aria-label="Loading"` (с локализацией) · [loading.md Issue 3](./loading.md)
 - [ ] [Alert.vue](../../lib/alert/Alert.vue) — `role="alert"`/`role="status"` based on severity + `aria-live` · [alert.md Issue 3](./alert.md)
 - [ ] [Menu.vue](../../lib/menu/Menu.vue) — `role="menu"` + `role="menuitem"` + `aria-haspopup` + `aria-expanded` · [menu.md Issue 4](./menu.md)
-- [ ] [Accordion.vue](../../lib/accordion/Accordion.vue) — disclosure pattern: header `<button aria-expanded aria-controls>` + content `role="region"` · [accordion.md Issue 3](./accordion.md)
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — disclosure pattern: header `<button aria-expanded aria-controls>` + content `role="region" aria-labelledby` · [accordion.md Issue 3](./done/accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Split.vue](../../lib/split/Split.vue) — resize handle `role="separator"` + `aria-orientation` + `aria-valuenow/min/max` · [split.md Issue 4](./split.md)
 - [ ] [Table.vue](../../lib/table/Table.vue) — `<caption>` slot + `<th scope="col">` · [table.md Issue 8](./table.md)
 - [ ] [Icons.vue](../../lib/icons/Icons.vue) — default `aria-hidden="true"` + prop `:label` для семантических · [icons.md Issue 3](./icons.md)
@@ -245,7 +245,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 #### 4.3 Keyboard navigation
 
 - [ ] [Menu.vue](../../lib/menu/Menu.vue) — ArrowUp/Down между items, ArrowRight/Left для submenu, Home/End, typeahead, roving tabindex · [menu.md Issue 3](./menu.md)
-- [ ] [Accordion.vue](../../lib/accordion/Accordion.vue) — ArrowUp/Down между header items · [accordion.md Issue 4](./accordion.md)
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — ArrowUp/Down/Home/End между header items + roving tabindex · [accordion.md Issue 4](./done/accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Split.vue](../../lib/split/Split.vue) — стрелки на focused resize handle (с Shift для крупного шага) · [split.md Issue 5](./split.md)
 - [ ] [Select.vue:341-352](../../lib/select/Select.vue#L341) — audit existing keyboard logic (ArrowUp/Down уже есть) + добавить Home/End/typeahead.
 
@@ -315,7 +315,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 6.5 Accordion → `<Accordion><AccordionItem>`
 
-- [ ] `lib/accordion/AccordionItem.vue` · [accordion.md Issue 2](./accordion.md)
+- [ ] `lib/accordion/AccordionItem.vue` · [accordion.md Issue 2](./done/accordion.md)
 
 **Acceptance:** для каждого из 5 компонентов schema-driven и compound API работают одновременно (test). Volar autocomplete для child-компонентов работает. Documentation обновлена с примерами обоих API.
 
@@ -423,7 +423,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.6 Other architecture
 
-- [ ] [Animation transitions](../../lib/accordion/Accordion.vue) — `<Transition>` с `@after-leave` для unmount-safe collapse · [accordion.md Issue 6](./accordion.md)
+- [x] [Animation transitions](../../lib/accordion/Accordion.vue) — `<Transition :css="false">` с JS `@leave` hook для unmount-safe collapse · [accordion.md Issue 6](./done/accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Input.vue:175](../../lib/input/Input.vue#L175) — `focus(event?: FocusEvent)` argless вариант · [input.md Issue 10](./input.md)
 - [ ] [Input.vue:213](../../lib/input/Input.vue#L213) — eye-icon class через computed (option `passwordToggleClass`) · [input.md Issue 5](./input.md)
 - [ ] [InputLayout.vue:184](../../lib/inputlayout/InputLayout.vue#L184) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` · [inputlayout.md Issue 5](./inputlayout.md)
@@ -493,7 +493,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [Form.vue:380](../../lib/form/Form.vue#L380) (select-marker copy) — [form.md Issue 1](./form.md)
 - [Table.vue:1842, 1939, 1999, 2011, 2026](../../lib/table/Table.vue#L1842) (cell, summary, noData/Column/Filter ×3) — [table.md Issue 1](./table.md)
 - [Menu.vue:388, 392](../../lib/menu/Menu.vue#L388) (item.info ×2) — [menu.md Issue 1](./menu.md)
-- [Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) (item.subtitle) — [accordion.md Issue 1](./accordion.md)
+- ~~[Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) (item.subtitle)~~ ✅ resolved 2026-05-11 — see [accordion.md Issue 1](./done/accordion.md)
 - [Alert.vue:253](../../lib/alert/Alert.vue#L253) (subtitle) — [alert.md Issue 1](./alert.md)
 
 **Memory leaks (observers/listeners без cleanup):**

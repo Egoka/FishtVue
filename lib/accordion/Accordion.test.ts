@@ -1,6 +1,6 @@
-import { createApp } from "vue"
-import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { createApp, nextTick, Transition } from "vue"
+import { flushPromises, mount } from "@vue/test-utils"
+import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Accordion from "fishtvue/accordion/Accordion.vue"
 
@@ -145,6 +145,166 @@ describe("Accordion Component Tests", () => {
       expect(wrapper.props("animationDuration")).toBe("invalid")
       // Ensure component doesn't break on invalid props
       expect(wrapper.exists()).toBe(true)
+    })
+  })
+
+  describe("Security — XSS in subtitle", () => {
+    it("renders subtitle as text, not HTML, when no slot provided", () => {
+      const payload = "<img src=x onerror=alert(1)>"
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "t", subtitle: payload, open: true }] }
+      })
+      expect(wrapper.html()).not.toContain("<img")
+      expect(wrapper.text()).toContain(payload)
+    })
+
+    it("allows consumer to opt-in to HTML via #item-subtitle slot", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "t", subtitle: "raw", open: true }] },
+        slots: { "item-subtitle": '<strong class="custom-subtitle-slot">custom</strong>' }
+      })
+      expect(wrapper.find(".custom-subtitle-slot").exists()).toBe(true)
+      expect(wrapper.find(".custom-subtitle-slot").text()).toBe("custom")
+    })
+
+    it("does not render fallback <p> when slot is provided", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "t", subtitle: "default", open: true }] },
+        slots: { "item-subtitle": '<span class="only-slot">only</span>' }
+      })
+      expect(wrapper.find(".only-slot").exists()).toBe(true)
+      expect(wrapper.html()).not.toContain("default")
+    })
+  })
+
+  describe("Accessibility — disclosure pattern", () => {
+    it("links header to panel via aria-controls/aria-labelledby with stable ids", () => {
+      const wrapper = mount(Accordion, {
+        props: {
+          dataSource: [
+            { title: "A", subtitle: "sa", open: true },
+            { title: "B", subtitle: "sb", open: false }
+          ]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      const panels = wrapper.findAll('[role="region"]')
+      expect(buttons).toHaveLength(2)
+      expect(panels).toHaveLength(2)
+      for (let i = 0; i < buttons.length; i++) {
+        const headerId = buttons[i].attributes("id")
+        const panelId = panels[i].attributes("id")
+        expect(headerId).toBeTruthy()
+        expect(panelId).toBeTruthy()
+        expect(headerId).not.toBe(panelId)
+        expect(buttons[i].attributes("aria-controls")).toBe(panelId)
+        expect(panels[i].attributes("aria-labelledby")).toBe(headerId)
+      }
+    })
+
+    it("ArrowDown moves focus to next header", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }, { title: "C" }]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      ;(buttons[0].element as HTMLElement).focus()
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "ArrowDown" })
+      expect(document.activeElement).toBe(buttons[1].element)
+      wrapper.unmount()
+    })
+
+    it("ArrowUp moves focus to previous header", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }, { title: "C" }]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      ;(buttons[2].element as HTMLElement).focus()
+      // simulate roving via two ArrowDown to land on idx 2, then ArrowUp
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "End" })
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "ArrowUp" })
+      expect(document.activeElement).toBe(buttons[1].element)
+      wrapper.unmount()
+    })
+
+    it("Home / End move focus to first / last header", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }, { title: "C" }, { title: "D" }]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      ;(buttons[0].element as HTMLElement).focus()
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "End" })
+      expect(document.activeElement).toBe(buttons[3].element)
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "Home" })
+      expect(document.activeElement).toBe(buttons[0].element)
+      wrapper.unmount()
+    })
+
+    it("roving tabindex — only focused header is tabbable", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }, { title: "C" }]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      expect(buttons[0].attributes("tabindex")).toBe("0")
+      expect(buttons[1].attributes("tabindex")).toBe("-1")
+      expect(buttons[2].attributes("tabindex")).toBe("-1")
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "ArrowDown" })
+      const buttons2 = wrapper.findAll('[type="button"]')
+      expect(buttons2[0].attributes("tabindex")).toBe("-1")
+      expect(buttons2[1].attributes("tabindex")).toBe("0")
+      expect(buttons2[2].attributes("tabindex")).toBe("-1")
+      wrapper.unmount()
+    })
+
+    it("exposes focus(index) helper", () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }]
+        }
+      })
+      const accordionRef = wrapper.vm as any
+      expect(typeof accordionRef.focus).toBe("function")
+      accordionRef.focus(1)
+      const buttons = wrapper.findAll('[type="button"]')
+      expect(document.activeElement).toBe(buttons[1].element)
+      wrapper.unmount()
+    })
+
+    it("non-handled keys are ignored", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: { dataSource: [{ title: "A" }, { title: "B" }] }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      ;(buttons[0].element as HTMLElement).focus()
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "Tab" })
+      expect(document.activeElement).toBe(buttons[0].element)
+      wrapper.unmount()
+    })
+  })
+
+  describe("Animation lifecycle — Transition unmount race", () => {
+    it("renders <Transition> wrapper around root for unmount delay", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }], animationDuration: 300 }
+      })
+      // The rendered subtree's root must be a Transition VNode so Vue can run the leave hook
+      // before removing the panel DOM. Compare subTree.type with Vue's built-in Transition.
+      const subTree: any = (wrapper.vm.$ as any).subTree
+      expect(subTree?.type).toBe(Transition)
+      wrapper.unmount()
     })
   })
 

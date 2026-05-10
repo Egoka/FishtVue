@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, unref, watch } from "vue"
+  import { computed, ref, unref, useId, watch } from "vue"
   import { ArrowDownCircleIcon, ChevronDownIcon } from "@heroicons/vue/20/solid"
   import { AccordionEmits, AccordionExpose, AccordionItem, AccordionProps } from "./Accordion"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -15,10 +15,16 @@
   const emit = defineEmits<AccordionEmits>()
   // ---STATE-------------------------------
   const dataItems = ref<AccordionItem[]>(unref(props.dataSource) ?? [])
+  const focusedIndex = ref(0)
+  const headerRefs = ref<HTMLButtonElement[]>([])
+  const uid = useId() ?? "fv-accordion"
   watch(
     () => props.dataSource,
     (value) => {
       dataItems.value = unref(value) ?? []
+      if (focusedIndex.value > dataItems.value.length - 1) {
+        focusedIndex.value = Math.max(0, dataItems.value.length - 1)
+      }
     },
     { deep: true, immediate: true }
   )
@@ -51,16 +57,17 @@
       "grid overflow-hidden"
     ])
   )
-  const classButton = ref(Accordion.setStyle("flex items-center justify-between w-full text-left font-semibold py-2"))
-  const styleIcon = ref(
-    Accordion.setStyle(
-      "h-5 w-5 shrink-0 ml-8 text-slate-400 dark:text-slate-500 group-hover/item:text-slate-500 group-hover/item:dark:text-slate-400 transition-all duration-200 ease-out"
-    )
+  const classButton = Accordion.setStyle("flex items-center justify-between w-full text-left font-semibold py-2")
+  const styleIcon = Accordion.setStyle(
+    "h-5 w-5 shrink-0 ml-8 text-slate-400 dark:text-slate-500 group-hover/item:text-slate-500 group-hover/item:dark:text-slate-400 transition-all duration-200 ease-out"
   )
-  const classPlus = ref(Accordion.setStyle("fill-slate-600 dark:fill-slate-500 shrink-0 ml-8"))
-  const classRect = ref(Accordion.setStyle("transform origin-center transition duration-200 ease-out"))
-  const classTemplate = ref(Accordion.setStyle("overflow-hidden"))
-  const classNotTemplate = ref(Accordion.setStyle("pb-3"))
+  const classPlus = Accordion.setStyle("fill-slate-600 dark:fill-slate-500 shrink-0 ml-8")
+  const classRect = Accordion.setStyle("transform origin-center transition duration-200 ease-out")
+  const classTemplate = Accordion.setStyle("overflow-hidden")
+  const classNotTemplate = Accordion.setStyle("pb-3")
+  // ---IDS-FOR-ARIA-----------------------
+  const headerId = (i: number | string) => `${uid}-h-${i}`
+  const panelId = (i: number | string) => `${uid}-p-${i}`
   // ---EXPOSE------------------------------
   defineExpose<AccordionExpose>({
     // ---STATE-------------------------
@@ -74,13 +81,46 @@
     classTitle,
     classSubtitle,
     // ---METHODS-----------------------
-    toggle
-  })
-  // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
-    Accordion.initStyle()
+    toggle,
+    focus
   })
   // ---METHODS-----------------------------
+  function setButtonRef(el: any, index: number) {
+    if (el) headerRefs.value[index] = el as HTMLButtonElement
+  }
+  function focus(index: number) {
+    if (!dataItems.value?.length) return
+    const max = dataItems.value.length - 1
+    const target = Math.min(Math.max(0, index), max)
+    focusedIndex.value = target
+    headerRefs.value[target]?.focus()
+  }
+  function onKeydown(e: KeyboardEvent) {
+    if (!dataItems.value?.length) return
+    const max = dataItems.value.length - 1
+    let next = focusedIndex.value
+    switch (e.key) {
+      case "ArrowDown":
+        next = Math.min(focusedIndex.value + 1, max)
+        break
+      case "ArrowUp":
+        next = Math.max(focusedIndex.value - 1, 0)
+        break
+      case "Home":
+        next = 0
+        break
+      case "End":
+        next = max
+        break
+      default:
+        return
+    }
+    e.preventDefault()
+    focus(next)
+  }
+  function onRootLeave(_el: Element, done: () => void) {
+    setTimeout(done, animationDuration.value)
+  }
   function toggle(key: string | number) {
     const index = typeof key === "string" ? Number(key) : key
     if (dataItems.value && dataItems.value[index]) {
@@ -92,63 +132,74 @@
 </script>
 
 <template>
-  <div v-if="dataItems?.length" :class="classBody" data-accordion>
-    <div
-      v-for="(item, key) in dataItems as AccordionItem[]"
-      :key="key"
-      :class="classItem"
-      role="group"
-      data-accordion-group>
-      <h2>
-        <button
-          type="button"
-          :class="classButton"
-          :aria-expanded="item.open"
-          data-accordion-button
-          @click="toggle(key)">
-          <slot name="title" :title="item.title">
-            <span :class="classTitle">{{ item.title }}</span>
-            <svg
-              v-if="icon === 'Plus'"
-              class="PlusIcon"
-              :class="classPlus"
-              width="10"
-              height="10"
-              xmlns="http://www.w3.org/2000/svg">
-              <rect
-                y="4"
-                width="10"
-                height="2"
-                rx="1"
-                :class="[classRect, item.open ? 'rotate-360' : 'rotate-0']"></rect>
-              <rect
-                y="4"
-                width="10"
-                height="2"
-                rx="1"
-                :class="[classRect, item.open ? 'rotate-180' : 'rotate-90']"></rect>
-            </svg>
-            <ChevronDownIcon
-              v-else-if="icon === 'ChevronDown'"
-              aria-hidden="true"
-              :class="['ChevronDownIcon', styleIcon, item.open ? 'rotate-180' : '']" />
-            <ArrowDownCircleIcon
-              v-else-if="icon === 'ArrowDownCircle'"
-              aria-hidden="true"
-              :class="['ArrowDownCircleIcon', styleIcon, item.open ? 'rotate-180' : '']" />
-            <Icons v-else :type="icon" :class="[styleIcon, item.open ? 'rotate-180' : '']" />
-          </slot>
-        </button>
-      </h2>
+  <Transition :css="false" @leave="onRootLeave">
+    <div v-if="dataItems?.length" :class="classBody" data-accordion @keydown="onKeydown">
       <div
-        role="region"
-        :class="[classSubtitle, item.open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0']"
-        :style="`transition-duration: ${animationDuration}ms;`">
-        <div data-accordion-content :class="classTemplate">
-          <slot v-if="item.template" :name="item.template" v-bind="fieldsOmit(item, ['template', 'open'])" />
-          <p v-else :class="classNotTemplate" v-html="item.subtitle" />
+        v-for="(item, key) in dataItems as AccordionItem[]"
+        :key="key"
+        :class="classItem"
+        role="group"
+        data-accordion-group>
+        <h2>
+          <button
+            :id="headerId(key)"
+            :ref="(el) => setButtonRef(el, key)"
+            type="button"
+            :class="classButton"
+            :aria-expanded="!!item.open"
+            :aria-controls="panelId(key)"
+            :tabindex="key === focusedIndex ? 0 : -1"
+            data-accordion-button
+            @click="toggle(key)"
+            @focus="focusedIndex = key">
+            <slot name="title" :title="item.title">
+              <span :class="classTitle">{{ item.title }}</span>
+              <svg
+                v-if="icon === 'Plus'"
+                class="PlusIcon"
+                :class="classPlus"
+                width="10"
+                height="10"
+                xmlns="http://www.w3.org/2000/svg">
+                <rect
+                  y="4"
+                  width="10"
+                  height="2"
+                  rx="1"
+                  :class="[classRect, item.open ? 'rotate-360' : 'rotate-0']"></rect>
+                <rect
+                  y="4"
+                  width="10"
+                  height="2"
+                  rx="1"
+                  :class="[classRect, item.open ? 'rotate-180' : 'rotate-90']"></rect>
+              </svg>
+              <ChevronDownIcon
+                v-else-if="icon === 'ChevronDown'"
+                aria-hidden="true"
+                :class="['ChevronDownIcon', styleIcon, item.open ? 'rotate-180' : '']" />
+              <ArrowDownCircleIcon
+                v-else-if="icon === 'ArrowDownCircle'"
+                aria-hidden="true"
+                :class="['ArrowDownCircleIcon', styleIcon, item.open ? 'rotate-180' : '']" />
+              <Icons v-else :type="icon" :class="[styleIcon, item.open ? 'rotate-180' : '']" />
+            </slot>
+          </button>
+        </h2>
+        <div
+          :id="panelId(key)"
+          role="region"
+          :aria-labelledby="headerId(key)"
+          :class="[classSubtitle, item.open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0']"
+          :style="`transition-duration: ${animationDuration}ms;`">
+          <div data-accordion-content :class="classTemplate">
+            <slot v-if="item.template" :name="item.template" v-bind="fieldsOmit(item, ['template', 'open'])" />
+            <slot v-else name="item-subtitle" v-bind="fieldsOmit(item, ['template', 'open'])">
+              <p v-if="item.subtitle" :class="classNotTemplate">{{ item.subtitle }}</p>
+            </slot>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </Transition>
 </template>

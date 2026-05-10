@@ -1,7 +1,7 @@
 ---
 title: Accordion
-summary: Аккордеон с multiple раскрытием, кастомными иконками и анимацией.
-updated: 2026-05-09
+summary: Аккордеон с multiple раскрытием, кастомными иконками, WAI-ARIA disclosure pattern и keyboard navigation.
+updated: 2026-05-11
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Accordion` — раскрывающиеся секции. Поддерживает single или multiple раскрытие, выбор иконки (`ChevronDown`/`ArrowDownCircle`/`Plus` или custom через [Icons](./icons.md)), настраиваемую длительность анимации.
 
-Stability: `stable` — 15 кейсов, coverage `Accordion.vue` 100%.
+Stability: `stable` — 25 кейсов, coverage `Accordion.vue` 100% (Security/A11y/Animation блоки покрыты после remediation 2026-05-11).
 
 Source: [Source](../../lib/accordion/Accordion.vue), [Accordion.d.ts](../../lib/accordion/Accordion.d.ts), [Accordion.test.ts](../../lib/accordion/Accordion.test.ts).
 
@@ -21,8 +21,8 @@ Source: [Source](../../lib/accordion/Accordion.vue), [Accordion.d.ts](../../lib/
 ```
 lib/accordion/
 ├── Accordion.vue
-├── Accordion.d.ts        # 185 строк
-├── Accordion.test.ts     # 15 кейсов
+├── Accordion.d.ts        # ~200 строк
+├── Accordion.test.ts     # 25 кейсов (Security / A11y / Animation покрыты)
 └── package.json
 ```
 
@@ -30,13 +30,14 @@ lib/accordion/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили; `onMounted(() => Accordion.initStyle())` дополнительно.
+- **Lifecycle:** `Component.__hooks()` инжектит стили (без дублирующего `onMounted` в SFC).
 - **Поток данных:** `dataSource: AccordionItem[]` → reactive копия `dataItems` → toggle меняет `open`-флаги → `toggle` event.
 - **Стили:** через `Accordion.setStyle()` (~8 вызовов в computed).
 - **Конфиг:** `componentsOptions.Accordion` — см. §10.
 - **Локализация:** не использует.
-- **SSR:** SSR-safe.
-- **Animation:** CSS `transition-all duration-200 ease-out` на иконках; inline `transition-duration` на content (управляется через `animationDuration`).
+- **SSR:** SSR-safe. Стабильные id для ARIA-связки header↔panel генерируются через `useId()`.
+- **Animation:** CSS `transition-all duration-200 ease-out` на иконках; inline `transition-duration` на content (управляется через `animationDuration`). Root обёрнут в `<Transition :css="false">` с JS `@leave` hook, который держит DOM смонтированным `animationDuration` ms — это устраняет flash при unmount во время collapse.
+- **A11y:** WAI-ARIA disclosure pattern — `<button aria-controls aria-expanded>` ↔ `<div role="region" aria-labelledby>`. Roving tabindex + ArrowUp/Down/Home/End навигация между header'ами.
 
 ## 4. Quick Start
 
@@ -82,6 +83,7 @@ v-model contract — не применимо.
 | Slot | Slot props | Description |
 |---|---|---|
 | `title` | `{ title: string }` | Кастомный заголовок секции. |
+| `item-subtitle` | `{ ...AccordionItem без template и open }` | Контент subtitle при отсутствии `item.template`. Default fallback — `<p>{{ subtitle }}</p>` (auto-escape). Override для произвольного markup'а; consumer ответственен за санитизацию входных данных. |
 | `[template]` | `{ ...AccordionItem без template и open }` | Динамический slot — имя совпадает с `item.template`. Контент секции. |
 
 ## 8. Exposed methods
@@ -94,6 +96,7 @@ v-model contract — не применимо.
 | `multiple`, `animationDuration`, `icon` | derived | Computed. |
 | `classBody`, `classItem`, `classTitle`, `classSubtitle` | derived | Computed CSS. |
 | `toggle(key)` | `(key: string \| number) => void` | Программный toggle. |
+| `focus(index)` | `(index: number) => void` | Программно фокусирует header указанного индекса и обновляет roving tabindex. |
 
 ## 9. Examples
 
@@ -180,13 +183,24 @@ Root класс — `fv fishtvue-accordion`.
 
 ### A11y
 
-- ARIA `role="region"`/`aria-expanded` — проверь по DOM. Для полноценного accordion-pattern (WAI-ARIA) добавь `aria-controls` на trigger и `aria-labelledby` на panel.
-- Keyboard: Enter/Space на trigger — toggle. ArrowDown/Up для навигации между секциями — НЕ реализованы.
-- `prefers-reduced-motion` не учтён.
+WAI-ARIA disclosure pattern реализован полностью:
+
+- Каждый header — `<button :aria-expanded :aria-controls>` со стабильным `id` (через `useId()`).
+- Каждый panel — `<div role="region" :aria-labelledby>` ссылается на id header'а.
+- **Keyboard:**
+  - `Enter`/`Space` на header — toggle (нативное поведение button'а).
+  - `ArrowDown` / `ArrowUp` — переход фокуса между header'ами.
+  - `Home` / `End` — переход на первый / последний header.
+  - Roving tabindex — только header в focus получает `tabindex="0"`, остальные `-1`.
+- `aria-hidden="true"` на иконках trigger'а — корректно для декоративного SVG.
+
+Известное ограничение: `prefers-reduced-motion` не учтён (cross-cutting Wave 10.1, см. [issues/README.md](../issues/README.md)).
 
 ### Security
 
-- Не рендерит HTML из props (но slot контент — ответственность родителя).
+- `item.subtitle` рендерится через interpolation `{{ }}` (auto-escape). XSS-payloads типа `<img src=x onerror=alert(1)>` отображаются как plain text, не исполняются.
+- Override через slot `#item-subtitle` — opt-in для произвольного markup'а. Consumer **обязан** санитизировать любой HTML, который попадает в этот слот.
+- Динамический `#[template]`-slot — та же модель: HTML внутри рендерится напрямую, ответственность санитизации на consumer'е.
 
 ## 13. TypeScript
 
@@ -245,7 +259,7 @@ describe("Accordion", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 100% statements / 86.44% branch — несколько ветвей ([Accordion.vue:85–86, 134–139, 148](../../lib/accordion/Accordion.vue#L85-L86)) не покрыты тестами по branch.
+- Branch coverage <100% для редких иконных ветвей внутри `<slot name="title">` fallback'а (`Plus` / `ChevronDown` / `ArrowDownCircle` / `Icons`). Не блокирует stable.
 
 ### Skipped tests
 
@@ -261,7 +275,7 @@ describe("Accordion", () => {
 
 - Динамические slot'ы по `template` — имя должно совпадать; ошибки при опечатке тихие.
 - При смене `dataSource` (reactive) — open-флаги сбрасываются.
-- ARIA-keyboard навигация (ArrowKeys) не реализована — для строгого WAI-ARIA pattern нужно дописать.
+- `<Transition>` `@leave` использует `setTimeout(animationDuration)` — реальный CSS transition end не отслеживается (jsdom не эмитит `transitionend`); в браузере анимация и таймер совпадают, расхождения нет.
 
 ### Bug report format
 

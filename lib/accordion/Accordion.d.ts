@@ -96,7 +96,17 @@ interface DynamicSlots {
   [key: string]: (args: Omit<AccordionItem, "template" | "open">) => VNode[]
 }
 export declare type AccordionSlots = {
+  /**
+   * Custom rendering for the title area of a section.
+   */
   title(args: { title: string }): VNode[]
+  /**
+   * Custom rendering for the subtitle area of a section.
+   * Replaces the default text fallback. The slot scope receives all `AccordionItem`
+   * fields except `template` and `open`. Use this slot to opt into rich markup —
+   * the consumer is responsible for sanitizing any HTML they pass.
+   */
+  "item-subtitle"(args: Omit<AccordionItem, "template" | "open">): VNode[]
 } & DynamicSlots
 /**
  * Events emitted by the Accordion component.
@@ -169,6 +179,13 @@ export declare type AccordionExpose = {
    * @param {string | number} key - The key of the item to toggle.
    */
   toggle(key: string | number): void
+
+  /**
+   * Programmatically focuses the header at the given index and updates the
+   * roving tabindex so the focused header is keyboard-tabbable.
+   * @param {number} index - Zero-based index of the header to focus.
+   */
+  focus(index: number): void
 }
 export declare type AccordionOption = Pick<
   AccordionProps,
