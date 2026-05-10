@@ -43,7 +43,7 @@ updated: 2026-05-10
 | Theme | [theme.md](./theme.md) | 0 | 6 | 4 | 2 |
 | Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
 | Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
-| Utilities (consolidated) | _pending audit_ | — | — | — | — |
+| Utilities (consolidated) | [_utilities.md](./_utilities.md) | 0 | 4 | 4 | 3 |
 
 ## 60-point audit checklist
 
