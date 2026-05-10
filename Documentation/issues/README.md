@@ -38,11 +38,11 @@ updated: 2026-05-10
 | Alert | [alert.md](./alert.md) | 2 | 5 | 4 | 3 |
 | Loading | [loading.md](./loading.md) | 0 | 5 | 4 | 3 |
 | Icons | [icons.md](./icons.md) | 0 | 5 | 4 | 3 |
-| Component class | _pending audit_ | — | — | — | — |
-| Config | _pending audit_ | — | — | — | — |
-| Theme | _pending audit_ | — | — | — | — |
-| Locale | _pending audit_ | — | — | — | — |
-| Nuxt module | _pending audit_ | — | — | — | — |
+| Component class | [component-class.md](./component-class.md) | 0 | 4 | 4 | 2 |
+| Config | [config.md](./config.md) | 1 | 5 | 4 | 2 |
+| Theme | [theme.md](./theme.md) | 0 | 6 | 4 | 2 |
+| Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
+| Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
 | Utilities (consolidated) | _pending audit_ | — | — | — | — |
 
 ## 60-point audit checklist
