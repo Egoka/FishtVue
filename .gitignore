@@ -1,6 +1,10 @@
 public_html
 package-lock.json
 lib/pnpm-lock.yaml
+# pnpm 11 auto-generates this file with allowBuilds placeholder.
+# Keeping it out of git so Vercel (Root Directory = docs) doesn't
+# treat the repo as a pnpm workspace and skip docs/-local deps.
+pnpm-workspace.yaml
 # Vite
 node_modules
 .DS_Store
