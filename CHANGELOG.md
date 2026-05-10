@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [0.2.12](https://github.com/Egoka/FishtVue/compare/v0.2.11...v0.2.12) (2026-05-10)
+
+
+### Bug Fixes
+
+* **table:** repair asyncData tests and behavior ([7393c9a](https://github.com/Egoka/FishtVue/commit/7393c9af6f2a7a6efa61401055f763f76dcfa355))
+* **utils:** resolve audit findings from _utilities.md ([d34511f](https://github.com/Egoka/FishtVue/commit/d34511f6649d72fea6ca9c4c5af8a5a1b2c1940d))
+* **select:** stabilize handles user interaction test on CI ([caad6c4](https://github.com/Egoka/FishtVue/commit/caad6c4920dbc13e97cf34d6ca2b6b03f64361fe))
+
 ## [0.2.11](https://github.com/Egoka/FishtVue/compare/v0.2.10...v0.2.11) (2025-11-28)
 
 
