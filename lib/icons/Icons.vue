@@ -15,15 +15,20 @@
   const options = Icons.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = defineProps<IconsProps>()
+  // ---DEPRECATION-WARN--------------------
+  if (props.stileIcon !== undefined && props.variant === undefined) {
+    console.warn("[FishtVue] <Icons> 'stileIcon' is deprecated, use 'variant' instead. Will be removed in 1.0.")
+  }
   // ---REF-LINK----------------------------
-  const heroIcons: Record<NonNullable<IconsProps["stileIcon"]>, any> = {
+  const heroIcons: Record<"outline" | "solid", any> = {
     outline: HeroIconsOutline,
     solid: HeroIconsSolid
   }
   const isViewIcon = ref(false)
   // ---PROPS-------------------------------
   const type = computed(() => props.type)
-  const stileIcon = computed(() => props.stileIcon ?? "outline")
+  const variant = computed<"outline" | "solid">(() => props.variant ?? props.stileIcon ?? options?.variant ?? "outline")
+  const label = computed<string | undefined>(() => (props.label ? props.label : undefined))
   const style = computed(() => props.style)
   const classIcon = computed(() =>
     Icons.setStyle([
@@ -34,7 +39,7 @@
     ])
   )
 
-  const heroIcon = ref<any | undefined>(heroIcons[stileIcon.value][convertToCamelCase(type.value) + "Icon"])
+  const heroIcon = ref<any | undefined>(heroIcons[variant.value][convertToCamelCase(type.value) + "Icon"])
   // ---------------------------------------
   function loadTestIcons(icons: (IconifyIconName | string)[]) {
     return new Promise((fulfill, reject) => {
@@ -65,9 +70,9 @@
     Icons.initStyle()
   })
   watch(
-    () => type.value,
-    async (value) => {
-      const heroI = heroIcons[stileIcon.value][convertToCamelCase(value) + "Icon"]
+    [() => type.value, () => variant.value],
+    async ([value, currentVariant]) => {
+      const heroI = heroIcons[currentVariant][convertToCamelCase(value) + "Icon"]
       if (!heroI) isViewIcon.value = await isIcon(value)
       else heroIcon.value = heroI
     },
@@ -77,14 +82,16 @@
   defineExpose({
     // ---PROPS-------------------------
     type,
+    variant,
+    label,
     classIcon,
     style
   })
 </script>
 
 <template>
-  <i data-icon>
-    <component v-if="heroIcon" :is="heroIcon" :class="classIcon" :style="style" aria-hidden="true" />
+  <i data-icon :role="label ? 'img' : undefined" :aria-label="label">
+    <component v-if="heroIcon" :is="heroIcon" :class="classIcon" :style="style" />
     <Icon v-else-if="isViewIcon" :icon="type" :class="classIcon" :style="style" aria-hidden="true" />
   </i>
 </template>
