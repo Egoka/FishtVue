@@ -36,8 +36,8 @@ updated: 2026-05-10
 | Dialog | [dialog.md](./dialog.md) | 2 | 5 | 4 | 3 |
 | Menu | [menu.md](./menu.md) | 1 | 6 | 4 | 3 |
 | Alert | [alert.md](./alert.md) | 2 | 5 | 4 | 3 |
-| Loading | _pending audit_ | — | — | — | — |
-| Icons | _pending audit_ | — | — | — | — |
+| Loading | [loading.md](./loading.md) | 0 | 5 | 4 | 3 |
+| Icons | [icons.md](./icons.md) | 0 | 5 | 4 | 3 |
 | Component class | _pending audit_ | — | — | — | — |
 | Config | _pending audit_ | — | — | — | — |
 | Theme | _pending audit_ | — | — | — | — |
