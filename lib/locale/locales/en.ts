@@ -13,6 +13,9 @@ export default <DefaultMessages>{
   find: "Find...",
   copy: "Copy",
   clear: "Clear",
+  inputLayout: {
+    copied: "Copied"
+  },
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

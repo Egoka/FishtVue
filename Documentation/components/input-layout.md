@@ -1,7 +1,7 @@
 ---
 title: InputLayout
 summary: Контейнер-обёртка для form-controls — label, error, help, clear/copy кнопки.
-updated: 2026-05-09
+updated: 2026-05-11
 stability: stable
 since: 0.2.11
 ---
@@ -30,12 +30,12 @@ lib/inputlayout/
 
 ## 3. How it works
 
-- **Lifecycle:** Component инжекция стилей; `onMounted` для `headerHeight = document.querySelector("header")?.offsetHeight` (для float-label позиционирования) и copy-handler.
+- **Lifecycle:** Component инжекция стилей; `onMounted` для `ResizeObserver`-инициализации (`beforeInput`/`afterInput`/`inputBody`) и резолва `headerHeight` через prop `offsetTop` (см. §5). `onUnmounted` дисконнектит все три observer'а — нет утечек.
 - **Поток данных:** props → computed states → slot rendering. `value`/`isValue` управляют отображением label dynamic states.
 - **Стили:** `InputLayout.setStyle()` интенсивно.
 - **Конфиг:** `componentsOptions.InputLayout` — см. §10.
-- **Локализация:** `InputLayout.t("clear")`, `InputLayout.t("copy")`.
-- **SSR:** `document.querySelector` в `onMounted` — guard'ится самим Vue lifecycle (server не вызывает `onMounted`). `navigator.clipboard.writeText` — только клиент.
+- **Локализация:** `InputLayout.t("clear")`, `InputLayout.t("copy")`, `InputLayout.t("inputLayout.copied")` (confirm после copy).
+- **SSR:** все DOM-доступы guard'ятся `isClient()`. `headerHeight` синхронно резолвится из `offsetTop` prop ещё до mount — без coupling с потребительской разметкой (`<header>`). `navigator.clipboard.writeText` — feature-detect + fallback на `document.execCommand("copy")` через скрытый `<textarea>`.
 - **Animation:** CSS transitions ("transition-all duration-550", "transition ease-in duration-200").
 
 ## 4. Quick Start
@@ -81,6 +81,7 @@ import InputLayout from "fishtvue/inputlayout"
 | `animation` | `string` | `"transition-all duration-500"` | CSS animation. |
 | `classBody` | `StyleClass` | (preset) | Класс тела. |
 | `class` | `StyleClass` | — | Класс контейнера. |
+| `offsetTop` | `number \| string \| (() => number)` | `0` | Вертикальный offset для `scroll-margin-top` invalid-региона (sticky-header awareness). Заменил hardcoded `document.querySelector("header")` — потребитель явно передаёт значение / геттер. |
 
 ## 6. Events / Emits + v-model contract
 
@@ -98,6 +99,8 @@ v-model: не применимо — InputLayout не имеет собстве�
 | `before` | — | Контент перед input. |
 | `after` | — | Контент после input. |
 | `body` | — | Полный override body (вместо default). |
+| `help` | — | Override для содержимого help-tooltip'а. Если не передан — рендерится `help` prop как text-node (XSS-safe). См. §12 Security. |
+| `messageInvalid` | — | Override для содержимого error-tooltip'а (FixWindow). Если не передан — рендерится `messageInvalid` prop как text-node. Корневой `<p data-input-layout-message-invalid>` под input'ом всегда показывает `messageInvalid` текстом + имеет `aria-live="assertive"`. |
 
 ## 8. Exposed methods
 
@@ -168,7 +171,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`InputLayoutOption = Pick<InputLayoutProps, "mode" | "labelMode" | "clear" | "width" | "height" | "animation" | "classBody" | "class">`.
+`InputLayoutOption = Pick<InputLayoutProps, "mode" | "labelMode" | "clear" | "width" | "height" | "animation" | "classBody" | "class" | "offsetTop">`.
 
 ### 10.2 Per-instance
 
@@ -191,12 +194,13 @@ Root класс — `fv fishtvue-input-layout`.
 ### A11y
 
 - Связь Label ↔ input — управляется родительским form-control'ом (передаёт `id` в slot).
-- `aria-describedby` для error-message — реализация в шаблоне.
-- Clear/copy кнопки — `<button>` с tooltip через [FixWindow](./fix-window.md).
+- **Error-region** `<p data-input-layout-message-invalid>` имеет `aria-live="assertive"` + `aria-atomic="true"` — screen reader озвучивает появление / изменение `messageInvalid` сразу.
+- Clear/copy кнопки — `<button>` с tooltip через [FixWindow](./fix-window.md). После успешного copy — confirm-icon с `aria-label` и FixWindow tooltip, локализованные через `InputLayout.t("inputLayout.copied")` (`"Copied"` / `"Скопировано"`).
 
 ### Security
 
-- `navigator.clipboard.writeText(value)` — копирует значение в системный clipboard. Не используется для security-чувствительных данных по умолчанию (учитывай при работе с password).
+- **XSS-safe рендер `help` / `messageInvalid`.** Props рендерятся как text-node через `{{ }}`-интерполяцию (slot fallback `<span data-input-layout-help-text>` / `<span data-input-layout-message-invalid-text>`). HTML возможен **только** через явный `<template #help>` / `<template #messageInvalid>` — потребитель сам отвечает за санитизацию ввода (`DOMPurify` и т.п.). См. [Issue 1 inputlayout.md](../issues/inputlayout.md). Это закрывает cross-cutting XSS-канал во всех 5 form-controls (Input/Aria/Select/Calendar/TextEditor), которые пробрасывали server-validation HTML в `messageInvalid`.
+- **Clipboard.** `copy()` использует feature-detect (`navigator.clipboard.writeText`); при отсутствии API или TypeError (HTTP, iframe-sandbox, permission-denied) — fallback на `document.execCommand("copy")` через скрытый `<textarea>`. SSR-safe: операции guard'ятся `isClient()`. Не используется для security-чувствительных данных по умолчанию (учитывай при работе с password).
 
 ## 13. TypeScript
 
@@ -240,8 +244,9 @@ describe("InputLayout", () => {
 | Проблема | Причина | Решение |
 |---|---|---|
 | Floating label не двигается | `value` не обновляется или `isValue: false`. | Передавай `:is-value="!!value"`. |
-| `headerHeight` всегда 0 | Нет `<header>` в DOM или вне body. | Не критично — используется только для специфичных layouts. |
-| Copy кнопка не копирует | Нет `navigator.clipboard` (HTTP, без HTTPS). | Используй на HTTPS или localhost. |
+| `headerHeight` всегда 0 | Не передан `offsetTop` prop / опция. | Передай `:offset-top="80"` (или функцию `() => stickyHeader.offsetHeight`) — компонент больше не делает hardcoded поиск `<header>`. |
+| Copy кнопка не копирует | Нет `navigator.clipboard` (HTTP без HTTPS) и `document.execCommand("copy")` тоже недоступен. | На HTTPS / localhost — работает clipboard API; на HTTP — fallback через `execCommand`; в SSR — no-op без падения. Если нужен custom-copy, override через `defineExpose`-метод компонента-обёртки. |
+| HTML внутри help / messageInvalid не рендерится | По умолчанию props рендерятся как text (XSS-safe). | Передай через slot: `<template #help><strong>...</strong></template>` (потребитель отвечает за санитизацию). |
 | Stop showing tooltip | FixWindow обёртка в copy/clear иногда виснет на безопасных движениях. | Проверь [FixWindow](./fix-window.md) issues. |
 | Custom form-controls не используют style — только разметка | Body-slot не передан или default-slot пустой. | Передай `<input>`/`<textarea>` в default. |
 
@@ -254,11 +259,11 @@ describe("InputLayout", () => {
 
 ### TODO / FIXME / HACK / XXX
 
-На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) и [InputLayout.d.ts](../../lib/inputlayout/InputLayout.d.ts) не зафиксировано.
+На момент ревизии (2026-05-11) комментариев `TODO/FIXME/HACK/XXX` в [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) и [InputLayout.d.ts](../../lib/inputlayout/InputLayout.d.ts) не зафиксировано.
 
 ### Incomplete or stubbed behavior
 
-- Coverage 89.91% statements / 75.16% branch — ветви ([InputLayout.vue:198–199, 207, 221](../../lib/inputlayout/InputLayout.vue#L198-L199)) не покрыты.
+- Открытые cross-cutting findings — `unstyled: true`, sideEffects/exports map, prefers-reduced-motion — см. активные пункты в [issues/inputlayout.md](../issues/inputlayout.md) (Issues 4, 8).
 
 ### Skipped tests
 
@@ -273,10 +278,11 @@ describe("InputLayout", () => {
 
 ### Behavioral caveats
 
-- Copy-функционал использует `navigator.clipboard` — недоступно на HTTP (только HTTPS/localhost).
+- Copy-функционал использует `navigator.clipboard` с feature-detect; при недоступности (HTTP, iframe-sandbox, permission-denied) — fallback на `document.execCommand("copy")` через скрытый `<textarea>`. SSR — no-op без падения.
 - Tooltip'ы для copy/clear через [FixWindow](./fix-window.md) — наследуют все его SSR-проблемы (см. соответствующий документ).
-- `headerHeight` — расчёт через `document.querySelector("header")` — если приложение не имеет `<header>`, этот pollyfill даёт 0; не критично.
+- `headerHeight` резолвится из prop `offsetTop` (`number | string | () => number`) — без coupling с разметкой потребителя. По умолчанию `0`.
 - При `clear: true` без `default-slot` clear-кнопка появляется, но не имеет к чему привязаться.
+- Слоты `help` / `messageInvalid` рендерят пользовательский content «как есть» — потребитель отвечает за санитизацию (DOMPurify и т.п.) при передаче server-данных в slot.
 
 ### Bug report format
 

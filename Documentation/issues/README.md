@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-11
-last-changes: accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slot, WAI-ARIA disclosure, keyboard nav, Transition unmount), файл перемещён в `./done/` (cross-cutting Issues 2/5/7 трекаются глобально). button — Issues 2, 4, 10, 11, 12 закрыты 2026-05-10 (a11y, ref forwarding, motion-safe, typed click, start/end slots), часть перемещена в [done/button.md](./done/button.md); active button.md содержит 11 открытых (нумерация с gaps). icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2/8 docs portion закрыты; файл перемещён в `./done/`. badge — Issues 2, 4, 5 закрыты, файл перемещён в `./done/`. utilities — 9 issues ранее закрыты. severity matrix пересчитана 16/136/100/70 (322 issues); roadmap Wave 1.1, 4.2, 4.3, 10.6 (accordion) + Wave 4.2 + Wave 10.3/10.4 (button/icons/badge) чекбоксы отмечены; cross-references в label/split/input/alert/pagination/menu/fixwindow/select/dialog/separator/switch на «button.md Issue 10» перенаправлены на done/button.md (motion-safe pattern); switch на «button.md Issue 4» аналогично.
+last-changes: inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 (XSS slots для help/messageInvalid, ResizeObserver cleanup, clipboard feature-detect + execCommand fallback, offsetTop prop вместо querySelector("header"), aria-live="assertive" на error region, локализованный inputLayout.copied). Файл остаётся в active — open cross-cutting Issues 4 / 8. accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slot, WAI-ARIA disclosure, keyboard nav, Transition unmount), файл перемещён в `./done/` (cross-cutting Issues 2/5/7 трекаются глобально). button — Issues 2, 4, 10, 11, 12 закрыты 2026-05-10 (a11y, ref forwarding, motion-safe, typed click, start/end slots), часть перемещена в [done/button.md](./done/button.md); active button.md содержит 11 открытых (нумерация с gaps). icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2/8 docs portion закрыты; файл перемещён в `./done/`. badge — Issues 2, 4, 5 закрыты, файл перемещён в `./done/`. utilities — 9 issues ранее закрыты. severity matrix пересчитана 14/136/96/70 (316 issues); roadmap Wave 1.1, 1.2, 4.4, 10.6 (inputlayout × 6) + Wave 1.1, 4.2, 4.3, 10.6 (accordion) + Wave 4.2 + Wave 10.3/10.4 (button/icons/badge) чекбоксы отмечены; cross-references в label/split/input/alert/pagination/menu/fixwindow/select/dialog/separator/switch на «button.md Issue 10» перенаправлены на done/button.md (motion-safe pattern); switch на «button.md Issue 4» аналогично.
 ---
 
 # Issues — Index
@@ -27,7 +27,7 @@ last-changes: accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slo
 | Pagination      | [pagination.md](./pagination.md)           | 1        | 4       | 4       | 3      |
 | Badge           | [badge.md](./done/badge.md)                | 0        | 3       | 0       | 3      |
 | Form            | [form.md](./form.md)                       | 1        | 6       | 4       | 3      |
-| InputLayout     | [inputlayout.md](./inputlayout.md)         | 2        | 4       | 4       | 3      |
+| InputLayout     | [inputlayout.md](./inputlayout.md)         | 0        | 4       | 0       | 3      |
 | Separator       | [separator.md](./separator.md)             | 0        | 3       | 2       | 2      |
 | Split           | [split.md](./split.md)                     | 0        | 5       | 5       | 3      |
 | FixWindow       | [fixwindow.md](./fixwindow.md)             | 0        | 7       | 5       | 3      |
@@ -43,15 +43,16 @@ last-changes: accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slo
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
 | Utilities       | [\_utilities.md](./done/_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **16**   | **136** | **100** | **70** |
+| **TOTAL**       | **28 files**                               | **14**   | **136** | **96**  | **70** |
 
-Всего **322 issues** распределены по 28 documentов аудита. Закрыты:
+Всего **316 issues** распределены по 28 documentов аудита. Закрыты:
 
 - [\_utilities.md](./done/_utilities.md) 2026-05-10 — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11.
 - [badge.md](./done/badge.md) 2026-05-10 — Issues 2, 4, 5; файл перемещён в `./done/`, остальные пункты Badge — cross-cutting.
 - [icons.md](./done/icons.md) 2026-05-10 — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing); Issues 2/8 — docs portion. Файл перемещён в `done/` (cross-cutting Issue 1/6/9 трекаются через roadmap waves).
 - [button.md](./done/button.md) 2026-05-10 — Issues 2 (a11y aria-label), 4 (buttonRef expose), 10 (motion-safe), 11 (typed click emit), 12 (start/end slots). Активный [button.md](./button.md) содержит 11 открытых issues (нумерация с gaps — cross-references из соседних файлов сохранены).
 - [accordion.md](./done/accordion.md) 2026-05-11 — Issues 1 (XSS slot), 3 (WAI-ARIA disclosure), 4 (keyboard nav), 6 (Transition unmount). Файл перемещён в `done/` несмотря на 3 открытых cross-cutting issues 2/5/7 (отслеживаются глобально через roadmap waves 6.5 / 2/3 / 8/9/10).
+- [inputlayout.md](./inputlayout.md) 2026-05-11 — Issues 1 (XSS via help/messageInvalid → slot fallback), 2 (anonymous ResizeObservers cleanup), 3 (clipboard feature-detect + execCommand fallback), 5 (offsetTop prop replaces hardcoded querySelector("header")), 6 (aria-live="assertive" on error region), 7 (locale `inputLayout.copied`). Файл **остаётся в active** — open cross-cutting Issues 4 (Distribution: sideEffects/exports map / unstyled) и Issue 8 (prefers-reduced-motion / colors / print) трекаются глобально через Wave 2/3/10. **Cross-cutting эффект:** XSS-канал через `messageInvalid`/`help` закрыт во всех 5 form-controls (Input/Aria/Select/Calendar/TextEditor — наследуют InputLayout); slot-forwarding в них — follow-up PR.
 
 ## Fix roadmap (live tracker)
 
@@ -84,8 +85,8 @@ last-changes: accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slo
 Унифицированный fix: заменить `v-html="X"` на `<slot name="X"><span>{{ X }}</span></slot>`. Сохраняет custom HTML только при явном использовании slot потребителем.
 
 - [ ] [Switch.vue:244](../../lib/switch/Switch.vue#L244) — `help` prop → `#help` slot · [switch.md Issue 1](./switch.md)
-- [ ] [InputLayout.vue:294](../../lib/inputlayout/InputLayout.vue#L294) — `help` prop → `#help` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает help-XSS во ВСЕХ form-controls** (Input/Aria/Select/Calendar/TextEditor наследуют InputLayout)
-- [ ] [InputLayout.vue:313](../../lib/inputlayout/InputLayout.vue#L313) — `messageInvalid` prop → `#messageInvalid` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает validation-XSS во ВСЕХ form-controls**
+- [x] [InputLayout.vue:359-364](../../lib/inputlayout/InputLayout.vue#L359-L364) — `help` prop → `#help` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает help-XSS во ВСЕХ form-controls** (Input/Aria/Select/Calendar/TextEditor наследуют InputLayout) · ✅ resolved 2026-05-11
+- [x] [InputLayout.vue:382-388](../../lib/inputlayout/InputLayout.vue#L382-L388) — `messageInvalid` prop → `#messageInvalid` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает validation-XSS во ВСЕХ form-controls** · ✅ resolved 2026-05-11
 - [ ] [Select.vue:553](../../lib/select/Select.vue#L553) — `item.marker` → `#item-marker` scoped slot + safe `<mark>` VNode-builder · [select.md Issue 1](./select.md)
 - [ ] [Select.vue:562](../../lib/select/Select.vue#L562) — `noData` → `#empty` slot · [select.md Issue 1](./select.md)
 - [ ] [Select.vue:564](../../lib/select/Select.vue#L564) — `noData` (второй сайт) → переиспользует `#empty` slot · [select.md Issue 1](./select.md)
@@ -111,8 +112,8 @@ last-changes: accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slo
 - [ ] [Calendar.vue:322-327](../../lib/calendar/Calendar.vue#L322) — `MutationObserver` на documentElement сохранить + disconnect · [calendar.md Issue 1](./calendar.md) · **рекомендация: вынести в singleton `useDarkMode()` composable** (один observer на весь app)
 - [ ] [Calendar.vue:254,261](../../lib/calendar/Calendar.vue#L254) — keydown listeners cleanup · [calendar.md Issue 1](./calendar.md)
 - [ ] [Pagination.vue:255](../../lib/pagination/Pagination.vue#L255) — anonymous `new ResizeObserver(...)` → сохранить в ref + disconnect · [pagination.md Issue 1](./pagination.md)
-- [ ] [InputLayout.vue:177-179](../../lib/inputlayout/InputLayout.vue#L177) — anonymous ResizeObserver на `beforeInput` сохранить + disconnect · [inputlayout.md Issue 2](./inputlayout.md)
-- [ ] [InputLayout.vue:181-183](../../lib/inputlayout/InputLayout.vue#L181) — anonymous ResizeObserver на `afterInput` сохранить + disconnect · [inputlayout.md Issue 2](./inputlayout.md)
+- [x] [InputLayout.vue:196-204](../../lib/inputlayout/InputLayout.vue#L196-L204) — anonymous ResizeObserver на `beforeInput` сохранить (`let beforeObserver`) + disconnect ([InputLayout.vue:232-237](../../lib/inputlayout/InputLayout.vue#L232-L237)) · [inputlayout.md Issue 2](./inputlayout.md) · ✅ resolved 2026-05-11
+- [x] [InputLayout.vue:205-210](../../lib/inputlayout/InputLayout.vue#L205-L210) — anonymous ResizeObserver на `afterInput` сохранить (`let afterObserver`) + disconnect ([InputLayout.vue:232-237](../../lib/inputlayout/InputLayout.vue#L232-L237)) · [inputlayout.md Issue 2](./inputlayout.md) · ✅ resolved 2026-05-11
 - [ ] [Table.vue:1519-1527](../../lib/table/Table.vue#L1519) — `lastRowVisibleObserver` (IntersectionObserver) добавить в `onUnmounted` disconnect · [table.md Issue 2](./table.md)
 - [ ] [Table.vue:1553-1554](../../lib/table/Table.vue#L1553) — `window.mousemove`/`mouseup` cleanup при unmount-while-resize · [table.md Issue 2](./table.md)
 - [ ] [Dialog.vue:155](../../lib/dialog/Dialog.vue#L155) — `escapeListener` cleanup при unmount-while-open + восстановление `body.style.overflow` · [dialog.md Issue 2](./dialog.md)
@@ -262,7 +263,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [Select.vue](../../lib/select/Select.vue) — `<div aria-live="polite">{{ resultsCount }}</div>` для search results · [select.md Issue 8](./select.md)
 - [ ] [Pagination.vue](../../lib/pagination/Pagination.vue) — announce «Page N of M» при switchPage · [pagination.md Issue 5](./pagination.md)
 - [ ] [Table.vue](../../lib/table/Table.vue) — announce filter/sort/search results count · [table.md Issue 9](./table.md)
-- [ ] [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) — `aria-live="assertive"` на error region · [inputlayout.md Issue 6](./inputlayout.md)
+- [x] [InputLayout.vue:432-440](../../lib/inputlayout/InputLayout.vue#L432-L440) — `aria-live="assertive"` + `aria-atomic="true"` на error region · [inputlayout.md Issue 6](./inputlayout.md) · ✅ resolved 2026-05-11
 
 **Acceptance:** axe-core CI passes для каждого компонента. Lighthouse a11y score = 100 для sandbox-pages со всеми компонентами. Manual screen-reader test (NVDA/VoiceOver) — каждый интерактивный компонент озвучивается корректно.
 
@@ -434,8 +435,8 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [x] [Animation transitions](../../lib/accordion/Accordion.vue) — `<Transition :css="false">` с JS `@leave` hook для unmount-safe collapse · [accordion.md Issue 6](./done/accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Input.vue:175](../../lib/input/Input.vue#L175) — `focus(event?: FocusEvent)` argless вариант · [input.md Issue 10](./input.md)
 - [ ] [Input.vue:213](../../lib/input/Input.vue#L213) — eye-icon class через computed (option `passwordToggleClass`) · [input.md Issue 5](./input.md)
-- [ ] [InputLayout.vue:184](../../lib/inputlayout/InputLayout.vue#L184) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` · [inputlayout.md Issue 5](./inputlayout.md)
-- [ ] [InputLayout.vue:226](../../lib/inputlayout/InputLayout.vue#L226) — `clipboard.writeText` feature-detect + execCommand fallback · [inputlayout.md Issue 3](./inputlayout.md)
+- [x] [InputLayout.vue:177-211](../../lib/inputlayout/InputLayout.vue#L177-L211) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` (number / string / `() => number`) + `resolveOffsetTop()` · [inputlayout.md Issue 5](./inputlayout.md) · ✅ resolved 2026-05-11
+- [x] [InputLayout.vue:253-298](../../lib/inputlayout/InputLayout.vue#L253-L298) — `clipboard.writeText` feature-detect + `legacyCopy()` execCommand fallback + SSR guard · [inputlayout.md Issue 3](./inputlayout.md) · ✅ resolved 2026-05-11
 - [ ] [Switch.vue:232-234](../../lib/switch/Switch.vue#L232) — help-icon contrast (`text-gray-400` → `text-gray-500` light) · [switch.md Issue 6](./switch.md)
 - [x] [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `ring-neutral-500/30` → `ring-neutral-300 dark:ring-neutral-700` · [badge.md Issue 4](./done/badge.md) ✅ 2026-05-10
 - [ ] [calendar.md Issue 9 — Floating UI](./calendar.md) (закрывается через Wave 5).
@@ -497,7 +498,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **XSS через v-html (всего 14 sites в 9 компонентах):**
 
 - [Switch.vue:244](../../lib/switch/Switch.vue#L244) (help) — [switch.md Issue 1](./switch.md)
-- [InputLayout.vue:294, 313](../../lib/inputlayout/InputLayout.vue#L294) (help, messageInvalid) — affects ALL form-controls — [inputlayout.md Issue 1](./inputlayout.md)
+- ~~[InputLayout.vue:294, 313]~~ (help, messageInvalid) — affects ALL form-controls — ✅ resolved 2026-05-11 — see [inputlayout.md Issue 1](./inputlayout.md). Slots `#help` / `#messageInvalid` с text-node fallback. Cross-cutting forwarding в 5 form-controls — follow-up PR.
 - [Select.vue:553, 562, 564](../../lib/select/Select.vue#L553) (marker, noData ×2) — [select.md Issue 1](./select.md)
 - [Form.vue:380](../../lib/form/Form.vue#L380) (select-marker copy) — [form.md Issue 1](./form.md)
 - [Table.vue:1842, 1939, 1999, 2011, 2026](../../lib/table/Table.vue#L1842) (cell, summary, noData/Column/Filter ×3) — [table.md Issue 1](./table.md)
@@ -510,7 +511,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - Select ResizeObserver + keydown listeners ([select.md Issue 2](./select.md))
 - Calendar MutationObserver на documentElement ([calendar.md Issue 1](./calendar.md))
 - Pagination anonymous ResizeObserver ([pagination.md Issue 1](./pagination.md))
-- InputLayout 2× anonymous ResizeObservers ([inputlayout.md Issue 2](./inputlayout.md))
+- ~~InputLayout 2× anonymous ResizeObservers~~ ✅ resolved 2026-05-11 ([inputlayout.md Issue 2](./inputlayout.md))
 - Table IntersectionObserver + window mousemove/up partial cleanup ([table.md Issue 2](./table.md))
 - Dialog escapeListener при unmount-while-open ([dialog.md Issue 2](./dialog.md))
 

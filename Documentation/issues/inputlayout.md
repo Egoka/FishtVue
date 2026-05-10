@@ -1,7 +1,7 @@
 ---
 title: Issues — InputLayout
-summary: Аудит InputLayout — CRITICAL XSS через v-html (help, messageInvalid), memory leak (2× anonymous ResizeObservers без cleanup), navigator.clipboard без feature-detect.
-updated: 2026-05-10
+summary: Аудит InputLayout — Issues 1/2/3/5/6/7 ✅ resolved 2026-05-11 (XSS slot, ResizeObserver cleanup, clipboard feature-detect, offsetTop prop, aria-live, i18n copied). Остаются cross-cutting Issues 4 / 8.
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/inputlayout/
 related-doc: ../components/input-layout.md
@@ -13,18 +13,19 @@ related-doc: ../components/input-layout.md
 
 | Severity | Count | Categories |
 |---|---|---|
-| critical | 2 | C13 (v-html × 2), H41 (anonymous ResizeObservers leak) |
-| high | 4 | A2, A4-5, C17, L53 |
-| medium | 4 | C14 (clipboard SSR), E29.5, F30, G34 |
+| critical | 0 | (2 closed: ~~C13 v-html × 2~~, ~~H41 ResizeObservers leak~~) |
+| high | 4 | A2, A4-5, C17, L53 (cross-cutting → button.md) |
+| medium | 0 | (4 closed: ~~C14 clipboard SSR~~, ~~E29.5 aria-live~~, ~~F30 i18n copied~~, ~~G34 querySelector coupling~~) |
 | low | 3 | E29.7, B10, N59 |
 
-## Issue 1: CRITICAL — XSS через `help` и `messageInvalid` (v-html)
+## Issue 1: ~~CRITICAL — XSS через `help` и `messageInvalid` (v-html)~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 + security
 - **Severity:** **critical**
-- **Где:** [InputLayout.vue:294](../../lib/inputlayout/InputLayout.vue#L294), [InputLayout.vue:313](../../lib/inputlayout/InputLayout.vue#L313)
+- **Где (was):** ~~[InputLayout.vue:294, 313]~~ → [InputLayout.vue:359-364](../../lib/inputlayout/InputLayout.vue#L359-L364) и [InputLayout.vue:382-388](../../lib/inputlayout/InputLayout.vue#L382-L388) — теперь slot-fallback на text-node.
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+### Что найдено (исторически)
 
 ```vue
 <div v-html="help" :class="classIconContent" />
@@ -52,17 +53,19 @@ related-doc: ../components/input-layout.md
 
 ### Acceptance criteria
 
-- [ ] `<Input message-invalid="<script>alert(1)</script>">` НЕ исполняет.
-- [ ] `<Input><template #messageInvalid><strong>Error</strong></template></Input>` рендерит strong-text.
-- [ ] Тесты для Aria, Select, Calendar, TextEditor — XSS payload не выполняется.
+- [x] `<InputLayout :message-invalid="<script>alert(1)</script>">` НЕ исполняет — рендер как text-node (тест `Security / XSS guard` в `InputLayout.test.ts`).
+- [x] `<InputLayout><template #messageInvalid><strong>Error</strong></template></InputLayout>` рендерит strong-text (тест `renders user-provided messageInvalid slot`).
+- [x] `help` идентично: `<template #help>` overrides text-node fallback; XSS payload не выполняется.
+- [ ] Cross-cutting forwarding в Input/Aria/Select/Calendar/TextEditor (`<template #help><slot name="help" /></template>`) — отдельный follow-up PR; на уровне самого InputLayout XSS невозможен — fallback всегда text.
 
-## Issue 2: CRITICAL — Memory leak: 2 anonymous ResizeObservers без disconnect
+## Issue 2: ~~CRITICAL — Memory leak: 2 anonymous ResizeObservers без disconnect~~ ✅ resolved 2026-05-11
 
 - **Категория:** H41
 - **Severity:** **critical**
-- **Где:** [InputLayout.vue:177](../../lib/inputlayout/InputLayout.vue#L177), [InputLayout.vue:181](../../lib/inputlayout/InputLayout.vue#L181)
+- **Где (was):** ~~[InputLayout.vue:177, 181]~~ → теперь [InputLayout.vue:196-208](../../lib/inputlayout/InputLayout.vue#L196-L208) (сохранены в `let beforeObserver` / `let afterObserver`) + [InputLayout.vue:232-237](../../lib/inputlayout/InputLayout.vue#L232-L237) (`onUnmounted` disconnect всех трёх).
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+### Что найдено (исторически)
 
 ```ts
 onMounted(() => {
@@ -113,15 +116,17 @@ onUnmounted(() => {
 
 ### Acceptance criteria
 
-- [ ] Mount/unmount × 100 в memory profiler — heap stable.
+- [x] Observers сохраняются в `let`-переменные, `onUnmounted` дисконнектит каждый (тест `ResizeObserver lifecycle > disconnects beforeInput / afterInput / layout observers on unmount`).
+- [ ] Long-running heap-profiler test (mount/unmount × 100) — не выполнен в CI (out of scope для unit-теста; покрыт unit-проверкой `disconnect.mock.calls`).
 
-## Issue 3: clipboard.writeText без feature-detect — падает в небезопасных контекстах
+## Issue 3: ~~clipboard.writeText без feature-detect — падает в небезопасных контекстах~~ ✅ resolved 2026-05-11
 
 - **Категория:** C14 (SSR + non-secure context)
 - **Severity:** medium
-- **Где:** [InputLayout.vue:226](../../lib/inputlayout/InputLayout.vue#L226)
+- **Где (was):** ~~[InputLayout.vue:226]~~ → теперь [InputLayout.vue:274-298](../../lib/inputlayout/InputLayout.vue#L274-L298) (feature-detect) + [InputLayout.vue:253-271](../../lib/inputlayout/InputLayout.vue#L253-L271) (`legacyCopy` execCommand fallback).
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+### Что найдено (исторически)
 
 ```ts
 async function copy() {
@@ -162,8 +167,9 @@ async function copy() {
 
 ### Acceptance criteria
 
-- [ ] HTTP context (тест в Lighthouse-mode HTTP) — copy не падает.
-- [ ] SSR-render не падает.
+- [x] `navigator.clipboard === undefined` → `copy()` не бросает; fallback на `execCommand` (тест `Clipboard copy — SSR / non-secure context > does not throw when navigator.clipboard is undefined`).
+- [x] `clipboard.writeText` бросает → fallback на `execCommand` (тест `falls back to execCommand when clipboard.writeText throws`).
+- [x] SSR-render не падает (`isClient()` guard в начале `copy()` и `legacyCopy()`).
 
 ## Issue 4: SSR styles + sideEffects/exports map / unstyled
 
@@ -171,13 +177,14 @@ async function copy() {
 
 См. [button.md Issue 1, 8, 9, 14](./button.md).
 
-## Issue 5: `document.querySelector("header")` — coupling с конкретным DOM в потребителе
+## Issue 5: ~~`document.querySelector("header")` — coupling с конкретным DOM в потребителе~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 (утечка структуры)
 - **Severity:** medium
-- **Где:** [InputLayout.vue:184](../../lib/inputlayout/InputLayout.vue#L184)
+- **Где (was):** ~~[InputLayout.vue:184]~~ — удалено. Заменено на `offsetTop` prop ([InputLayout.vue:177-191](../../lib/inputlayout/InputLayout.vue#L177-L191) — `resolveOffsetTop()`). Тип: `number | string | (() => number)`. По умолчанию `0`.
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+### Что найдено (исторически)
 
 ```ts
 if (isClient()) headerHeight.value = <number>document.querySelector("header")?.offsetHeight
@@ -202,19 +209,23 @@ if (isClient()) headerHeight.value = <number>document.querySelector("header")?.o
    ```
 2. Удалить hardcoded `querySelector("header")` или сделать opt-in через prop.
 
-## Issue 6: aria-live для error messages отсутствует
+## Issue 6: ~~aria-live для error messages отсутствует~~ ✅ resolved 2026-05-11
 
 - **Категория:** E29.5
 - **Severity:** medium
+- **Где:** [InputLayout.vue:432-440](../../lib/inputlayout/InputLayout.vue#L432-L440) — `<p data-input-layout-message-invalid aria-live="assertive" aria-atomic="true">`.
+- **Status:** ✅ resolved 2026-05-11
 
-`messageInvalid` появляется при validation error. Screen reader не объявит. Добавить `aria-live="assertive"` на error-region.
+`messageInvalid` появляется при validation error. Screen reader озвучивает изменения сразу. Тест: `Accessibility — aria-live on error region` в `InputLayout.test.ts`.
 
-## Issue 7: Hardcoded text "copied!" / "копировано!" для clipboard feedback
+## Issue 7: ~~Hardcoded text "copied!" / "копировано!" для clipboard feedback~~ ✅ resolved 2026-05-11
 
 - **Категория:** F30 (i18n)
 - **Severity:** medium
+- **Где:** Локализованный ключ `inputLayout.copied` ([locale/locales/en.ts:16-18](../../lib/locale/locales/en.ts#L16-L18), [ru.ts:16-18](../../lib/locale/locales/ru.ts#L16-L18)). Тип в [TypesLocale.d.ts:34-36](../../lib/locale/TypesLocale.d.ts#L34-L36). Использование — [InputLayout.vue:420-428](../../lib/inputlayout/InputLayout.vue#L420-L428) (FixWindow tooltip + `aria-label` на Check-иконке).
+- **Status:** ✅ resolved 2026-05-11
 
-Если в шаблоне есть «Copied»/«Скопировано» — должно через `t()`. Проверить и фикс.
+Confirm-feedback после успешного copy теперь рендерит FixWindow с локализованным текстом + `aria-label`. Тесты: `Locale — inputLayout.copied` (EN / RU dictionary).
 
 ## Issue 8: prefers-reduced-motion / colors / print
 
@@ -224,12 +235,12 @@ if (isClient()) headerHeight.value = <number>document.querySelector("header")?.o
 
 | Настройка | Поддержано? | Комментарий |
 |---|---|---|
-| `componentsOptions.InputLayout` | ✅ | mode, animation и др. |
+| `componentsOptions.InputLayout` | ✅ | mode, animation, `offsetTop` и др. |
 | `componentsStyle` global | ✅ | `InputLayout.componentsStyle()` ([InputLayout.vue:40](../../lib/inputlayout/InputLayout.vue#L40)) |
 | `unstyled: true` | ❌ | Issue 4 |
 | Theme tokens vs hardcode | ⚠️ | через theme-* частично |
 | Runtime theme switch | ✅ | через CSS-variables |
-| `t()` для текста | ⚠️ | clipboard feedback — проверить |
+| `t()` для текста | ✅ | clear, copy, `inputLayout.copied` confirm — все локализованы (Issue 7 ✅) |
 | Runtime locale switch | ✅ | если использует t() — реагирует |
 
 ## Dual-API gap

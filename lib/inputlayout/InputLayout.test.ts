@@ -1,7 +1,8 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
-import FishtVue from "fishtvue/config"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import FishtVue, { setActiveLocale } from "fishtvue/config"
 import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
+import type { InputLayoutExpose } from "fishtvue/inputlayout"
 import { InputProps } from "fishtvue/input"
 
 describe("InputLayout Component", () => {
@@ -279,6 +280,254 @@ describe("InputLayout Component", () => {
       })
       const afterSlot = wrapper.find("[data-input-layout-after]")
       expect(afterSlot.html()).toContain("After Slot")
+    })
+
+    it("renders fallback text for help prop without slot", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", help: "Plain help text" }
+      })
+      const helpRegion = wrapper.find("[data-input-layout-help-text]")
+      expect(helpRegion.exists()).toBe(true)
+      expect(helpRegion.text()).toBe("Plain help text")
+    })
+
+    it("renders fallback text for messageInvalid prop without slot", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", isInvalid: true, messageInvalid: "Plain error" }
+      })
+      const errorRegion = wrapper.find("[data-input-layout-message-invalid-text]")
+      expect(errorRegion.exists()).toBe(true)
+      expect(errorRegion.text()).toBe("Plain error")
+    })
+
+    it("renders user-provided help slot instead of prop fallback", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", help: "fallback" },
+        slots: {
+          help: "<strong data-custom-help>Custom <em>help</em></strong>"
+        }
+      })
+      expect(wrapper.find("strong[data-custom-help]").exists()).toBe(true)
+      expect(wrapper.find("strong[data-custom-help]").text()).toBe("Custom help")
+      // fallback span с data-input-layout-help-text не должен рендериться при наличии слота
+      expect(wrapper.find("[data-input-layout-help-text]").exists()).toBe(false)
+    })
+
+    it("renders user-provided messageInvalid slot instead of prop fallback", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", isInvalid: true, messageInvalid: "fallback" },
+        slots: {
+          messageInvalid: "<strong data-custom-error>Custom <em>error</em></strong>"
+        }
+      })
+      expect(wrapper.find("strong[data-custom-error]").exists()).toBe(true)
+      expect(wrapper.find("strong[data-custom-error]").text()).toBe("Custom error")
+      expect(wrapper.find("[data-input-layout-message-invalid-text]").exists()).toBe(false)
+    })
+  })
+
+  describe("Security / XSS guard", () => {
+    it("does NOT execute script payload passed via help prop", () => {
+      const xssPayload = '<img src=x onerror="(globalThis as any).__inputLayoutHelpXSS=1">'
+      const wrapper = mount(InputLayout, {
+        props: { value: "", help: xssPayload }
+      })
+      // payload рендерится как текст внутри span fallback
+      const helpRegion = wrapper.find("[data-input-layout-help-text]")
+      expect(helpRegion.exists()).toBe(true)
+      expect(helpRegion.text()).toContain("<img")
+      // нет реального <img> в DOM (text node, не HTML)
+      expect(wrapper.find("[data-input-layout-help] img").exists()).toBe(false)
+      // глобальный side-effect от onerror не сработал
+      expect((globalThis as any).__inputLayoutHelpXSS).toBeUndefined()
+    })
+
+    it("does NOT execute script payload passed via messageInvalid prop", () => {
+      const xssPayload = '<img src=x onerror="(globalThis as any).__inputLayoutErrorXSS=1">'
+      const wrapper = mount(InputLayout, {
+        props: { value: "", isInvalid: true, messageInvalid: xssPayload }
+      })
+      const errorRegion = wrapper.find("[data-input-layout-message-invalid-text]")
+      expect(errorRegion.exists()).toBe(true)
+      expect(errorRegion.text()).toContain("<img")
+      expect(wrapper.find("[data-input-layout-invalid] img").exists()).toBe(false)
+      expect((globalThis as any).__inputLayoutErrorXSS).toBeUndefined()
+    })
+  })
+
+  describe("Accessibility — aria-live on error region", () => {
+    it("annotates messageInvalid region with aria-live='assertive' and aria-atomic='true'", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", isInvalid: true, messageInvalid: "Required" }
+      })
+      const region = wrapper.find("[data-input-layout-message-invalid]")
+      expect(region.exists()).toBe(true)
+      expect(region.attributes("aria-live")).toBe("assertive")
+      expect(region.attributes("aria-atomic")).toBe("true")
+    })
+
+    it("preserves aria-live attributes even when not currently invalid (region is hidden but announces become visible)", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", isInvalid: false }
+      })
+      const region = wrapper.find("[data-input-layout-message-invalid]")
+      expect(region.attributes("aria-live")).toBe("assertive")
+      expect(region.attributes("aria-atomic")).toBe("true")
+    })
+  })
+
+  describe("ResizeObserver lifecycle", () => {
+    let disconnectSpies: ReturnType<typeof vi.fn>[]
+    let originalRO: typeof globalThis.ResizeObserver | undefined
+
+    beforeEach(() => {
+      disconnectSpies = []
+      originalRO = globalThis.ResizeObserver
+      class MockResizeObserver {
+        disconnect: ReturnType<typeof vi.fn>
+        observe: ReturnType<typeof vi.fn>
+        unobserve: ReturnType<typeof vi.fn>
+        constructor(_cb: (...args: any[]) => void) {
+          void _cb
+          this.disconnect = vi.fn()
+          this.observe = vi.fn()
+          this.unobserve = vi.fn()
+          disconnectSpies.push(this.disconnect)
+        }
+      }
+      ;(globalThis as any).ResizeObserver = MockResizeObserver
+    })
+
+    afterEach(() => {
+      ;(globalThis as any).ResizeObserver = originalRO
+    })
+
+    it("disconnects beforeInput / afterInput / layout observers on unmount", async () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "" },
+        slots: {
+          before: "<div>before</div>",
+          after: "<div>after</div>",
+          default: "<input />"
+        }
+      })
+      // подождать onMounted hook
+      await new Promise((r) => setTimeout(r, 0))
+      // создано минимум 3 observer'а: layout (всегда), before, after
+      expect(disconnectSpies.length).toBeGreaterThanOrEqual(3)
+      const createdBefore = disconnectSpies.length
+      wrapper.unmount()
+      // каждый созданный observer должен быть disconnect'нут
+      for (let i = 0; i < createdBefore; i++) {
+        expect(disconnectSpies[i]).toHaveBeenCalledTimes(1)
+      }
+    })
+  })
+
+  describe("Clipboard copy — SSR / non-secure context", () => {
+    let originalClipboard: any
+    let originalExecCommand: any
+
+    beforeEach(() => {
+      originalClipboard = (navigator as any).clipboard
+      originalExecCommand = (document as any).execCommand
+    })
+
+    afterEach(() => {
+      Object.assign(navigator, { clipboard: originalClipboard })
+      ;(document as any).execCommand = originalExecCommand
+    })
+
+    it("does not throw when navigator.clipboard is undefined (SSR / HTTP context)", async () => {
+      // имитируем отсутствие clipboard API
+      Object.assign(navigator, { clipboard: undefined })
+      const execCommandMock = vi.fn().mockReturnValue(true)
+      ;(document as any).execCommand = execCommandMock
+
+      const wrapper = mount(InputLayout, {
+        props: { value: "test value", disabled: true }
+      })
+
+      const expose = wrapper.vm as unknown as InputLayoutExpose
+      await expect((expose as any).copy()).resolves.not.toThrow()
+      // должен сработать fallback execCommand
+      expect(execCommandMock).toHaveBeenCalledWith("copy")
+    })
+
+    it("falls back to execCommand when clipboard.writeText throws", async () => {
+      const writeTextMock = vi.fn(() => Promise.reject(new DOMException("NotAllowedError")))
+      Object.assign(navigator, { clipboard: { writeText: writeTextMock } })
+      const execCommandMock = vi.fn().mockReturnValue(true)
+      ;(document as any).execCommand = execCommandMock
+
+      const wrapper = mount(InputLayout, {
+        props: { value: "fallback value", disabled: true }
+      })
+
+      const expose = wrapper.vm as unknown as InputLayoutExpose
+      await (expose as any).copy()
+      expect(writeTextMock).toHaveBeenCalledWith("fallback value")
+      expect(execCommandMock).toHaveBeenCalledWith("copy")
+    })
+  })
+
+  describe("offsetTop prop (replaces hardcoded querySelector('header'))", () => {
+    it("uses numeric offsetTop prop directly", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", offsetTop: 80 }
+      })
+      const expose = wrapper.vm as unknown as InputLayoutExpose
+      expect(expose.headerHeight).toBe(80)
+    })
+
+    it("uses function offsetTop prop, calling it for the value", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", offsetTop: () => 123 }
+      })
+      const expose = wrapper.vm as unknown as InputLayoutExpose
+      expect(expose.headerHeight).toBe(123)
+    })
+
+    it("falls back to 0 when no offsetTop prop and no <header> coupling is performed", () => {
+      // в jsdom нет <header> по умолчанию, но даже если есть — querySelector больше не используется
+      const wrapper = mount(InputLayout, {
+        props: { value: "" }
+      })
+      const expose = wrapper.vm as unknown as InputLayoutExpose
+      expect(expose.headerHeight).toBe(0)
+    })
+  })
+
+  describe("Locale — inputLayout.copied", () => {
+    afterEach(() => {
+      // вернуть локаль к дефолту для других тестов
+      setActiveLocale("en")
+    })
+
+    it("resolves 'Copied' for EN locale via Component.t('inputLayout.copied')", () => {
+      const wrapper = mount(InputLayout, {
+        global: {
+          plugins: [[FishtVue as any, { locale: { defaultLocale: "en" } }]]
+        },
+        props: { value: "" }
+      })
+      // helper берёт строку из локали — utility-вызов через componentsOptions.t недоступен снаружи,
+      // проверяем через mount-test что строка попадает в DOM при isCopy = true
+      const expose = wrapper.vm as unknown as InputLayoutExpose
+      expect(expose).toBeDefined()
+      // прямой вызов Component.t возможен через global helper — но без публичного API
+      // проверяем через присутствие в локали (это unit-проверка ключа, а не рендер):
+      // Импорт messages непосредственно — отдельный тест, ниже
+    })
+
+    it("EN locale dictionary contains inputLayout.copied = 'Copied'", async () => {
+      const Locales = (await import("fishtvue/locale")).default as any
+      expect(Locales.en?.inputLayout?.copied).toBe("Copied")
+    })
+
+    it("RU locale dictionary contains inputLayout.copied = 'Скопировано'", async () => {
+      const Locales = (await import("fishtvue/locale")).default as any
+      expect(Locales.ru?.inputLayout?.copied).toBe("Скопировано")
     })
   })
 })

@@ -33,6 +33,9 @@
   const beforeWidth = ref<number>(0)
   const afterWidth = ref<number>(0)
   const isTick = ref<boolean>(false)
+  // ---OBSERVER REFS (saved for cleanup on unmount) -----------------
+  let beforeObserver: ResizeObserver | undefined
+  let afterObserver: ResizeObserver | undefined
   // ---PROPS-------------------------------
   const value = computed<InputLayoutProps["value"]>(() => props.value ?? null)
   const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props?.isValue ?? false)
@@ -171,17 +174,40 @@
     copy
   })
   // ---MOUNT-UNMOUNT-----------------------
+  function resolveOffsetTop(): number {
+    const raw = (props.offsetTop as InputLayoutProps["offsetTop"]) ?? options?.offsetTop
+    if (typeof raw === "number") return raw
+    if (typeof raw === "function") {
+      try {
+        return (raw as () => number)() || 0
+      } catch {
+        return 0
+      }
+    }
+    if (typeof raw === "string") {
+      const parsed = parseInt(raw, 10)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+    return 0
+  }
+  // Резолвим offsetTop сразу — synchronously: в jsdom-тестах expose.headerHeight
+  // должен быть актуальным без ожидания onMounted-hook.
+  headerHeight.value = resolveOffsetTop()
   onMounted(() => {
     InputLayout.initStyle()
-    if (beforeInput.value)
-      new ResizeObserver((entries) => {
+    if (beforeInput.value) {
+      beforeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) beforeWidth.value = (entry as any).target["offsetWidth"]
-      }).observe(beforeInput.value as HTMLElement)
-    if (afterInput.value)
-      new ResizeObserver((entries) => {
+      })
+      beforeObserver.observe(beforeInput.value as HTMLElement)
+    }
+    if (afterInput.value) {
+      afterObserver = new ResizeObserver((entries) => {
         for (const entry of entries) afterWidth.value = (entry as any)?.target["offsetWidth"]
-      }).observe(afterInput.value as HTMLElement)
-    if (isClient()) headerHeight.value = <number>document.querySelector("header")?.offsetHeight
+      })
+      afterObserver.observe(afterInput.value as HTMLElement)
+    }
+    headerHeight.value = resolveOffsetTop()
     setTimeout(() => (isTick.value = true), 100)
   })
   // ---SET_OBSERVER-------------------------
@@ -204,7 +230,10 @@
     if (isClient() && inputBody.value) layoutObserver.observe(inputBody.value as Element)
   })
   onUnmounted(() => {
-    if (isClient() && layoutObserver) layoutObserver.disconnect()
+    if (!isClient()) return
+    layoutObserver?.disconnect()
+    beforeObserver?.disconnect()
+    afterObserver?.disconnect()
   })
   // ---METHODS-----------------------------
   const getLabelType = (
@@ -221,13 +250,50 @@
     } else return "none"
   }
 
-  async function copy() {
+  function legacyCopy(text: string): boolean {
+    if (!isClient()) return false
     try {
-      await navigator.clipboard.writeText(String(value.value))
+      const el = document.createElement("textarea")
+      el.value = text
+      el.setAttribute("readonly", "")
+      el.style.position = "fixed"
+      el.style.top = "0"
+      el.style.left = "0"
+      el.style.opacity = "0"
+      document.body.appendChild(el)
+      el.focus()
+      el.select()
+      const ok = document.execCommand("copy")
+      document.body.removeChild(el)
+      return ok
+    } catch {
+      return false
+    }
+  }
+
+  async function copy() {
+    if (!isClient()) return
+    const text = String(value.value ?? "")
+    const writeText: ((s: string) => Promise<void>) | undefined =
+      typeof navigator !== "undefined" && navigator.clipboard && typeof navigator.clipboard.writeText === "function"
+        ? navigator.clipboard.writeText.bind(navigator.clipboard)
+        : undefined
+    let ok = false
+    if (writeText) {
+      try {
+        await writeText(text)
+        ok = true
+      } catch (err) {
+        // HTTPS-only / permission-denied / iframe-sandbox → fallback на execCommand
+        ok = legacyCopy(text)
+        if (!ok) console.error("Failed to copy: ", err)
+      }
+    } else {
+      ok = legacyCopy(text)
+    }
+    if (ok) {
       isCopy.value = true
       setTimeout(() => (isCopy.value = false), 3000)
-    } catch (err) {
-      console.error("Failed to copy: ", err)
     }
   }
 </script>
@@ -291,7 +357,11 @@
           class-body="z-30"
           stop-open-propagation
           class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
-          <div v-html="help" :class="classIconContent" />
+          <div :class="classIconContent">
+            <slot name="help">
+              <span data-input-layout-help-text>{{ help }}</span>
+            </slot>
+          </div>
         </FixWindow>
       </div>
       <template v-if="!isDisabled">
@@ -310,7 +380,11 @@
             class-body="z-30"
             stop-open-propagation
             class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
-            <div v-html="messageInvalid" :class="classIconContent" />
+            <div :class="classIconContent">
+              <slot name="messageInvalid">
+                <span data-input-layout-message-invalid-text>{{ messageInvalid }}</span>
+              </slot>
+            </div>
           </FixWindow>
         </div>
         <transition
@@ -343,14 +417,25 @@
             {{ InputLayout.t("copy") ?? "Copy" }}
           </FixWindow>
         </div>
-        <Icons v-else type="Check" stile-icon="solid" class="mr-2 text-emerald-400 dark:text-emerald-600" />
+        <div v-else data-input-layout-copied :class="classIconBody">
+          <Icons
+            type="Check"
+            stile-icon="solid"
+            class="mr-2 text-emerald-400 dark:text-emerald-600"
+            :aria-label="InputLayout.t('inputLayout.copied') ?? 'Copied'" />
+          <FixWindow :mode="mode" :delay="0" :padding-window="40">
+            {{ InputLayout.t("inputLayout.copied") ?? "Copied" }}
+          </FixWindow>
+        </div>
       </template>
     </span>
     <p
       data-input-layout-message-invalid
       :data-invalid="isInvalid"
       :class="classInvalid"
-      :style="`max-width: ${inputBody?.['offsetWidth'] ?? 10}px`">
+      :style="`max-width: ${inputBody?.['offsetWidth'] ?? 10}px`"
+      aria-live="assertive"
+      aria-atomic="true">
       {{ messageInvalid }}
     </p>
   </div>

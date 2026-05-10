@@ -899,7 +899,16 @@ describe("Form Component Tests", () => {
     ]
 
     it("fails validation and calls scrollIntoView", async () => {
-      const querySelectorSpy = vi.spyOn(document, "querySelector").mockReturnValue(null)
+      // Подменяем scrollIntoView на jsdom Element.prototype — он отсутствует в jsdom по умолчанию.
+      // Эта проверка валидирует, что Form.validateFields() выполняет scroll к первому
+      // элементу `.is-invalid`. Раньше тест полагался на побочный вызов
+      // `document.querySelector("header")` из InputLayout — этот coupling устранён
+      // в Issue 5 inputlayout.md (replaced by `offsetTop` prop), поэтому проверяем
+      // конечный эффект напрямую через scrollIntoView spy.
+      const scrollIntoViewSpy = vi.fn()
+      const origScrollIntoView = (HTMLElement.prototype as any).scrollIntoView
+      ;(HTMLElement.prototype as any).scrollIntoView = scrollIntoViewSpy
+
       const wrapper = mount(Form, {
         props: {
           structure: structureForValidation()
@@ -916,8 +925,8 @@ describe("Form Component Tests", () => {
       expect(wrapper.vm.validateFields()).toBe(false)
       await nextTick()
 
-      // Проверить вызов scrollIntoView
-      expect(querySelectorSpy).toHaveBeenCalled()
+      // Проверить вызов scrollIntoView (на найденном .is-invalid элементе)
+      expect(scrollIntoViewSpy).toHaveBeenCalled()
 
       // Проверить, что поле стало невалидным
       const field = wrapper.vm.getField<"Input">("invalidField")
@@ -925,7 +934,9 @@ describe("Form Component Tests", () => {
       // Проверить, что сообщение об ошибке соответствует правилу
       expect(field?.messageInvalid).toBe("This field is required.")
       expect(wrapper.vm.isFieldInvalid("invalidField")).toBe(true)
-      querySelectorSpy.mockRestore()
+
+      // Восстановить prototype
+      ;(HTMLElement.prototype as any).scrollIntoView = origScrollIntoView
     })
   })
 })

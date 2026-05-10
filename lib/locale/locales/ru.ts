@@ -13,6 +13,9 @@ export default <DefaultMessages>{
   find: "Найти...",
   copy: "Копировать",
   clear: "Очистить",
+  inputLayout: {
+    copied: "Скопировано"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",
