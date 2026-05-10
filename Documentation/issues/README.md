@@ -24,9 +24,9 @@ updated: 2026-05-10
 | Select | [select.md](./select.md) | 2 | 6 | 4 | 3 |
 | Calendar | [calendar.md](./calendar.md) | 1 | 6 | 4 | 3 |
 | TextEditor | [texteditor.md](./texteditor.md) | 0 | 7 | 5 | 3 |
-| Table | _pending audit_ | — | — | — | — |
-| Pagination | _pending audit_ | — | — | — | — |
-| Badge | _pending audit_ | — | — | — | — |
+| Table | [table.md](./table.md) | 2 | 8 | 5 | 4 |
+| Pagination | [pagination.md](./pagination.md) | 1 | 4 | 4 | 3 |
+| Badge | [badge.md](./badge.md) | 0 | 4 | 2 | 3 |
 | Form | _pending audit_ | — | — | — | — |
 | InputLayout | _pending audit_ | — | — | — | — |
 | Separator | _pending audit_ | — | — | — | — |
