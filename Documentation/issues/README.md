@@ -1,6 +1,6 @@
 ---
 title: Issues — Index
-summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap.
+summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings и priority list.
 updated: 2026-05-10
 ---
 
@@ -8,11 +8,9 @@ updated: 2026-05-10
 
 Внутренний аудит библиотеки `fishtvue` против 60-пунктового чек-листа индустриальных требований к UI-кит библиотекам, плюс проверка соответствия публичной [Configuration-документации](../../docs/content/ru/3.Configuration/) и анализ dual-API gap для коллекционных компонентов.
 
-> **Принцип:** файл `{component}.md` создаётся ТОЛЬКО при наличии хотя бы одной проблемы. Если у компонента 0 проблем — он помечен как «✅ no issues found». Это значит «пройден аудит», а не «не проверен».
+> **Принцип:** файл `{component}.md` создаётся ТОЛЬКО при наличии хотя бы одной проблемы. Если у компонента 0 проблем — он помечен как «✅ no issues found». В текущем аудите ВСЕ targets имеют ≥1 проблем (минимум через cross-cutting корневой `lib/package.json`).
 
 ## Сводка по компонентам
-
-Таблица заполняется по мере прохождения коммитов C2–C9 и финализируется в C10.
 
 | Target | File | Critical | High | Medium | Low |
 |---|---|---|---|---|---|
@@ -43,11 +41,110 @@ updated: 2026-05-10
 | Theme | [theme.md](./theme.md) | 0 | 6 | 4 | 2 |
 | Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
 | Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
-| Utilities (consolidated) | [_utilities.md](./_utilities.md) | 0 | 4 | 4 | 3 |
+| Utilities | [_utilities.md](./_utilities.md) | 0 | 4 | 4 | 3 |
+| **TOTAL** | **28 files** | **17** | **144** | **111** | **76** |
+
+Всего **348 issues** распределены по 28 documentов аудита.
+
+## Cross-cutting findings (top priority)
+
+Эти проблемы затрагивают **множество компонентов одновременно** — фикс в одном месте устраняет их везде.
+
+### 🔴 Critical cross-cutting
+
+**XSS через v-html (всего 14 sites в 9 компонентах):**
+- [Switch.vue:244](../../lib/switch/Switch.vue#L244) (help) — [switch.md Issue 1](./switch.md)
+- [InputLayout.vue:294, 313](../../lib/inputlayout/InputLayout.vue#L294) (help, messageInvalid) — affects ALL form-controls — [inputlayout.md Issue 1](./inputlayout.md)
+- [Select.vue:553, 562, 564](../../lib/select/Select.vue#L553) (marker, noData ×2) — [select.md Issue 1](./select.md)
+- [Form.vue:380](../../lib/form/Form.vue#L380) (select-marker copy) — [form.md Issue 1](./form.md)
+- [Table.vue:1842, 1939, 1999, 2011, 2026](../../lib/table/Table.vue#L1842) (cell, summary, noData/Column/Filter ×3) — [table.md Issue 1](./table.md)
+- [Menu.vue:388, 392](../../lib/menu/Menu.vue#L388) (item.info ×2) — [menu.md Issue 1](./menu.md)
+- [Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) (item.subtitle) — [accordion.md Issue 1](./accordion.md)
+- [Alert.vue:253](../../lib/alert/Alert.vue#L253) (subtitle) — [alert.md Issue 1](./alert.md)
+
+**Унифицированный fix-pattern:** заменить v-html на slot (`<slot name="X">{{ rawString }}</slot>`) во всех сайтах. Сохраняет custom HTML только для случаев, где пользователь явно его рендерит через slot.
+
+**Memory leaks (observers/listeners без cleanup):**
+- Select ResizeObserver + keydown listeners ([select.md Issue 2](./select.md))
+- Calendar MutationObserver на documentElement ([calendar.md Issue 1](./calendar.md))
+- Pagination anonymous ResizeObserver ([pagination.md Issue 1](./pagination.md))
+- InputLayout 2× anonymous ResizeObservers ([inputlayout.md Issue 2](./inputlayout.md))
+- Table IntersectionObserver + window mousemove/up partial cleanup ([table.md Issue 2](./table.md))
+- Dialog escapeListener при unmount-while-open ([dialog.md Issue 2](./dialog.md))
+
+**Унифицированный fix-pattern:** все Observers / DOM listeners сохранять в reactive ref, в `onBeforeUnmount`/`onUnmounted` вызывать `disconnect()` / `removeEventListener()`. Альтернатива — использовать VueUse composables (`useResizeObserver`, `useEventListener`) — auto-cleanup.
+
+**FishtVueSymbol race-condition:** [config.md Issue 1](./config.md) — затрагивает корректность `inject` во всех компонентах. Highest leverage fix.
+
+**Alert imperative DOM bypass Vue:** [alert.md Issue 2](./alert.md) — критичен для SSR / Shadow DOM / Vue DevTools видимости.
+
+### 🟠 High cross-cutting
+
+**Distribution / packaging (затрагивает все 22 компонента):**
+- A2 — `sideEffects` не размечены в [lib/package.json](../../lib/package.json) и [lib/{component}/package.json](../../lib/) (×22).
+- A4-5 — нет `exports` map, нет CJS-варианта, ESM-only без условий.
+- A3 — `vue` в `dependencies` (должно быть peer); `lodash-es`, `dayjs`, `date-fns`, `gsap`, `quill`, `vue-quill`, `v-calendar` в `dependencies` (должны быть optional peer).
+
+**Унифицированный fix-pattern:** см. [button.md Issue 8 и Issue 9](./button.md).
+
+**SSR style injection (C17):** Каждый компонент в `onMounted` дублирует `Component.initStyle()`, хотя base class уже вызывает через `onServerPrefetch` + `vueOnMounted`. Удалить дубли. См. [component-class.md Issue 1](./component-class.md).
+
+**`unstyled: true` не реализован (L53):** documentation [docs/content/ru/3.Configuration/1.Options.md](../../docs/content/ru/3.Configuration/1.Options.md) обещает, но `Component.setStyle` не учитывает. Точка фикса — `Component.setStyle`. См. [button.md Issue 14](./button.md), [component-class.md Issue 6](./component-class.md).
+
+**`componentsStyle` global fallback (L53):** Switch / Label / InputLayout / Table / Pagination / Menu / FixWindow реагируют через `Component.componentsStyle()`. Button / Input / Aria / Select / Calendar / TextEditor / Badge — нет. Inconsistent. См. [button.md Issue 13](./button.md), [input.md Issue 2](./input.md).
+
+**Theme runtime API не реализован (L53):** documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает `usePreset`, `updatePreset`, `updatePrimaryPalette`, `updateSurfacePalette`, `$dt`, `palette` — НЕ exported в [lib/theme/](../../lib/theme/). Documentation lies. См. [theme.md Issue 1](./theme.md).
+
+**A11y — focus trap, focus return, ARIA roles:**
+- Dialog нет focus trap, focus return, role="dialog" ([dialog.md Issue 1, 4, 5](./dialog.md)).
+- Menu нет keyboard navigation, role="menu" ([menu.md Issue 3, 4](./menu.md)).
+- Accordion нет disclosure pattern, keyboard ([accordion.md Issue 3, 4](./accordion.md)).
+- Pagination нет navigation role ([pagination.md Issue 4](./pagination.md)).
+- Loading нет role="status"+aria-live ([loading.md Issue 3](./loading.md)).
+- Alert нет role="alert"/"status" ([alert.md Issue 3](./alert.md)).
+- Button — нет aria-label для icon-кнопок ([button.md Issue 2](./button.md)).
+- Label — нет for-id связки ([label.md Issue 1](./label.md)).
+- Split, Table — нет navigation/separator semantics ([split.md Issue 4](./split.md), [table.md Issue 8](./table.md)).
+
+**FixWindow — Floating UI integration (затрагивает Calendar, Select, Menu, Tooltip-uses):** manual position calculation без auto-flip / auto-shift; click-outside ломается с Teleport. См. [fixwindow.md Issue 1, 2, 3](./fixwindow.md).
+
+### 🟡 Medium cross-cutting
+
+**RTL не поддерживается:** буквальные `left/right` классы в Button, Switch, Calendar, Select, Pagination, InputLayout, Dialog, Menu, FixWindow. См. [switch.md Issue 8](./switch.md), [dialog.md Issue 8](./dialog.md), и др.
+
+**`prefers-reduced-motion` не учитывается:** все `transition-*` без `motion-safe:` guard. См. [button.md Issue 10](./button.md).
+
+**Locale fallback chain отсутствует:** при отсутствии ключа `t()` возвращает undefined, не fallback на defaultLocale. См. [config.md Issue 3](./config.md), [locale.md Issue 2](./locale.md).
+
+**Hardcoded цвета через Tailwind primitives** (gray-_, neutral-_, red-_, green-_) вместо semantic tokens из FishtVue theme. Cross-cutting во всех 22 компонентах.
+
+**Dual-API gap для коллекционных компонентов:**
+- [Table](./table.md) — нет `<Table><Column>` (industry standard для table — AG Grid, Element Plus, Naive UI, PrimeVue).
+- [Form](./form.md) — нет `<Form><FormField>`.
+- [Select](./select.md) — нет `<Select><SelectOption>`.
+- [Menu](./menu.md) — нет `<Menu><MenuItem>`.
+- [Accordion](./accordion.md) — нет `<Accordion><AccordionItem>`.
+
+**Унифицированный fix-pattern:** parallel API через `provide(CONTEXT, { register, unregister })` + child компоненты регистрируют себя при mount. Schema-driven (existing `:items`/`:dataColumns` props) выигрывает при конфликте — backward compat.
+
+## Priority list (рекомендуемая последовательность фиксов)
+
+1. **🔴 Critical XSS (v-html × 14 sites)** — 1-2 sprint'а; security-blocker.
+2. **🔴 Memory leaks** (Observer/Listener cleanup) — 1 sprint; production-stability.
+3. **🔴 FishtVueSymbol race + Alert imperative DOM** — 1 sprint; architectural blockers.
+4. **🟠 sideEffects + exports map + peer-deps** — 1 sprint; one-time packaging fix; устраняет ~70% bundle bloat для потребителя.
+5. **🟠 SSR style injection (remove duplicate initStyle, fix теме @layer)** — 1 sprint; affects every consumer's first paint.
+6. **🟠 `unstyled` + `componentsStyle` consistency + theme runtime API** — 2 sprints; устраняет documentation lies.
+7. **🟠 A11y baseline (focus trap Dialog, keyboard Menu/Accordion, ARIA roles)** — 2-3 sprints; WCAG conformance.
+8. **🟠 Floating UI integration** — 1 sprint; FixWindow / Calendar / Select / Menu все упрощаются.
+9. **🟡 Dual-API параллельно для Table → Form → Select → Menu → Accordion** — 4-6 sprints; competitive parity с AG Grid / Element Plus.
+10. **🟡 RTL + prefers-reduced-motion + locale fallback + i18n validation messages** — 2 sprints; markets expansion (RTL, accessibility).
+11. **🟡 Hardcoded colors → semantic tokens** — 1-2 sprints; theming consistency.
+12. **🟢 Tests + coverage gaps** (TextEditor 0%, Loading 22%, Calendar 63%, Split 60%, infra modules 0%) — параллельно с fixes выше.
 
 ## 60-point audit checklist
 
-Каждый issue в отдельном файле помечен категорией из этой таблицы (`A2`, `E29.3` и т. д.), что позволяет делать cross-component сравнения.
+(Полный 60-пунктовый чек-лист с группами A–P для cross-references из issue-доков. Каждый issue в отдельном файле помечен категорией из этой таблицы.)
 
 ### A. Distribution & build (1–7)
 
@@ -178,7 +275,7 @@ updated: 2026-05-10
 - **Источник истины — `lib/`**, без правок исходников.
 - **Конфиг-референс — [docs/content/ru/3.Configuration/](../../docs/content/ru/3.Configuration/)**, без правок (это публичная декларация поддерживаемых настроек).
 - **Документация компонента уже существует** в [Documentation/components/](../components/) — issue-документ ссылается на неё через front-matter `related-doc`.
-- **22 компонента + 6 инфра-модулей + опционально утилиты** = до 29 targets / до 28 файлов аудита.
+- **22 компонента + 6 инфра-модулей + сводный utilities** = 29 targets / 28 файлов аудита (utilities one consolidated).
 - **Severity** — субъективная оценка приоритета фикса:
   - `critical` — runtime-крэш / security / data loss / production blocker.
   - `high` — серьёзный UX/DX gap, фикс в ближайший минор.
@@ -231,12 +328,7 @@ related-doc: ../components/{name}.md
 | Настройка | Поддержано? | Комментарий |
 |---|---|---|
 | `componentsOptions.{Name}` | ✅ / ❌ | … |
-| `componentsStyle` global | ✅ / ❌ | … |
-| `unstyled: true` | ✅ / ❌ | … |
-| theme tokens | ✅ / ❌ | … |
-| runtime theme switch | ✅ / ❌ | … |
-| `t()` для текста | ✅ / ❌ | … |
-| runtime locale switch | ✅ / ❌ | … |
+| ... | ... | ... |
 
 ## Dual-API gap (если применимо)
 
