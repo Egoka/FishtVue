@@ -12,6 +12,7 @@ export default defineConfig({
     environment: "jsdom",
     silent: true,
     include: ["lib/**/*.test.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.claude/worktrees/**"],
     maxWorkers: 1,
     minWorkers: 1,
     isolate: false,

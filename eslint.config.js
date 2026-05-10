@@ -195,6 +195,7 @@ export default defineConfig([
     "**/dist/**/*",
     "**/node_modules/**/*",
     "**/.nuxt/**/*",
-    "**/.output/**/*"
+    "**/.output/**/*",
+    ".claude/worktrees/**/*"
   ])
 ])
