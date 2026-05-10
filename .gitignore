@@ -88,3 +88,6 @@ docs/.vitepress/cache
 
 .idea
 .npmrc
+
+# trace-mcp local cache
+.trace-mcp/

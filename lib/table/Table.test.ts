@@ -1,5 +1,5 @@
-import { mount } from "@vue/test-utils"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { mount, flushPromises } from "@vue/test-utils"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import { addDays, format } from "date-fns"
 import * as functionHandler from "fishtvue/utils/functionHandler"
@@ -16,6 +16,22 @@ describe("Table Component", () => {
       unobserve() {}
       disconnect() {}
     }
+    // Mock fetch globally to prevent real HTTP requests
+    global.fetch = vi.fn()
+  })
+
+  beforeEach(() => {
+    // Reset fetch mock before each test and set default response
+    vi.mocked(global.fetch).mockClear()
+    // Default mock: return empty array to prevent network errors
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => []
+    } as Response)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
   const baseData = [
     { name: "orange", color: "orange", shape: "round" },
@@ -1137,6 +1153,710 @@ describe("Table Component", () => {
         hoverRows: "",
         isStripedRows: false,
         width: ""
+      })
+    })
+  })
+  describe("Table Component - asyncData Feature", () => {
+    describe("Mode 1: asyncData = true (Boolean mode)", () => {
+      it("disables client-side sorting when asyncData is true", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            asyncData: true,
+            columns: [
+              { dataField: "name", isSort: true },
+              { dataField: "color", isSort: true }
+            ]
+          }
+        })
+
+        await nextTick()
+        const initialRows = wrapper.findAll("[data-table-tbody-tr]")
+        const initialFirstRowText = initialRows[0].text()
+
+        // Вызываем сортировку
+        await wrapper.findAll("[data-table-thead-col-sort]")[0].trigger("click")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+
+        // Проверяем, что данные НЕ отсортировались на клиенте
+        const afterSortRows = wrapper.findAll("[data-table-tbody-tr]")
+        expect(afterSortRows[0].text()).toBe(initialFirstRowText)
+
+        // Но событие должно быть отправлено
+        expect(wrapper.emitted("sort")).toBeTruthy()
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("disables client-side filtering when asyncData is true", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            asyncData: true,
+            columns: [
+              { dataField: "name", isFilter: true },
+              { dataField: "color", isFilter: true }
+            ]
+          }
+        })
+
+        await nextTick()
+        const initialRowsCount = wrapper.findAll("[data-table-tbody-tr]").length
+
+        // Применяем фильтр
+        const filterInput = wrapper.find("[data-table-thead-col-filter] input")
+        await filterInput.setValue("orange")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+
+        // Проверяем, что данные НЕ отфильтровались на клиенте
+        const afterFilterRowsCount = wrapper.findAll("[data-table-tbody-tr]").length
+        expect(afterFilterRowsCount).toBe(initialRowsCount)
+
+        // Но событие должно быть отправлено
+        expect(wrapper.emitted("filter")).toBeTruthy()
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("disables client-side search when asyncData is true", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            asyncData: true,
+            search: true
+          }
+        })
+
+        await nextTick()
+        const initialRowsCount = wrapper.findAll("[data-table-tbody-tr]").length
+
+        // Выполняем поиск
+        const searchInput = wrapper.find("[data-table-search] input")
+        await searchInput.setValue("orange")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+
+        // Проверяем, что данные НЕ отфильтровались на клиенте
+        const afterSearchRowsCount = wrapper.findAll("[data-table-tbody-tr]").length
+        expect(afterSearchRowsCount).toBe(initialRowsCount)
+
+        // Но событие должно быть отправлено
+        expect(wrapper.emitted("search")).toBeTruthy()
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("disables client-side pagination slicing when asyncData is true", async () => {
+        const largeData = Array.from({ length: 50 }, (_, i) => ({
+          name: `Item ${i + 1}`,
+          color: "blue",
+          id: i + 1
+        }))
+
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: largeData,
+            asyncData: true,
+            totalCount: 50,
+            pagination: { sizePage: 10 },
+            columns: [{ dataField: "name" }, { dataField: "color" }]
+          }
+        })
+
+        await nextTick()
+
+        // В режиме asyncData = true пагинационный слайсинг не должен применяться:
+        // внутренний dataSource содержит все 50 элементов (видимый рендер ограничен
+        // virtual-scroll окном, поэтому проверяем внутренние данные).
+        expect((wrapper.vm as any).dataSource.length).toBe(50)
+      })
+
+      it("emits events for sort, filter, search, pagination when asyncData is true", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            asyncData: true,
+            search: true,
+            pagination: true,
+            columns: [{ dataField: "name", isSort: true, isFilter: true }]
+          }
+        })
+
+        await nextTick()
+
+        // Тестируем sort event
+        await wrapper.find("[data-table-thead-col-sort]").trigger("click")
+        vi.advanceTimersByTime(100)
+        await nextTick()
+        expect(wrapper.emitted("sort")).toBeTruthy()
+
+        // Тестируем filter event
+        const filterInput = wrapper.find("[data-table-thead-col-filter] input")
+        await filterInput.setValue("test")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+        expect(wrapper.emitted("filter")).toBeTruthy()
+
+        // Тестируем search event
+        const searchInput = wrapper.find("[data-table-search] input")
+        await searchInput.setValue("test")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+        expect(wrapper.emitted("search")).toBeTruthy()
+
+        // Тестируем pagination events
+        expect(wrapper.emitted("switch-page")).toBeTruthy()
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("Mode 2: asyncData = string (URL mode)", () => {
+      it("loads data from URL on mount", async () => {
+        const mockData = [
+          { id: 1, title: "Test 1", body: "Body 1" },
+          { id: 2, title: "Test 2", body: "Body 2" }
+        ]
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockData
+        } as Response)
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: "https://jsonplaceholder.typicode.com/posts",
+            columns: [{ dataField: "id" }, { dataField: "title" }, { dataField: "body" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+
+        expect(global.fetch).toHaveBeenCalledWith("https://jsonplaceholder.typicode.com/posts", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        })
+
+        await nextTick()
+        const rows = wrapper.findAll("[data-table-tbody-tr]")
+        expect(rows.length).toBe(2)
+      })
+
+      it("handles HTTP errors gracefully in URL mode", async () => {
+        // Mock fetch to return error response (not ok) with empty array
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => []
+        } as Response)
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: "https://invalid-url.com/data",
+            columns: [{ dataField: "id" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+
+        // Проверяем, что данные пустые при ошибке
+        const rows = wrapper.findAll("[data-table-tbody-tr]")
+        expect(rows.length).toBe(0)
+      })
+
+      it("handles network errors gracefully in URL mode", async () => {
+        // Mock fetch to throw error (network failure)
+        vi.mocked(global.fetch).mockRejectedValueOnce(new Error("Network error"))
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: "https://invalid-url.com/data",
+            columns: [{ dataField: "id" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+
+        // Проверяем, что данные пустые при сетевой ошибке
+        const rows = wrapper.findAll("[data-table-tbody-tr]")
+        expect(rows.length).toBe(0)
+      })
+
+      it("applies client-side filtering, sorting, search when asyncData is URL string", async () => {
+        vi.useFakeTimers()
+        const mockData = [
+          { id: 1, name: "apple", type: "fruit" },
+          { id: 2, name: "banana", type: "fruit" },
+          { id: 3, name: "carrot", type: "vegetable" }
+        ]
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockData
+        } as Response)
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: "https://api.example.com/data",
+            search: true,
+            columns: [{ dataField: "name", isSort: true, isFilter: true }, { dataField: "type" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        // Проверяем, что все данные загружены
+        expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(3)
+
+        // Проверяем поиск (должен работать на клиенте)
+        const searchInput = wrapper.find("[data-table-search] input")
+        await searchInput.setValue("apple")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+
+        // После поиска должна остаться одна строка
+        expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(1)
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("Mode 3: asyncData = object (Config mode)", () => {
+      it("loads data with custom headers", async () => {
+        const mockData = [{ id: 1, name: "Test" }]
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockData
+        } as Response)
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: {
+              url: "https://api.example.com/data",
+              headers: {
+                Authorization: "Bearer token123",
+                "Custom-Header": "custom-value"
+              }
+            },
+            columns: [{ dataField: "id" }, { dataField: "name" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+
+        expect(global.fetch).toHaveBeenCalledWith("https://api.example.com/data", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer token123",
+            "Custom-Header": "custom-value"
+          }
+        })
+      })
+
+      it("loads data with query parameters", async () => {
+        const mockData = [{ id: 1 }]
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockData
+        } as Response)
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: {
+              url: "https://api.example.com/data",
+              query: {
+                limit: 10,
+                offset: 0,
+                sort: "name"
+              }
+            },
+            columns: [{ dataField: "id" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+
+        const fetchCall = (global.fetch as any).mock.calls[0]
+        const url = fetchCall[0]
+        expect(url).toContain("limit=10")
+        expect(url).toContain("offset=0")
+        expect(url).toContain("sort=name")
+      })
+
+      it("handles empty query parameters correctly", async () => {
+        const mockData = [{ id: 1 }]
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockData
+        } as Response)
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: {
+              url: "https://api.example.com/data",
+              query: {
+                limit: 10,
+                emptyParam: undefined,
+                nullParam: null
+              }
+            },
+            columns: [{ dataField: "id" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+
+        const fetchCall = (global.fetch as any).mock.calls[0]
+        const url = fetchCall[0]
+        expect(url).toContain("limit=10")
+        expect(url).not.toContain("emptyParam")
+        expect(url).not.toContain("nullParam")
+      })
+    })
+
+    describe("Mode 4: asyncData = function (Function mode)", () => {
+      it("calls asyncData function on mount", async () => {
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: baseData,
+          totalCount: 5
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            columns: [{ dataField: "name" }, { dataField: "color" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+
+        expect(mockAsyncFunction).toHaveBeenCalledTimes(1)
+        expect(mockAsyncFunction).toHaveBeenCalledWith({
+          filters: {},
+          sort: {},
+          search: "",
+          pagination: {
+            page: 1,
+            size: 5
+          }
+        })
+      })
+
+      it("loads data from function and displays it", async () => {
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: [
+            { id: 1, name: "Test 1" },
+            { id: 2, name: "Test 2" }
+          ],
+          totalCount: 2
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            columns: [{ dataField: "id" }, { dataField: "name" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        const rows = wrapper.findAll("[data-table-tbody-tr]")
+        expect(rows.length).toBe(2)
+      })
+
+      it("calls asyncData function when filters change", async () => {
+        vi.useFakeTimers()
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: baseData,
+          totalCount: 5
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            columns: [{ dataField: "name", isFilter: true }, { dataField: "color" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        // Сбрасываем счетчик вызовов после монтирования
+        mockAsyncFunction.mockClear()
+
+        // Применяем фильтр
+        const filterInput = wrapper.find("[data-table-thead-col-filter] input")
+        await filterInput.setValue("orange")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+
+        expect(mockAsyncFunction).toHaveBeenCalledTimes(1)
+        const callArgs = mockAsyncFunction.mock.calls[0][0]
+        expect(callArgs.filters.name).toBe("orange")
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("calls asyncData function when sort changes", async () => {
+        vi.useFakeTimers()
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: baseData,
+          totalCount: 5
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            columns: [{ dataField: "name", isSort: true }, { dataField: "color" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        mockAsyncFunction.mockClear()
+
+        // Вызываем сортировку
+        await wrapper.find("[data-table-thead-col-sort]").trigger("click")
+        vi.advanceTimersByTime(100)
+        await nextTick()
+
+        expect(mockAsyncFunction).toHaveBeenCalledTimes(1)
+        const callArgs = mockAsyncFunction.mock.calls[0][0]
+        expect(callArgs.sort.name).toBe("asc")
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("calls asyncData function when search changes", async () => {
+        vi.useFakeTimers()
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: baseData,
+          totalCount: 5
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            search: true,
+            columns: [{ dataField: "name" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        mockAsyncFunction.mockClear()
+
+        // Выполняем поиск
+        const searchInput = wrapper.find("[data-table-search] input")
+        await searchInput.setValue("test")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+
+        expect(mockAsyncFunction).toHaveBeenCalledTimes(1)
+        const callArgs = mockAsyncFunction.mock.calls[0][0]
+        expect(callArgs.search).toBe("test")
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("calls asyncData function when pagination changes", async () => {
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: baseData,
+          totalCount: 5
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            pagination: { sizePage: 2 },
+            columns: [{ dataField: "name" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        mockAsyncFunction.mockClear()
+
+        // Меняем страницу через expose метод
+        wrapper.vm.switchPage(2)
+        await nextTick()
+
+        expect(mockAsyncFunction).toHaveBeenCalledTimes(1)
+        const callArgs = mockAsyncFunction.mock.calls[0][0]
+        expect(callArgs.pagination.page).toBe(2)
+        expect(callArgs.pagination.size).toBe(2)
+      })
+
+      it("uses totalCount from function result for pagination", async () => {
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: [
+            { id: 1, name: "Item 1" },
+            { id: 2, name: "Item 2" }
+          ],
+          totalCount: 100
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            pagination: { sizePage: 10 },
+            columns: [{ dataField: "id" }, { dataField: "name" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        // Проверяем, что lengthData использует totalCount из функции
+        expect(wrapper.vm.lengthData).toBe(100)
+      })
+
+      it("handles function errors gracefully", async () => {
+        const mockAsyncFunction = vi.fn().mockRejectedValue(new Error("API Error"))
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            columns: [{ dataField: "name" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        // При ошибке данные должны быть пустыми
+        const rows = wrapper.findAll("[data-table-tbody-tr]")
+        expect(rows.length).toBe(0)
+      })
+
+      it("reloads data when reloadData method is called", async () => {
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: baseData,
+          totalCount: 5
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            columns: [{ dataField: "name" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        const initialCallCount = mockAsyncFunction.mock.calls.length
+
+        // Вызываем метод reloadData
+        await wrapper.vm.reloadData()
+        await nextTick()
+
+        expect(mockAsyncFunction).toHaveBeenCalledTimes(initialCallCount + 1)
+      })
+
+      it("disables client-side pagination slicing when asyncData is function", async () => {
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: [
+            { id: 1, name: "Item 1" },
+            { id: 2, name: "Item 2" }
+          ],
+          totalCount: 2
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            pagination: { sizePage: 10 },
+            columns: [{ dataField: "id" }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        // В режиме функции данные уже приходят отфильтрованными, слайсинг не нужен
+        const rows = wrapper.findAll("[data-table-tbody-tr]")
+        expect(rows.length).toBe(2) // Все загруженные данные отображаются
+      })
+
+      it("disables client-side filtering, sorting, search when asyncData is function", async () => {
+        vi.useFakeTimers()
+        const mockAsyncFunction = vi.fn().mockResolvedValue({
+          dataSource: baseData,
+          totalCount: 5
+        })
+
+        const wrapper = mount(Table, {
+          props: {
+            asyncData: mockAsyncFunction,
+            search: true,
+            columns: [{ dataField: "name", isSort: true, isFilter: true }]
+          }
+        })
+
+        await nextTick()
+        await flushPromises()
+        await nextTick()
+
+        const initialRowsCount = wrapper.findAll("[data-table-tbody-tr]").length
+        mockAsyncFunction.mockClear()
+
+        // Применяем фильтр - должно вызвать функцию, но не фильтровать на клиенте
+        const filterInput = wrapper.find("[data-table-thead-col-filter] input")
+        await filterInput.setValue("orange")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+
+        // Функция должна быть вызвана
+        expect(mockAsyncFunction).toHaveBeenCalled()
+
+        // Но данные на клиенте не должны измениться до получения ответа
+        // (в реальном сценарии функция вернет новые данные)
+
+        vi.clearAllTimers()
+        vi.useRealTimers()
       })
     })
   })

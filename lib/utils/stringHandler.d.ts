@@ -123,20 +123,21 @@ export declare function toFlatCase(str: string): string
 
  **Note**: The `toKebabCase` function can be used to convert strings from various case styles to kebab case. It is commonly used in web development for creating CSS class names and URLs.
  */
-export declare function toCapitalCase(str: string): string
+export declare function toCapitalCase(str: string, locale?: string | string[]): string
 
 /**
  #### `toCapitalCase` Function Documentation
 
- The `toCapitalCase` function is a utility function that converts a string to Capital Case format. It takes one parameter: `str`, which is the string to be converted. It returns the converted string in Capital Case format.
+ The `toCapitalCase` function is a utility function that converts a string to Capital Case format. It takes two parameters: `str`, the string to be converted, and `locale` (optional) — a BCP-47 locale tag (or array of tags) used for `String.prototype.toLocaleUpperCase`. Without `locale`, the host environment's default locale is used. It returns the converted string in Capital Case format.
 
  ##### Syntax
  ```typescript
- export function toCapitalCase(str: string): string
+ export function toCapitalCase(str: string, locale?: string | string[]): string
  ```
 
  ##### Parameters
  - `str`: The string to be converted.
+ - `locale` (optional): BCP-47 locale tag (or array of tags) for locale-aware uppercasing — required for languages where `toUpperCase` produces different output, such as Turkish (`"tr-TR"`: `"i"` → `"İ"`).
 
  ##### Return Value
  - The converted string in Capital Case format.

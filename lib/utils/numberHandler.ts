@@ -1,29 +1,46 @@
-const arrPhone = [
+export type PhoneFormat = {
+  codeCountry: number
+  mask: number[]
+  codeCity: number[]
+}
+
+export interface ConvertToPhoneOptions {
+  phoneFormats?: PhoneFormat[]
+}
+
+const defaultPhoneFormats: PhoneFormat[] = [
   { codeCountry: 1, mask: [3, 2, 2, 7], codeCity: [] },
   { codeCountry: 7, mask: [3, 2, 2, 7], codeCity: [] },
   { codeCountry: 81, mask: [4, 4, 6], codeCity: [6, 75, 742] },
   { codeCountry: 82, mask: [4, 4, 6], codeCity: [2, 52, 51] },
   { codeCountry: 86, mask: [4, 4, 6], codeCity: [10, 20, 21] }
 ]
-const strReg = arrPhone
-  .map(
-    (p) =>
-      `^(${p.codeCountry})` +
-      `(${p.codeCity.join("|") + (p.codeCity.length > 0 ? "|" : "")}\\d{1,3})` +
-      `(\\d{0,${p.mask.join("})(\\d{0,") || 16}})`
-  )
-  .join("|")
-const phoneRegular = RegExp(`${strReg + (strReg.length > 0 ? "|" : "")}^(\\d{1,18})`, "")
 
-export function convertToPhone(value: string): string {
+function buildPhoneRegex(formats: PhoneFormat[]): RegExp {
+  const strReg = formats
+    .map(
+      (p) =>
+        `^(${p.codeCountry})` +
+        `(${p.codeCity.join("|") + (p.codeCity.length > 0 ? "|" : "")}\\d{1,3})` +
+        `(\\d{0,${p.mask.join("})(\\d{0,") || 16}})`
+    )
+    .join("|")
+  return RegExp(`${strReg + (strReg.length > 0 ? "|" : "")}^(\\d{1,18})`, "")
+}
+
+const defaultPhoneRegex = buildPhoneRegex(defaultPhoneFormats)
+
+export function convertToPhone(value: string, options?: ConvertToPhoneOptions): string {
   if (!value) return value
   if (!value.match(/^[\d+]/m)) return value.replace(/\D/g, "")
-  const x: any = value.replace(/\D/g, "").match(phoneRegular) || []
+  const formats = options?.phoneFormats && options.phoneFormats.length > 0 ? options.phoneFormats : defaultPhoneFormats
+  const regex = formats === defaultPhoneFormats ? defaultPhoneRegex : buildPhoneRegex(formats)
+  const x: any = value.replace(/\D/g, "").match(regex) || []
   if (x.length) x.shift()
   else return "+"
   const i = x.findIndex((index: any) => index)
   if (x[i].length) {
-    if (arrPhone.some((p) => p.codeCountry === +x[i])) {
+    if (formats.some((p) => p.codeCountry === +x[i])) {
       // eslint-disable-next-line no-self-assign
       x[i] = x[i]
     } else if (x[i] === "9") {

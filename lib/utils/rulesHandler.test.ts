@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import type { Rules } from "fishtvue/utils/rulesHandler"
-import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
+import { getAsyncValidate, getValidate, isExistRule, setDefaultRuleMessages } from "fishtvue/utils/rulesHandler"
 import { email, length, numeric, phone, range, regular, required } from "./rulesMethods"
 
 describe("Testing rules handler", () => {
@@ -825,6 +825,50 @@ describe("Testing rules handler", () => {
         }
       }
       await expect(getAsyncValidate("value", rules)).rejects.toThrow("Unexpected error")
+    })
+  })
+
+  describe("setDefaultRuleMessages", () => {
+    afterEach(() => {
+      setDefaultRuleMessages({})
+    })
+
+    it("should override the default required message", () => {
+      setDefaultRuleMessages({ required: "Поле обязательно" })
+      const rules: Rules = [{ type: "required" }]
+      expect(getValidate("", rules, {})).toEqual({ isInvalid: true, message: "Поле обязательно" })
+    })
+
+    it("should override multiple default messages at once", () => {
+      setDefaultRuleMessages({ email: "Неверный email", phone: "Неверный телефон" })
+      expect(getValidate("not-an-email", [{ type: "email" }], {})).toEqual({
+        isInvalid: true,
+        message: "Неверный email"
+      })
+      expect(getValidate("abc", [{ type: "phone" }], {})).toEqual({
+        isInvalid: true,
+        message: "Неверный телефон"
+      })
+    })
+
+    it("should reset to original defaults when called with an empty object", () => {
+      setDefaultRuleMessages({ required: "Custom" })
+      setDefaultRuleMessages({})
+      expect(getValidate("", [{ type: "required" }], {})).toEqual({ isInvalid: true, message: "Required field" })
+    })
+
+    it("should keep explicit rule.message taking precedence over the default", () => {
+      setDefaultRuleMessages({ required: "Default-RU" })
+      const rules: Rules = [{ type: "required", message: "Explicit message" }]
+      expect(getValidate("", rules, {})).toEqual({ isInvalid: true, message: "Explicit message" })
+    })
+
+    it("should leave non-overridden keys at their original defaults", () => {
+      setDefaultRuleMessages({ required: "Поле обязательно" })
+      expect(getValidate("not-an-email", [{ type: "email" }], {})).toEqual({
+        isInvalid: true,
+        message: "Invalid email"
+      })
     })
   })
 })

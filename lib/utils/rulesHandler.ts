@@ -138,7 +138,9 @@ const arrayRules: Array<keyof RulesObject> = [
   "custom",
   "compare"
 ]
-const defaultMessages: Record<keyof RulesObject, message> = {
+export type RuleMessageKey = keyof RulesObject
+
+const initialMessages: Readonly<Record<RuleMessageKey, message>> = Object.freeze({
   required: "Required field",
   email: "Invalid email",
   phone: "Invalid phone",
@@ -149,6 +151,29 @@ const defaultMessages: Record<keyof RulesObject, message> = {
   async: "Invalid field",
   custom: "Invalid field",
   compare: "The field does not fall off"
+})
+let defaultMessages: Record<RuleMessageKey, message> = { ...initialMessages }
+
+/**
+ * Override default validation messages used when a rule does not provide its own `message`.
+ *
+ * Pass a partial map of overrides — only the listed keys are replaced.
+ * Pass an empty object (`{}`) to restore all built-in English defaults.
+ *
+ * Use this once during application/locale setup (e.g. inside Form/Input setup tied to the FishtVue locale).
+ *
+ * @example
+ * ```ts
+ * setDefaultRuleMessages({ required: "Поле обязательно", email: "Неверный email" })
+ * setDefaultRuleMessages({}) // reset to English defaults
+ * ```
+ */
+export function setDefaultRuleMessages(messages: Partial<Record<RuleMessageKey, message>>): void {
+  if (Object.keys(messages).length === 0) {
+    defaultMessages = { ...initialMessages }
+    return
+  }
+  defaultMessages = { ...defaultMessages, ...messages }
 }
 
 function toRulesArray(rules: RulesArray | RulesObject): RulesArray {

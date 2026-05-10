@@ -83,7 +83,11 @@ describe("Testing class Component", () => {
   })
 
   it("should return the correct options with getOptions", () => {
-    expect(component.getOptions()).toEqual({ closeButton: true })
+    expect(component.getOptions()).toEqual({
+      FixWindow: {
+        closeButton: true
+      }
+    })
   })
 
   it("should return the correct prefix with getPrefix", () => {

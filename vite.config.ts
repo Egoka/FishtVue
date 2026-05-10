@@ -12,6 +12,9 @@ export default defineConfig({
     environment: "jsdom",
     silent: true,
     include: ["lib/**/*.test.ts"],
+    maxWorkers: 1,
+    minWorkers: 1,
+    isolate: false,
     coverage: {
       provider: "v8",
       enabled: true,

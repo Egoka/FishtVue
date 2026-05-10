@@ -1,5 +1,19 @@
 {
   "main": "./utils.mjs",
   "module": "./utils.mjs",
-  "types": "./Utils.d.ts"
+  "types": "./Utils.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./Utils.d.ts",
+      "import": "./utils.mjs",
+      "default": "./utils.mjs"
+    },
+    "./*": {
+      "types": "./*.d.ts",
+      "import": "./*.mjs",
+      "default": "./*.mjs"
+    },
+    "./package.json": "./package.json"
+  }
 }

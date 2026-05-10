@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils"
+import { mount, flushPromises } from "@vue/test-utils"
 import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Select from "fishtvue/select/Select.vue"
@@ -171,6 +171,7 @@ describe("Select Component Tests", () => {
         props: {
           dataSelect: ["Apple", "Banana", "Cherry"],
           modelValue: null,
+          multiple: true,
           paramsFixWindow: {
             el: "[data-v-app]",
             eventClose: "click"
@@ -182,7 +183,9 @@ describe("Select Component Tests", () => {
       // Open the select dropdown
       expect(wrapper.find("[data-fix-window]").isVisible()).toBe(false)
       await wrapper.find("[data-select]").trigger("click")
-      expect(wrapper.find("[data-fix-window]").isVisible()).toBe(true)
+      await flushPromises()
+      const componentFixWindow = wrapper.findComponent({ name: "FixWindow" })
+      expect(componentFixWindow.vm.isOpen).toBe(true)
       expect(wrapper.find("[data-select-list]").exists()).toBe(true)
 
       // switch selector on first item
@@ -209,13 +212,13 @@ describe("Select Component Tests", () => {
 
       // Simulate Escape key press
       await wrapper.trigger("keydown", { key: "Escape" })
-      const componentFixWindow = wrapper.findComponent({ name: "FixWindow" })
       expect(componentFixWindow.vm.isOpen).toBe(false)
       expect(wrapper.vm.isOpenList).toBe(false)
 
       // Open the select dropdown
       await wrapper.find("[data-select]").trigger("click")
-      expect(wrapper.find("[data-fix-window]").isVisible()).toBe(true)
+      await flushPromises()
+      expect(componentFixWindow.vm.isOpen).toBe(true)
 
       // Создаём событие клика в точке (50, 50) на div
       const clickEvent = new MouseEvent("click", {

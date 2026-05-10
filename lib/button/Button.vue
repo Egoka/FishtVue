@@ -313,7 +313,7 @@
   const classBase = computed<StyleClass>(() => {
     const classes = [
       baseClasses.value,
-      modeClasses.value[mode.value][color.value],
+      modeClasses.value?.[mode.value]?.[color.value],
       sizeClasses.value[type.value === "icon" ? "icon" : "button"][size.value],
       roundedClasses.value[rounded.value],
       options?.class ?? "",

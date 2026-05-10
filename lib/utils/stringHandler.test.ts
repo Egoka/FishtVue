@@ -231,6 +231,20 @@ describe("Testing string handler", () => {
       const result = toCapitalCase(capitalizedStr)
       expect(result).toBe(capitalizedStr)
     })
+
+    it("should capitalize Unicode letters with diacritics", () => {
+      expect(toCapitalCase("über")).toBe("Über")
+      expect(toCapitalCase("ñoño")).toBe("Ñoño")
+      expect(toCapitalCase("éclat")).toBe("Éclat")
+    })
+
+    it("should respect explicit locale for Turkish dotted I", () => {
+      expect(toCapitalCase("istanbul", "tr-TR")).toBe("İstanbul")
+    })
+
+    it("should accept array of locales", () => {
+      expect(toCapitalCase("istanbul", ["tr-TR", "en-US"])).toBe("İstanbul")
+    })
   })
 
   describe("convertToCamelCase", () => {

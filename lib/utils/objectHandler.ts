@@ -402,6 +402,8 @@ export function fieldsPick<Structure extends Record<string | number, any>>(
  ```
 
  **Note**: The `deepMerge` function can be used to perform a deep merge of multiple objects. When primitive types are mixed with objects, only objects are merged and primitives are ignored. If all arguments are primitives, the function returns the last non-empty value.
+
+ **Mutation**: For historical and performance reasons, `deepMerge` **mutates and returns the first non-empty object argument**; subsequent objects are merged into it. To keep all inputs unchanged, deep-clone the first argument: `deepMerge(deepCopy(defaults), overrides)`. Cyclic references are handled via `WeakMap` and resolved to the previously visited node.
  */
 export function deepMerge<T extends any | object | any[]>(...objects: any[]): T {
   // Handle case when no arguments provided
