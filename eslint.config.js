@@ -45,6 +45,7 @@ const globals = {
   Response: "readonly",
   MouseEvent: "readonly",
   FocusEvent: "readonly",
+  FocusOptions: "readonly",
   KeyboardEvent: "readonly",
   InputEvent: "readonly",
   ShadowRoot: "readonly",
@@ -195,6 +196,7 @@ export default defineConfig([
     "**/dist/**/*",
     "**/node_modules/**/*",
     "**/.nuxt/**/*",
-    "**/.output/**/*"
+    "**/.output/**/*",
+    ".claude/worktrees/**/*"
   ])
 ])

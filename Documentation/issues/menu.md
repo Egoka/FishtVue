@@ -11,12 +11,12 @@ related-doc: ../components/menu.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 1 | C13 (v-html × 2 in item.info) |
-| high | 6 | A2, A4-5, C17, E29.1, E29.2, P (dual-API) |
-| medium | 4 | E29.3, F30, G34, H39 |
-| low | 3 | E29.7, B10, F31 |
+| Severity | Count | Categories                                |
+| -------- | ----- | ----------------------------------------- |
+| critical | 1     | C13 (v-html × 2 in item.info)             |
+| high     | 6     | A2, A4-5, C17, E29.1, E29.2, P (dual-API) |
+| medium   | 4     | E29.3, F30, G34, H39                      |
+| low      | 3     | E29.7, B10, F31                           |
 
 ## Issue 1: CRITICAL — XSS через `item.info` v-html
 
@@ -53,13 +53,15 @@ related-doc: ../components/menu.md
 API только schema-driven через `items: MenuItem[]` с nested `subItems`. Custom rendering — только через единый `item` slot для всего меню.
 
 ```vue
-<Menu :items="[
-  { name: 'File', subItems: [{ name: 'Open' }, { name: 'Save' }] },
-  { name: 'Edit', icon: 'edit' }
-]" />
+<Menu
+  :items="[
+    { name: 'File', subItems: [{ name: 'Open' }, { name: 'Save' }] },
+    { name: 'Edit', icon: 'edit' }
+  ]" />
 ```
 
 vs compound:
+
 ```vue
 <Menu>
   <MenuGroup label="File">
@@ -151,17 +153,17 @@ Submenu позиционируется через FixWindow. См. [fixwindow.md
 
 ## Issue 9: prefers-reduced-motion / RTL / colors
 
-Cross-cutting. См. [button.md Issue 10](./button.md), [switch.md](./switch.md).
+Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern, плюс [switch.md](./switch.md).
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Menu` | ✅ | mode, items, и др. |
-| `componentsStyle` global | ✅ | через `MenuComponent.componentsStyle()` |
-| `unstyled: true` | ❌ | cross-cutting |
-| Theme tokens vs hardcode | ⚠️ | частично |
-| `t()` для текста | N/A | item.name — пользовательский |
+| Настройка                | Поддержано? | Комментарий                             |
+| ------------------------ | ----------- | --------------------------------------- |
+| `componentsOptions.Menu` | ✅          | mode, items, и др.                      |
+| `componentsStyle` global | ✅          | через `MenuComponent.componentsStyle()` |
+| `unstyled: true`         | ❌          | cross-cutting                           |
+| Theme tokens vs hardcode | ⚠️          | частично                                |
+| `t()` для текста         | N/A         | item.name — пользовательский            |
 
 ## Dual-API gap
 

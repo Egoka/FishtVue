@@ -12,12 +12,12 @@ stability: beta
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 5 | A2, A4-5, C13 (body.classList), C17, J46 (low coverage) |
-| medium | 5 | E29.1, E29.2 (keyboard), F31, G34, K46 (branch 39%) |
-| low | 3 | E29.7, B10, N57 |
+| Severity | Count | Categories                                              |
+| -------- | ----- | ------------------------------------------------------- |
+| critical | 0     | —                                                       |
+| high     | 5     | A2, A4-5, C13 (body.classList), C17, J46 (low coverage) |
+| medium   | 5     | E29.1, E29.2 (keyboard), F31, G34, K46 (branch 39%)     |
+| low      | 3     | E29.7, B10, N57                                         |
 
 ## Issue 1: Мутация `document.body.classList` — global side-effect
 
@@ -34,6 +34,7 @@ document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
 ```
 
 При drag-resize Split добавляет cursor-class к `document.body`. Это глобальное состояние:
+
 - Конфликт с пользовательскими classes на body.
 - При unmount во время active drag — class остаётся (resolved через onUnmounted? Нужно проверить ниже).
 - Конфликт с другими Split-компонентами на странице (двух split-панелей одновременно — race condition).
@@ -103,8 +104,8 @@ Resize handle (drag-bar between panels) — без `role="separator" aria-orient
      :aria-valuemax="maxSize"
      :aria-controls="panelId"
      tabindex="0"
-     @keydown.left="..." @keydown.right="..."
-   />
+     @keydown.left="..."
+     @keydown.right="..." />
    ```
 
 ## Issue 5: Keyboard navigation (стрелки для resize) отсутствует
@@ -155,17 +156,17 @@ Audit persist save/restore через `isClient()` или `typeof localStorage !
 
 Drag-resize на mobile: нужны touch-event handlers (touchstart, touchmove, touchend). Сейчас только mouse. Mobile users не могут resize.
 
-См. [button.md Issue 10](./button.md) для motion.
+См. [done/button.md Issue 10](./done/button.md) для motion-safe pattern.
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Split` | ✅ | direction, panels, persistence |
-| `componentsStyle` global | ❌ | Split не имеет mode-enum |
-| `unstyled: true` | ❌ | Issue 3 |
-| Theme tokens vs hardcode | ⚠️ | resize-handle цвета через theme-* |
-| `t()` для текста | N/A | контент через slot |
+| Настройка                 | Поддержано? | Комментарий                        |
+| ------------------------- | ----------- | ---------------------------------- |
+| `componentsOptions.Split` | ✅          | direction, panels, persistence     |
+| `componentsStyle` global  | ❌          | Split не имеет mode-enum           |
+| `unstyled: true`          | ❌          | Issue 3                            |
+| Theme tokens vs hardcode  | ⚠️          | resize-handle цвета через theme-\* |
+| `t()` для текста          | N/A         | контент через slot                 |
 
 ## Dual-API gap
 

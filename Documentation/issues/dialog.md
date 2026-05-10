@@ -11,12 +11,12 @@ related-doc: ../components/dialog.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 2 | E29.3 (focus trap), H41 (escapeListener leak) |
-| high | 5 | A2, A4-5, C13 (body.style mutation), C17, E29.1 (no role/aria-modal) |
-| medium | 4 | E29.4 (focus return), E29.5, F31, G34 |
-| low | 3 | E29.7, B10, N59 |
+| Severity | Count | Categories                                                           |
+| -------- | ----- | -------------------------------------------------------------------- |
+| critical | 2     | E29.3 (focus trap), H41 (escapeListener leak)                        |
+| high     | 5     | A2, A4-5, C13 (body.style mutation), C17, E29.1 (no role/aria-modal) |
+| medium   | 4     | E29.4 (focus return), E29.5, F31, G34                                |
+| low      | 3     | E29.7, B10, N59                                                      |
 
 ## Issue 1: CRITICAL — Нет focus trap внутри dialog
 
@@ -40,7 +40,7 @@ related-doc: ../components/dialog.md
    ```ts
    import { useFocusTrap } from "@vueuse/integrations/useFocusTrap"
    const { activate, deactivate } = useFocusTrap(dialogContent, { immediate: false })
-   watch(isOpen, (val) => val ? activate() : deactivate())
+   watch(isOpen, (val) => (val ? activate() : deactivate()))
    ```
 2. На open — focus первого focusable element внутри dialog (или явный `initialFocus` ref).
 3. Tab/Shift-Tab — циклит внутри dialog.
@@ -121,6 +121,7 @@ bodyEl.setAttribute("style", `${bodyEl.style.cssText}overflow: hidden;`)
 ```
 
 Добавляется class `overflow-hidden` и **inline style** `overflow: hidden`. При множественных Dialog (nested, или toast + dialog):
+
 - Первый Dialog open → `overflow: hidden` set.
 - Второй Dialog open → ещё раз `${bodyEl.style.cssText}overflow: hidden;` — string concat дублирует.
 - Первый Dialog close → удаляет `overflow: hidden;` (только первое вхождение через `.replace(..., "")`) — второй Dialog ещё открыт, но overflow восстановился.
@@ -171,7 +172,10 @@ bodyEl.setAttribute("style", `${bodyEl.style.cssText}overflow: hidden;`)
 ### Что нужно сделать
 
 1. ```vue
-   <div v-if="isOpen" :class="classBase" data-dialog
+   <div
+     v-if="isOpen"
+     :class="classBase"
+     data-dialog
      role="dialog"
      aria-modal="true"
      :aria-labelledby="titleId"
@@ -216,17 +220,17 @@ bodyEl.setAttribute("style", `${bodyEl.style.cssText}overflow: hidden;`)
 - **Категория:** E29.7
 - **Где:** [Dialog.vue:179-184](../../lib/dialog/Dialog.vue#L179-L184)
 
-`transition-all ease-in-out duration-500` — без guard. См. [button.md Issue 10](./button.md).
+`transition-all ease-in-out duration-500` — без guard. См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern.
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Dialog` | ✅ | toTeleport, position, sizes, и др. |
-| `componentsStyle` global | ❌ | Dialog не пересекается с filled/outlined/underlined |
-| `unstyled: true` | ❌ | cross-cutting |
-| Theme tokens vs hardcode | ⚠️ | через theme-* частично |
-| `t()` для текста | N/A | контент через slot |
+| Настройка                  | Поддержано? | Комментарий                                         |
+| -------------------------- | ----------- | --------------------------------------------------- |
+| `componentsOptions.Dialog` | ✅          | toTeleport, position, sizes, и др.                  |
+| `componentsStyle` global   | ❌          | Dialog не пересекается с filled/outlined/underlined |
+| `unstyled: true`           | ❌          | cross-cutting                                       |
+| Theme tokens vs hardcode   | ⚠️          | через theme-\* частично                             |
+| `t()` для текста           | N/A         | контент через slot                                  |
 
 ## Dual-API gap
 

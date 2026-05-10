@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted } from "vue"
+  import { computed } from "vue"
   import type { BadgeEmits, BadgeProps } from "./Badge"
   import Icons from "fishtvue/icons/Icons.vue"
   import Button from "fishtvue/button/Button.vue"
@@ -14,7 +14,13 @@
   })
   const emit = defineEmits<BadgeEmits>()
   // ---PROPS-------------------------------
-  const mode = computed<NonNullable<BadgeProps["mode"]>>(() => props.mode ?? options?.mode ?? "primary")
+  const componentsStyleMode = computed<NonNullable<BadgeProps["mode"]> | undefined>(() => {
+    const cs = Badge.componentsStyle()
+    return cs === "filled" ? "primary" : cs === "outlined" ? "outline" : cs === "underlined" ? "neutral" : undefined
+  })
+  const mode = computed<NonNullable<BadgeProps["mode"]>>(
+    () => props.mode ?? options?.mode ?? componentsStyleMode.value ?? "primary"
+  )
   const isPoint = computed<NonNullable<BadgeProps["point"]>>(() => props.point ?? options?.point ?? false)
   const isButton = computed<NonNullable<BadgeProps["closeButton"]>>(
     () => props.closeButton ?? options?.closeButton ?? false
@@ -29,7 +35,7 @@
           : mode.value === "outline"
             ? !isPoint.value && !isButton.value
               ? "ring-1 ring-inset bg-theme-50 dark:bg-theme-900 text-theme-600 dark:text-theme-400 ring-theme-500/10"
-              : "ring-1 ring-inset text-neutral-600 dark:text-neutral-200 ring-neutral-500/30"
+              : "ring-1 ring-inset text-neutral-600 dark:text-neutral-200 ring-neutral-300 dark:ring-neutral-700"
             : ""
   )
   const classBadgeContent = computed<BadgeProps["classContent"]>(() => {
@@ -68,14 +74,10 @@
     // ---METHODS-----------------------
     deleteBadge
   })
-  // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
-    Badge.initStyle()
-  })
-
   // ---METHODS-----------------------------
   function deleteBadge() {
     emit("delete")
+    emit("close")
   }
 </script>
 
