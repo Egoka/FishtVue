@@ -1,7 +1,7 @@
 ---
 title: utils/numberHandler
-summary: Форматирование чисел и телефонов + input-handlers для масок.
-updated: 2026-05-09
+summary: Форматирование чисел и телефонов + input-handlers для масок. `convertToPhone` принимает optional `phoneFormats` для произвольных стран.
+updated: 2026-05-10
 stability: beta
 since: 0.2.11
 ---
@@ -31,7 +31,7 @@ lib/utils/numberHandler.test.ts    # 47 кейсов
 
 ## 3. How it works
 
-- `convertToPhone(value)` — форматирует строку из цифр в телефонный формат (внутренние сепараторы по канону).
+- `convertToPhone(value, options?)` — форматирует строку из цифр в телефонный формат (внутренние сепараторы по канону). По умолчанию поддерживает country codes 1, 7, 81, 82, 86 (РФ, JP, KR, CN, US/CA). Через `options.phoneFormats: PhoneFormat[]` можно передать произвольный набор стран — backward compatible (без options используются дефолты).
 - `convertToNumber(number, lengthInteger, lengthDecimal, separator, end, interval, floatingPoint)` — приводит число/строку к фиксированному формату с разделителем тысяч, обрезанной целой/дробной частью, кастомным окончанием.
 - `onkeydown(e)` / `toPhone(e)` / `toNumber(e, separator, lengthInteger, lengthDecimal)` — DOM-handlers для `<input>` (input/keydown event'ы), которые мутируют `e.target.value` в момент ввода для маскирования.
 
@@ -65,7 +65,7 @@ convertToNumber(1234567.891, 20, 2, " ", " ₽", 3, ".")
 
 | Name | Type | Description |
 |---|---|---|
-| `convertToPhone(value)` | `(value: string) => string` | Форматирует строку цифр в телефон. |
+| `convertToPhone(value, options?)` | `(value: string, options?: ConvertToPhoneOptions) => string` | Форматирует строку цифр в телефон. `options.phoneFormats` — кастомные форматы вида `{ codeCountry, mask, codeCity }[]`. |
 | `convertToNumber(number, lengthInteger, lengthDecimal, separator, end, interval, floatingPoint)` | См. [.d.ts](../../lib/utils/numberHandler.d.ts) | Форматирует число с разделителем, обрезкой, suffix. |
 | `onkeydown(e)` | `(e: any) => void` | Keyboard handler — фильтрует не-цифровой ввод. |
 | `toPhone(e)` | `(e: any) => void` | Маска для ввода телефона. |
@@ -105,9 +105,31 @@ function onInput(e: Event) {
 
 Чаще всего эти helpers не вызываются напрямую — за маски ввода в FishtVue отвечает [Input](../components/input.md) с props `maskInput`.
 
+### 9.4 Кастомный набор стран в `convertToPhone`
+
+```ts
+import { convertToPhone, type PhoneFormat } from "fishtvue/utils/numberHandler"
+
+const europe: PhoneFormat[] = [
+  { codeCountry: 44, mask: [4, 4, 2], codeCity: [20] }, // UK
+  { codeCountry: 49, mask: [4, 4, 4], codeCity: [30] }  // DE
+]
+
+convertToPhone("442012345678", { phoneFormats: europe })
+// "+44 (20) 1234-5678"
+```
+
+Если `phoneFormats` пустой массив или не передан — используются дефолтные форматы (1, 7, 81, 82, 86).
+
 ## 10. Configuration & Customization
 
-Не применимо.
+`convertToPhone(value, options?)`:
+
+| Field | Type | Description |
+|---|---|---|
+| `options.phoneFormats` | `PhoneFormat[]` | Опциональный набор форматов стран. Каждый элемент: `{ codeCountry: number; mask: number[]; codeCity: number[] }`. |
+
+При отсутствии `options.phoneFormats` или передаче пустого массива — fallback на встроенный набор (РФ + JP/KR/CN + US/CA).
 
 ## 11. Form integration & validation
 
@@ -153,7 +175,7 @@ describe("convertToNumber", () => {
 
 | Проблема | Причина | Решение |
 |---|---|---|
-| `convertToPhone` форматирует не как ожидалось | Внутренний шаблон закодирован в реализации; вариативность параметров отсутствует. | Если нужен другой формат — пиши свою функцию. |
+| `convertToPhone` форматирует не как ожидалось | Дефолтный набор стран — РФ + JP/KR/CN + US/CA. | Передай свой набор через `options.phoneFormats: PhoneFormat[]`. |
 | `toNumber` теряет курсор при вводе | Handler пере-присваивает `e.target.value` → теряется selection range. | Сохраняй и восстанавливай `selectionStart` снаружи handler'а. |
 | Paste не маскируется | Handler слушает только keydown/input. | Подпиши свой `paste` handler, вызывай `convertToNumber` вручную. |
 
@@ -183,7 +205,7 @@ describe("convertToNumber", () => {
 
 ### Behavioral caveats
 
-- `convertToPhone` форматирует с расчётом на российский формат +7 (XXX) XXX-XX-XX по умолчанию — для интернациональных номеров не подходит.
+- `convertToPhone` без `options` форматирует с расчётом на встроенный набор стран (1, 7, 81, 82, 86). Для произвольных стран используй `options.phoneFormats`.
 - `toNumber` при многократном вводе может тратить performance на каждый keydown. Для больших input'ов — debounce.
 
 ### Bug report format

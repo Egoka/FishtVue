@@ -180,8 +180,8 @@ export function toKebabCase(str: any): string {
 
  **Note**: The `toCapitalCase` function can be used to convert strings to Capital Case format. It is a useful utility function when working with different string formats in JavaScript.
  */
-export function toCapitalCase(str: string): string {
-  return isString(str, false) ? str[0].toUpperCase() + str.slice(1) : str
+export function toCapitalCase(str: string, locale?: string | string[]): string {
+  return isString(str, false) ? str[0].toLocaleUpperCase(locale) + str.slice(1) : str
 }
 
 export function convertToCamelCase(text: string): string {

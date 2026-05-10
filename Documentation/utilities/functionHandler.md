@@ -1,7 +1,7 @@
 ---
 title: utils/functionHandler
-summary: isFunction(value) и generateUUID() — type guard и UUID v4.
-updated: 2026-05-09
+summary: isFunction(value) и generateUUID() — type guard и cryptographically secure UUID v4 (с Math.random fallback для legacy runtime'ов).
+updated: 2026-05-10
 stability: stable
 since: 0.2.11
 ---
@@ -10,7 +10,7 @@ since: 0.2.11
 
 ## 1. Overview
 
-Два helper'а: `isFunction` — type guard для функций, `generateUUID` — генератор UUID v4 на `Math.random()`. Используются повсеместно для валидации callback'ов и генерации id'ов в reactive стейтах.
+Два helper'а: `isFunction` — type guard для функций, `generateUUID` — генератор UUID v4 через `crypto.randomUUID()` (Web Crypto API) с fallback на `Math.random` для legacy runtime'ов. Используются повсеместно для валидации callback'ов и генерации id'ов в reactive стейтах.
 
 Stability: `stable`.
 
@@ -29,7 +29,7 @@ lib/utils/functionHandler.test.ts  # 8 кейсов
 ## 3. How it works
 
 - `isFunction(value)` — проверяет через `typeof === "function"` + кросс-окружные guard'ы (constructor.name, наличие `apply`).
-- `generateUUID()` — собирает 36-символьный UUID v4 на `Math.random()`. **Не cryptographically secure** — для security-чувствительных id'ов используй `crypto.randomUUID()` напрямую.
+- `generateUUID()` — feature-detect `crypto.randomUUID()`; при наличии — используется (cryptographically secure). При отсутствии (или если call throws — например, insecure context до Node 19) — fallback на `Math.random` собирает 36-символьный UUID v4 в каноничной форме `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`.
 
 SSR/hydration: чистые функции.
 
@@ -88,7 +88,7 @@ const li = { id, label: "item" }
 
 ## 12. Accessibility & Security
 
-`generateUUID` использует `Math.random()` — НЕ cryptographically secure. Для session id'ов, токенов, security-чувствительных коллизий используй `crypto.randomUUID()` (Web Crypto API, доступен в браузерах и Node 19+).
+`generateUUID` использует `crypto.randomUUID()` (Web Crypto API) на evergreen browsers и Node 19+ — cryptographically secure из коробки. Math.random fallback срабатывает только в legacy runtime'ах без Web Crypto или в insecure contexts (например, http:// в старых браузерах) — там id'ы не следует использовать как security tokens.
 
 ## 13. TypeScript
 
@@ -133,7 +133,7 @@ describe("functionHandler", () => {
 | Проблема | Причина | Решение |
 |---|---|---|
 | После `isFunction(x)` TypeScript не sugает тип | Не type-guard signature. | Используй `typeof x === "function"` напрямую — встроенный narrowing работает. |
-| Коллизия двух UUID при массовой генерации | `Math.random()` — не uniformly distributed на всех runtime'ах. | Используй `crypto.randomUUID()`. |
+| Коллизия UUID при массовой генерации в legacy runtime | Fallback на `Math.random` — не uniformly distributed на старых runtime'ах. | Обнови runtime до Node 19+ / evergreen-browser; на современных платформах используется secure `crypto.randomUUID()`. |
 
 ## 17. Related
 
@@ -159,7 +159,7 @@ describe("functionHandler", () => {
 
 ### Behavioral caveats
 
-- `generateUUID` использует `Math.random()` — для security-критичных id'ов используй `crypto.randomUUID()`.
+- `generateUUID` использует `crypto.randomUUID()` где доступен (evergreen browsers, Node 19+) — secure из коробки. `Math.random` fallback включается только в legacy runtime'ах / insecure context — там не годится для security tokens.
 - `isFunction(class A {})` возвращает `true` — классы технически функции в JS.
 
 ### Bug report format

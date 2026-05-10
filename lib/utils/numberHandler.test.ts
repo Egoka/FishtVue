@@ -70,6 +70,32 @@ describe("Testing Number handler", () => {
       const result = convertToPhone("+")
       expect(result).toBe("+")
     })
+
+    describe("custom phoneFormats option", () => {
+      it("should format using custom UK country code 44", () => {
+        const result = convertToPhone("442012345678", {
+          phoneFormats: [{ codeCountry: 44, mask: [4, 4, 2], codeCity: [20] }]
+        })
+        expect(result).toBe("+44 (20) 1234-5678")
+      })
+
+      it("should format using custom German country code 49", () => {
+        const result = convertToPhone("4930123456789", {
+          phoneFormats: [{ codeCountry: 49, mask: [4, 4, 4], codeCity: [30] }]
+        })
+        expect(result).toBe("+49 (30) 1234-5678-9")
+      })
+
+      it("should fall back to default formats when phoneFormats is empty", () => {
+        const result = convertToPhone("79012345678", { phoneFormats: [] })
+        expect(result).toBe("+7 (901) 234-56-78")
+      })
+
+      it("should fall back to default formats when options is omitted", () => {
+        const result = convertToPhone("79012345678")
+        expect(result).toBe("+7 (901) 234-56-78")
+      })
+    })
   })
 
   describe("convertToNumber", () => {

@@ -2,6 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings и priority list.
 updated: 2026-05-10
+last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; severity matrix пересчитана.
 ---
 
 # Issues — Index
@@ -41,10 +42,10 @@ updated: 2026-05-10
 | Theme | [theme.md](./theme.md) | 0 | 6 | 4 | 2 |
 | Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
 | Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
-| Utilities | [_utilities.md](./_utilities.md) | 0 | 4 | 4 | 3 |
-| **TOTAL** | **28 files** | **17** | **144** | **111** | **76** |
+| Utilities | [_utilities.md](./done/_utilities.md) | 0 | 1 | 0 | 1 |
+| **TOTAL** | **28 files** | **17** | **141** | **107** | **74** |
 
-Всего **348 issues** распределены по 28 documentов аудита.
+Всего **339 issues** распределены по 28 documentов аудита (9 закрыты в [_utilities.md](./done/_utilities.md) 2026-05-10: Issues 1, 2, 3, 5, 6, 7, 8, 10, 11).
 
 ## Cross-cutting findings (top priority)
 

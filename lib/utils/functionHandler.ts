@@ -42,7 +42,7 @@ export function isFunction<T>(value: T): boolean {
 /**
  #### `generateUUID` Function Documentation
 
- The `generateUUID` function generates a random UUID (Universally Unique Identifier) version 4 using `Math.random()`.
+ The `generateUUID` function generates a random UUID (Universally Unique Identifier) version 4. It uses the cryptographically secure Web Crypto API (`crypto.randomUUID`) when available and falls back to a `Math.random`-based implementation only on legacy runtimes that lack the API.
 
  ##### Syntax
  ```typescript
@@ -50,7 +50,7 @@ export function isFunction<T>(value: T): boolean {
  ```
 
  ##### Return Value
- - A string representing a randomly generated UUID v4.
+ - A string representing a randomly generated UUID v4 in the canonical `xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx` form.
 
  ##### Example Usage
  ```typescript
@@ -58,9 +58,19 @@ export function isFunction<T>(value: T): boolean {
  console.log(uuid); // Example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
  ```
 
- The `generateUUID` function replaces characters in a template string with randomly generated hexadecimal values, ensuring compliance with UUID v4 format.
+ ##### Security
+ - On evergreen browsers and Node 19+, `crypto.randomUUID()` is used — cryptographically secure.
+ - The `Math.random` branch only triggers when the runtime exposes no `crypto.randomUUID` (very old environments) or the call throws (e.g. insecure context). The fallback is **not** cryptographically secure; treat such environments accordingly.
  */
 export function generateUUID(): string {
+  const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined
+  if (cryptoObj && typeof cryptoObj.randomUUID === "function") {
+    try {
+      return cryptoObj.randomUUID()
+    } catch {
+      // fall through to Math.random fallback
+    }
+  }
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
     const v = c === "x" ? r : (r & 0x3) | 0x8

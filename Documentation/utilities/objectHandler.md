@@ -1,7 +1,7 @@
 ---
 title: utils/objectHandler
-summary: type/isObject/isEmpty, get(dot-path), fieldsOmit/Pick, deepMerge/Equals/Copy, freeze.
-updated: 2026-05-09
+summary: type/isObject/isEmpty, get(dot-path), fieldsOmit/Pick, deepMerge (мутирует первый аргумент!), Equals/Copy, freeze.
+updated: 2026-05-10
 stability: stable
 since: 0.2.11
 ---
@@ -32,7 +32,7 @@ lib/utils/objectHandler.test.ts     # 157 кейсов
 - `isObject` / `isEmpty` / `isNotEmpty` — проверки разных flavor.
 - `get(obj, path)` — dot-path или array-path (`"a.b.c"` или `["a", "b", "c"]`).
 - `fieldsOmit` / `fieldsPick` — возвращают новый объект без/только перечисленных полей. Возвращаемый тип сужается через TS Pick/Omit.
-- `deepMerge(...objects)` — глубокий мерж. Обработка примитивов: если все аргументы примитивы — возвращает последний непустой; если смешано с объектами — примитивы игнорятся.
+- `deepMerge(...objects)` — глубокий мерж. **Мутирует и возвращает первый non-empty object аргумент**; subsequent objects merge into it. Обработка примитивов: если все аргументы примитивы — возвращает последний непустой; если смешано с объектами — примитивы игнорятся. Для immutable-семантики передавай `deepCopy(defaults)` первым: `deepMerge(deepCopy(defaults), overrides)`.
 - `deepEquals(a, b)` — рекурсивное сравнение по структуре.
 - `equals(a, b, field?)` — обёртка с опциональным полем (если задан — сравнение `a[field] === b[field]` с deep если объекты).
 - `compare(v1, v2, comparator, order)` — wrapper вокруг comparator с направлением.
@@ -122,12 +122,16 @@ const miss = get(messages, "ru.title") // undefined
 ### 9.2 deepMerge для конфигов
 
 ```ts
-import { deepMerge } from "fishtvue/utils/objectHandler"
+import { deepMerge, deepCopy } from "fishtvue/utils/objectHandler"
 
 const defaults = { theme: { primary: "#000" }, options: { autoImport: true } }
 const user = { theme: { primary: "#3b82f6" } }
-const merged = deepMerge(defaults, user)
+
+// Внимание: deepMerge мутирует первый аргумент. Если defaults — общий объект,
+// клонируй его перед мержем:
+const merged = deepMerge(deepCopy(defaults), user)
 // { theme: { primary: "#3b82f6" }, options: { autoImport: true } }
+// defaults остаётся неизменным.
 ```
 
 ### 9.3 Frozen-копия для useFishtVue
@@ -202,6 +206,7 @@ describe("deepMerge", () => {
 | Проблема | Причина | Решение |
 |---|---|---|
 | `deepMerge` объединяет массивы вместо замены | By design — для config'а удобнее. | Если нужна замена — извлеки массив и присваивай явно: `merged.field = newArray`. |
+| `deepMerge(defaults, user)` мутирует `defaults` | By design — первый аргумент мутируется и возвращается. | `deepMerge(deepCopy(defaults), user)` — immutable-семантика. |
 | `deepCopy` теряет Date/RegExp | JSON-pipeline не сохраняет их. | Используй `structuredClone` для browser-only кода или `lodash.cloneDeep`. |
 | `get(obj, "a.b")` возвращает `undefined` для существующего поля `a.b` (буквальный ключ) | Помешали dot-path expansion. | Передай как массив: `get(obj, ["a.b"])`. |
 | `deepFreeze` не предотвращает мутации в Vue reactive | reactive-обёртка перехватывает freeze. | Используй для frozen snapshots, не для reactive state. |

@@ -1,7 +1,7 @@
 ---
 title: Locale
-summary: Структура Locales/Messages, встроенные en/ru, setActiveLocale, расширение.
-updated: 2026-05-09
+summary: Структура Locales/Messages, встроенные en/ru, setActiveLocale, расширение. Optional validation keys для интеграции с rulesHandler.
+updated: 2026-05-10
 stability: stable
 since: 0.2.11
 ---
@@ -120,24 +120,34 @@ function toggle() {
 
 `NameLocale = string | "en" | "ru"` ([TypesLocale.d.ts:3](../../lib/locale/TypesLocale.d.ts#L3)) — открытый union: можно использовать любую строку, но `"en"` и `"ru"` гарантированно встроены.
 
-`DefaultMessages` ([TypesLocale.d.ts:10–26](../../lib/locale/TypesLocale.d.ts#L10-L26)) — обязательный набор ключей:
+`DefaultMessages` ([TypesLocale.d.ts](../../lib/locale/TypesLocale.d.ts)) — набор ключей UI и валидации:
 
-| Key | Use case |
-|---|---|
-| `of` | Pagination: «10 of 100» |
-| `items` | Pagination, Table |
-| `lines` | Table |
-| `previous` / `next` | Pagination |
-| `save` | Form submit |
-| `increase` | Counter |
-| `show` | «Show: 10» selector |
-| `find` | Search inputs |
-| `copy` | Copy-button tooltip |
-| `requiredField` | Validation message |
-| `noData` | Table empty state |
-| `noColumn` | Table no columns |
-| `noDataForQuery` | Table search empty |
-| `clearAllFilters` | Table filter reset |
+| Key | Required | Use case |
+|---|---|---|
+| `of` | required | Pagination: «10 of 100» |
+| `items` | required | Pagination, Table |
+| `lines` | required | Table |
+| `previous` / `next` | required | Pagination |
+| `save` | required | Form submit |
+| `increase` | required | Counter |
+| `show` | required | «Show: 10» selector |
+| `find` | required | Search inputs |
+| `copy` | required | Copy-button tooltip |
+| `requiredField` | required | Validation: required rule |
+| `noData` | required | Table empty state |
+| `noColumn` | required | Table no columns |
+| `noDataForQuery` | required | Table search empty |
+| `clearAllFilters` | required | Table filter reset |
+| `invalidEmail` | optional | Validation: email rule |
+| `invalidPhone` | optional | Validation: phone rule |
+| `invalidNumeric` | optional | Validation: numeric rule |
+| `regexMismatch` | optional | Validation: regular rule |
+| `valueOutOfRange` | optional | Validation: range rule |
+| `invalidLength` | optional | Validation: length rule |
+| `invalidField` | optional | Validation: async / custom rule |
+| `compareMismatch` | optional | Validation: compare rule |
+
+Optional ключи добавлены 2026-05-10 в связке с `setDefaultRuleMessages` ([utilities/rulesHandler.md §10](../utilities/rulesHandler.md#10-configuration--customization)) — можно мапить эти ключи на `t()` для локализации валидации.
 
 `DefaultMessages extends DeepPartial<TypeLocale>` — допустимы вложенные строки/массивы строк.
 

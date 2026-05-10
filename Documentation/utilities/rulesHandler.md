@@ -1,7 +1,7 @@
 ---
 title: utils/rulesHandler
-summary: Валидация: Rules union (RulesArray/RulesObject), getValidate (sync), getAsyncValidate.
-updated: 2026-05-09
+summary: Валидация: Rules union (RulesArray/RulesObject), getValidate (sync), getAsyncValidate, setDefaultRuleMessages для i18n.
+updated: 2026-05-10
 stability: stable
 since: 0.2.11
 ---
@@ -92,6 +92,7 @@ await getAsyncValidate("user@example.com", [
 | `getValidate(value, rules)` | `(value: any, rules: Rules) => ReturnValid` | Синхронная валидация. |
 | `getAsyncValidate(value, rules)` | `(value: any, rules: Rules) => Promise<ReturnValid>` | Async-валидация. |
 | `isExistRule(rules, rule)` | `(rules: Rules, rule: keyof RulesObject) => boolean` | Есть ли тип правила в наборе. |
+| `setDefaultRuleMessages(messages)` | `(messages: Partial<Record<RuleMessageKey, string>>) => void` | Переопределить дефолтные сообщения для всех 10 rule-types (используются, когда `rule.message` не задан). Передача `{}` восстанавливает встроенные английские defaults. |
 
 Типы:
 
@@ -154,7 +155,33 @@ const { isInvalid, message } = await getAsyncValidate(login, [
 
 ## 10. Configuration & Customization
 
-Не применимо. Сообщения локализуются через `Component.t(key)` на стороне SFC; rulesHandler сам не подхватывает локали — `message` передаётся явно.
+Дефолтные сообщения (используются, когда у rule не задан `message`) можно переопределить глобально через `setDefaultRuleMessages`. Полезно при подключении проекта к локалям FishtVue: вызови один раз во время инициализации, маппя ключи на `t()`:
+
+```ts
+import { setDefaultRuleMessages } from "fishtvue/utils/rulesHandler"
+import { useFishtVue } from "fishtvue/config"
+
+function applyLocaleToRules() {
+  const fv = useFishtVue()
+  if (!fv) return
+  setDefaultRuleMessages({
+    required: fv.t("requiredField") ?? "Required field",
+    email: fv.t("invalidEmail") ?? "Invalid email",
+    phone: fv.t("invalidPhone") ?? "Invalid phone",
+    numeric: fv.t("invalidNumeric") ?? "Invalid numeric",
+    regular: fv.t("regexMismatch") ?? "The value does not satisfy the rule",
+    range: fv.t("valueOutOfRange") ?? "The value is not within the set range",
+    length: fv.t("invalidLength") ?? "Invalid length value",
+    async: fv.t("invalidField") ?? "Invalid field",
+    custom: fv.t("invalidField") ?? "Invalid field",
+    compare: fv.t("compareMismatch") ?? "The field does not fall off"
+  })
+}
+```
+
+Для возврата к встроенным английским defaults — `setDefaultRuleMessages({})`. Явно заданный `rule.message` всегда имеет высший приоритет.
+
+Сообщения по-прежнему могут передаваться per-rule через `message`-свойство — это удобно для локально-зависимых формулировок.
 
 ## 11. Form integration & validation
 
@@ -236,7 +263,7 @@ describe("getValidate required", () => {
 ### Behavioral caveats
 
 - `getValidate` может возвращать первое сообщение или агрегировать — поведение зависит от реализации; для UI обычно достаточно «первая ошибка», но Form может показать все.
-- Локализация message — на стороне консумера (через `Component.t()`).
+- Локализация message — глобально через `setDefaultRuleMessages` (см. §10) или per-rule через `message`-свойство.
 - Async-валидаторы НЕ дебоунсятся — вызывай ответственно (debounce на стороне SFC).
 
 ### Bug report format

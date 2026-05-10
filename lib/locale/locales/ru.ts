@@ -17,5 +17,13 @@ export default <DefaultMessages>{
   noData: "Нет данных",
   noColumn: "Нет столбцов",
   noDataForQuery: "По вашему запросу не найдено данных",
-  clearAllFilters: "Очистить все фильтры"
+  clearAllFilters: "Очистить все фильтры",
+  invalidEmail: "Неверный email",
+  invalidPhone: "Неверный телефон",
+  invalidNumeric: "Неверное числовое значение",
+  regexMismatch: "Значение не соответствует правилу",
+  valueOutOfRange: "Значение не попадает в заданный диапазон",
+  invalidLength: "Неверная длина значения",
+  invalidField: "Неверное поле",
+  compareMismatch: "Поля не совпадают"
 }

@@ -593,6 +593,23 @@ describe("Testing object handler", () => {
       const result = deepMerge(obj1, obj2)
       expect(result).toEqual({ a: 1, b: { c: 2 }, d: 3 })
     })
+
+    it("should mutate and return the first non-empty object argument", () => {
+      const obj1 = { a: 1, nested: { x: 10 } }
+      const obj2 = { b: 2, nested: { y: 20 } }
+      const result = deepMerge(obj1, obj2)
+      expect(result).toBe(obj1)
+      expect(obj1).toEqual({ a: 1, b: 2, nested: { x: 10, y: 20 } })
+    })
+
+    it("should preserve later inputs unchanged when first argument is deep-cloned", () => {
+      const obj1 = { a: 1, nested: { x: 10 } }
+      const obj2 = { b: 2, nested: { y: 20 } }
+      const obj2Snapshot = JSON.parse(JSON.stringify(obj2))
+      const result = deepMerge(deepCopy(obj1), obj2)
+      expect(obj2).toEqual(obj2Snapshot)
+      expect(result).toEqual({ a: 1, b: 2, nested: { x: 10, y: 20 } })
+    })
   })
 
   describe("deepEquals function", () => {

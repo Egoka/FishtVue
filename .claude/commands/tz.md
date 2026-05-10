@@ -63,7 +63,7 @@ Read-only `pnpm`-скрипты (`pnpm typecheck`, `pnpm test --run`, `pnpm form
 | config, plugin, options, global, useFishtVue | `Documentation/architecture/config.md`, `Documentation/issues/config.md` |
 | component class, lifecycle, initStyle, hooks, ClassComponent, `__hooks` | `Documentation/architecture/component-class.md`, `Documentation/issues/component-class.md` |
 | nuxt, ssr, module, auto-import | `Documentation/architecture/nuxt-module.md`, `Documentation/issues/nuxt-module.md` |
-| utility, handler, helper (array / colors / date / dom / function / number / object / rules / string / tailwind / uniqueCollection) | matching `Documentation/utilities/{name}Handler.md` (или `uniqueCollection.md`) + `Documentation/issues/_utilities.md` |
+| utility, handler, helper (array / colors / date / dom / function / number / object / rules / string / tailwind / uniqueCollection) | matching `Documentation/utilities/{name}Handler.md` (или `uniqueCollection.md`) + `Documentation/issues/done/_utilities.md` (большинство пунктов закрыто; для активных issues — `Documentation/issues/_utilities.md`, если файл вернулся в активную папку) |
 | aria, a11y, accessibility, keyboard, focus, screen reader | `Documentation/components/aria.md`, `Documentation/issues/aria.md` |
 | icons, svg | `Documentation/components/icons.md`, `Documentation/issues/icons.md` |
 | install, setup, getting started, sandbox, playground | `Documentation/01-getting-started.md`, `Documentation/02-installation.md`, `Documentation/playgrounds.md` |

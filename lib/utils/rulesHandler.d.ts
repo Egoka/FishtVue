@@ -105,6 +105,14 @@ export declare type RulesObject = {
 }
 export declare type Rules = RulesArray | RulesObject
 
+export declare type RuleMessageKey = keyof RulesObject
+
 export function getValidate(value: any, rules: Rules): ReturnValid
 export function isExistRule(rules: RulesArray | RulesObject, rule: keyof RulesObject): boolean
 export function getAsyncValidate(value: any, rules: Rules): Promise<ReturnValid>
+/**
+ * Override default validation messages used when a rule does not provide its own `message`.
+ * Pass a partial map of overrides — only the listed keys are replaced.
+ * Pass an empty object (`{}`) to restore all built-in English defaults.
+ */
+export function setDefaultRuleMessages(messages: Partial<Record<RuleMessageKey, message>>): void

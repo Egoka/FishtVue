@@ -1,7 +1,7 @@
 ---
 title: utils/stringHandler
-summary: isString type guard, case-конверсии, stringify сериализация.
-updated: 2026-05-09
+summary: isString type guard, case-конверсии (включая locale-aware `toCapitalCase`), stringify сериализация.
+updated: 2026-05-10
 stability: stable
 since: 0.2.11
 ---
@@ -31,7 +31,7 @@ lib/utils/stringHandler.test.ts    # 86 кейсов
 - `isString(value, empty?)` — type-проверка через `typeof === "string"`. Если `empty: true` — дополнительно требует ненулевую длину.
 - `toFlatCase(str)` — нормализует к lowercase без разделителей: `"my-thing"`/`"myThing"`/`"MyThing"`/`"my_thing"` → `"mything"`.
 - `toKebabCase(str)` — `"myThing"` → `"my-thing"`.
-- `toCapitalCase(str)` — `"hello"` → `"Hello"`.
+- `toCapitalCase(str, locale?)` — `"hello"` → `"Hello"`. Использует `String.prototype.toLocaleUpperCase(locale)` — без `locale` берётся host environment locale; явный `locale` (например, `"tr-TR"`) корректно обрабатывает Turkish dotted I (`"i"` → `"İ"`).
 - `stringify(value, indent?, currentIndent?)` — `JSON.stringify`-подобный сериализатор с отступами, понимает функции, циклы и спец-кейсы.
 
 SSR/hydration: чистые функции.
@@ -68,7 +68,7 @@ stringify({ a: 1 }, 2)       // "{\n  a: 1\n}"
 | `isString(value, empty?)` | `<T>(value: T, empty?: boolean) => boolean` | Тип-проверка с опциональной валидацией непустоты. |
 | `toFlatCase(str)` | `(str: string) => string` | Любой регистр → lowercase без разделителей. |
 | `toKebabCase(str)` | `(str: string) => string` | → kebab-case. |
-| `toCapitalCase(str)` | `(str: string) => string` | Первая буква → uppercase. |
+| `toCapitalCase(str, locale?)` | `(str: string, locale?: string \| string[]) => string` | Первая буква → uppercase через `toLocaleUpperCase(locale)`. Поддерживает Unicode (`"über"` → `"Über"`) и явный locale для Turkish dotted I и т.п. |
 | `stringify(value, indent?, currentIndent?)` | `(value: any, indent?: number, currentIndent?: number) => string` | Сериализация с отступами. |
 
 ## 9. Examples
@@ -185,6 +185,7 @@ describe("toKebabCase", () => {
 ### Behavioral caveats
 
 - `toFlatCase` теряет различение слов — если потом нужно вернуться к camel/kebab, информация утеряна.
+- `toCapitalCase` без `locale` использует host environment locale — для строк с language-specific casing (Turkish `i`/`İ`, Lithuanian `i̇`) передавай `locale` явно.
 - `stringify` для функций возвращает их `.toString()` — это включает body. Нежелательно для логирования в production.
 
 ### Bug report format
