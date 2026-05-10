@@ -21,9 +21,9 @@ updated: 2026-05-10
 | Switch | [switch.md](./switch.md) | 1 | 5 | 4 | 3 |
 | Input | [input.md](./input.md) | 0 | 4 | 5 | 3 |
 | Aria | [aria.md](./aria.md) | 0 | 4 | 4 | 3 |
-| Select | _pending audit_ | — | — | — | — |
-| Calendar | _pending audit_ | — | — | — | — |
-| TextEditor | _pending audit_ | — | — | — | — |
+| Select | [select.md](./select.md) | 2 | 6 | 4 | 3 |
+| Calendar | [calendar.md](./calendar.md) | 1 | 6 | 4 | 3 |
+| TextEditor | [texteditor.md](./texteditor.md) | 0 | 7 | 5 | 3 |
 | Table | _pending audit_ | — | — | — | — |
 | Pagination | _pending audit_ | — | — | — | — |
 | Badge | _pending audit_ | — | — | — | — |
