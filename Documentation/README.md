@@ -79,6 +79,7 @@
 
 - [dev-patterns.md](./dev-patterns.md) — конституция разработки + регламенты документирования (§11). Прочти перед правкой любого `.md` или нового компонента.
 - [playgrounds.md](./playgrounds.md) — назначение `sandbox` и `sandbox-nuxt`, workflow для регрессионного репро.
+- [issues/README.md](./issues/README.md) — внутренний аудит компонентов и инфра-модулей по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Файл `{component}.md` появляется только при наличии проблем.
 
 ## Соглашения
 
@@ -105,6 +106,9 @@ Documentation/
 │   └── nuxt-module.md
 ├── components/
 │   └── <kebab-name>.md        # один файл на компонент
-└── utilities/
-    └── <handler-name>.md
+├── utilities/
+│   └── <handler-name>.md
+└── issues/
+    ├── README.md              # индекс аудита + 60-пунктовый чек-лист
+    └── <kebab-name>.md        # файл создаётся ТОЛЬКО при наличии проблем
 ```
