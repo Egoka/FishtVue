@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-10
-last-changes: icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2 docs portion, 8 docs portion закрыты; severity matrix пересчитана; Wave 4.2 + 10.4 checkboxes отмечены. Ранее — utilities Issues 1, 2, 3, 5, 6, 7, 8, 10, 11.
+last-changes: icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2 docs portion, 8 docs portion закрыты, файл перемещён в `./done/`; Wave 4.2 + 10.4 checkboxes отмечены. badge — Issues 2, 4, 5 закрыты (Badge-SFC); Issue 1 C17 закрыт per-SFC; Issues 1 packaging/3/6 — cross-cutting, tracked elsewhere; файл перемещён в `./done/`; Waves 3.2/10.4/10.6 Badge-checkboxes flipped. severity matrix пересчитана. Ранее — utilities Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты.
 ---
 
 # Issues — Index
@@ -25,7 +25,7 @@ last-changes: icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrow
 | TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 7       | 5       | 3      |
 | Table           | [table.md](./table.md)                     | 2        | 8       | 5       | 4      |
 | Pagination      | [pagination.md](./pagination.md)           | 1        | 4       | 4       | 3      |
-| Badge           | [badge.md](./badge.md)                     | 0        | 4       | 2       | 3      |
+| Badge           | [badge.md](./done/badge.md)                | 0        | 3       | 0       | 3      |
 | Form            | [form.md](./form.md)                       | 1        | 6       | 4       | 3      |
 | InputLayout     | [inputlayout.md](./inputlayout.md)         | 2        | 4       | 4       | 3      |
 | Separator       | [separator.md](./separator.md)             | 0        | 3       | 2       | 2      |
@@ -43,11 +43,12 @@ last-changes: icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrow
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
 | Utilities       | [\_utilities.md](./done/_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **17**   | **140** | **104** | **73** |
+| **TOTAL**       | **28 files**                               | **17**   | **139** | **102** | **73** |
 
-Всего **334 issues** распределены по 28 documentов аудита. Закрыты:
+Всего **331 issues** распределены по 28 documentов аудита. Закрыты:
 
 - [\_utilities.md](./done/_utilities.md) 2026-05-10 — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11.
+- [badge.md](./done/badge.md) 2026-05-10 — Issues 2, 4, 5; файл перемещён в `./done/`, остальные пункты Badge — cross-cutting.
 - [icons.md](./done/icons.md) 2026-05-10 — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing); Issues 2/8 — docs portion. Файл перемещён в `done/` (cross-cutting Issue 1/6/9 трекаются через roadmap waves).
 
 ## Fix roadmap (live tracker)
@@ -187,7 +188,7 @@ last-changes: icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrow
 - [ ] [Select.vue](../../lib/select/Select.vue) — добавить `?? Select.componentsStyle()` · [select.md Issue 5](./select.md)
 - [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — добавить `?? Calendar.componentsStyle()` · [calendar.md Issue 6](./calendar.md)
 - [ ] [TextEditor.vue:54](../../lib/texteditor/TextEditor.vue#L54) — добавить `?? TextEditor.componentsStyle()` · [texteditor.md Issue 7](./texteditor.md)
-- [ ] [Badge.vue:17](../../lib/badge/Badge.vue#L17) — добавить mapping (`filled→primary`, etc.) · [badge.md Issue 2](./badge.md)
+- [x] [Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23) — добавить mapping (`filled→primary`, `outlined→outline`, `underlined→neutral`) · [badge.md Issue 2](./done/badge.md) ✅ 2026-05-10
 
 #### 3.3 Theme runtime API (новый файл per function)
 
@@ -415,7 +416,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts) — то же `change:modelValue` type bug fix · [texteditor.md Issue 5](./texteditor.md)
 - [x] [Icons.d.ts:84](../../lib/icons/Icons.d.ts#L84) — `variant?: "outline"|"solid"` (было `stileIcon` опечатка), deprecation soft через runtime `console.warn` · [icons.md Issue 4](./done/icons.md) ✅ 2026-05-10 (hard removal + codemod — Wave 12)
 - [x] [Icons.d.ts:61](../../lib/icons/Icons.d.ts#L61) — `IconType = HeroIconName | IconifyIconName | (string & {})` template literal union (hand-curated 30 heroicons + Iconify pattern + open fallback) · [icons.md Issue 5](./done/icons.md) ✅ 2026-05-10 (full ~280 union via build-script — future)
-- [ ] [Badge.vue:78](../../lib/badge/Badge.vue#L78) — `delete` emit → `close` (deprecation) · [badge.md Issue 5](./badge.md)
+- [x] [Badge.vue:78–81](../../lib/badge/Badge.vue#L78-L81) — `delete` emit → `close` (soft deprecation, both emit) · [badge.md Issue 5](./done/badge.md) ✅ 2026-05-10
 - [ ] [Switch.vue:244](../../lib/switch/Switch.vue#L244) — `<input type="hidden">` рядом с `<button role="switch">` для native form integration · [switch.md Issue 3](./switch.md)
 - [ ] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — hidden `<input>` для native form submit · [texteditor.md Issue 10](./texteditor.md)
 - [ ] [Form.vue](../../lib/form/Form.vue) — корень `<form>` (после Wave 6.2) · [form.md Issue 4](./form.md)
@@ -434,7 +435,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [InputLayout.vue:184](../../lib/inputlayout/InputLayout.vue#L184) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` · [inputlayout.md Issue 5](./inputlayout.md)
 - [ ] [InputLayout.vue:226](../../lib/inputlayout/InputLayout.vue#L226) — `clipboard.writeText` feature-detect + execCommand fallback · [inputlayout.md Issue 3](./inputlayout.md)
 - [ ] [Switch.vue:232-234](../../lib/switch/Switch.vue#L232) — help-icon contrast (`text-gray-400` → `text-gray-500` light) · [switch.md Issue 6](./switch.md)
-- [ ] [Badge.vue:32](../../lib/badge/Badge.vue#L32) — `ring-neutral-500/30` → `ring-neutral-300` · [badge.md Issue 4](./badge.md)
+- [x] [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `ring-neutral-500/30` → `ring-neutral-300 dark:ring-neutral-700` · [badge.md Issue 4](./done/badge.md) ✅ 2026-05-10
 - [ ] [calendar.md Issue 9 — Floating UI](./calendar.md) (закрывается через Wave 5).
 - [ ] [\_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./done/_utilities.md) — низкий приоритет.
 
@@ -475,7 +476,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
   - [ ] `Aria` → `Textarea` (rename + import-update) · [aria.md Issue 6](./aria.md)
   - [ ] `iconPosition: "left"|"right"` → `"start"|"end"` · [button.md Issue 3](./button.md)
   - [ ] `stileIcon` → `variant` · [icons.md Issue 4](./done/icons.md)
-  - [ ] `delete` emit → `close` for Badge · [badge.md Issue 5](./badge.md)
+  - [ ] `delete` emit → `close` for Badge · [badge.md Issue 5](./done/badge.md) (codemod still TODO; soft deprecation already landed)
   - [ ] `change:modelValue` type для Aria/TextEditor · [aria.md Issue 1](./aria.md)
 - [ ] [CHANGELOG.md](../../CHANGELOG.md) (auto-gen) — documentation для каждого breaking change.
 - [ ] [Documentation/issues/migration-guide.md](./migration-guide.md) — пошаговый guide для major-bumps.
