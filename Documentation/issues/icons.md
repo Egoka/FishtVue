@@ -1,10 +1,10 @@
 ---
 title: Issues — Icons
 summary: Аудит Icons — heroicons тянутся целиком (~200kb), Iconify CSP-неблагонадёжен (CDN-загрузка). API-уровень — variant prop, label prop, narrow IconType union — закрыт в 0.2.x.
-updated: 2026-05-10
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/icons/
-related-doc: ../../components/icons.md
+related-doc: ../components/icons.md
 ---
 
 # Issues — Icons
@@ -24,7 +24,7 @@ related-doc: ../../components/icons.md
 
 - **Категория:** I45 (иконки точечно)
 - **Severity:** high
-- **Где:** [Icons.vue](../../../lib/icons/Icons.vue), [rollup.config.js:54-57](../../../lib/rollup.config.js#L54-L57)
+- **Где:** [Icons.vue](../../lib/icons/Icons.vue), [rollup.config.js:54-57](../../lib/rollup.config.js#L54-L57)
 
 ### Что найдено
 
@@ -51,7 +51,7 @@ const HeroIcon = defineAsyncComponent({
 
 - **Категория:** C13 / security (CSP)
 - **Severity:** high
-- **Где:** [Icons.vue](../../../lib/icons/Icons.vue) (через `@iconify/vue`)
+- **Где:** [Icons.vue](../../lib/icons/Icons.vue) (через `@iconify/vue`)
 
 ### Что найдено
 
@@ -60,12 +60,12 @@ const HeroIcon = defineAsyncComponent({
 ### Почему это проблема
 
 - Multi-tenant SaaS / enterprise apps часто имеют strict CSP.
-- Documentation [components/icons.md](../../components/icons.md) §12 уже флагает, но без фикса.
+- Documentation [components/icons.md](../components/icons.md) §12 уже флагает, но без фикса.
 - Зависимость от внешнего CDN — supply-chain risk (если api.iconify.design компрометирован).
 
 ### Что нужно сделать
 
-1. ~~Документировать в [components/icons.md](../../components/icons.md) §12 как обязательный параграф.~~ ✅ **resolved 2026-05-10** — §12 Security содержит полный mitigation-блок с CSP-impact, supply-chain risk, offline failure и кодом `addCollection(<json>)`.
+1. ~~Документировать в [components/icons.md](../components/icons.md) §12 как обязательный параграф.~~ ✅ **resolved 2026-05-10** — §12 Security содержит полный mitigation-блок с CSP-impact, supply-chain risk, offline failure и кодом `addCollection(<json>)`.
 2. ~~Предложить bundling через `@iconify/tools`~~ ✅ **resolved 2026-05-10** — рекомендация документирована.
 3. Добавить prop `:offline?: boolean` или env-detection — если CDN недоступен, fallback на placeholder. **deferred** — отдельный PR, рассматривается как future enhancement в Wave 8 i18n / RTL polish.
 
@@ -78,7 +78,7 @@ const HeroIcon = defineAsyncComponent({
 
 - **Категория:** E29.1
 - **Severity:** ~~medium~~ → resolved
-- **Где:** [Icons.vue](../../../lib/icons/Icons.vue)
+- **Где:** [Icons.vue](../../lib/icons/Icons.vue)
 
 ### Что найдено
 
@@ -86,9 +86,9 @@ const HeroIcon = defineAsyncComponent({
 
 ### Что сделано
 
-1. ✅ Default `aria-hidden="true"` — heroicons имеют hardcoded; для Iconify добавлен явно ([Icons.vue:95](../../../lib/icons/Icons.vue#L95)).
-2. ✅ Prop `:label?: string` — если задан, wrapper `<i data-icon>` получает `role="img"` + `aria-label="<label>"` ([Icons.vue:93](../../../lib/icons/Icons.vue#L93)).
-3. ✅ Документировано в [components/icons.md §12](../../components/icons.md#12-accessibility--security) с wrapper-pattern rationale (heroicons render-функции хардкодят aria-hidden и не пробрасывают $attrs — wrapper-based pattern эквивалентен по семантике).
+1. ✅ Default `aria-hidden="true"` — heroicons имеют hardcoded; для Iconify добавлен явно ([Icons.vue:95](../../lib/icons/Icons.vue#L95)).
+2. ✅ Prop `:label?: string` — если задан, wrapper `<i data-icon>` получает `role="img"` + `aria-label="<label>"` ([Icons.vue:93](../../lib/icons/Icons.vue#L93)).
+3. ✅ Документировано в [components/icons.md §12](../components/icons.md#12-accessibility--security) с wrapper-pattern rationale (heroicons render-функции хардкодят aria-hidden и не пробрасывают $attrs — wrapper-based pattern эквивалентен по семантике).
 
 ### Реализованная семантика
 
@@ -108,13 +108,13 @@ const HeroIcon = defineAsyncComponent({
 
 - [x] Default режим: wrapper прозрачен, SVG aria-hidden="true".
 - [x] `label` prop: wrapper role=img + aria-label, SVG остаётся aria-hidden.
-- [x] 4 теста в [Icons.test.ts](../../../lib/icons/Icons.test.ts) (ARIA describe-блок).
+- [x] 4 теста в [Icons.test.ts](../../lib/icons/Icons.test.ts) (ARIA describe-блок).
 
 ## ~~Issue 4: `stileIcon` — опечатка от "styleIcon"~~ ✅ deprecation added 2026-05-10
 
 - **Категория:** D25 (консистентность naming)
 - **Severity:** ~~medium~~ → low (soft-deprecated, runtime warn)
-- **Где:** [Icons.d.ts:102–107](../../../lib/icons/Icons.d.ts#L102-L107)
+- **Где:** [Icons.d.ts:102–107](../../lib/icons/Icons.d.ts#L102-L107)
 
 ### Что найдено
 
@@ -122,8 +122,8 @@ const HeroIcon = defineAsyncComponent({
 
 ### Что сделано
 
-1. ✅ Добавлен prop `variant?: "outline" | "solid"` ([Icons.d.ts:84](../../../lib/icons/Icons.d.ts#L84)).
-2. ✅ `stileIcon` soft-deprecated с JSDoc `@deprecated` и runtime dev `console.warn` при использовании без `variant` ([Icons.vue:19–21](../../../lib/icons/Icons.vue#L19-L21)).
+1. ✅ Добавлен prop `variant?: "outline" | "solid"` ([Icons.d.ts:84](../../lib/icons/Icons.d.ts#L84)).
+2. ✅ `stileIcon` soft-deprecated с JSDoc `@deprecated` и runtime dev `console.warn` при использовании без `variant` ([Icons.vue:19–21](../../lib/icons/Icons.vue#L19-L21)).
 3. ⏳ В `1.0` удалить — **deferred** (separate breaking-change PR).
 4. ⏳ Codemod для замены — **deferred** ([Wave 12](../README.md#-wave-12--migration--dx)).
 
@@ -146,7 +146,7 @@ variant = props.variant ?? props.stileIcon ?? options?.variant ?? "outline"
 
 - **Категория:** D21 (Generic / type narrowing)
 - **Severity:** ~~medium~~ → resolved
-- **Где:** [Icons.d.ts:18–61](../../../lib/icons/Icons.d.ts#L18-L61)
+- **Где:** [Icons.d.ts:18–61](../../lib/icons/Icons.d.ts#L18-L61)
 
 ### Что найдено
 
@@ -156,10 +156,10 @@ variant = props.variant ?? props.stileIcon ?? options?.variant ?? "outline"
 
 Intermediate approach — без build-script, для maintenance simplicity:
 
-1. ✅ `HeroIconName` — hand-curated union из 30 наиболее частых имён ([Icons.d.ts:18–48](../../../lib/icons/Icons.d.ts#L18-L48)).
-2. ✅ `IconifyIconName = \`${string}:${string}\`` — template literal для Iconify-паттерна ([Icons.d.ts:53](../../../lib/icons/Icons.d.ts#L53)).
-3. ✅ `IconType = HeroIconName | IconifyIconName | (string & {})` — публичный union, `(string & {})` сохраняет open-string fallback для всех остальных heroicons / arbitrary имён ([Icons.d.ts:61](../../../lib/icons/Icons.d.ts#L61)).
-4. ✅ `type: IconType` в `IconsProps` ([Icons.d.ts:77](../../../lib/icons/Icons.d.ts#L77)).
+1. ✅ `HeroIconName` — hand-curated union из 30 наиболее частых имён ([Icons.d.ts:18–48](../../lib/icons/Icons.d.ts#L18-L48)).
+2. ✅ `IconifyIconName = \`${string}:${string}\`` — template literal для Iconify-паттерна ([Icons.d.ts:53](../../lib/icons/Icons.d.ts#L53)).
+3. ✅ `IconType = HeroIconName | IconifyIconName | (string & {})` — публичный union, `(string & {})` сохраняет open-string fallback для всех остальных heroicons / arbitrary имён ([Icons.d.ts:61](../../lib/icons/Icons.d.ts#L61)).
+4. ✅ `type: IconType` в `IconsProps` ([Icons.d.ts:77](../../lib/icons/Icons.d.ts#L77)).
 
 Volar даёт autocomplete для:
 
@@ -198,7 +198,7 @@ Static SVG — OK. Если animated icons (например, через CSS) �
 
 Иконки `arrow-left`, `arrow-right`, `chevron-*` — буквально направлены. В RTL должны зеркалиться.
 
-✅ **Документировано** в [components/icons.md](../../components/icons.md):
+✅ **Документировано** в [components/icons.md](../components/icons.md):
 
 - §12 A11y — упоминание RTL caveat.
 - §16 FAQ — практический рецепт с CSS `[dir="rtl"] [data-rtl-mirror] { transform: scaleX(-1); }` + per-instance `:style` вариант.
@@ -209,7 +209,7 @@ Static SVG — OK. Если animated icons (например, через CSS) �
 
 - **Категория:** B10
 - **Severity:** low
-- **Где:** [Icons.d.ts:113](../../../lib/icons/Icons.d.ts#L113), [Icons.vue:35](../../../lib/icons/Icons.vue#L35)
+- **Где:** [Icons.d.ts:113](../../lib/icons/Icons.d.ts#L113), [Icons.vue:35](../../lib/icons/Icons.vue#L35)
 
 ### Что найдено
 
@@ -221,13 +221,13 @@ class: "h-5 w-5 text-gray-900 dark:text-gray-100" | StyleClass
 
 ### Что нужно сделать
 
-См. [switch.md Issue 12](../switch.md). **Cross-cutting [Wave 9](../README.md#-wave-9--theming-polish)** — требует расширения [theme/uno.ts](../../../lib/theme/uno.ts) с semantic-token mappings; затрагивает большинство компонентов.
+См. [switch.md Issue 12](../switch.md). **Cross-cutting [Wave 9](../README.md#-wave-9--theming-polish)** — требует расширения [theme/uno.ts](../../lib/theme/uno.ts) с semantic-token mappings; затрагивает большинство компонентов.
 
 ## Cross-cutting: Configuration support
 
 | Настройка                 | Поддержано? | Комментарий                                                             |
 | ------------------------- | ----------- | ----------------------------------------------------------------------- |
-| `componentsOptions.Icons` | ✅          | `class` + `variant` ([Icons.d.ts:158](../../../lib/icons/Icons.d.ts#L158)) |
+| `componentsOptions.Icons` | ✅          | `class` + `variant` ([Icons.d.ts:158](../../lib/icons/Icons.d.ts#L158)) |
 | `componentsStyle` global  | N/A         | Icons не имеет mode-enum, использует `variant` локально                 |
 | `unstyled: true`          | ❌          | default class всегда применяется — Wave 3.1 cross-cutting               |
 | Theme tokens vs hardcode  | ⚠️          | `text-gray-900 dark:text-gray-100` хардкоден (Issue 9) — Wave 9         |

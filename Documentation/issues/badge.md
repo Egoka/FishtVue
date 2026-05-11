@@ -1,10 +1,10 @@
 ---
 title: Issues — Badge
 summary: Аудит Badge — остаются cross-cutting (sideEffects/exports, unstyled, reduced-motion/RTL/colors). Badge-specific issues (componentsStyle, contrast, close-event) закрыты 2026-05-10.
-updated: 2026-05-10
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/badge/
-related-doc: ../../components/badge.md
+related-doc: ../components/badge.md
 ---
 
 # Issues — Badge
@@ -18,7 +18,7 @@ related-doc: ../../components/badge.md
 | medium   | 0     | —                                                                |
 | low      | 3     | E29.7, B10, F31                                                  |
 
-> 2026-05-10: **all Badge-SFC-specific work done.** Issues 2, 4, 5 resolved полностью; Issue 1 — C17 (per-SFC `onMounted` dup) удалён, packaging A2/A4-5 = cross-cutting в [lib/package.json](../../../lib/package.json) под [Wave 2.1](../README.md#21-packaging-one-time-fix-в-libpackagejson); Issues 3 (unstyled) и 6 (reduced-motion/RTL/colors) — cross-cutting, отслеживаются под [component-class.md Issue 6](../component-class.md) (Wave 3.1) и Waves 8.1/9/10.1 соответственно. Файл перемещён в `./done/`.
+> 2026-05-10: **all Badge-SFC-specific work done.** Issues 2, 4, 5 resolved полностью; Issue 1 — C17 (per-SFC `onMounted` dup) удалён, packaging A2/A4-5 = cross-cutting в [lib/package.json](../../lib/package.json) под [Wave 2.1](../README.md#21-packaging-one-time-fix-в-libpackagejson); Issues 3 (unstyled) и 6 (reduced-motion/RTL/colors) — cross-cutting, отслеживаются под [component-class.md Issue 6](../component-class.md) (Wave 3.1) и Waves 8.1/9/10.1 соответственно. Файл перемещён в `./done/`.
 
 ## ~~Issue 1: SSR styles + sideEffects/exports map~~ ✅ resolved 2026-05-10 (Badge-part) / cross-cutting
 
@@ -28,14 +28,14 @@ related-doc: ../../components/badge.md
 
 См. [button.md Issue 1, 8, 9](../button.md). Идентичный fix для всех 22 компонентов.
 
-- ~~C17 — `onMounted(() => Badge.initStyle())` дублирующий init в Badge.vue~~ ✅ resolved 2026-05-10: удалён, авто-init идёт через [Component.\_\_hooks()](../../../lib/component/index.ts#L79-L84).
-- A2 (`sideEffects` map), A4-A5 (ESM/CJS dual + `exports` map) — остаются cross-cutting в [lib/package.json](../../../lib/package.json), закрываются [Wave 2.1](../README.md#21-packaging-one-time-fix-в-libpackagejson).
+- ~~C17 — `onMounted(() => Badge.initStyle())` дублирующий init в Badge.vue~~ ✅ resolved 2026-05-10: удалён, авто-init идёт через [Component.\_\_hooks()](../../lib/component/index.ts#L79-L84).
+- A2 (`sideEffects` map), A4-A5 (ESM/CJS dual + `exports` map) — остаются cross-cutting в [lib/package.json](../../lib/package.json), закрываются [Wave 2.1](../README.md#21-packaging-one-time-fix-в-libpackagejson).
 
 ## ~~Issue 2: Нет componentsStyle global fallback~~ ✅ resolved 2026-05-10
 
 - **Категория:** L53
 - **Severity:** high
-- **Где:** [Badge.vue:17–23](../../../lib/badge/Badge.vue#L17-L23)
+- **Где:** [Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23)
 - **Status:** resolved 2026-05-10
 
 ~~`mode` не учитывал global `componentsStyle`.~~ Добавлен `componentsStyleMode` helper и расширен fallback chain:
@@ -66,7 +66,7 @@ const mode = computed<NonNullable<BadgeProps["mode"]>>(
 
 - **Категория:** E29.6 (WCAG contrast)
 - **Severity:** medium
-- **Где:** [Badge.vue:38](../../../lib/badge/Badge.vue#L38)
+- **Где:** [Badge.vue:38](../../lib/badge/Badge.vue#L38)
 - **Status:** resolved 2026-05-10
 
 ### Что найдено
@@ -89,7 +89,7 @@ Light: `ring-neutral-300` (#d4d4d4) на белом — 3:1 non-text contrast WC
 
 - **Категория:** D26
 - **Severity:** medium
-- **Где:** [Badge.vue:78–81](../../../lib/badge/Badge.vue#L78-L81), [Badge.d.ts:53–64](../../../lib/badge/Badge.d.ts#L53-L64)
+- **Где:** [Badge.vue:78–81](../../lib/badge/Badge.vue#L78-L81), [Badge.d.ts:53–64](../../lib/badge/Badge.d.ts#L53-L64)
 - **Status:** soft deprecation — резолв 2026-05-10. Жёсткое удаление — Wave 12 codemod при major bump.
 
 ### Что найдено
@@ -103,7 +103,7 @@ function deleteBadge() {
 }
 ```
 
-`delete` помечен `@deprecated` в [Badge.d.ts:57](../../../lib/badge/Badge.d.ts#L57) — IDE/Volar показывают предупреждение.
+`delete` помечен `@deprecated` в [Badge.d.ts:57](../../lib/badge/Badge.d.ts#L57) — IDE/Volar показывают предупреждение.
 
 ### Что нужно сделать
 
@@ -124,7 +124,7 @@ Cross-cutting. См. [button.md Issue 10](../button.md), [switch.md Issue 8, 12]
 | Настройка                 | Поддержано? | Комментарий                                                                                                                                              |
 | ------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `componentsOptions.Badge` | ✅          | mode, point, closeButton, class, classContent                                                                                                            |
-| `componentsStyle` global  | ✅          | через mapping `filled→primary`, `outlined→outline`, `underlined→neutral` ([Badge.vue:17–23](../../../lib/badge/Badge.vue#L17-L23)) — resolved 2026-05-10 |
+| `componentsStyle` global  | ✅          | через mapping `filled→primary`, `outlined→outline`, `underlined→neutral` ([Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23)) — resolved 2026-05-10 |
 | `unstyled: true`          | ❌          | Issue 3 (cross-cutting, Wave 3.1)                                                                                                                        |
 | Theme tokens vs hardcode  | ⚠️          | theme-_/neutral-_ через Tailwind; контрол через design tokens частичный                                                                                  |
 | Runtime theme switch      | ✅          | через CSS-переменные theme-\*                                                                                                                            |

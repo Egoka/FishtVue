@@ -4,7 +4,7 @@ summary: Аудит Accordion — XSS / ARIA / keyboard / animation закрыт
 updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/accordion/
-related-doc: ../../components/accordion.md
+related-doc: ../components/accordion.md
 ---
 
 # Issues — Accordion
@@ -24,7 +24,7 @@ related-doc: ../../components/accordion.md
 
 - **Категория:** C13 + security
 - **Severity:** ~~**critical**~~
-- **Где:** ~~[Accordion.vue:149](../../../lib/accordion/Accordion.vue#L149)~~
+- **Где:** ~~[Accordion.vue:149](../../lib/accordion/Accordion.vue#L149)~~
 
 ### ~~Что найдено~~
 
@@ -40,7 +40,7 @@ related-doc: ../../components/accordion.md
 
 - **Категория:** P
 - **Severity:** high
-- **Где:** [Accordion.d.ts](../../../lib/accordion/Accordion.d.ts)
+- **Где:** [Accordion.d.ts](../../lib/accordion/Accordion.d.ts)
 
 ### Что найдено
 
@@ -72,7 +72,7 @@ Compound вариант:
 
 - **Категория:** E29.1
 - **Severity:** ~~high~~
-- **Где:** ~~[Accordion.vue](../../../lib/accordion/Accordion.vue)~~
+- **Где:** ~~[Accordion.vue](../../lib/accordion/Accordion.vue)~~
 
 ### Что было сделано
 
@@ -99,7 +99,7 @@ ArrowUp/Down/Home/End на root `<div data-accordion>` + roving tabindex на he
 
 - **Категория:** H42
 - **Severity:** ~~medium~~
-- **Где:** ~~[Accordion.vue](../../../lib/accordion/Accordion.vue)~~
+- **Где:** ~~[Accordion.vue](../../lib/accordion/Accordion.vue)~~
 
 ### Что было сделано
 

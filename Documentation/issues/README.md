@@ -2,20 +2,20 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-11
-last-changes: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 закрыты 2026-05-11 (Input-localized scope; initStyle dedup, Input.componentsStyle() fallback, passwordToggleClass override, type union → tel/url/search, phoneFormats prop+option, autocomplete auto-defaults, motion-safe transitions, focus(eventOrOptions?) argless, @media print стили, RTL eye-icon тест, emit semantics docs §6.1-6.3). Файл остаётся в active — open cross-cutting Issues 3 (packaging Wave 2.1), 4 (unstyled Wave 3.1). inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 (XSS slots для help/messageInvalid, ResizeObserver cleanup, clipboard feature-detect + execCommand fallback, offsetTop prop вместо querySelector("header"), aria-live="assertive" на error region, локализованный inputLayout.copied). Файл остаётся в active — open cross-cutting Issues 4 / 8. accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slot, WAI-ARIA disclosure, keyboard nav, Transition unmount), файл перемещён в `./done/` (cross-cutting Issues 2/5/7 трекаются глобально). button — Issues 2, 4, 10, 11, 12 закрыты 2026-05-10 (a11y, ref forwarding, motion-safe, typed click, start/end slots), часть перемещена в [done/button.md](./done/button.md); active button.md содержит 11 открытых (нумерация с gaps). icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2/8 docs portion закрыты; файл перемещён в `./done/`. badge — Issues 2, 4, 5 закрыты, файл перемещён в `./done/`. utilities — 9 issues ранее закрыты. severity matrix пересчитана 14/134/91/67 (305 issues; −11 input); roadmap Wave 2.3 (Input ✓), Wave 3.2 (Input ✓), Wave 10.1 (Input motion-safe ✓), Wave 10.5/10.6 (Input print/RTL/docs ✓) чекбоксы отмечены; cross-references в label/split/input/alert/pagination/menu/fixwindow/select/dialog/separator/switch на «button.md Issue 10» перенаправлены на done/button.md (motion-safe pattern); switch на «button.md Issue 4» аналогично.
+last-changes: 2026-05-11 — revert: возвращены из `./done/` файлы accordion, badge, icons, _utilities; resolved-блоки done/button.md слиты обратно в button.md (Issues 2/4/10/11/12 зачёркнуты с `✅ resolved`-маркерами, нумерация сохранена). Все ссылки `./done/X.md` в README заменены на `./X.md`. Закрытые ранее: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (2026-05-11); inputlayout — Issues 1, 2, 3, 5, 6, 7 (2026-05-11); accordion — Issues 1, 3, 4, 6 (2026-05-11); button — Issues 2, 4, 10, 11, 12 (2026-05-10); icons — Issues 3, 4, 5 + 2/8 docs portion (2026-05-10); badge — Issues 2, 4, 5 (2026-05-10); utilities — 9 issues ранее. Button row пересчитан 5/5/1 → 6/6/4 после merge (включает 5 ранее закрытых Issues 2/4/10/11/12). Severity matrix: 14/135/92/70 = 311 issues (+5 button closed reintegrated, было 305). Roadmap чекбоксы — single-source-of-truth прогресса.
 ---
 
 # Issues — Index
 
 Внутренний аудит библиотеки `fishtvue` против 60-пунктового чек-листа индустриальных требований к UI-кит библиотекам, плюс проверка соответствия публичной [Configuration-документации](../../docs/content/ru/3.Configuration/) и анализ dual-API gap для коллекционных компонентов.
 
-> **Принцип:** файл `{component}.md` создаётся ТОЛЬКО при наличии хотя бы одной проблемы. Файл, у которого все issues закрыты, перемещается в [`./done/`](./done/). Чекбоксы в roadmap'е — single-source-of-truth прогресса.
+> **Принцип:** файл `{component}.md` создаётся ТОЛЬКО при наличии хотя бы одной проблемы. Файл, у которого ВСЕ issues закрыты (включая cross-cutting, не только component-localized), перемещается в `./done/`. Чекбоксы в roadmap'е — single-source-of-truth прогресса.
 
 ## Сводка по компонентам
 
 | Target          | File                                       | Critical | High    | Medium  | Low    |
 | --------------- | ------------------------------------------ | -------- | ------- | ------- | ------ |
-| Button          | [button.md](./button.md)                   | 0        | 5       | 5       | 1      |
+| Button          | [button.md](./button.md)                   | 0        | 6       | 6       | 4      |
 | Label           | [label.md](./label.md)                     | 0        | 4       | 3       | 2      |
 | Switch          | [switch.md](./switch.md)                   | 1        | 5       | 4       | 3      |
 | Input           | [input.md](./input.md)                     | 0        | 2       | 0       | 0      |
@@ -25,35 +25,27 @@ last-changes: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 закрыт�
 | TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 7       | 5       | 3      |
 | Table           | [table.md](./table.md)                     | 2        | 8       | 5       | 4      |
 | Pagination      | [pagination.md](./pagination.md)           | 1        | 4       | 4       | 3      |
-| Badge           | [badge.md](./done/badge.md)                | 0        | 3       | 0       | 3      |
+| Badge           | [badge.md](./badge.md)                | 0        | 3       | 0       | 3      |
 | Form            | [form.md](./form.md)                       | 1        | 6       | 4       | 3      |
 | InputLayout     | [inputlayout.md](./inputlayout.md)         | 0        | 4       | 0       | 3      |
 | Separator       | [separator.md](./separator.md)             | 0        | 3       | 2       | 2      |
 | Split           | [split.md](./split.md)                     | 0        | 5       | 5       | 3      |
 | FixWindow       | [fixwindow.md](./fixwindow.md)             | 0        | 7       | 5       | 3      |
-| Accordion       | [accordion.md](./done/accordion.md)        | 0        | 3       | 2       | 3      |
+| Accordion       | [accordion.md](./accordion.md)        | 0        | 3       | 2       | 3      |
 | Dialog          | [dialog.md](./dialog.md)                   | 2        | 5       | 4       | 3      |
 | Menu            | [menu.md](./menu.md)                       | 1        | 6       | 4       | 3      |
 | Alert           | [alert.md](./alert.md)                     | 2        | 5       | 4       | 3      |
 | Loading         | [loading.md](./loading.md)                 | 0        | 5       | 4       | 3      |
-| Icons           | [icons.md](./done/icons.md)                | 0        | 4       | 1       | 2      |
+| Icons           | [icons.md](./icons.md)                | 0        | 4       | 1       | 2      |
 | Component class | [component-class.md](./component-class.md) | 0        | 4       | 4       | 2      |
 | Config          | [config.md](./config.md)                   | 1        | 5       | 4       | 2      |
 | Theme           | [theme.md](./theme.md)                     | 0        | 6       | 4       | 2      |
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
-| Utilities       | [\_utilities.md](./done/_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **14**   | **134** | **91**  | **67** |
+| Utilities       | [\_utilities.md](./_utilities.md)     | 0        | 1       | 0       | 1      |
+| **TOTAL**       | **28 files**                               | **14**   | **135** | **92**  | **70** |
 
-Всего **305 issues** распределены по 28 documentов аудита. Закрыты:
-
-- [\_utilities.md](./done/_utilities.md) 2026-05-10 — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11.
-- [badge.md](./done/badge.md) 2026-05-10 — Issues 2, 4, 5; файл перемещён в `./done/`, остальные пункты Badge — cross-cutting.
-- [icons.md](./done/icons.md) 2026-05-10 — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing); Issues 2/8 — docs portion. Файл перемещён в `done/` (cross-cutting Issue 1/6/9 трекаются через roadmap waves).
-- [button.md](./done/button.md) 2026-05-10 — Issues 2 (a11y aria-label), 4 (buttonRef expose), 10 (motion-safe), 11 (typed click emit), 12 (start/end slots). Активный [button.md](./button.md) содержит 11 открытых issues (нумерация с gaps — cross-references из соседних файлов сохранены).
-- [accordion.md](./done/accordion.md) 2026-05-11 — Issues 1 (XSS slot), 3 (WAI-ARIA disclosure), 4 (keyboard nav), 6 (Transition unmount). Файл перемещён в `done/` несмотря на 3 открытых cross-cutting issues 2/5/7 (отслеживаются глобально через roadmap waves 6.5 / 2/3 / 8/9/10).
-- [inputlayout.md](./inputlayout.md) 2026-05-11 — Issues 1 (XSS via help/messageInvalid → slot fallback), 2 (anonymous ResizeObservers cleanup), 3 (clipboard feature-detect + execCommand fallback), 5 (offsetTop prop replaces hardcoded querySelector("header")), 6 (aria-live="assertive" on error region), 7 (locale `inputLayout.copied`). Файл **остаётся в active** — open cross-cutting Issues 4 (Distribution: sideEffects/exports map / unstyled) и Issue 8 (prefers-reduced-motion / colors / print) трекаются глобально через Wave 2/3/10. **Cross-cutting эффект:** XSS-канал через `messageInvalid`/`help` закрыт во всех 5 form-controls (Input/Aria/Select/Calendar/TextEditor — наследуют InputLayout); slot-forwarding в них — follow-up PR.
-- [input.md](./input.md) 2026-05-11 — Issues 1 (initStyle dedup в Input.vue → полагается на `Component.__hooks()`), 2 (`Input.componentsStyle()` в fallback chain), 5 (`passwordToggleClass` override + theme-токены вместо cyan-_), 6 (`type` union расширен `tel`/`url`/`search`), 7 (`phoneFormats` prop+option + расширение `toPhone(e, options)` в numberHandler.ts), 8 (`autocomplete` auto-defaults по type + `InputAutocomplete` widened union), 9 (`motion-safe:transition-all` вместо unconditional), 10 (`focus(eventOrOptions?: FocusEvent | FocusOptions)` argless + FocusOptions), 11 (`@media print` стили на classBaseInput), 12 (RTL eye-icon тест), 13 (docs-only: §6.1-6.3 explicit timing + `update:isInvalid` reset-сигнал). Файл **остаётся в active** — open cross-cutting Issues 3 (packaging Wave 2.1) и 4 (unstyled Wave 3.1). Tests: 17 → 41 (+24 audit-кейсов). Cross-cutting: argless focus и componentsStyle fallback не применены к Aria/Select/Calendar/TextEditor — отдельные строчки в Wave 3.2 (componentsStyle) и Wave 10.7 (argless focus pattern).
+Всего **311 issues** распределены по 28 документам аудита. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
 
 ## Fix roadmap (live tracker)
 
@@ -69,7 +61,7 @@ last-changes: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 закрыт�
 
 1. Чекни `[x]` в roadmap'е.
 2. В соответствующем `<issue>.md` помечай `~~текст~~` зачёркнутым + `✅ resolved YYYY-MM-DD (PR #N)` рядом.
-3. Если ВСЕ issues файла закрыты — переместить файл в [`./done/`](./done/) и обновить ссылку в таблице сводки выше.
+3. Если ВСЕ issues файла закрыты (включая cross-cutting) — переместить файл в `./done/` и обновить ссылку в таблице сводки выше.
 4. Пересчитать severity matrix в таблице сводки.
 
 ---
@@ -99,7 +91,7 @@ last-changes: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 закрыт�
 - [ ] [Table.vue:2026](../../lib/table/Table.vue#L2026) — `noFilter` → `#empty-filter` slot · [table.md Issue 1](./table.md)
 - [ ] [Menu.vue:388](../../lib/menu/Menu.vue#L388) — `item.info` → `#item-info` scoped slot · [menu.md Issue 1](./menu.md)
 - [ ] [Menu.vue:392](../../lib/menu/Menu.vue#L392) — `item.info` (FixWindow ветка) → переиспользует `#item-info` · [menu.md Issue 1](./menu.md)
-- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — `item.subtitle` → `#item-subtitle` scoped slot · [accordion.md Issue 1](./done/accordion.md) · ✅ resolved 2026-05-11
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — `item.subtitle` → `#item-subtitle` scoped slot · [accordion.md Issue 1](./accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Alert.vue:253](../../lib/alert/Alert.vue#L253) — `subtitle` → `#subtitle` slot · [alert.md Issue 1](./alert.md)
 
 **Acceptance:** payload `<img src=x onerror=alert(1)>` не исполняется ни в одном из 14 сайтов (CI-test). Документация компонентов §12 Security обновлена с примером кастомизации через slot.
@@ -149,7 +141,7 @@ last-changes: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 закрыт�
 
 #### 2.2 Lazy import тяжёлых deps
 
-- [ ] [lib/icons/Icons.vue](../../lib/icons/Icons.vue) — heroicons через `defineAsyncComponent(() => import("@heroicons/vue/24/${stileIcon}/${pascalCase(type)}.vue"))` · [icons.md Issue 1](./done/icons.md), [button.md Issue 7](./button.md)
+- [ ] [lib/icons/Icons.vue](../../lib/icons/Icons.vue) — heroicons через `defineAsyncComponent(() => import("@heroicons/vue/24/${stileIcon}/${pascalCase(type)}.vue"))` · [icons.md Issue 1](./icons.md), [button.md Issue 7](./button.md)
 - [ ] [lib/texteditor/TextEditor.vue:3-5](../../lib/texteditor/TextEditor.vue#L3) — Quill через `defineAsyncComponent`, CSS импорты в `onMounted` · [texteditor.md Issue 3](./texteditor.md)
 - [ ] [lib/calendar/Calendar.vue](../../lib/calendar/Calendar.vue) — v-calendar `DatePicker` через `defineAsyncComponent` · [calendar.md Issue 2](./calendar.md)
 - [ ] [lib/loading/Loading.vue](../../lib/loading/Loading.vue) — Epic-вариации lazy через `defineAsyncComponent` · [loading.md Issue 2](./loading.md)
@@ -192,7 +184,7 @@ last-changes: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 закрыт�
 - [ ] [Select.vue](../../lib/select/Select.vue) — добавить `?? Select.componentsStyle()` · [select.md Issue 5](./select.md)
 - [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — добавить `?? Calendar.componentsStyle()` · [calendar.md Issue 6](./calendar.md)
 - [ ] [TextEditor.vue:54](../../lib/texteditor/TextEditor.vue#L54) — добавить `?? TextEditor.componentsStyle()` · [texteditor.md Issue 7](./texteditor.md)
-- [x] [Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23) — добавить mapping (`filled→primary`, `outlined→outline`, `underlined→neutral`) · [badge.md Issue 2](./done/badge.md) ✅ 2026-05-10
+- [x] [Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23) — добавить mapping (`filled→primary`, `outlined→outline`, `underlined→neutral`) · [badge.md Issue 2](./badge.md) ✅ 2026-05-10
 
 #### 3.3 Theme runtime API (новый файл per function)
 
@@ -240,22 +232,22 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 4.2 ARIA roles + attributes
 
-- [x] [Button.vue:382–390](../../lib/button/Button.vue#L382-L390) — `aria-label` для icon-кнопок (с dev-warning если type="icon" без label) · [done/button.md Issue 2](./done/button.md) · resolved 2026-05-10
+- [x] [Button.vue:382–390](../../lib/button/Button.vue#L382-L390) — `aria-label` для icon-кнопок (с dev-warning если type="icon" без label) · [done/button.md Issue 2](./button.md) · resolved 2026-05-10
 - [ ] [Label.vue:60](../../lib/label/Label.vue#L60) — корень `<div>` → `<label :for="forId">` + новый prop `forId` · [label.md Issue 1](./label.md)
 - [ ] [Pagination.vue:262](../../lib/pagination/Pagination.vue#L262) — `<nav role="navigation" aria-label>` + `aria-current="page"` · [pagination.md Issue 4](./pagination.md)
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — `role="status"` + `aria-live="polite"` + `aria-label="Loading"` (с локализацией) · [loading.md Issue 3](./loading.md)
 - [ ] [Alert.vue](../../lib/alert/Alert.vue) — `role="alert"`/`role="status"` based on severity + `aria-live` · [alert.md Issue 3](./alert.md)
 - [ ] [Menu.vue](../../lib/menu/Menu.vue) — `role="menu"` + `role="menuitem"` + `aria-haspopup` + `aria-expanded` · [menu.md Issue 4](./menu.md)
-- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — disclosure pattern: header `<button aria-expanded aria-controls>` + content `role="region" aria-labelledby` · [accordion.md Issue 3](./done/accordion.md) · ✅ resolved 2026-05-11
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — disclosure pattern: header `<button aria-expanded aria-controls>` + content `role="region" aria-labelledby` · [accordion.md Issue 3](./accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Split.vue](../../lib/split/Split.vue) — resize handle `role="separator"` + `aria-orientation` + `aria-valuenow/min/max` · [split.md Issue 4](./split.md)
 - [ ] [Table.vue](../../lib/table/Table.vue) — `<caption>` slot + `<th scope="col">` · [table.md Issue 8](./table.md)
-- [x] [Icons.vue](../../lib/icons/Icons.vue) — default `aria-hidden="true"` + prop `:label` для семантических (wrapper-based pattern) · [icons.md Issue 3](./done/icons.md) ✅ 2026-05-10
+- [x] [Icons.vue](../../lib/icons/Icons.vue) — default `aria-hidden="true"` + prop `:label` для семантических (wrapper-based pattern) · [icons.md Issue 3](./icons.md) ✅ 2026-05-10
 - [ ] [Separator.vue](../../lib/separator/Separator.vue) — корень `<hr>` или `<div role="separator" aria-orientation>` · [separator.md Issue 2](./separator.md)
 
 #### 4.3 Keyboard navigation
 
 - [ ] [Menu.vue](../../lib/menu/Menu.vue) — ArrowUp/Down между items, ArrowRight/Left для submenu, Home/End, typeahead, roving tabindex · [menu.md Issue 3](./menu.md)
-- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — ArrowUp/Down/Home/End между header items + roving tabindex · [accordion.md Issue 4](./done/accordion.md) · ✅ resolved 2026-05-11
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — ArrowUp/Down/Home/End между header items + roving tabindex · [accordion.md Issue 4](./accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Split.vue](../../lib/split/Split.vue) — стрелки на focused resize handle (с Shift для крупного шага) · [split.md Issue 5](./split.md)
 - [ ] [Select.vue:341-352](../../lib/select/Select.vue#L341) — audit existing keyboard logic (ArrowUp/Down уже есть) + добавить Home/End/typeahead.
 
@@ -325,7 +317,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 6.5 Accordion → `<Accordion><AccordionItem>`
 
-- [ ] `lib/accordion/AccordionItem.vue` · [accordion.md Issue 2](./done/accordion.md)
+- [ ] `lib/accordion/AccordionItem.vue` · [accordion.md Issue 2](./accordion.md)
 
 **Acceptance:** для каждого из 5 компонентов schema-driven и compound API работают одновременно (test). Volar autocomplete для child-компонентов работает. Documentation обновлена с примерами обоих API.
 
@@ -397,7 +389,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.1 prefers-reduced-motion
 
-- [~] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([done/button.md Issue 10](./done/button.md)) — pattern готов к применению на остальных 21 компонента. **Прогресс 2026-05-11:** Input ([Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98)) ✅. 2 / 22.
+- [~] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([done/button.md Issue 10](./button.md)) — pattern готов к применению на остальных 21 компонента. **Прогресс 2026-05-11:** Input ([Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98)) ✅. 2 / 22.
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — статичный fallback (loader-circle outline) в reduced-motion mode · [loading.md Issue 6](./loading.md)
 
 #### 10.2 Print styles
@@ -407,8 +399,8 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 #### 10.3 Polymorphic & composition
 
 - [ ] [Button.vue](../../lib/button/Button.vue) — `as?: string | Component` (default `"button"`, поддержка `<NuxtLink>`) · [button.md Issue 5](./button.md)
-- [x] [Button.vue:400–407](../../lib/button/Button.vue#L400-L407) — slots `start` + `end` · [done/button.md Issue 12](./done/button.md) · resolved 2026-05-10 (slot names `start`/`end` выбраны для logical-writing-order)
-- [x] [Button.vue:344–366](../../lib/button/Button.vue#L344-L366) — expose `buttonRef` + `focus()` / `blur()` методы · [done/button.md Issue 4](./done/button.md) · resolved 2026-05-10
+- [x] [Button.vue:400–407](../../lib/button/Button.vue#L400-L407) — slots `start` + `end` · [done/button.md Issue 12](./button.md) · resolved 2026-05-10 (slot names `start`/`end` выбраны для logical-writing-order)
+- [x] [Button.vue:344–366](../../lib/button/Button.vue#L344-L366) — expose `buttonRef` + `focus()` / `blur()` методы · [done/button.md Issue 4](./button.md) · resolved 2026-05-10
 - [ ] [Switch.vue](../../lib/switch/Switch.vue) — expose `inputRef` · [switch.md Issue 11](./switch.md)
 - [ ] [Pagination.vue](../../lib/pagination/Pagination.vue) — expose root ref · [pagination.md Issue 7](./pagination.md)
 
@@ -418,9 +410,9 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [Switch.d.ts:48](../../lib/switch/Switch.d.ts#L48) — закрыть union `switchingType: "checkbox" | "switch"` (убрать `| string`) · [switch.md Issue 9](./switch.md)
 - [ ] [Aria.d.ts:97](../../lib/aria/Aria.d.ts#L97) — `change:modelValue(payload: string)` (was boolean type bug) · [aria.md Issue 1](./aria.md)
 - [ ] [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts) — то же `change:modelValue` type bug fix · [texteditor.md Issue 5](./texteditor.md)
-- [x] [Icons.d.ts:84](../../lib/icons/Icons.d.ts#L84) — `variant?: "outline"|"solid"` (было `stileIcon` опечатка), deprecation soft через runtime `console.warn` · [icons.md Issue 4](./done/icons.md) ✅ 2026-05-10 (hard removal + codemod — Wave 12)
-- [x] [Icons.d.ts:61](../../lib/icons/Icons.d.ts#L61) — `IconType = HeroIconName | IconifyIconName | (string & {})` template literal union (hand-curated 30 heroicons + Iconify pattern + open fallback) · [icons.md Issue 5](./done/icons.md) ✅ 2026-05-10 (full ~280 union via build-script — future)
-- [x] [Badge.vue:78–81](../../lib/badge/Badge.vue#L78-L81) — `delete` emit → `close` (soft deprecation, both emit) · [badge.md Issue 5](./done/badge.md) ✅ 2026-05-10
+- [x] [Icons.d.ts:84](../../lib/icons/Icons.d.ts#L84) — `variant?: "outline"|"solid"` (было `stileIcon` опечатка), deprecation soft через runtime `console.warn` · [icons.md Issue 4](./icons.md) ✅ 2026-05-10 (hard removal + codemod — Wave 12)
+- [x] [Icons.d.ts:61](../../lib/icons/Icons.d.ts#L61) — `IconType = HeroIconName | IconifyIconName | (string & {})` template literal union (hand-curated 30 heroicons + Iconify pattern + open fallback) · [icons.md Issue 5](./icons.md) ✅ 2026-05-10 (full ~280 union via build-script — future)
+- [x] [Badge.vue:78–81](../../lib/badge/Badge.vue#L78-L81) — `delete` emit → `close` (soft deprecation, both emit) · [badge.md Issue 5](./badge.md) ✅ 2026-05-10
 - [ ] [Switch.vue:244](../../lib/switch/Switch.vue#L244) — `<input type="hidden">` рядом с `<button role="switch">` для native form integration · [switch.md Issue 3](./switch.md)
 - [ ] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — hidden `<input>` для native form submit · [texteditor.md Issue 10](./texteditor.md)
 - [ ] [Form.vue](../../lib/form/Form.vue) — корень `<form>` (после Wave 6.2) · [form.md Issue 4](./form.md)
@@ -433,15 +425,15 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.6 Other architecture
 
-- [x] [Animation transitions](../../lib/accordion/Accordion.vue) — `<Transition :css="false">` с JS `@leave` hook для unmount-safe collapse · [accordion.md Issue 6](./done/accordion.md) · ✅ resolved 2026-05-11
+- [x] [Animation transitions](../../lib/accordion/Accordion.vue) — `<Transition :css="false">` с JS `@leave` hook для unmount-safe collapse · [accordion.md Issue 6](./accordion.md) · ✅ resolved 2026-05-11
 - [x] [Input.vue:212-220](../../lib/input/Input.vue#L212-L220) — `focus(eventOrOptions?: FocusEvent | FocusOptions)` argless + FocusOptions вариант · [input.md Issue 10](./input.md) ✅ 2026-05-11
 - [x] [Input.vue:96-102](../../lib/input/Input.vue#L96-L102), [Input.vue:255-266](../../lib/input/Input.vue#L255-L266) — eye-icon class через computed (option `passwordToggleClass`, theme-токены) · [input.md Issue 5](./input.md) ✅ 2026-05-11
 - [x] [InputLayout.vue:177-211](../../lib/inputlayout/InputLayout.vue#L177-L211) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` (number / string / `() => number`) + `resolveOffsetTop()` · [inputlayout.md Issue 5](./inputlayout.md) · ✅ resolved 2026-05-11
 - [x] [InputLayout.vue:253-298](../../lib/inputlayout/InputLayout.vue#L253-L298) — `clipboard.writeText` feature-detect + `legacyCopy()` execCommand fallback + SSR guard · [inputlayout.md Issue 3](./inputlayout.md) · ✅ resolved 2026-05-11
 - [ ] [Switch.vue:232-234](../../lib/switch/Switch.vue#L232) — help-icon contrast (`text-gray-400` → `text-gray-500` light) · [switch.md Issue 6](./switch.md)
-- [x] [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `ring-neutral-500/30` → `ring-neutral-300 dark:ring-neutral-700` · [badge.md Issue 4](./done/badge.md) ✅ 2026-05-10
+- [x] [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `ring-neutral-500/30` → `ring-neutral-300 dark:ring-neutral-700` · [badge.md Issue 4](./badge.md) ✅ 2026-05-10
 - [ ] [calendar.md Issue 9 — Floating UI](./calendar.md) (закрывается через Wave 5).
-- [ ] [\_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./done/_utilities.md) — низкий приоритет.
+- [ ] [\_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./_utilities.md) — низкий приоритет.
 
 **Acceptance:** axe-core CI без contrast violations. Codemods для deprecated aliases (Aria→Textarea, stileIcon→variant, iconPosition left→start, delete→close emit).
 
@@ -479,8 +471,8 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] **Codemods для breaking changes:**
   - [ ] `Aria` → `Textarea` (rename + import-update) · [aria.md Issue 6](./aria.md)
   - [ ] `iconPosition: "left"|"right"` → `"start"|"end"` · [button.md Issue 3](./button.md)
-  - [ ] `stileIcon` → `variant` · [icons.md Issue 4](./done/icons.md)
-  - [ ] `delete` emit → `close` for Badge · [badge.md Issue 5](./done/badge.md) (codemod still TODO; soft deprecation already landed)
+  - [ ] `stileIcon` → `variant` · [icons.md Issue 4](./icons.md)
+  - [ ] `delete` emit → `close` for Badge · [badge.md Issue 5](./badge.md) (codemod still TODO; soft deprecation already landed)
   - [ ] `change:modelValue` type для Aria/TextEditor · [aria.md Issue 1](./aria.md)
 - [ ] [CHANGELOG.md](../../CHANGELOG.md) (auto-gen) — documentation для каждого breaking change.
 - [ ] [Documentation/issues/migration-guide.md](./migration-guide.md) — пошаговый guide для major-bumps.
@@ -504,7 +496,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [Form.vue:380](../../lib/form/Form.vue#L380) (select-marker copy) — [form.md Issue 1](./form.md)
 - [Table.vue:1842, 1939, 1999, 2011, 2026](../../lib/table/Table.vue#L1842) (cell, summary, noData/Column/Filter ×3) — [table.md Issue 1](./table.md)
 - [Menu.vue:388, 392](../../lib/menu/Menu.vue#L388) (item.info ×2) — [menu.md Issue 1](./menu.md)
-- ~~[Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) (item.subtitle)~~ ✅ resolved 2026-05-11 — see [accordion.md Issue 1](./done/accordion.md)
+- ~~[Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) (item.subtitle)~~ ✅ resolved 2026-05-11 — see [accordion.md Issue 1](./accordion.md)
 - [Alert.vue:253](../../lib/alert/Alert.vue#L253) (subtitle) — [alert.md Issue 1](./alert.md)
 
 **Memory leaks (observers/listeners без cleanup):**
