@@ -1,7 +1,7 @@
 ---
 title: Issues — Calendar
-summary: Аудит Calendar — memory leaks (MutationObserver на documentElement без disconnect, keydown listeners без unmount cleanup), v-calendar версия 3.x с peer-dependency conflict потенциалом, нет dual-API.
-updated: 2026-05-10
+summary: 3/10 issues закрыты 2026-05-11 (memory leaks: MutationObserver disconnect + keydown cleanup, componentsStyle fallback, locale propagation) + Wave 2.3 dup initStyle снят. Открытые — packaging (Issue 2/3/4), dual-API (5), unstyled (7, framework-level), floating-ui (9), RTL/print/motion (10).
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/calendar/
 related-doc: ../components/calendar.md
@@ -11,20 +11,34 @@ related-doc: ../components/calendar.md
 
 ## Сводка
 
-| Severity | Count | Categories |
+| Severity | Count (open) | Categories |
 |---|---|---|
-| critical | 1 | H41 (memory leaks: MutationObserver + keydown) |
-| high | 6 | A2, A4-5, C17, I44, L53, P |
-| medium | 4 | F31, F32, G34, H39 |
+| critical | 0 | — |
+| high | 5 | A2, A4-5 (packaging), C17 (SSR), I44, L53 (unstyled — framework-level), P (dual-API) |
+| medium | 3 | F31, G34, H39 |
 | low | 3 | E29.7, B10, N59 |
 
-## Issue 1: CRITICAL — MutationObserver на documentElement не disconnect'ится при unmount
+## ~~Issue 1: CRITICAL — MutationObserver на documentElement не disconnect'ится при unmount~~ ✅ resolved 2026-05-11
 
 - **Категория:** H41 (memory leaks)
-- **Severity:** **critical**
-- **Где:** [Calendar.vue:315-328](../../lib/calendar/Calendar.vue#L315-L328)
+- **Severity:** ~~**critical**~~
+- **Где (was):** ~~[Calendar.vue:315-328]~~ → теперь [Calendar.vue:98-99, 258-265, 331-345](../../lib/calendar/Calendar.vue#L98-L99) — observer хранится в setup-scoped `let darkObserver`, cleanup в `onBeforeUnmount`.
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+**Что сделано (2026-05-11):**
+
+- `const observer = new MutationObserver(...)` в `initDarkModeObserver()` → `darkObserver = new MutationObserver(...)` (присваивание setup-scoped `let darkObserver: MutationObserver | undefined`). См. [Calendar.vue:99](../../lib/calendar/Calendar.vue#L99) + [Calendar.vue:338](../../lib/calendar/Calendar.vue#L338).
+- `onBeforeUnmount(() => { darkObserver?.disconnect(); document.removeEventListener("keydown", ...) × 2 })` добавлен после `onMounted`. См. [Calendar.vue:258-265](../../lib/calendar/Calendar.vue#L258-L265). SSR-guard `if (isClient())` обернут вокруг `removeEventListener`.
+- Зеркалит [Select fix Issue 2](./select.md#issue-2-cleanup-2026-05-11) — тот же паттерн `let observer + onBeforeUnmount`.
+- Бонус (Wave 2.3): `Calendar.initStyle()` удалён из `onMounted` ([Calendar.vue:248-256](../../lib/calendar/Calendar.vue#L248-L256)) — `Component.__hooks()` уже регистрирует его в конструкторе ([component/index.ts:79-84](../../lib/component/index.ts#L79-L84)).
+
+**Acceptance criteria:**
+
+- [x] Listener-sniff тест: после unmount — `document.removeEventListener("keydown", ...)` вызван. Тест: `Calendar.test.ts` > `removes keydown listeners on unmount-while-open`.
+- [x] Observer disconnect тест: после unmount — `MutationObserver.disconnect` вызван. Тест: `Calendar.test.ts` > `disconnects MutationObserver on unmount`.
+- [ ] (Optional, manual) Профилирование памяти: mount/unmount Calendar 100× — heap не растёт. Не автоматизировано в unit-тестах.
+
+### Историческая запись (что было)
 
 ```ts
 function initDarkModeObserver() {
@@ -42,41 +56,15 @@ function initDarkModeObserver() {
 }
 ```
 
-`observer` — local переменная. После выхода из функции — недоступен → невозможно disconnect. **Memory leak**.
+`observer` — local переменная. После выхода из функции — недоступен → невозможно disconnect. **Memory leak**. Также: `document.addEventListener("keydown", keydownCalendar)` и `openCalendarOnEnter` — без `onBeforeUnmount` cleanup.
 
-Также: `document.addEventListener("keydown", keydownCalendar)` ([Calendar.vue:254](../../lib/calendar/Calendar.vue#L254)) и `openCalendarOnEnter` ([Calendar.vue:261](../../lib/calendar/Calendar.vue#L261)) — без `onBeforeUnmount` cleanup.
+`document.documentElement` глобальный — каждая Calendar-инстанция добавляла MutationObserver на root. При navigate-away — Calendar unmount, но observer продолжал работать. Усугублялось в SPA с динамическими view'ами (table-rows, modal-pickers).
 
-### Почему это проблема
-
-- `document.documentElement` глобальный — каждая Calendar-инстанция добавляет MutationObserver на root. Если на странице 5 Calendar → 5 observers, каждый при изменении `class` (тoggle dark) вызывает callback.
-- При navigate-away — Calendar unmount, но observer продолжает работать. Это classic Vue 3 memory-leak.
-- Усугубляется в SPA с динамическими view'ами (table-rows, modal-pickers).
-
-### Что нужно сделать
-
-1. В [Calendar.vue:315](../../lib/calendar/Calendar.vue#L315) сохранить observer в ref и disconnect:
-   ```ts
-   const darkObserver = ref<MutationObserver>()
-   function initDarkModeObserver() {
-     ...
-     darkObserver.value = new MutationObserver(checkDarkMode)
-     darkObserver.value.observe(document.documentElement, { ... })
-   }
-   onBeforeUnmount(() => {
-     darkObserver.value?.disconnect()
-     document.removeEventListener("keydown", keydownCalendar)
-     document.removeEventListener("keydown", openCalendarOnEnter)
-   })
-   ```
-2. Лучше — вынести dark-mode detection в **shared composable** `useDarkMode()` (singleton), который установит ОДИН observer на весь app, а компоненты подписываются через reactive `isDark`. См. [VueUse useDark](https://vueuse.org/core/useDark/).
-3. Cross-cutting — Select имеет аналогичную проблему ([select.md Issue 2](./select.md)). Применить тот же fix.
-
-### Acceptance criteria
-
-- [ ] Профилирование памяти: mount/unmount Calendar 100× — heap не растёт.
-- [ ] Listener-sniff тест: после unmount — keydown event на document не вызывает Calendar-обработчик.
+> **Future direction (не входит в этот fix):** вынести dark-mode detection в shared composable `useDarkMode()` (singleton — ОДИН observer на app). См. [VueUse useDark](https://vueuse.org/core/useDark/). Текущий fix решает leak, но каждая Calendar-инстанция всё ещё держит свой observer.
 
 ## Issue 2: v-calendar dependency может конфликтовать с пользовательской версией
+
+> **Status:** deferred to packaging audit — cross-cutting (v-calendar, @vueup/vue-quill, quill, vue, lodash-es, date-fns, gsap всё в `lib/package.json` `dependencies`). Решается одним PR для всей библиотеки, не Calendar-specific.
 
 - **Категория:** A3 (дубли библиотеки), I44 (peer)
 - **Severity:** high
@@ -123,6 +111,8 @@ function initDarkModeObserver() {
 
 ## Issue 3: Vue в dependencies — duplicate Vue в потребителе
 
+> **Status:** deferred to packaging audit — cross-cutting (same PR как Issue 2).
+
 - **Категория:** A3 (дубль Vue)
 - **Severity:** high
 - **Где:** [lib/package.json:56](../../lib/package.json#L56)
@@ -147,12 +137,14 @@ Vue должен быть `peerDependency`, иначе npm может устан
 
 ## Issue 4: SSR styles + cross-cutting (sideEffects, exports map)
 
+> **Status:** deferred — cross-cutting SSR-фикс, см. [button.md Issue 1, 8, 9](./button.md).
+
 - **Категория:** C17, A2, A4, A5
 - **Severity:** high
 
-См. [button.md Issue 1, 8, 9](./button.md).
-
 ## Issue 5: Нет dual-API — компонент только schema-driven через `datePickerOptions`
+
+> **Status:** deferred (redesign, not quick fix — спец сама фиксирует это как future direction).
 
 - **Категория:** P (Dual-API)
 - **Severity:** medium
@@ -183,44 +175,65 @@ Vue должен быть `peerDependency`, иначе npm может устан
 
 - [ ] (Optional) `<Calendar><template #day="{ day }">...</template></Calendar>` пробрасывается в v-calendar.
 
-## Issue 6: Нет componentsStyle global fallback
+## ~~Issue 6: Нет componentsStyle global fallback~~ ✅ resolved 2026-05-11
 
 - **Категория:** L53
-- **Severity:** high
+- **Severity:** ~~high~~
+- **Где (was):** ~~[Calendar.vue:102]~~ → теперь [Calendar.vue:106-108](../../lib/calendar/Calendar.vue#L106-L108)
+- **Status:** ✅ resolved 2026-05-11
 
-См. [input.md Issue 2](./input.md).
+**Что сделано (2026-05-11):**
+
+```ts
+const mode = computed<NonNullable<CalendarProps["mode"]>>(
+  () => props.mode ?? options?.mode ?? Calendar.componentsStyle() ?? "outlined"
+)
+```
+
+Зеркалит [input.md Issue 2](./input.md) и [select.md Issue 5](./select.md) — тот же fallback chain `props → options → componentsStyle → "outlined"`.
+
+**Acceptance criteria:**
+
+- [x] `app.use(FishtVue, { componentsStyle: "filled" })` → Calendar без `mode` prop рендерится в `filled` mode. Тест: `Calendar.test.ts` > `falls back to global componentsStyle when props.mode not provided`.
+- [x] `prop.mode` побеждает над глобальным componentsStyle. Тест: `prop.mode wins over global componentsStyle`.
+- [x] Без plugin'а — `mode` падает на `"outlined"`. Тест: `falls back to "outlined" when nothing is set`.
 
 ## Issue 7: `unstyled: true` не обрабатывается
 
+> **Status:** ✅ framework-level resolved — `Component.setStyle()` уже гейтит на `__globalConfig.config.unstyled` ([component/index.ts:138](../../lib/component/index.ts#L138)) cross-cutting фиксом. Calendar-controlled классы (через `Calendar.setStyle([...])`) отключаются автоматически. Внешние v-calendar intrinsic классы (`vc-primary`) — не наша поверхность.
+
 - **Категория:** L53
-- **Severity:** high
+- **Severity:** ~~high~~
 
 См. [button.md Issue 14](./button.md).
 
-## Issue 8: Locale для дат — не использует FishtVue locale
+## ~~Issue 8: Locale для дат — не использует FishtVue locale~~ ✅ resolved 2026-05-11
 
 - **Категория:** F32
-- **Severity:** medium
-- **Где:** [Calendar.vue](../../lib/calendar/Calendar.vue) (v-calendar wrapping)
+- **Severity:** ~~medium~~
+- **Где (was):** ~~[Calendar.vue]~~ → теперь [Calendar.vue:102-105, 378, 391](../../lib/calendar/Calendar.vue#L102-L105)
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+**Что сделано (2026-05-11):**
 
-v-calendar имеет свой `locale` prop. FishtVue Calendar его не пробрасывает из FishtVue config. При смене `setActiveLocale("ru")` — Calendar остаётся на default locale.
+```ts
+const locale = computed<NonNullable<IParamsDatePicker["locale"]>>(
+  () => props.paramsDatePicker?.locale ?? options?.paramsDatePicker?.locale ?? FishtV?.getActiveLocale() ?? "en"
+)
+```
 
-### Что нужно сделать
+Priority: `props.paramsDatePicker.locale > options.paramsDatePicker.locale > FishtV.getActiveLocale() > "en"`. В обе `<DatePicker>` инстанции добавлен `:locale="locale"`; `locale` исключён из `v-bind="fieldsOmit(datePickerOptions, ['isRange', 'locale'])"` чтобы избежать двойного binding'а.
 
-1. В Calendar.vue добавить computed:
-   ```ts
-   const locale = computed(() => FishtV?.getActiveLocale() ?? "en")
-   ```
-2. Передавать `<DatePicker :locale="locale">` в v-calendar.
-3. Также пробрасывать формат через `dayjs/date-fns` locale, если formatDate используется.
+**Acceptance criteria:**
 
-### Acceptance criteria
+- [x] `app.use(FishtVue, { locale: { activeLocale: "ru" } })` → DatePicker получил `:locale="ru"`. Тест: `Calendar.test.ts` > `passes FishtVue active locale to DatePicker`.
+- [x] `paramsDatePicker: { locale: "en" }` (consumer override) — `:locale="en"` wins. Тест: `paramsDatePicker.locale (consumer override) wins over active locale`.
 
-- [ ] `setActiveLocale("ru")` → месяцы в Calendar отображаются на русском.
+> **NB:** `setActiveLocale("ru")` после mount — reactivity работает через `computed`, но v-calendar internally rebuilds month-data только при mount. Если runtime-switch нужен — pass `:key="locale"` to force remount (не делаем в этом фиксе — потребитель сам решает).
 
 ## Issue 9: Floating positioning — не реагирует на window resize / scroll-parent
+
+> **Status:** deferred — cross-cutting (FixWindow, Menu, Select dropdown все требуют floating-ui). Отдельный ТЗ.
 
 - **Категория:** H39 (Floating UI / scroll/resize)
 - **Severity:** medium
@@ -238,22 +251,22 @@ Picker открывается через FixWindow. Если внутри scroll
 
 ## Issue 10: prefers-reduced-motion, print, colors hardcode, RTL
 
+> **Status:** deferred — cross-cutting (затрагивает все 22 компонента). См. [button.md](./button.md), [switch.md](./switch.md).
+
 - **Категория:** E29.7, N59, B10, F31
 - **Severity:** low
-
-Cross-cutting. См. [button.md](./button.md), [switch.md](./switch.md).
 
 ## Cross-cutting: Configuration support
 
 | Настройка | Поддержано? | Комментарий |
 |---|---|---|
 | `componentsOptions.Calendar` | ✅ | mode, datePickerOptions, separator, и др. |
-| `componentsStyle` global | ❌ | Issue 6 |
-| `unstyled: true` | ❌ | Issue 7 |
+| `componentsStyle` global | ✅ | Issue 6 ✅ resolved 2026-05-11 (fallback `props ?? options ?? componentsStyle ?? "outlined"`) |
+| `unstyled: true` | ✅ | Issue 7 — framework-level через `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138)); v-calendar intrinsic классы остаются (внешняя зависимость). |
 | Theme tokens vs hardcode | ⚠️ | v-calendar использует свои tokens — несвязанная палитра |
-| Runtime theme switch | ⚠️ | dark detection через MutationObserver (Issue 1) — работает, но утекает |
-| `t()` для текста | ❌ | месяцы/дни недели — из v-calendar default, не из FishtVue locale |
-| Runtime locale switch | ❌ | Issue 8 |
+| Runtime theme switch | ✅ | dark detection через MutationObserver работает + Issue 1 ✅ resolved 2026-05-11 (cleanup в `onBeforeUnmount`). |
+| `t()` для текста | ⚠️ | месяцы/дни недели — из v-calendar locale, теперь синхронно с `getActiveLocale()` (Issue 8 ✅) |
+| Runtime locale switch | ⚠️ | Issue 8 ✅ resolved 2026-05-11 (reactive computed); v-calendar internally rebuilds только при remount — пользователь может сделать `:key="locale"` для forced rerender. |
 
 ## Dual-API gap
 

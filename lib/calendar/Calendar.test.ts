@@ -1,7 +1,9 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import Calendar from "fishtvue/calendar/Calendar.vue"
 import { CalendarProps } from "fishtvue/calendar/Calendar"
+import FishtVue from "fishtvue/config"
+import { DatePicker } from "v-calendar"
 import "v-calendar/style.css"
 import { nextTick } from "vue"
 
@@ -235,6 +237,136 @@ describe("Calendar Component", () => {
 
       const dateDisplay = wrapper.find("[data-input-layout]")
       expect(dateDisplay.attributes("placeholder")).toBe("Select a date")
+    })
+  })
+
+  describe("Audit fixes 2026-05-11 (Issues 1, 6, 8)", () => {
+    let removeListenerSpy: ReturnType<typeof vi.spyOn>
+    let mutationDisconnectSpy: ReturnType<typeof vi.fn>
+    // eslint-disable-next-line no-undef
+    let originalMutationObserver: typeof MutationObserver
+
+    beforeEach(() => {
+      removeListenerSpy = vi.spyOn(document, "removeEventListener")
+      mutationDisconnectSpy = vi.fn()
+      originalMutationObserver = (globalThis as any).MutationObserver
+      const disconnect = mutationDisconnectSpy
+      class MockMutationObserver {
+        public cb: unknown
+        constructor(cb: unknown) {
+          this.cb = cb
+        }
+        observe = vi.fn()
+        takeRecords = vi.fn(() => [])
+        disconnect = disconnect
+      }
+      ;(globalThis as any).MutationObserver = MockMutationObserver
+    })
+
+    afterEach(() => {
+      removeListenerSpy.mockRestore()
+      ;(globalThis as any).MutationObserver = originalMutationObserver
+      // Очистка window.FishtVue — он мутируется FishtVue plugin'ом и pollutes following tests.
+      delete (window as any).FishtVue
+    })
+
+    // ---ISSUE 1 — memory leak cleanup ---------------------------------------
+    it("disconnects MutationObserver on unmount", async () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { optionsTheme: { darkModeSelector: ".dark" } })
+        }
+      }
+      const wrapper = mount(Calendar, {
+        global: { plugins: [app as any] }
+      })
+      await nextTick()
+      mutationDisconnectSpy.mockClear()
+      wrapper.unmount()
+      expect(mutationDisconnectSpy).toHaveBeenCalled()
+    })
+
+    it("removes keydown listeners on unmount-while-open", async () => {
+      const wrapper = mount(Calendar, {
+        props: { modelValue: null },
+        attachTo: document.body
+      })
+      const calendarRef: any = wrapper.vm
+      calendarRef.openCalendar()
+      await nextTick()
+      calendarRef.focus(true)
+      await nextTick()
+      removeListenerSpy.mockClear()
+      wrapper.unmount()
+      const removed = removeListenerSpy.mock.calls.map((c: unknown[]) => c[0])
+      expect(removed).toContain("keydown")
+    })
+
+    // ---ISSUE 6 — componentsStyle fallback ----------------------------------
+    it("falls back to global componentsStyle when props.mode not provided", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { componentsStyle: "filled" })
+        }
+      }
+      const wrapper = mount(Calendar, {
+        global: { plugins: [app as any] }
+      })
+      expect((wrapper.vm as any).mode).toBe("filled")
+    })
+
+    it("prop.mode wins over global componentsStyle", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { componentsStyle: "filled" })
+        }
+      }
+      const wrapper = mount(Calendar, {
+        global: { plugins: [app as any] },
+        props: { mode: "outlined" }
+      })
+      expect((wrapper.vm as any).mode).toBe("outlined")
+    })
+
+    it('falls back to "outlined" when nothing is set', () => {
+      const wrapper = mount(Calendar)
+      expect((wrapper.vm as any).mode).toBe("outlined")
+    })
+
+    // ---ISSUE 8 — locale propagation ----------------------------------------
+    it("passes FishtVue active locale to DatePicker", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, {
+            locale: { activeLocale: "ru", defaultLocale: "ru", messages: { ru: {}, en: {} } }
+          })
+        }
+      }
+      const wrapper = mount(Calendar, {
+        global: { plugins: [app as any] }
+      })
+      const datePicker = wrapper.findComponent(DatePicker as any)
+      expect(datePicker.exists()).toBe(true)
+      expect(datePicker.props("locale")).toBe("ru")
+    })
+
+    it("paramsDatePicker.locale (consumer override) wins over active locale", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, {
+            locale: { activeLocale: "ru", defaultLocale: "ru", messages: { ru: {}, en: {} } }
+          })
+        }
+      }
+      const wrapper = mount(Calendar, {
+        global: { plugins: [app as any] },
+        props: {
+          paramsDatePicker: { locale: "en" }
+        }
+      })
+      const datePicker = wrapper.findComponent(DatePicker as any)
+      expect(datePicker.exists()).toBe(true)
+      expect(datePicker.props("locale")).toBe("en")
     })
   })
 })

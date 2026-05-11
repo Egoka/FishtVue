@@ -21,7 +21,7 @@ last-changes: 2026-05-11 — select: закрыто 7 of 11 issues (1 critical X
 | Input           | [input.md](./input.md)                     | 0        | 2       | 0       | 0      |
 | Aria            | [aria.md](./aria.md)                       | 0        | 4       | 4       | 3      |
 | Select          | [select.md](./select.md)                   | 0        | 4       | 2       | 2      |
-| Calendar        | [calendar.md](./calendar.md)               | 1        | 6       | 4       | 3      |
+| Calendar        | [calendar.md](./calendar.md)               | 0        | 5       | 3       | 3      |
 | TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 7       | 5       | 3      |
 | Table           | [table.md](./table.md)                     | 2        | 8       | 5       | 4      |
 | Pagination      | [pagination.md](./pagination.md)           | 1        | 4       | 4       | 3      |
@@ -43,7 +43,7 @@ last-changes: 2026-05-11 — select: закрыто 7 of 11 issues (1 critical X
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
 | Utilities       | [\_utilities.md](./_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **11**   | **130** | **85**  | **68** |
+| **TOTAL**       | **28 files**                               | **10**   | **129** | **84**  | **68** |
 
 Всего **294 issues** распределены по 28 документам аудита. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
 
@@ -101,8 +101,8 @@ last-changes: 2026-05-11 — select: закрыто 7 of 11 issues (1 critical X
 
 - [x] [Select.vue ResizeObserver](../../lib/select/Select.vue) — сохранён в `let resizeObserver` closure + `onBeforeUnmount` disconnect (зеркалит InputLayout pattern) · [select.md Issue 2](./select.md) · ✅ resolved 2026-05-11
 - [x] [Select.vue keydown listeners](../../lib/select/Select.vue) — `openSelectOnEnter` и `keydownSelect` cleanup в `onBeforeUnmount` (с `isClient()` SSR-guard) · [select.md Issue 2](./select.md) · ✅ resolved 2026-05-11
-- [ ] [Calendar.vue:322-327](../../lib/calendar/Calendar.vue#L322) — `MutationObserver` на documentElement сохранить + disconnect · [calendar.md Issue 1](./calendar.md) · **рекомендация: вынести в singleton `useDarkMode()` composable** (один observer на весь app)
-- [ ] [Calendar.vue:254,261](../../lib/calendar/Calendar.vue#L254) — keydown listeners cleanup · [calendar.md Issue 1](./calendar.md)
+- [x] [Calendar.vue:99,338](../../lib/calendar/Calendar.vue#L99) — `MutationObserver` сохранён в setup-scoped `let darkObserver` + disconnect в `onBeforeUnmount` ([Calendar.vue:258-265](../../lib/calendar/Calendar.vue#L258-L265)) · [calendar.md Issue 1](./calendar.md) · ✅ resolved 2026-05-11 · (singleton `useDarkMode()` composable — future direction, не входит в этот fix)
+- [x] [Calendar.vue:258-265](../../lib/calendar/Calendar.vue#L258-L265) — keydown listeners cleanup в `onBeforeUnmount` · [calendar.md Issue 1](./calendar.md) · ✅ resolved 2026-05-11
 - [ ] [Pagination.vue:255](../../lib/pagination/Pagination.vue#L255) — anonymous `new ResizeObserver(...)` → сохранить в ref + disconnect · [pagination.md Issue 1](./pagination.md)
 - [x] [InputLayout.vue:196-204](../../lib/inputlayout/InputLayout.vue#L196-L204) — anonymous ResizeObserver на `beforeInput` сохранить (`let beforeObserver`) + disconnect ([InputLayout.vue:232-237](../../lib/inputlayout/InputLayout.vue#L232-L237)) · [inputlayout.md Issue 2](./inputlayout.md) · ✅ resolved 2026-05-11
 - [x] [InputLayout.vue:205-210](../../lib/inputlayout/InputLayout.vue#L205-L210) — anonymous ResizeObserver на `afterInput` сохранить (`let afterObserver`) + disconnect ([InputLayout.vue:232-237](../../lib/inputlayout/InputLayout.vue#L232-L237)) · [inputlayout.md Issue 2](./inputlayout.md) · ✅ resolved 2026-05-11
@@ -148,7 +148,7 @@ last-changes: 2026-05-11 — select: закрыто 7 of 11 issues (1 critical X
 
 #### 2.3 SSR style injection
 
-- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, Label, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, Aria, ~~Select~~ ✅ 2026-05-11, Calendar, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons. **Прогресс:** 3 / 22.
+- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, Label, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, Aria, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons. **Прогресс:** 4 / 22.
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue { ... }` (или настраиваемый layer name из `optionsTheme.layers`) · [theme.md Issue 4](./theme.md)
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — HMR teardown: replace content existing `<style>` element, не append new · [component-class.md Issue 3](./component-class.md)
 
@@ -181,7 +181,7 @@ last-changes: 2026-05-11 — select: закрыто 7 of 11 issues (1 critical X
 - [x] [Input.vue:62-64](../../lib/input/Input.vue#L62-L64) — добавить `?? Input.componentsStyle()` в fallback · [input.md Issue 2](./input.md) ✅ 2026-05-11
 - [ ] [Aria.vue:49](../../lib/aria/Aria.vue#L49) — добавить `?? Aria.componentsStyle()` · [aria.md Issue 4](./aria.md)
 - [x] [Select.vue](../../lib/select/Select.vue) — добавлено `?? options?.mode ?? Select.componentsStyle()` в fallback chain (`mode` computed) · [select.md Issue 5](./select.md) · ✅ resolved 2026-05-11
-- [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — добавить `?? Calendar.componentsStyle()` · [calendar.md Issue 6](./calendar.md)
+- [x] [Calendar.vue:106-108](../../lib/calendar/Calendar.vue#L106-L108) — добавлено `?? Calendar.componentsStyle()` · [calendar.md Issue 6](./calendar.md) · ✅ resolved 2026-05-11
 - [ ] [TextEditor.vue:54](../../lib/texteditor/TextEditor.vue#L54) — добавить `?? TextEditor.componentsStyle()` · [texteditor.md Issue 7](./texteditor.md)
 - [x] [Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23) — добавить mapping (`filled→primary`, `outlined→outline`, `underlined→neutral`) · [badge.md Issue 2](./badge.md) ✅ 2026-05-10
 
@@ -355,7 +355,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 #### 8.2 i18n текстов
 
 - [ ] [rulesHandler.ts / rulesMethods.ts](../../lib/utils/rulesHandler.ts) — validation messages через `t("validation.required")` keys + добавить ключи в [locales/{en,ru}.ts](../../lib/locale/locales/) · [form.md Issue 6](./form.md)
-- [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — пробросить FishtVue locale в v-calendar · [calendar.md Issue 8](./calendar.md)
+- [x] [Calendar.vue:102-105, 378, 391](../../lib/calendar/Calendar.vue#L102-L105) — `getActiveLocale()` пробрасывается в `<DatePicker :locale>`, priority `props > options > active > "en"` · [calendar.md Issue 8](./calendar.md) · ✅ resolved 2026-05-11
 - [ ] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — Quill toolbar tooltips через i18n · [texteditor.md Issue 8, 9](./texteditor.md)
 - [~] [numberHandler.convertToPhone](../../lib/utils/numberHandler.ts) — параметризовать по locale · [input.md Issue 7](./input.md). **Прогресс 2026-05-11:** `phoneFormats` пробрасывается через `InputProps.phoneFormats` + `InputOption.phoneFormats`; `toPhone(e, options)` расширен. Auto-bind к активной локали — оставлен на следующую итерацию (требует расширения `lib/locale/` + либо `libphonenumber-js` peer-dep, либо встроенной таблицы locale → PhoneFormat[]).
 - [x] [Select.vue search](../../lib/select/Select.vue) — фильтрация через `Intl.Collator(getActiveLocale() ?? "en", { sensitivity: "base", usage: "search" })` (diacritic + case insensitive). Сcollator также используется в `splitByQuery` для подсветки — match-логика согласована · [select.md Issue 10](./select.md) · ✅ resolved 2026-05-11
@@ -501,7 +501,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **Memory leaks (observers/listeners без cleanup):**
 
 - ~~Select ResizeObserver + keydown listeners~~ ✅ resolved 2026-05-11 ([select.md Issue 2](./select.md)) — `let resizeObserver` + `onBeforeUnmount` disconnect + removeEventListener для обоих keydown handlers.
-- Calendar MutationObserver на documentElement ([calendar.md Issue 1](./calendar.md))
+- ~~Calendar MutationObserver на documentElement~~ ([calendar.md Issue 1](./calendar.md)) ✅ resolved 2026-05-11
 - Pagination anonymous ResizeObserver ([pagination.md Issue 1](./pagination.md))
 - ~~InputLayout 2× anonymous ResizeObservers~~ ✅ resolved 2026-05-11 ([inputlayout.md Issue 2](./inputlayout.md))
 - Table IntersectionObserver + window mousemove/up partial cleanup ([table.md Issue 2](./table.md))
@@ -515,7 +515,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **Distribution/packaging** (sideEffects, exports map, peer-deps): затрагивает все 22 компонента — [button.md Issue 8 и 9](./button.md), [calendar.md Issue 2, 3](./calendar.md).
 **SSR style injection (C17):** дубль `Component.initStyle()` в каждом из 22 SFC — [component-class.md Issue 1](./component-class.md).
 ~~**`unstyled: true` не реализован (L53):**~~ ✅ resolved 2026-05-11 — `Component.setStyle()` guard в [lib/component/index.ts:138](../../lib/component/index.ts#L138). Cross-cutting fix — все 22 компонента, использующие базовый класс, теперь респектят `unstyled: true` config. См. [component-class.md Issue 6](./component-class.md).
-**`componentsStyle` global fallback inconsistent (L53):** Button/Aria/Calendar/TextEditor не имеют (resolved: ~~Input~~ 2026-05-11, ~~Select~~ 2026-05-11, ~~Badge~~ 2026-05-10) — см. [button.md Issue 13](./button.md), [input.md Issue 2](./input.md).
+**`componentsStyle` global fallback inconsistent (L53):** Button/Aria/TextEditor не имеют (resolved: ~~Input~~ 2026-05-11, ~~Select~~ 2026-05-11, ~~Badge~~ 2026-05-10, ~~Calendar~~ 2026-05-11) — см. [button.md Issue 13](./button.md), [input.md Issue 2](./input.md).
 **Theme runtime API не реализован (L53):** [theme.md Issue 1](./theme.md).
 **A11y (focus trap, ARIA roles, keyboard navigation):** см. список в Wave 4.
 **FixWindow Floating UI integration:** [fixwindow.md Issue 1, 2, 3](./fixwindow.md).

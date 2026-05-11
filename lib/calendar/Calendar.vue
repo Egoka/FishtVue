@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, inject, nextTick, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from "vue"
   import {
     CalendarEmits,
     CalendarProps,
@@ -95,11 +95,18 @@
     () => props?.isNotCloseOnDateChange ?? options?.isNotCloseOnDateChange ?? false
   )
   const isDark = ref<boolean | undefined>(undefined)
-
-  onMounted(() => {
-    initDarkModeObserver()
-  })
-  const mode = computed<NonNullable<CalendarProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  // ---ISSUE 1 — MutationObserver saved in closure-let so onBeforeUnmount can disconnect.
+  // eslint-disable-next-line no-undef
+  let darkObserver: MutationObserver | undefined
+  // ---ISSUE 8 — propagate FishtVue active locale to v-calendar DatePicker.
+  // Priority: props.paramsDatePicker.locale > options.paramsDatePicker.locale > FishtVue active locale > "en"
+  const locale = computed<NonNullable<IParamsDatePicker["locale"]>>(
+    () => props.paramsDatePicker?.locale ?? options?.paramsDatePicker?.locale ?? FishtV?.getActiveLocale() ?? "en"
+  )
+  // ---ISSUE 6 — fall back to global componentsStyle before built-in default.
+  const mode = computed<NonNullable<CalendarProps["mode"]>>(
+    () => props.mode ?? options?.mode ?? Calendar.componentsStyle() ?? "outlined"
+  )
   const placeholder = computed<IParamsDatePicker["placeholder"]>(() =>
     String(props.paramsDatePicker?.placeholder ?? "")
   )
@@ -238,14 +245,24 @@
     clearDataPicker
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // ---Wave 2.3 — drop duplicate Calendar.initStyle() — Component.__hooks() already registers it.
+  // ---ISSUE 1 — onBeforeUnmount cleanup for MutationObserver + keydown listeners (memory leak fix).
   onMounted(() => {
-    Calendar.initStyle()
+    initDarkModeObserver()
     if (autoFocus.value) openCalendar()
     nextTick(() => {
       visibleDate.value = <ICalendarPicker["inputValue"]>(
         (calendarPicker.value?.inputValue as ICalendarPicker["inputValue"])
       )
     })
+  })
+  onBeforeUnmount(() => {
+    darkObserver?.disconnect()
+    darkObserver = undefined
+    if (isClient()) {
+      document.removeEventListener("keydown", keydownCalendar)
+      document.removeEventListener("keydown", openCalendarOnEnter)
+    }
   })
   // ---WATCHERS----------------------------
   watch(calendarPicker, () => emit("getCalendar", calendarPicker.value as ICalendarPicker), { deep: true })
@@ -319,8 +336,8 @@
     const checkDarkMode = () => (isDark.value = !!document.querySelector(selector))
     checkDarkMode()
     // eslint-disable-next-line no-undef
-    const observer = new MutationObserver(checkDarkMode)
-    observer.observe(document.documentElement, {
+    darkObserver = new MutationObserver(checkDarkMode)
+    darkObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class"],
       subtree: true
@@ -375,9 +392,10 @@
           <DatePicker
             v-if="datePickerOptions?.isRange"
             v-model.range.string="value"
-            v-bind="fieldsOmit(datePickerOptions, ['isRange'])"
+            v-bind="fieldsOmit(datePickerOptions, ['isRange', 'locale'])"
             ref="calendarPicker"
             :is-dark="isDark"
+            :locale="locale"
             class="vc-primary"
             @update:modelValue="changeDate">
             <template #footer>
@@ -387,8 +405,9 @@
           <DatePicker
             v-else
             v-model.string="value"
-            v-bind="fieldsOmit(datePickerOptions, ['isRange'])"
+            v-bind="fieldsOmit(datePickerOptions, ['isRange', 'locale'])"
             :is-dark="isDark"
+            :locale="locale"
             ref="calendarPicker"
             class="vc-primary"
             @update:modelValue="changeDate">
