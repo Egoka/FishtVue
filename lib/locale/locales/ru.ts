@@ -21,6 +21,9 @@ export default <DefaultMessages>{
     resultsCountOne: "1 результат",
     resultsCountNone: "Результатов не найдено"
   },
+  alert: {
+    close: "Закрыть"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

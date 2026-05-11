@@ -98,6 +98,13 @@ export interface AlertProps extends Omit<BaseAlert, "position" | "toTeleport"> {
 
 export declare type AlertSlots = {
   default(): VNode[]
+  /**
+   * Custom rendering for the alert subtitle. Fallback — `subtitle` prop as plain text.
+   *
+   * Use this slot when richer markup is required. Native HTML in `subtitle` prop is
+   * intentionally rendered as text (XSS guard) — supply your own markup through this slot.
+   */
+  subtitle(): VNode[]
 }
 
 /**

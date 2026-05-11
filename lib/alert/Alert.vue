@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, ref, useSlots, watch } from "vue"
   import type { AlertEmits, AlertProps } from "./Alert"
   import {
     ChatBubbleOvalLeftIcon,
@@ -35,6 +35,16 @@
     () => props.closeButton ?? options?.closeButton ?? false
   )
   const position = computed<NonNullable<AlertProps["position"]>>(() => props.position ?? options?.position ?? "top")
+  // ARIA mapping per type (Issue 3, audit 2026-05-11):
+  // error/warning → assertive alert; success/info/neutral → polite status.
+  const ariaRole = computed<"alert" | "status">(() =>
+    type.value === "error" || type.value === "warning" ? "alert" : "status"
+  )
+  const ariaLive = computed<"assertive" | "polite">(() =>
+    type.value === "error" || type.value === "warning" ? "assertive" : "polite"
+  )
+  // Close-button aria-label via locale (Issue 6 partial, audit 2026-05-11).
+  const closeLabel = computed<string>(() => Alert.t("alert.close") ?? "Close")
   const startEnterAndLeaveClass = computed<string>(() => {
     let classAnimate
     if (!notAnimate.value) {
@@ -163,7 +173,8 @@
     }
     return Alert.setStyle(classSize)
   })
-  Alert.setStyle(`transition-all ease-in-out duration-500`)
+  // Issue 9 (audit 2026-05-11): respect prefers-reduced-motion via Tailwind `motion-safe:` prefix.
+  Alert.setStyle(`motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500`)
   const classBase = computed<StyleClass>(() =>
     Alert.setStyle([
       "alert-body p-4 w-auto max-w-[89vw] rounded-md",
@@ -203,10 +214,9 @@
     // ---METHODS-----------------------
     close
   })
-  // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
-    Alert.initStyle()
-  })
+  // `Alert.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84,
+  // Documentation/dev-patterns.md §2 decision row 1).
   // ---WATCHERS----------------------------
   watch(
     () => props.modelValue,
@@ -236,13 +246,13 @@
 <template>
   <transition
     appear
-    leave-active-class="transition-all ease-in-out duration-500"
+    leave-active-class="motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500"
     :leave-from-class="endEnterAndLeaveClass"
     :leave-to-class="startEnterAndLeaveClass"
-    enter-active-class="transition-all ease-in-out duration-500"
+    enter-active-class="motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500"
     :enter-from-class="startEnterAndLeaveClass"
     :enter-to-class="endEnterAndLeaveClass">
-    <div v-if="isVisible" data-alert>
+    <div v-if="isVisible" data-alert :role="ariaRole" :aria-live="ariaLive" aria-atomic="true">
       <div :class="classBase" :style="styleBase">
         <div :class="classBody">
           <div data-alert-icon :class="classDivIcon">
@@ -250,7 +260,9 @@
           </div>
           <div data-alert-content :class="classContent">
             <h3 v-if="title?.length" data-alert-title :class="classTitle">{{ title }}</h3>
-            <div v-if="subtitle" data-alert-subtitle :class="classSubtitle" v-html="subtitle" />
+            <div v-if="subtitle || slots?.subtitle" data-alert-subtitle :class="classSubtitle">
+              <slot name="subtitle">{{ subtitle }}</slot>
+            </div>
             <div v-if="slots?.default" data-alert-slot :class="classSlotDefault">
               <slot />
             </div>
@@ -260,6 +272,7 @@
               type="icon"
               icon="XMark"
               mode="ghost"
+              :aria-label="closeLabel"
               :class="['-mx-1.5 -my-2', classesStyle.button as string]"
               :class-icon="classesStyle.buttonIcon"
               @click="close" />

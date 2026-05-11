@@ -39,6 +39,9 @@ export declare interface DefaultMessages extends DeepPartial<TypeLocale> {
     resultsCountOne?: string
     resultsCountNone?: string
   }
+  alert?: {
+    close?: string
+  }
 }
 
 export declare type Messages = DeepPartial<Record<NameLocale, DefaultMessages>>

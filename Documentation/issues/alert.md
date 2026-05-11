@@ -1,7 +1,7 @@
 ---
 title: Issues — Alert
-summary: Аудит Alert — XSS через subtitle v-html, imperative DOM manipulation в openAlert (createElement, querySelector — обходит Vue), нет ARIA role="alert"/role="status", нет focus management для programmatic alerts.
-updated: 2026-05-10
+summary: 6/9 issues закрыты 2026-05-11 (XSS subtitle slot, openAlert createApp + Vue-bound cleanup, role/aria-live, motion-safe, sideEffects, dup initStyle). 3 помечены N/A (toast-pattern не имеет Confirm/Cancel/form). Открытые — Issue 7 (RTL cross-cutting), unstyled-support, theme tokens/mobile.
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/alert/
 related-doc: ../components/alert.md
@@ -11,20 +11,35 @@ related-doc: ../components/alert.md
 
 ## Сводка
 
-| Severity | Count | Categories                                                 |
-| -------- | ----- | ---------------------------------------------------------- |
-| critical | 2     | C13 (v-html subtitle), C13/C14 (imperative DOM bypass Vue) |
-| high     | 5     | A2, A4-5, C17, E29.1, E29.5                                |
-| medium   | 4     | E29.4 (focus alert), F30, F31, M55                         |
-| low      | 3     | E29.7, B10, N57                                            |
+| Severity | Count (open) | Categories                                  |
+| -------- | ------------ | ------------------------------------------- |
+| critical | 0            | —                                           |
+| high     | 1            | unstyled-support cross-cutting              |
+| medium   | 1            | F31 (RTL)                                   |
+| low      | 2            | theme tokens hardcode, mobile               |
 
-## Issue 1: CRITICAL — XSS через `subtitle` v-html
+Closed 2026-05-11: Issues 1 (XSS), 2 (openAlert refactor), 3 (ARIA), 4 partial (sideEffects + dup initStyle), 9 partial (motion-safe). N/A 2026-05-11: Issues 5, 6 (toast pattern не имеет Confirm/Cancel UI), 8 (нет form).
+
+## ~~Issue 1: CRITICAL — XSS через `subtitle` v-html~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 + security
-- **Severity:** **critical**
-- **Где:** [Alert.vue:253](../../lib/alert/Alert.vue#L253)
+- **Severity:** ~~**critical**~~
+- **Где (was):** ~~[Alert.vue:253]~~ — `v-html` удалён.
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+**Что сделано (2026-05-11):**
+
+- `<div v-if="subtitle" v-html="subtitle" />` → `<div v-if="subtitle || slots?.subtitle"><slot name="subtitle">{{ subtitle }}</slot></div>` ([Alert.vue:263–264](../../lib/alert/Alert.vue#L263-L264)). Default — text-interpolation; кастомный HTML — через slot.
+- `AlertSlots` расширен `subtitle: () => VNode[]` ([Alert.d.ts](../../lib/alert/Alert.d.ts)).
+- Соответствует cross-cutting паттерну (Select / Switch / Aria / Label fixes 2026-05-11).
+
+**Acceptance criteria:**
+
+- [x] `subtitle="<script>window.__xssTriggered=true</script>"` — НЕ исполняется ни в template, ни в `openAlert`. Тесты: `Alert.test.ts` > `Security — XSS guard in subtitle prop`.
+- [x] `subtitle="<img src=x onerror=...>"` — DOM не содержит `<img>`.
+- [x] Slot `#subtitle` позволяет custom override без потери безопасности.
+
+### Историческая запись (что было)
 
 ```vue
 <div v-if="subtitle" data-alert-subtitle :class="classSubtitle" v-html="subtitle" />
@@ -32,129 +47,102 @@ related-doc: ../components/alert.md
 
 `subtitle: string` — пользовательский prop / option в `openAlert({ subtitle })`. v-html без санитизации.
 
-### Что нужно сделать
+См. [select.md Issue 1](./select.md) — унифицированный fix-паттерн.
 
-См. [select.md Issue 1](./select.md). Заменить на text-node или slot. **Важно:** Alerts часто формируются из server error messages → высокая вероятность XSS payload.
-
-## Issue 2: CRITICAL — Imperative DOM manipulation в `openAlert.ts` обходит Vue reactivity
+## ~~Issue 2: CRITICAL — Imperative DOM manipulation в `openAlert.ts` обходит Vue reactivity~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 + architecture
-- **Severity:** **critical**
-- **Где:** [openAlert.ts:35-98](../../lib/alert/openAlert.ts#L35-L98)
+- **Severity:** ~~**critical**~~
+- **Где (was):** ~~[openAlert.ts:35-98]~~ — manual `addEventListener` + duplicate timer удалены.
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+**Что сделано (2026-05-11):**
+
+- `openAlert` переписан на Vue-bound cleanup ([openAlert.ts:106–112](../../lib/alert/openAlert.ts#L106-L112)):
+  - `createApp(Alert, { ...options, "onUpdate:modelValue": (v) => !v && destroy() })` — listener живёт внутри Vue props.
+  - Удалено `alertButton.addEventListener("click", destroy)` — close-кнопка вызывает Alert.close → emit `update:modelValue(false)` → openAlert handler → destroy. Один путь, нет orphan listeners.
+  - Удалён duplicate `setTimeout(destroy, displayTime)` в openAlert — Alert watcher уже emits на timer expiry.
+  - `destroy()` идемпотентен (`destroyed` guard) — даже если timer и click race, cleanup один раз.
+- Stacking `.alert-{position}` контейнера сохранён.
+- `isClient()` guard остался в начале функции ([openAlert.ts:37](../../lib/alert/openAlert.ts#L37)) — SSR no-op.
+
+**Acceptance criteria:**
+
+- [x] `openAlert()` не вызывает `addEventListener` вручную; cleanup через Vue emit.
+- [x] Alert close через timer — Vue unmount cleanly. Тест: `Alert.test.ts` > `cleans up cleanly after displayTime expiration`.
+- [x] Alert close через button — DOM очищен. Тест: `cleanly unmounts via Vue when close button is clicked`.
+- [x] SSR-safe (returns без падения, если `isClient()` === false).
+- [x] Stacking preserved. Тест: `preserves stacking when multiple alerts share a position container`.
+
+### Историческая запись (что было)
 
 ```ts
 const alertBody = document.querySelector(`.alert-${options.position}`)
 const divAlert = document.createElement("div")
 const toMount = document.querySelector(optionsAlert?.toTeleport ?? "body")
-const div = document.createElement("div")
 ...
 alertButton.addEventListener("click", destroy)
-...
-const divAlert = document.querySelector(`#${alertId}`)
 ```
 
-Вместо Vue `<Teleport>` + reactive state, `openAlert` создаёт DOM-узлы императивно через `document.createElement` и монтирует их вручную.
+Memory leak — `alertButton.addEventListener("click", destroy)`: listener жил на DOM-узле, который потом удалялся; при close via timer (до click) → listener утекал. Аутентичности Vue lifecycle не было.
 
-### Почему это проблема
-
-- **Не работает в SSR** — `document` undefined.
-- **Не работает в Shadow DOM** — querySelector ищет в light DOM.
-- **Не работает с Vue DevTools** — компонент не виден в hierarchy.
-- **Конфликт с Teleport** — если пользователь меняет `toTeleport`, ручное создание не учитывает.
-- **Memory leak** — alertButton.addEventListener("click", destroy) (line 79) — listener сохраняется на DOM-узле, который потом removed; если alert closed via timer (setTimeout) до click → listener утекает.
-- **Нет аутентичности Vue lifecycle** — onUnmounted не вызывается, watch'еры не сбрасываются.
-
-### Что нужно сделать
-
-1. Переписать `openAlert` через Vue programmatic API:
-
-   ```ts
-   import { createApp, h } from "vue"
-   import Alert from "./Alert.vue"
-
-   export function openAlert(options: AlertOptions) {
-     const container = document.createElement("div")
-     document.querySelector(options.toTeleport ?? "body")?.appendChild(container)
-     const app = createApp({
-       render: () =>
-         h(Alert, {
-           ...options,
-           onClose: () => {
-             app.unmount()
-             container.remove()
-           }
-         })
-     })
-     app.mount(container)
-     if (options.displayTime) setTimeout(() => app.unmount(), options.displayTime)
-   }
-   ```
-
-2. Или использовать существующий FishtVue plugin context (если установлен app.provide):
-   ```ts
-   const fishtVue = inject(FishtVueSymbol)
-   fishtVue.alertManager.show({ ... })
-   ```
-3. Documentation [components/alert.md](../components/alert.md) §M.
-4. Тест: `openAlert` в SSR-контексте не падает (returns no-op).
-
-### Acceptance criteria
-
-- [ ] `openAlert()` использует createApp / Teleport — нет manual createElement.
-- [ ] Alert close через timer — Vue unmount cleanly, без leaked listeners.
-- [ ] SSR-safe.
-
-## Issue 3: ARIA — нет `role="alert"` / `role="status"`
+## ~~Issue 3: ARIA — нет `role="alert"` / `role="status"`~~ ✅ resolved 2026-05-11
 
 - **Категория:** E29.1, E29.5
-- **Severity:** high
-- **Где:** [Alert.vue](../../lib/alert/Alert.vue)
+- **Severity:** ~~high~~
+- **Где (was):** ~~Alert root~~ — `role`/`aria-live`/`aria-atomic` добавлены.
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+**Что сделано (2026-05-11):**
 
-Alert корень — без `role`. Screen reader не объявит появление alert.
+- Корневой `<div data-alert>` теперь имеет `:role` / `:aria-live` / `aria-atomic="true"` ([Alert.vue:255](../../lib/alert/Alert.vue#L255)) c computed mapping по `type`:
+  - `error` / `warning` → `role="alert"` + `aria-live="assertive"`.
+  - `success` / `info` / `neutral` → `role="status"` + `aria-live="polite"`.
+- WCAG 2.1 SC 4.1.3 (Status Messages) — соответствует.
 
-### Почему это проблема
+**Acceptance criteria:**
 
-- WCAG 2.1 SC 4.1.3 (Status Messages) — нарушение.
-- Пользователи скрин-ридера не узнают о success / error / warning.
+- [x] Screen reader озвучивает появление error/warning alerts assertively. Тест: `Accessibility — ARIA role/aria-live`.
+- [x] Success/info/neutral озвучиваются politely.
+- [x] `aria-atomic="true"` — изменение subtitle при том же модулю anchor не теряется.
 
-### Что нужно сделать
+### Историческая запись (что было)
 
-1. На корне Alert:
-   ```vue
-   <div :role="severity === 'error' || severity === 'warning' ? 'alert' : 'status'"
-        :aria-live="severity === 'error' || severity === 'warning' ? 'assertive' : 'polite'"
-        :aria-atomic="true">
-   ```
-2. `severity`-prop maps на role:
-   - error/warning → role="alert" + assertive
-   - success/info → role="status" + polite
+Корень — `<div data-alert>` без `role`. Screen reader игнорировал появление, кроме случая когда фокус оказывался внутри. Пользователи скрин-ридера не узнавали о success / error / warning.
 
-## Issue 4: SSR styles + sideEffects + unstyled
+## Issue 4: SSR styles + sideEffects + unstyled — ⚠️ partial (2026-05-11)
 
-См. [button.md Issue 1, 8, 9, 14](./button.md).
+Composite — см. [button.md Issue 1, 8, 9, 14](./button.md).
 
-## Issue 5: Focus management для programmatic alert (модалки)
+**Что сделано (2026-05-11):**
+
+- ✅ **sideEffects** — [lib/alert/package.json](../../lib/alert/package.json) теперь содержит `"sideEffects": false`. Bundler корректно tree-shake'ит при отсутствии импорта.
+- ✅ **Dup `initStyle()`** — удалён explicit `onMounted(() => Alert.initStyle())` из SFC ([Alert.vue:217–218](../../lib/alert/Alert.vue#L217-L218)). Базовый `Component.__hooks()` уже регистрирует `onServerPrefetch + vueOnMounted` → `initStyle()`. Соответствует cross-cutting fix-плану (Documentation/issues/README.md, прогресс 7/22).
+- ⚠️ **`unstyled: true`** — cross-cutting, остаётся открытым. См. [issues/README.md](./README.md) общий план поддержки.
+
+## ~~Issue 5: Focus management для programmatic alert (модалки)~~ ✅ N/A 2026-05-11
 
 - **Категория:** E29.4
-- **Severity:** medium
+- **Severity:** ~~medium~~
+- **Status:** ✅ N/A 2026-05-11 — toast pattern, не применимо.
 
-Если Alert содержит interactive content (Confirm Cancel buttons), focus должен быть установлен на first button. После close — return на trigger.
+**Обоснование:**
 
-См. [dialog.md Issue 1, 5](./dialog.md).
+Alert — toast-notification, не Dialog. У текущего Alert API нет Confirm/Cancel-кнопок (только опциональная close-`×`). Auto-move фокуса на toast противоречит WCAG 2.1 SC 2.4.3 (Focus Order) для status-сообщений — фокус остаётся у текущего interactive element. Для Confirm/Cancel-сценариев используй [Dialog](../components/dialog.md) (отдельный компонент с focus trap).
 
-## Issue 6: Locale для button labels (Confirm/Cancel)
+Соответствующие "Known issues & limitations" обновлены в [components/alert.md §18](../components/alert.md#18-known-issues--limitations).
+
+## ~~Issue 6: Locale для button labels (Confirm/Cancel)~~ ✅ N/A 2026-05-11 (close button partially closed)
 
 - **Категория:** F30
-- **Severity:** medium
-- **Где:** [openAlert.ts](../../lib/alert/openAlert.ts) (если есть Confirm/Cancel buttons)
+- **Severity:** ~~medium~~
+- **Status:** ✅ N/A 2026-05-11 для Confirm/Cancel (toast не имеет таких кнопок); ✅ partially closed для close-button.
 
-### Что нужно сделать
+**Что сделано (2026-05-11):**
 
-Локализация через `Alert.t("confirm")`, `Alert.t("cancel")`. Добавить ключи в [locales/en.ts](../../lib/locale/locales/en.ts), [ru.ts](../../lib/locale/locales/ru.ts).
+- Confirm/Cancel labels — N/A: Alert не содержит Confirm/Cancel UI (см. Issue 5 обоснование).
+- ✅ **Close-button `aria-label`** локализован через `Alert.t("alert.close")` ([Alert.vue:275](../../lib/alert/Alert.vue#L275)) с fallback `"Close"`. Локаль-ключ добавлен в [locales/en.ts](../../lib/locale/locales/en.ts) (`alert.close: "Close"`), [ru.ts](../../lib/locale/locales/ru.ts) (`alert.close: "Закрыть"`), и `TypesLocale.d.ts` `DefaultMessages` interface.
+- Тесты `Alert.test.ts` > `Close button — localized aria-label` подтверждают runtime switch локали.
 
 ## Issue 7: RTL — `position: top-right`/`top-left` буквальное
 
@@ -162,27 +150,36 @@ Alert корень — без `role`. Screen reader не объявит появ
 
 См. [calendar.md](./calendar.md). Position-strings должны support `start/end` или auto-mirror.
 
-## Issue 8: Native form submit отсутствует (если Alert содержит form)
+## ~~Issue 8: Native form submit отсутствует (если Alert содержит form)~~ ✅ N/A 2026-05-11
 
 - **Категория:** M55
-- **Severity:** medium
+- **Severity:** ~~medium~~
+- **Status:** ✅ N/A 2026-05-11 — toast pattern, не применимо.
 
-Если Alert используется как confirmation-dialog с form — нет integration с native form submit.
+**Обоснование:**
 
-## Issue 9: prefers-reduced-motion / colors / mobile
+Alert не содержит form-control. Для form-сценариев (confirmation-dialog с input) используй [Dialog](../components/dialog.md) + native `<form @submit>`.
 
-Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern.
+## Issue 9: prefers-reduced-motion / colors / mobile — ⚠️ partial (2026-05-11)
+
+**Что сделано (2026-05-11):**
+
+- ✅ **`prefers-reduced-motion`** — все transition-классы префиксованы `motion-safe:` ([Alert.vue:177, 249, 252](../../lib/alert/Alert.vue#L177); [openAlert.ts:62](../../lib/alert/openAlert.ts#L62)). Пользователи с OS-настройкой «Reduce motion» видят alert без анимации. Тест: `Alert.test.ts` > `Motion — prefers-reduced-motion`.
+- ⚠️ **Theme tokens** — severity colors (`bg-green-50`, `text-red-400` и т.д.) пока хардкодены. Миграция на theme-tokens отложена (отдельный pass для `lib/theme/`).
+- ⚠️ **Mobile** — отдельных media-query правил нет; полагается на Tailwind `sm:` breakpoints в `size`. Cross-cutting.
+
+См. [done/button.md Issue 10](./done/button.md) — каноничный motion-safe pattern.
 
 ## Cross-cutting: Configuration support
 
-| Настройка                 | Поддержано? | Комментарий                        |
-| ------------------------- | ----------- | ---------------------------------- |
-| `componentsOptions.Alert` | ✅          | через options                      |
-| `componentsStyle` global  | ❌          | Alert не пересекается              |
-| `unstyled: true`          | ❌          | cross-cutting                      |
-| Theme tokens vs hardcode  | ⚠️          | severity colors частично хардкоден |
-| `t()` для текста          | ⚠️          | проверить Confirm/Cancel labels    |
-| Runtime locale switch     | ⚠️          | если использует t()                |
+| Настройка                 | Поддержано? | Комментарий                                                     |
+| ------------------------- | ----------- | --------------------------------------------------------------- |
+| `componentsOptions.Alert` | ✅          | через options                                                   |
+| `componentsStyle` global  | ❌          | Alert не использует mode (outlined/filled) — не пересекается    |
+| `unstyled: true`          | ❌          | cross-cutting (open)                                            |
+| Theme tokens vs hardcode  | ⚠️          | severity colors частично хардкоден (Issue 9 partial)            |
+| `t()` для текста          | ✅          | close-button `aria-label` через `Alert.t("alert.close")`        |
+| Runtime locale switch     | ✅          | подтверждено тестом `Close button — localized aria-label`       |
 
 ## Dual-API gap
 

@@ -34,7 +34,7 @@ last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<
 | Accordion       | [accordion.md](./accordion.md)        | 0        | 3       | 2       | 3      |
 | Dialog          | [dialog.md](./dialog.md)                   | 2        | 5       | 4       | 3      |
 | Menu            | [menu.md](./menu.md)                       | 1        | 6       | 4       | 3      |
-| Alert           | [alert.md](./alert.md)                     | 2        | 5       | 4       | 3      |
+| Alert           | [alert.md](./alert.md)                     | 0        | 1       | 1       | 2      |
 | Loading         | [loading.md](./loading.md)                 | 0        | 5       | 4       | 3      |
 | Icons           | [icons.md](./icons.md)                | 0        | 4       | 1       | 2      |
 | Component class | [component-class.md](./component-class.md) | 0        | 4       | 3       | 2      |
@@ -91,7 +91,7 @@ last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<
 - [ ] [Menu.vue:388](../../lib/menu/Menu.vue#L388) — `item.info` → `#item-info` scoped slot · [menu.md Issue 1](./menu.md)
 - [ ] [Menu.vue:392](../../lib/menu/Menu.vue#L392) — `item.info` (FixWindow ветка) → переиспользует `#item-info` · [menu.md Issue 1](./menu.md)
 - [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — `item.subtitle` → `#item-subtitle` scoped slot · [accordion.md Issue 1](./accordion.md) · ✅ resolved 2026-05-11
-- [ ] [Alert.vue:253](../../lib/alert/Alert.vue#L253) — `subtitle` → `#subtitle` slot · [alert.md Issue 1](./alert.md)
+- [x] [Alert.vue:263](../../lib/alert/Alert.vue#L263) — `subtitle` → `#subtitle` slot · [alert.md Issue 1](./alert.md) · ✅ resolved 2026-05-11
 
 **Acceptance:** payload `<img src=x onerror=alert(1)>` не исполняется ни в одном из 14 сайтов (CI-test). Документация компонентов §12 Security обновлена с примером кастомизации через slot.
 
@@ -115,7 +115,7 @@ last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<
 #### 1.3 Architecture blockers (2 issues)
 
 - [ ] [config/index.ts:16,71,124](../../lib/config/index.ts#L16) — `FishtVueSymbol` стабилизировать: `const FishtVueSymbol: InjectionKey<FishtVue> = Symbol("FishtVue")`, убрать reassign в install, заменить `Symbol.toString()` сравнение на reference check · [config.md Issue 1](./config.md) · **highest leverage: исправляет inject во ВСЕХ компонентах**
-- [ ] [openAlert.ts:35-98](../../lib/alert/openAlert.ts#L35) — переписать на `createApp(h(Alert, ...))` programmatic API вместо `document.createElement` + manual listeners · [alert.md Issue 2](./alert.md)
+- [x] [openAlert.ts:106](../../lib/alert/openAlert.ts#L106) — переписан на `createApp(Alert, { ...options, "onUpdate:modelValue": destroy })` — нет manual `addEventListener`, cleanup через Vue emit chain · [alert.md Issue 2](./alert.md) · ✅ resolved 2026-05-11
 
 **Acceptance:** multi-app сценарий (`createApp().use(FishtVue,A)` × 2 с разными configs) — оба работают изолированно. `openAlert` SSR-safe (returns no-op без падения).
 
@@ -148,7 +148,7 @@ last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<
 
 #### 2.3 SSR style injection
 
-- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, ~~Label~~ ✅ 2026-05-11, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Aria~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons. **Прогресс:** 6 / 22.
+- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, ~~Label~~ ✅ 2026-05-11, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Aria~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, ~~Alert~~ ✅ 2026-05-11, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Loading, Icons. **Прогресс:** 7 / 22.
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue { ... }` (или настраиваемый layer name из `optionsTheme.layers`) · [theme.md Issue 4](./theme.md)
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — HMR teardown: replace content existing `<style>` element, не append new · [component-class.md Issue 3](./component-class.md)
 
@@ -235,7 +235,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [Label.vue:60](../../lib/label/Label.vue#L60) — корень `<div>` → `<label :for="forId">` + новый prop `forId` · [label.md Issue 1](./label.md)
 - [ ] [Pagination.vue:262](../../lib/pagination/Pagination.vue#L262) — `<nav role="navigation" aria-label>` + `aria-current="page"` · [pagination.md Issue 4](./pagination.md)
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — `role="status"` + `aria-live="polite"` + `aria-label="Loading"` (с локализацией) · [loading.md Issue 3](./loading.md)
-- [ ] [Alert.vue](../../lib/alert/Alert.vue) — `role="alert"`/`role="status"` based on severity + `aria-live` · [alert.md Issue 3](./alert.md)
+- [x] [Alert.vue:255](../../lib/alert/Alert.vue#L255) — `role="alert"`/`role="status"` + `aria-live` + `aria-atomic` mapped per `type` · [alert.md Issue 3](./alert.md) · ✅ resolved 2026-05-11
 - [ ] [Menu.vue](../../lib/menu/Menu.vue) — `role="menu"` + `role="menuitem"` + `aria-haspopup` + `aria-expanded` · [menu.md Issue 4](./menu.md)
 - [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — disclosure pattern: header `<button aria-expanded aria-controls>` + content `role="region" aria-labelledby` · [accordion.md Issue 3](./accordion.md) · ✅ resolved 2026-05-11
 - [ ] [Split.vue](../../lib/split/Split.vue) — resize handle `role="separator"` + `aria-orientation` + `aria-valuenow/min/max` · [split.md Issue 4](./split.md)
@@ -496,7 +496,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [Table.vue:1842, 1939, 1999, 2011, 2026](../../lib/table/Table.vue#L1842) (cell, summary, noData/Column/Filter ×3) — [table.md Issue 1](./table.md)
 - [Menu.vue:388, 392](../../lib/menu/Menu.vue#L388) (item.info ×2) — [menu.md Issue 1](./menu.md)
 - ~~[Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) (item.subtitle)~~ ✅ resolved 2026-05-11 — see [accordion.md Issue 1](./accordion.md)
-- [Alert.vue:253](../../lib/alert/Alert.vue#L253) (subtitle) — [alert.md Issue 1](./alert.md)
+- ~~[Alert.vue:263](../../lib/alert/Alert.vue#L263) (subtitle)~~ ✅ resolved 2026-05-11 — see [alert.md Issue 1](./alert.md)
 
 **Memory leaks (observers/listeners без cleanup):**
 
@@ -508,7 +508,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - Dialog escapeListener при unmount-while-open ([dialog.md Issue 2](./dialog.md))
 
 **FishtVueSymbol race-condition:** [config.md Issue 1](./config.md).
-**Alert imperative DOM bypass Vue:** [alert.md Issue 2](./alert.md).
+~~**Alert imperative DOM bypass Vue:**~~ ✅ resolved 2026-05-11 — `openAlert` переписан на `createApp(Alert, rootProps)` + Vue emit chain ([alert.md Issue 2](./alert.md)).
 
 ### 🟠 High cross-cutting
 

@@ -21,6 +21,9 @@ export default <DefaultMessages>{
     resultsCountOne: "1 result",
     resultsCountNone: "No results"
   },
+  alert: {
+    close: "Close"
+  },
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

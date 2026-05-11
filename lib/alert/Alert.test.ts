@@ -433,4 +433,172 @@ describe("Alert Component", () => {
       })
     })
   })
+
+  // -------------------------------------------------------------------------
+  // Audit fixes (2026-05-11): Issue 1 (XSS), 2 (openAlert createApp+h),
+  // 3 (ARIA role/aria-live), 6-partial (close-button locale), 9 (motion-safe).
+  // -------------------------------------------------------------------------
+
+  describe("Security — XSS guard in subtitle prop (Issue 1)", () => {
+    beforeEach(() => {
+      document.body.innerHTML = ""
+      delete (window as any).__xssTriggered
+    })
+
+    it("does not render <script> tag from subtitle prop (template usage)", () => {
+      const payload = "<script>window.__xssTriggered=true</script>"
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, subtitle: payload }
+      })
+
+      expect(wrapper.find("[data-alert-subtitle] script").exists()).toBe(false)
+      expect((window as any).__xssTriggered).toBeUndefined()
+      // subtitle escapes as plain text:
+      expect(wrapper.find("[data-alert-subtitle]").text()).toContain("<script>")
+    })
+
+    it("does not execute <img onerror> payload from subtitle prop (template usage)", () => {
+      const payload = '<img src=x onerror="window.__xssTriggered=true">'
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, subtitle: payload }
+      })
+
+      expect(wrapper.find("[data-alert-subtitle] img").exists()).toBe(false)
+      expect((window as any).__xssTriggered).toBeUndefined()
+    })
+
+    it("does not execute XSS payload from openAlert programmatic subtitle", () => {
+      const payload = "<script>window.__xssTriggered=true</script>"
+      openAlert({ subtitle: payload })
+
+      const subtitle = document.querySelector("[data-alert-subtitle]")
+      expect(subtitle).not.toBeNull()
+      expect(subtitle?.querySelector("script")).toBeNull()
+      expect((window as any).__xssTriggered).toBeUndefined()
+    })
+  })
+
+  describe("Slots — subtitle (Issue 1)", () => {
+    it("renders subtitle prop as plain text when no #subtitle slot is provided", () => {
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, subtitle: "Plain text subtitle" }
+      })
+      expect(wrapper.find("[data-alert-subtitle]").text()).toBe("Plain text subtitle")
+    })
+
+    it("renders custom #subtitle slot content when provided", () => {
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, subtitle: "fallback" },
+        slots: { subtitle: "<strong data-custom-subtitle>Custom subtitle</strong>" }
+      })
+      const subtitle = wrapper.find("[data-alert-subtitle]")
+      expect(subtitle.exists()).toBe(true)
+      expect(subtitle.find("[data-custom-subtitle]").exists()).toBe(true)
+      expect(subtitle.text()).toContain("Custom subtitle")
+      // when slot is used, fallback "fallback" should not also be rendered
+      expect(subtitle.text()).not.toContain("fallback")
+    })
+  })
+
+  describe("Accessibility — ARIA role/aria-live (Issue 3)", () => {
+    it.each([
+      { type: "error" as const, role: "alert", live: "assertive" },
+      { type: "warning" as const, role: "alert", live: "assertive" }
+    ])("type '%s' uses role='alert' + aria-live='assertive'", ({ type, role, live }) => {
+      const wrapper = mount(Alert, { props: { modelValue: true, type } })
+      const root = wrapper.find("[data-alert]")
+      expect(root.attributes("role")).toBe(role)
+      expect(root.attributes("aria-live")).toBe(live)
+      expect(root.attributes("aria-atomic")).toBe("true")
+    })
+
+    it.each([
+      { type: "success" as const, role: "status", live: "polite" },
+      { type: "info" as const, role: "status", live: "polite" },
+      { type: "neutral" as const, role: "status", live: "polite" }
+    ])("type '%s' uses role='status' + aria-live='polite'", ({ type, role, live }) => {
+      const wrapper = mount(Alert, { props: { modelValue: true, type } })
+      const root = wrapper.find("[data-alert]")
+      expect(root.attributes("role")).toBe(role)
+      expect(root.attributes("aria-live")).toBe(live)
+      expect(root.attributes("aria-atomic")).toBe("true")
+    })
+  })
+
+  describe("Motion — prefers-reduced-motion (Issue 9)", () => {
+    it("transition classes use motion-safe: prefix on root style injection", () => {
+      const wrapper = mount(Alert, { props: { modelValue: true } })
+      const html = wrapper.html()
+      expect(html).toMatch(/motion-safe:transition/)
+      expect(html).toMatch(/motion-safe:duration/)
+    })
+  })
+
+  describe("Close button — localized aria-label (Issue 6 partial)", () => {
+    it("uses 'Close' aria-label by default (en locale)", () => {
+      const app: any = createApp({})
+      app.use(FishtVue, {
+        locale: { activeLocale: "en", defaultLocale: "en" }
+      })
+      const wrapper = mount(Alert, {
+        global: { plugins: [app] },
+        props: { modelValue: true, closeButton: true }
+      })
+      const button = wrapper.find("[data-alert-button] button")
+      expect(button.attributes("aria-label")).toBe("Close")
+    })
+
+    it("uses 'Закрыть' aria-label when active locale is 'ru'", () => {
+      const app: any = createApp({})
+      app.use(FishtVue, {
+        locale: { activeLocale: "ru", defaultLocale: "ru" }
+      })
+      const wrapper = mount(Alert, {
+        global: { plugins: [app] },
+        props: { modelValue: true, closeButton: true }
+      })
+      const button = wrapper.find("[data-alert-button] button")
+      expect(button.attributes("aria-label")).toBe("Закрыть")
+    })
+  })
+
+  describe("openAlert — Vue-bound cleanup (Issue 2)", () => {
+    beforeEach(() => {
+      document.body.innerHTML = ""
+    })
+
+    it("cleanly unmounts via Vue when close button is clicked (no orphaned DOM)", async () => {
+      vi.useFakeTimers()
+      openAlert({ closeButton: true, position: "top" })
+
+      const closeButton = document.querySelector("[data-alert-button] [data-button]")
+      expect(closeButton).not.toBeNull()
+      closeButton?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+
+      vi.advanceTimersByTime(700)
+      expect(document.querySelector("[data-alert]")).toBeNull()
+      expect(document.querySelector(".alert-top")).toBeNull()
+      vi.useRealTimers()
+    })
+
+    it("cleans up cleanly after displayTime expiration (no leaked listeners)", async () => {
+      vi.useFakeTimers()
+      openAlert({ displayTime: 500, position: "top" })
+      expect(document.querySelector("[data-alert]")).not.toBeNull()
+
+      vi.advanceTimersByTime(1500)
+      expect(document.querySelector("[data-alert]")).toBeNull()
+      vi.useRealTimers()
+    })
+
+    it("preserves stacking when multiple alerts share a position container", () => {
+      openAlert({ title: "first", position: "top" })
+      openAlert({ title: "second", position: "top" })
+      openAlert({ title: "third", position: "top" })
+
+      const container = document.querySelector(".alert-top")
+      expect(container).not.toBeNull()
+      expect(container?.querySelectorAll("[data-alert]").length).toBe(3)
+    })
+  })
 })
