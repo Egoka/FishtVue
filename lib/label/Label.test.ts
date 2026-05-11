@@ -1,9 +1,9 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Label from "fishtvue/label/Label.vue"
 
-describe("Icons Component Tests", () => {
+describe("Label Component Tests", () => {
   describe("Label Component - Without Library Initialization", () => {
     it("renders with default props", () => {
       const wrapper = mount(Label, {
@@ -14,6 +14,17 @@ describe("Icons Component Tests", () => {
 
       expect(wrapper.find("[data-label]").exists()).toBe(true)
       expect(wrapper.text()).toBe("Default Label")
+    })
+
+    it("renders <label> as root element with data-label", () => {
+      const wrapper = mount(Label, {
+        props: {
+          title: "Root tag"
+        }
+      })
+
+      expect(wrapper.element.tagName).toBe("LABEL")
+      expect(wrapper.find("label[data-label]").exists()).toBe(true)
     })
 
     it("applies correct styles for type 'dynamic'", () => {
@@ -66,15 +77,15 @@ describe("Icons Component Tests", () => {
       it.each([
         [
           "outlined",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 transition-all duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
         ],
         [
           "underlined",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 transition-all duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
         ],
         [
           "filled",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 transition-all duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
         ]
       ])('applies correct background style for mode "%s"', (mode, expectedBackground) => {
         const wrapper = mount(Label, {
@@ -200,6 +211,135 @@ describe("Icons Component Tests", () => {
 
       expect(wrapper.find("[data-label]").classes()).toContain("-translate-y-[28px]")
       expect(wrapper.find("[data-label]").classes()).not.toContain("peer-focus:-translate-y-[48px]")
+    })
+  })
+
+  // Issue 1 (E29.1, audit 2026-05-10) — `<label for>` association
+  describe("Label Component - for-id (a11y)", () => {
+    it("applies for attribute when forId is provided", () => {
+      const wrapper = mount(Label, {
+        props: { forId: "email-input", title: "Email" }
+      })
+
+      expect(wrapper.find("label").attributes("for")).toBe("email-input")
+    })
+
+    it("omits for attribute when forId is undefined", () => {
+      const wrapper = mount(Label, {
+        props: { title: "No for-id" }
+      })
+
+      expect(wrapper.find("label").attributes("for")).toBeUndefined()
+    })
+
+    // Note: click-to-focus is a native browser behavior on `<label for>` and
+    // is not reliably implemented in jsdom. Asserting the `for` attribute is
+    // sufficient — the browser handles the rest per WHATWG HTML spec.
+  })
+
+  // Issue 4 (D25, audit 2026-05-10) — translateX / maxWidth accept number | string
+  describe("Label Component - translateX / maxWidth typing", () => {
+    it("accepts translateX as string with CSS unit", () => {
+      const wrapper = mount(Label, {
+        props: { title: "Rem translate", translateX: "1rem" }
+      })
+
+      expect(wrapper.find("[data-label]").attributes("style")).toContain("--fv-translate-x: 1rem;")
+    })
+
+    it("accepts translateX as percentage string", () => {
+      const wrapper = mount(Label, {
+        props: { title: "Pct translate", translateX: "50%" }
+      })
+
+      expect(wrapper.find("[data-label]").attributes("style")).toContain("--fv-translate-x: 50%;")
+    })
+
+    it("accepts maxWidth as string with calc fallback", () => {
+      const wrapper = mount(Label, {
+        props: { title: "Pct maxWidth", maxWidth: "100%" }
+      })
+
+      const span = wrapper.find("span")
+      expect(span.attributes("style")).toContain("max-width: calc(100% - 38px)")
+    })
+
+    it("accepts maxWidth as rem string", () => {
+      const wrapper = mount(Label, {
+        props: { title: "Rem maxWidth", maxWidth: "5rem" }
+      })
+
+      const span = wrapper.find("span")
+      expect(span.attributes("style")).toContain("max-width: calc(5rem - 38px)")
+    })
+  })
+
+  // Issue 7 (L53, audit 2026-05-10) — `unstyled: true` regression test
+  // Cross-cutting fix in Component.setStyle (lib/component/index.ts:138).
+  describe("Label Component - unstyled cross-cutting", () => {
+    afterEach(() => {
+      // Component falls back to `window.FishtVue` when no app instance is
+      // present (see lib/component/index.ts ctor). The `app.use` above
+      // assigns it; clean up so subsequent tests are not unstyled.
+      delete (window as any).FishtVue
+    })
+
+    it("respects unstyled: true via Component.setStyle guard", () => {
+      const unstyledApp = {
+        install(app: any) {
+          app.use(FishtVue, { unstyled: true })
+        }
+      }
+
+      const wrapper = mount(Label, {
+        props: { title: "Unstyled Label" },
+        global: {
+          plugins: [unstyledApp]
+        }
+      })
+
+      expect(wrapper.find("[data-label]").classes()).toEqual([])
+      const span = wrapper.find("span")
+      expect(span.classes()).toEqual([])
+    })
+  })
+
+  // Issue 8 (E29.7, audit 2026-05-10) — prefers-reduced-motion guard
+  describe("Label Component - motion-safe", () => {
+    it("applies motion-safe guard on transition classes", () => {
+      const wrapper = mount(Label, {
+        props: { title: "Motion-safe" }
+      })
+
+      const classes = wrapper.find("[data-label]").classes()
+      expect(classes).toContain("motion-safe:transition-all")
+      expect(classes).toContain("motion-safe:duration-200")
+      expect(classes).not.toContain("transition-all")
+      expect(classes).not.toContain("duration-200")
+    })
+  })
+
+  // Issue 10 (G37, audit 2026-05-10) — default slot for custom title content
+  describe("Label Component - default slot", () => {
+    it("renders title prop as fallback when no default slot is provided", () => {
+      const wrapper = mount(Label, {
+        props: { title: "Plain title" }
+      })
+
+      expect(wrapper.text()).toBe("Plain title")
+    })
+
+    it("renders default slot content overriding title prop", () => {
+      const wrapper = mount(Label, {
+        props: { title: "Plain title" },
+        slots: {
+          default: "<strong>Slot title</strong>"
+        }
+      })
+
+      expect(wrapper.find("strong").exists()).toBe(true)
+      expect(wrapper.find("strong").text()).toBe("Slot title")
+      expect(wrapper.text()).toBe("Slot title")
     })
   })
 })

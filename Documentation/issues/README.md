@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-11
-last-changes: 2026-05-11 — aria: закрыто 8 of 11 issues (1 type bug change:modelValue → string + cross-cutting fix TextEditor, 2 drop dup initStyle, 4 componentsStyle fallback chain, 5 unstyled regression test cross-cutting, 7 modelValue type narrow, 8 typed before/after slot props, 9 motion-safe placeholder, 11 print styles). Cross-cutting: texteditor.md Issue 5 (D26 type bug) тоже закрыт same PR. Aria row пересчитан 0/4/4/3 → 0/1/1/1. TextEditor row пересчитан 0/7/5/3 → 0/7/4/3. Wave 2.3 progress 4/22 → 5/22 (Input + Switch + Select + Calendar + Aria). Wave 3.2 для Aria — closed. Wave 10.1 motion-safe progress 2/22 → 3/22 (Input + Select + Aria + bonus). Severity matrix: 11/130/85/68 → 11/130/82/65 = 288 issues. Раньше 2026-05-11: select: 7 of 11 (XSS via #marker/#empty + safe highlight, observer/listener cleanup, dup initStyle, componentsStyle, unstyled cross-cutting Component.setStyle → закрывает Issue 6 во всех 22 + component-class.md Issue 6, aria-live with locale, Intl.Collator filtering, motion-safe + print); switch: 9 of 14; input: 11/13; inputlayout: 6/7; accordion: 4/9; button: 5/16; icons/badge: 5/6 (2026-05-10); utilities: 9 ранее. Roadmap чекбоксы — single-source-of-truth прогресса.
+last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<label>` root, 2 drop dup initStyle, 4 translateX/maxWidth `number | string` typing, 6 type-via-componentsOptions de facto, 7 unstyled cross-cutting regression test, 8 motion-safe, 10 default slot). Defer-обоснованы: Issue 3 (Wave 2.1 packaging), Issue 5 (Wave 3.3 CSS vars / Theme runtime API), Issue 9 (dedicated RTL wave). Label row пересчитан 0/4/3/2 → 0/1/2/0. Wave 2.3 progress 5/22 → 6/22 (Input + Switch + Select + Calendar + Aria + Label). Wave 10.1 motion-safe progress 4/22 → 5/22 (Button + Input + Select + Aria + Label). Severity matrix: 10/126/80/66 → 10/123/79/64 = 282 → 276 issues. Раньше 2026-05-11: aria: 8/11; select: 7 of 11 (XSS via #marker/#empty + safe highlight, observer/listener cleanup, dup initStyle, componentsStyle, unstyled cross-cutting Component.setStyle → закрывает Issue 6 во всех 22 + component-class.md Issue 6, aria-live with locale, Intl.Collator filtering, motion-safe + print); switch: 9 of 14; input: 11/13; inputlayout: 6/7; accordion: 4/9; button: 5/16; icons/badge: 5/6 (2026-05-10); utilities: 9 ранее. Roadmap чекбоксы — single-source-of-truth прогресса.
 ---
 
 # Issues — Index
@@ -16,7 +16,7 @@ last-changes: 2026-05-11 — aria: закрыто 8 of 11 issues (1 type bug cha
 | Target          | File                                       | Critical | High    | Medium  | Low    |
 | --------------- | ------------------------------------------ | -------- | ------- | ------- | ------ |
 | Button          | [button.md](./button.md)                   | 0        | 6       | 6       | 4      |
-| Label           | [label.md](./label.md)                     | 0        | 4       | 3       | 2      |
+| Label           | [label.md](./label.md)                     | 0        | 1       | 2       | 0      |
 | Switch          | [switch.md](./switch.md)                   | 0        | 2       | 0       | 3      |
 | Input           | [input.md](./input.md)                     | 0        | 2       | 0       | 0      |
 | Aria            | [aria.md](./aria.md)                       | 0        | 1       | 1       | 1      |
@@ -43,9 +43,9 @@ last-changes: 2026-05-11 — aria: закрыто 8 of 11 issues (1 type bug cha
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
 | Utilities       | [\_utilities.md](./_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **10**   | **126** | **80**  | **66** |
+| **TOTAL**       | **28 files**                               | **10**   | **123** | **79**  | **64** |
 
-Всего **282 issues** распределены по 28 документам аудита. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
+Всего **276 issues** распределены по 28 документам аудита. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
 
 ## Fix roadmap (live tracker)
 
@@ -148,7 +148,7 @@ last-changes: 2026-05-11 — aria: закрыто 8 of 11 issues (1 type bug cha
 
 #### 2.3 SSR style injection
 
-- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, Label, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Aria~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons. **Прогресс:** 5 / 22.
+- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, ~~Label~~ ✅ 2026-05-11, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Aria~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons. **Прогресс:** 6 / 22.
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue { ... }` (или настраиваемый layer name из `optionsTheme.layers`) · [theme.md Issue 4](./theme.md)
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — HMR teardown: replace content existing `<style>` element, не append new · [component-class.md Issue 3](./component-class.md)
 
@@ -388,7 +388,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.1 prefers-reduced-motion
 
-- [~] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([button.md Issue 10](./button.md)) — pattern готов к применению на остальных 21 компонента. **Прогресс 2026-05-11:** Input ([Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98)) ✅; Select ([Select.vue](../../lib/select/Select.vue) — root transition + classSelectList + classLiItem + TransitionGroup leave/enter classes + Badge inline + print: prefixes) ✅; Aria ([Aria.vue:65](../../lib/aria/Aria.vue#L65) — `motion-safe:placeholder:transition-all` + `print:*`) ✅. 4 / 22.
+- [~] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([button.md Issue 10](./button.md)) — pattern готов к применению на остальных 21 компонента. **Прогресс 2026-05-11:** Input ([Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98)) ✅; Select ([Select.vue](../../lib/select/Select.vue) — root transition + classSelectList + classLiItem + TransitionGroup leave/enter classes + Badge inline + print: prefixes) ✅; Aria ([Aria.vue:65](../../lib/aria/Aria.vue#L65) — `motion-safe:placeholder:transition-all` + `print:*`) ✅; Label ([Label.vue:36](../../lib/label/Label.vue#L36) — `motion-safe:transition-all motion-safe:duration-200`) ✅. 5 / 22.
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — статичный fallback (loader-circle outline) в reduced-motion mode · [loading.md Issue 6](./loading.md)
 
 #### 10.2 Print styles
