@@ -1,5 +1,6 @@
 import { mount, flushPromises } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { nextTick } from "vue"
 import FishtVue from "fishtvue/config"
 import Select from "fishtvue/select/Select.vue"
 import { SelectProps } from "fishtvue/select/Select"
@@ -232,9 +233,230 @@ describe("Select Component Tests", () => {
       document.body?.dispatchEvent(clickEvent)
 
       expect(wrapper.emitted("change:modelValue")?.[0][0]).toEqual(["Banana"])
-      expect((wrapper.emitted("change:modelValue")?.[0][1] as any)[0].marker).toBe(
-        `<span class="fv fishtvue-select font-bold text-theme-700 dark:text-theme-300">Ban</span>ana`
-      )
+      // Issue 1 (2026-05-11): `item.marker` HTML-сборка убрана как XSS surface — substring highlight теперь рендерится через
+      // безопасный template helper, а не мутирует data. selectItem payload — оригинальный объект из dataSelect.
+      const selectItem = (wrapper.emitted("change:modelValue")?.[0][1] as any)[0]
+      expect(selectItem.marker).toBeUndefined()
+      wrapper.unmount()
+    })
+  })
+
+  describe("Audit fixes 2026-05-11 (Issues 1, 2, 5, 6, 8, 10, 11)", () => {
+    let warnSpy: ReturnType<typeof vi.spyOn>
+    let removeListenerSpy: ReturnType<typeof vi.spyOn>
+    let resizeObserverDisconnectSpy: ReturnType<typeof vi.fn>
+    let originalResizeObserver: typeof ResizeObserver
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+      removeListenerSpy = vi.spyOn(document, "removeEventListener")
+      resizeObserverDisconnectSpy = vi.fn()
+      originalResizeObserver = (globalThis as any).ResizeObserver
+      const disconnect = resizeObserverDisconnectSpy
+      class MockResizeObserver {
+        public cb: unknown
+        constructor(cb: unknown) {
+          this.cb = cb
+        }
+        observe = vi.fn()
+        unobserve = vi.fn()
+        disconnect = disconnect
+      }
+      ;(globalThis as any).ResizeObserver = MockResizeObserver
+    })
+
+    afterEach(() => {
+      warnSpy.mockRestore()
+      removeListenerSpy.mockRestore()
+      ;(globalThis as any).ResizeObserver = originalResizeObserver
+      delete (globalThis as any).__xssTriggered
+      // Очистка window.FishtVue — он мутируется FishtVue plugin'ом и pollutes following tests.
+      delete (window as any).FishtVue
+    })
+
+    // ---ISSUE 1 — XSS guard ---------------------------------------
+    it("does not execute XSS payload from item.marker (legacy field is ignored)", async () => {
+      const xssPayload = '<img src=x onerror="window.__xssTriggered=true">'
+      ;(globalThis as any).__xssTriggered = false
+      const wrapper = mount(Select, {
+        props: {
+          dataSelect: [{ id: 1, value: "alpha", marker: xssPayload }],
+          modelValue: null
+        }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      const html = wrapper.html()
+      expect(html).not.toContain("onerror=")
+      expect(html).not.toMatch(/<img[^>]*src=x/)
+      expect((globalThis as any).__xssTriggered).toBe(false)
+      expect(warnSpy).toHaveBeenCalled()
+      wrapper.unmount()
+    })
+
+    it("does not execute XSS payload from noData prop", async () => {
+      const xssPayload = "<img src=x onerror=alert(1)><script>alert(2)</script>"
+      const wrapper = mount(Select, {
+        props: {
+          dataSelect: [],
+          noData: xssPayload
+        }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      const html = wrapper.html()
+      // Raw `<img>` или `<script>` теги (как DOM-узлы) не должны быть в выводе — только escaped text.
+      expect(html).not.toMatch(/<img\s+src=x/i)
+      expect(html).not.toMatch(/<script\b/i)
+      // Payload должен присутствовать как escaped текст — это подтверждает, что Vue text-interpolation guard сработал.
+      expect(html).toContain("&lt;img")
+      expect(html).toContain("&lt;script")
+      wrapper.unmount()
+    })
+
+    it("renders custom #marker scoped slot when provided", async () => {
+      const wrapper = mount(Select, {
+        props: {
+          dataSelect: [{ id: 1, value: "Apple" }],
+          modelValue: null
+        },
+        slots: {
+          marker: `<template #marker="{ item, query }">
+            <span data-custom-marker>{{ item.value }}-q={{ query }}</span>
+          </template>`
+        }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      expect(wrapper.find("[data-custom-marker]").exists()).toBe(true)
+      expect(wrapper.find("[data-custom-marker]").text()).toContain("Apple")
+      wrapper.unmount()
+    })
+
+    // ---ISSUE 2 — memory leak cleanup -----------------------------
+    it("removes keydown listeners on unmount-while-focused", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["a", "b"], modelValue: null },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select]").trigger("focusin")
+      await nextTick()
+      removeListenerSpy.mockClear()
+      wrapper.unmount()
+      const removed = removeListenerSpy.mock.calls.map((c: unknown[]) => c[0])
+      expect(removed).toContain("keydown")
+    })
+
+    it("disconnects ResizeObserver on unmount", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["a"], modelValue: null },
+        attachTo: document.body
+      })
+      await nextTick()
+      resizeObserverDisconnectSpy.mockClear()
+      wrapper.unmount()
+      expect(resizeObserverDisconnectSpy).toHaveBeenCalled()
+    })
+
+    // ---ISSUE 5 — componentsStyle fallback ------------------------
+    it("falls back to global componentsStyle when props.mode not provided", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { componentsStyle: "filled" })
+        }
+      }
+      const wrapper = mount(Select, {
+        global: { plugins: [app as any] },
+        props: { dataSelect: ["a"] }
+      })
+      expect(wrapper.vm.mode).toBe("filled")
+    })
+
+    it("prop.mode wins over global componentsStyle", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { componentsStyle: "filled" })
+        }
+      }
+      const wrapper = mount(Select, {
+        global: { plugins: [app as any] },
+        props: { dataSelect: ["a"], mode: "outlined" }
+      })
+      expect(wrapper.vm.mode).toBe("outlined")
+    })
+
+    // ---ISSUE 6 — unstyled enforcement (base class fix) -----------
+    it("respects unstyled: true via Component.setStyle guard", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { unstyled: true })
+        }
+      }
+      const wrapper = mount(Select, {
+        global: { plugins: [app as any] },
+        props: { dataSelect: ["a"] }
+      })
+      const root = wrapper.find("[data-select]")
+      const classAttr = root.attributes("class") ?? ""
+      expect(classAttr).not.toContain("fishtvue-select")
+      expect(classAttr).not.toContain("selectBody")
+    })
+
+    // ---ISSUE 8 — aria-live -------------------------------------
+    it("renders aria-live region with results count when query is active", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Apple", "Banana", "Bandana"], modelValue: null },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      await search.setValue("an")
+      await search.trigger("input")
+      await flushPromises()
+      const live = wrapper.find("[data-select-aria-live]")
+      expect(live.exists()).toBe(true)
+      expect(live.attributes("aria-live")).toBe("polite")
+      // Two matches: "Banana" + "Bandana" — оба содержат substring "an".
+      expect(live.text()).toMatch(/2/)
+      wrapper.unmount()
+    })
+
+    // ---ISSUE 10 — Intl.Collator (diacritic-insensitive) ----------
+    it("filters dataList through Intl.Collator (diacritic-insensitive)", async () => {
+      const wrapper = mount(Select, {
+        props: {
+          dataSelect: [
+            { id: 1, value: "Müller" },
+            { id: 2, value: "Smith" }
+          ],
+          modelValue: null
+        },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      await search.setValue("muller")
+      await search.trigger("input")
+      await flushPromises()
+      expect(wrapper.vm.dataList.length).toBe(1)
+      expect(wrapper.vm.dataList[0].value).toBe("Müller")
+      wrapper.unmount()
+    })
+
+    // ---ISSUE 11 — motion-safe prefix -----------------------------
+    it("uses motion-safe: prefix on transition classes", () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["a"] }
+      })
+      // Корневой контейнер должен иметь print:* классы, что зеркалит Input pattern.
+      const root = wrapper.find("[data-select]")
+      const html = wrapper.html()
+      // motion-safe: появляется хотя бы один раз в style sheet корневых классов
+      expect(html).toMatch(/motion-safe:/)
+      // print: классы добавлены для печати
+      expect(root.attributes("class")).toMatch(/print:/)
     })
   })
 })

@@ -16,6 +16,11 @@ export default <DefaultMessages>{
   inputLayout: {
     copied: "Скопировано"
   },
+  select: {
+    resultsCount: "Результатов: %d",
+    resultsCountOne: "1 результат",
+    resultsCountNone: "Результатов не найдено"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

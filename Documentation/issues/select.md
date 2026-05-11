@@ -1,7 +1,7 @@
 ---
 title: Issues — Select
-summary: Аудит Select — CRITICAL XSS через v-html (marker/noData), memory leak (ResizeObserver + keydown listeners без disconnect), нет dual-API (только schema-driven).
-updated: 2026-05-10
+summary: 7/13 issues закрыты 2026-05-11 (XSS via slots, observer/listener cleanup, componentsStyle fallback, unstyled, aria-live, Intl.Collator, motion-safe + bonus drop dup initStyle). Открытые — Issue 3 (dual-API), 4 (cross-cutting SSR/exports), 7 (virtualization), 9 (RTL).
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
 related-doc: ../components/select.md
@@ -11,18 +11,36 @@ related-doc: ../components/select.md
 
 ## Сводка
 
-| Severity | Count | Categories                                             |
-| -------- | ----- | ------------------------------------------------------ |
-| critical | 2     | C13 (XSS v-html × 3), H41 (memory leaks)               |
-| high     | 6     | A2, A4-5, C17, L53, P (dual-API), H43 (virtualization) |
-| medium   | 4     | E29.5, F31, F32, G34                                   |
-| low      | 3     | E29.7, B10, N59                                        |
+| Severity | Count (open) | Categories                                            |
+| -------- | ------------ | ----------------------------------------------------- |
+| critical | 0            | —                                                     |
+| high     | 4            | A2, A4-5, C17, P (dual-API), H43 (virtualization)     |
+| medium   | 2            | F31 (RTL), F32                                        |
+| low      | 2            | B10, N59                                              |
 
-## Issue 1: CRITICAL — XSS через `v-html` в `marker` и `noData`
+## ~~Issue 1: CRITICAL — XSS через `v-html` в `marker` и `noData`~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 + security
-- **Severity:** **critical**
-- **Где:** [Select.vue:553](../../lib/select/Select.vue#L553), [Select.vue:562](../../lib/select/Select.vue#L562), [Select.vue:564](../../lib/select/Select.vue#L564)
+- **Severity:** ~~**critical**~~
+- **Где (was):** ~~[Select.vue:553, 562, 564]~~ — все три `v-html` сайта удалены.
+- **Status:** ✅ resolved 2026-05-11
+
+**Что сделано (2026-05-11):**
+
+- `v-html="item?.marker"` (Select.vue:553) → scoped slot `#marker` с default-template, который рендерит `<mark>`-теги через `<template v-for>` + text-interpolation (без `v-html`). См. [Select.vue](../../lib/select/Select.vue) (slot `marker` в template, helper `splitByQuery` + `markerParts` в script).
+- `v-html="noData"` (Select.vue:562, 564) → объединено в `#empty` slot с default text-node `<div>{{ noData }}</div>`.
+- `dataList` computed больше **не** мутирует `item.marker` HTML-строкой — подсветка вычисляется на render-time через safe helper.
+- `IDataItem.marker?: string` помечен `@deprecated`; передача поля логируется через `console.warn` один раз на item (WeakSet guard).
+- Slots `marker` и `empty` объявлены в `SelectSlots` ([Select.d.ts](../../lib/select/Select.d.ts)) с типизированными scoped-props.
+
+**Acceptance criteria:**
+
+- [x] `<Select :data-select="[{ id: 1, value: 'X', marker: '<script>alert(1)</script>' }]">` — НЕ исполняет скрипт. Тест: `Select.test.ts` > `does not execute XSS payload from item.marker (legacy field is ignored)`.
+- [x] Payload с `<img src=x onerror=...>` в `noData` — DOM не содержит `<img>`. Тест: `does not execute XSS payload from noData prop`.
+- [x] Поиск/highlighting работает: substring matches рендерится в `<mark>`-тегах через safe-helper.
+- [x] `#marker` scoped slot позволяет custom override без потери безопасности.
+
+### Историческая запись (что было)
 
 ### Что найдено
 
@@ -73,11 +91,27 @@ related-doc: ../components/select.md
 - [ ] Тест: payload с `<img src=x onerror=...>` в `marker` или `noData` — DOM не содержит `<img>`.
 - [ ] Поиск/highlighting продолжает работать через slot или helper-функцию.
 
-## Issue 2: CRITICAL — Memory leak (ResizeObserver + keydown listeners без cleanup)
+## ~~Issue 2: CRITICAL — Memory leak (ResizeObserver + keydown listeners без cleanup)~~ ✅ resolved 2026-05-11
 
 - **Категория:** H41 (memory leaks)
-- **Severity:** **critical**
-- **Где:** [Select.vue:279-281](../../lib/select/Select.vue#L279-L281), [Select.vue:284-292](../../lib/select/Select.vue#L284-L292)
+- **Severity:** ~~**critical**~~
+- **Где (was):** ~~[Select.vue:279-281, 284-292]~~ — `let resizeObserver` сохраняется в closure, `onBeforeUnmount` отключает observer и удаляет оба document keydown listener'а.
+- **Status:** ✅ resolved 2026-05-11
+
+**Что сделано (2026-05-11):**
+
+- `new ResizeObserver(...)` теперь присваивается `let resizeObserver: ResizeObserver | undefined` в setup-scope (зеркалит [InputLayout pattern](../../lib/inputlayout/InputLayout.vue#L196-L237)).
+- Добавлен `onBeforeUnmount` hook, который вызывает `resizeObserver?.disconnect()` + `document.removeEventListener("keydown", openSelectOnEnter)` + `document.removeEventListener("keydown", keydownSelect)`.
+- `Select.initStyle()` дубликат в `onMounted` удалён — `Component.__hooks()` ([component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) уже регистрирует через `vueOnMounted + onServerPrefetch`. Bonus: закрывает 1 пункт в [component-class.md Issue 1](./component-class.md) Wave 2.3 (progress 2/22 → 3/22).
+- SSR-guard `if (isClient())` обернут вокруг `document.removeEventListener` вызовов.
+
+**Acceptance criteria:**
+
+- [x] `mount → focus → unmount` — keydown listener (`openSelectOnEnter`) удалён. Тест: `Select.test.ts` > `removes keydown listeners on unmount-while-focused`.
+- [x] `mount → openSelect → unmount` — `ResizeObserver.disconnect()` вызван. Тест: `disconnects ResizeObserver on unmount`.
+- [x] `onBeforeUnmount` существует и вызывает disconnect/removeEventListener.
+
+### Историческая запись (что было)
 
 ### Что найдено
 
@@ -226,19 +260,21 @@ Custom rendering каждого option возможен только через 
 
 См. [button.md Issue 1, Issue 8, Issue 9](./button.md).
 
-## Issue 5: Нет componentsStyle global fallback
+## ~~Issue 5: Нет componentsStyle global fallback~~ ✅ resolved 2026-05-11
 
 - **Категория:** L53
-- **Severity:** high
+- **Severity:** ~~high~~
+- **Status:** ✅ resolved 2026-05-11
 
-См. [input.md Issue 2](./input.md). Select имеет ту же проблему — `mode` не учитывает `Select.componentsStyle()`.
+`mode` computed в [Select.vue](../../lib/select/Select.vue) теперь резолвится по полной fallback chain: `props.mode ?? options?.mode ?? Select.componentsStyle() ?? "outlined"`. Зеркалит [Input.vue:62-64](../../lib/input/Input.vue#L62-L64) pattern. Тесты: `Select.test.ts` > `falls back to global componentsStyle when props.mode not provided` + `prop.mode wins over global componentsStyle`.
 
-## Issue 6: `unstyled: true` не обрабатывается
+## ~~Issue 6: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-05-11
 
 - **Категория:** L53
-- **Severity:** high
+- **Severity:** ~~high~~
+- **Status:** ✅ resolved 2026-05-11 (cross-cutting fix в `lib/component/index.ts` — закрывает Issue 6 во всех 22 компонентах + [component-class.md Issue 6](./component-class.md))
 
-См. [button.md Issue 14](./button.md).
+`Component.setStyle()` теперь проверяет `this.__globalConfig?.config?.unstyled` и возвращает `""` если true — это отключает рендер Tailwind-классов во всех компонентах, использующих базовый класс. Тест: `Select.test.ts` > `respects unstyled: true via Component.setStyle guard`. Roadmap Wave 3.1 — done.
 
 ## Issue 7: Нет виртуализации списка — лагает при >500 items
 
@@ -270,29 +306,13 @@ Custom rendering каждого option возможен только через 
 - [ ] `<Select :data-select="thousand_items" virtual>` — first render <50ms.
 - [ ] Скролл 60fps в Chrome DevTools profiler.
 
-## Issue 8: aria-live для search results отсутствует
+## ~~Issue 8: aria-live для search results отсутствует~~ ✅ resolved 2026-05-11
 
 - **Категория:** E29.5 (announcements)
-- **Severity:** medium
-- **Где:** [Select.vue:540-570](../../lib/select/Select.vue) (dropdown render)
+- **Severity:** ~~medium~~
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
-
-При фильтрации (query) screen reader не объявляет «X results found». Пользователь печатает в search input и не получает feedback.
-
-### Что нужно сделать
-
-1. Добавить hidden live region:
-   ```vue
-   <div aria-live="polite" aria-atomic="true" class="sr-only">
-     {{ dataList?.length }} {{ t("select.resultsCount") }}
-   </div>
-   ```
-2. Добавить ключ в [lib/locale/locales/en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts).
-
-### Acceptance criteria
-
-- [ ] axe-core тест проходит для Select с открытым dropdown.
+`<div data-select-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>` рендерится внутри dropdown. `ariaResultsLabel` computed формирует строку через `Select.t("select.resultsCount" | "select.resultsCountOne" | "select.resultsCountNone")` с подстановкой `%d`. Новые locale-ключи добавлены в [TypesLocale.d.ts](../../lib/locale/TypesLocale.d.ts), [locales/en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts). Тест: `Select.test.ts` > `renders aria-live region with results count when query is active`.
 
 ## Issue 9: RTL — left/right в `right-0`, `mr-2`, etc.
 
@@ -300,28 +320,32 @@ Custom rendering каждого option возможен только через 
 
 См. [switch.md Issue 8](./switch.md). Select имеет много left/right в dropdown позиционировании.
 
-## Issue 10: Локаль для filtering search query
+## ~~Issue 10: Локаль для filtering search query~~ ✅ resolved 2026-05-11
 
 - **Категория:** F32
-- **Severity:** medium
-- **Где:** [Select.vue](../../lib/select/Select.vue) (filter logic)
+- **Severity:** ~~medium~~
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+Фильтрация теперь использует `Intl.Collator(getActiveLocale() ?? "en", { sensitivity: "base", usage: "search" })` — diacritic-insensitive (немецкое `ü` matches `u`, французское `é` matches `e`) и case-insensitive. Helper `matchesQuery(itemValue, q)` — sliding-window substring match через `collator.compare`. Подсветка совпадений (`splitByQuery` → `markerParts`) использует тот же collator для согласованности с фильтром. Тест: `Select.test.ts` > `filters dataList through Intl.Collator (diacritic-insensitive)`.
 
-`String.includes(query)` для фильтрации. Не учитывает diacritics (немецкое `ü` ≠ `u`), case-sensitive в некоторых локалях.
-
-### Что нужно сделать
-
-1. Использовать `Intl.Collator(locale, { sensitivity: 'base' })` для сравнения.
-2. Подключить через `FishtVue.getActiveLocale()`.
-3. Альтернатива — `localeCompare`.
-
-## Issue 11: prefers-reduced-motion + print + colors hardcode
+## ~~Issue 11: prefers-reduced-motion + print + colors hardcode~~ ✅ resolved 2026-05-11 (motion + print parts)
 
 - **Категория:** E29.7, N59, B10
-- **Severity:** low
+- **Severity:** ~~low~~ (частично — `motion-safe:` + `print:` закрыты; B10 colors через theme tokens — Wave 9)
+- **Status:** ✅ resolved 2026-05-11 (motion-safe + print). B10 / colors hardcode остаётся открытым (Wave 9).
 
-См. [done/button.md Issue 10](./done/button.md) (motion-safe pattern, resolved), [button.md Issue 15](./button.md) (print — open), [switch.md Issue 12](./switch.md).
+**Что сделано:**
+
+- Все Tailwind `transition*` / `duration-*` классы в [Select.vue](../../lib/select/Select.vue) обёрнуты в `motion-safe:` префикс (CSS variant `@media (prefers-reduced-motion: no-preference)`). Зеркалит [Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98) pattern.
+- Корневой контейнер получил `print:bg-white print:text-black print:shadow-none`.
+- `<transition-group>` в template (multiple-mode badges) использует `motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300` (вместо безусловного `transition`).
+- Inline `transition-colors duration-500` на Badge-компонентах в template заменены на `motion-safe:transition-colors motion-safe:duration-500`.
+- Тест: `Select.test.ts` > `uses motion-safe: prefix on transition classes`.
+
+**Что осталось открытым:**
+
+- GSAP-анимация раскрытия списка не учитывает `prefers-reduced-motion` — потребует JS-проверки media query или Motion-One интеграцию. Wave 10.1 follow-up.
+- Hardcoded `text-gray-500`, `bg-stone-100` и т. д. через Tailwind primitives — Wave 9 (semantic tokens).
 
 ## Cross-cutting: Configuration support
 

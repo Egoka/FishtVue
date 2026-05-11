@@ -1,7 +1,7 @@
 ---
 title: Issues — Component class (`Component<T>`)
-summary: Аудит базового класса — coupling с window.FishtVue, double-initStyle (onServerPrefetch + onMounted), нет teardown для injected styles при HMR.
-updated: 2026-05-10
+summary: 1/10 issues закрыт 2026-05-11 (Issue 6 — unstyled enforcement через setStyle guard, cross-cutting fix → 22 компонента). Открытые — Issue 1 (dup initStyle, 3/22 progress), Issue 2 (window.FishtVue coupling), Issue 3 (HMR teardown), Issue 4 (generic narrowing).
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support
 source: lib/component/
 related-doc: ../architecture/component-class.md
@@ -11,11 +11,11 @@ related-doc: ../architecture/component-class.md
 
 ## Сводка
 
-| Severity | Count | Categories |
+| Severity | Count (open) | Categories |
 |---|---|---|
 | critical | 0 | — |
 | high | 4 | C13 (window.FishtVue coupling), C17 (style injection paths), D24, K46 (87% coverage) |
-| medium | 4 | D21 (generic narrowing), L53 (unstyled support), B11, K46 |
+| medium | 3 | D21 (generic narrowing), B11, K46 |
 | low | 2 | E29.7 (motion not at base), N59 |
 
 ## Issue 1: Double initStyle — onServerPrefetch + onMounted + manual call в каждом компоненте
@@ -142,16 +142,28 @@ if (isClient() && !this.__globalConfig) this.__globalConfig = (window as any)?.F
 
 Добавить тесты для: SSR `onServerPrefetch`, HMR teardown (после Issue 3), multiple init calls (idempotence), `initStyle(stylesComp)` с custom function.
 
-## Issue 6: SSR styles + sideEffects + unstyled
+## ~~Issue 6: SSR styles + sideEffects + unstyled~~ ✅ resolved 2026-05-11 (unstyled part)
 
-См. [button.md Issue 1, 8, 9, 14](./button.md). Базовый класс — natural place для `unstyled` guard.
+См. [button.md Issue 1, 8, 9, 14](./button.md) для остальных частей (SSR/sideEffects/exports — Wave 2.1, open).
+
+**Что сделано (2026-05-11):**
+
+`Component.setStyle()` ([component/index.ts:134-157](../../lib/component/index.ts#L134-L157)) теперь проверяет `this.__globalConfig?.config?.unstyled` первой строкой (line 138) и возвращает `""` если флаг включен — это отключает рендер Tailwind-классов **во всех 22 компонентах**, использующих базовый класс. Cross-cutting fix через одну точку (Wave 3.1 → done).
 
 ```ts
 public setStyle = (...) => {
   if (this.__globalConfig?.config?.unstyled) return ""
-  // ... existing logic
+  // ... existing logic (registers classes via tailwind() + listOfStyledComponents,
+  //     returns `fv ${specialClass} ${styles}`)
 }
 ```
+
+Тест: `Select.test.ts` > `respects unstyled: true via Component.setStyle guard` (демонстрирует cross-cutting эффект на Select, но применимо ко всем компонентам).
+
+**Что осталось открытым:**
+
+- Issue 1 (Double initStyle) — Wave 2.3, progress 3/22 после Select.
+- SSR styles + sideEffects + exports map в lib/package.json — `button.md` Issues 1, 8, 9 (Wave 2.1).
 
 ## Cross-cutting: Configuration support
 
@@ -159,7 +171,7 @@ public setStyle = (...) => {
 |---|---|---|
 | `componentsOptions` | ✅ | через `Component.getOptions()` |
 | `componentsStyle` global | ✅ | через `Component.componentsStyle()` (доступен), но не у всех компонентов используется (см. component-issues docs) |
-| `unstyled: true` | ❌ | Issue 6 — `setStyle` не учитывает |
+| `unstyled: true` | ✅ | (2026-05-11) `Component.setStyle()` возвращает `""` при `config.unstyled === true` — cross-cutting fix для 22 компонентов |
 | Theme tokens | ✅ | через `Component.initStyle(stylesComp)` callback |
 | `t(key)` для текста | ✅ | через `Component.t(key)` |
 | Runtime locale switch | ✅ | если использует `t()` — реактивен через computed |

@@ -16,6 +16,11 @@ export default <DefaultMessages>{
   inputLayout: {
     copied: "Copied"
   },
+  select: {
+    resultsCount: "Results: %d",
+    resultsCountOne: "1 result",
+    resultsCountNone: "No results"
+  },
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

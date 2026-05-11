@@ -14,7 +14,14 @@ import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue
 declare class Select extends ClassComponent<SelectProps, SelectSlots, SelectEmits, SelectExpose> {}
 
 // ---------------------------------------
-export type IDataItem = { [key: string]: any }
+export type IDataItem = {
+  [key: string]: any
+  /**
+   * @deprecated since 2026-05-11 — поле `marker` игнорируется компонентом для защиты от XSS.
+   * Для кастомного рендеринга подсветки используйте scoped slot `#marker` (см. SelectSlots).
+   */
+  marker?: string
+}
 export type BaseDataItem = string | number | IDataItem
 
 /**
@@ -121,6 +128,17 @@ export interface SelectProps extends Omit<InputLayoutProps, "value" | "isValue">
 export declare type SelectSlots = {
   values(args: { selected: any; key?: string; deleteSelect?: (selectValue: BaseDataItem | null) => void }): VNode[]
   item(args: { item: any; key: string; isQuery: boolean }): VNode[]
+  /**
+   * Scoped slot для безопасного рендера подсветки совпадения query внутри значения опции.
+   * По умолчанию выводит текст значения + `<mark>` для участков, совпавших с `query`,
+   * через text-interpolation (без `v-html`). Заменяет deprecated `IDataItem.marker` поле.
+   */
+  marker(args: { item: any; query: string; isQuery: boolean; valueKey: string | null }): VNode[]
+  /**
+   * Slot для пустой выдачи (либо весь `dataSelect` пустой, либо фильтр без совпадений).
+   * По умолчанию рендерит `noData` как text-node. Заменяет небезопасный `v-html="noData"`.
+   */
+  empty(args: { noData: string; query: string; hasData: boolean }): VNode[]
   default(): VNode[]
   before(): VNode[]
   after(): VNode[]

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, unref, useSlots, watch } from "vue"
+  import { computed, onBeforeUnmount, onMounted, ref, unref, useSlots, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
+  import { getActiveLocale } from "fishtvue/config"
   import type { BaseDataItem, IDataItem, SelectEmits, SelectProps } from "./Select"
   import type { FixWindowExpose } from "fishtvue/fixwindow"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
@@ -94,7 +95,9 @@
   const autoFocus = computed<NonNullable<SelectProps["autoFocus"]>>(
     () => props?.autoFocus ?? options?.autoFocus ?? false
   )
-  const mode = computed<NonNullable<SelectProps["mode"]>>(() => (props.mode as SelectProps["mode"]) ?? "outlined")
+  const mode = computed<NonNullable<SelectProps["mode"]>>(
+    () => (props.mode as SelectProps["mode"]) ?? options?.mode ?? Select.componentsStyle() ?? "outlined"
+  )
   const isDisabled = computed<NonNullable<SelectProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<SelectProps["loading"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<SelectProps["isInvalid"]>>(() => props.isInvalid ?? false)
@@ -117,28 +120,78 @@
   const classMaskQuery = computed<NonNullable<SelectProps["classMaskQuery"]>>(() =>
     Select.setStyle(props?.classMaskQuery ?? options?.classMaskQuery ?? "font-bold text-theme-700 dark:text-theme-300")
   )
-  const dataList = computed(() => {
-    if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
-      return LD.map(
-        LD.filter(dataSelect.value, (item) =>
-          String(typeof item === "object" ? item[valueSelect.value as string] : item)
-            .toLowerCase()
-            .includes(query.value.toLowerCase())
-        ),
-        (item: any) => {
-          item.marker = query.value.length
-            ? String(item[valueSelect.value as string]).replace(
-                new RegExp(query.value, "gi"),
-                `<span class="${classMaskQuery.value}">$&</span>`
-              )
-            : String(item[valueSelect.value as string])
-          return item
-        }
-      )
-    } else {
-      return dataSelect.value ?? []
+  // ---ISSUE 10 — Intl.Collator (locale-aware, diacritic-insensitive substring search) ---
+  const collator = computed(
+    () => new Intl.Collator(getActiveLocale() ?? "en", { sensitivity: "base", usage: "search" })
+  )
+  function matchesQuery(itemValue: string, q: string): boolean {
+    if (!q) return true
+    const hay = String(itemValue)
+    const needle = q
+    if (needle.length > hay.length) return false
+    const c = collator.value
+    for (let i = 0; i <= hay.length - needle.length; i++) {
+      if (c.compare(hay.slice(i, i + needle.length), needle) === 0) return true
     }
+    return false
+  }
+  // ---ISSUE 1 — deprecation warning for `marker` field (XSS surface removed) ---
+  const __markerWarnedItems = new WeakSet<object>()
+  function warnDeprecatedMarker(item: unknown): void {
+    if (!item || typeof item !== "object") return
+    const obj = item as Record<string, unknown>
+    if (!Object.prototype.hasOwnProperty.call(obj, "marker")) return
+    if (__markerWarnedItems.has(obj)) return
+    __markerWarnedItems.add(obj)
+
+    console.warn(
+      "[FishtVue Select] `IDataItem.marker` is deprecated since 2026-05-11 — the field is ignored to prevent XSS. " +
+        "Use the `#marker` scoped slot to customise substring highlighting."
+    )
+  }
+  const dataList = computed<any[]>(() => {
+    if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
+      return LD.filter(dataSelect.value, (item) => {
+        if (typeof item === "object" && item) warnDeprecatedMarker(item)
+        const raw = typeof item === "object" ? (item as IDataItem)[valueSelect.value as string] : item
+        return matchesQuery(String(raw), query.value)
+      }) as any[]
+    }
+    if (dataSelect.value?.length) {
+      for (const item of dataSelect.value) {
+        if (typeof item === "object" && item) warnDeprecatedMarker(item)
+      }
+    }
+    return (dataSelect.value ?? []) as any[]
   })
+  // ---ISSUE 1 — safe substring highlight helper (replaces v-html marker assembly) ---
+  type MarkerPart = { text: string; mark: boolean }
+  function splitByQuery(text: string, q: string): MarkerPart[] {
+    const hay = String(text ?? "")
+    if (!q || !hay) return hay ? [{ text: hay, mark: false }] : []
+    const needle = q
+    if (needle.length > hay.length) return [{ text: hay, mark: false }]
+    const c = collator.value
+    const parts: MarkerPart[] = []
+    let cursor = 0
+    let i = 0
+    while (i <= hay.length - needle.length) {
+      if (c.compare(hay.slice(i, i + needle.length), needle) === 0) {
+        if (i > cursor) parts.push({ text: hay.slice(cursor, i), mark: false })
+        parts.push({ text: hay.slice(i, i + needle.length), mark: true })
+        cursor = i + needle.length
+        i = cursor
+      } else {
+        i += 1
+      }
+    }
+    if (cursor < hay.length) parts.push({ text: hay.slice(cursor), mark: false })
+    return parts
+  }
+  function markerParts(item: any): MarkerPart[] {
+    const raw = typeof item === "object" && valueSelect.value ? item[valueSelect.value as string] : item
+    return splitByQuery(String(raw ?? ""), query.value)
+  }
   const paramsFixWindow = computed<NonNullable<SelectProps["paramsFixWindow"]>>(() => ({
     position: "bottom-left",
     eventOpen: "click",
@@ -148,10 +201,13 @@
     ...props?.paramsFixWindow
   }))
   const labelInput = computed(() => Select.t("find") ?? "Find...")
-  Select.setStyle(`transition ease-in-out duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`)
+  Select.setStyle(
+    `motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`
+  )
   const classBase = computed<SelectProps["classSelect"]>(() => {
     return Select.setStyle([
       "selectBody w-46 min-h-[36px] max-h-16 focus:outline-0 focus:ring-0",
+      "print:bg-white print:text-black print:shadow-none",
       options?.classSelect ?? "",
       props?.classSelect ?? "",
       "classSelect flex overflow-auto cursor-pointer"
@@ -159,7 +215,7 @@
   })
   const classSelectList = computed<SelectProps["classSelectList"]>(() =>
     Select.setStyle([
-      "min-w-[10rem] mt-1 max-h-60 transition-all",
+      "min-w-[10rem] mt-1 max-h-60 motion-safe:transition-all",
       "text-base rounded-md ring-1 ring-black/5 shadow-xl focus:outline-none sm:text-sm",
       mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-black" : "",
       mode.value === "underlined"
@@ -204,7 +260,7 @@
       "focus-visible:bg-theme-200 focus-visible:dark:bg-theme-900 focus-visible:text-theme-700 dark:focus-visible:text-theme-100 focus-visible:ring-1 focus-visible:ring-theme-100 focus-visible:dark:ring-theme-800 focus-visible:outline-none",
       mode.value === "outlined" ? "rounded-md" : "",
       mode.value === "filled" ? "rounded-md" : "",
-      "group/li relative cursor-default select-none flex transition-colors duration-500"
+      "group/li relative cursor-default select-none flex motion-safe:transition-colors motion-safe:duration-500"
     ])
   )
   const classItemSelectValue = computed(() =>
@@ -212,6 +268,15 @@
       "text-left text-gray-600 dark:text-gray-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200"
     )
   )
+  // ---ISSUE 8 — aria-live announcement for filtered results count ---
+  const ariaResultsLabel = computed<string>(() => {
+    if (!isQuery.value || !query.value) return ""
+    const n = dataList.value?.length ?? 0
+    if (n === 0) return Select.t("select.resultsCountNone") ?? "No results"
+    if (n === 1) return Select.t("select.resultsCountOne") ?? "1 result"
+    const tpl = Select.t("select.resultsCount") ?? "Results: %d"
+    return tpl.replace("%d", String(n))
+  })
   const inputLayout = computed(() => ({
     isValue: isValue.value,
     mode: mode.value,
@@ -273,12 +338,25 @@
     select
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // ---ISSUE 2 — ResizeObserver saved in closure-let so onBeforeUnmount can disconnect.
+  // ---Bonus — drop duplicate Select.initStyle() — Component.__hooks() already registers it.
+  let resizeObserver: ResizeObserver | undefined
   onMounted(() => {
-    Select.initStyle()
     if (autoFocus.value) openSelect()
-    new ResizeObserver(() => {
-      if (isOpenList.value) selectListWindow.value?.updatePosition()
-    }).observe(selectBody.value as HTMLElement)
+    if (isClient() && selectBody.value) {
+      resizeObserver = new ResizeObserver(() => {
+        if (isOpenList.value) selectListWindow.value?.updatePosition()
+      })
+      resizeObserver.observe(selectBody.value as HTMLElement)
+    }
+  })
+  onBeforeUnmount(() => {
+    resizeObserver?.disconnect()
+    resizeObserver = undefined
+    if (isClient()) {
+      document.removeEventListener("keydown", openSelectOnEnter)
+      document.removeEventListener("keydown", keydownSelect)
+    }
   })
   // ---WATCHERS----------------------------
   watch(isFocus, (value) => {
@@ -322,27 +400,36 @@
   // })
 
   // ---METHODS-----------------------------
+  // ---ISSUE 2 (defensive) — guards against undefined refs after unmount-while-open ---
   function changeFocus(currentIndex: number, direction: 1 | -1) {
-    const listItems = (selectItems.value as any)?.$el.querySelectorAll("li")
+    const listItems = (selectItems.value as any)?.$el?.querySelectorAll("li") as NodeListOf<HTMLElement> | undefined
+    if (!listItems || !listItems.length) return
     let newIndex = currentIndex + direction
-    listItems[currentIndex].setAttribute("tabindex", "-1")
-    listItems[currentIndex].blur()
+    const cur = listItems[currentIndex]
+    if (cur) {
+      cur.setAttribute("tabindex", "-1")
+      cur.blur()
+    }
     if (newIndex < 0) newIndex = listItems.length - 1
     else if (newIndex >= listItems.length) newIndex = 0
-    listItems[newIndex].setAttribute("tabindex", "0")
-    listItems[newIndex].focus()
+    const next = listItems[newIndex]
+    if (next) {
+      next.setAttribute("tabindex", "0")
+      next.focus()
+    }
     activeItem.value = newIndex
   }
 
   function keydownSelect(event: KeyboardEvent) {
+    // ---ISSUE 2 (defensive) — bail out if component already unmounted ---
+    if (!selectItems.value) return
     if (event.key === "Tab") activeItem.value += 1
     else if (event.key === "Enter") select(dataList.value[activeItem.value])
     else if (["Escape", "Esc"].includes(event.key)) isOpenList.value = false
     else if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-      const currentIndex = Array.prototype.indexOf.call(
-        (selectItems.value as any)?.$el.querySelectorAll("li"),
-        document.activeElement
-      )
+      const items = (selectItems.value as any)?.$el?.querySelectorAll("li") as NodeListOf<HTMLElement> | undefined
+      if (!items || !items.length) return
+      const currentIndex = Array.prototype.indexOf.call(items, document.activeElement)
       if (currentIndex !== -1) {
         event.preventDefault()
         if (event.key === "ArrowDown") changeFocus(currentIndex, 1)
@@ -446,10 +533,10 @@
       <div data-select-content :class="classSelectContent">
         <template v-if="isMultiple">
           <transition-group
-            leave-active-class="transition ease-in-out duration-300"
+            leave-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300"
             leave-from-class="opacity-100 translate-x-0"
             leave-to-class="opacity-0 -translate-x-5"
-            enter-active-class="transition ease-in-out duration-300"
+            enter-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300"
             enter-from-class="opacity-0 -translate-x-5"
             enter-to-class="opacity-100 translate-x-0">
             <div
@@ -463,7 +550,7 @@
                   :close-button="closeButtonBadge"
                   class-content="fill-theme-500"
                   @delete="select(item)"
-                  class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500">
+                  class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500">
                   {{ valueSelect ? item[valueSelect] : item[keySelect] }}
                 </Badge>
               </slot>
@@ -473,7 +560,7 @@
                 <Badge
                   mode="neutral"
                   :close-button="closeButtonBadge"
-                  class="m-1 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500"
+                  class="m-1 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
                   class-content="fill-theme-500 flex items-center"
                   @delete="select(null)">
                   <Icons type="Funnel" class="h-3 w-3 mr-1 text-theme-400 dark:text-theme-600" />
@@ -549,20 +636,39 @@
                 :data-index="index"
                 :class="classLiItem"
                 @click="select(item)">
-                <slot name="item" :item="item" :key="valueSelect" :isQuery="isQuery && item?.marker">
-                  <div v-if="isQuery && item?.marker" v-html="item?.marker" :class="classItemSelectValue" />
-                  <div v-else :class="classItemSelectValue">
-                    {{ valueSelect ? item[valueSelect] : item }}
-                  </div>
+                <slot name="item" :item="item" :key="valueSelect" :isQuery="isQuery && !!query">
+                  <slot
+                    name="marker"
+                    :item="item"
+                    :query="query"
+                    :isQuery="isQuery && !!query"
+                    :valueKey="valueSelect ?? null">
+                    <div :class="classItemSelectValue">
+                      <template v-if="isQuery && query">
+                        <template v-for="(part, pi) in markerParts(item)" :key="pi">
+                          <mark v-if="part.mark" :class="classMaskQuery">{{ part.text }}</mark>
+                          <template v-else>{{ part.text }}</template>
+                        </template>
+                      </template>
+                      <template v-else>{{ valueSelect ? item[valueSelect] : item }}</template>
+                    </div>
+                  </slot>
                 </slot>
                 <span v-if="visibleValue?.find((i) => i[keySelect] === item[keySelect])" :class="iconCheck">
                   <Icons type="Check" class="w-5 h-5" />
                 </span>
               </li>
-              <div v-if="!dataList?.length" :class="classDataListNoData" v-html="noData" />
+              <slot v-if="!dataList?.length" name="empty" :noData="noData" :query="query" :hasData="true">
+                <div :class="classDataListNoData">{{ noData }}</div>
+              </slot>
             </template>
-            <div v-else :class="classNoData" v-html="noData" />
+            <slot v-else name="empty" :noData="noData" :query="query" :hasData="false">
+              <div :class="classNoData">{{ noData }}</div>
+            </slot>
           </TransitionGroup>
+          <div data-select-aria-live class="sr-only" aria-live="polite" aria-atomic="true">
+            {{ ariaResultsLabel }}
+          </div>
         </div>
       </FixWindow>
       <slot />

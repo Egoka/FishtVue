@@ -135,6 +135,7 @@ export default class Component<T extends keyof ComponentsOptions> {
     stylesComp: T | T[],
     options?: setStyleOptions
   ): string => {
+    if (this.__globalConfig?.config?.unstyled) return ""
     const specialClass = `${this.prefix}-${toKebabCase(this.name)}`
     const styles = cn(stylesComp)
     const isBaseClasses = options?.isBaseClasses ? "" : " "

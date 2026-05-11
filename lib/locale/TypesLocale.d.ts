@@ -34,6 +34,11 @@ export declare interface DefaultMessages extends DeepPartial<TypeLocale> {
   inputLayout?: {
     copied?: string
   }
+  select?: {
+    resultsCount?: string
+    resultsCountOne?: string
+    resultsCountNone?: string
+  }
 }
 
 export declare type Messages = DeepPartial<Record<NameLocale, DefaultMessages>>
