@@ -1,8 +1,8 @@
 ---
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
-updated: 2026-05-11
-last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<label>` root, 2 drop dup initStyle, 4 translateX/maxWidth `number | string` typing, 6 type-via-componentsOptions de facto, 7 unstyled cross-cutting regression test, 8 motion-safe, 10 default slot). Defer-обоснованы: Issue 3 (Wave 2.1 packaging), Issue 5 (Wave 3.3 CSS vars / Theme runtime API), Issue 9 (dedicated RTL wave). Label row пересчитан 0/4/3/2 → 0/1/2/0. Wave 2.3 progress 5/22 → 6/22 (Input + Switch + Select + Calendar + Aria + Label). Wave 10.1 motion-safe progress 4/22 → 5/22 (Button + Input + Select + Aria + Label). Severity matrix: 10/126/80/66 → 10/123/79/64 = 282 → 276 issues. Раньше 2026-05-11: aria: 8/11; select: 7 of 11 (XSS via #marker/#empty + safe highlight, observer/listener cleanup, dup initStyle, componentsStyle, unstyled cross-cutting Component.setStyle → закрывает Issue 6 во всех 22 + component-class.md Issue 6, aria-live with locale, Intl.Collator filtering, motion-safe + print); switch: 9 of 14; input: 11/13; inputlayout: 6/7; accordion: 4/9; button: 5/16; icons/badge: 5/6 (2026-05-10); utilities: 9 ранее. Roadmap чекбоксы — single-source-of-truth прогресса.
+updated: 2026-05-12
+last-changes: 2026-05-12 — dialog: закрыто 9 of 9 issues (focus trap native, escapeListener leak, reference-counted scroll lock via NEW lib/utils/scrollLockHandler.ts, role="dialog"/aria-modal/labelledby/describedby, focus return, motion-safe transitions, RTL close button (end-2), aria-live polite region, sideEffects:false). Файл перенесён в ./done/dialog.md. Severity matrix Dialog row 2/5/4/3 → 0/0/0/0. TOTAL 10/123/79/64 = 276 → 8/118/75/61 = 262. Wave 1.2 Dialog ✓. Wave 2.3 progress 7/22 → 8/22 (dup initStyle removed). Wave 2.4 scroll-lock Dialog ✓ (Split — оставшийся пункт). Раньше 2026-05-11: label: закрыто 7 of 10 issues (1 for-id + `<label>` root, 2 drop dup initStyle, 4 translateX/maxWidth `number | string` typing, 6 type-via-componentsOptions de facto, 7 unstyled cross-cutting regression test, 8 motion-safe, 10 default slot). Defer-обоснованы: Issue 3 (Wave 2.1 packaging), Issue 5 (Wave 3.3 CSS vars / Theme runtime API), Issue 9 (dedicated RTL wave). Label row пересчитан 0/4/3/2 → 0/1/2/0. Wave 2.3 progress 5/22 → 6/22 (Input + Switch + Select + Calendar + Aria + Label). Wave 10.1 motion-safe progress 4/22 → 5/22 (Button + Input + Select + Aria + Label). Severity matrix: 10/126/80/66 → 10/123/79/64 = 282 → 276 issues. Раньше 2026-05-11: aria: 8/11; select: 7 of 11 (XSS via #marker/#empty + safe highlight, observer/listener cleanup, dup initStyle, componentsStyle, unstyled cross-cutting Component.setStyle → закрывает Issue 6 во всех 22 + component-class.md Issue 6, aria-live with locale, Intl.Collator filtering, motion-safe + print); switch: 9 of 14; input: 11/13; inputlayout: 6/7; accordion: 4/9; button: 5/16; icons/badge: 5/6 (2026-05-10); utilities: 9 ранее. Roadmap чекбоксы — single-source-of-truth прогресса.
 ---
 
 # Issues — Index
@@ -32,7 +32,7 @@ last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<
 | Split           | [split.md](./split.md)                     | 0        | 5       | 5       | 3      |
 | FixWindow       | [fixwindow.md](./fixwindow.md)             | 0        | 7       | 5       | 3      |
 | Accordion       | [accordion.md](./accordion.md)        | 0        | 3       | 2       | 3      |
-| Dialog          | [dialog.md](./dialog.md)                   | 2        | 5       | 4       | 3      |
+| Dialog          | [done/dialog.md](./done/dialog.md)         | 0        | 0       | 0       | 0      |
 | Menu            | [menu.md](./menu.md)                       | 1        | 6       | 4       | 3      |
 | Alert           | [alert.md](./alert.md)                     | 0        | 1       | 1       | 2      |
 | Loading         | [loading.md](./loading.md)                 | 0        | 5       | 4       | 3      |
@@ -43,9 +43,9 @@ last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
 | Utilities       | [\_utilities.md](./_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **10**   | **123** | **79**  | **64** |
+| **TOTAL**       | **28 files**                               | **8**    | **118** | **75**  | **61** |
 
-Всего **276 issues** распределены по 28 документам аудита. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
+Всего **262 issues** распределены по 28 документам аудита (Dialog ✅ полностью закрыт 2026-05-11 → перенесён в `./done/`). Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
 
 ## Fix roadmap (live tracker)
 
@@ -108,7 +108,7 @@ last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<
 - [x] [InputLayout.vue:205-210](../../lib/inputlayout/InputLayout.vue#L205-L210) — anonymous ResizeObserver на `afterInput` сохранить (`let afterObserver`) + disconnect ([InputLayout.vue:232-237](../../lib/inputlayout/InputLayout.vue#L232-L237)) · [inputlayout.md Issue 2](./inputlayout.md) · ✅ resolved 2026-05-11
 - [ ] [Table.vue:1519-1527](../../lib/table/Table.vue#L1519) — `lastRowVisibleObserver` (IntersectionObserver) добавить в `onUnmounted` disconnect · [table.md Issue 2](./table.md)
 - [ ] [Table.vue:1553-1554](../../lib/table/Table.vue#L1553) — `window.mousemove`/`mouseup` cleanup при unmount-while-resize · [table.md Issue 2](./table.md)
-- [ ] [Dialog.vue:155](../../lib/dialog/Dialog.vue#L155) — `escapeListener` cleanup при unmount-while-open + восстановление `body.style.overflow` · [dialog.md Issue 2](./dialog.md)
+- [x] [Dialog.vue](../../lib/dialog/Dialog.vue) — `escapeListener` cleanup в `onBeforeUnmount` + reference-counted scroll lock release; `body.style.overflow` восстановление через [lib/utils/scrollLockHandler.ts](../../lib/utils/scrollLockHandler.ts) · [done/dialog.md Issue 2](./done/dialog.md) · ✅ resolved 2026-05-12
 
 **Acceptance:** mount/unmount × 100 в Chrome Memory profiler — heap не растёт (для каждого из 6 компонентов отдельный test). DevTools Performance не показывает retained DOM-узлов с listeners.
 
@@ -148,13 +148,13 @@ last-changes: 2026-05-11 — label: закрыто 7 of 10 issues (1 for-id + `<
 
 #### 2.3 SSR style injection
 
-- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, ~~Label~~ ✅ 2026-05-11, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Aria~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, ~~Alert~~ ✅ 2026-05-11, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Loading, Icons. **Прогресс:** 7 / 22.
+- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, ~~Label~~ ✅ 2026-05-11, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Aria~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, ~~Alert~~ ✅ 2026-05-11, ~~Dialog~~ ✅ 2026-05-12, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Menu, Loading, Icons. **Прогресс:** 8 / 22.
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue { ... }` (или настраиваемый layer name из `optionsTheme.layers`) · [theme.md Issue 4](./theme.md)
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — HMR teardown: replace content existing `<style>` element, не append new · [component-class.md Issue 3](./component-class.md)
 
 #### 2.4 Body scroll lock — reference counted
 
-- [ ] [Dialog.vue:147-148, 157-159](../../lib/dialog/Dialog.vue#L147) — заменить string-concat `body.style.overflow` на reference-counted `useScrollLock` (VueUse) или собственный singleton с counter · [dialog.md Issue 3](./dialog.md)
+- [x] [Dialog.vue](../../lib/dialog/Dialog.vue) — заменено на reference-counted singleton [lib/utils/scrollLockHandler.ts](../../lib/utils/scrollLockHandler.ts) (`lockBodyScroll` / `unlockBodyScroll` + counter + сохранение оригинальных `body.style.overflow` / `paddingRight`) · [done/dialog.md Issue 3](./done/dialog.md) · ✅ resolved 2026-05-12 · готов к переиспользованию Split
 - [ ] [Split.vue:525, 534, 558-559](../../lib/split/Split.vue#L525) — `document.body.classList.add(cursorClass)` → локальный overlay div `<div class="split-drag-overlay">` (без global state мутации) · [split.md Issue 1](./split.md)
 
 **Acceptance:** `pnpm sandbox:build` + analyzer показывает ~70% bundle reduction для consumer не использующего Calendar/TextEditor/много heroicons. SSR-render через `renderToString` содержит inline `<style>` с правилами компонентов (snapshot test). DevTools Memory: HMR-обновление компонента 50× → один `<style>` в head, не 50.

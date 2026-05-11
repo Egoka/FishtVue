@@ -7,6 +7,7 @@ import * as objectHandler from "fishtvue/utils/objectHandler"
 import * as colorsHandler from "fishtvue/utils/colorsHandler"
 import * as functionHandler from "fishtvue/utils/functionHandler"
 import * as rulesHandler from "fishtvue/utils/rulesHandler"
+import * as scrollLockHandler from "fishtvue/utils/scrollLockHandler"
 import * as tailwindHandler from "fishtvue/utils/tailwindHandler"
 import * as uniqueCollection from "fishtvue/utils/uniqueCollection"
 
@@ -20,6 +21,7 @@ export default {
   colorsHandler,
   functionHandler,
   rulesHandler,
+  scrollLockHandler,
   tailwindHandler,
   uniqueCollection
 }

@@ -73,6 +73,44 @@ export declare type DialogProps = {
    * @type {StyleClass | undefined}
    */
   classBody?: StyleClass
+
+  /**
+   * Accessible label для корневого элемента dialog. Используется, когда нет
+   * заголовка, к которому можно привязать `aria-labelledby`. Не комбинируется
+   * с `ariaLabelledby` — `aria-labelledby` имеет приоритет в браузерах.
+   * @type {string | undefined}
+   */
+  ariaLabel?: string
+
+  /**
+   * ID элемента-заголовка для связки через `aria-labelledby`. Потребитель
+   * должен сам выставить этот id на узел title внутри default slot.
+   * @type {string | undefined}
+   */
+  ariaLabelledby?: string
+
+  /**
+   * ID элемента-описания для связки через `aria-describedby`. Потребитель
+   * должен сам выставить этот id на узел description внутри default slot.
+   * @type {string | undefined}
+   */
+  ariaDescribedby?: string
+
+  /**
+   * CSS-селектор внутри dialog для автофокуса при open. По умолчанию — первый
+   * focusable элемент. Полезно для confirmation-dialog'ов, где Cancel
+   * должен быть выбран по умолчанию.
+   * @type {string | undefined}
+   */
+  initialFocus?: string
+
+  /**
+   * Возвращать ли focus на trigger element (тот, что был активен до open)
+   * при close. По умолчанию `true`. Установи `false` для programmatic-flow,
+   * где focus управляется снаружи.
+   * @type {boolean | undefined}
+   */
+  returnFocus?: boolean
 }
 
 export declare type DialogSlots = {
@@ -163,11 +201,32 @@ export declare type DialogExpose = {
    */
   classDialog: StyleClass
 
+  /**
+   * Trigger element, который был активен до open. Сохраняется автоматически
+   * для focus return. `null` пока dialog не открывался.
+   * @type {HTMLElement | null}
+   */
+  triggerEl: HTMLElement | null
+
+  /**
+   * Reference на корневой DOM-узел dialog (контейнер с `role="dialog"`).
+   * Полезен для programmatic focus, axe-core тестов и интеграций.
+   * @type {HTMLElement | null}
+   */
+  dialogContentRef: HTMLElement | null
+
   // ---METHODS-----------------------
   /**
    * Closes the dialog.
    */
   closeDialog(): void
+
+  /**
+   * Программно ставит focus на initialFocus selector или первый focusable
+   * элемент внутри dialog. Используется тестами и при необходимости
+   * re-focus после dynamic content updates.
+   */
+  focusFirst(): void
 }
 export declare type DialogOption = Pick<
   DialogProps,
@@ -180,6 +239,11 @@ export declare type DialogOption = Pick<
   | "withoutMargin"
   | "notCloseBackground"
   | "toTeleport"
+  | "ariaLabel"
+  | "ariaLabelledby"
+  | "ariaDescribedby"
+  | "initialFocus"
+  | "returnFocus"
 >
 
 // ---------------------------------------
