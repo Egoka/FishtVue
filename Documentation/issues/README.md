@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-11
-last-changes: inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 (XSS slots для help/messageInvalid, ResizeObserver cleanup, clipboard feature-detect + execCommand fallback, offsetTop prop вместо querySelector("header"), aria-live="assertive" на error region, локализованный inputLayout.copied). Файл остаётся в active — open cross-cutting Issues 4 / 8. accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slot, WAI-ARIA disclosure, keyboard nav, Transition unmount), файл перемещён в `./done/` (cross-cutting Issues 2/5/7 трекаются глобально). button — Issues 2, 4, 10, 11, 12 закрыты 2026-05-10 (a11y, ref forwarding, motion-safe, typed click, start/end slots), часть перемещена в [done/button.md](./done/button.md); active button.md содержит 11 открытых (нумерация с gaps). icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2/8 docs portion закрыты; файл перемещён в `./done/`. badge — Issues 2, 4, 5 закрыты, файл перемещён в `./done/`. utilities — 9 issues ранее закрыты. severity matrix пересчитана 14/136/96/70 (316 issues); roadmap Wave 1.1, 1.2, 4.4, 10.6 (inputlayout × 6) + Wave 1.1, 4.2, 4.3, 10.6 (accordion) + Wave 4.2 + Wave 10.3/10.4 (button/icons/badge) чекбоксы отмечены; cross-references в label/split/input/alert/pagination/menu/fixwindow/select/dialog/separator/switch на «button.md Issue 10» перенаправлены на done/button.md (motion-safe pattern); switch на «button.md Issue 4» аналогично.
+last-changes: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 закрыты 2026-05-11 (Input-localized scope; initStyle dedup, Input.componentsStyle() fallback, passwordToggleClass override, type union → tel/url/search, phoneFormats prop+option, autocomplete auto-defaults, motion-safe transitions, focus(eventOrOptions?) argless, @media print стили, RTL eye-icon тест, emit semantics docs §6.1-6.3). Файл остаётся в active — open cross-cutting Issues 3 (packaging Wave 2.1), 4 (unstyled Wave 3.1). inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 (XSS slots для help/messageInvalid, ResizeObserver cleanup, clipboard feature-detect + execCommand fallback, offsetTop prop вместо querySelector("header"), aria-live="assertive" на error region, локализованный inputLayout.copied). Файл остаётся в active — open cross-cutting Issues 4 / 8. accordion — Issues 1, 3, 4, 6 закрыты 2026-05-11 (XSS slot, WAI-ARIA disclosure, keyboard nav, Transition unmount), файл перемещён в `./done/` (cross-cutting Issues 2/5/7 трекаются глобально). button — Issues 2, 4, 10, 11, 12 закрыты 2026-05-10 (a11y, ref forwarding, motion-safe, typed click, start/end slots), часть перемещена в [done/button.md](./done/button.md); active button.md содержит 11 открытых (нумерация с gaps). icons — Issues 3 (ARIA), 4 (variant deprecation), 5 (type narrowing), 2/8 docs portion закрыты; файл перемещён в `./done/`. badge — Issues 2, 4, 5 закрыты, файл перемещён в `./done/`. utilities — 9 issues ранее закрыты. severity matrix пересчитана 14/134/91/67 (305 issues; −11 input); roadmap Wave 2.3 (Input ✓), Wave 3.2 (Input ✓), Wave 10.1 (Input motion-safe ✓), Wave 10.5/10.6 (Input print/RTL/docs ✓) чекбоксы отмечены; cross-references в label/split/input/alert/pagination/menu/fixwindow/select/dialog/separator/switch на «button.md Issue 10» перенаправлены на done/button.md (motion-safe pattern); switch на «button.md Issue 4» аналогично.
 ---
 
 # Issues — Index
@@ -18,7 +18,7 @@ last-changes: inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 
 | Button          | [button.md](./button.md)                   | 0        | 5       | 5       | 1      |
 | Label           | [label.md](./label.md)                     | 0        | 4       | 3       | 2      |
 | Switch          | [switch.md](./switch.md)                   | 1        | 5       | 4       | 3      |
-| Input           | [input.md](./input.md)                     | 0        | 4       | 5       | 3      |
+| Input           | [input.md](./input.md)                     | 0        | 2       | 0       | 0      |
 | Aria            | [aria.md](./aria.md)                       | 0        | 4       | 4       | 3      |
 | Select          | [select.md](./select.md)                   | 2        | 6       | 4       | 3      |
 | Calendar        | [calendar.md](./calendar.md)               | 1        | 6       | 4       | 3      |
@@ -43,9 +43,9 @@ last-changes: inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
 | Utilities       | [\_utilities.md](./done/_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **14**   | **136** | **96**  | **70** |
+| **TOTAL**       | **28 files**                               | **14**   | **134** | **91**  | **67** |
 
-Всего **316 issues** распределены по 28 documentов аудита. Закрыты:
+Всего **305 issues** распределены по 28 documentов аудита. Закрыты:
 
 - [\_utilities.md](./done/_utilities.md) 2026-05-10 — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11.
 - [badge.md](./done/badge.md) 2026-05-10 — Issues 2, 4, 5; файл перемещён в `./done/`, остальные пункты Badge — cross-cutting.
@@ -53,6 +53,7 @@ last-changes: inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 
 - [button.md](./done/button.md) 2026-05-10 — Issues 2 (a11y aria-label), 4 (buttonRef expose), 10 (motion-safe), 11 (typed click emit), 12 (start/end slots). Активный [button.md](./button.md) содержит 11 открытых issues (нумерация с gaps — cross-references из соседних файлов сохранены).
 - [accordion.md](./done/accordion.md) 2026-05-11 — Issues 1 (XSS slot), 3 (WAI-ARIA disclosure), 4 (keyboard nav), 6 (Transition unmount). Файл перемещён в `done/` несмотря на 3 открытых cross-cutting issues 2/5/7 (отслеживаются глобально через roadmap waves 6.5 / 2/3 / 8/9/10).
 - [inputlayout.md](./inputlayout.md) 2026-05-11 — Issues 1 (XSS via help/messageInvalid → slot fallback), 2 (anonymous ResizeObservers cleanup), 3 (clipboard feature-detect + execCommand fallback), 5 (offsetTop prop replaces hardcoded querySelector("header")), 6 (aria-live="assertive" on error region), 7 (locale `inputLayout.copied`). Файл **остаётся в active** — open cross-cutting Issues 4 (Distribution: sideEffects/exports map / unstyled) и Issue 8 (prefers-reduced-motion / colors / print) трекаются глобально через Wave 2/3/10. **Cross-cutting эффект:** XSS-канал через `messageInvalid`/`help` закрыт во всех 5 form-controls (Input/Aria/Select/Calendar/TextEditor — наследуют InputLayout); slot-forwarding в них — follow-up PR.
+- [input.md](./input.md) 2026-05-11 — Issues 1 (initStyle dedup в Input.vue → полагается на `Component.__hooks()`), 2 (`Input.componentsStyle()` в fallback chain), 5 (`passwordToggleClass` override + theme-токены вместо cyan-_), 6 (`type` union расширен `tel`/`url`/`search`), 7 (`phoneFormats` prop+option + расширение `toPhone(e, options)` в numberHandler.ts), 8 (`autocomplete` auto-defaults по type + `InputAutocomplete` widened union), 9 (`motion-safe:transition-all` вместо unconditional), 10 (`focus(eventOrOptions?: FocusEvent | FocusOptions)` argless + FocusOptions), 11 (`@media print` стили на classBaseInput), 12 (RTL eye-icon тест), 13 (docs-only: §6.1-6.3 explicit timing + `update:isInvalid` reset-сигнал). Файл **остаётся в active** — open cross-cutting Issues 3 (packaging Wave 2.1) и 4 (unstyled Wave 3.1). Tests: 17 → 41 (+24 audit-кейсов). Cross-cutting: argless focus и componentsStyle fallback не применены к Aria/Select/Calendar/TextEditor — отдельные строчки в Wave 3.2 (componentsStyle) и Wave 10.7 (argless focus pattern).
 
 ## Fix roadmap (live tracker)
 
@@ -156,7 +157,7 @@ last-changes: inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 
 
 #### 2.3 SSR style injection
 
-- [ ] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, Label, Switch, Input, Aria, Select, Calendar, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons.
+- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, Label, Switch, ~~Input~~ ✅ 2026-05-11, Aria, Select, Calendar, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons. **Прогресс:** 1 / 22.
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue { ... }` (или настраиваемый layer name из `optionsTheme.layers`) · [theme.md Issue 4](./theme.md)
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — HMR teardown: replace content existing `<style>` element, не append new · [component-class.md Issue 3](./component-class.md)
 
@@ -186,7 +187,7 @@ last-changes: inputlayout — Issues 1, 2, 3, 5, 6, 7 закрыты 2026-05-11 
 Унификация: все form-controls с `mode` prop должны учитывать `Component.componentsStyle()` в fallback chain.
 
 - [ ] [Button.vue:301-303](../../lib/button/Button.vue#L301) — добавить `Button.componentsStyle()` mapping (`filled→primary`, `outlined→outline`, `underlined→ghost`) · [button.md Issue 13](./button.md)
-- [ ] [Input.vue:42](../../lib/input/Input.vue#L42) — добавить `?? Input.componentsStyle()` в fallback · [input.md Issue 2](./input.md)
+- [x] [Input.vue:62-64](../../lib/input/Input.vue#L62-L64) — добавить `?? Input.componentsStyle()` в fallback · [input.md Issue 2](./input.md) ✅ 2026-05-11
 - [ ] [Aria.vue:49](../../lib/aria/Aria.vue#L49) — добавить `?? Aria.componentsStyle()` · [aria.md Issue 4](./aria.md)
 - [ ] [Select.vue](../../lib/select/Select.vue) — добавить `?? Select.componentsStyle()` · [select.md Issue 5](./select.md)
 - [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — добавить `?? Calendar.componentsStyle()` · [calendar.md Issue 6](./calendar.md)
@@ -365,7 +366,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [rulesHandler.ts / rulesMethods.ts](../../lib/utils/rulesHandler.ts) — validation messages через `t("validation.required")` keys + добавить ключи в [locales/{en,ru}.ts](../../lib/locale/locales/) · [form.md Issue 6](./form.md)
 - [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — пробросить FishtVue locale в v-calendar · [calendar.md Issue 8](./calendar.md)
 - [ ] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — Quill toolbar tooltips через i18n · [texteditor.md Issue 8, 9](./texteditor.md)
-- [ ] [numberHandler.convertToPhone](../../lib/utils/numberHandler.ts) — параметризовать по locale · [input.md Issue 7](./input.md)
+- [~] [numberHandler.convertToPhone](../../lib/utils/numberHandler.ts) — параметризовать по locale · [input.md Issue 7](./input.md). **Прогресс 2026-05-11:** `phoneFormats` пробрасывается через `InputProps.phoneFormats` + `InputOption.phoneFormats`; `toPhone(e, options)` расширен. Auto-bind к активной локали — оставлен на следующую итерацию (требует расширения `lib/locale/` + либо `libphonenumber-js` peer-dep, либо встроенной таблицы locale → PhoneFormat[]).
 - [ ] [Select.vue search](../../lib/select/Select.vue) — фильтрация через `Intl.Collator(locale, { sensitivity: 'base' })` · [select.md Issue 10](./select.md)
 - [ ] Локализация UI-текстов (Pagination prev/next уже есть): Loading aria-label, Alert Confirm/Cancel, Dialog title, и т.д.
 
@@ -396,12 +397,12 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.1 prefers-reduced-motion
 
-- [ ] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([done/button.md Issue 10](./done/button.md)) — pattern готов к применению на остальных 21 компонента
+- [~] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([done/button.md Issue 10](./done/button.md)) — pattern готов к применению на остальных 21 компонента. **Прогресс 2026-05-11:** Input ([Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98)) ✅. 2 / 22.
 - [ ] [Loading.vue](../../lib/loading/Loading.vue) — статичный fallback (loader-circle outline) в reduced-motion mode · [loading.md Issue 6](./loading.md)
 
 #### 10.2 Print styles
 
-- [ ] Глобальный `@media print` блок: интерактивные компоненты (Button, Select, Loading) скрываются или упрощаются · [button.md Issue 15](./button.md)
+- [~] Глобальный `@media print` блок: интерактивные компоненты (Button, Select, Loading) скрываются или упрощаются · [button.md Issue 15](./button.md). **Прогресс 2026-05-11:** Input ([Input.vue:90](../../lib/input/Input.vue#L90)) получил `print:border print:border-black print:bg-white print:text-black print:shadow-none`. Pattern зафиксирован, но цельного `@media print` блока ещё нет.
 
 #### 10.3 Polymorphic & composition
 
@@ -423,7 +424,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [ ] [Switch.vue:244](../../lib/switch/Switch.vue#L244) — `<input type="hidden">` рядом с `<button role="switch">` для native form integration · [switch.md Issue 3](./switch.md)
 - [ ] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — hidden `<input>` для native form submit · [texteditor.md Issue 10](./texteditor.md)
 - [ ] [Form.vue](../../lib/form/Form.vue) — корень `<form>` (после Wave 6.2) · [form.md Issue 4](./form.md)
-- [ ] [Input.vue:31](../../lib/input/Input.vue#L31) — расширить `arrayInputType` ["text","number","email","password","tel","url","search"] · [input.md Issue 6](./input.md)
+- [x] [Input.vue:31-39](../../lib/input/Input.vue#L31-L39) — расширить `arrayInputType` ["text","number","email","password","tel","url","search"] · [input.md Issue 6](./input.md) ✅ 2026-05-11
 - [ ] [Loading.d.ts](../../lib/loading/Loading.d.ts) — `LoadingOption` включить `type` · [loading.md Issue 4](./loading.md)
 
 #### 10.5 Window.FishtVue coupling cleanup
@@ -433,8 +434,8 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 #### 10.6 Other architecture
 
 - [x] [Animation transitions](../../lib/accordion/Accordion.vue) — `<Transition :css="false">` с JS `@leave` hook для unmount-safe collapse · [accordion.md Issue 6](./done/accordion.md) · ✅ resolved 2026-05-11
-- [ ] [Input.vue:175](../../lib/input/Input.vue#L175) — `focus(event?: FocusEvent)` argless вариант · [input.md Issue 10](./input.md)
-- [ ] [Input.vue:213](../../lib/input/Input.vue#L213) — eye-icon class через computed (option `passwordToggleClass`) · [input.md Issue 5](./input.md)
+- [x] [Input.vue:212-220](../../lib/input/Input.vue#L212-L220) — `focus(eventOrOptions?: FocusEvent | FocusOptions)` argless + FocusOptions вариант · [input.md Issue 10](./input.md) ✅ 2026-05-11
+- [x] [Input.vue:96-102](../../lib/input/Input.vue#L96-L102), [Input.vue:255-266](../../lib/input/Input.vue#L255-L266) — eye-icon class через computed (option `passwordToggleClass`, theme-токены) · [input.md Issue 5](./input.md) ✅ 2026-05-11
 - [x] [InputLayout.vue:177-211](../../lib/inputlayout/InputLayout.vue#L177-L211) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` (number / string / `() => number`) + `resolveOffsetTop()` · [inputlayout.md Issue 5](./inputlayout.md) · ✅ resolved 2026-05-11
 - [x] [InputLayout.vue:253-298](../../lib/inputlayout/InputLayout.vue#L253-L298) — `clipboard.writeText` feature-detect + `legacyCopy()` execCommand fallback + SSR guard · [inputlayout.md Issue 3](./inputlayout.md) · ✅ resolved 2026-05-11
 - [ ] [Switch.vue:232-234](../../lib/switch/Switch.vue#L232) — help-icon contrast (`text-gray-400` → `text-gray-500` light) · [switch.md Issue 6](./switch.md)
