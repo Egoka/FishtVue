@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from "vue"
+  import { computed, ref, watch } from "vue"
   import type { SwitchEmits, SwitchProps } from "./Switch"
   import type { StyleClass, StyleMode } from "fishtvue/types"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -117,8 +117,8 @@
           ])
         : ""
   )
-  const classAfterInput = ref(Switch.setStyle("relative inset-y-0 right-0 flex items-center"))
-  const classIconBody = ref(Switch.setStyle("relative h-5 w-5 mr-2"))
+  const classAfterInput = ref(Switch.setStyle("relative inset-y-0 end-0 flex items-center"))
+  const classIconBody = ref(Switch.setStyle("relative h-5 w-5 me-2"))
   const classIconContent = ref(
     Switch.setStyle(
       "p-3 rounded-md shadow-lg " +
@@ -135,10 +135,16 @@
       "h-4 w-4 shadow-sm ring-1 ring-gray-900/5 transition-all duration-300 ease-in-out"
     ])
   )
+  // ---TEMPLATE-REF------------------------
+  // Единый ref на текущий native control (button[role=switch] или input[type=checkbox]).
+  // v-if в шаблоне гарантирует, что в DOM присутствует только один из них.
+  const inputRef = ref<HTMLElement | undefined>()
   // ---EXPOSE------------------------------
   defineExpose({
     // ---STATE-------------------------------
     isActiveSwitch,
+    // ---REFS--------------------------------
+    inputRef,
     // ---PROPS-------------------------------
     id,
     mode,
@@ -152,12 +158,13 @@
     classBaseSwitch,
     classSwitch,
     // ---METHODS-----------------------------
-    inputEvent
+    inputEvent,
+    focus,
+    blur
   })
-  // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
-    Switch.initStyle()
-  })
+
+  // `Switch.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
 
   // ---METHODS-----------------------------
   function inputEvent(value: boolean) {
@@ -166,21 +173,44 @@
 
   function inputModelValue(value: any) {
     emit("update:modelValue", value)
-    emit("updateModelValue", value)
   }
 
   function changeModelValue(value: any) {
     emit("change:modelValue", value)
+  }
+
+  function focus(options?: FocusOptions) {
+    inputRef.value?.focus(options)
+  }
+
+  function blur() {
+    inputRef.value?.blur()
   }
 </script>
 
 <template>
   <div data-switch :class="classBaseSwitch">
     <div :class="classInputDiv">
+      <!--
+        Switch mode: visible <button role="switch"> участвует в a11y/UX, а скрытый
+        <input type="checkbox"> рядом обеспечивает FormData submission в native <form>.
+        Скрытый input не фокусируется (tabindex=-1, aria-hidden) — это исключительно
+        bridge между button-style UI и native form-control семантикой.
+      -->
+      <input
+        v-if="switchingType === 'switch'"
+        data-switch-form-bridge
+        :name="id"
+        :checked="modelValue as boolean"
+        :disabled="isDisabled"
+        type="checkbox"
+        tabindex="-1"
+        aria-hidden="true"
+        hidden />
       <button
         v-if="switchingType === 'switch'"
+        ref="inputRef"
         :id="id"
-        :name="id"
         data-input-switch
         role="switch"
         type="button"
@@ -208,6 +238,7 @@
       </button>
       <input
         v-else-if="switchingType === 'checkbox'"
+        ref="inputRef"
         data-input-checkbox
         :id="id as string"
         :name="id"
@@ -228,10 +259,10 @@
     </div>
     <slot />
     <span data-switch-after ref="afterInput" :class="classAfterInput">
-      <div data-switch-help v-if="help?.length" :class="classIconBody">
+      <div data-switch-help v-if="help?.length || $slots.help" :class="classIconBody">
         <Icons
           type="QuestionMarkCircle"
-          class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 transition cursor-help" />
+          class="text-gray-500 dark:text-gray-400 hover:text-yellow-500 transition cursor-help" />
         <FixWindow
           :mode="mode as StyleMode"
           event-open="click"
@@ -241,7 +272,9 @@
           class-body="z-20"
           stop-open-propagation
           class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
-          <div v-html="help" :class="classIconContent" />
+          <slot name="help">
+            <div :class="classIconContent">{{ help }}</div>
+          </slot>
         </FixWindow>
       </div>
     </span>

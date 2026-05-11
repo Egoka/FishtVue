@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-11
-last-changes: 2026-05-11 — revert: возвращены из `./done/` файлы accordion, badge, icons, _utilities; resolved-блоки done/button.md слиты обратно в button.md (Issues 2/4/10/11/12 зачёркнуты с `✅ resolved`-маркерами, нумерация сохранена). Все ссылки `./done/X.md` в README заменены на `./X.md`. Закрытые ранее: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (2026-05-11); inputlayout — Issues 1, 2, 3, 5, 6, 7 (2026-05-11); accordion — Issues 1, 3, 4, 6 (2026-05-11); button — Issues 2, 4, 10, 11, 12 (2026-05-10); icons — Issues 3, 4, 5 + 2/8 docs portion (2026-05-10); badge — Issues 2, 4, 5 (2026-05-10); utilities — 9 issues ранее. Button row пересчитан 5/5/1 → 6/6/4 после merge (включает 5 ранее закрытых Issues 2/4/10/11/12). Severity matrix: 14/135/92/70 = 311 issues (+5 button closed reintegrated, было 305). Roadmap чекбоксы — single-source-of-truth прогресса.
+last-changes: 2026-05-11 — switch: закрыто 9 of 14 issues (1 critical XSS via #help slot, 2 drop updateModelValue alias, 3 hidden checkbox form-bridge, 4 drop dup onMounted initStyle, 6 contrast text-gray-500, 8 logical end-0/me-2, 9 closed-union types, 11 inputRef + focus/blur expose, 13 switchingType vs componentsStyle doc). Switch row пересчитан 1/5/4/3 → 0/2/0/3. Wave 1.1 checkbox для Switch.vue:244 — closed. Wave 2.3 progress 1/22 → 2/22 (Input + Switch). Severity matrix: 14/135/92/70 → 13/132/88/70 = 303 issues. Раньше: revert moves to ./done/, merged done/button.md into button.md. Закрытые ранее: input — Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (2026-05-11); inputlayout — Issues 1, 2, 3, 5, 6, 7 (2026-05-11); accordion — Issues 1, 3, 4, 6 (2026-05-11); button — Issues 2, 4, 10, 11, 12 (2026-05-10); icons — Issues 3, 4, 5 + 2/8 docs portion (2026-05-10); badge — Issues 2, 4, 5 (2026-05-10); utilities — 9 issues ранее. Roadmap чекбоксы — single-source-of-truth прогресса.
 ---
 
 # Issues — Index
@@ -17,7 +17,7 @@ last-changes: 2026-05-11 — revert: возвращены из `./done/` фай�
 | --------------- | ------------------------------------------ | -------- | ------- | ------- | ------ |
 | Button          | [button.md](./button.md)                   | 0        | 6       | 6       | 4      |
 | Label           | [label.md](./label.md)                     | 0        | 4       | 3       | 2      |
-| Switch          | [switch.md](./switch.md)                   | 1        | 5       | 4       | 3      |
+| Switch          | [switch.md](./switch.md)                   | 0        | 2       | 0       | 3      |
 | Input           | [input.md](./input.md)                     | 0        | 2       | 0       | 0      |
 | Aria            | [aria.md](./aria.md)                       | 0        | 4       | 4       | 3      |
 | Select          | [select.md](./select.md)                   | 2        | 6       | 4       | 3      |
@@ -43,9 +43,9 @@ last-changes: 2026-05-11 — revert: возвращены из `./done/` фай�
 | Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
 | Utilities       | [\_utilities.md](./_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **14**   | **135** | **92**  | **70** |
+| **TOTAL**       | **28 files**                               | **13**   | **132** | **88**  | **70** |
 
-Всего **311 issues** распределены по 28 документам аудита. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
+Всего **303 issues** распределены по 28 документам аудита. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
 
 ## Fix roadmap (live tracker)
 
@@ -77,7 +77,7 @@ last-changes: 2026-05-11 — revert: возвращены из `./done/` фай�
 
 Унифицированный fix: заменить `v-html="X"` на `<slot name="X"><span>{{ X }}</span></slot>`. Сохраняет custom HTML только при явном использовании slot потребителем.
 
-- [ ] [Switch.vue:244](../../lib/switch/Switch.vue#L244) — `help` prop → `#help` slot · [switch.md Issue 1](./switch.md)
+- [x] [Switch.vue:268–270](../../lib/switch/Switch.vue#L268-L270) — `help` prop → `#help` slot · [switch.md Issue 1](./switch.md) · ✅ resolved 2026-05-11
 - [x] [InputLayout.vue:359-364](../../lib/inputlayout/InputLayout.vue#L359-L364) — `help` prop → `#help` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает help-XSS во ВСЕХ form-controls** (Input/Aria/Select/Calendar/TextEditor наследуют InputLayout) · ✅ resolved 2026-05-11
 - [x] [InputLayout.vue:382-388](../../lib/inputlayout/InputLayout.vue#L382-L388) — `messageInvalid` prop → `#messageInvalid` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает validation-XSS во ВСЕХ form-controls** · ✅ resolved 2026-05-11
 - [ ] [Select.vue:553](../../lib/select/Select.vue#L553) — `item.marker` → `#item-marker` scoped slot + safe `<mark>` VNode-builder · [select.md Issue 1](./select.md)
@@ -149,7 +149,7 @@ last-changes: 2026-05-11 — revert: возвращены из `./done/` фай�
 
 #### 2.3 SSR style injection
 
-- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, Label, Switch, ~~Input~~ ✅ 2026-05-11, Aria, Select, Calendar, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons. **Прогресс:** 1 / 22.
+- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, Label, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, Aria, Select, Calendar, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons. **Прогресс:** 2 / 22.
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue { ... }` (или настраиваемый layer name из `optionsTheme.layers`) · [theme.md Issue 4](./theme.md)
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — HMR teardown: replace content existing `<style>` element, не append new · [component-class.md Issue 3](./component-class.md)
 

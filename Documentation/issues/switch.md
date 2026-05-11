@@ -1,7 +1,7 @@
 ---
 title: Issues — Switch
-summary: Аудит Switch — CRITICAL XSS через v-html в help-prop, дубль updateModelValue, button-mode не submitting в native form, SSR-стили.
-updated: 2026-05-10
+summary: Аудит Switch — 9 of 14 закрыто 2026-05-11 (CRITICAL XSS via v-html → slot, дубль updateModelValue, native form bridge, SSR initStyle dedup, contrast, logical CSS properties, closed-union types, inputRef expose, switchingType doc). Остались 5 cross-cutting (sideEffects/exports, prefers-reduced-motion, unstyled, semantic tokens, print).
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/switch/
 related-doc: ../components/switch.md
@@ -13,16 +13,19 @@ related-doc: ../components/switch.md
 
 | Severity | Count | Categories                    |
 | -------- | ----- | ----------------------------- |
-| critical | 1     | C13/security (XSS via v-html) |
-| high     | 5     | A2, A4-5, C17, D26, M54       |
-| medium   | 4     | E29.6, F31, L53, G34          |
-| low      | 3     | E29.7, B10, N59               |
+| critical | 0     | — (Issue 1 resolved 2026-05-11) |
+| high     | 2     | A2/A4-5 (Issue 5), L53 (Issue 10) |
+| medium   | 0     | — (Issues 6/8/9/11/13 resolved 2026-05-11) |
+| low      | 3     | E29.7 (Issue 7), B10 (Issue 12), N59 (Issue 14) |
 
-## Issue 1: CRITICAL — XSS через `v-html` в `help` prop
+**Закрыто 2026-05-11:** Issues 1 (XSS → `#help` slot), 2 (drop `updateModelValue` alias), 3 (hidden checkbox bridge для FormData), 4 (drop duplicate `onMounted(initStyle)`), 6 (contrast `text-gray-500`), 8 (logical `end-0`/`me-2`), 9 (closed-union типы), 11 (`inputRef` + `focus`/`blur` expose), 13 (документация `switchingType` vs `componentsStyle`) — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references сохраняются.
+
+## ~~Issue 1: CRITICAL — XSS через `v-html` в `help` prop~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 (утечка / security) + custom security
-- **Severity:** **critical**
-- **Где:** [Switch.vue:244](../../lib/switch/Switch.vue#L244), [Switch.d.ts:82-83](../../lib/switch/Switch.d.ts#L82-L83)
+- **Severity:** ~~**critical**~~
+- **Где:** [Switch.vue:268–270](../../lib/switch/Switch.vue#L268-L270), [Switch.d.ts:83](../../lib/switch/Switch.d.ts#L83)
+- **Resolution:** `<div v-html="help">` заменён на `<slot name="help"><div :class="classIconContent">{{ help }}</div></slot>`. `SwitchSlots` расширен `help?(): VNode[]`. Outer `v-if="help?.length || $slots.help"` обеспечивает icon-trigger при slot-only-usage. Тесты в `Switch.test.ts` блок «Security — XSS in help prop» (2 кейса) + «Help slot» (2 кейса) подтверждают, что `<img onerror>`/`<script>` payload'ы не исполняются.
 
 ### Что найдено
 
@@ -66,11 +69,12 @@ related-doc: ../components/switch.md
 - [ ] Тест: `mount(Switch, { props: { help: '<img src=x onerror=...>' } })` — ассерт что DOM не содержит `<img>` элемент.
 - [ ] Аудит других компонентов — v-html отсутствует или санитизирован.
 
-## Issue 2: Дубликат события `updateModelValue` (camelCase) рядом с `update:modelValue`
+## ~~Issue 2: Дубликат события `updateModelValue` (camelCase) рядом с `update:modelValue`~~ ✅ resolved 2026-05-11
 
 - **Категория:** D26 (консистентность событий)
-- **Severity:** high
-- **Где:** [Switch.vue:168-169](../../lib/switch/Switch.vue#L168-L169), [Switch.d.ts:113-118](../../lib/switch/Switch.d.ts#L113-L118)
+- **Severity:** ~~high~~
+- **Где:** [Switch.vue:174–176](../../lib/switch/Switch.vue#L174-L176), [Switch.d.ts:114–127](../../lib/switch/Switch.d.ts#L114-L127)
+- **Resolution:** Удалена строка `emit("updateModelValue", value)` из `inputModelValue()` и удалена соответствующая entry в `SwitchEmits`. Тест блока «Emits — no duplicate updateModelValue» в `Switch.test.ts` подтверждает, что событие НЕ эмитится в switch- и checkbox-режимах. **Breaking change:** подписчики `@update-model-value` обязаны мигрировать на `@update:model-value`.
 
 ### Что найдено
 
@@ -100,11 +104,12 @@ function inputModelValue(value: any) {
 
 - [ ] `mount(Switch).find('input').trigger('change')` → `wrapper.emitted('update:modelValue')` is truthy, `wrapper.emitted('updateModelValue')` is undefined.
 
-## Issue 3: Switch с `switchingType: "switch"` использует `<button>` — не submitting в native form
+## ~~Issue 3: Switch с `switchingType: "switch"` использует `<button>` — не submitting в native form~~ ✅ resolved 2026-05-11
 
 - **Категория:** M54 (Native form integration)
-- **Severity:** high
-- **Где:** [Switch.vue:180-208](../../lib/switch/Switch.vue#L180-L208)
+- **Severity:** ~~high~~
+- **Где:** [Switch.vue:201–238](../../lib/switch/Switch.vue#L201-L238)
+- **Resolution:** Перед visible `<button role="switch">` рендерится скрытый bridge `<input type="checkbox" data-switch-form-bridge :name="id" :checked="modelValue" :disabled="isDisabled" hidden tabindex="-1" aria-hidden="true">`. Visible button сохраняет UX/a11y, hidden input участвует в `FormData`. `id` атрибут переехал с input'а bridge на button (чтобы избежать дубля). Тесты «Native form integration» (4 кейса) подтверждают: `modelValue=true` → `FormData.get(id) === "on"`, `false` → ключ отсутствует, `disabled=true` → ключ отсутствует, checkbox-режим — no regression.
 
 ### Что найдено
 
@@ -135,13 +140,12 @@ function inputModelValue(value: any) {
 - [ ] `<form>` submit включает значение Switch в FormData.
 - [ ] Аналогично работает с native fetch/XHR `body: new FormData(form)`.
 
-## Issue 4: Стили SSR не инжектятся
+## ~~Issue 4: Стили SSR не инжектятся~~ ✅ resolved 2026-05-11
 
 - **Категория:** C17
-- **Severity:** high
-- **Где:** [Switch.vue:158-160](../../lib/switch/Switch.vue#L158-L160)
-
-См. [button.md Issue 1](./button.md) — cross-cutting.
+- **Severity:** ~~high~~
+- **Где:** ~~`Switch.vue:158-160`~~ (блок удалён)
+- **Resolution:** Удалён дублирующий блок `onMounted(() => Switch.initStyle())`. Базовый `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) уже регистрирует `onServerPrefetch + vueOnMounted` → `initStyle()` в конструкторе — теперь Switch следует канону из [dev-patterns.md §2](../dev-patterns.md#2-decisions). Wave 2.3 progress: 2/22 SFC migrated (Input + Switch). Полный cross-cutting SSR-style fix (layer wrapping, HMR teardown) остаётся в [component-class.md Issue 3](./component-class.md) — общий вопрос, не switch-specific.
 
 ## Issue 5: Нет sideEffects/exports map
 
@@ -151,11 +155,12 @@ function inputModelValue(value: any) {
 
 См. [button.md Issue 8 и Issue 9](./button.md) — cross-cutting.
 
-## Issue 6: Контраст `text-gray-400` на `bg-gray-200` ниже WCAG AA
+## ~~Issue 6: Контраст `text-gray-400` на `bg-gray-200` ниже WCAG AA~~ ✅ resolved 2026-05-11
 
 - **Категория:** E29.6 (WCAG contrast)
-- **Severity:** medium
-- **Где:** [Switch.vue:232-234](../../lib/switch/Switch.vue#L232-L234)
+- **Severity:** ~~medium~~
+- **Где:** [Switch.vue:263–265](../../lib/switch/Switch.vue#L263-L265)
+- **Resolution:** Help icon класс `text-gray-400 dark:text-gray-600` → `text-gray-500 dark:text-gray-400`. Light mode contrast `#6b7280` на `#fafaf9` ≈ 5:1 — WCAG AA passes (4.5:1+ для UI text). Dark mode сохраняет читабельность через ослабление tint. axe-core тест не подключен в проекте; визуальная верификация + ручная проверка contrast ratio достаточны.
 
 ### Что найдено
 
@@ -191,11 +196,12 @@ Help icon `text-gray-400` (#9ca3af) на body `bg-stone-50` (#fafaf9) → contra
 
 См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern. Switch имеет `transition-all duration-300` без guard.
 
-## Issue 8: RTL — left/right специфичные классы (`right-0`, `mr-2`, `translate-x-3.5`)
+## ~~Issue 8: RTL — left/right специфичные классы (`right-0`, `mr-2`, `translate-x-3.5`)~~ ✅ resolved 2026-05-11 (partial)
 
 - **Категория:** F31
-- **Severity:** medium
+- **Severity:** ~~medium~~
 - **Где:** [Switch.vue:120](../../lib/switch/Switch.vue#L120), [Switch.vue:121](../../lib/switch/Switch.vue#L121), [Switch.vue:133](../../lib/switch/Switch.vue#L133)
+- **Resolution:** `classAfterInput` `right-0` → `end-0`; `classIconBody` `mr-2` → `me-2` (Tailwind logical properties). Тесты блока «Logical CSS properties (RTL)» подтверждают через regex. `translate-x-3.5` для switch thumb оставлен — это позиционирование внутри controlled-track, не зависящее от документа `dir`; для полноценной RTL-инверсии thumb-движения потребуется `[dir="rtl"]` selector в theme/uno.ts (выходит за scope switch-specific PR).
 
 ### Что найдено
 
@@ -214,11 +220,12 @@ const classIconBody = ref(Switch.setStyle("relative h-5 w-5 mr-2"))
 2. `mr-2` → `me-2`.
 3. `translate-x-3.5` для switch thumb — оставить, но добавить RTL-mirroring через `[dir="rtl"]` selector.
 
-## Issue 9: switchingType сравнения через string — потеря типизации
+## ~~Issue 9: switchingType сравнения через string — потеря типизации~~ ✅ resolved 2026-05-11
 
 - **Категория:** D25 (консистентность props)
-- **Severity:** medium
-- **Где:** [Switch.d.ts:48](../../lib/switch/Switch.d.ts#L48)
+- **Severity:** ~~medium~~
+- **Где:** [Switch.d.ts:15](../../lib/switch/Switch.d.ts#L15), [Switch.d.ts:48](../../lib/switch/Switch.d.ts#L48)
+- **Resolution:** `SwitchMode = StyleMode | "none" | string` → `StyleMode | "none"`; `switchingType: "checkbox" | "switch" | string` → `"checkbox" | "switch"`. Closed unions ловят typos на этапе `vue-tsc`. `it.each(["checkbox", "switch"])` в `Switch.test.ts` поправлен на `as const`, чтобы tuple-literal соответствовал closed-union типу. **Breaking change:** кастомные строки `switchingType` и `mode` больше не принимаются.
 
 ### Что найдено
 
@@ -245,13 +252,12 @@ switchingType: "checkbox" | "switch" | string
 
 См. [button.md Issue 14](./button.md).
 
-## Issue 11: `inputRef` не expose'д — невозможно programmatically focus
+## ~~Issue 11: `inputRef` не expose'д — невозможно programmatically focus~~ ✅ resolved 2026-05-11
 
 - **Категория:** G34
-- **Severity:** medium
-- **Где:** [Switch.vue:139-156](../../lib/switch/Switch.vue#L139-L156)
-
-`expose` не возвращает ref на native `<input>`/`<button>`. Аналогично [done/button.md Issue 4](./done/button.md) — там есть готовый pattern (resolved 2026-05-10).
+- **Severity:** ~~medium~~
+- **Где:** [Switch.vue:141–187](../../lib/switch/Switch.vue#L141-L187), [Switch.d.ts:213–234](../../lib/switch/Switch.d.ts#L213-L234)
+- **Resolution:** Единый `inputRef: Ref<HTMLElement | undefined>` объявлен на script-уровне; `ref="inputRef"` навешен и на `<button v-if="switchingType === 'switch'">` ([Switch.vue:212](../../lib/switch/Switch.vue#L212)), и на `<input v-else-if="switchingType === 'checkbox'">` ([Switch.vue:241](../../lib/switch/Switch.vue#L241)) — `v-if` гарантирует, что в DOM присутствует только один. `defineExpose` расширен `inputRef`, `focus(options?: FocusOptions)`, `blur()`. `SwitchExpose` обновлён с JSDoc. Паттерн зеркалит [Button Issue 4](./button.md) и [Input](../../lib/input/Input.vue) resolution. Тесты «Expose — inputRef + focus/blur» (6 кейсов) подтверждают ref-pointing для обоих режимов, focus/blur, и forward `FocusOptions`.
 
 ## Issue 12: Хардкод цветов `gray-*`/`green-*`/`red-*` вместо semantic tokens
 
@@ -274,11 +280,12 @@ switchingType: "checkbox" | "switch" | string
 2. Определить mapping в [lib/theme/uno.ts](../../lib/theme/uno.ts).
 3. Cross-cutting — большинство компонентов имеют ту же проблему.
 
-## Issue 13: Не реагирует на `componentsStyle` глобально для `switchingType`
+## ~~Issue 13: Не реагирует на `componentsStyle` глобально для `switchingType`~~ ✅ resolved 2026-05-11
 
 - **Категория:** L53
-- **Severity:** medium
+- **Severity:** ~~medium~~
 - **Где:** [Switch.vue:30-32](../../lib/switch/Switch.vue#L30-L32)
+- **Resolution:** Doc-only fix — добавлен §10.4 «`switchingType` и global `componentsStyle`» в [Documentation/components/switch.md](../components/switch.md), который явно объясняет: `switchingType` — UX-выбор, не визуальный preset, не зависит от global `componentsStyle`. Влияет только `componentsOptions.Switch.switchingType` и per-instance prop.
 
 ### Что найдено
 
