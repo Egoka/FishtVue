@@ -40,6 +40,7 @@ const globals = {
   HTMLTableRowElement: "readonly",
   HTMLElement: "readonly",
   HTMLInputElement: "readonly",
+  HTMLTextAreaElement: "readonly",
   HTMLButtonElement: "readonly",
   HTMLStyleElement: "readonly",
   Response: "readonly",

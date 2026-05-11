@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, ref, useSlots, watch } from "vue"
   import type { AriaEmits, AriaProps } from "./Aria"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import { onkeydown } from "fishtvue/utils/numberHandler"
@@ -46,7 +46,9 @@
     () => (props?.maxLength as AriaProps["maxLength"]) ?? options?.maxLength ?? 9999
   )
   const isValue = computed<boolean>(() => !!modelValue.value || isActiveAria.value)
-  const mode = computed<NonNullable<AriaProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  const mode = computed<NonNullable<AriaProps["mode"]>>(
+    () => props.mode ?? options?.mode ?? Aria.componentsStyle() ?? "outlined"
+  )
   const isDisabled = computed<NonNullable<AriaProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<AriaProps["isInvalid"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<AriaProps["isInvalid"]>>(() =>
@@ -60,9 +62,10 @@
     Aria.setStyle([
       "w-full ring-0 border-0 bg-transparent p-0 mt-2 mb-1 min-h-[28px] max-h-[10rem] rounded text-gray-900 dark:text-gray-100",
       "placeholder:select-none focus:placeholder:text-gray-400 focus:placeholder:dark:text-gray-500",
-      props.label?.length ? "placeholder:text-transparent placeholder:transition-all" : "",
+      props.label?.length ? "placeholder:text-transparent motion-safe:placeholder:transition-all" : "",
       "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
       "focus:outline-0 focus:ring-0 caret-theme-500",
+      "print:border print:border-black print:bg-white print:text-black print:shadow-none",
       options?.classInput ?? "",
       props.classInput ?? "",
       "classInput block"
@@ -112,9 +115,10 @@
     blur
   })
   // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
-    Aria.initStyle()
-  })
+  // Style injection wired up via Component.__hooks() in the base class
+  // (onServerPrefetch + vueOnMounted -> initStyle). No explicit onMounted
+  // call here — see Documentation/dev-patterns.md §2 decision row 1.
+
   // ---WATCHERS----------------------------
   watch(isActiveAria, (value) => {
     classLayout.value =
@@ -132,17 +136,17 @@
   }
 
   // ---------------------------------------
-  function inputEvent($event: any) {
-    inputModelValue(($event.target as HTMLInputElement).value)
+  function inputEvent($event: Event) {
+    inputModelValue(($event.target as HTMLTextAreaElement).value)
   }
 
-  function inputModelValue(valueResult: any) {
+  function inputModelValue(valueResult: string) {
     modelValue.value = valueResult
     emit("update:isInvalid", false)
     emit("update:modelValue", valueResult)
   }
 
-  function changeModelValue(value: any) {
+  function changeModelValue(value: string) {
     emit("change:modelValue", value)
   }
 
@@ -176,15 +180,15 @@
       @blur="blur"
       @input="inputEvent"
       @keydown="onkeydown"
-      @change="changeModelValue(($event.target as HTMLInputElement).value)" />
+      @change="changeModelValue(($event.target as HTMLTextAreaElement).value)" />
     <template #body>
       <slot />
     </template>
     <template #before>
-      <slot v-if="slots.before" name="before" />
+      <slot v-if="slots.before" name="before" :is-invalid="isInvalid" :is-focused="isActiveAria" />
     </template>
     <template #after>
-      <slot v-if="slots.after" name="after" />
+      <slot v-if="slots.after" name="after" :is-invalid="isInvalid" :is-focused="isActiveAria" :clear="clear" />
     </template>
   </InputLayout>
 </template>

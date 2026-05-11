@@ -1,7 +1,7 @@
 ---
 title: TextEditor
 summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar.
-updated: 2026-05-09
+updated: 2026-05-11
 stability: experimental
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `TextEditor` — обёртка над [Quill](https://quilljs.com/) (через [@vueup/vue-quill](https://vueup.github.io/vue-quill/)) внутри [Dialog](./dialog.md). Поддерживает темы `snow` (toolbar сверху) и `bubble` (toolbar появляется при выделении), кастомные toolbar-конфиги (`essential`/`minimal`/`full` или custom), reactive v-model.
 
-Stability: `experimental` — все 17 тестов пропущены ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)); coverage `TextEditor.vue` — 0%; в `change:modelValue` payload объявлен как `boolean` вместо `string` (явный type bug — см. Known issues).
+Stability: `experimental` — все 17 тестов пропущены ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)); coverage `TextEditor.vue` — 0%. Type-bug `change:modelValue(payload: boolean)` исправлен 2026-05-11 — payload теперь корректно типизирован как `string` (cross-cutting fix с [Aria](./aria.md)).
 
 Source: [Source](../../lib/texteditor/TextEditor.vue), [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts), [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts).
 
@@ -100,7 +100,7 @@ Note: компонент рендерит trigger-кнопку, которая �
 |---|---|---|
 | `update:modelValue` | `string` (HTML) | На каждый change в Quill. |
 | `update:isInvalid` | `boolean` | При смене статуса валидации. |
-| `change:modelValue` | `boolean` | **Type bug** — должно быть `string`. См. Known issues. |
+| `change:modelValue` | `string` (HTML) | На blur / programmatic save. Fixed 2026-05-11 (раньше тип был ошибочно `boolean`). |
 
 ## 7. Slots
 
@@ -239,7 +239,7 @@ const quill = ed.value?.quillEditorLink?.getQuill()
 - **Vue:** `^3.5.x`.
 - **Quill:** `^2.0.2`.
 - **vue-quill:** `^1.2.0`.
-- **Stability flag:** `experimental` — нет покрытия тестами; type bug в emits; Quill инжектит inline стили без layer'а.
+- **Stability flag:** `experimental` — нет покрытия тестами; Quill инжектит inline стили без layer'а. (Type bug в `change:modelValue` emits исправлен 2026-05-11.)
 - **Breaking changes:** при апгрейде Quill 3.x — ожидаются.
 
 ## 15. Testing recipes
@@ -269,7 +269,6 @@ describe.skip("TextEditor smoke", () => {
 |---|---|---|
 | Toolbar не отображается | `theme` не задан или CSS не подгружен. | Установи `theme="snow"` и проверь, что `vue-quill.snow.css` подгружен. |
 | HTML «теряет» форматирование при v-model | Quill нормализует HTML — некоторые atypical тэги фильтруются. | Используй `contentType: "delta"` и работай с Delta-объектом. |
-| `change:modelValue` приходит с `boolean` | Type bug — payload объявлен `boolean`, но реально `string`. | Игнорируй type, используй runtime значение. См. Known issues. |
 | XSS через paste | Нет санитизации. | Добавь `sanitize-html` перед `v-model`. |
 | Размер bundle вырос | Quill — ~200KB minified. | Ленивая загрузка через dynamic import + Suspense. |
 | `image`-toolbar не работает | По умолчанию upload не реализован. | Регистрируй custom Quill module для image-handler. |
@@ -297,7 +296,7 @@ describe.skip("TextEditor smoke", () => {
 
 ### API inconsistencies
 
-- **Type bug:** `change:modelValue(payload: boolean)` ([TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts)) — payload объявлен `boolean`, но семантически и runtime — это HTML-строка `string`. Должно быть `change:modelValue(payload: string)`.
+- ~~**Type bug:** `change:modelValue(payload: boolean)`~~ ✅ resolved 2026-05-11 — payload теперь корректно типизирован как `string` ([TextEditor.d.ts:121](../../lib/texteditor/TextEditor.d.ts#L121)). Cross-cutting fix вместе с [aria.md Issue 1](../issues/aria.md).
 - `modelValue?: string | number | null` — `number` не имеет смысла для HTML-content.
 - `toolbar: "essential" \| "minimal" \| "full" \| string \| object \| Array<any>` — open union, narrow не работает.
 - `IDataTextEditor.options: any`, `globalOptions: any` — потеря типизации.

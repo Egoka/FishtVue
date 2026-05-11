@@ -1,7 +1,7 @@
 ---
 title: Issues — TextEditor
-summary: Аудит TextEditor — coverage 0% (skipped tests), хардкод HEX цветов в style, Quill peer-dep потенциал, type bug change:modelValue, image upload не задокументирован.
-updated: 2026-05-10
+summary: Аудит TextEditor — coverage 0% (skipped tests), хардкод HEX цветов в style, Quill peer-dep потенциал, image upload не задокументирован. Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11 cross-cutting вместе с aria.md Issue 1.
+updated: 2026-05-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/texteditor/
 related-doc: ../components/text-editor.md
@@ -12,11 +12,11 @@ stability: experimental (на момент аудита 17 тестов skipped)
 
 ## Сводка
 
-| Severity | Count | Categories |
+| Severity | Count (open) | Categories |
 |---|---|---|
 | critical | 0 | — |
 | high | 7 | A2, A4-5, B10 (HEX hardcode), C17, I44 (Quill peer), J46 (tests skipped), L53 |
-| medium | 5 | D26 (type bug), F30, F32, M55, security (image upload) |
+| medium | 4 | F30, F32, M55, security (image upload) — Issue 5 D26 closed 2026-05-11 |
 | low | 3 | E29.7, N59, G34 |
 
 ## Issue 1: 17 тестов skipped, coverage 0% — компонент не верифицирован
@@ -146,19 +146,12 @@ onMounted(async () => {
 
 См. [button.md Issue 1, 8, 9](./button.md).
 
-## Issue 5: Type bug `change:modelValue(payload: boolean)` должно быть string
+## ~~Issue 5: Type bug `change:modelValue(payload: boolean)` должно быть string~~ ✅ resolved 2026-05-11
 
 - **Категория:** D26
-- **Severity:** medium
-- **Где:** [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts)
-
-### Что найдено
-
-Аналогично [aria.md Issue 1](./aria.md) — `change:modelValue` объявлен с `boolean` payload, runtime передаёт string (HTML content).
-
-### Что нужно сделать
-
-См. [aria.md Issue 1](./aria.md) — идентичный fix-план.
+- **Severity:** ~~medium~~
+- **Где:** [TextEditor.d.ts:121](../../lib/texteditor/TextEditor.d.ts#L121)
+- **Resolution:** Cross-cutting fix вместе с [aria.md Issue 1](./aria.md). `TextEditorEmits["change:modelValue"]` payload изменён `boolean` → `string`. Runtime поведение не меняется (всегда эмитилась HTML-строка) — это type-only fix, исправляющий Volar-hint для подписчиков `@change:modelValue`. Существующие 17 skipped тестов в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) (см. Issue 1) при разблокировке смогут assert'ить корректный type. Documentation [components/text-editor.md](../components/text-editor.md) §6 обновлена.
 
 ## Issue 6: Image upload не задокументирован — toolbar содержит `image` button
 
