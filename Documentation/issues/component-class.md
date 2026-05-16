@@ -2,6 +2,7 @@
 title: Issues — Component class (`Component<T>`)
 summary: 2/10 issues закрыто (Issue 6 — unstyled enforcement через setStyle guard cross-cutting; Issue 1 — dup initStyle sweep done 2026-05-16, Wave 2.3 завершена для класса). Issue 5 — частично resolved (SSR + idempotence + fallback chain tests added; HMR test переехал в Issue 3). Открытые — Issue 2 (window.FishtVue coupling), Issue 3 (HMR teardown), Issue 4 (generic narrowing).
 updated: 2026-05-16
+last-changes: 2026-05-16 — FixWindow добавлен в "14 SFC чистые" список (Wave 2.3 sweep дошёл до FixWindow в рамках fix(fixwindow) audit close-out); ранее ошибочно числился в "не используют initStyle".
 audit-checklist: 60-point + Configuration support
 source: lib/component/
 related-doc: ../architecture/component-class.md
@@ -11,12 +12,12 @@ related-doc: ../architecture/component-class.md
 
 ## Сводка
 
-| Severity | Count (open) | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 3 | C13 (window.FishtVue coupling), C17 (HMR teardown), K46 (coverage, частично закрыто) |
-| medium | 3 | D21 (generic narrowing), B11, K46 (HMR-test pending) |
-| low | 2 | E29.7 (motion not at base), N59 |
+| Severity | Count (open) | Categories                                                                           |
+| -------- | ------------ | ------------------------------------------------------------------------------------ |
+| critical | 0            | —                                                                                    |
+| high     | 3            | C13 (window.FishtVue coupling), C17 (HMR teardown), K46 (coverage, частично закрыто) |
+| medium   | 3            | D21 (generic narrowing), B11, K46 (HMR-test pending)                                 |
+| low      | 2            | E29.7 (motion not at base), N59                                                      |
 
 ## ~~Issue 1: Double initStyle — onServerPrefetch + onMounted + manual call в каждом компоненте~~ ✅ resolved 2026-05-16
 
@@ -27,12 +28,14 @@ related-doc: ../architecture/component-class.md
 ### Что было найдено
 
 Constructor `Component<T>` уже вызывал:
+
 ```ts
 onServerPrefetch(() => this.initStyle())
 vueOnMounted(() => this.initStyle())
 ```
 
 Но 6 SFC дублировали ручной `onMounted(() => X.initStyle())` (7 occurrences):
+
 - Button.vue:369, Icons.vue:70, InputLayout.vue:197 + InputLayout.vue:229, Menu.vue:235, Separator.vue:128, Table.vue:937.
 
 Это давало двойную инжекцию стилей при mount (хотя `__setStyle` дедуплицирует — runtime-cost оставался), излишний код в каждом компоненте, inconsistent pattern: одни полагались на base-class-hook, другие добавляли ручной вызов.
@@ -48,7 +51,7 @@ Sweep по 6 SFC × 7 occurrences:
 - ~~Separator.vue:127-129~~ — весь `onMounted(() => { Separator.initStyle() })` удалён, заменён comment-marker'ом.
 - ~~Table.vue:937~~ — `Table.initStyle()` удалён, comment-marker над `onMounted`; блок сохранён (tableObserver + sortColumns setup).
 
-После sweep'а: **13 SFC чистые** (Alert, Aria, Calendar, Input, Label, Select, Switch + Button, Icons, InputLayout, Menu, Separator, Table), **8 SFC не используют initStyle** (Accordion, Badge, Dialog, FixWindow, Form, Pagination, Split, TextEditor), Dialog ✅ переведён в `./done/` ранее. Итого 21/21 чистых core SFC.
+После sweep'а: **14 SFC чистые** (Alert, Aria, Calendar, Input, Label, Select, Switch + Button, Icons, InputLayout, Menu, Separator, Table, FixWindow — последний sweep'нут 2026-05-16 в рамках fix(fixwindow) audit close-out), **7 SFC не используют initStyle** (Accordion, Badge, Dialog, Form, Pagination, Split, TextEditor), Dialog ✅ переведён в `./done/` ранее. Итого 21/21 чистых core SFC. _Correction (2026-05-16): FixWindow ошибочно числился в списке "не используют initStyle" — на самом деле использовал ручной `FixWindow.initStyle()` в `onMounted` SFC line 132; убран в рамках Wave 2.3._
 
 Acceptance criteria:
 
@@ -172,15 +175,15 @@ public setStyle = (...) => {
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions` | ✅ | через `Component.getOptions()` |
-| `componentsStyle` global | ✅ | через `Component.componentsStyle()` (доступен), но не у всех компонентов используется (см. component-issues docs) |
-| `unstyled: true` | ✅ | (2026-05-11) `Component.setStyle()` возвращает `""` при `config.unstyled === true` — cross-cutting fix для 22 компонентов |
-| Theme tokens | ✅ | через `Component.initStyle(stylesComp)` callback |
-| `t(key)` для текста | ✅ | через `Component.t(key)` |
-| Runtime locale switch | ✅ | если использует `t()` — реактивен через computed |
-| Provide/inject через FishtVueSymbol | ✅ | основной механизм + window fallback (Issue 2) |
+| Настройка                           | Поддержано? | Комментарий                                                                                                               |
+| ----------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `componentsOptions`                 | ✅          | через `Component.getOptions()`                                                                                            |
+| `componentsStyle` global            | ✅          | через `Component.componentsStyle()` (доступен), но не у всех компонентов используется (см. component-issues docs)         |
+| `unstyled: true`                    | ✅          | (2026-05-11) `Component.setStyle()` возвращает `""` при `config.unstyled === true` — cross-cutting fix для 22 компонентов |
+| Theme tokens                        | ✅          | через `Component.initStyle(stylesComp)` callback                                                                          |
+| `t(key)` для текста                 | ✅          | через `Component.t(key)`                                                                                                  |
+| Runtime locale switch               | ✅          | если использует `t()` — реактивен через computed                                                                          |
+| Provide/inject через FishtVueSymbol | ✅          | основной механизм + window fallback (Issue 2)                                                                             |
 
 ## Dual-API gap
 

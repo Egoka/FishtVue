@@ -24,6 +24,9 @@ export default <DefaultMessages>{
   alert: {
     close: "Закрыть"
   },
+  fixwindow: {
+    close: "Закрыть"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

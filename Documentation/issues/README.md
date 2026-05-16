@@ -2,7 +2,7 @@
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
 updated: 2026-05-16
-last-changes: 2026-05-16 — component-class: закрыты Issue 1 (Wave 2.3 — dup initStyle sweep по 6 SFC × 7 occurrences: Button:369, Icons:70, InputLayout:197+229, Menu:235, Separator:128, Table:937) и Issue 5 partial (Component.test.ts расширен 4 it-блоками: SSR-coverage, idempotence, window.FishtVue fallback, graceful no-config; HMR test переехал в Issue 3; pre-existing flaky test getOptions — out of scope). Severity matrix Component class row 0/4/3/2 → 0/3/3/2. TOTAL 8/118/75/61 = 262 → 8/117/75/61 = 261. После sweep'а: 13/21 core SFC с comment-marker'ом канона + 8/21 не используют initStyle = 21/21 чистых. Раньше 2026-05-12 — dialog: закрыто 9 of 9 issues (focus trap native, escapeListener leak, reference-counted scroll lock via NEW lib/utils/scrollLockHandler.ts, role="dialog"/aria-modal/labelledby/describedby, focus return, motion-safe transitions, RTL close button (end-2), aria-live polite region, sideEffects:false). Файл перенесён в ./done/dialog.md. Severity matrix Dialog row 2/5/4/3 → 0/0/0/0. TOTAL 10/123/79/64 = 276 → 8/118/75/61 = 262. Wave 1.2 Dialog ✓. Wave 2.3 progress 7/22 → 8/22 (dup initStyle removed). Wave 2.4 scroll-lock Dialog ✓ (Split — оставшийся пункт). Раньше 2026-05-11: label: закрыто 7 of 10 issues (1 for-id + `<label>` root, 2 drop dup initStyle, 4 translateX/maxWidth `number | string` typing, 6 type-via-componentsOptions de facto, 7 unstyled cross-cutting regression test, 8 motion-safe, 10 default slot). Defer-обоснованы: Issue 3 (Wave 2.1 packaging), Issue 5 (Wave 3.3 CSS vars / Theme runtime API), Issue 9 (dedicated RTL wave). Label row пересчитан 0/4/3/2 → 0/1/2/0. Wave 2.3 progress 5/22 → 6/22 (Input + Switch + Select + Calendar + Aria + Label). Wave 10.1 motion-safe progress 4/22 → 5/22 (Button + Input + Select + Aria + Label). Severity matrix: 10/126/80/66 → 10/123/79/64 = 282 → 276 issues. Раньше 2026-05-11: aria: 8/11; select: 7 of 11 (XSS via #marker/#empty + safe highlight, observer/listener cleanup, dup initStyle, componentsStyle, unstyled cross-cutting Component.setStyle → закрывает Issue 6 во всех 22 + component-class.md Issue 6, aria-live with locale, Intl.Collator filtering, motion-safe + print); switch: 9 of 14; input: 11/13; inputlayout: 6/7; accordion: 4/9; button: 5/16; icons/badge: 5/6 (2026-05-10); utilities: 9 ранее. Roadmap чекбоксы — single-source-of-truth прогресса.
+last-changes: 2026-05-16 — fixwindow: закрыты все 10 issues (Teleport через @floating-ui/vue + опциональный Teleport prop, native focus trap mirror Dialog, focus return через triggerEl, dynamic ARIA role, RTL via logical placement, motion-safe transitions, touchstart fallback, sideEffects: false, удалён duplicate FixWindow.initStyle()). Coverage 77.27%/65.36% → 88.44%/83.77%. Файл перенесён в ./done/fixwindow.md. Severity matrix FixWindow row 0/7/5/3 → 0/0/0/0. TOTAL 8/117/75/61 = 261 → 8/110/70/58 = 246. Wave 2.3 progress 8/22 → 9/22 (FixWindow). Wave 2.1 per-component sideEffects progress 1/22 → 2/22 (Dialog + FixWindow). Раньше 2026-05-16 — component-class: закрыты Issue 1 (Wave 2.3 — dup initStyle sweep по 6 SFC × 7 occurrences: Button:369, Icons:70, InputLayout:197+229, Menu:235, Separator:128, Table:937) и Issue 5 partial (Component.test.ts расширен 4 it-блоками: SSR-coverage, idempotence, window.FishtVue fallback, graceful no-config; HMR test переехал в Issue 3; pre-existing flaky test getOptions — out of scope). Severity matrix Component class row 0/4/3/2 → 0/3/3/2. TOTAL 8/118/75/61 = 262 → 8/117/75/61 = 261. После sweep'а: 13/21 core SFC с comment-marker'ом канона + 8/21 не используют initStyle = 21/21 чистых. Раньше 2026-05-12 — dialog: закрыто 9 of 9 issues (focus trap native, escapeListener leak, reference-counted scroll lock via NEW lib/utils/scrollLockHandler.ts, role="dialog"/aria-modal/labelledby/describedby, focus return, motion-safe transitions, RTL close button (end-2), aria-live polite region, sideEffects:false). Файл перенесён в ./done/dialog.md. Severity matrix Dialog row 2/5/4/3 → 0/0/0/0. TOTAL 10/123/79/64 = 276 → 8/118/75/61 = 262. Wave 1.2 Dialog ✓. Wave 2.3 progress 7/22 → 8/22 (dup initStyle removed). Wave 2.4 scroll-lock Dialog ✓ (Split — оставшийся пункт). Раньше 2026-05-11: label: закрыто 7 of 10 issues (1 for-id + `<label>` root, 2 drop dup initStyle, 4 translateX/maxWidth `number | string` typing, 6 type-via-componentsOptions de facto, 7 unstyled cross-cutting regression test, 8 motion-safe, 10 default slot). Defer-обоснованы: Issue 3 (Wave 2.1 packaging), Issue 5 (Wave 3.3 CSS vars / Theme runtime API), Issue 9 (dedicated RTL wave). Label row пересчитан 0/4/3/2 → 0/1/2/0. Wave 2.3 progress 5/22 → 6/22 (Input + Switch + Select + Calendar + Aria + Label). Wave 10.1 motion-safe progress 4/22 → 5/22 (Button + Input + Select + Aria + Label). Severity matrix: 10/126/80/66 → 10/123/79/64 = 282 → 276 issues. Раньше 2026-05-11: aria: 8/11; select: 7 of 11 (XSS via #marker/#empty + safe highlight, observer/listener cleanup, dup initStyle, componentsStyle, unstyled cross-cutting Component.setStyle → закрывает Issue 6 во всех 22 + component-class.md Issue 6, aria-live with locale, Intl.Collator filtering, motion-safe + print); switch: 9 of 14; input: 11/13; inputlayout: 6/7; accordion: 4/9; button: 5/16; icons/badge: 5/6 (2026-05-10); utilities: 9 ранее. Roadmap чекбоксы — single-source-of-truth прогресса.
 ---
 
 # Issues — Index
@@ -13,39 +13,39 @@ last-changes: 2026-05-16 — component-class: закрыты Issue 1 (Wave 2.3 �
 
 ## Сводка по компонентам
 
-| Target          | File                                       | Critical | High    | Medium  | Low    |
-| --------------- | ------------------------------------------ | -------- | ------- | ------- | ------ |
-| Button          | [button.md](./button.md)                   | 0        | 6       | 6       | 4      |
-| Label           | [label.md](./label.md)                     | 0        | 1       | 2       | 0      |
-| Switch          | [switch.md](./switch.md)                   | 0        | 2       | 0       | 3      |
-| Input           | [input.md](./input.md)                     | 0        | 2       | 0       | 0      |
-| Aria            | [aria.md](./aria.md)                       | 0        | 1       | 1       | 1      |
-| Select          | [select.md](./select.md)                   | 0        | 4       | 2       | 2      |
-| Calendar        | [calendar.md](./calendar.md)               | 0        | 5       | 3       | 3      |
-| TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 7       | 4       | 3      |
-| Table           | [table.md](./table.md)                     | 2        | 8       | 5       | 4      |
-| Pagination      | [pagination.md](./pagination.md)           | 1        | 4       | 4       | 3      |
-| Badge           | [badge.md](./badge.md)                | 0        | 3       | 0       | 3      |
-| Form            | [form.md](./form.md)                       | 1        | 6       | 4       | 3      |
-| InputLayout     | [inputlayout.md](./inputlayout.md)         | 0        | 4       | 0       | 3      |
-| Separator       | [separator.md](./separator.md)             | 0        | 3       | 2       | 2      |
-| Split           | [split.md](./split.md)                     | 0        | 5       | 5       | 3      |
-| FixWindow       | [fixwindow.md](./fixwindow.md)             | 0        | 7       | 5       | 3      |
-| Accordion       | [accordion.md](./accordion.md)        | 0        | 3       | 2       | 3      |
-| Dialog          | [done/dialog.md](./done/dialog.md)         | 0        | 0       | 0       | 0      |
-| Menu            | [menu.md](./menu.md)                       | 1        | 6       | 4       | 3      |
-| Alert           | [alert.md](./alert.md)                     | 0        | 1       | 1       | 2      |
-| Loading         | [loading.md](./loading.md)                 | 0        | 5       | 4       | 3      |
-| Icons           | [icons.md](./icons.md)                | 0        | 4       | 1       | 2      |
-| Component class | [component-class.md](./component-class.md) | 0        | 3       | 3       | 2      |
-| Config          | [config.md](./config.md)                   | 1        | 5       | 4       | 2      |
-| Theme           | [theme.md](./theme.md)                     | 0        | 6       | 4       | 2      |
-| Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4       | 2      |
-| Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4       | 2      |
-| Utilities       | [\_utilities.md](./_utilities.md)     | 0        | 1       | 0       | 1      |
-| **TOTAL**       | **28 files**                               | **8**    | **117** | **75**  | **61** |
+| Target          | File                                       | Critical | High    | Medium | Low    |
+| --------------- | ------------------------------------------ | -------- | ------- | ------ | ------ |
+| Button          | [button.md](./button.md)                   | 0        | 6       | 6      | 4      |
+| Label           | [label.md](./label.md)                     | 0        | 1       | 2      | 0      |
+| Switch          | [switch.md](./switch.md)                   | 0        | 2       | 0      | 3      |
+| Input           | [input.md](./input.md)                     | 0        | 2       | 0      | 0      |
+| Aria            | [aria.md](./aria.md)                       | 0        | 1       | 1      | 1      |
+| Select          | [select.md](./select.md)                   | 0        | 4       | 2      | 2      |
+| Calendar        | [calendar.md](./calendar.md)               | 0        | 5       | 3      | 3      |
+| TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 7       | 4      | 3      |
+| Table           | [table.md](./table.md)                     | 2        | 8       | 5      | 4      |
+| Pagination      | [pagination.md](./pagination.md)           | 1        | 4       | 4      | 3      |
+| Badge           | [badge.md](./badge.md)                     | 0        | 3       | 0      | 3      |
+| Form            | [form.md](./form.md)                       | 1        | 6       | 4      | 3      |
+| InputLayout     | [inputlayout.md](./inputlayout.md)         | 0        | 4       | 0      | 3      |
+| Separator       | [separator.md](./separator.md)             | 0        | 3       | 2      | 2      |
+| Split           | [split.md](./split.md)                     | 0        | 5       | 5      | 3      |
+| FixWindow       | [done/fixwindow.md](./done/fixwindow.md)   | 0        | 0       | 0      | 0      |
+| Accordion       | [accordion.md](./accordion.md)             | 0        | 3       | 2      | 3      |
+| Dialog          | [done/dialog.md](./done/dialog.md)         | 0        | 0       | 0      | 0      |
+| Menu            | [menu.md](./menu.md)                       | 1        | 6       | 4      | 3      |
+| Alert           | [alert.md](./alert.md)                     | 0        | 1       | 1      | 2      |
+| Loading         | [loading.md](./loading.md)                 | 0        | 5       | 4      | 3      |
+| Icons           | [icons.md](./icons.md)                     | 0        | 4       | 1      | 2      |
+| Component class | [component-class.md](./component-class.md) | 0        | 3       | 3      | 2      |
+| Config          | [config.md](./config.md)                   | 1        | 5       | 4      | 2      |
+| Theme           | [theme.md](./theme.md)                     | 0        | 6       | 4      | 2      |
+| Locale          | [locale.md](./locale.md)                   | 0        | 5       | 4      | 2      |
+| Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 6       | 4      | 2      |
+| Utilities       | [\_utilities.md](./_utilities.md)          | 0        | 1       | 0      | 1      |
+| **TOTAL**       | **28 files**                               | **8**    | **110** | **70** | **58** |
 
-Всего **261 issue** распределены по 28 документам аудита (Dialog ✅ полностью закрыт 2026-05-11 → перенесён в `./done/`). Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
+Всего **246 issues** распределены по 28 документам аудита (Dialog ✅ закрыт 2026-05-11 + FixWindow ✅ закрыт 2026-05-16 → перенесены в `./done/`). Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
 
 ## Fix roadmap (live tracker)
 
@@ -131,7 +131,7 @@ last-changes: 2026-05-16 — component-class: закрыты Issue 1 (Wave 2.3 �
 #### 2.1 Packaging (one-time fix в [lib/package.json](../../lib/package.json))
 
 - [ ] [lib/package.json:17-18](../../lib/package.json#L17) — добавить `exports` map с условиями `types`/`import`/`require`/`default` для всех subpath: `./button`, `./input`, `./theme`, `./config`, `./component`, `./locale`, `./module`, `./plugins/nuxt`, `./utils/*`, `./types` · [button.md Issue 9](./button.md)
-- [ ] [lib/package.json](../../lib/package.json) — добавить `"sideEffects": ["**/*.css", "**/*.vue"]` (Vue SFC `<style>` имеют side-effects) · [button.md Issue 8](./button.md)
+- [ ] [lib/package.json](../../lib/package.json) — добавить `"sideEffects": ["**/*.css", "**/*.vue"]` (Vue SFC `<style>` имеют side-effects) · [button.md Issue 8](./button.md) · **per-component progress:** Dialog ✅ 2026-05-12, FixWindow ✅ 2026-05-16 (sideEffects: false по precedent'у); root-level — open.
 - [ ] [lib/package.json:56](../../lib/package.json#L56) — `vue` из `dependencies` → `peerDependencies: "^3.5.0"` · [calendar.md Issue 3](./calendar.md)
 - [ ] [lib/package.json:44-57](../../lib/package.json#L44) — `lodash-es`, `date-fns`, `gsap`, `quill`, `@vueup/vue-quill`, `v-calendar`, `tailwind-merge`, `clsx` → optional `peerDependencies` + `peerDependenciesMeta.optional: true` · [calendar.md Issue 2](./calendar.md), [texteditor.md Issue 3](./texteditor.md)
 - [ ] [lib/rollup.config.js:409](../../lib/rollup.config.js#L409) — раскомментировать `get_CJS_ESM()` или явно решить ESM-only + добавить `engines: { node: ">=18" }` · [button.md Issue 9](./button.md)
@@ -148,7 +148,7 @@ last-changes: 2026-05-16 — component-class: закрыты Issue 1 (Wave 2.3 �
 
 #### 2.3 SSR style injection
 
-- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, ~~Label~~ ✅ 2026-05-11, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Aria~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, ~~Alert~~ ✅ 2026-05-11, ~~Dialog~~ ✅ 2026-05-12, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Menu, Loading, Icons. **Прогресс:** 8 / 22.
+- [~] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, ~~Label~~ ✅ 2026-05-11, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Aria~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, ~~Alert~~ ✅ 2026-05-11, ~~Dialog~~ ✅ 2026-05-12, ~~FixWindow~~ ✅ 2026-05-16, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, Accordion, Menu, Loading, Icons. **Прогресс:** 9 / 22.
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue { ... }` (или настраиваемый layer name из `optionsTheme.layers`) · [theme.md Issue 4](./theme.md)
 - [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — HMR teardown: replace content existing `<style>` element, не append new · [component-class.md Issue 3](./component-class.md)
 
