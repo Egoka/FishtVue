@@ -124,9 +124,8 @@
     classLineRight
   })
   // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
-    Separator.initStyle()
-  })
+  // `Separator.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
 </script>
 
 <template>

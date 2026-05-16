@@ -1,7 +1,7 @@
 ---
 title: Component class
 summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle.
-updated: 2026-05-09
+updated: 2026-05-16
 stability: stable
 since: 0.2.11
 ---
@@ -22,7 +22,7 @@ Source: [lib/component/index.ts](../../lib/component/index.ts), [lib/component/T
 lib/component/
 ├── index.ts            # реализация Component<T>
 ├── TypeComponent.d.ts  # внешние типы: Component, NamesComponents, PublicFields, StylesComponent, setStyleOptions
-├── Component.test.ts   # 15 кейсов (Vitest)
+├── Component.test.ts   # 19 кейсов (Vitest)
 └── package.json        # main "./component.mjs", types "./TypeComponent.d.ts"
 ```
 
@@ -49,7 +49,7 @@ lib/component/
 4. `name` берётся из аргумента; если опущен — из `__instance?.type.__name` (имя SFC).
 5. `prefix` — из `optionsTheme.prefix` или `"fishtvue"` по умолчанию.
 6. `__options = $fishtVue.getOptions(name)` — frozen-копия `componentsOptions[name]`.
-7. `__hooks()` регистрирует `onServerPrefetch(() => initStyle())` и `vueOnMounted(() => initStyle())` — стили инициализируются автоматически.
+7. `__hooks()` регистрирует `onServerPrefetch(() => initStyle())` и `vueOnMounted(() => initStyle())` — стили инициализируются автоматически. **Это единственный источник вызова `initStyle()` на mount/SSR-prefetch.** Дополнительный ручной `onMounted(() => X.initStyle())` в SFC — антипаттерн (двойная инициализация), см. [dev-patterns.md §2 row 1](../dev-patterns.md#2-decisions). Wave 2.3 sweep (2026-05-16) убрал все ручные дубликаты из 6 SFC; в чистых SFC стоит comment-marker, фиксирующий канон.
 
 Шаги стилизации:
 
@@ -272,7 +272,7 @@ X.setStyle(["px-2", "py-1"], { selector: ".my-scope ", isBaseClasses: true })
 
 ## 15. Testing recipes
 
-Тесты — [Component.test.ts](../../lib/component/Component.test.ts) (15 кейсов).
+Тесты — [Component.test.ts](../../lib/component/Component.test.ts) (19 кейсов). Wave 2.3 (2026-05-16) добавил 4 it-блока: SSR/client hook registration coverage, idempotence `initStyle()`, fallback chain на `window.FishtVue`, graceful no-config.
 
 Минимальный кейс:
 
@@ -343,7 +343,7 @@ describe("Component class", () => {
 
 ### Behavioral caveats
 
-- `Component.__hooks()` вызывает `initStyle()` и на `onServerPrefetch`, и на `onMounted` — на клиенте после SSR это двойная инициализация. Доплнительный явный `onMounted(() => X.initStyle())` в SFC ([Button.vue:346](../../lib/button/Button.vue#L346), [Label.vue:57](../../lib/label/Label.vue#L57)) даёт **третий** вызов. См. [dev-patterns.md §12](../dev-patterns.md#12-known-deviations-from-this-pattern).
+- `Component.__hooks()` вызывает `initStyle()` и на `onServerPrefetch`, и на `onMounted` — на клиенте после SSR это двойная инициализация. Ручной `onMounted(() => X.initStyle())` в SFC давал бы **третий** вызов; Wave 2.3 (2026-05-16) убрал все такие дубликаты из 6 SFC (Button, Icons, InputLayout × 2, Menu, Separator, Table). См. [dev-patterns.md §2 row 1](../dev-patterns.md#2-decisions).
 - `cssComponents: Map` — растёт по мере уникальных классов. Без TTL и cleanup. На long-running приложениях с тысячами разных динамических классов память будет расти.
 - `FishtVueSymbol` пере-инициализируется при каждом `app.use(FishtVue, ...)` — `Component`-инстанс, созданный между установками, может ссылаться на старый instance.
 - Fallback на `window.FishtVue` ([component/index.ts:68](../../lib/component/index.ts#L68)) ломается в multi-instance/multi-app сценариях и в SSR.

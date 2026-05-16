@@ -193,8 +193,9 @@
   // Резолвим offsetTop сразу — synchronously: в jsdom-тестах expose.headerHeight
   // должен быть актуальным без ожидания onMounted-hook.
   headerHeight.value = resolveOffsetTop()
+  // `InputLayout.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
   onMounted(() => {
-    InputLayout.initStyle()
     if (beforeInput.value) {
       beforeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) beforeWidth.value = (entry as any).target["offsetWidth"]
@@ -226,7 +227,6 @@
   }
 
   onMounted(() => {
-    InputLayout.initStyle()
     if (isClient() && inputBody.value) layoutObserver.observe(inputBody.value as Element)
   })
   onUnmounted(() => {

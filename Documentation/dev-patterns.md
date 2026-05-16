@@ -1,7 +1,7 @@
 ---
 title: Development patterns & documentation regulations
 summary: Конституция разработки внутри lib/ и регламенты внутренней документации.
-updated: 2026-05-09
+updated: 2026-05-16
 stability: stable
 since: 0.2.11
 ---
@@ -18,7 +18,7 @@ since: 0.2.11
 
 | Расхождение | Найдено | Решение | Обоснование | Action item |
 |---|---|---|---|---|
-| `onMounted` vs `Component.onMounted` для инициализации стилей | [Button.vue:346](../lib/button/Button.vue#L346), [Label.vue:57](../lib/label/Label.vue#L57) — raw `onMounted(() => X.initStyle())`. При этом `Component.__hooks()` ([component/index.ts:79–84](../lib/component/index.ts#L79-L84)) уже регистрирует `vueOnMounted(() => this.initStyle())` в конструкторе. | Канон — **полагаться только на авто-хук** в конструкторе `Component`. Не вызывать `initStyle()` повторно из SFC. | Двойной вызов `initStyle()` — лишняя работа, риск race-conditions при будущих расширениях lifecycle. | Удалить `onMounted(() => X.initStyle())` из всех SFC. См. §12. |
+| `onMounted` vs `Component.onMounted` для инициализации стилей | Ранее [Button.vue:346](../lib/button/Button.vue#L346), [Label.vue:57](../lib/label/Label.vue#L57) — raw `onMounted(() => X.initStyle())`. При этом `Component.__hooks()` ([component/index.ts:79–84](../lib/component/index.ts#L79-L84)) уже регистрирует `vueOnMounted(() => this.initStyle())` в конструкторе. | Канон — **полагаться только на авто-хук** в конструкторе `Component`. Не вызывать `initStyle()` повторно из SFC. | Двойной вызов `initStyle()` — лишняя работа, риск race-conditions при будущих расширениях lifecycle. | ✅ Wave 2.3 done (2026-05-16) — sweep по 13 SFC (Alert, Aria, Calendar, Input, Label, Select, Switch + Button, Icons, InputLayout, Menu, Separator, Table); 8 SFC не используют initStyle. См. §12. |
 | Импорт SFC: `from "./Button"` или `from "fishtvue/button"` | `Button.vue` использует относительные `./Button`, `./Icons.vue`. Внешние компоненты — через `fishtvue/{name}`. | Канон — **внутренние типы из `./{Name}` (относительный)**, **сторонние компоненты — через `fishtvue/{name}`** (alias-импорт). | Относительные внутри собственного каталога — короче и устойчивы к refactor каталога. Через alias — для cross-component импортов, чтобы tree-shaking видел публичный entry. | Аудит на конфликты при переименовании. |
 | `defineEmits` отсутствует в части компонентов | [Button.d.ts:109](../lib/button/Button.d.ts#L109) — `ButtonEmits = null`. У form-controls (Input, Select) — полноценный type. | Канон — **`{Name}Emits = null` явно**, если компонент не эмитит ничего. Никаких пустых `defineEmits()`. | Сигнал в `.d.ts`: «компонент намеренно не эмитит». | Везде, где emits нет — type объявить как `null`, не пропускать. |
 | Класс-обёртка `class X extends ClassComponent<...>` в `.d.ts` | [Button.d.ts:11](../lib/button/Button.d.ts#L11), [Input.d.ts:12](../lib/input/Input.d.ts#L12) — везде объявлен. | Канон — **обязательная декларация** + `declare module "vue" { interface GlobalComponents { X: GlobalComponentConstructor<X> } }`. | Даёт IntelliSense в template'ах + правильную типизацию template-ref'ов. | Проверка в чек-листе нового компонента. |
@@ -328,15 +328,9 @@ since: <версия fishtvue>
 
 Список мест, где канон не соблюдается на 2026-05-09. Это входной материал для cleanup PR'ов.
 
-### Дублирование `initStyle()`
+### ~~Дублирование `initStyle()`~~ ✅ resolved 2026-05-16 (Wave 2.3)
 
-`Component.__hooks()` ([component/index.ts:79–84](../lib/component/index.ts#L79-L84)) уже регистрирует `vueOnMounted(() => this.initStyle())`. Тем не менее SFC дополнительно вызывают `onMounted(() => X.initStyle())`:
-
-- [Button.vue:346–348](../lib/button/Button.vue#L346-L348)
-- [Label.vue:57](../lib/label/Label.vue#L57)
-- (вероятно — повсеместно; полный аудит при cleanup PR)
-
-Action item: убрать дублирующие `onMounted(() => X.initStyle())` из всех SFC.
+`Component.__hooks()` ([component/index.ts:79–84](../lib/component/index.ts#L79-L84)) регистрирует `vueOnMounted(() => this.initStyle())` и `onServerPrefetch(() => this.initStyle())`. Раньше 6 SFC дублировали ручной `onMounted(() => X.initStyle())` (7 occurrences): Button, Icons, InputLayout (×2), Menu, Separator, Table. Wave 2.3 (2026-05-16) убрал все дубликаты и поставил comment-marker в каждом затронутом SFC. После sweep'а 21 of 21 core SFC соблюдают канон. Подробности — [Documentation/issues/component-class.md Issue 1](./issues/component-class.md).
 
 ### Каталог `texteditor` без дефиса
 

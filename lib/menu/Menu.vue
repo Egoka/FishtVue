@@ -231,8 +231,9 @@
     setItems
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // `MenuComponent.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
   onMounted(() => {
-    MenuComponent.initStyle()
     const groupsValue = unref(props.groups)
     listGroups.value = setItems({ ...props, groups: groupsValue } as MenuItemPrivate)?.groups ?? []
   })

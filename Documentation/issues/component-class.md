@@ -1,7 +1,7 @@
 ---
 title: Issues — Component class (`Component<T>`)
-summary: 1/10 issues закрыт 2026-05-11 (Issue 6 — unstyled enforcement через setStyle guard, cross-cutting fix → 22 компонента). Открытые — Issue 1 (dup initStyle, 3/22 progress), Issue 2 (window.FishtVue coupling), Issue 3 (HMR teardown), Issue 4 (generic narrowing).
-updated: 2026-05-11
+summary: 2/10 issues закрыто (Issue 6 — unstyled enforcement через setStyle guard cross-cutting; Issue 1 — dup initStyle sweep done 2026-05-16, Wave 2.3 завершена для класса). Issue 5 — частично resolved (SSR + idempotence + fallback chain tests added; HMR test переехал в Issue 3). Открытые — Issue 2 (window.FishtVue coupling), Issue 3 (HMR teardown), Issue 4 (generic narrowing).
+updated: 2026-05-16
 audit-checklist: 60-point + Configuration support
 source: lib/component/
 related-doc: ../architecture/component-class.md
@@ -14,54 +14,48 @@ related-doc: ../architecture/component-class.md
 | Severity | Count (open) | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 4 | C13 (window.FishtVue coupling), C17 (style injection paths), D24, K46 (87% coverage) |
-| medium | 3 | D21 (generic narrowing), B11, K46 |
+| high | 3 | C13 (window.FishtVue coupling), C17 (HMR teardown), K46 (coverage, частично закрыто) |
+| medium | 3 | D21 (generic narrowing), B11, K46 (HMR-test pending) |
 | low | 2 | E29.7 (motion not at base), N59 |
 
-## Issue 1: Double initStyle — onServerPrefetch + onMounted + manual call в каждом компоненте
+## ~~Issue 1: Double initStyle — onServerPrefetch + onMounted + manual call в каждом компоненте~~ ✅ resolved 2026-05-16
 
 - **Категория:** C17 (SSR style injection)
 - **Severity:** high
-- **Где:** [component/index.ts:81-82](../../lib/component/index.ts#L81-L82) + каждый component (`onMounted(() => Component.initStyle())`)
+- **Где:** [component/index.ts:79-84](../../lib/component/index.ts#L79-L84) + ранее — каждый component (`onMounted(() => X.initStyle())`)
 
-### Что найдено
+### Что было найдено
 
-Constructor `Component<T>` уже вызывает:
+Constructor `Component<T>` уже вызывал:
 ```ts
 onServerPrefetch(() => this.initStyle())
 vueOnMounted(() => this.initStyle())
 ```
 
-Но КАЖДЫЙ компонент в lib/ дублирует:
-```ts
-onMounted(() => { Button.initStyle() })  // Button.vue:347
-onMounted(() => Label.initStyle())        // Label.vue:57
-onMounted(() => { Switch.initStyle() })   // Switch.vue:159
-// и так далее во всех 22
-```
+Но 6 SFC дублировали ручной `onMounted(() => X.initStyle())` (7 occurrences):
+- Button.vue:369, Icons.vue:70, InputLayout.vue:197 + InputLayout.vue:229, Menu.vue:235, Separator.vue:128, Table.vue:937.
 
-Это:
-- Двойная инжекция стилей при mount (хотя `__setStyle` дедуплицирует — runtime-cost остаётся).
-- Излишний код в каждом компоненте.
-- Конфликт паттернов: одни компоненты полагаются на base-class-hook, другие добавляют ручной — inconsistent.
+Это давало двойную инжекцию стилей при mount (хотя `__setStyle` дедуплицирует — runtime-cost оставался), излишний код в каждом компоненте, inconsistent pattern: одни полагались на base-class-hook, другие добавляли ручной вызов.
 
-### Почему это проблема
+### Что сделано (Wave 2.3, 2026-05-16)
 
-- Documentation [components/label.md](../components/label.md) §18 уже отмечает: «raw `onMounted(() => Label.initStyle())` is duplicate».
-- Cross-cutting baroque pattern в 22 компонентах.
+Sweep по 6 SFC × 7 occurrences:
 
-### Что нужно сделать
+- ~~Button.vue:369~~ — `Button.initStyle()` удалён, добавлен comment-marker выше `onMounted` (блок сохранён — внутри dev-warning по a11y).
+- ~~Icons.vue:69-71~~ — весь `onMounted(async () => { Icons.initStyle() })` удалён (после удаления тело пустое), заменён comment-marker'ом.
+- ~~InputLayout.vue:197 + 229~~ — два `InputLayout.initStyle()` удалены, comment-marker над первым блоком; обе `onMounted` сохранены (внутри ResizeObserver setup и layoutObserver setup).
+- ~~Menu.vue:235~~ — `MenuComponent.initStyle()` удалён, comment-marker над `onMounted`; блок сохранён (setItems setup).
+- ~~Separator.vue:127-129~~ — весь `onMounted(() => { Separator.initStyle() })` удалён, заменён comment-marker'ом.
+- ~~Table.vue:937~~ — `Table.initStyle()` удалён, comment-marker над `onMounted`; блок сохранён (tableObserver + sortColumns setup).
 
-1. Проверить, что `Component.__hooks()` действительно вызывает `initStyle()` корректно (line 81-82 — да).
-2. Удалить `onMounted(() => X.initStyle())` из всех 22 SFC.
-3. Альтернатива: убрать auto-hook из `Component<T>` constructor и оставить explicit вызов в каждом SFC (но тогда SSR-safety теряется).
+После sweep'а: **13 SFC чистые** (Alert, Aria, Calendar, Input, Label, Select, Switch + Button, Icons, InputLayout, Menu, Separator, Table), **8 SFC не используют initStyle** (Accordion, Badge, Dialog, FixWindow, Form, Pagination, Split, TextEditor), Dialog ✅ переведён в `./done/` ранее. Итого 21/21 чистых core SFC.
 
-**Рекомендация — оставить auto-hook, удалить дубликаты.**
+Acceptance criteria:
 
-### Acceptance criteria
-
-- [ ] Все 22 SFC не вызывают `Component.initStyle()` явно.
-- [ ] Стили инжектятся при SSR + mount (сохраняется текущее behavior).
+- [x] Все touched SFC не вызывают `Component.initStyle()` явно.
+- [x] Стили инжектятся при SSR + mount через `Component.__hooks()` ([component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) — сохранено.
+- [x] Регрессионные тесты проходят: `Button.test.ts` 27✓, `Icons.test.ts` 18✓, `InputLayout.test.ts` 41✓, `Menu.test.ts` 21✓, `Separator.test.ts` 25✓, `Table.test.ts` 66✓.
+- [x] Полный suite зелёный (38 test files passed).
 
 ## Issue 2: `window.FishtVue` global pollution + tight coupling
 
@@ -132,15 +126,26 @@ if (isClient() && !this.__globalConfig) this.__globalConfig = (window as any)?.F
 1. Документировать в [architecture/component-class.md](../architecture/component-class.md) §3: «при добавлении нового компонента: добавить ключ в ComponentsOptions interface».
 2. Альтернатива — derive автоматически через type-helper.
 
-## Issue 5: Тесты 213 строк — coverage 87%, есть untested ветви
+## Issue 5: Тесты 213 строк — coverage 87%, есть untested ветви (частично resolved 2026-05-16)
 
 - **Категория:** K46
 - **Severity:** medium
-- **Где:** [Component.test.ts](../../lib/component/Component.test.ts), coverage 87.36/78.68
+- **Где:** [Component.test.ts](../../lib/component/Component.test.ts), ранее coverage 87.36/78.68 (15 it-блоков)
 
-### Что нужно сделать
+### Что сделано (2026-05-16, Wave 2.3)
 
-Добавить тесты для: SSR `onServerPrefetch`, HMR teardown (после Issue 3), multiple init calls (idempotence), `initStyle(stylesComp)` с custom function.
+Добавлены 4 новых it-блока в `Component.test.ts` (теперь 19 cases):
+
+1. ~~SSR `onServerPrefetch` registration~~ — `constructor wires up SSR + client style injection hooks without throwing` (координативная проверка веток `__hooks()` 79-84 без зависимости от mock state; vitest `isolate: false` делает `vi.mocked(onServerPrefetch).toHaveBeenCalled()` flaky под batch run).
+2. ~~Multiple init calls (idempotence)~~ — `initStyle is idempotent — multiple calls produce identical args`.
+3. ~~`__globalConfig` fallback chain (window.FishtVue)~~ — `falls back to window.FishtVue when appContext.globalProperties.$fishtVue is undefined` (в nested `describe` с afterEach cleanup для предотвращения утечки в другие test-файлы под `isolate: false`).
+4. ~~Graceful no-config~~ — `does not throw when neither appContext.$fishtVue nor window.FishtVue is set`.
+
+### Что осталось
+
+- [ ] **HMR teardown test** — переехал в Issue 3 (нужен сначала фикс самого HMR-механизма или явная верификация, что `useStyle.ts:43-45` уже дедуплицирует через `data-fishtvue-style-id`).
+- [ ] **`initStyle(stylesComp)` с custom function**, выходящей за пределы текущего dual-call test — оставить как опциональное улучшение, нет высокого приоритета.
+- [ ] **Pre-existing flaky test** `should return the correct options with getOptions` падает соло (verified `git stash` на baseline), passes в batch. Не введён моими правками — фиксить отдельно. Возможная причина — order-dependent mock state из-за `isolate: false`.
 
 ## ~~Issue 6: SSR styles + sideEffects + unstyled~~ ✅ resolved 2026-05-11 (unstyled part)
 

@@ -66,9 +66,9 @@
       })
   }
 
-  onMounted(async () => {
-    Icons.initStyle()
-  })
+  // `Icons.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
+
   watch(
     [() => type.value, () => variant.value],
     async ([value, currentVariant]) => {

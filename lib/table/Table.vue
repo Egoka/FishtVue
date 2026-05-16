@@ -933,8 +933,9 @@
     reloadData: loadDataFromFunction
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // `Table.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
   onMounted(() => {
-    Table.initStyle()
     if (isClient() && tbody.value) tableObserver.observe(tbody.value as Element)
     suppressLoadFromFunctionInWatchers = true
     Object.assign(
