@@ -82,7 +82,7 @@ declare class Component<T extends keyof ComponentsOptions> {
   initStyle(stylesComp?: StylesComponent): void
 
   setStyle<T extends StyleClass | boolean | undefined>(stylesComp: T | T[], options?: setStyleOptions): string
-  t(key: keyof DefaultMessages | string): string | undefined
+  t(key: keyof DefaultMessages | string): string
   componentsStyle(): StyleMode | undefined
 }
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import Component from "fishtvue/component"
 import type { App } from "vue"
-import { createApp, getCurrentInstance } from "vue"
+import { createApp, defineComponent, getCurrentInstance } from "vue"
 import type { FishtVueConfiguration } from "fishtvue/config"
 import FishtVue from "fishtvue/config"
 
@@ -188,7 +188,7 @@ describe("Testing class Component", () => {
         getOptions: vi.fn(() => ({ fromWindow: true })),
         getActiveLocale: vi.fn(() => "en")
       }
-      vi.mocked(getCurrentInstance).mockReturnValueOnce({
+      vi.mocked(getCurrentInstance).mockReturnValue({
         type: { __name: "FixWindow" },
         appContext: { config: { globalProperties: {} } }
       } as any)
@@ -199,7 +199,7 @@ describe("Testing class Component", () => {
 
     it("does not throw when neither appContext.$fishtVue nor window.FishtVue is set", () => {
       delete (window as any).FishtVue
-      vi.mocked(getCurrentInstance).mockReturnValueOnce({
+      vi.mocked(getCurrentInstance).mockReturnValue({
         type: { __name: "FixWindow" },
         appContext: { config: { globalProperties: {} } }
       } as any)
@@ -209,6 +209,84 @@ describe("Testing class Component", () => {
       }).not.toThrow()
       expect(noConfigComponent.getOptions()).toBeUndefined()
       expect(noConfigComponent.getPrefix()).toBe("fishtvue")
+    })
+  })
+
+  describe("t() — locale fallback chain (Issue 3)", () => {
+    // Используем РЕАЛЬНЫЙ Vue + FishtVue plugin (не vue-mock из верхнего beforeEach):
+    // Component.t() читает this.__globalConfig.getActiveLocale() / getDefaultLocale() / messages,
+    // которые setup'аются в plugin install. С моком getCurrentInstance не получается имитировать
+    // эти зависимости в полном suite (модуль fishtvue/component уже захватил реальный
+    // getCurrentInstance до момента vi.mock в beforeEach Component.test.ts).
+    const buildComponent = (cfg: FishtVueConfiguration): Component<"FixWindow"> => {
+      let captured: Component<"FixWindow"> | undefined
+      const Probe = defineComponent({
+        name: "FixWindow",
+        setup() {
+          captured = new Component<"FixWindow">()
+          return () => null
+        }
+      })
+      mount(Probe, { global: { plugins: [[FishtVue as any, cfg]] } })
+      // @ts-ignore — captured is set synchronously inside setup before mount returns.
+      return captured
+    }
+
+    it("returns active-locale value when key exists in messages[activeLocale]", () => {
+      const c = buildComponent({
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "ru",
+          messages: { en: { greet: "Hello" }, ru: { greet: "Привет" } }
+        }
+      })
+      expect(c.t("greet")).toBe("Привет")
+    })
+
+    it("falls back to defaultLocale when key missing in activeLocale", () => {
+      const c = buildComponent({
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "fr",
+          messages: { en: { greet: "Hello" } }
+        }
+      })
+      expect(c.t("greet")).toBe("Hello")
+    })
+
+    it("returns key as last resort when neither active nor default contain it", () => {
+      const c = buildComponent({
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "ru",
+          messages: { en: {}, ru: {} }
+        }
+      })
+      expect(c.t("missing.key")).toBe("missing.key")
+    })
+
+    it("returns empty string for empty key", () => {
+      const c = buildComponent({})
+      expect(c.t("")).toBe("")
+    })
+
+    it("supports dot-path lookup with default-locale fallback", () => {
+      const c = buildComponent({
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "fr",
+          messages: { en: { alert: { close: "Close" } }, fr: {} }
+        }
+      })
+      expect(c.t("alert.close")).toBe("Close")
+    })
+
+    it("returns string type (no longer string | undefined)", () => {
+      const c = buildComponent({
+        locale: { defaultLocale: "en", activeLocale: "en", messages: { en: {} } }
+      })
+      const result: string = c.t("anykey")
+      expect(typeof result).toBe("string")
     })
   })
 

@@ -1,8 +1,8 @@
 ---
 title: Issues — Component class (`Component<T>`)
-summary: 2/10 issues закрыто (Issue 6 — unstyled enforcement через setStyle guard cross-cutting; Issue 1 — dup initStyle sweep done 2026-05-16, Wave 2.3 завершена для класса). Issue 5 — частично resolved (SSR + idempotence + fallback chain tests added; HMR test переехал в Issue 3). Открытые — Issue 2 (window.FishtVue coupling), Issue 3 (HMR teardown), Issue 4 (generic narrowing).
-updated: 2026-05-16
-last-changes: 2026-05-16 — FixWindow добавлен в "14 SFC чистые" список (Wave 2.3 sweep дошёл до FixWindow в рамках fix(fixwindow) audit close-out); ранее ошибочно числился в "не используют initStyle".
+summary: 3/10 issues закрыто (Issue 6 — unstyled enforcement через setStyle guard cross-cutting; Issue 1 — dup initStyle sweep done 2026-05-16; Issue 2 — window.FishtVue coupling resolved 2026-05-20 через inject-first path в config Issue 1 fix). Issue 5 — частично resolved (SSR + idempotence + fallback chain tests added; HMR test переехал в Issue 3). Открытые — Issue 3 (HMR teardown), Issue 4 (generic narrowing).
+updated: 2026-05-20
+last-changes: 2026-05-20 — Issue 2 (window.FishtVue coupling) ✅ resolved через config Issue 1 fix (inject(FishtVueSymbol) primary path + const Symbol, window.FishtVue теперь только для imperative API вне Vue setup). Wave 1.3 architecture blocker закрыт.
 audit-checklist: 60-point + Configuration support
 source: lib/component/
 related-doc: ../architecture/component-class.md
@@ -15,7 +15,7 @@ related-doc: ../architecture/component-class.md
 | Severity | Count (open) | Categories                                                                           |
 | -------- | ------------ | ------------------------------------------------------------------------------------ |
 | critical | 0            | —                                                                                    |
-| high     | 3            | C13 (window.FishtVue coupling), C17 (HMR teardown), K46 (coverage, частично закрыто) |
+| high     | 2            | C17 (HMR teardown), K46 (coverage, частично закрыто)                                  |
 | medium   | 3            | D21 (generic narrowing), B11, K46 (HMR-test pending)                                 |
 | low      | 2            | E29.7 (motion not at base), N59                                                      |
 
@@ -60,39 +60,13 @@ Acceptance criteria:
 - [x] Регрессионные тесты проходят: `Button.test.ts` 27✓, `Icons.test.ts` 18✓, `InputLayout.test.ts` 41✓, `Menu.test.ts` 21✓, `Separator.test.ts` 25✓, `Table.test.ts` 66✓.
 - [x] Полный suite зелёный (38 test files passed).
 
-## Issue 2: `window.FishtVue` global pollution + tight coupling
+## ~~Issue 2: `window.FishtVue` global pollution + tight coupling~~ ✅ resolved 2026-05-20
 
 - **Категория:** C13 (утечка структуры)
-- **Severity:** high
-- **Где:** [component/index.ts:68](../../lib/component/index.ts#L68)
-
-### Что найдено
-
-```ts
-if (isClient() && !this.__globalConfig) this.__globalConfig = (window as any)?.FishtVue
-```
-
-`window.FishtVue` устанавливается в [config/index.ts:125](../../lib/config/index.ts#L125). Каждая Component-инстанция читает оттуда.
-
-### Почему это проблема
-
-- Multi-tenant scenarios (multiple Vue apps на одной странице с разными FishtVue configs) — конфликт через single `window.FishtVue`.
-- SSR: `window` undefined — `isClient()` guard защищает, но fallback на `inject(FishtVueSymbol)` достаточен сам по себе.
-- `(window as any)` — type-cast bypass типизации.
-- Iframe / Shadow DOM: window-context разный — компоненты в iframe не видят родительский FishtVue.
-
-### Что нужно сделать
-
-1. Сделать `inject(FishtVueSymbol)` primary path:
-   ```ts
-   if (hasInjectionContext()) {
-     this.__globalConfig = inject(FishtVueSymbol) ?? this.__globalConfig
-   } else if (isClient() && (window as any)?.FishtVue) {
-     this.__globalConfig = (window as any).FishtVue
-   }
-   ```
-2. `window.FishtVue` → fallback только когда `inject` недоступен (вне Vue setup, например, в `openAlert` imperative API).
-3. Documentation [architecture/component-class.md](../architecture/component-class.md) обновить.
+- **Severity:** ~~high~~
+- **Где:** [component/index.ts:68](../../lib/component/index.ts#L68), [config/index.ts:82](../../lib/config/index.ts#L82)
+- **Resolution:** через config Issue 1 fix. `isExistFishtVue` ([config/index.ts:82–92](../../lib/config/index.ts#L82-L92)) теперь использует `inject(FishtVueSymbol)` primary path (через `hasInjectionContext`), fallback на `window.FishtVue` — только когда нет inject context (imperative API, например `openAlert`). `FishtVueSymbol` стабилизирован как `const InjectionKey<FishtVue>` — multi-app safe.
+- Component class ([component/index.ts:68](../../lib/component/index.ts#L68)) сохраняет window fallback для backward compat, но теперь это исключительный путь, не primary.
 
 ## Issue 3: SSR style injection — нет teardown при HMR
 

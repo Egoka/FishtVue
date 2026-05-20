@@ -1,7 +1,7 @@
 ---
 title: Component class
-summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle.
-updated: 2026-05-16
+summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20.
+updated: 2026-05-20
 stability: stable
 since: 0.2.11
 ---
@@ -124,7 +124,7 @@ Note: тип-параметр `T extends keyof ComponentsOptions` — обяза
 | `getPrefix()` | `() => string \| undefined` | Возвращает `prefix`. |
 | `initStyle(stylesComp?)` | `(stylesComp?: StylesComponent) => void` | Применяет накопленный CSS через `useStyle`. Авто-вызывается из `__hooks()` на mount/SSR-prefetch. |
 | `setStyle<T>(stylesComp, options?)` | `(stylesComp: T \| T[], options?: setStyleOptions) => string` | Главный API: преобразует tw-классы в CSS, добавляет в реестр и возвращает `"fv {prefix}-{kebab-name} {merged-classes}"` для `:class=`. |
-| `t(key)` | `(key: keyof DefaultMessages \| string) => string \| undefined` | Локализация через `getActiveLocale()` + `messages[locale][key]`. Поддерживает dot-path (`"button.label"`). |
+| `t(key)` | `(key: keyof DefaultMessages \| string) => string` | Локализация с fallback chain `messages[active][key] → messages[default][key] → key`. Поддерживает dot-path. См. [locale.md §3](./locale.md#3-how-it-works). |
 | `componentsStyle()` | `() => StyleMode \| undefined` | Возвращает `componentsStyle` из global config: `"filled" \| "outlined" \| "underlined"`. |
 
 `PublicFields` ([TypeComponent.d.ts:89–100](../../lib/component/TypeComponent.d.ts#L89-L100)) — список ключей, доступных в lifecycle-хуке: `name`, `prefix`, `onBefore*`, `on*`, `getOptions`, `getPrefix`, `initStyle`. `setStyle` и `t` через хук не пробрасываются.
@@ -312,7 +312,7 @@ describe("Component class", () => {
 | `getOptions()` возвращает `undefined` | Plugin не установлен или name не совпадает с ключом `ComponentsOptions`. | `app.use(FishtVue, {})` + проверь, что `name` в `new Component<"X">()` есть в `ComponentsOptions`. |
 | `setStyle` возвращает класс, но стили не применяются | `useStyle` не нашёл `<head>` (SSR). | Стили инжектятся только на клиенте — на сервере класс возвращается, но `<style>` не создаётся. На клиенте после hydration стиль появится. |
 | `name` отображается как `undefined` | SFC без `defineOptions({ name: "X" })` или без аргумента в `new Component<"X">()`. | Передай явно: `new Component<"X">("X")`. |
-| `t()` всегда возвращает `undefined` | Нет ключа в `locale.messages[activeLocale]` или активная локаль не соответствует messages. | Проверь конфиг плагина и `getActiveLocale()`. |
+| `t()` возвращает literal key вместо перевода | Ключа нет ни в `messages[active]`, ни в `messages[default]`. | Добавь ключ в локаль — fallback chain покрывает active → default → key. |
 | Custom layers не применяются | `optionsTheme.layers` не передан. | Передай: `app.use(FishtVue, { optionsTheme: { layers: "reset, base" } })`. |
 
 ## 17. Related
@@ -345,8 +345,8 @@ describe("Component class", () => {
 
 - `Component.__hooks()` вызывает `initStyle()` и на `onServerPrefetch`, и на `onMounted` — на клиенте после SSR это двойная инициализация. Ручной `onMounted(() => X.initStyle())` в SFC давал бы **третий** вызов; Wave 2.3 (2026-05-16) убрал все такие дубликаты из 6 SFC (Button, Icons, InputLayout × 2, Menu, Separator, Table). См. [dev-patterns.md §2 row 1](../dev-patterns.md#2-decisions).
 - `cssComponents: Map` — растёт по мере уникальных классов. Без TTL и cleanup. На long-running приложениях с тысячами разных динамических классов память будет расти.
-- `FishtVueSymbol` пере-инициализируется при каждом `app.use(FishtVue, ...)` — `Component`-инстанс, созданный между установками, может ссылаться на старый instance.
-- Fallback на `window.FishtVue` ([component/index.ts:68](../../lib/component/index.ts#L68)) ломается в multi-instance/multi-app сценариях и в SSR.
+- ~~`FishtVueSymbol` пере-инициализируется при каждом `app.use(FishtVue, ...)`~~ — ✅ resolved 2026-05-20: symbol теперь `const`, multi-app safe.
+- ~~Fallback на `window.FishtVue` ломается в multi-instance/multi-app сценариях~~ — ✅ resolved 2026-05-20: inject-first path в `isExistFishtVue` ([config/index.ts:81](../../lib/config/index.ts#L82)); window fallback используется только вне Vue setup context (например, imperative API).
 
 ### Bug report format
 

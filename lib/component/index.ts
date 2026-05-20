@@ -181,15 +181,21 @@ export default class Component<T extends keyof ComponentsOptions> {
     listComponents.add(this.name)
   }
 
-  public t(key: keyof DefaultMessages | string): string | undefined {
-    if (!key) return
-    const nameLocale = this.__globalConfig?.getActiveLocale() ?? "en"
-    if (!nameLocale) return
-    const localeMessages = this.__globalLocale?.messages?.[nameLocale]
-    if (!localeMessages) return
-    const value = get<unknown>(localeMessages, key)
-    if (!value) return
-    return typeof value === "string" ? value : undefined
+  // Issue 3: fallback chain `messages[active][key] → messages[default][key] → key`.
+  // Возвращаемый тип сужен с `string | undefined` до `string` — key используется как last resort,
+  // что делает t() безопасным для template/computed без дополнительного `?? "literal"` fallback.
+  public t(key: keyof DefaultMessages | string): string {
+    if (!key) return ""
+    const active = this.__globalConfig?.getActiveLocale() ?? "en"
+    const def = this.__globalConfig?.getDefaultLocale() ?? "en"
+    const messages = this.__globalLocale?.messages
+    const fromActive = get<unknown>(messages?.[active], key)
+    if (typeof fromActive === "string") return fromActive
+    if (def && def !== active) {
+      const fromDefault = get<unknown>(messages?.[def], key)
+      if (typeof fromDefault === "string") return fromDefault
+    }
+    return String(key)
   }
 
   public componentsStyle(): StyleMode | undefined {

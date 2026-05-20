@@ -202,7 +202,10 @@ describe("Form Component Tests", () => {
       const rules = field?.rules && !Array.isArray(field.rules) ? field.rules : null
       expect(rules).toBeDefined()
       expect(rules?.required).toEqual(expect.any(String)) // Проверяем, что правило существует и является строкой
-      expect(rules?.required).toBe("Required field")
+      // Issue 3 (2026-05-20): Component.t() returns key as last resort when plugin not installed.
+      // В "Without Library Initialization" блоке FishtVue не подключён → t("requiredField") → "requiredField"
+      // (раньше → undefined → "Required field" via ?? fallback). С install плагина — "Required field".
+      expect(rules?.required).toBe("requiredField")
 
       // Протестировать валидацию поля
       const input = wrapper.find("[data-form-group-item] input")
@@ -211,7 +214,8 @@ describe("Form Component Tests", () => {
 
       // Убедиться, что поле помечено как невалидное
       expect(wrapper.vm.isFieldInvalid("testField")).toBe(true)
-      expect(wrapper.vm.getField<"Input">("testField")?.messageInvalid).toBe("Required field")
+      // Issue 3 (2026-05-20): see comment above — t() returns key without plugin.
+      expect(wrapper.vm.getField<"Input">("testField")?.messageInvalid).toBe("requiredField")
     })
   })
 

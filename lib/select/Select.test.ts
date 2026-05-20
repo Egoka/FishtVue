@@ -286,6 +286,16 @@ describe("Select Component Tests", () => {
       })
       await wrapper.find("[data-select]").trigger("click")
       await flushPromises()
+      // Force dataList computed evaluation — warnDeprecatedMarker fires only on access.
+      // Template open-path может не дойти до dataList в jsdom раньше assertion'а.
+      // Type in search box to flip isQuery + dataSelect filter branch (where warn fires).
+      const search = wrapper.find("[data-select-search] input")
+      if (search.exists()) {
+        await search.setValue("a")
+        await search.trigger("input")
+        await flushPromises()
+      }
+      void (wrapper.vm as any).dataList
       const html = wrapper.html()
       expect(html).not.toContain("onerror=")
       expect(html).not.toMatch(/<img[^>]*src=x/)
@@ -404,9 +414,12 @@ describe("Select Component Tests", () => {
 
     // ---ISSUE 8 — aria-live -------------------------------------
     it("renders aria-live region with results count when query is active", async () => {
+      // Issue 3 (2026-05-20): Component.t() возвращает key как last resort без плагина.
+      // Чтобы %d template из en messages применился, подключаем FishtVue plugin.
       const wrapper = mount(Select, {
         props: { dataSelect: ["Apple", "Banana", "Bandana"], modelValue: null },
-        attachTo: document.body
+        attachTo: document.body,
+        global: { plugins: [[FishtVue as any, {}]] }
       })
       await wrapper.find("[data-select]").trigger("click")
       await flushPromises()

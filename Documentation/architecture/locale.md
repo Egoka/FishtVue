@@ -1,7 +1,7 @@
 ---
 title: Locale
-summary: Структура Locales/Messages, встроенные en/ru, setActiveLocale, расширение. Optional validation keys для интеграции с rulesHandler.
-updated: 2026-05-10
+summary: Структура Locales/Messages, встроенные en/ru, setActiveLocale, расширение. Optional validation keys для интеграции с rulesHandler. t() fallback chain (active → default → key) с 2026-05-20.
+updated: 2026-05-20
 stability: stable
 since: 0.2.11
 ---
@@ -63,11 +63,12 @@ type Locales = Partial<{
 
 **Чтение:**
 
-- `Component.t(key)` ([component/index.ts:183–192](../../lib/component/index.ts#L183-L192)):
-  1. `getActiveLocale()` — текущая локаль.
-  2. `messages[activeLocale]` — подмножество сообщений.
-  3. `get(messages, key)` ([utils/objectHandler.get](../../lib/utils/objectHandler.ts)) — поддержка dot-path: `"button.label"`.
-  4. Возвращает `string | undefined`. Не-строки фильтруются.
+- `Component.t(key)` ([component/index.ts:184–199](../../lib/component/index.ts#L184-L199)) с 2026-05-20 — fallback chain:
+  1. `getActiveLocale()` → `messages[active][key]` через `get()` ([utils/objectHandler.get](../../lib/utils/objectHandler.ts), поддержка dot-path: `"alert.close"`). Если строка — возвращается.
+  2. Если в active нет — `getDefaultLocale()` → `messages[default][key]`. Если строка — возвращается.
+  3. Last resort — возвращается **сам key как строка** (например, `"alert.close"`).
+  4. Empty/falsy key — возвращается `""`.
+  5. Сигнатура: `(key) => string` (раньше `string | undefined`).
 
 **Переключение:**
 
@@ -173,7 +174,7 @@ Optional ключи добавлены 2026-05-10 в связке с `setDefault
 
 | Name | Type | Description |
 |---|---|---|
-| `Component.t(key)` | `(key: keyof DefaultMessages \| string) => string \| undefined` | Возвращает строку для текущей локали. Поддерживает dot-path. |
+| `Component.t(key)` | `(key: keyof DefaultMessages \| string) => string` | Возвращает строку для текущей локали с fallback chain `active → default → key`. Поддерживает dot-path. Никогда не возвращает `undefined` (key как last resort). |
 
 Из `fishtvue/locale` (default export):
 
@@ -369,8 +370,8 @@ describe("Pagination locale", () => {
 
 | Проблема | Причина | Решение |
 |---|---|---|
-| `t()` возвращает `undefined` | Ключа нет в `messages[activeLocale]`. | Добавь ключ в локаль или fallback в SFC: `X.t("key") ?? "fallback"`. |
-| После `setActiveLocale("xx")` ничего не изменилось | `messages.xx` не определён. | Передай `messages: { xx: {...} }` в plugin. |
+| `t()` возвращает сам key как строку (например, `"alert.close"`) | Ключа нет ни в `messages[active]`, ни в `messages[default]`. | Добавь ключ в один из locale messages, либо смирись с literal key как fallback (используется как development-signal). |
+| После `setActiveLocale("xx")` ключи внезапно не локализуются | `messages.xx` не определён → fallback на `messages[defaultLocale]` (`en` по умолчанию) — обычно тоже даёт нужный текст. | Если хочешь именно `xx`-локаль, передай `messages: { xx: {...} }` в plugin. |
 | Hydration mismatch для текстов | Сервер и клиент разрешили разные `activeLocale`. | Установи `defaultLocale` детерминированно (например, из cookie/header) до `app.mount()`. |
 | Ключи `rows` / `clear` есть в en.ts, но нет в `DefaultMessages` | Локали содержат расширения сверх `DefaultMessages` без обновления типа. | См. Known issues — это API inconsistency. |
 | `getActiveLocale()` возвращает `undefined` | Plugin не установлен. | Установи через `app.use(FishtVue, ...)`. |
@@ -404,8 +405,9 @@ describe("Pagination locale", () => {
 
 ### Behavioral caveats
 
-- `Component.t()` возвращает `undefined` при отсутствии ключа, а не fallback на `defaultLocale`. Если хочешь fallback — реализуй на стороне SFC или через wrapper.
-- При `setActiveLocale(name)` если `messages[name]` не существует, реактивность сработает, но `t()` начнёт возвращать `undefined`. Нет встроенной валидации существования локали.
+- ~~`Component.t()` возвращает `undefined` при отсутствии ключа, а не fallback на `defaultLocale`~~ — ✅ resolved 2026-05-20: fallback chain `active → default → key` встроен. Сигнатура возвращает `string` (не nullable).
+- При `setActiveLocale(name)` если `messages[name]` не существует, реактивность сработает; `t()` начнёт возвращать значения из `defaultLocale` (через fallback chain), а не undefined как раньше.
+- SFC-сайты с pattern `X.t("key") ?? "fallback"` — `??` теперь dead code (t() не возвращает nullish). Сохранены для backward compat, могут быть очищены в будущем cleanup'е.
 - Default messages импортируются из `lib/locale/locales/{en,ru}.ts` напрямую; если bundler не корректно tree-shake'ит, ru может попасть в bundle даже при использовании только en.
 
 ### Bug report format
