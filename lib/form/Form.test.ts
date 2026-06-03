@@ -1,5 +1,5 @@
-import { mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { flushPromises, mount } from "@vue/test-utils"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Form from "fishtvue/form/Form.vue"
 import { nextTick } from "vue"
@@ -9,6 +9,18 @@ import type { RuleCallback, Rules } from "fishtvue/utils/rulesHandler"
 import * as AllRules from "fishtvue/utils/rulesHandler"
 
 describe("Form Component Tests", () => {
+  // Изоляция global state: window.FishtVue мутируется FishtVue-плагином и протекает между
+  // тест-файлами (зеркалит Select.test.ts); setDefaultRuleMessages — global module state.
+  // Чистим до и после каждого теста, чтобы no-plugin кейсы (Form.t → ключ) были детерминированы.
+  beforeEach(() => {
+    delete (window as any).FishtVue
+    AllRules.setDefaultRuleMessages({})
+  })
+  afterEach(() => {
+    delete (window as any).FishtVue
+    AllRules.setDefaultRuleMessages({})
+  })
+
   const structure = (): FormProps["structure"] => [
     {
       fields: [
@@ -941,6 +953,225 @@ describe("Form Component Tests", () => {
 
       // Восстановить prototype
       ;(HTMLElement.prototype as any).scrollIntoView = origScrollIntoView
+    })
+  })
+
+  // ---ISSUE 1 — XSS guard: Form must not v-html Select option values ---
+  describe("Form Component - XSS guard for Select fields (Issue 1)", () => {
+    const selectStructure = (payload: string): FormProps["structure"] => [
+      {
+        fields: [
+          {
+            name: "role",
+            typeComponent: "Select",
+            label: "Role",
+            dataSelect: [{ id: 1, value: payload }]
+          } as FieldType<"Select">
+        ]
+      }
+    ]
+
+    it("does not execute an XSS payload from a Select option value", async () => {
+      const xssPayload = '<img src=x onerror="window.__formXss=true">'
+      ;(window as any).__formXss = false
+
+      const wrapper = mount(Form, {
+        props: { structure: selectStructure(xssPayload), formFields: {} },
+        attachTo: document.body
+      })
+
+      // Открываем inline-rendered Select dropdown.
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+
+      const html = wrapper.html() + document.body.innerHTML
+      // Раньше Form переопределял Select #item slot через v-html — payload исполнялся как HTML.
+      // Теперь Select рендерит значение через text-interpolation: raw <img> DOM-узла быть не должно.
+      expect(html).not.toMatch(/<img[^>]*src=x/i)
+      expect(html).not.toMatch(/<img[^>]+onerror/i)
+      expect((window as any).__formXss).toBe(false)
+      // Payload остаётся escaped-текстом — это подтверждает, что text-interpolation guard сработал.
+      expect(html).toContain("&lt;img")
+
+      wrapper.unmount()
+      delete (window as any).__formXss
+    })
+
+    it("renders a Select field and defaults closeButtonBadge", () => {
+      const wrapper = mount(Form, {
+        props: { structure: selectStructure("alpha"), formFields: {} }
+      })
+      expect(wrapper.find("[data-select]").exists()).toBe(true)
+      const field = wrapper.vm.getField<"Select">("role")
+      expect(field?.closeButtonBadge).toBe(true)
+    })
+  })
+
+  // ---ISSUE 8 — coverage: async-valid, compare, custom field, multi-section ---
+  describe("Form Component - Coverage (Issue 8)", () => {
+    it("passes async validation for a valid value", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            {
+              fields: [
+                {
+                  name: "asyncField",
+                  typeComponent: "Input",
+                  label: "Async",
+                  modelValue: "",
+                  rules: {
+                    async: {
+                      message: "Invalid async field",
+                      validationCallback(value: any): Promise<RuleCallback> {
+                        return Promise.resolve({ isInvalid: value !== "ok" })
+                      }
+                    }
+                  } as Rules
+                }
+              ]
+            }
+          ]
+        }
+      })
+      await nextTick()
+      wrapper.vm.setFieldValue("asyncField", "ok")
+      wrapper.vm.validateFields("asyncField")
+      await flushPromises()
+      await nextTick()
+      expect(wrapper.vm.formInvalidFields["asyncField"]).toBe(false)
+    })
+
+    it("validates a compare rule against another field", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            {
+              fields: [
+                { name: "password", typeComponent: "Input", label: "Password", modelValue: "secret" },
+                {
+                  name: "confirm",
+                  typeComponent: "Input",
+                  label: "Confirm",
+                  modelValue: "",
+                  rules: {
+                    compare: {
+                      compareFields: ["password"],
+                      validationCallback(value: any, fields: any): RuleCallback {
+                        return { isInvalid: value !== fields.password, message: "Passwords don't match" }
+                      }
+                    }
+                  } as Rules
+                }
+              ]
+            }
+          ],
+          formFields: { password: "secret", confirm: "nope" }
+        }
+      })
+      await nextTick()
+      wrapper.vm.validateFields("confirm")
+      expect(wrapper.vm.isFieldInvalid("confirm")).toBe(true)
+      expect(wrapper.vm.getField<"Input">("confirm")?.messageInvalid).toBe("Passwords don't match")
+    })
+
+    it("renders a custom field and bridges updateModelValue/changeModelValue", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            {
+              fields: [
+                {
+                  name: "rating",
+                  typeComponent: "Custom",
+                  nameTemplate: "rating",
+                  label: "Rating"
+                } as FieldType<"Custom">
+              ]
+            }
+          ],
+          formFields: { rating: 1 }
+        },
+        slots: {
+          rating: `<template #rating="{ data, updateModelValue, changeModelValue }">
+            <button data-custom-up @click="updateModelValue((data.modelValue ?? 0) + 1)">up</button>
+            <button data-custom-change @click="changeModelValue(99)">change</button>
+          </template>`
+        }
+      })
+      await nextTick()
+      expect(wrapper.find("[data-custom-up]").exists()).toBe(true)
+
+      await wrapper.find("[data-custom-up]").trigger("click")
+      expect(wrapper.vm.formFields.rating).toBe(2)
+
+      await wrapper.find("[data-custom-change]").trigger("click")
+      expect(wrapper.vm.formFields.rating).toBe(99)
+      expect(wrapper.emitted("update:formFields")).toBeTruthy()
+    })
+
+    it("validates required fields across multiple sections", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            { fields: [{ name: "a", typeComponent: "Input", label: "A", required: true, modelValue: "" }] },
+            { fields: [{ name: "b", typeComponent: "Input", label: "B", required: true, modelValue: "" }] }
+          ],
+          formFields: { a: "", b: "" }
+        }
+      })
+      await nextTick()
+      expect(wrapper.vm.validateFields()).toBe(false)
+      expect(wrapper.vm.isFieldInvalid("a")).toBe(true)
+      expect(wrapper.vm.isFieldInvalid("b")).toBe(true)
+    })
+  })
+
+  // ---ISSUE 6 — validation messages localised via setDefaultRuleMessages (placed last: mutates global state) ---
+  describe("Form Component - Validation message localization (Issue 6)", () => {
+    const createAppWithLocale = (locale: any) => ({
+      install(app: any) {
+        app.use(FishtVue, { locale })
+      }
+    })
+
+    const emailStructure = (): FormProps["structure"] => [
+      {
+        fields: [
+          {
+            name: "email",
+            typeComponent: "Input",
+            label: "Email",
+            rules: { required: true, email: true },
+            modelValue: ""
+          }
+        ]
+      }
+    ]
+
+    it("localizes default validation messages to ru when active locale is ru", async () => {
+      const wrapper = mount(Form, {
+        props: { structure: emailStructure(), modeValidate: "onChange" },
+        global: { plugins: [createAppWithLocale({ activeLocale: "ru" })] }
+      })
+
+      const input = wrapper.find('input[id="email"]')
+      await input.setValue("invalid-email")
+
+      expect(wrapper.vm.isFieldInvalid("email")).toBe(true)
+      expect(wrapper.vm.getField<"Input">("email")?.messageInvalid).toBe("Неверный email")
+    })
+
+    it("keeps en messages under the default locale", async () => {
+      const wrapper = mount(Form, {
+        props: { structure: emailStructure(), modeValidate: "onChange" },
+        global: { plugins: [createAppWithLocale({})] }
+      })
+
+      const input = wrapper.find('input[id="email"]')
+      await input.setValue("invalid-email")
+
+      expect(wrapper.vm.getField<"Input">("email")?.messageInvalid).toBe("Invalid email")
     })
   })
 })

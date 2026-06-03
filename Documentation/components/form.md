@@ -1,7 +1,7 @@
 ---
 title: Form
-summary: Динамическая форма из FormStructure, валидация в трёх режимах, поля Input/Select/Calendar/TextEditor/Switch/Custom.
-updated: 2026-05-09
+summary: Динамическая форма из FormStructure, валидация в трёх режимах, поля Input/Select/Calendar/TextEditor/Switch/Custom. Validation messages локализуются через активную локаль.
+updated: 2026-06-03
 stability: stable
 since: 0.2.11
 ---
@@ -38,7 +38,7 @@ lib/form/
   - `modeValidate: "onInput"` — на каждый input.
 - **Стили:** через `Form.setStyle()`.
 - **Конфиг:** `componentsOptions.Form` — см. §10.
-- **Локализация:** через `Form.t("save")`, `Form.t("requiredField")`.
+- **Локализация:** через `Form.t("save")`, `Form.t("requiredField")`. Default validation-messages (email/phone/numeric/regular/range/length/async/custom/compare) локализуются через `setDefaultRuleMessages()` — см. §11.
 - **SSR:** `isClient()` guard в нескольких местах. Внутренние компоненты SSR-совместимы (за исключением TextEditor — см. соответствующий документ).
 - **Animation:** CSS transitions при появлении ошибок.
 
@@ -228,6 +228,10 @@ Root класс — `fv fishtvue-form`.
 
 Это и есть Form. Внутри использует [rulesHandler.getValidate](../utilities/rulesHandler.md). Для async-валидации (например, server-side username check) используй `rulesHandler.getAsyncValidate` — но Form его не вызывает автоматически; делай через ref-метод `validateFields` + custom rule с async validator.
 
+### Локализация validation messages
+
+Когда подключён FishtVue plugin, Form один раз при mount (и при смене активной локали) вызывает `setDefaultRuleMessages()`, мапя 10 rule-типов на ключи активной локали (`requiredField`, `invalidEmail`, `invalidPhone`, `invalidNumeric`, `regexMismatch`, `valueOutOfRange`, `invalidLength`, `invalidField`, `compareMismatch`). Это применяется к rules без явного `message`. Для standalone-Form (без plugin) сохраняются встроенные английские defaults. Явный `rule.message` всегда имеет высший приоритет. Подробнее — [rulesHandler §10](../utilities/rulesHandler.md).
+
 ## 12. Accessibility & Security
 
 ### A11y
@@ -240,7 +244,7 @@ Root класс — `fv fishtvue-form`.
 
 ### Security
 
-- Не рендерит HTML из props.
+- Не рендерит HTML из props. Для полей `Select` Form переиспользует встроенный безопасный render Select (`#marker` slot + `markerParts()` через text-interpolation); собственного `v-html` Form не содержит (ранее был `#item`-override — удалён 2026-06-03, [issues/form.md Issue 1](../issues/form.md)).
 - Custom slot `nameTemplate` — родитель отвечает за безопасный rendering.
 
 ## 13. TypeScript
@@ -306,11 +310,12 @@ describe("Form", () => {
 
 ### TODO / FIXME / HACK / XXX
 
-На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [Form.vue](../../lib/form/Form.vue) и [Form.d.ts](../../lib/form/Form.d.ts) не зафиксировано.
+На момент ревизии (2026-06-03) комментариев `TODO/FIXME/HACK/XXX` в [Form.vue](../../lib/form/Form.vue) и [Form.d.ts](../../lib/form/Form.d.ts) не зафиксировано.
 
 ### Incomplete or stubbed behavior
 
-- Coverage 91.41% statements / 78.91% branch — несколько ветвей ([Form.vue:264, 309, 379–409](../../lib/form/Form.vue#L264)) не покрыты.
+- Coverage `Form.vue` 95.73% statements / **80.6% branch** (было 78.91% — поднято 2026-06-03 в [issues/form.md Issue 8](../issues/form.md)). Непокрытые ветви — [Form.vue:159–164](../../lib/form/Form.vue#L159) (sync-watch при reassign внешнего `props.formFields`).
+- Validation messages локализуются глобально через `setDefaultRuleMessages` (global module state) — при нескольких Form с разными локалями последний mount выигрывает. Custom validator с `{ key, params }` interpolation не поддержан (нужен `t(key, params)` — Wave 3.5). См. [issues/form.md Issue 6](../issues/form.md).
 - В `FieldSelect`/`FieldCalendar`/`FieldTextEditor` rules-поле закомментировано в `.d.ts` (планируется).
 
 ### Skipped tests

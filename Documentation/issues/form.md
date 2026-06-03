@@ -1,7 +1,7 @@
 ---
 title: Issues — Form
-summary: Аудит Form — XSS via item.marker (через Select), schema-driven only (нет compound API), нет registration механизма для произвольных typeField, slow при глубокой структуре, отсутствие FormData submit.
-updated: 2026-05-10
+summary: Аудит Form — schema-driven only (нет compound API), нет registration механизма для произвольных typeField, slow при глубокой структуре, отсутствие FormData submit. XSS (Issue 1), validation i18n (Issue 6) и branch coverage (Issue 8) закрыты 2026-06-03.
+updated: 2026-06-03
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/form/
 related-doc: ../components/form.md
@@ -13,16 +13,16 @@ related-doc: ../components/form.md
 
 | Severity | Count | Categories |
 |---|---|---|
-| critical | 1 | C13 (v-html в select-marker внутри Form, наследуется через Select) |
+| critical | 0 | ~~C13 (v-html в select-marker)~~ ✅ resolved 2026-06-03 |
 | high | 6 | A2, A4-5, C17, L53, P (dual-API), M55 (FormData) |
-| medium | 4 | D21 (typeField generic), F30, F32, G34 |
-| low | 3 | E29.7, B10, K46 (branch coverage) |
+| medium | 3 | D21 (typeField generic), ~~F30~~ ✅ resolved 2026-06-03, F32, G34 |
+| low | 2 | E29.7, B10, ~~K46 (branch coverage)~~ ✅ resolved 2026-06-03 |
 
-## Issue 1: CRITICAL — XSS через select-marker (наследуется через Form-rendered Select)
+## ~~Issue 1: CRITICAL — XSS через select-marker (наследуется через Form-rendered Select)~~ ✅ resolved 2026-06-03
 
 - **Категория:** C13 + security
 - **Severity:** **critical**
-- **Где:** [Form.vue:380](../../lib/form/Form.vue#L380)
+- **Где:** ~~[Form.vue:380]~~ (template `#item` override удалён)
 
 ### Что найдено
 
@@ -30,18 +30,16 @@ related-doc: ../components/form.md
 <div v-if="!isQuery" v-html="item?.marker ?? item[key]" :class="classSelectItemIsQuery" />
 ```
 
-Form имеет inline-rendered select dropdown (для typeField "Select" возможно). Использует `v-html` для marker rendering — копия [select.md Issue 1](./select.md).
+Form переопределял Select `#item` slot через `v-html` для marker rendering — копия [select.md Issue 1](./select.md). Этот override **заменял** безопасный default Select (`#marker` slot + `markerParts()` `<mark>` highlight), воскрешая XSS и теряя подсветку.
 
-### Что нужно сделать
+### Что сделано ✅
 
-См. [select.md Issue 1](./select.md). Заменить v-html на slot/VNode-render через CellWithMarker компонент.
-
-Дополнительно: Form должен использовать `<Select>` напрямую, а не дублировать render-логику. Это уменьшит surface XSS-уязвимостей.
+Удалён `#item`-override в [Form.vue](../../lib/form/Form.vue) полностью — теперь Form переиспользует встроенный безопасный render Select (`#marker` slot + `markerParts()`, text-interpolation для значения). Удалены ставшие dead-кодом refs `classSelectItemIsQuery` / `classSelectItemNotQuery`. Никакого `v-html` в Form не осталось.
 
 ### Acceptance criteria
 
-- [ ] Form-rendered select option с XSS payload не исполняется.
-- [ ] Form переиспользует Select-component вместо дублирования.
+- [x] Form-rendered select option с XSS payload (`<img src=x onerror=…>`) не исполняется — рендерится как escaped-текст ([Form.test.ts](../../lib/form/Form.test.ts) → "does not execute an XSS payload from a Select option value"). ✅
+- [x] Form переиспользует Select-component вместо дублирования render-логики. ✅
 
 ## Issue 2: Dual-API gap — нет compound `<Form><FormField>` API
 
@@ -142,21 +140,25 @@ Form-компонент не использует native `<form>` element. Nativ
 
 См. [button.md Issue 1, 8, 9, 14](./button.md).
 
-## Issue 6: `t()` для validation error messages
+## ~~Issue 6: `t()` для validation error messages~~ ✅ resolved 2026-06-03
 
 - **Категория:** F30
 - **Severity:** medium
-- **Где:** [Form.vue](../../lib/form/Form.vue), [lib/utils/rulesHandler.ts](../../lib/utils/rulesHandler.ts)
+- **Где:** [Form.vue:131–146](../../lib/form/Form.vue#L131), [lib/utils/rulesHandler.ts:171](../../lib/utils/rulesHandler.ts#L171)
 
 ### Что найдено
 
-Validation rules возвращают error messages: «Field is required», «Email is invalid», и т. д. Хардкоден строки в [rulesHandler.ts](../../lib/utils/rulesHandler.ts) на английском.
+Validation rules возвращают error messages: «Required field», «Invalid email», и т. д. Хардкоден встроенные английские defaults в [rulesHandler.ts](../../lib/utils/rulesHandler.ts).
 
-### Что нужно сделать
+### Что сделано ✅
 
-1. Перевести error messages через `t("validation.required")` / `t("validation.email")` keys.
-2. Добавить ключи в [lib/locale/locales/en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts).
-3. Custom validator може возвращать `{ key: "validation.minLength", params: { min: 8 } }` — Form подставит локализацию.
+1. Form вызывает `setDefaultRuleMessages()` через `applyLocaleToRules()`, мапя 10 rule-типов на `Form.t(<localeKey>)` (`requiredField`, `invalidEmail`, `invalidPhone`, `invalidNumeric`, `regexMismatch`, `valueOutOfRange`, `invalidLength`, `invalidField`, `compareMismatch`). Ключи **уже** присутствуют в [en.ts](../../lib/locale/locales/en.ts) / [ru.ts](../../lib/locale/locales/ru.ts).
+2. Wiring guarded через `useFishtVue()` — standalone-Form (без plugin) сохраняет встроенные английские defaults. `watch(() => getActiveLocale(), …, { immediate: true })` переприменяет messages при runtime смене локали.
+3. Тест: [Form.test.ts](../../lib/form/Form.test.ts) → "localizes default validation messages to ru when active locale is ru" / "keeps en messages under the default locale".
+
+### Known limitation
+
+`setDefaultRuleMessages` — global module state (shared между всеми instance'ами Form/Input/Select). Custom validator с `{ key, params }` interpolation не поддержан (требует `t(key, params)` — Wave 3.5). Per-rule `message` по-прежнему имеет высший приоритет.
 
 ## Issue 7: Date fields не уважают locale
 
@@ -164,7 +166,7 @@ Validation rules возвращают error messages: «Field is required», «E
 
 См. [calendar.md Issue 8](./calendar.md). Form использует Calendar для date fields → наследует проблему.
 
-## Issue 8: Тестов 32, но branch coverage 78.91% — много untested ветвей
+## ~~Issue 8: Тестов 32, но branch coverage 78.91% — много untested ветвей~~ ✅ resolved 2026-06-03
 
 - **Категория:** K46
 - **Severity:** low
@@ -173,14 +175,14 @@ Validation rules возвращают error messages: «Field is required», «E
 ### Что найдено
 
 ```
-lib/form: 91.41 / 78.91 / 88.67 / 92.30
+lib/form (было): 91.41 / 78.91 / 88.67 / 92.30
 ```
 
-Branch coverage <80%. Особенно в complex validation flows (async rules, dynamic typeField switching).
+Branch coverage <80%. Особенно в complex validation flows (async rules, compare, custom typeField).
 
-### Что нужно сделать
+### Что сделано ✅
 
-Add tests for: async validators, conditional-required (rules depending on other field), nested FormStructure, custom typeField, SSR-render.
+Добавлены тесты (40 кейсов всего): async-valid path, `compare` rule с `compareFields`, `FieldCustom` slot (`updateModelValue`/`changeModelValue` bridge), multi-section required validation, Select-field branch (`closeButtonBadge` defaulting). Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%, functions 94.44%).
 
 ## Issue 9: prefers-reduced-motion / RTL / colors / print
 
@@ -194,8 +196,8 @@ Cross-cutting. См. [button.md](./button.md).
 | `componentsStyle` global | ⚠️ | пробрасывается в child fields через their own logic |
 | `unstyled: true` | ❌ | Issue 5 |
 | Theme tokens vs hardcode | ⚠️ | через child компоненты |
-| `t()` для текста | ❌ | Issue 6 — validation messages не локализованы |
-| Runtime locale switch | ❌ | Issue 6 |
+| `t()` для текста | ✅ | Issue 6 ✅ — validation messages локализованы через `setDefaultRuleMessages` |
+| Runtime locale switch | ✅ | Issue 6 ✅ — `watch(getActiveLocale)` переприменяет rule-messages |
 
 ## Dual-API gap
 

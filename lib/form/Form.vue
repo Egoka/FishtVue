@@ -20,10 +20,11 @@
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
   import type { RulesObject } from "fishtvue/utils/rulesHandler"
-  import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
+  import { getAsyncValidate, getValidate, isExistRule, setDefaultRuleMessages } from "fishtvue/utils/rulesHandler"
   import { deepCopy, fieldsOmit } from "fishtvue/utils/objectHandler"
   import { generateUUID } from "fishtvue/utils/functionHandler"
   import { isClient } from "fishtvue/utils/domHandler"
+  import { getActiveLocale, useFishtVue } from "fishtvue/config"
   // ---BASE-COMPONENT----------------------
   const Form = new Component<"Form">()
   const options = Form.getOptions()
@@ -98,10 +99,6 @@
   const classItemGrid = ref(Form.setStyle("grid transition"))
   const classBeforeSlot = ref(Form.setStyle("flex select-none items-center text-gray-500 sm:text-sm"))
   const classAfterSlot = ref(Form.setStyle("ml-1 mr-3 text-gray-400 dark:text-gray-600 select-none"))
-  const classSelectItemIsQuery = ref(
-    Form.setStyle("text-gray-600 dark:text-gray-300 group-hover:text-theme-700 dark:group-hover:text-theme-400")
-  )
-  const classSelectItemNotQuery = ref(Form.setStyle("text-gray-500 dark:text-gray-300"))
   const classFooter = ref(Form.setStyle("mt-3 flex items-center justify-end gap-x-6"))
   // ---EXPOSE------------------------------
   defineExpose({
@@ -118,8 +115,8 @@
     validateFields
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // ---CANON — без ручного Form.initStyle(): Component.__hooks() регистрирует vueOnMounted/onServerPrefetch.
   onMounted(() => {
-    Form.initStyle()
     structure.value?.forEach((item) =>
       item.fields?.forEach((field) => {
         const formFieldsValue = unref(props.formFields)
@@ -128,6 +125,26 @@
     )
   })
   // ---WATCHERS----------------------------
+  // ---ISSUE 6 — локализация default validation-messages через rulesHandler, когда активен plugin.
+  // setDefaultRuleMessages — global module state; guarded через useFishtVue(), чтобы standalone-Form
+  // (без plugin) сохранял встроенные английские defaults. Переприменяется при смене активной локали.
+  function applyLocaleToRules(): void {
+    if (!useFishtVue()) return
+    setDefaultRuleMessages({
+      required: Form.t("requiredField") ?? "Required field",
+      email: Form.t("invalidEmail") ?? "Invalid email",
+      phone: Form.t("invalidPhone") ?? "Invalid phone",
+      numeric: Form.t("invalidNumeric") ?? "Invalid numeric",
+      regular: Form.t("regexMismatch") ?? "The value does not satisfy the rule",
+      range: Form.t("valueOutOfRange") ?? "The value is not within the set range",
+      length: Form.t("invalidLength") ?? "Invalid length value",
+      async: Form.t("invalidField") ?? "Invalid field",
+      custom: Form.t("invalidField") ?? "Invalid field",
+      compare: Form.t("compareMismatch") ?? "The field does not fall off"
+    })
+  }
+  watch(() => getActiveLocale(), applyLocaleToRules, { immediate: true })
+
   watch(
     formFields,
     (value: FormValues) => {
@@ -375,10 +392,6 @@
                           v-if="(field as FieldUseInputLayout)?.insert?.afterIcon"
                           :type="(field as FieldUseInputLayout)?.insert?.afterIcon ?? ''"
                           class="mr-2 h-5 w-5 text-gray-400 dark:text-gray-600" />
-                      </template>
-                      <template #item="{ item, key, isQuery }">
-                        <div v-if="!isQuery" v-html="item?.marker ?? item[key]" :class="classSelectItemIsQuery" />
-                        <div v-else :class="classSelectItemNotQuery">{{ item[key] }}</div>
                       </template>
                       <template #footerPicker>
                         <slot
