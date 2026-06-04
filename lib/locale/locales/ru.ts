@@ -27,6 +27,9 @@ export default <DefaultMessages>{
   fixwindow: {
     close: "Закрыть"
   },
+  loading: {
+    label: "Загрузка"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

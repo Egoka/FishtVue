@@ -45,6 +45,9 @@ export declare interface DefaultMessages extends DeepPartial<TypeLocale> {
   fixwindow?: {
     close?: string
   }
+  loading?: {
+    label?: string
+  }
 }
 
 export declare type Messages = DeepPartial<Record<NameLocale, DefaultMessages>>

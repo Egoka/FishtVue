@@ -27,6 +27,9 @@ export default <DefaultMessages>{
   fixwindow: {
     close: "Close"
   },
+  loading: {
+    label: "Loading"
+  },
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

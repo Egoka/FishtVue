@@ -1,7 +1,7 @@
 ---
 title: Loading
-summary: Лоадер с типами Epic/SVG/simple, configurable size, color, animationDuration.
-updated: 2026-05-09
+summary: Лоадер с типами Epic/SVG/simple, configurable size, color, animationDuration; ARIA status-регион, reduced-motion fallback.
+updated: 2026-06-03
 stability: beta
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Loading` — индикатор загрузки. Поддерживает три категории типов: `EpicLoading` (анимированные многокомпонентные), `SvgLoading` (статичные SVG с CSS-анимацией), `"simple"` (минималистичный спиннер). Конфигурируется через `size`, `color`, `animationDuration`.
 
-Stability: `beta` — coverage `Loading.vue` 79.06%, но coverage `loadingTypes.ts` 22.22% statements / 7.97% functions (большая часть type definitions не запускается на тестах).
+Stability: `beta` — coverage `Loading.vue` ~98% statements / 100% lines, `loadingTypes.ts` 100% (добавлен [Loading.test.ts](../../lib/loading/Loading.test.ts), 145 кейсов, по тесту на каждую Epic/SVG вариацию). `beta` сохраняется до закрытия [Issue 7](../issues/loading.md) (hardcoded HEX в Epic/SVG, Wave 9).
 
 Source: [Source](../../lib/loading/Loading.vue), [Loading.d.ts](../../lib/loading/Loading.d.ts), [loadingTypes.ts](../../lib/loading/loadingTypes.ts), [Loading.test.ts](../../lib/loading/Loading.test.ts).
 
@@ -30,13 +30,13 @@ lib/loading/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили; `onMounted` для дополнительной инициализации.
-- **Поток данных:** `type` → resolve в один из мап `componentsMapEpic`/`componentsMapSvg` → рендер компонента-инстанса. `size`/`color`/`animationDuration` управляются как inline-styles.
+- **Lifecycle:** стили инжектит базовый `Component.__hooks()` (`onServerPrefetch + vueOnMounted`) — ручной `onMounted(() => initStyle())` в SFC отсутствует (канон, см. [dev-patterns §2](../dev-patterns.md)).
+- **Поток данных:** `resolvedType` (`props.type ?? options?.type ?? "simple"`) → resolve в один из мап `componentsMapEpic`/`componentsMapSvg` → ленивый `defineAsyncComponent`. `size`/`color`/`animationDuration` управляются как inline-styles.
 - **Стили:** через `Loading.setStyle()`. CSS-анимации через `animation-duration` inline.
-- **Конфиг:** `componentsOptions.Loading` — см. §10.
-- **Локализация:** не использует.
+- **Конфиг:** `componentsOptions.Loading` (включая `type`) — см. §10.
+- **Локализация:** `aria-label` статус-региона через `Loading.t("loading.label")` (ключ `loading.label` в en/ru).
 - **SSR:** SSR-safe (CSS-анимации работают и на сервере при initial render).
-- **Animation:** CSS keyframes (per-component-type).
+- **Animation:** CSS keyframes (per-component-type). При `prefers-reduced-motion: reduce` рендерится статичный `simple`-loader вместо анимации (см. §12).
 
 ## 4. Quick Start
 
@@ -116,7 +116,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`LoadingOption = Pick<LoadingProps, "animationDuration" | "size" | "color" | "class">`. **`type`** не входит в Option.
+`LoadingOption = Pick<LoadingProps, "type" | "animationDuration" | "size" | "color" | "class">`. `type` **входит** в Option — `componentsOptions.Loading.type` задаёт дефолтный тип глобально (Issue 4 закрыт 2026-06-03).
 
 ### 10.2 Per-instance
 
@@ -138,9 +138,9 @@ Root класс — `fv fishtvue-loading`.
 
 ### A11y
 
-- ARIA `role="status"`/`aria-live="polite"` — проверь по DOM. По умолчанию screen-reader может не озвучивать loader.
-- Для критичной a11y добавь `aria-label="Loading"` через `props.class` или wrap.
-- `prefers-reduced-motion` не учтён.
+- Корень — `<div role="status" aria-live="polite" :aria-label>` + visually-hidden `<span class="sr-only">` с тем же текстом. Screen-reader озвучивает loader.
+- `aria-label` локализуется через `Loading.t("loading.label")` (ключ `loading.label`, en `Loading` / ru `Загрузка`); реагирует на runtime locale-switch.
+- `prefers-reduced-motion: reduce` — рендерится статичный `simple`-loader (`animation-duration=0`) вместо анимации. Один guard покрывает все 126 вариаций.
 
 ### Security
 
@@ -156,7 +156,7 @@ import Loading from "fishtvue/loading"
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `beta` — coverage loadingTypes.ts 22.22%.
+- **Stability flag:** `beta` — coverage `loadingTypes.ts` 100%; до `stable` остаётся [Issue 7](../issues/loading.md) (hardcoded HEX, Wave 9) + root exports map (Wave 2.1).
 - **Breaking changes:** не зафиксировано.
 - **Deprecations:** нет.
 
@@ -201,8 +201,9 @@ describe("Loading", () => {
 
 ### Incomplete or stubbed behavior
 
-- `loadingTypes.ts` coverage 3.12% lines — большая часть named animations не вызывается ни в одном тесте.
-- `LoadingOption` не включает `type` — глобально нельзя задать дефолтный тип (только через wrapper).
+- ~~`loadingTypes.ts` coverage 3.12% lines~~ ✅ resolved 2026-06-03 — добавлен [Loading.test.ts](../../lib/loading/Loading.test.ts), coverage 100%.
+- ~~`LoadingOption` не включает `type`~~ ✅ resolved 2026-06-03 — `type` добавлен в `Pick`.
+- Hardcoded HEX (`#ff1d5e` и т.п.) в 20 `epic/*.vue` + 2 `svg/*.vue` — [Issue 7](../issues/loading.md), отложено в Wave 9 (colors → tokens).
 
 ### Skipped tests
 

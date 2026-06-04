@@ -87,7 +87,7 @@ export declare type LoadingExpose = {
    */
   classLoading: ReadRef<LoadingProps["class"]>
 }
-export declare type LoadingOption = Pick<LoadingProps, "animationDuration" | "size" | "color" | "class">
+export declare type LoadingOption = Pick<LoadingProps, "type" | "animationDuration" | "size" | "color" | "class">
 
 // ---------------------------------------
 
