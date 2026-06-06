@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Pagination from "fishtvue/pagination/Pagination.vue"
 import { nextTick } from "vue"
@@ -221,6 +221,56 @@ describe("Pagination Component Tests", () => {
       })
     })
   })
+  describe("Pagination Component - ResizeObserver cleanup (memory leak guard)", () => {
+    it("observes both navigation links on mount and does not disconnect early", () => {
+      const observeSpy = vi.spyOn(global.ResizeObserver.prototype, "observe")
+      const disconnectSpy = vi.spyOn(global.ResizeObserver.prototype, "disconnect")
+
+      const wrapper = mount(Pagination, {
+        props: { modelValue: 1, total: 100, sizePage: 10 }
+      })
+
+      // оба nav-link (previous + next) должны наблюдаться
+      expect(observeSpy).toHaveBeenCalledTimes(2)
+      expect(disconnectSpy).not.toHaveBeenCalled()
+
+      wrapper.unmount()
+      observeSpy.mockRestore()
+      disconnectSpy.mockRestore()
+    })
+
+    it("disconnects every ResizeObserver on unmount", () => {
+      const disconnectSpy = vi.spyOn(global.ResizeObserver.prototype, "disconnect")
+
+      const wrapper = mount(Pagination, {
+        props: { modelValue: 1, total: 100, sizePage: 10 }
+      })
+      expect(disconnectSpy).not.toHaveBeenCalled()
+
+      wrapper.unmount()
+      // оба observer'а отключены — heap не растёт
+      expect(disconnectSpy).toHaveBeenCalledTimes(2)
+
+      disconnectSpy.mockRestore()
+    })
+
+    it("scales disconnect count across repeated mount/unmount cycles", () => {
+      const disconnectSpy = vi.spyOn(global.ResizeObserver.prototype, "disconnect")
+
+      for (let i = 0; i < 5; i++) {
+        const wrapper = mount(Pagination, {
+          props: { modelValue: 1, total: 100, sizePage: 10 }
+        })
+        expect(() => wrapper.unmount()).not.toThrow()
+      }
+
+      // 5 циклов × 2 observer'а = 10 disconnect-вызовов
+      expect(disconnectSpy).toHaveBeenCalledTimes(10)
+
+      disconnectSpy.mockRestore()
+    })
+  })
+
   describe("Pagination Component - With Library Initialization", () => {
     const createAppWithFishtVue = (options = {}) => ({
       install(app: any) {

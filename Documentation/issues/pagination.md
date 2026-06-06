@@ -1,7 +1,7 @@
 ---
 title: Issues — Pagination
 summary: Аудит Pagination — memory leak (anonymous ResizeObserver без cleanup), нет ARIA navigation роли, RTL, виртуализация для много-страничной нумерации.
-updated: 2026-05-10
+updated: 2026-06-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/pagination/
 related-doc: ../components/pagination.md
@@ -11,18 +11,20 @@ related-doc: ../components/pagination.md
 
 ## Сводка
 
-| Severity | Count | Categories                          |
-| -------- | ----- | ----------------------------------- |
-| critical | 1     | H41 (anonymous ResizeObserver leak) |
-| high     | 4     | A2, A4-5, C17, L53                  |
-| medium   | 4     | E29.1, E29.5, F31, G34              |
-| low      | 3     | E29.7, B10, N59                     |
+| Severity | Count | Categories                                          |
+| -------- | ----- | --------------------------------------------------- |
+| critical | 0     | ~~H41 (anonymous ResizeObserver leak)~~ ✅ resolved |
+| high     | 4     | A2, A4-5, C17, L53                                  |
+| medium   | 4     | E29.1, E29.5, F31, G34                              |
+| low      | 3     | E29.7, B10, N59                                     |
 
-## Issue 1: CRITICAL — Анонимный ResizeObserver без cleanup
+## ~~Issue 1: CRITICAL — Анонимный ResizeObserver без cleanup~~ ✅ resolved (2026-06-06)
 
 - **Категория:** H41 (memory leaks)
-- **Severity:** **critical**
-- **Где:** [Pagination.vue:253-258](../../lib/pagination/Pagination.vue#L253-L258)
+- **Severity:** ~~critical~~ → resolved
+- **Где:** [Pagination.vue:259-268](../../lib/pagination/Pagination.vue#L259-L268)
+
+> **Resolved (2026-06-06):** observer'ы теперь сохраняются в локальный массив `navigationObservers` ([Pagination.vue:33](../../lib/pagination/Pagination.vue#L33)) и отключаются в `onBeforeUnmount` ([Pagination.vue:222-225](../../lib/pagination/Pagination.vue#L222-L225)). Массив — обычный (не `ref`): reactive-proxy ломал внутренний WeakMap-lookup полифилла при `disconnect()`. Regression-тесты — `Pagination.test.ts` describe «ResizeObserver cleanup (memory leak guard)».
 
 ### Что найдено
 
@@ -62,8 +64,8 @@ function setShortNavigation(link: HTMLElement, limit: number, refButton: Ref) {
 
 ### Acceptance criteria
 
-- [ ] `onBeforeUnmount` вызывает disconnect.
-- [ ] Профилирование DevTools heap не растёт.
+- [x] `onBeforeUnmount` вызывает disconnect. ✅ ([Pagination.vue:222-225](../../lib/pagination/Pagination.vue#L222-L225))
+- [x] Профилирование DevTools heap не растёт. ✅ (proxy через тест: disconnect-count масштабируется по mount/unmount циклам)
 
 ## Issue 2: SSR styles + sideEffects/exports map
 
