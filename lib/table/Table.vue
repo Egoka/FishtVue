@@ -73,7 +73,8 @@
     pagination: undefined,
     search: undefined,
     columns: undefined,
-    summary: undefined
+    summary: undefined,
+    virtual: undefined
   })
   const emit = defineEmits<TableEmits>()
   const slots = useSlots()
@@ -243,6 +244,38 @@
   const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
     () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
   )
+  // ---VIRTUALIZATION----------------------
+  const virtualScrollTop = ref<number>(0)
+  const virtualViewportHeight = ref<number>(0)
+  const virtualConfig = computed<{
+    enabled: boolean
+    force: boolean
+    rowHeight: number
+    overscan: number
+    threshold: number
+  }>(() => {
+    const raw = props.virtual ?? options?.virtual
+    const obj = (typeof raw === "object" && raw !== null ? raw : {}) as Exclude<
+      TableProps["virtual"],
+      boolean | undefined
+    >
+    return {
+      enabled: raw !== false,
+      force: raw === true || (typeof raw === "object" && raw !== null),
+      rowHeight: Math.max(1, obj?.rowHeight ?? heightCell.value + 9),
+      overscan: obj?.overscan ?? 6,
+      threshold: obj?.threshold ?? 100
+    }
+  })
+  // Auto по умолчанию + opt-out через :virtual=false. Только client-side flat-режим:
+  // не виртуализируем asyncData(boolean/function) / grouping / активную pagination.
+  const isVirtual = computed<boolean>(() => {
+    const c = virtualConfig.value
+    if (!c.enabled) return false
+    if (isAsyncDataBoolean.value || isAsyncDataFunction.value || isGroup.value || isPagination.value) return false
+    return c.force || lengthData.value > c.threshold
+  })
+  const virtualRowHeight = computed<number>(() => virtualConfig.value.rowHeight)
   // ---PAGINATION--------------------------
   const startPage = computed<NonNullable<TablePagination["startPage"]>>(() =>
     isNumber((pagination.value as TablePagination)?.startPage as number) ? +(pagination.value as any).startPage : 1
@@ -287,7 +320,7 @@
   const resultDataSource = computed<ResultData>(() => {
     let resultData: Record<string, any> = toRaw(dataGrouping.value)
     let limit = countVisibleRows.value + sizeLoadedRows.value
-    if (resultData && countVisibleRows.value > 0) {
+    if (resultData && countVisibleRows.value > 0 && !isVirtual.value) {
       const result: Record<string, any> = {}
       for (const item of Object.keys(resultData)) {
         if (limit > resultData[item]?.length) {
@@ -304,6 +337,37 @@
     emit("result-data", resultData)
     return resultData
   })
+  // Окно виртуализации поверх плоского (non-grouped) результата. Читает resultDataSource,
+  // поэтому result-data продолжает эмититься. countVisibleRows-слайс в virtual-режиме отключён.
+  const virtualWindow = computed<{ rows: any[]; startIndex: number; topPad: number; bottomPad: number }>(() => {
+    if (!isVirtual.value) return { rows: [], startIndex: 0, topPad: 0, bottomPad: 0 }
+    const { rowHeight, overscan } = virtualConfig.value
+    const all = ((resultDataSource.value as any)?.[0] as any[]) ?? []
+    const total = all.length
+    const count = Math.ceil((virtualViewportHeight.value || 0) / rowHeight) + overscan * 2
+    const startIndex = Math.max(0, Math.floor(virtualScrollTop.value / rowHeight) - overscan)
+    const endIndex = Math.min(total, startIndex + count)
+    return {
+      rows: all.slice(startIndex, endIndex),
+      startIndex,
+      topPad: startIndex * rowHeight,
+      bottomPad: Math.max(0, (total - endIndex) * rowHeight)
+    }
+  })
+  // Единый источник для рендера tbody: окно (virtual) или сгруппированный resultDataSource.
+  const renderSource = computed<Record<string, any[]>>(() =>
+    isVirtual.value ? { 0: virtualWindow.value.rows } : (resultDataSource.value as any)
+  )
+  // Absolute index строки: для virtual = startIndex + локальный; иначе — локальный (без изменений).
+  const absIndex = (localIndex: number): number =>
+    isVirtual.value ? virtualWindow.value.startIndex + localIndex : localIndex
+  // Захватываем элемент scroll-viewport: в onUnmounted template-ref уже может быть null.
+  let virtualScrollEl: HTMLElement | null = null
+  function onVirtualScroll() {
+    if (!virtualScrollEl) return
+    virtualScrollTop.value = virtualScrollEl.scrollTop
+    virtualViewportHeight.value = virtualScrollEl.clientHeight
+  }
   const dataColumns = computed<Array<IColumnPrivate>>(() => {
     const listFields: Array<string> = LD.uniq(
       LD.flatMap(allData.value, (item) => Object.keys(item)) as string[]
@@ -969,9 +1033,15 @@
     Promise.resolve().then(() => {
       suppressLoadFromFunctionInWatchers = false
     })
+    // Scroll-listener вешаем синхронно (template-ref уже доступен в onMounted) —
+    // иначе cleanup в onUnmounted может не найти элемент при раннем размонтировании.
+    virtualScrollEl = (tableBody.value as HTMLElement) ?? null
+    virtualScrollEl?.addEventListener("scroll", onVirtualScroll, { passive: true })
     nextTick(() => {
       updateHeightTable()
-      startLastRowVisibleObserver()
+      onVirtualScroll()
+      // virtual заменяет lazy-load: lastRowVisibleObserver не нужен.
+      if (!isVirtual.value) startLastRowVisibleObserver()
     })
     setTimeout(() => {
       updateHeightTable()
@@ -988,6 +1058,9 @@
       // window-listeners снимаются и в stopResizeColumn, но при unmount во время drag mouseup не приходит.
       window.removeEventListener("mousemove", moveResizedColumns)
       window.removeEventListener("mouseup", stopResizeColumn)
+      // virtual scroll listener.
+      virtualScrollEl?.removeEventListener("scroll", onVirtualScroll)
+      virtualScrollEl = null
     }
   })
   // ---WATCHERS----------------------------
@@ -1745,8 +1818,8 @@
         </div>
       </div>
       <div data-table-body-base :class="classBaseTableBody">
-        <div ref="tableBody" :class="classBodyTable" :style="styleBodyTable">
-          <table data-table ref="table" :class="classTable">
+        <div ref="tableBody" data-table-scroll :class="classBodyTable" :style="styleBodyTable">
+          <table data-table ref="table" :class="classTable" :aria-rowcount="isVirtual ? lengthData : undefined">
             <caption v-if="caption || slots.caption" data-table-caption class="sr-only">
               <slot name="caption">{{ caption }}</slot>
             </caption>
@@ -1845,7 +1918,14 @@
             </thead>
             <!-- -------------------------------- -->
             <tbody data-table-tbody ref="tbody" :class="classTBody">
-              <template v-for="(group, key) in resultDataSource" :key="key">
+              <tr
+                v-if="isVirtual && virtualWindow.topPad"
+                data-table-virtual-spacer-top
+                aria-hidden="true"
+                :style="`height:${virtualWindow.topPad}px`">
+                <td :colspan="dataColumns.length" class="p-0 border-0"></td>
+              </tr>
+              <template v-for="(group, key) in renderSource" :key="key">
                 <tr v-if="isGroup" data-table-tbody-group>
                   <th
                     :colspan="dataColumns.length"
@@ -1858,25 +1938,27 @@
                     </div>
                   </th>
                 </tr>
-                <template v-for="(data, indexRow) in group" :key="`${data?._key}-${indexRow}`">
+                <template v-for="(data, indexRow) in group" :key="data?._key">
                   <tr
                     data-table-tbody-tr
-                    :class="classTr(data, indexRow)"
-                    @click="clickRow(`tr--${indexRow}`, data, indexRow)">
-                    <template v-for="(column, indexCol) in dataColumns" :key="`${data?._key}-${indexRow}-${indexCol}`">
+                    :class="classTr(data, absIndex(indexRow))"
+                    :style="isVirtual ? `height:${virtualRowHeight}px` : undefined"
+                    :aria-rowindex="isVirtual ? absIndex(indexRow) + 1 : undefined"
+                    @click="clickRow(`tr--${absIndex(indexRow)}`, data, absIndex(indexRow))">
+                    <template v-for="(column, indexCol) in dataColumns" :key="`${data?._key}-${indexCol}`">
                       <td
                         v-if="column.visible"
                         data-table-tbody-td
-                        :class="classColumnTd(data, indexRow, column, indexCol)"
+                        :class="classColumnTd(data, absIndex(indexRow), column, indexCol)"
                         :style="styleColumnTd(column)"
                         @click="
                           clickCell(
-                            `td--${indexRow}--${column?.name ?? indexCol}`,
+                            `td--${absIndex(indexRow)}--${column?.name ?? indexCol}`,
                             column,
                             data[column.dataField],
                             setMarker(column, setCell(column, data[column.dataField], data)),
                             data,
-                            indexRow,
+                            absIndex(indexRow),
                             indexCol
                           )
                         ">
@@ -1885,7 +1967,10 @@
                           data-table-tbody-not-cell-template
                           :class="classCellTable(indexRow, column, indexCol)"
                           :style="styleCellTable">
-                          <div v-if="!(editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol)">
+                          <div
+                            v-if="
+                              !(editableCell?.indexRow === absIndex(indexRow) && editableCell?.indexCol === indexCol)
+                            ">
                             <template
                               v-for="(part, partIndex) in markerParts(
                                 column,
@@ -1896,7 +1981,8 @@
                               ><template v-else>{{ part.text }}</template></template
                             >
                           </div>
-                          <template v-if="editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol">
+                          <template
+                            v-if="editableCell?.indexRow === absIndex(indexRow) && editableCell?.indexCol === indexCol">
                             <Input
                               v-if="column.type === 'string' || column.type === 'number'"
                               :model-value="data[column.dataField]"
@@ -1910,7 +1996,7 @@
                               class="border-none font-normal bg-transparent dark:bg-transparent"
                               class-body="pt-0 -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
                               @change:model-value="(value) => updateCell(data?._key, column, value)" />
                             <Select
                               v-else-if="column.type === 'select'"
@@ -1929,7 +2015,7 @@
                               class="border-none font-normal bg-transparent dark:bg-transparent"
                               class-body="pt-[0px] -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
                               @update:model-value="
                                 (value) => {
                                   updateCell(data?._key, column, value)
@@ -1952,7 +2038,7 @@
                               class="border-none font-normal bg-transparent dark:bg-transparent"
                               class-body="pt-0 -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
                               @update:model-value="(value) => updateCell(data?._key, column, value)" />
                           </template>
                         </div>
@@ -1968,7 +2054,9 @@
                             :rowData="data"
                             :value="setCell(column, data[column.dataField], data)"
                             :value-with-marker="setMarker(column, setCell(column, data[column.dataField], data))"
-                            :is-close-editor="(isActive: boolean) => isActive || clearEditableCell(indexRow, indexCol)"
+                            :is-close-editor="
+                              (isActive: boolean) => isActive || clearEditableCell(absIndex(indexRow), indexCol)
+                            "
                             :edit-valiue="(value: any) => updateCell(data?._key, column, value)" />
                         </div>
                       </td>
@@ -1976,6 +2064,13 @@
                   </tr>
                 </template>
               </template>
+              <tr
+                v-if="isVirtual && virtualWindow.bottomPad"
+                data-table-virtual-spacer-bottom
+                aria-hidden="true"
+                :style="`height:${virtualWindow.bottomPad}px`">
+                <td :colspan="dataColumns.length" class="p-0 border-0"></td>
+              </tr>
             </tbody>
             <!-- -------------------------------- -->
             <tr

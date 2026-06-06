@@ -1,6 +1,6 @@
 ---
 title: Issues — Table
-summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live). Остаются: compound API, виртуализация, packaging/SSR, RTL.
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization). Остаются: compound API, packaging/SSR, coverage, RTL.
 updated: 2026-06-07
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
@@ -14,11 +14,11 @@ related-doc: ../components/table.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅ |
-| high | 7 | A2, A4-5, C17, H43 (виртуализация), ~~L53~~ ✅, P (dual-API), J47, K51 |
+| high | 6 | A2, A4-5, C17, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, P (dual-API), J47, K51 |
 | medium | 3 | ~~E29.1~~ ✅, ~~E29.5~~ ✅, F31, G34, H39 |
 | low | 4 | E29.7, B10, N59, D26 |
 
-> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle). Остаются active: 3 (compound API), 4 (виртуализация), 5/13/14 (packaging/SSR), 7 (coverage), 10/11/12 (floating/RTL/motion).
+> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle) **и Issue 4** (virtualization). Остаются active: 3 (compound API), 5/13/14 (packaging/SSR), 7 (coverage), 10/11/12 (floating/RTL/motion).
 
 ## ~~Issue 1: CRITICAL — XSS через 5 сайтов `v-html`~~ ✅ resolved 2026-06-07
 
@@ -27,7 +27,7 @@ related-doc: ../components/table.md
 - **Где:** [Table.vue:1842](../../lib/table/Table.vue#L1842), [Table.vue:1939](../../lib/table/Table.vue#L1939), [Table.vue:1999](../../lib/table/Table.vue#L1999), [Table.vue:2011](../../lib/table/Table.vue#L2011), [Table.vue:2026](../../lib/table/Table.vue#L2026)
 
 > **Resolution (2026-06-07).** Все 5 `v-html` устранены:
-> - **Cell content** → безопасный render через `markerParts()` ([Table.vue:1375](../../lib/table/Table.vue#L1375)): текст разбивается на части, совпадения с query/filter оборачиваются в `<mark :class="classMaskQuery">` через `<template v-for>` (без `v-html`). `setMarker()` сохранён только для `valueWithMarker` payload (`click-cell`) и slot-prop. Кастомный HTML на ячейку — через существующий per-column slot.
+> - **Cell content** → безопасный render через `markerParts()` ([Table.vue:1448](../../lib/table/Table.vue#L1448)): текст разбивается на части, совпадения с query/filter оборачиваются в `<mark :class="classMaskQuery">` через `<template v-for>` (без `v-html`). `setMarker()` сохранён только для `valueWithMarker` payload (`click-cell`) и slot-prop. Кастомный HTML на ячейку — через существующий per-column slot.
 > - **Summary** → text-render `{{ summaryColumns[column.dataField] }}`.
 > - **noData / noColumn / noFilter** → `<slot name="empty|empty-columns|empty-filter">{{ ... }}</slot>` (text по умолчанию, HTML только через explicit slot).
 > - Regex query экранируется (`escapeRegExp`) — нет regex-injection.
@@ -92,7 +92,7 @@ related-doc: ../components/table.md
 - **Severity:** ~~**critical** (если unmount во время drag)~~ → resolved
 - **Где:** [Table.vue:1519-1527](../../lib/table/Table.vue#L1519-L1527), [Table.vue:1553-1554](../../lib/table/Table.vue#L1553-L1554), [Table.vue:972-974](../../lib/table/Table.vue#L972-L974)
 
-> **Resolution (2026-06-07).** `onUnmounted` ([Table.vue:983](../../lib/table/Table.vue#L983)) расширен: помимо `tableObserver.disconnect()` теперь `lastRowVisibleObserver?.disconnect()` + `window.removeEventListener("mousemove"/"mouseup", ...)` (внутри `isClient()` guard) — закрывает leak IntersectionObserver и drag-listeners при unmount-during-resize. Тест: `Table.test.ts` describe «Issue 2 — observer / listener cleanup on unmount».
+> **Resolution (2026-06-07).** `onUnmounted` ([Table.vue:1053](../../lib/table/Table.vue#L1053)) расширен: помимо `tableObserver.disconnect()` теперь `lastRowVisibleObserver?.disconnect()` + `window.removeEventListener("mousemove"/"mouseup", ...)` (внутри `isClient()` guard) — закрывает leak IntersectionObserver и drag-listeners при unmount-during-resize. Тест: `Table.test.ts` describe «Issue 2 — observer / listener cleanup on unmount».
 
 ### Что найдено
 
@@ -219,11 +219,15 @@ API только schema-driven:
 - [ ] `<template #cell="{ row }">` в `<Column>` пробрасывается в render.
 - [ ] Volar предлагает props `<Column>`-компонента.
 
-## Issue 4: Нет виртуализации — таблицы с >1000 строк лагают
+## ~~Issue 4: Нет виртуализации — таблицы с >1000 строк лагают~~ ✅ resolved 2026-06-07
 
 - **Категория:** H43 (виртуализация)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [Table.vue](../../lib/table/Table.vue) (rendering tbody)
+
+> **Resolution (2026-06-07).** Dependency-free row virtualization (без новых deps — по решению пользователя, соответствует bundle-философии Wave 2.1). `isVirtual` computed + `virtualWindow` (fixed `rowHeight`, `overscan`) рендерят только видимое окно `<tbody>` + spacer-`<tr>` (`[data-table-virtual-spacer-top/bottom]`) для сохранения scroll-height. Scroll отслеживается passive-листенером на `[data-table-scroll]` (= `tableBody`, reuse существующего viewport), cleanup в `onUnmounted`. **Auto** по умолчанию (client-mode, без `grouping`/активной `pagination`/`asyncData:true|function`, при `lengthData > threshold`, default 100) с **opt-out** `:virtual="false"`; `:virtual="true"`/object — force + config (`rowHeight`/`overscan`/`threshold`). Absolute index (`absIndex`) для `clickRow`/`clickCell`/`editableCell`/`activeRow`. ARIA: `[data-table] aria-rowcount` + строки `aria-rowindex`. Новый prop `virtual` ([Table.d.ts](../../lib/table/Table.d.ts)) + `TableOption`. Тесты: `Table.test.ts` describe «Virtualization (Issue 4)» (7 кейсов).
+>
+> **Limitations (v1, отдельным заходом):** virtual + `grouping`, dynamic row-height (сейчас fixed — multi-line ячейки клипаются до `rowHeight`), virtual + edit-mode проверен, но не оптимизирован. SSR рендерит первое окно от index 0.
 
 ### Что найдено
 
@@ -279,7 +283,7 @@ Coverage statements 85.93% — OK, но branch 67.74% — много untested у
 - **Severity:** ~~medium~~ → resolved
 - **Где:** [Table.vue](../../lib/table/Table.vue) (table render)
 
-> **Resolution (2026-06-07).** `scope` уже присутствовал (аудит-текст устарел): `<th scope="col">` ([Table.vue:1760](../../lib/table/Table.vue#L1760)), group `<th scope="colgroup">` ([Table.vue:1853](../../lib/table/Table.vue#L1853)), tfoot `<th scope="col">` ([Table.vue:1994](../../lib/table/Table.vue#L1994)). Добавлен `<caption>`: новый prop `caption?: string` + slot `#caption`, рендерится как `sr-only` `<caption data-table-caption>` первым child `<table>` ([Table.vue](../../lib/table/Table.vue)). Тесты: `Table.test.ts` describe «Issue 8 — caption + scope» (4 кейса, включая scope-regression).
+> **Resolution (2026-06-07).** `scope` уже присутствовал (аудит-текст устарел): `<th scope="col">` ([Table.vue:1832](../../lib/table/Table.vue#L1832)), group `<th scope="colgroup">` ([Table.vue:1932](../../lib/table/Table.vue#L1932)), tfoot `<th scope="col">` ([Table.vue:2089](../../lib/table/Table.vue#L2089)). Добавлен `<caption>`: новый prop `caption?: string` + slot `#caption`, рендерится как `sr-only` `<caption data-table-caption>` первым child `<table>` ([Table.vue](../../lib/table/Table.vue)). Тесты: `Table.test.ts` describe «Issue 8 — caption + scope» (4 кейса, включая scope-regression).
 
 ### Что найдено
 

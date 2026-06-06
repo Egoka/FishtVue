@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Table` — самый объёмный компонент библиотеки (~1900 LOC SFC + 1471 LOC `.d.ts`). Поддерживает: sort, filter, search, grouping, summary rows, inline edit (Input/Select/Calendar editors), 4 режима асинхронной загрузки данных (`true`-flag, URL string, config object, custom function), column resizing, кастомные cell templates, dynamic slots по `dataField`.
 
-Stability: `stable` — 84 кейса (66 базовых + 18 audit: XSS/cleanup/a11y/unstyled). Тесты покрывают core flow + security/a11y; edge cases в edit/group remain.
+Stability: `stable` — 91 кейс (66 базовых + 18 audit: XSS/cleanup/a11y/unstyled + 7 virtualization). Тесты покрывают core flow + security/a11y/virtualization; edge cases в edit/group remain.
 
 Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.d.ts), [Table.test.ts](../../lib/table/Table.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.
 lib/table/
 ├── Table.vue            # SFC ~1900 строк
 ├── Table.d.ts           # 1471 строка
-├── Table.test.ts        # 84 кейса
+├── Table.test.ts        # 91 кейс
 └── package.json
 ```
 
@@ -48,6 +48,7 @@ lib/table/
   - `string` — URL для одноразового fetch на mount. Все client-side фичи активны.
   - `IAsyncDataConfig` — `{ url, headers?, query? }` — то же, с доп. опциями fetch.
   - `(params: IAsyncDataParams) => Promise<IAsyncDataResult>` — function mode: callback вызывается на mount + при изменении filters/sort/search/pagination. Возвращает `{ dataSource, totalCount }`.
+- **Virtualization:** большие client-side таблицы по умолчанию рендерят только видимое окно строк (auto при `> threshold`); выключается `:virtual="false"`. См. §10.5.
 - **Стили:** через `Table.setStyle()` для контейнера; кастомизация — через `styles: ITableStyles`.
 - **Конфиг:** `componentsOptions.Table` — см. §10.
 - **Локализация:** `Table.t()` для default messages (`noData`, `noColumn`, `noDataForQuery`, `clearAllFilters`, `find`, `of`, `items`).
@@ -76,7 +77,7 @@ const data = ref([
 
 ## 5. Props
 
-`TableProps` ([Table.d.ts:688–844](../../lib/table/Table.d.ts#L688-L844)):
+`TableProps` ([Table.d.ts:688–860](../../lib/table/Table.d.ts#L688-L860)):
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -96,6 +97,7 @@ const data = ref([
 | `sizeLoadingRows` | `number` | — | Сколько skeleton-строк показывать. |
 | `noData` / `noColumn` | `string` | (locale) | Сообщения пустых состояний (рендерятся как текст; HTML — через slot `empty`/`empty-columns`). |
 | `caption` | `string` | — | Accessible `<caption>` (sr-only) для screen reader. HTML — через slot `caption`. |
+| `virtual` | `boolean \| { rowHeight?, overscan?, threshold? }` | auto | Виртуализация строк. `undefined` — auto при `> threshold` (client-side, без grouping/pagination); `false` — выключить; `true`/object — форс + config. См. §10.5. |
 | `countDataOnLoading` | `number` | — | Симулированное количество строк при loading. |
 | `totalCount` | `number` | — | Общий count для server-side pagination. |
 | `asyncData` | `true \| string \| IAsyncDataConfig \| ((params) => Promise<IAsyncDataResult>)` | — | См. §3. |
@@ -153,14 +155,14 @@ v-model contract — не применимо: Table не имеет одного
 
 ## 8. Exposed methods
 
-`TableExpose` ([Table.d.ts:1032–1457](../../lib/table/Table.d.ts#L1032-L1457)) — большой:
+`TableExpose` ([Table.d.ts:1048–1473](../../lib/table/Table.d.ts#L1048-L1473)) — большой:
 
 | Name | Description |
 |---|---|
 | `activeRow`, `sortColumns`, `filterColumns`, `widthsColumns`, `queryTable`, `pageTable`, `sizeTable`, `allData`, `isLoading`, `resizableColumn` | Reactive state. |
 | Программные методы: `switchPage`, `switchSizePage`, `setQuery`, `clearFilter`, `addRow`, `deleteRow`, `editRow`, `editCell`, `setColumnWidth`, `reloadData()` (только для function-mode asyncData) | Управление. |
 
-См. полный список в [Table.d.ts:1032–1457](../../lib/table/Table.d.ts#L1032-L1457).
+См. полный список в [Table.d.ts:1048–1473](../../lib/table/Table.d.ts#L1048-L1473).
 
 ## 9. Examples
 
@@ -236,6 +238,30 @@ async function load(params: IAsyncDataParams): Promise<IAsyncDataResult> {
 
 Root класс — `fv fishtvue-table`. См. [01-getting-started §10.4](../01-getting-started.md#104-css-layer-override).
 
+### 10.5 Virtualization
+
+Большие client-side таблицы рендерят только видимое «окно» строк (+ overscan), а место остальных занимают spacer-`<tr>` — это держит DOM компактным и устраняет лаги scroll на тысячах строк.
+
+- **Auto по умолчанию.** Включается автоматически, когда строк больше порога (`threshold`, default `100`) — только для client-side flat-режима: **не** применяется при `grouping`, активной `pagination`, `asyncData: true`/function.
+- **Opt-out:** `:virtual="false"` — рендерить все строки (legacy).
+- **Force + config:** `:virtual="true"` или `:virtual="{ rowHeight, overscan, threshold }"`.
+  - `rowHeight` — фиксированная высота строки в px (default `heightCell + 9`). **Fixed-height**: multi-line содержимое клипается до `rowHeight`.
+  - `overscan` — сколько строк дорисовывать сверху/снизу окна (default `6`).
+  - `threshold` — порог auto-включения (default `100`).
+
+```vue
+<!-- auto: включится само на больших данных -->
+<Table :data-source="rows" />
+<!-- форс + фиксированная высота 40px -->
+<Table :data-source="rows" :virtual="{ rowHeight: 40 }" />
+<!-- выключить -->
+<Table :data-source="rows" :virtual="false" />
+```
+
+ARIA: при активной виртуализации `<table>` получает `aria-rowcount` (полное число строк), а строки — `aria-rowindex` (абсолютный, 1-based). Виртуализация заменяет lazy-load через `countVisibleRows`/`lastRowVisibleObserver`.
+
+**Limitations (v1):** virtual + `grouping`, dynamic (измеряемая) высота строк, и оптимизация edit-mode в окне — отдельным заходом. SSR рендерит первое окно от начала; client догоняет при hydration.
+
 ## 11. Form integration & validation
 
 Не применимо в стандартном смысле. Edit-mode принимает `editorOptions` для Input/Select/Calendar — туда можно передать `rules` для валидации значения ячейки.
@@ -248,6 +274,7 @@ Root класс — `fv fishtvue-table`. См. [01-getting-started §10.4](../01
 - `<caption>` (sr-only): prop `caption` или slot `#caption` — объявляет назначение таблицы screen reader'у.
 - `<th scope="col">` на заголовках, `scope="colgroup"` на group-строках, `scope="col"` в tfoot — связь header↔column для SR.
 - aria-live: sr-only `[data-table-aria-live]` (`aria-live="polite"`, `aria-atomic="true"`) озвучивает количество строк после filter/search/sort (локаль `table.resultsCount*`).
+- При виртуализации (§10.5): `<table aria-rowcount>` (полное число строк) + строки `aria-rowindex` (абсолютный, 1-based) — screen reader корректно объявляет позицию в неполном DOM.
 - `aria-sort` на колонках с sort'ом — проверь по DOM.
 - Keyboard: Tab/Shift+Tab по интерактивным элементам; ArrowKeys для sort-икон не привязаны.
 - Focus management в edit-mode: при открытии cell editor — focus автоматический.
@@ -304,7 +331,7 @@ describe("Table", () => {
 })
 ```
 
-Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (84 кейса).
+Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (91 кейс).
 
 ## 16. Troubleshooting / FAQ
 
@@ -334,6 +361,7 @@ describe("Table", () => {
 
 - Coverage: большая часть веток покрыта; edge cases в edit/group/asyncData режимах ([Table.vue](../../lib/table/Table.vue)) покрыты частично (см. [issues/table.md Issue 7](../issues/table.md)). Cell-render, empty-state, caption, aria-live и cleanup-ветви покрыты в рамках audit-фикса 2026-06-07.
 - `IColumnPrivate.isEdit: boolean` ([Table.d.ts:393](../../lib/table/Table.d.ts#L393)) — внутренний флаг, expose'ится через TableExpose.
+- Virtualization (§10.5) — v1: только flat client-side (не grouping), **fixed** `rowHeight` (multi-line ячейки клипаются), edit-mode в окне работает, но не оптимизирован. Dynamic-height и virtual+grouping — отдельным заходом.
 
 ### Skipped tests
 

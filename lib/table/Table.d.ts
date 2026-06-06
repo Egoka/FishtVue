@@ -798,6 +798,22 @@ export declare type TableProps = {
   caption?: string
 
   /**
+   * Row virtualization for large client-side tables (renders only the visible window).
+   *
+   * - `undefined` (default) — auto-enabled when row count exceeds the threshold
+   *   (client-side, non-grouped, non-paginated tables only).
+   * - `false` — always render every row (legacy behavior).
+   * - `true` — force-enable regardless of row count.
+   * - object — force-enable with config: `rowHeight` (fixed px, default `heightCell + 9`),
+   *   `overscan` (extra rows above/below, default `6`), `threshold` (auto cutoff, default `100`).
+   *
+   * Not applied with `grouping`, active `pagination`, or `asyncData: true`/function mode.
+   * Fixed row height — multi-line cells are clipped to `rowHeight`.
+   * @type {boolean | { rowHeight?: number; overscan?: number; threshold?: number } | undefined}
+   */
+  virtual?: boolean | { rowHeight?: number; overscan?: number; threshold?: number }
+
+  /**
    * Number of rows simulated during data loading.
    * @type {number | 100 | 1000 | 10000 | undefined}
    */
@@ -1471,6 +1487,7 @@ export declare type TableOption = Pick<
   | "noData"
   | "noColumn"
   | "countDataOnLoading"
+  | "virtual"
   | "class"
   | "styles"
 >

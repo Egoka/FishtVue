@@ -1381,6 +1381,90 @@ describe("Table Component", () => {
       })
     })
   })
+  describe("Table Component - Virtualization (Issue 4)", () => {
+    const genRows = (n: number) => Array.from({ length: n }, (_, i) => ({ name: `Item ${i}`, id: i }))
+    // jsdom не считает layout — мокаем viewport-высоту scroll-контейнера и scrollTop.
+    const setViewport = async (wrapper: any, { scrollTop = 0, clientHeight = 0 } = {}) => {
+      const el = wrapper.find("[data-table-scroll]").element as HTMLElement
+      Object.defineProperty(el, "clientHeight", { value: clientHeight, configurable: true })
+      el.scrollTop = scrollTop
+      await wrapper.find("[data-table-scroll]").trigger("scroll")
+      await nextTick()
+      return el
+    }
+
+    it("auto-enables virtualization for large client-side tables", () => {
+      const wrapper = mount(Table, { props: { dataSource: genRows(500) } })
+      const rendered = wrapper.findAll("[data-table-tbody-tr]").length
+      expect(rendered).toBeGreaterThan(0)
+      expect(rendered).toBeLessThan(500) // окно, не весь список
+      expect(wrapper.find("[data-table-virtual-spacer-bottom]").exists()).toBe(true)
+      expect(wrapper.find("[data-table]").attributes("aria-rowcount")).toBe("500")
+    })
+
+    it("opt-out via :virtual=false renders all rows (legacy)", () => {
+      const wrapper = mount(Table, { props: { dataSource: genRows(500), virtual: false } as TableProps })
+      expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(500)
+      expect(wrapper.find("[data-table-virtual-spacer-top]").exists()).toBe(false)
+      expect(wrapper.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+    })
+
+    it("force-enables via :virtual=true below threshold", () => {
+      const wrapper = mount(Table, { props: { dataSource: genRows(10), virtual: true } as TableProps })
+      expect(wrapper.find("[data-table]").attributes("aria-rowcount")).toBe("10")
+    })
+
+    it("does NOT virtualize with grouping / pagination / asyncData:true", () => {
+      const grouped = mount(Table, {
+        props: { dataSource: genRows(500), grouping: "name" } as TableProps
+      })
+      expect(grouped.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+
+      const paged = mount(Table, {
+        props: { dataSource: genRows(500), pagination: true, countVisibleRows: 3 } as TableProps
+      })
+      expect(paged.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+
+      const asyncTrue = mount(Table, { props: { dataSource: genRows(500), asyncData: true } as TableProps })
+      expect(asyncTrue.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+    })
+
+    it("shifts the window and top spacer on scroll (rowHeight math)", async () => {
+      const wrapper = mount(Table, {
+        props: { dataSource: genRows(500), virtual: { rowHeight: 50, overscan: 5 } } as TableProps
+      })
+      await setViewport(wrapper, { scrollTop: 0, clientHeight: 200 })
+      const firstBefore = wrapper.find("[data-table-tbody-tr] [data-table-tbody-td]").text()
+
+      await setViewport(wrapper, { scrollTop: 1000, clientHeight: 200 })
+      // startIndex = floor(1000/50) - overscan(5) = 15 -> topPad = 15*50 = 750
+      expect(wrapper.find("[data-table-virtual-spacer-top]").attributes("style")).toContain("750px")
+      const firstAfter = wrapper.find("[data-table-tbody-tr] [data-table-tbody-td]").text()
+      expect(firstAfter).not.toBe(firstBefore)
+      expect(firstAfter).toContain("Item 15")
+    })
+
+    it("emits click-row with the absolute index after scrolling", async () => {
+      const wrapper = mount(Table, {
+        props: { dataSource: genRows(500), virtual: { rowHeight: 50, overscan: 5 } } as TableProps
+      })
+      await setViewport(wrapper, { scrollTop: 1000, clientHeight: 200 })
+      await wrapper.find("[data-table-tbody-tr]").trigger("click")
+      const payload = wrapper.emitted("click-row")?.[0]?.[0] as any
+      expect(payload).toBeTruthy()
+      // первая отрисованная строка = startIndex; data.name должна совпасть с absolute index
+      expect(payload.data.name).toBe(`Item ${payload.indexRow}`)
+      expect(payload.indexRow).toBe(15)
+    })
+
+    it("removes the scroll listener on unmount", () => {
+      const wrapper = mount(Table, { props: { dataSource: genRows(500) } })
+      const el = wrapper.find("[data-table-scroll]").element as HTMLElement
+      const removeSpy = vi.spyOn(el, "removeEventListener")
+      wrapper.unmount()
+      expect(removeSpy).toHaveBeenCalledWith("scroll", expect.any(Function))
+    })
+  })
   describe("Table Component - asyncData Feature", () => {
     describe("Mode 1: asyncData = true (Boolean mode)", () => {
       it("disables client-side sorting when asyncData is true", async () => {
