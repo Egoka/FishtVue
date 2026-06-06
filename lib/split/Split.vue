@@ -152,8 +152,9 @@
   })
   // ---MOUNT-UNMOUNT-----------------------
   // initStyle() регистрируется автоматически в Component.__hooks() (dev-patterns §2) — не дублируем здесь
-  // синхронный seed размеров — чтобы первый render (в т.ч. SSR) имел корректные flex-basis и aria-valuenow
-  updatePanels()
+  // на сервере считаем initial sizes сразу; на клиенте — в onMounted, когда resizableGroup забинжен
+  // (для units="pixels" getDefaultSize требует offsetWidth контейнера — в setup он ещё 0)
+  if (!isClient()) updatePanels()
   onMounted(() => {
     if (!isClient()) return
     setCursorPanels(panels.value)
@@ -673,7 +674,7 @@
         :data-min="panel.minSize"
         :aria-orientation="direction"
         :aria-controls="panelDomId(panel.name)"
-        :aria-valuenow="Math.round(sizePanels[panel.name])"
+        :aria-valuenow="Math.round(sizePanels[panel.name] ?? panel.size ?? 0)"
         :aria-valuemax="panel.maxSize"
         :aria-valuemin="panel.minSize"
         data-panel-resize-handle-enabled="true"

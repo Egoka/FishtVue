@@ -1,7 +1,7 @@
 ---
 title: Split
 summary: Resizable панели с persistence через localStorage, horizontal/vertical, Pointer Events (mouse+touch+pen), keyboard resize и ARIA separator.
-updated: 2026-06-06
+updated: 2026-06-07
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Split` — resizable панели с разделителями (separator). Поддерживает horizontal/vertical направление, persistence размеров через `autoSaveName` (localStorage), `min`/`max`/`disabled`/`hidden` per-panel, единицы `percentages` или `pixels`. Resize — через Pointer Events (mouse + touch + pen) либо с клавиатуры на focused separator. Динамические slots по `panel.name`.
 
-Stability: `stable` — 31 кейс, coverage `Split.vue` 85.43% statements / 70.35% branch.
+Stability: `stable` — 32 кейса, coverage `Split.vue` 85.19% statements / 71.77% branch.
 
 Source: [Source](../../lib/split/Split.vue), [Split.d.ts](../../lib/split/Split.d.ts), [Split.test.ts](../../lib/split/Split.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/split/Split.vue), [Split.d.ts](../../lib/split/Split.
 lib/split/
 ├── Split.vue
 ├── Split.d.ts          # 294 строки
-├── Split.test.ts       # 31 кейс
+├── Split.test.ts       # 32 кейса
 └── package.json        # "sideEffects": false
 ```
 
@@ -240,7 +240,7 @@ describe("Split", () => {
 })
 ```
 
-Реальные тесты — [Split.test.ts](../../lib/split/Split.test.ts) (31 кейс).
+Реальные тесты — [Split.test.ts](../../lib/split/Split.test.ts) (32 кейса).
 
 ## 16. Troubleshooting / FAQ
 
@@ -265,7 +265,7 @@ describe("Split", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 85.43% statements / 70.35% branch (2026-06-06). Часть ветвей геометрии resize (`resizePanel` math) проверяется через mock'и `getBoundingClientRect`/`ResizeObserver` — реальный pixel-perfect resize валидируется только в браузере.
+- Coverage 85.19% statements / 71.77% branch (2026-06-07). Часть ветвей геометрии resize (`resizePanel` math) проверяется через mock'и `getBoundingClientRect`/`ResizeObserver` — реальный pixel-perfect resize валидируется только в браузере.
 
 ### Skipped tests
 

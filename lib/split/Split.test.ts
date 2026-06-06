@@ -497,6 +497,28 @@ describe("Split Component", () => {
       expect(wrapper.findAll("[data-split-item]")).toHaveLength(1)
       expect(wrapper.find('[data-name="b"]').exists()).toBe(true)
     })
+
+    // регрессия: pixels-панель без явного size должна получать положительный default
+    // из offsetWidth контейнера (в onMounted, не в setup где resizableGroup ещё undefined)
+    it("computes a positive pixel default size for panels without explicit size", () => {
+      const proto = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth")
+      Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, get: () => 800 })
+      try {
+        const wrapper = mount(Split, {
+          props: {
+            panels: [{ name: "menu", size: 75, minSize: 75, maxSize: 200 }, { name: "main" }],
+            units: "pixels",
+            direction: "horizontal"
+          }
+        })
+        const vm = wrapper.vm as any
+        expect(vm.sizePanels.menu).toBe(75)
+        expect(vm.sizePanels.main).toBeGreaterThan(0) // (800 - 75) / 1 = 725, не отрицательное
+      } finally {
+        if (proto) Object.defineProperty(HTMLElement.prototype, "offsetWidth", proto)
+        else delete (HTMLElement.prototype as any).offsetWidth
+      }
+    })
   })
 
   // ---ISSUE 2 — coverage geometry-dependent branches (mocked layout)----

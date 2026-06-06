@@ -1,7 +1,7 @@
 ---
 title: Issues — Split
-summary: Аудит Split. Закрыто 2026-06-06 — Issue 1 (body.classList → drag overlay), 2 (coverage 60→85% / 39→70% branch, 7→31 тестов), 3 (dup initStyle снят Wave 2.3 + per-component sideEffects + unstyled regression), 4 (aria-orientation + aria-controls; role/valuenow уже были), 5 (keyboard resize), 6 (localStorage persistence реализована, isClient-guarded), 8 (touch уже через Pointer Events + motion-safe). Остаются cross-cutting: A4-5 exports map (root, Wave 2.1), F31 RTL (Wave 8), G34, B10 colors (Wave 9).
-updated: 2026-06-06
+summary: Аудит Split. Закрыто 2026-06-06 — Issue 1 (body.classList → drag overlay), 2 (coverage 60→85% / 39→72% branch, 7→32 теста), 3 (dup initStyle снят Wave 2.3 + per-component sideEffects + unstyled regression), 4 (aria-orientation + aria-controls; role/valuenow уже были), 5 (keyboard resize), 6 (localStorage persistence реализована, isClient-guarded), 8 (touch уже через Pointer Events + motion-safe). Остаются cross-cutting: A4-5 exports map (root, Wave 2.1), F31 RTL (Wave 8), G34, B10 colors (Wave 9).
+updated: 2026-06-07
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/split/
 related-doc: ../components/split.md
@@ -58,8 +58,8 @@ document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
 
 - **Категория:** J46, K46
 - **Severity:** ~~high~~
-- **Где:** [Split.test.ts](../../lib/split/Split.test.ts) (7 → 31 tests)
-- **Resolution:** `Split.vue` coverage **60.48 → 85.43%** statements / **39.15 → 70.35%** branch. Добавлены тесты на: pointer-drag flow, min/max constraints, pixel vs percent units, horizontal/vertical, hidden/disabled панели, persistence save/restore, keyboard resize, ARIA, overlay, unstyled, motion-safe. Геометро-зависимые ветви (`resizePanel` math, `updatePanels` pixel-recalc) покрыты через mock `getBoundingClientRect`/`offsetWidth` и mock `ResizeObserver`. Branch ≥ 70% → переход beta → stable.
+- **Где:** [Split.test.ts](../../lib/split/Split.test.ts) (7 → 32 tests)
+- **Resolution:** `Split.vue` coverage **60.48 → 85.19%** statements / **39.15 → 71.77%** branch. Добавлены тесты на: pointer-drag flow, min/max constraints, pixel vs percent units (включая default-size без явного `size`), horizontal/vertical, hidden/disabled панели, persistence save/restore, keyboard resize, ARIA, overlay, unstyled, motion-safe. Геометро-зависимые ветви (`resizePanel` math, `updatePanels` pixel-recalc) покрыты через mock `getBoundingClientRect`/`offsetWidth` и mock `ResizeObserver`. Branch ≥ 70% → переход beta → stable.
 
 ### Что найдено (исторически)
 
