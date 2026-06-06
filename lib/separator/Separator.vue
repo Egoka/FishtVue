@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, useSlots } from "vue"
+  import { computed, useSlots } from "vue"
   import type { SeparatorProps } from "./Separator"
   import Component from "fishtvue/component"
   import { StyleClass } from "fishtvue/types"
@@ -129,7 +129,7 @@
 </script>
 
 <template>
-  <div data-separator :class="classBase">
+  <div data-separator role="separator" :aria-orientation="vertical ? 'vertical' : 'horizontal'" :class="classBase">
     <div v-if="!['left', 'full'].includes(content)" data-separator-left :class="classBodyLineLeft" aria-hidden="true">
       <div
         :class="classLineLeft"

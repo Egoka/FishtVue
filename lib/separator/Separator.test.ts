@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Separator from "fishtvue/separator/Separator.vue"
 import { SeparatorProps } from "fishtvue/separator/Separator"
@@ -110,6 +110,59 @@ describe("Separator Component", () => {
       })
       expect(wrapper.exists()).toBe(true)
       expect(wrapper.find("[data-separator]").classes()).toContain("relative")
+    })
+  })
+
+  describe("Accessibility", () => {
+    it('sets role="separator" on the root', () => {
+      const wrapper = mount(Separator)
+      expect(wrapper.find("[data-separator]").attributes("role")).toBe("separator")
+    })
+
+    it('sets aria-orientation="horizontal" by default', () => {
+      const wrapper = mount(Separator)
+      expect(wrapper.find("[data-separator]").attributes("aria-orientation")).toBe("horizontal")
+    })
+
+    it('sets aria-orientation="vertical" when vertical', () => {
+      const wrapper = mount(Separator, { props: { vertical: true } })
+      expect(wrapper.find("[data-separator]").attributes("aria-orientation")).toBe("vertical")
+    })
+
+    it("keeps decorative line segments aria-hidden", () => {
+      const wrapper = mount(Separator)
+      expect(wrapper.find("[data-separator-left]").attributes("aria-hidden")).toBe("true")
+      expect(wrapper.find("[data-separator-right]").attributes("aria-hidden")).toBe("true")
+    })
+
+    it("exposes slot content as the accessible name (not aria-hidden)", () => {
+      const wrapper = mount(Separator, { slots: { default: "OR" } })
+      const content = wrapper.find("[data-separator-content]")
+      expect(content.exists()).toBe(true)
+      expect(content.attributes("aria-hidden")).toBeUndefined()
+      expect(content.text()).toBe("OR")
+    })
+  })
+
+  describe("Unstyled mode", () => {
+    // window.FishtVue — глобальный singleton, выставляемый plugin'ом; чистим, чтобы
+    // unstyled-конфиг не утёк в последующие тесты/файлы.
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    const createUnstyledApp = () => ({
+      install(app: any) {
+        app.use(FishtVue, { unstyled: true })
+      }
+    })
+
+    it("respects unstyled: true via Component.setStyle guard", () => {
+      const app = createUnstyledApp()
+      const wrapper = mount(Separator, {
+        global: { plugins: [app] }
+      })
+      expect(wrapper.find("[data-separator]").classes()).toEqual([])
     })
   })
 })

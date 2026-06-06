@@ -1,5 +1,6 @@
 {
   "main": "./separator.mjs",
   "module": "./separator.mjs",
-  "types": "./Separator.d.ts"
+  "types": "./Separator.d.ts",
+  "sideEffects": false
 }
