@@ -21,6 +21,11 @@ export default <DefaultMessages>{
     resultsCountOne: "1 result",
     resultsCountNone: "No results"
   },
+  table: {
+    resultsCount: "Results: %d",
+    resultsCountOne: "1 result",
+    resultsCountNone: "No results"
+  },
   alert: {
     close: "Close"
   },

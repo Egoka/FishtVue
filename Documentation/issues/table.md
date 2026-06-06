@@ -1,7 +1,7 @@
 ---
 title: Issues — Table
-summary: Аудит Table — CRITICAL XSS через 5 v-html сайтов (setMarker/summary/noData/noColumn/noFilter), IntersectionObserver и window-listeners без полного cleanup, отсутствие compound API, нет виртуализации.
-updated: 2026-05-10
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live). Остаются: compound API, виртуализация, packaging/SSR, RTL.
+updated: 2026-06-07
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
 related-doc: ../components/table.md
@@ -13,16 +13,25 @@ related-doc: ../components/table.md
 
 | Severity | Count | Categories |
 |---|---|---|
-| critical | 2 | C13/security (5× v-html), H41 (partial cleanup) |
-| high | 8 | A2, A4-5, C17, H43 (виртуализация), L53, P (dual-API), J47, K51 |
-| medium | 5 | E29.1, E29.5, F31, G34, H39 |
+| critical | 0 | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅ |
+| high | 7 | A2, A4-5, C17, H43 (виртуализация), ~~L53~~ ✅, P (dual-API), J47, K51 |
+| medium | 3 | ~~E29.1~~ ✅, ~~E29.5~~ ✅, F31, G34, H39 |
 | low | 4 | E29.7, B10, N59, D26 |
 
-## Issue 1: CRITICAL — XSS через 5 сайтов `v-html`
+> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle). Остаются active: 3 (compound API), 4 (виртуализация), 5/13/14 (packaging/SSR), 7 (coverage), 10/11/12 (floating/RTL/motion).
+
+## ~~Issue 1: CRITICAL — XSS через 5 сайтов `v-html`~~ ✅ resolved 2026-06-07
 
 - **Категория:** C13 + security
-- **Severity:** **critical**
+- **Severity:** ~~**critical**~~ → resolved
 - **Где:** [Table.vue:1842](../../lib/table/Table.vue#L1842), [Table.vue:1939](../../lib/table/Table.vue#L1939), [Table.vue:1999](../../lib/table/Table.vue#L1999), [Table.vue:2011](../../lib/table/Table.vue#L2011), [Table.vue:2026](../../lib/table/Table.vue#L2026)
+
+> **Resolution (2026-06-07).** Все 5 `v-html` устранены:
+> - **Cell content** → безопасный render через `markerParts()` ([Table.vue:1375](../../lib/table/Table.vue#L1375)): текст разбивается на части, совпадения с query/filter оборачиваются в `<mark :class="classMaskQuery">` через `<template v-for>` (без `v-html`). `setMarker()` сохранён только для `valueWithMarker` payload (`click-cell`) и slot-prop. Кастомный HTML на ячейку — через существующий per-column slot.
+> - **Summary** → text-render `{{ summaryColumns[column.dataField] }}`.
+> - **noData / noColumn / noFilter** → `<slot name="empty|empty-columns|empty-filter">{{ ... }}</slot>` (text по умолчанию, HTML только через explicit slot).
+> - Regex query экранируется (`escapeRegExp`) — нет regex-injection.
+> - Тесты: `Table.test.ts` describe «Issue 1 — XSS via v-html» (7 кейсов + slot-overrides + highlight).
 
 ### Что найдено
 
@@ -77,11 +86,13 @@ related-doc: ../components/table.md
 - [ ] Search highlight (`<mark>`) продолжает работать через VNode-render.
 - [ ] noData с HTML — отрисовывается как escaped text по умолчанию; HTML только через явный slot.
 
-## Issue 2: CRITICAL — partial cleanup observers/listeners
+## ~~Issue 2: CRITICAL — partial cleanup observers/listeners~~ ✅ resolved 2026-06-07
 
 - **Категория:** H41 (memory leaks)
-- **Severity:** **critical** (если unmount во время drag)
+- **Severity:** ~~**critical** (если unmount во время drag)~~ → resolved
 - **Где:** [Table.vue:1519-1527](../../lib/table/Table.vue#L1519-L1527), [Table.vue:1553-1554](../../lib/table/Table.vue#L1553-L1554), [Table.vue:972-974](../../lib/table/Table.vue#L972-L974)
+
+> **Resolution (2026-06-07).** `onUnmounted` ([Table.vue:983](../../lib/table/Table.vue#L983)) расширен: помимо `tableObserver.disconnect()` теперь `lastRowVisibleObserver?.disconnect()` + `window.removeEventListener("mousemove"/"mouseup", ...)` (внутри `isClient()` guard) — закрывает leak IntersectionObserver и drag-listeners при unmount-during-resize. Тест: `Table.test.ts` describe «Issue 2 — observer / listener cleanup on unmount».
 
 ### Что найдено
 
@@ -238,11 +249,13 @@ API только schema-driven:
 
 См. [button.md Issue 1, 8, 9](./button.md).
 
-## Issue 6: `unstyled: true` не обрабатывается
+## ~~Issue 6: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-06-07
 
 - **Категория:** L53
 
 См. [button.md Issue 14](./button.md).
+
+> **Resolution (2026-06-07).** Cross-cutting guard в `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138), resolved 2026-05-11) уже отключает Tailwind-классы при `config.unstyled === true`. Корневой класс Table идёт через `Table.setStyle` ([classBaseTable]) — guard применяется. Добавлен regression-тест `Table.test.ts` > «Issue 6 — unstyled» > `respects unstyled: true via Component.setStyle guard`.
 
 ## Issue 7: Тесты есть (66), но низкие coverage в edit-cells / async-data ветках
 
@@ -260,11 +273,13 @@ Coverage statements 85.93% — OK, но branch 67.74% — много untested у
 2. asyncData ветки: 4 режима (см. [components/table.md](../components/table.md)) — каждый требует test case.
 3. Целевой branch coverage > 80%.
 
-## Issue 8: ARIA — таблица без `<caption>`, headers без `scope`
+## ~~Issue 8: ARIA — таблица без `<caption>`, headers без `scope`~~ ✅ resolved 2026-06-07
 
 - **Категория:** E29.1 (ARIA-роли)
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 - **Где:** [Table.vue](../../lib/table/Table.vue) (table render)
+
+> **Resolution (2026-06-07).** `scope` уже присутствовал (аудит-текст устарел): `<th scope="col">` ([Table.vue:1760](../../lib/table/Table.vue#L1760)), group `<th scope="colgroup">` ([Table.vue:1853](../../lib/table/Table.vue#L1853)), tfoot `<th scope="col">` ([Table.vue:1994](../../lib/table/Table.vue#L1994)). Добавлен `<caption>`: новый prop `caption?: string` + slot `#caption`, рендерится как `sr-only` `<caption data-table-caption>` первым child `<table>` ([Table.vue](../../lib/table/Table.vue)). Тесты: `Table.test.ts` describe «Issue 8 — caption + scope» (4 кейса, включая scope-regression).
 
 ### Что найдено
 
@@ -284,12 +299,14 @@ Coverage statements 85.93% — OK, но branch 67.74% — много untested у
 2. На каждом `<th>` добавить `scope="col"`.
 3. Для row headers (если есть) — `<th scope="row">`.
 
-## Issue 9: aria-live для filter/search/sort changes отсутствует
+## ~~Issue 9: aria-live для filter/search/sort changes отсутствует~~ ✅ resolved 2026-06-07
 
 - **Категория:** E29.5
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 
 См. [select.md Issue 8](./select.md). Аналогичный fix-план — `<div aria-live="polite">{{ resultsAnnouncement }}</div>` для «X rows shown after filter».
+
+> **Resolution (2026-06-07).** Добавлен sr-only polite-регион `<div data-table-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>` первым child корня. `ariaResultsLabel` ([Table.vue](../../lib/table/Table.vue)) считает `lengthData` (отфильтрованный count) → новые locale-ключи `table.resultsCount` / `table.resultsCountOne` / `table.resultsCountNone` (en + ru + `TypesLocale.DefaultMessages`), с литеральным fallback (т.к. `Component.t()` возвращает сам ключ при отсутствии перевода). Тесты: `Table.test.ts` describe «Issue 9 — aria-live results announcement».
 
 ## Issue 10: Floating UI для filter/edit popovers
 

@@ -21,6 +21,11 @@ export default <DefaultMessages>{
     resultsCountOne: "1 результат",
     resultsCountNone: "Результатов не найдено"
   },
+  table: {
+    resultsCount: "Результатов: %d",
+    resultsCountOne: "1 результат",
+    resultsCountNone: "Результатов не найдено"
+  },
   alert: {
     close: "Закрыть"
   },

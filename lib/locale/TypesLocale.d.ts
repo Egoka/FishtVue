@@ -39,6 +39,11 @@ export declare interface DefaultMessages extends DeepPartial<TypeLocale> {
     resultsCountOne?: string
     resultsCountNone?: string
   }
+  table?: {
+    resultsCount?: string
+    resultsCountOne?: string
+    resultsCountNone?: string
+  }
   alert?: {
     close?: string
   }

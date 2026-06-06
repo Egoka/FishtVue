@@ -791,6 +791,13 @@ export declare type TableProps = {
   noColumn?: string
 
   /**
+   * Accessible table caption, rendered as a visually-hidden `<caption>` element
+   * (for screen readers). Use the `caption` slot to provide HTML content instead.
+   * @type {string | undefined}
+   */
+  caption?: string
+
+  /**
    * Number of rows simulated during data loading.
    * @type {number | 100 | 1000 | 10000 | undefined}
    */
@@ -852,6 +859,14 @@ export declare type TableSlots = {
   header(): VNode[]
   footer(): VNode[]
   group(args: { item: string; length: number }): VNode[]
+  /** Accessible `<caption>` content (HTML allowed). Overrides the `caption` prop. */
+  caption(): VNode[]
+  /** Empty state shown when there is no data. Overrides the `noData` text. */
+  empty(): VNode[]
+  /** Empty state shown when no columns are defined. Overrides the `noColumn` text. */
+  "empty-columns"(): VNode[]
+  /** Empty state shown when filters/search produce no rows. Overrides the `noFilter` text. */
+  "empty-filter"(): VNode[]
 } & DynamicSlots
 /**
  * Defines the events emitted by the Table component.

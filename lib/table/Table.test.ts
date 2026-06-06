@@ -1024,9 +1024,12 @@ describe("Table Component", () => {
 
         vi.advanceTimersByTime(850)
         await nextTick()
-        const highlightedText = wrapper.find("[data-table-tbody-td] [data-table-tbody-not-cell-template] div span")
+        const highlightedText = wrapper.find("[data-table-tbody-td] [data-table-tbody-not-cell-template] div mark")
         expect(highlightedText.exists()).toBe(true)
-        expect(highlightedText.html()).toBe('<span class="fv fishtvue-table font-bold text-theme-700">orange</span>')
+        expect(highlightedText.text()).toBe("orange")
+        expect(highlightedText.classes()).toContain("fishtvue-table")
+        expect(highlightedText.classes()).toContain("font-bold")
+        expect(highlightedText.classes()).toContain("text-theme-700")
         vi.clearAllTimers()
         vi.useRealTimers()
       })
@@ -1153,6 +1156,228 @@ describe("Table Component", () => {
         hoverRows: "",
         isStripedRows: false,
         width: ""
+      })
+    })
+  })
+  describe("Table Component - Audit: XSS / cleanup / a11y / unstyled", () => {
+    const XSS = "<img src=x onerror=alert(1)>"
+    // unstyled инициализируется через window.FishtVue fallback при install — чистим, чтобы
+    // не утекало в соседние тесты/файлы (см. memory: window.FishtVue leak across Vitest files).
+    afterEach(() => {
+      try {
+        // @ts-ignore
+        delete window.FishtVue
+      } catch {
+        // @ts-ignore
+        window.FishtVue = undefined
+      }
+    })
+
+    describe("Issue 1 — XSS via v-html", () => {
+      it("does not render raw HTML from cell data (cell content)", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: [{ name: XSS }], columns: [{ dataField: "name" }] }
+        })
+        expect(wrapper.find("[data-table-tbody-td] img").exists()).toBe(false)
+        expect(wrapper.find("[data-table-tbody-not-cell-template]").text()).toContain("<img")
+      })
+
+      it("renders search highlight via <mark> text-node, not v-html <span>", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData, search: true, styles: { maskQuery: "font-bold text-theme-700" } } as TableProps
+        })
+        await wrapper.find("[data-table-search] input").setValue("orange")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+        const cell = wrapper.find("[data-table-tbody-td] [data-table-tbody-not-cell-template] div")
+        const mark = cell.find("mark")
+        expect(mark.exists()).toBe(true)
+        expect(mark.text()).toBe("orange")
+        expect(mark.classes()).toContain("font-bold")
+        expect(mark.classes()).toContain("text-theme-700")
+        // нет инъекции через v-html span
+        expect(cell.find("span").exists()).toBe(false)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("does not highlight cells without an active query", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData, columns: [{ dataField: "name" }] }
+        })
+        expect(wrapper.find("[data-table-tbody-not-cell-template] mark").exists()).toBe(false)
+        expect(wrapper.find("[data-table-tbody-td]").text()).toBe("orange")
+      })
+
+      it("renders noData message as text, not HTML", () => {
+        const wrapper = mount(Table, { props: { dataSource: [], noData: XSS } })
+        const el = wrapper.find("[data-table-no-data]")
+        expect(el.exists()).toBe(true)
+        expect(el.find("img").exists()).toBe(false)
+        expect(el.text()).toContain("<img")
+      })
+
+      it("renders noColumn message as text, not HTML", () => {
+        const wrapper = mount(Table, { props: { dataSource: [{}], noColumn: XSS } })
+        const el = wrapper.find("[data-table-no-column]")
+        expect(el.exists()).toBe(true)
+        expect(el.find("img").exists()).toBe(false)
+      })
+
+      it("renders noFilter message as text, not HTML", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            columns: [{ dataField: "name", isFilter: true }],
+            filter: { noFilter: XSS }
+          } as TableProps
+        })
+        await wrapper.find("[data-table-thead-col-filter] input").setValue("zzz-nomatch")
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        const el = wrapper.find("[data-table-no-filter]")
+        expect(el.exists()).toBe(true)
+        expect(el.find("img").exists()).toBe(false)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("renders summary as text, not HTML", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ t1: 1 }, { t1: 2 }],
+            columns: [{ dataField: "t1", type: "number" }],
+            summary: [{ dataField: "t1", type: "sum", displayFormat: `${XSS}{0}` }]
+          } as TableProps
+        })
+        const tfoot = wrapper.find("[data-table-tfoot]")
+        expect(tfoot.exists()).toBe(true)
+        expect(tfoot.find("img").exists()).toBe(false)
+        expect(tfoot.text()).toContain("<img")
+      })
+
+      it("allows custom HTML only via explicit empty slot", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: [] },
+          slots: { empty: "<div class='my-empty'>Nothing</div>" }
+        })
+        expect(wrapper.find("[data-table-no-data] .my-empty").exists()).toBe(true)
+      })
+
+      it("supports #empty-columns slot", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: [{}] },
+          slots: { "empty-columns": "<div class='my-noc'>No columns</div>" }
+        })
+        expect(wrapper.find("[data-table-no-column] .my-noc").exists()).toBe(true)
+      })
+
+      it("supports #empty-filter slot", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData, columns: [{ dataField: "name", isFilter: true }] } as TableProps,
+          slots: { "empty-filter": "<div class='my-nof'>No filter</div>" }
+        })
+        await wrapper.find("[data-table-thead-col-filter] input").setValue("zzz-nomatch")
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        expect(wrapper.find("[data-table-no-filter] .my-nof").exists()).toBe(true)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("Issue 2 — observer / listener cleanup on unmount", () => {
+      it("disconnects IntersectionObserver and removes window listeners on unmount", async () => {
+        const disconnectSpy = vi.spyOn(global.IntersectionObserver.prototype, "disconnect")
+        const removeSpy = vi.spyOn(window, "removeEventListener")
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            columns: [{ dataField: "name", width: 120 }],
+            resizedColumns: true
+          } as TableProps
+        })
+        // начинаем drag-resize → добавляются window mousemove/mouseup
+        await wrapper.find("[data-table-thead-col-resized]").trigger("mousedown")
+        wrapper.unmount()
+        expect(disconnectSpy).toHaveBeenCalled()
+        expect(removeSpy).toHaveBeenCalledWith("mousemove", expect.any(Function))
+        expect(removeSpy).toHaveBeenCalledWith("mouseup", expect.any(Function))
+      })
+    })
+
+    describe("Issue 8 — caption + scope", () => {
+      it("renders <caption> from the caption prop (sr-only)", () => {
+        const wrapper = mount(Table, { props: { dataSource: baseData, caption: "Fruit inventory" } as TableProps })
+        const cap = wrapper.find("caption[data-table-caption]")
+        expect(cap.exists()).toBe(true)
+        expect(cap.text()).toBe("Fruit inventory")
+        expect(cap.classes()).toContain("sr-only")
+      })
+
+      it("renders #caption slot over the prop", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData },
+          slots: { caption: "<span class='cap'>Custom</span>" }
+        })
+        expect(wrapper.find("caption[data-table-caption] .cap").exists()).toBe(true)
+      })
+
+      it("does not render <caption> without prop or slot", () => {
+        const wrapper = mount(Table, { props: { dataSource: baseData } })
+        expect(wrapper.find("caption[data-table-caption]").exists()).toBe(false)
+      })
+
+      it("keeps scope=col on header cells", () => {
+        const wrapper = mount(Table, { props: { dataSource: baseData, columns: true } as TableProps })
+        const headers = wrapper.findAll("[data-table-thead-col]")
+        expect(headers.length).toBeGreaterThan(0)
+        headers.forEach((th) => expect(th.attributes("scope")).toBe("col"))
+      })
+    })
+
+    describe("Issue 9 — aria-live results announcement", () => {
+      it("renders a polite sr-only live region reflecting the result count", () => {
+        const wrapper = mount(Table, { props: { dataSource: baseData } })
+        const live = wrapper.find("[data-table-aria-live]")
+        expect(live.exists()).toBe(true)
+        expect(live.attributes("aria-live")).toBe("polite")
+        expect(live.attributes("aria-atomic")).toBe("true")
+        expect(live.classes()).toContain("sr-only")
+        expect(live.text()).toBe("Results: 5")
+      })
+
+      it("announces one / none after filtering", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData, columns: [{ dataField: "name", isFilter: true }] } as TableProps
+        })
+        await wrapper.find("[data-table-thead-col-filter] input").setValue("orange")
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        expect(wrapper.find("[data-table-aria-live]").text()).toBe("1 result")
+        await wrapper.find("[data-table-thead-col-filter] input").setValue("zzz-nomatch")
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        expect(wrapper.find("[data-table-aria-live]").text()).toBe("No results")
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("Issue 6 — unstyled", () => {
+      it("respects unstyled: true via Component.setStyle guard", () => {
+        const styled = mount(Table, { props: { dataSource: baseData } })
+        expect(styled.find("[data-table-component]").classes()).toContain("fishtvue-table")
+
+        const wrapper = mount(Table, {
+          global: { plugins: [[FishtVue, { unstyled: true }] as any] },
+          props: { dataSource: baseData }
+        })
+        expect(wrapper.find("[data-table-component]").classes()).not.toContain("fishtvue-table")
       })
     })
   })

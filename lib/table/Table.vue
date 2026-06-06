@@ -151,12 +151,22 @@
   const noFilter = computed<NonNullable<IFilter["noFilter"]>>(
     () => (filter.value as IFilter)?.noFilter ?? Table.t("noDataForQuery") ?? "No data was found for your query"
   )
+  const caption = computed<NonNullable<TableProps["caption"]>>(() => props.caption ?? "")
   const iconSort = computed<ISort["icon"]>(() => (sort.value as ISort)?.icon ?? "Arrow")
   const resizedColumns = computed<NonNullable<TableProps["resizedColumns"]>>(
     () => props?.resizedColumns ?? options?.resizedColumns ?? false
   )
   const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props?.edit ?? options?.edit ?? false)
   const lengthData = computed<number>(() => totalCountAsync.value ?? props.totalCount ?? dataSource.value.length)
+  // aria-live: озвучивание количества строк после filter/search/sort (polite, sr-only).
+  // Table.t() возвращает сам ключ, если перевода нет, — в этом случае берём литеральный fallback.
+  const ariaResultsLabel = computed<string>(() => {
+    const count = lengthData.value ?? 0
+    const key = count === 0 ? "table.resultsCountNone" : count === 1 ? "table.resultsCountOne" : "table.resultsCount"
+    const fallback = count === 0 ? "No results" : count === 1 ? "1 result" : "Results: %d"
+    const message = Table.t(key)
+    return (message && message !== key ? message : fallback).replace(/%d/g, String(count))
+  })
   const isFilter = computed<boolean>(() =>
     typeof filter.value === "object"
       ? typeof filter.value?.visible === "boolean"
@@ -971,7 +981,14 @@
     // Function mode: initial load triggered by sizePage/startPage immediate watchers
   })
   onUnmounted(() => {
-    if (isClient() && tableObserver) tableObserver.disconnect()
+    if (isClient()) {
+      tableObserver?.disconnect()
+      // IntersectionObserver lazy-load: без disconnect наблюдатель продолжает держать DOM-узел.
+      lastRowVisibleObserver?.disconnect()
+      // window-listeners снимаются и в stopResizeColumn, но при unmount во время drag mouseup не приходит.
+      window.removeEventListener("mousemove", moveResizedColumns)
+      window.removeEventListener("mouseup", stopResizeColumn)
+    }
   })
   // ---WATCHERS----------------------------
   let loadDataFromFunctionPending = false
@@ -1342,10 +1359,36 @@
   function setMarker(column: IColumnPrivate, valueCell: any): string {
     if (valueCell && (filterColumns[column.dataField] || queryTable.value.length))
       valueCell = valueCell.replace(
-        new RegExp(filterColumns[column.dataField] ?? queryTable.value, "gi"),
+        new RegExp(escapeRegExp(String(filterColumns[column.dataField] ?? queryTable.value)), "gi"),
         `<span class="${classMaskQuery.value}">$&</span>`
       )
     return valueCell
+  }
+
+  // Экранирование regex-спецсимволов — query/filter приходят от пользователя.
+  function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  }
+
+  // Безопасный аналог setMarker: разбивает значение ячейки на текстовые части, отмечая
+  // совпадения с query/filter. Рендерится через <mark> + text-node (без v-html) — нет XSS.
+  function markerParts(column: IColumnPrivate, valueCell: any): Array<{ text: string; mark: boolean }> {
+    const text = valueCell === null || valueCell === undefined ? "" : String(valueCell)
+    const rawQuery = filterColumns[column.dataField] ?? queryTable.value
+    const query = typeof rawQuery === "string" ? rawQuery : ""
+    if (!text || !query.length) return [{ text, mark: false }]
+    const parts: Array<{ text: string; mark: boolean }> = []
+    const regex = new RegExp(escapeRegExp(query), "gi")
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) parts.push({ text: text.slice(lastIndex, match.index), mark: false })
+      parts.push({ text: match[0], mark: true })
+      lastIndex = match.index + match[0].length
+      if (match.index === regex.lastIndex) regex.lastIndex++
+    }
+    if (lastIndex < text.length) parts.push({ text: text.slice(lastIndex), mark: false })
+    return parts.length ? parts : [{ text, mark: false }]
   }
 
   function getSorted(sorted: Sorted): Sorted {
@@ -1658,6 +1701,7 @@
     ref="componentTable"
     :class="classBaseTable"
     :style="`width:${styles.width};height:${styles.height};`">
+    <div data-table-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>
     <div v-if="isVisibleToolbar" data-table-toolbar ref="tableToolbar" :class="classBaseToolbar">
       <slot v-if="slots.toolbar" data-table-toolbar-slot name="toolbar" />
       <div v-if="isSearch" data-table-search :class="classSearch">
@@ -1703,6 +1747,9 @@
       <div data-table-body-base :class="classBaseTableBody">
         <div ref="tableBody" :class="classBodyTable" :style="styleBodyTable">
           <table data-table ref="table" :class="classTable">
+            <caption v-if="caption || slots.caption" data-table-caption class="sr-only">
+              <slot name="caption">{{ caption }}</slot>
+            </caption>
             <!-- -------------------------------- -->
             <thead v-if="isColumns" data-table-thead ref="thead" :class="classTHead">
               <tr :class="classHeadTr">
@@ -1838,9 +1885,17 @@
                           data-table-tbody-not-cell-template
                           :class="classCellTable(indexRow, column, indexCol)"
                           :style="styleCellTable">
-                          <div
-                            v-if="!(editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol)"
-                            v-html="setMarker(column, setCell(column, data[column.dataField], data))" />
+                          <div v-if="!(editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol)">
+                            <template
+                              v-for="(part, partIndex) in markerParts(
+                                column,
+                                setCell(column, data[column.dataField], data)
+                              )"
+                              :key="partIndex"
+                              ><mark v-if="part.mark" :class="classMaskQuery">{{ part.text }}</mark
+                              ><template v-else>{{ part.text }}</template></template
+                            >
+                          </div>
                           <template v-if="editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol">
                             <Input
                               v-if="column.type === 'string' || column.type === 'number'"
@@ -1937,7 +1992,7 @@
               <tr data-table-tfoot-tr>
                 <template v-for="column in dataColumns" :key="column.id">
                   <th v-if="column.visible" data-table-tfoot-th scope="col" :class="classThSummary(column)">
-                    <div :class="classThSummaryText(column)" v-html="summaryColumns[column.dataField]" />
+                    <div :class="classThSummaryText(column)">{{ summaryColumns[column.dataField] }}</div>
                   </th>
                 </template>
               </tr>
@@ -1997,7 +2052,9 @@
           enter-to-class="opacity-100">
           <div v-if="!isLoading && !allData?.length" data-table-no-data :class="classNoData">
             <TableCellsIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noData" />
+            <div>
+              <slot name="empty">{{ noData }}</slot>
+            </div>
           </div>
         </transition>
         <transition
@@ -2009,7 +2066,9 @@
           enter-to-class="opacity-100">
           <div v-if="!isLoading && allData?.length && !dataColumns?.length" data-table-no-column :class="classNoData">
             <ViewColumnsIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noColumn" />
+            <div>
+              <slot name="empty-columns">{{ noColumn }}</slot>
+            </div>
           </div>
         </transition>
         <transition
@@ -2024,7 +2083,9 @@
             data-table-no-filter
             :class="classNoData">
             <FunnelIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noFilter" />
+            <div>
+              <slot name="empty-filter">{{ noFilter }}</slot>
+            </div>
           </div>
         </transition>
       </div>

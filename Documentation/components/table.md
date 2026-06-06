@@ -1,7 +1,7 @@
 ---
 title: Table
 summary: Полнофункциональная таблица: sort/filter/group/search/pagination, edit, summary, asyncData (4 режима).
-updated: 2026-05-09
+updated: 2026-06-07
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Table` — самый объёмный компонент библиотеки (~1900 LOC SFC + 1471 LOC `.d.ts`). Поддерживает: sort, filter, search, grouping, summary rows, inline edit (Input/Select/Calendar editors), 4 режима асинхронной загрузки данных (`true`-flag, URL string, config object, custom function), column resizing, кастомные cell templates, dynamic slots по `dataField`.
 
-Stability: `stable` — 66 кейсов, coverage `Table.vue` 85.93%. Тесты покрывают core flow; edge cases в edit/group remain.
+Stability: `stable` — 84 кейса (66 базовых + 18 audit: XSS/cleanup/a11y/unstyled). Тесты покрывают core flow + security/a11y; edge cases в edit/group remain.
 
 Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.d.ts), [Table.test.ts](../../lib/table/Table.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.
 lib/table/
 ├── Table.vue            # SFC ~1900 строк
 ├── Table.d.ts           # 1471 строка
-├── Table.test.ts        # 66 кейсов
+├── Table.test.ts        # 84 кейса
 └── package.json
 ```
 
@@ -76,7 +76,7 @@ const data = ref([
 
 ## 5. Props
 
-`TableProps` ([Table.d.ts:688–837](../../lib/table/Table.d.ts#L688-L837)):
+`TableProps` ([Table.d.ts:688–844](../../lib/table/Table.d.ts#L688-L844)):
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -94,7 +94,8 @@ const data = ref([
 | `summary` | `MaybeRef<boolean \| Array<ISummary>>` | — | Summary rows (sum/min/max/avg/count). |
 | `countVisibleRows` | `number` | — | Лимит видимых строк. |
 | `sizeLoadingRows` | `number` | — | Сколько skeleton-строк показывать. |
-| `noData` / `noColumn` | `string` | (locale) | Сообщения. |
+| `noData` / `noColumn` | `string` | (locale) | Сообщения пустых состояний (рендерятся как текст; HTML — через slot `empty`/`empty-columns`). |
+| `caption` | `string` | — | Accessible `<caption>` (sr-only) для screen reader. HTML — через slot `caption`. |
 | `countDataOnLoading` | `number` | — | Симулированное количество строк при loading. |
 | `totalCount` | `number` | — | Общий count для server-side pagination. |
 | `asyncData` | `true \| string \| IAsyncDataConfig \| ((params) => Promise<IAsyncDataResult>)` | — | См. §3. |
@@ -131,7 +132,11 @@ v-model contract — не применимо: Table не имеет одного
 | `toolbar` | — | Override toolbar. |
 | `header` | — | Слот выше table (под toolbar). |
 | `footer` | — | Слот ниже table (над pagination). |
+| `caption` | — | HTML-контент для `<caption>` (sr-only). Переопределяет prop `caption`. |
 | `group` | `{ item, length }` | Override row группы. |
+| `empty` | — | Override пустого состояния «нет данных» (`noData`). |
+| `empty-columns` | — | Override пустого состояния «нет колонок» (`noColumn`). |
+| `empty-filter` | — | Override пустого состояния «фильтр без результатов» (`noFilter`). |
 | `[dataField]` | `{ key, column, rowData, value, valueWithMarker, isCloseEditor, editValue }` | Dynamic slot — кастомная отрисовка ячейки в колонке `dataField`. Имя slot'а = значение `dataField`. |
 
 Пример dynamic slot:
@@ -148,14 +153,14 @@ v-model contract — не применимо: Table не имеет одного
 
 ## 8. Exposed methods
 
-`TableExpose` ([Table.d.ts:1017–1442](../../lib/table/Table.d.ts#L1017-L1442)) — большой:
+`TableExpose` ([Table.d.ts:1032–1457](../../lib/table/Table.d.ts#L1032-L1457)) — большой:
 
 | Name | Description |
 |---|---|
 | `activeRow`, `sortColumns`, `filterColumns`, `widthsColumns`, `queryTable`, `pageTable`, `sizeTable`, `allData`, `isLoading`, `resizableColumn` | Reactive state. |
 | Программные методы: `switchPage`, `switchSizePage`, `setQuery`, `clearFilter`, `addRow`, `deleteRow`, `editRow`, `editCell`, `setColumnWidth`, `reloadData()` (только для function-mode asyncData) | Управление. |
 
-См. полный список в [Table.d.ts:1017–1442](../../lib/table/Table.d.ts#L1017-L1442).
+См. полный список в [Table.d.ts:1032–1457](../../lib/table/Table.d.ts#L1032-L1457).
 
 ## 9. Examples
 
@@ -240,6 +245,9 @@ Root класс — `fv fishtvue-table`. См. [01-getting-started §10.4](../01
 ### A11y
 
 - Семантика `<table>`/`<thead>`/`<tbody>`/`<tfoot>` нативная.
+- `<caption>` (sr-only): prop `caption` или slot `#caption` — объявляет назначение таблицы screen reader'у.
+- `<th scope="col">` на заголовках, `scope="colgroup"` на group-строках, `scope="col"` в tfoot — связь header↔column для SR.
+- aria-live: sr-only `[data-table-aria-live]` (`aria-live="polite"`, `aria-atomic="true"`) озвучивает количество строк после filter/search/sort (локаль `table.resultsCount*`).
 - `aria-sort` на колонках с sort'ом — проверь по DOM.
 - Keyboard: Tab/Shift+Tab по интерактивным элементам; ArrowKeys для sort-икон не привязаны.
 - Focus management в edit-mode: при открытии cell editor — focus автоматический.
@@ -247,8 +255,10 @@ Root класс — `fv fishtvue-table`. См. [01-getting-started §10.4](../01
 
 ### Security
 
+- **Нет `v-html`.** Содержимое ячеек рендерится как текст; search-highlight — через `<mark>` + `<template v-for>` (`markerParts`), не через `v-html`. Summary, `noData`/`noColumn`/`noFilter` — тоже текст. Payload вида `<img src=x onerror=...>` не исполняется (см. [issues/table.md Issue 1](../issues/table.md)).
+- Кастомный HTML — только через явные slot'ы (`#empty`, `#empty-columns`, `#empty-filter`, `#caption`, per-column slot). Ответственность за sanitization — на потребителе slot'а.
 - `cellTemplate` рендерит подстановку через template-string (не v-html). Безопасно для plain text.
-- `setCellValue` — пользовательский callback. Если возвращает HTML — потенциальный XSS; используй sanitization.
+- `setCellValue` — пользовательский callback. Если возвращает HTML — он рендерится как текст (не исполняется); для HTML используй slot.
 - `asyncData` URL/config — fetch на стороне клиента; не передавай credentials в URL.
 
 ## 13. TypeScript
@@ -294,7 +304,7 @@ describe("Table", () => {
 })
 ```
 
-Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (66 кейсов).
+Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (84 кейса).
 
 ## 16. Troubleshooting / FAQ
 
@@ -322,7 +332,7 @@ describe("Table", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 85.93% statements / 67.74% branch — большая часть веток покрыта, но edge cases в edit/group/asyncData ([Table.vue:1762, 1857–1916](../../lib/table/Table.vue#L1762)) не покрыты тестами.
+- Coverage: большая часть веток покрыта; edge cases в edit/group/asyncData режимах ([Table.vue](../../lib/table/Table.vue)) покрыты частично (см. [issues/table.md Issue 7](../issues/table.md)). Cell-render, empty-state, caption, aria-live и cleanup-ветви покрыты в рамках audit-фикса 2026-06-07.
 - `IColumnPrivate.isEdit: boolean` ([Table.d.ts:393](../../lib/table/Table.d.ts#L393)) — внутренний флаг, expose'ится через TableExpose.
 
 ### Skipped tests
