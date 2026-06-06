@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, onUnmounted, reactive, ref, unref, watch } from "vue"
+  import { computed, onMounted, onUnmounted, reactive, ref, unref, useId, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import { deepCopyObject, deepMergeSoft } from "fishtvue/utils/objectHandler"
   import type { StyleClass } from "fishtvue/types"
@@ -10,6 +10,9 @@
   // ---BASE-COMPONENT----------------------
   const Split = new Component<"Split">()
   const options = Split.getOptions()
+  // SSR-safe уникальный префикс для id панелей (aria-controls на separator)
+  const uid = useId()
+  const panelDomId = (name: Panel["name"]) => `${uid}-split-${name}`
 
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<SplitProps>(), {
@@ -83,18 +86,22 @@
 
   const separatorIconClass = computed<StyleClass>(() => [
     "split z-10 inset-y-0 flex items-center justify-center",
-    separatorNotHoverOpacity.value ? "" : "transition-opacity duration-500 opacity-0",
+    separatorNotHoverOpacity.value ? "" : "motion-safe:transition-opacity motion-safe:duration-500 opacity-0",
     direction.value === "vertical" ? "rotate-90" : ""
   ])
 
   const classBase = computed<StyleClass>(() =>
     Split.setStyle([
-      "h-full w-full transition-all",
+      "h-full w-full motion-safe:transition-all",
       options?.class ?? "",
       props?.class ?? "",
-      isStartResize.value && isClient() ? getStyleCursor(activeCursorPanel.value) : "",
       "flex data-[direction=vertical]:flex-col"
     ])
+  )
+
+  // overlay покрывает весь viewport во время drag — задаёт глобальный cursor без мутации document.body (Issue 1)
+  const classDragOverlay = computed<StyleClass>(() =>
+    Split.setStyle(["fixed inset-0 z-[9999]", getStyleCursor(activeCursorPanel.value)])
   )
 
   const classPanelBody = (panel: Panel) =>
@@ -144,11 +151,13 @@
     classBase
   })
   // ---MOUNT-UNMOUNT-----------------------
-  if (!isClient()) updatePanels()
+  // initStyle() регистрируется автоматически в Component.__hooks() (dev-patterns §2) — не дублируем здесь
+  // синхронный seed размеров — чтобы первый render (в т.ч. SSR) имел корректные flex-basis и aria-valuenow
+  updatePanels()
   onMounted(() => {
     if (!isClient()) return
-    Split.initStyle()
     setCursorPanels(panels.value)
+    restoreSizes()
     updatePanels()
     if (resizableGroup.value) {
       splitObserver = new ResizeObserver(() => updatePanels())
@@ -383,6 +392,85 @@
     }
   }
 
+  // ---PERSISTENCE-------------------------
+  const storageKey = () => `fv-split-${props.autoSaveName}`
+
+  function persistSizes() {
+    if (!isClient() || !props.autoSaveName) return
+    try {
+      localStorage.setItem(storageKey(), JSON.stringify(sizePanels))
+    } catch {
+      // localStorage может быть недоступен (quota / private mode) — persistence не критична
+    }
+  }
+
+  function restoreSizes() {
+    if (!isClient() || !props.autoSaveName) return
+    try {
+      const raw = localStorage.getItem(storageKey())
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      if (!parsed || typeof parsed !== "object") return
+      panels.value.forEach((panel) => {
+        const value = (parsed as Record<string, unknown>)[panel.name]
+        if (typeof value !== "number" || !(value >= 0)) return
+        let size = value
+        if (typeof panel.maxSize === "number" && panel.maxSize > 0) size = Math.min(size, panel.maxSize)
+        if (typeof panel.minSize === "number" && panel.minSize > 0) size = Math.max(size, panel.minSize)
+        sizePanels[panel.name] = size
+      })
+    } catch {
+      // повреждённые данные в localStorage игнорируем — остаются initial sizes
+    }
+  }
+
+  // ---KEYBOARD-RESIZE---------------------
+  function keyboardResize(namePanel: Panel["name"], delta: number) {
+    const idx = panels.value.findIndex((p) => p.name === namePanel)
+    const cur = panels.value[idx]
+    const next = panels.value[idx + 1]
+    if (!cur || !next || cur.disabled || next.disabled) return
+    const curOld = sizePanels[cur.name] ?? 0
+    const nextOld = sizePanels[next.name] ?? 0
+    let d = delta
+    // cur растёт на d
+    if (d > 0 && typeof cur.maxSize === "number" && cur.maxSize > 0) d = Math.min(d, cur.maxSize - curOld)
+    if (d < 0 && typeof cur.minSize === "number" && cur.minSize > 0) d = Math.max(d, cur.minSize - curOld)
+    // next уменьшается на d
+    if (d > 0 && typeof next.minSize === "number" && next.minSize > 0) d = Math.min(d, nextOld - next.minSize)
+    if (d < 0 && typeof next.maxSize === "number" && next.maxSize > 0) d = Math.max(d, nextOld - next.maxSize)
+    // ни одна панель не уходит ниже нуля
+    if (d > 0) d = Math.min(d, nextOld)
+    if (d < 0) d = Math.max(d, -curOld)
+    if (d === 0) return
+    sizePanels[cur.name] = curOld + d
+    sizePanels[next.name] = nextOld - d
+    emit("updated-panels", sizePanels)
+    emit("updated-size-panel", sizePanels[cur.name], cur.name)
+    persistSizes()
+  }
+
+  function onSeparatorKeydown(event: KeyboardEvent, namePanel: Panel["name"]) {
+    if (!isClient()) return
+    const step = event.shiftKey ? 50 : 10
+    const horizontal = direction.value === "horizontal"
+    const nextKey = horizontal ? "ArrowRight" : "ArrowDown"
+    const prevKey = horizontal ? "ArrowLeft" : "ArrowUp"
+    if (event.key === nextKey) {
+      event.preventDefault()
+      keyboardResize(namePanel, step)
+    } else if (event.key === prevKey) {
+      event.preventDefault()
+      keyboardResize(namePanel, -step)
+    } else if (event.key === "Home") {
+      event.preventDefault()
+      keyboardResize(namePanel, -1e9)
+    } else if (event.key === "End") {
+      event.preventDefault()
+      keyboardResize(namePanel, 1e9)
+    }
+  }
+
   // ---RESIZE-PANELS-----------------------
   function resizePanel($event: MouseEvent, namePanel: Panel["name"]) {
     if (!isClient() || !resizableGroup.value || !resizablePanels.value[namePanel]) return
@@ -522,7 +610,6 @@
     isStartResize.value = true
     if ($event.target instanceof HTMLElement && $event?.pointerId)
       ($event.target as HTMLElement).setPointerCapture($event.pointerId)
-    document.body.classList.add(getStyleCursor(activeCursorPanel.value))
     emit("start-resize-panel", $event, namePanel)
   }
 
@@ -531,7 +618,7 @@
     if ($event.target instanceof HTMLElement && $event?.pointerId) $event.target.releasePointerCapture($event.pointerId)
     isStartResize.value = false
     if (!isStartMove.value) resizablePanel.value = null
-    document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
+    persistSizes()
     emit("stop-resize-panel", $event, namePanel as Panel["name"])
   }
 
@@ -552,13 +639,6 @@
     if (!isStartResize.value) resizablePanel.value = null
     emit("out-resize-panel", $event, namePanel)
   }
-
-  watch(activeCursorPanel, (value, oldValue) => {
-    if (isClient()) {
-      document.body.classList.remove(getStyleCursor(oldValue))
-      document.body.classList.add(getStyleCursor(value))
-    }
-  })
 </script>
 
 <template>
@@ -572,6 +652,7 @@
     <template v-for="(panel, key) in panels" :key="key">
       <div
         data-split-item
+        :id="panelDomId(panel.name)"
         :ref="(el) => setItemRef(el as HTMLElement, panel.name)"
         :class="classPanelBody(panel)"
         :data-name="panel.name"
@@ -590,7 +671,9 @@
         :data-now="sizePanels[panel.name]"
         :data-max="panel.maxSize"
         :data-min="panel.minSize"
-        :aria-valuenow="sizePanels[panel.name]"
+        :aria-orientation="direction"
+        :aria-controls="panelDomId(panel.name)"
+        :aria-valuenow="Math.round(sizePanels[panel.name])"
         :aria-valuemax="panel.maxSize"
         :aria-valuemin="panel.minSize"
         data-panel-resize-handle-enabled="true"
@@ -598,7 +681,8 @@
         @pointermove="moveResizePanel($event, panel.name)"
         @pointerup="stopResizePanel($event, panel.name)"
         @pointercancel="stopResizePanel($event, panel.name)"
-        @pointerout="outResizePanel($event, panel.name)">
+        @pointerout="outResizePanel($event, panel.name)"
+        @keydown="onSeparatorKeydown($event, panel.name)">
         <div v-if="separatorType === 'strip'" data-split-separator-strip :class="classSeparatorStrip(panel)">
           <div :class="classSeparatorStripStyle"></div>
         </div>
@@ -622,7 +706,14 @@
             :class="['h-2.5 w-2.5 text-gray-500', direction === 'vertical' ? 'rotate-90' : '']" />
         </div>
       </div>
-      <div v-else-if="key !== panels?.length - 1" role="separator" :class="classSeparatorDisabled" />
+      <div
+        v-else-if="key !== panels?.length - 1"
+        data-split-separator-disabled
+        role="separator"
+        aria-disabled="true"
+        :aria-orientation="direction"
+        :class="classSeparatorDisabled" />
     </template>
+    <div v-if="isStartResize" data-split-drag-overlay :class="classDragOverlay" />
   </div>
 </template>
