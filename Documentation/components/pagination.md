@@ -1,7 +1,7 @@
 ---
 title: Pagination
 summary: Пейджер с size-selector, info-text, кастомизируемым числом видимых страниц.
-updated: 2026-05-09
+updated: 2026-06-06
 stability: stable
 since: 0.2.11
 ---
@@ -251,7 +251,8 @@ describe("Pagination", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 98.42% statements / 72.05% branch — несколько ветвей не покрыты ([Pagination.vue:256](../../lib/pagination/Pagination.vue#L256)).
+- Coverage 98.42% statements / 72.05% branch — несколько ветвей не покрыты ([Pagination.vue:262](../../lib/pagination/Pagination.vue#L262)).
+- `ResizeObserver`'ы для short-navigation сохраняются в локальный массив `navigationObservers` и отключаются в `onBeforeUnmount` ([Pagination.vue:222-225](../../lib/pagination/Pagination.vue#L222-L225)) — утечки памяти при unmount нет (regression-тесты в [Pagination.test.ts](../../lib/pagination/Pagination.test.ts)).
 
 ### Skipped tests
 

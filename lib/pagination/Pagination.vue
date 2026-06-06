@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { Ref } from "vue"
-  import { computed, onMounted, ref, watch } from "vue"
+  import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
   import {
     ArrowLongLeftIcon,
     ArrowLongRightIcon,
@@ -30,6 +30,7 @@
   const sizePage = ref<number>()
   const isShortPrevious = ref(false)
   const isShortNext = ref(false)
+  const navigationObservers: ResizeObserver[] = []
   // ---PROPS-------------------------------
   const sizePageProp = computed<NonNullable<PaginationProps["sizePage"]>>(() => {
     const sizePageProp = (props.sizePage as PaginationProps["sizePage"]) ?? options?.sizePage ?? 5
@@ -218,6 +219,11 @@
       setShortNavigation(navNextLink.value, limit, isShortNext)
     }
   })
+  onBeforeUnmount(() => {
+    // отключаем все ResizeObserver'ы при размонтировании
+    navigationObservers.forEach((observer) => observer.disconnect())
+    navigationObservers.length = 0
+  })
   // ---WATCHERS----------------------------
   watch(sizePageProp, (value) => (sizePage.value = value), {
     immediate: true
@@ -251,10 +257,14 @@
   }
 
   function setShortNavigation(link: HTMLElement, limit: number, refButton: Ref) {
-    if (link)
-      new ResizeObserver((entries) => {
+    if (link) {
+      // сохраняем observer, чтобы отключить его в onBeforeUnmount (иначе утечка памяти)
+      const observer = new ResizeObserver((entries) => {
         for (const entry of entries) refButton.value = (entry as any)?.target["offsetWidth"] < limit
-      }).observe(link)
+      })
+      observer.observe(link)
+      navigationObservers.push(observer)
+    }
   }
 </script>
 

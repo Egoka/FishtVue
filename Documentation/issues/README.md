@@ -1,8 +1,8 @@
 ---
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
-updated: 2026-05-10
-last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; severity matrix пересчитана; добавлен fix roadmap с чекбоксами.
+updated: 2026-06-06
+last-changes: pagination — Issue 1 (critical ResizeObserver leak) закрыт; severity matrix пересчитана (critical TOTAL 17→16); Wave 1.2 чекбокс отмечен.
 ---
 
 # Issues — Index
@@ -24,7 +24,7 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 | Calendar | [calendar.md](./calendar.md) | 1 | 6 | 4 | 3 |
 | TextEditor | [texteditor.md](./texteditor.md) | 0 | 7 | 5 | 3 |
 | Table | [table.md](./table.md) | 2 | 8 | 5 | 4 |
-| Pagination | [pagination.md](./pagination.md) | 1 | 4 | 4 | 3 |
+| Pagination | [pagination.md](./pagination.md) | 0 | 4 | 4 | 3 |
 | Badge | [badge.md](./badge.md) | 0 | 4 | 2 | 3 |
 | Form | [form.md](./form.md) | 1 | 6 | 4 | 3 |
 | InputLayout | [inputlayout.md](./inputlayout.md) | 2 | 4 | 4 | 3 |
@@ -43,9 +43,9 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 | Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
 | Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
 | Utilities | [_utilities.md](./done/_utilities.md) | 0 | 1 | 0 | 1 |
-| **TOTAL** | **28 files** | **17** | **141** | **107** | **74** |
+| **TOTAL** | **28 files** | **16** | **141** | **107** | **74** |
 
-Всего **339 issues** распределены по 28 documentов аудита (9 закрыты в [_utilities.md](./done/_utilities.md) 2026-05-10: Issues 1, 2, 3, 5, 6, 7, 8, 10, 11).
+Всего **339 issues** распределены по 28 documentов аудита (10 закрыты: 9 в [_utilities.md](./done/_utilities.md) 2026-05-10 — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11; [pagination.md](./pagination.md) Issue 1 — 2026-06-06).
 
 ## Fix roadmap (live tracker)
 
@@ -102,7 +102,7 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 - [ ] [Select.vue:286,291](../../lib/select/Select.vue#L286) — keydown listeners (`openSelectOnEnter`, `keydownSelect`) cleanup при unmount-while-open · [select.md Issue 2](./select.md)
 - [ ] [Calendar.vue:322-327](../../lib/calendar/Calendar.vue#L322) — `MutationObserver` на documentElement сохранить + disconnect · [calendar.md Issue 1](./calendar.md) · **рекомендация: вынести в singleton `useDarkMode()` composable** (один observer на весь app)
 - [ ] [Calendar.vue:254,261](../../lib/calendar/Calendar.vue#L254) — keydown listeners cleanup · [calendar.md Issue 1](./calendar.md)
-- [ ] [Pagination.vue:255](../../lib/pagination/Pagination.vue#L255) — anonymous `new ResizeObserver(...)` → сохранить в ref + disconnect · [pagination.md Issue 1](./pagination.md)
+- [x] [Pagination.vue:259-268](../../lib/pagination/Pagination.vue#L259-L268) — anonymous `new ResizeObserver(...)` → сохранён в массив + disconnect в `onBeforeUnmount` · ✅ resolved 2026-06-06 · [pagination.md Issue 1](./pagination.md)
 - [ ] [InputLayout.vue:177-179](../../lib/inputlayout/InputLayout.vue#L177) — anonymous ResizeObserver на `beforeInput` сохранить + disconnect · [inputlayout.md Issue 2](./inputlayout.md)
 - [ ] [InputLayout.vue:181-183](../../lib/inputlayout/InputLayout.vue#L181) — anonymous ResizeObserver на `afterInput` сохранить + disconnect · [inputlayout.md Issue 2](./inputlayout.md)
 - [ ] [Table.vue:1519-1527](../../lib/table/Table.vue#L1519) — `lastRowVisibleObserver` (IntersectionObserver) добавить в `onUnmounted` disconnect · [table.md Issue 2](./table.md)
@@ -499,7 +499,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **Memory leaks (observers/listeners без cleanup):**
 - Select ResizeObserver + keydown listeners ([select.md Issue 2](./select.md))
 - Calendar MutationObserver на documentElement ([calendar.md Issue 1](./calendar.md))
-- Pagination anonymous ResizeObserver ([pagination.md Issue 1](./pagination.md))
+- ~~Pagination anonymous ResizeObserver~~ ✅ resolved 2026-06-06 ([pagination.md Issue 1](./pagination.md))
 - InputLayout 2× anonymous ResizeObservers ([inputlayout.md Issue 2](./inputlayout.md))
 - Table IntersectionObserver + window mousemove/up partial cleanup ([table.md Issue 2](./table.md))
 - Dialog escapeListener при unmount-while-open ([dialog.md Issue 2](./dialog.md))
