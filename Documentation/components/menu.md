@@ -1,7 +1,7 @@
 ---
 title: Menu
-summary: Структурированное меню с группами, подменю через FixWindow, separators, иконками.
-updated: 2026-05-09
+summary: Структурированное меню с группами, подменю через FixWindow, separators, иконками. Два API (schema-driven `groups` + compound `<MenuItem>`/`<MenuGroup>`), полная keyboard navigation и WAI-ARIA menu.
+updated: 2026-06-06
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,14 @@ since: 0.2.11
 
 `Menu` — навигационное меню с поддержкой групп, вложенных подменю (через [FixWindow](./fix-window.md)), separators, иконок, режима только-иконок (`onlyIcons`), горизонтальной/вертикальной ориентации, selection.
 
-Stability: `stable` — 21 кейс, coverage 91.66%.
+Два параллельных API:
+
+- **Schema-driven** — `:groups="GroupMenu[]"` (основной, см. §4–§9).
+- **Compound** — декларативные `<MenuItem>` / `<MenuGroup>` внутри `<Menu>` (см. §9.5). При наличии `:groups` schema выигрывает (backward compat).
+
+Accessibility: роль `menu` / `menuitem` / `group` / `separator`, `aria-orientation` / `aria-haspopup` / `aria-expanded`, полная keyboard navigation (стрелки, Home/End, Enter/Space, typeahead, roving tabindex), focus trap для submenu, `prefers-reduced-motion`-safe анимации (см. §12).
+
+Stability: `stable`.
 
 Source: [Source](../../lib/menu/Menu.vue), [Menu.d.ts](../../lib/menu/Menu.d.ts), [Menu.test.ts](../../lib/menu/Menu.test.ts).
 
@@ -20,9 +27,15 @@ Source: [Source](../../lib/menu/Menu.vue), [Menu.d.ts](../../lib/menu/Menu.d.ts)
 
 ```
 lib/menu/
-├── Menu.vue
-├── Menu.d.ts          # 599 строк
-├── Menu.test.ts       # 21 кейс
+├── Menu.vue           # основной компонент (schema + compound API, keyboard nav, ARIA)
+├── Menu.d.ts
+├── Menu.test.ts       # 45 кейсов
+├── MenuItem.vue       # renderless descriptor для compound API
+├── MenuItem.d.ts
+├── MenuItem.test.ts
+├── MenuGroup.vue      # renderless descriptor для compound API
+├── MenuGroup.d.ts
+├── MenuGroup.test.ts
 └── package.json
 ```
 
@@ -96,7 +109,8 @@ v-model contract — не применимо.
 | Slot | Slot props | Description |
 |---|---|---|
 | `title` | `{ title: string }` | Кастомный заголовок меню. |
-| `item` | `{ data: ItemMenu & { isActive, isSelected } }` | Кастомный rendering item. |
+| `item` | `{ data: ItemMenu & { isActive, isSelected } }` | Кастомный rendering item (полностью заменяет содержимое пункта, включая `item-info`). |
+| `item-info` | `{ item: ItemMenu (public), info: string \| undefined }` | Кастомный rendering `item.info`. По умолчанию `info` рендерится как **text** (без `v-html`). Используй этот slot для собственного (в т.ч. HTML) рендеринга — безопасность контента на стороне потребителя. |
 | `footer` | — | Контент после меню. |
 
 ## 8. Exposed methods
@@ -163,6 +177,50 @@ v-model contract — не применимо.
 </Menu>
 ```
 
+### 9.5 Compound API (`<MenuItem>` / `<MenuGroup>`)
+
+Альтернатива schema-driven `:groups`. `MenuItem` и `MenuGroup` — renderless descriptor-компоненты: собственного DOM не рендерят, родительский `<Menu>` читает их через VNode-walk и рендерит пункты сам. Submenu задаётся вложением `<MenuItem>` в `<MenuItem>`.
+
+```vue
+<script setup lang="ts">
+import Menu, { MenuItem, MenuGroup } from "fishtvue/menu"
+</script>
+
+<template>
+  <Menu :selected="true">
+    <MenuGroup title="File">
+      <MenuItem icon="document" @click="open">Open</MenuItem>
+      <MenuItem icon="bookmark" @click="save">Save</MenuItem>
+    </MenuGroup>
+    <MenuItem icon="pencil-square">
+      Edit
+      <!-- вложенные MenuItem становятся submenu -->
+      <MenuItem @click="undo">Undo</MenuItem>
+      <MenuItem @click="redo">Redo</MenuItem>
+    </MenuItem>
+  </Menu>
+</template>
+```
+
+Правила резолва:
+
+- `title` берётся из prop `title`, иначе — из текстового содержимого default slot (`<MenuItem>Open</MenuItem>` → `title: "Open"`).
+- Top-level `<MenuItem>` без обёртки `<MenuGroup>` собираются в одну неявную группу.
+- При одновременном указании `:groups` и compound-детей — **`:groups` выигрывает** (backward compat).
+- `@click` / `@active` / `@inactive` на `<MenuItem>` мапятся в `onClick` / `onActive` / `onInactive` item'а.
+
+### 9.6 Безопасный `item.info` через `#item-info`
+
+`item.info` по умолчанию рендерится как text (никакого `v-html` — защита от XSS). Для кастомного (в т.ч. HTML) рендеринга — scoped slot `#item-info` (ответственность за безопасность контента на потребителе):
+
+```vue
+<Menu :groups="groups">
+  <template #item-info="{ info }">
+    <kbd class="rounded border px-1 text-xs">{{ info }}</kbd>
+  </template>
+</Menu>
+```
+
 ## 10. Configuration & Customization
 
 ### 10.1 Global
@@ -189,14 +247,25 @@ Root класс — `fv fishtvue-menu`.
 
 ### A11y
 
-- ARIA `role="menu"`/`role="menuitem"` — проверь по DOM.
-- Keyboard: ArrowKeys (up/down/left/right) для навигации — НЕ реализованы по полноценному WAI-ARIA. Tab работает.
-- Focus management для подменю — на стороне [FixWindow](./fix-window.md) (без focus trap).
-- `prefers-reduced-motion` не учтён.
+- **ARIA roles:** root — `role="menu"` + `:aria-orientation` (`vertical` / `horizontal`); группы — `role="group"`; пункты — `role="menuitem"` + `:aria-disabled`; пункты с submenu — `:aria-haspopup="menu"` + `:aria-expanded` (синхронизируется с open/close FixWindow); separators — `role="separator"` + `:aria-orientation`.
+- **Keyboard navigation** (WAI-ARIA menu pattern):
+  - `ArrowDown`/`ArrowUp` (vertical) или `ArrowRight`/`ArrowLeft` (horizontal) — переход между пунктами (disabled пропускаются).
+  - `ArrowRight` (vertical) / `ArrowDown` (horizontal) — открыть submenu сфокусированного пункта; `ArrowLeft` / `ArrowUp` или `Escape` — закрыть.
+  - `Home` / `End` — первый / последний пункт.
+  - `Enter` / `Space` — активировать пункт (эмитит `onClick`).
+  - typeahead — буква фокусирует следующий пункт, чей `title` начинается с неё.
+  - **Roving tabindex:** только один пункт имеет `tabindex=0`, остальные `-1`; Tab входит в меню на активный пункт.
+- **Focus trap для submenu:** дочернее submenu через [FixWindow](./fix-window.md) получает `:focus-trap`, когда меню используется с клавиатуры (`usingKeyboard`). При hover focus не крадётся; при keyboard-открытии фокус уходит внутрь submenu и возвращается на trigger при закрытии (focus return — на стороне FixWindow).
+- **`prefers-reduced-motion`:** анимация по умолчанию использует `motion-safe:`-префиксы (`styles.animation = "motion-safe:transition-all motion-safe:duration-500"`).
 
 ### Security
 
+- **`item.info` рендерится как text** (через scoped slot `#item-info` с text-node fallback, **без `v-html`**) — защита от XSS, т.к. menu items часто формируются из server data. Для кастомного HTML — `#item-info` slot (безопасность на стороне потребителя).
 - Custom slot `item` — родитель отвечает за безопасный rendering.
+
+### i18n
+
+- `item.title` / `item.info` — пользовательский текст; компонент рендерит его как есть и **не** резолвит i18n-ключи. Рекомендация: передавай уже локализованный текст (`item.title = t("menu.file")` на стороне потребителя), а не ключ.
 
 ## 13. TypeScript
 
@@ -206,12 +275,17 @@ import type {
   ItemMenu, GroupMenu, MenuStyles, MenuSeparator, MenuFixWindow
 } from "fishtvue/menu"
 import Menu from "fishtvue/menu"
+
+// Compound API descriptor компоненты + их типы:
+import { MenuItem, MenuGroup } from "fishtvue"
+import type { MenuItemProps, MenuItemEmits, MenuGroupProps } from "fishtvue/menu/MenuItem"
+// либо точечно: import MenuItem from "fishtvue/menu/MenuItem.vue"
 ```
 
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 21 кейс, coverage 91.66%.
+- **Stability flag:** `stable` — 45 кейсов (`Menu.test.ts`) + descriptor-тесты `MenuItem.test.ts` / `MenuGroup.test.ts`.
 - **Breaking changes:** не зафиксировано.
 - **Deprecations:** нет.
 
@@ -234,7 +308,7 @@ describe("Menu", () => {
 })
 ```
 
-Реальные тесты — [Menu.test.ts](../../lib/menu/Menu.test.ts) (21 кейс).
+Реальные тесты — [Menu.test.ts](../../lib/menu/Menu.test.ts) (45 кейсов), [MenuItem.test.ts](../../lib/menu/MenuItem.test.ts), [MenuGroup.test.ts](../../lib/menu/MenuGroup.test.ts).
 
 ## 16. Troubleshooting / FAQ
 
@@ -255,11 +329,7 @@ describe("Menu", () => {
 
 ### TODO / FIXME / HACK / XXX
 
-На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [Menu.vue](../../lib/menu/Menu.vue) и [Menu.d.ts](../../lib/menu/Menu.d.ts) не зафиксировано.
-
-### Incomplete or stubbed behavior
-
-- Coverage 91.66% statements / 83.24% branch — несколько ветвей ([Menu.vue:243–244, 367–406](../../lib/menu/Menu.vue#L243-L244)) не покрыты.
+На момент ревизии (2026-06-06) комментариев `TODO/FIXME/HACK/XXX` в [Menu.vue](../../lib/menu/Menu.vue) и [Menu.d.ts](../../lib/menu/Menu.d.ts) не зафиксировано.
 
 ### Skipped tests
 
@@ -274,10 +344,12 @@ describe("Menu", () => {
 
 ### Behavioral caveats
 
-- Вложенные menu рендерятся через FixWindow — наследуют его SSR-проблемы.
-- ARIA-keyboard-навигация (ArrowKeys) не реализована полноценно.
+- **Compound API:** `MenuItem` / `MenuGroup` — renderless descriptors; их сопоставление в VNode-walk идёт по имени компонента (`name === "MenuItem"`/`"MenuGroup"`), импорт самих SFC в `Menu.vue` не выполняется (он ломал бы type-resolver `@vue/compiler-sfc`). Богатый (нетекстовый) label у `<MenuItem>` не поддержан — для произвольного содержимого используй prop `title` или slot `#item`; текстовое содержимое default slot мапится только в `title`.
+- Compound-структура считывается из default slot и подаётся в тот же `setItems`-конвейер; `_key` генерируются в `onMounted` (client-only) — на SSR меню рендерится пустым (наследуется от текущей архитектуры + FixWindow).
+- Вложенные menu рендерятся через FixWindow — наследуют его поведение (Floating UI positioning, focus trap, SSR).
 - При горизонтальном layout с большим количеством items overflow не управляется автоматически — добавь scroll или collapse.
 - `useFirstLetter: true` берёт `title[0]` без учёта Unicode-нормализации — для эмодзи или сложных символов может быть некорректно.
+- Keyboard-активация (`Enter`/`Space`) эмитит `onClick` с `KeyboardEvent` (приводится к типу `MouseEvent` в payload — поля, специфичные для мыши, будут `undefined`).
 
 ### Bug report format
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, unref, useSlots, watch } from "vue"
+  import { Comment, Fragment, Text, computed, onMounted, ref, unref, useSlots, watch } from "vue"
   import { ChevronRightIcon } from "@heroicons/vue/20/solid"
   import {
     GroupMenu,
     GroupMenuPrivate,
+    ItemMenu,
     ItemMenuPrivate,
     MenuEmits,
     MenuItemPrivate,
@@ -91,7 +92,7 @@
       class: s?.class,
       width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
       height: s?.height ? (typeof s?.height === "number" ? `${s?.height}px` : s?.height) : "",
-      animation: s?.animation ?? "transition-all duration-500",
+      animation: s?.animation ?? "motion-safe:transition-all motion-safe:duration-500",
       activeRows:
         typeof s?.activeRows === "string"
           ? s?.activeRows
@@ -195,6 +196,238 @@
     MenuComponent.setStyle(["h-4 w-4 opacity-60", styles.value?.class?.itemRightIcon ?? ""])
   )
   const listGroups = ref<Array<GroupMenuPrivate>>([])
+  // ---COMPOUND-API (VNode-walk) ----------
+  // Считываем декларативные <MenuItem>/<MenuGroup> из default slot и синтезируем GroupMenu[].
+  // Schema-driven `groups` prop при наличии выигрывает (backward compat).
+  function normalizeChildren(raw: unknown): Array<any> {
+    if (raw === null || raw === undefined) return []
+    return isArray(raw) ? (raw as Array<any>) : [raw]
+  }
+  // Сопоставление по имени компонента (defineOptions name / __name), без импорта SFC —
+  // импорт MenuItem.vue/MenuGroup.vue в этот SFC ломает type-resolver @vue/compiler-sfc
+  // (re-export `declare class ... extends ClassComponent`). Имя надёжно и не минифицируется.
+  function isMenuItemVNode(vn: any): boolean {
+    const t = vn?.type
+    return !!t && (t?.name === "MenuItem" || t?.__name === "MenuItem")
+  }
+  function isMenuGroupVNode(vn: any): boolean {
+    const t = vn?.type
+    return !!t && (t?.name === "MenuGroup" || t?.__name === "MenuGroup")
+  }
+  function flattenVNodes(nodes: Array<any>): Array<any> {
+    const out: Array<any> = []
+    for (const n of nodes) {
+      if (n === null || n === undefined || typeof n === "boolean") continue
+      if (typeof n === "object" && n.type === Comment) continue
+      if (typeof n === "object" && n.type === Fragment) out.push(...flattenVNodes(normalizeChildren(n.children)))
+      else out.push(n)
+    }
+    return out
+  }
+  function textOfVNodes(nodes: Array<any>): string {
+    const parts: Array<string> = []
+    for (const n of nodes) {
+      if (typeof n === "string") parts.push(n)
+      else if (typeof n === "number") parts.push(String(n))
+      else if (n && typeof n === "object" && n.type === Text) parts.push(String(n.children ?? ""))
+    }
+    return parts.join("").trim()
+  }
+  function vnodeChildren(vn: any): Array<any> {
+    const def = vn?.children?.default
+    return typeof def === "function" ? normalizeChildren(def()) : []
+  }
+  function extractItemFromVNode(vn: any): ItemMenu {
+    const item: ItemMenu = { ...(vn?.props ?? {}) }
+    const children = flattenVNodes(vnodeChildren(vn))
+    const structural = children.filter((c) => isMenuItemVNode(c) || isMenuGroupVNode(c))
+    if (item.title === undefined) {
+      const text = textOfVNodes(children)
+      if (text) item.title = text
+    }
+    if (structural.length) item.menu = { groups: extractGroupsFromVNodes(children) }
+    return item
+  }
+  function extractItemsFromVNodes(nodes: Array<any>): Array<ItemMenu> {
+    return flattenVNodes(nodes)
+      .filter((vn) => isMenuItemVNode(vn))
+      .map((vn) => extractItemFromVNode(vn))
+  }
+  function extractGroupsFromVNodes(nodes: Array<any>): Array<GroupMenu> {
+    const groups: Array<GroupMenu> = []
+    let loose: Array<ItemMenu> = []
+    const flush = () => {
+      if (loose.length) {
+        groups.push({ items: loose })
+        loose = []
+      }
+    }
+    for (const vn of flattenVNodes(nodes)) {
+      if (isMenuGroupVNode(vn)) {
+        flush()
+        groups.push({ ...(vn?.props ?? {}), items: extractItemsFromVNodes(vnodeChildren(vn)) })
+      } else if (isMenuItemVNode(vn)) {
+        loose.push(extractItemFromVNode(vn))
+      }
+    }
+    flush()
+    return groups
+  }
+  const compoundGroups = computed<Array<GroupMenu>>(() => {
+    const raw = typeof slots.default === "function" ? slots.default() : undefined
+    return raw ? extractGroupsFromVNodes(normalizeChildren(raw)) : []
+  })
+  const sourceGroups = computed<Array<GroupMenu>>(() => {
+    const g = unref(props.groups)
+    if (g && isArray(g) && g.length) return g as Array<GroupMenu>
+    return compoundGroups.value
+  })
+  // ---KEYBOARD-NAVIGATION (roving tabindex + WAI-ARIA menu) ----------
+  const focusedItemKey = ref<_key>()
+  const usingKeyboard = ref(false)
+  const openSubmenuKeys = ref<Set<_key>>(new Set())
+  const itemElements = new Map<_key, HTMLElement>()
+  const submenuWindows = new Map<_key, { open?: () => void; close?: () => void }>()
+  const flatItems = computed<Array<ItemMenuPrivate>>(() =>
+    (listGroups.value ?? []).flatMap((group) => (group?.items ?? []) as Array<ItemMenuPrivate>)
+  )
+  const focusableItems = computed<Array<ItemMenuPrivate>>(() => flatItems.value.filter((item) => !item?.disabled))
+  watch(
+    focusableItems,
+    (items) => {
+      if (!items.some((item) => item._key === focusedItemKey.value)) focusedItemKey.value = items[0]?._key
+    },
+    { immediate: true }
+  )
+  function setItemRef(el: unknown, key: _key): void {
+    if (el) itemElements.set(key, el as HTMLElement)
+    else itemElements.delete(key)
+  }
+  function setSubmenuRef(el: unknown, key: _key): void {
+    if (el) submenuWindows.set(key, el as { open?: () => void; close?: () => void })
+    else submenuWindows.delete(key)
+  }
+  function currentItem(): ItemMenuPrivate | undefined {
+    return flatItems.value.find((item) => item._key === focusedItemKey.value)
+  }
+  function focusItemByKey(key: _key | undefined): void {
+    if (key === undefined) return
+    focusedItemKey.value = key
+    setActiveItem(key)
+    itemElements.get(key)?.focus?.()
+  }
+  function moveFocus(delta: number): void {
+    const items = focusableItems.value
+    if (!items.length) return
+    const current = items.findIndex((item) => item._key === focusedItemKey.value)
+    const base = current < 0 ? 0 : current
+    const next = Math.min(Math.max(0, base + delta), items.length - 1)
+    focusItemByKey(items[next]?._key)
+  }
+  function focusEdge(edge: "first" | "last"): void {
+    const items = focusableItems.value
+    if (!items.length) return
+    focusItemByKey((edge === "first" ? items[0] : items[items.length - 1])?._key)
+  }
+  function typeahead(char: string): void {
+    const items = focusableItems.value
+    if (!items.length) return
+    const needle = char.toLowerCase()
+    const current = items.findIndex((item) => item._key === focusedItemKey.value)
+    const ordered = [...items.slice(current + 1), ...items.slice(0, current + 1)]
+    const hit = ordered.find((item) => (item.title ?? "").trim().toLowerCase().startsWith(needle))
+    if (hit) focusItemByKey(hit._key)
+  }
+  function onSubmenuOpen(item: ItemMenuPrivate): void {
+    const next = new Set(openSubmenuKeys.value)
+    next.add(item._key)
+    openSubmenuKeys.value = next
+  }
+  function onSubmenuClose(item: ItemMenuPrivate): void {
+    const next = new Set(openSubmenuKeys.value)
+    next.delete(item._key)
+    openSubmenuKeys.value = next
+  }
+  function openSubmenu(item: ItemMenuPrivate): void {
+    submenuWindows.get(item._key)?.open?.()
+    onSubmenuOpen(item)
+  }
+  function closeSubmenu(item: ItemMenuPrivate): void {
+    submenuWindows.get(item._key)?.close?.()
+    onSubmenuClose(item)
+  }
+  function onItemFocus(item: ItemMenuPrivate): void {
+    focusedItemKey.value = item._key
+  }
+  function onKeydown(event: KeyboardEvent): void {
+    if (!flatItems.value.length) return
+    const nextKey = horizontal.value ? "ArrowRight" : "ArrowDown"
+    const prevKey = horizontal.value ? "ArrowLeft" : "ArrowUp"
+    const openKey = horizontal.value ? "ArrowDown" : "ArrowRight"
+    const closeKey = horizontal.value ? "ArrowUp" : "ArrowLeft"
+    switch (event.key) {
+      case nextKey:
+        usingKeyboard.value = true
+        event.preventDefault()
+        moveFocus(1)
+        break
+      case prevKey:
+        usingKeyboard.value = true
+        event.preventDefault()
+        moveFocus(-1)
+        break
+      case "Home":
+        usingKeyboard.value = true
+        event.preventDefault()
+        focusEdge("first")
+        break
+      case "End":
+        usingKeyboard.value = true
+        event.preventDefault()
+        focusEdge("last")
+        break
+      case openKey: {
+        const item = currentItem()
+        if (item?.menu) {
+          usingKeyboard.value = true
+          event.preventDefault()
+          openSubmenu(item)
+        }
+        break
+      }
+      case closeKey: {
+        const item = currentItem()
+        if (item && openSubmenuKeys.value.has(item._key)) {
+          usingKeyboard.value = true
+          event.preventDefault()
+          closeSubmenu(item)
+        }
+        break
+      }
+      case "Enter":
+      case " ": {
+        const item = currentItem()
+        if (item) {
+          event.preventDefault()
+          clickItem(event as unknown as MouseEvent, item)
+        }
+        break
+      }
+      case "Escape": {
+        const item = currentItem()
+        if (item && openSubmenuKeys.value.has(item._key)) {
+          event.preventDefault()
+          closeSubmenu(item)
+        }
+        break
+      }
+      default:
+        if (event.key.length === 1 && /\S/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          usingKeyboard.value = true
+          typeahead(event.key)
+        }
+    }
+  }
   // ---EXPOSE------------------------------
   defineExpose({
     // ---STATE-------------------------
@@ -233,21 +466,17 @@
   // ---MOUNT-UNMOUNT-----------------------
   // `MenuComponent.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
   // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
-  onMounted(() => {
-    const groupsValue = unref(props.groups)
-    listGroups.value = setItems({ ...props, groups: groupsValue } as MenuItemPrivate)?.groups ?? []
-  })
+  // `setItems` (через generateUUID) запускаем только на клиенте, чтобы избежать hydration mismatch.
+  function rebuildItems(): void {
+    listGroups.value = setItems({ ...props, groups: sourceGroups.value } as MenuItemPrivate)?.groups ?? []
+  }
+  onMounted(rebuildItems)
   // ---WATCHERS----------------------------
-  watch(
-    props,
-    (value) => {
-      const groupsValue = unref(value.groups)
-      listGroups.value = setItems({ ...value, groups: groupsValue } as MenuItemPrivate)?.groups ?? []
-    },
-    { deep: true }
-  )
+  watch(props, rebuildItems, { deep: true })
+  watch(compoundGroups, rebuildItems, { deep: true })
   // ---METHODS-----------------------------
   function enterItem(event: MouseEvent | TouchEvent, item: ItemMenuPrivate) {
+    usingKeyboard.value = false
     setActiveItem(item?._key)
     emit("onActive", event, item)
     if (item?.onActive) item.onActive(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as ItemMenuPrivate)
@@ -324,9 +553,11 @@
     v-if="listGroups.length"
     data-menu
     role="menu"
+    :aria-orientation="horizontal ? 'horizontal' : 'vertical'"
     :class="classMenu"
     :style="`${(styles.width as string).length ? `width:${styles.width};` : ''}${(styles.height as string).length ? `height:${styles.height};` : ''}`"
-    tabindex="-1">
+    tabindex="-1"
+    @keydown="onKeydown">
     <div v-if="title.length || slots?.title" data-menu-title :class="classTitle">
       <slot name="title" :title="title">{{ title }}</slot>
     </div>
@@ -341,14 +572,18 @@
           v-if="group?.separator?.icon?.length ?? iconSeparator?.length"
           v-bind="fieldsOmit(group?.separator ?? baseSeparator, ['isVisible', 'icon']) as SeparatorProps"
           :class="classSeparator"
-          :vertical="horizontal">
+          :vertical="horizontal"
+          role="separator"
+          :aria-orientation="horizontal ? 'vertical' : 'horizontal'">
           <Icons :type="group.separator?.icon ?? iconSeparator ?? ''" :class="classSeparatorIcon" />
         </Separator>
         <Separator
           v-else
           v-bind="fieldsOmit(group?.separator ?? baseSeparator, ['isVisible', 'icon']) as SeparatorProps"
           :class="classSeparator"
-          :vertical="horizontal" />
+          :vertical="horizontal"
+          role="separator"
+          :aria-orientation="horizontal ? 'vertical' : 'horizontal'" />
       </template>
       <div data-menu-group role="group" :class="classGroup(group.class)">
         <div v-if="!onlyIcons && group.title" data-menu-group-title :class="classGroupTitle">
@@ -357,13 +592,17 @@
         <div
           v-for="item in group.items as Array<ItemMenuPrivate>"
           :key="item._key"
+          :ref="(el) => setItemRef(el, item._key)"
           data-menu-item
           role="menuitem"
           :data-collection-item="item?._key"
           :aria-disabled="item?.disabled ?? false"
-          :tabindex="activeItemIndex === item?._key ? 0 : -2"
+          :aria-haspopup="item?.menu ? 'menu' : undefined"
+          :aria-expanded="item?.menu ? openSubmenuKeys.has(item._key) : undefined"
+          :tabindex="!item?.disabled && focusedItemKey === item?._key ? 0 : -1"
           @pointerenter="(event) => enterItem(event, item)"
           @pointerleave="(event) => leaveItem(event, item)"
+          @focus="() => onItemFocus(item)"
           @click="(event) => clickItem(event, item)"
           @touchstart="(event) => enterItem(event, item)"
           @touchend="(event) => leaveItem(event, item)"
@@ -386,18 +625,30 @@
               <span :data-title="!!item?.title" :class="classItemTitleOnlyIcons">
                 {{ item?.title }}
               </span>
-              <span :data-info="!!item?.info" :class="classItemInfoOnlyIcons" v-html="item?.info" />
+              <span :data-info="!!item?.info" :class="classItemInfoOnlyIcons">
+                <slot name="item-info" :item="fieldsOmit(item, notPublicParamsMenu)" :info="item?.info">{{
+                  item?.info
+                }}</slot>
+              </span>
             </template>
             <FixWindow v-else :position="horizontal ? 'top' : 'right'" :delay="500" :margin-px="10" :mode="mode">
               <span :data-title="!!item?.title" :class="classItemTitleFixWindow">{{ item?.title }}</span>
-              <span :data-info="!!item?.info" :class="classItemInfoFixWindow" v-html="item?.info" />
+              <span :data-info="!!item?.info" :class="classItemInfoFixWindow">
+                <slot name="item-info" :item="fieldsOmit(item, notPublicParamsMenu)" :info="item?.info">{{
+                  item?.info
+                }}</slot>
+              </span>
             </FixWindow>
           </slot>
           <ChevronRightIcon v-if="item?.menu && !onlyIcons" :class="classItemRightIcon" />
           <FixWindow
             v-if="!!item?.menu"
+            :ref="(el) => setSubmenuRef(el, item._key)"
             v-bind="(item?.menu?.paramsWindowMenu ?? paramsWindowMenu) as FixWindowProps"
-            class-body="z-10">
+            :focus-trap="usingKeyboard"
+            class-body="z-10"
+            @open="() => onSubmenuOpen(item)"
+            @close="() => onSubmenuClose(item)">
             <Menu
               v-bind="item?.menu as MenuProps"
               :mode="mode"

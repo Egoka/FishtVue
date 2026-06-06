@@ -1,12 +1,25 @@
 import { mount } from "@vue/test-utils"
-import { nextTick } from "vue"
-import { describe, expect, it, vi } from "vitest"
+import { h, nextTick } from "vue"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Menu from "fishtvue/menu/Menu.vue"
+import MenuItem from "fishtvue/menu/MenuItem.vue"
+import MenuGroup from "fishtvue/menu/MenuGroup.vue"
+import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 import { GroupMenu, ItemMenuPrivate, MenuOption, MenuProps } from "fishtvue/menu/Menu"
 import { StyleMode } from "fishtvue/types"
 
 describe("Menu Component", () => {
+  // Глобальные componentsOptions (через app.use(FishtVue, …)) пишутся в window.FishtVue и
+  // протекают между тестами (см. MEMORY: i18n & test isolation). Чистим до/после каждого теста,
+  // чтобы plain-mount тесты не подхватывали leaked options (напр. horizontal: true).
+  beforeEach(() => {
+    delete (window as any).FishtVue
+  })
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
   describe("Menu Component - Without Library Initialization", () => {
     const mockGroups = () => [
       {
@@ -470,6 +483,326 @@ describe("Menu Component", () => {
       expect(nestedItems.length).toBe(3)
       expect(nestedItems[0].text()).toContain("Profile")
       expect(nestedItems[1].text()).toContain("Settings")
+    })
+  })
+
+  // ---ISSUE 1 — XSS guard через #item-info slot вместо v-html -----------------------------------
+  describe("Menu Component - XSS guard (item.info)", () => {
+    const xss = '<img src=x onerror="window.__menuXss = true">'
+
+    it("renders item.info as text, not as HTML (no injected <img>)", async () => {
+      const wrapper = mount(Menu, {
+        props: { groups: [{ items: [{ title: "A", info: xss }] }] }
+      })
+      await nextTick()
+      const info = wrapper.find("[data-info='true']")
+      expect(info.exists()).toBe(true)
+      // v-html создал бы реальный <img>; text-interpolation — нет
+      expect(info.find("img").exists()).toBe(false)
+      expect(info.text()).toContain("<img")
+    })
+
+    it("renders item.info as text inside FixWindow branch (onlyIcons)", async () => {
+      const wrapper = mount(Menu, {
+        props: { onlyIcons: true, groups: [{ items: [{ title: "A", icon: "user", info: xss }] }] }
+      })
+      await nextTick()
+      const info = wrapper.find("[data-info='true']")
+      expect(info.exists()).toBe(true)
+      expect(info.find("img").exists()).toBe(false)
+    })
+
+    it("uses #item-info scoped slot when provided", async () => {
+      const wrapper = mount(Menu, {
+        props: { groups: [{ items: [{ title: "A", info: "raw-info" }] }] },
+        slots: {
+          "item-info": (scope: any) => h("b", { class: "custom-info" }, scope?.info)
+        }
+      })
+      await nextTick()
+      const custom = wrapper.find("b.custom-info")
+      expect(custom.exists()).toBe(true)
+      expect(custom.text()).toContain("raw-info")
+    })
+  })
+
+  // ---ISSUE 9 — prefers-reduced-motion -----------------------------------------------------------
+  describe("Menu Component - reduced motion", () => {
+    it("applies motion-safe transition on the menu container by default", async () => {
+      const wrapper = mount(Menu, { props: { groups: [{ items: [{ title: "A" }] }] } })
+      await nextTick()
+      const cls = wrapper.find("[data-menu]").classes().join(" ")
+      expect(cls).toContain("motion-safe:transition-all")
+    })
+  })
+
+  // ---ISSUE 4 — ARIA ----------------------------------------------------------------------------
+  describe("Menu Component - ARIA", () => {
+    it("sets aria-orientation on root (vertical / horizontal)", async () => {
+      const v = mount(Menu, { props: { groups: [{ items: [{ title: "A" }] }] } })
+      await nextTick()
+      expect(v.find("[data-menu]").attributes("aria-orientation")).toBe("vertical")
+
+      const hr = mount(Menu, { props: { horizontal: true, groups: [{ items: [{ title: "A" }] }] } })
+      await nextTick()
+      expect(hr.find("[data-menu]").attributes("aria-orientation")).toBe("horizontal")
+    })
+
+    it("sets aria-haspopup + aria-expanded on items with a submenu", async () => {
+      const v = mount(Menu, {
+        props: { groups: [{ items: [{ title: "P", menu: { groups: [{ items: [{ title: "S" }] }] } }] }] }
+      })
+      await nextTick()
+      const item = v.find("[data-menu-item]")
+      expect(item.attributes("aria-haspopup")).toBe("menu")
+      expect(item.attributes("aria-expanded")).toBe("false")
+    })
+
+    it("omits aria-haspopup on plain items", async () => {
+      const v = mount(Menu, { props: { groups: [{ items: [{ title: "A" }] }] } })
+      await nextTick()
+      expect(v.find("[data-menu-item]").attributes("aria-haspopup")).toBeUndefined()
+    })
+
+    it("toggles aria-expanded when the submenu FixWindow opens/closes", async () => {
+      const v = mount(Menu, {
+        props: { groups: [{ items: [{ title: "P", menu: { groups: [{ items: [{ title: "S" }] }] } }] }] }
+      })
+      await nextTick()
+      const item = v.find("[data-menu-item]")
+      const fw = v.findComponent(FixWindow)
+      expect(fw.exists()).toBe(true)
+      fw.vm.$emit("open")
+      await nextTick()
+      expect(item.attributes("aria-expanded")).toBe("true")
+      fw.vm.$emit("close")
+      await nextTick()
+      expect(item.attributes("aria-expanded")).toBe("false")
+    })
+
+    it("marks group separators with role=separator", async () => {
+      const v = mount(Menu, {
+        props: {
+          groups: [
+            { title: "G1", items: [{ title: "A" }] },
+            { title: "G2", items: [{ title: "B" }] }
+          ]
+        }
+      })
+      await nextTick()
+      const sep = v.find("[data-separator]")
+      expect(sep.exists()).toBe(true)
+      expect(sep.attributes("role")).toBe("separator")
+    })
+  })
+
+  // ---ISSUE 3 — keyboard navigation -------------------------------------------------------------
+  describe("Menu Component - keyboard navigation", () => {
+    const kbGroups = () => [{ items: [{ title: "Apple" }, { title: "Banana", disabled: true }, { title: "Cherry" }] }]
+
+    it("uses roving tabindex (first focusable=0, rest=-1, no -2)", async () => {
+      const v = mount(Menu, { props: { groups: kbGroups() } })
+      await nextTick()
+      const items = v.findAll("[data-menu-item]")
+      expect(items[0].attributes("tabindex")).toBe("0")
+      expect(items[1].attributes("tabindex")).toBe("-1")
+      expect(items[2].attributes("tabindex")).toBe("-1")
+      items.forEach((i) => expect(i.attributes("tabindex")).not.toBe("-2"))
+    })
+
+    it("ArrowDown moves roving focus to the next focusable item (skips disabled)", async () => {
+      const v = mount(Menu, { props: { groups: kbGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowDown" })
+      await nextTick()
+      const items = v.findAll("[data-menu-item]")
+      expect(items[0].attributes("tabindex")).toBe("-1")
+      expect(items[2].attributes("tabindex")).toBe("0")
+    })
+
+    it("ArrowUp moves roving focus back", async () => {
+      const v = mount(Menu, { props: { groups: kbGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "End" })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowUp" })
+      await nextTick()
+      const items = v.findAll("[data-menu-item]")
+      expect(items[0].attributes("tabindex")).toBe("0")
+    })
+
+    it("Home/End jump to first/last focusable", async () => {
+      const v = mount(Menu, { props: { groups: kbGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "End" })
+      await nextTick()
+      expect(v.findAll("[data-menu-item]")[2].attributes("tabindex")).toBe("0")
+      await v.find("[data-menu]").trigger("keydown", { key: "Home" })
+      await nextTick()
+      expect(v.findAll("[data-menu-item]")[0].attributes("tabindex")).toBe("0")
+    })
+
+    it("Enter activates the focused item (emits onClick)", async () => {
+      const v = mount(Menu, { props: { groups: kbGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "Enter" })
+      expect(v.emitted("onClick")).toBeTruthy()
+      expect((v.emitted("onClick")![0][1] as any).title).toBe("Apple")
+    })
+
+    it("Space activates the focused item (emits onClick)", async () => {
+      const v = mount(Menu, { props: { groups: kbGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: " " })
+      expect(v.emitted("onClick")).toBeTruthy()
+    })
+
+    it("typeahead focuses item by first letter", async () => {
+      const v = mount(Menu, { props: { groups: kbGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "c" })
+      await nextTick()
+      expect(v.findAll("[data-menu-item]")[2].attributes("tabindex")).toBe("0")
+    })
+
+    it("horizontal: ArrowRight/ArrowLeft navigate items", async () => {
+      const v = mount(Menu, { props: { horizontal: true, groups: kbGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowRight" })
+      await nextTick()
+      expect(v.findAll("[data-menu-item]")[2].attributes("tabindex")).toBe("0")
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowLeft" })
+      await nextTick()
+      expect(v.findAll("[data-menu-item]")[0].attributes("tabindex")).toBe("0")
+    })
+  })
+
+  // ---ISSUE 6 — submenu focus trap --------------------------------------------------------------
+  describe("Menu Component - submenu focus trap", () => {
+    it("enables focus-trap on the submenu FixWindow after keyboard interaction", async () => {
+      const v = mount(Menu, {
+        props: {
+          groups: [{ items: [{ title: "P", menu: { groups: [{ items: [{ title: "S" }] }] } }] }]
+        }
+      })
+      await nextTick()
+      // до клавиатуры focus-trap не активен (hover не должен красть фокус)
+      expect(v.findComponent(FixWindow).props("focusTrap")).toBeFalsy()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowRight" })
+      await nextTick()
+      expect(v.findComponent(FixWindow).props("focusTrap")).toBe(true)
+    })
+  })
+
+  // ---ISSUE 2 — compound API <Menu><MenuItem>/<MenuGroup> ---------------------------------------
+  describe("Menu Component - compound API", () => {
+    it("renders top-level <MenuItem> children as items", async () => {
+      const v = mount(Menu, {
+        slots: { default: () => [h(MenuItem, { title: "Open" }), h(MenuItem, { title: "Save" })] }
+      })
+      await nextTick()
+      const items = v.findAll("[data-menu-item]")
+      expect(items.length).toBe(2)
+      expect(items[0].text()).toContain("Open")
+      expect(items[1].text()).toContain("Save")
+    })
+
+    it("groups children with <MenuGroup>", async () => {
+      const v = mount(Menu, {
+        slots: {
+          default: () => [h(MenuGroup, { title: "File" }, () => [h(MenuItem, { title: "Open" })])]
+        }
+      })
+      await nextTick()
+      expect(v.find("[data-menu-group-title]").text()).toContain("File")
+      expect(v.findAll("[data-menu-item]").length).toBe(1)
+    })
+
+    it("treats nested <MenuItem> as a submenu", async () => {
+      const v = mount(Menu, {
+        slots: {
+          default: () => [h(MenuItem, { title: "Parent" }, () => [h(MenuItem, { title: "Child" })])]
+        }
+      })
+      await nextTick()
+      const parent = v.find("[data-menu-item]")
+      expect(parent.attributes("aria-haspopup")).toBe("menu")
+      expect(v.findComponent(Menu).exists()).toBe(true)
+    })
+
+    it("uses text content as title fallback", async () => {
+      const v = mount(Menu, { slots: { default: () => [h(MenuItem, null, () => "Inline")] } })
+      await nextTick()
+      expect(v.find("[data-menu-item]").text()).toContain("Inline")
+    })
+
+    it(":groups prop wins over compound children (backward compat)", async () => {
+      const v = mount(Menu, {
+        props: { groups: [{ items: [{ title: "FromProp" }] }] },
+        slots: { default: () => [h(MenuItem, { title: "FromSlot" })] }
+      })
+      await nextTick()
+      expect(v.text()).toContain("FromProp")
+      expect(v.text()).not.toContain("FromSlot")
+    })
+
+    it("forwards @click handler from <MenuItem>", async () => {
+      const onClick = vi.fn()
+      const v = mount(Menu, {
+        slots: { default: () => [h(MenuItem, { title: "X", onClick })] }
+      })
+      await nextTick()
+      await v.find("[data-menu-item]").trigger("click")
+      expect(onClick).toHaveBeenCalled()
+    })
+  })
+
+  // ---ISSUE 3/6 — keyboard submenu open/close ---------------------------------------------------
+  describe("Menu Component - keyboard submenu open/close", () => {
+    const subGroups = () => [{ items: [{ title: "Parent", menu: { groups: [{ items: [{ title: "Child" }] }] } }] }]
+
+    it("ArrowRight (vertical) opens submenu of focused item → aria-expanded true", async () => {
+      const v = mount(Menu, { props: { groups: subGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowRight" })
+      await nextTick()
+      expect(v.find("[data-menu-item]").attributes("aria-expanded")).toBe("true")
+    })
+
+    it("ArrowLeft closes the open submenu", async () => {
+      const v = mount(Menu, { props: { groups: subGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowRight" })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowLeft" })
+      await nextTick()
+      expect(v.find("[data-menu-item]").attributes("aria-expanded")).toBe("false")
+    })
+
+    it("Escape closes the open submenu", async () => {
+      const v = mount(Menu, { props: { groups: subGroups() } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowRight" })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "Escape" })
+      await nextTick()
+      expect(v.find("[data-menu-item]").attributes("aria-expanded")).toBe("false")
+    })
+
+    it("ArrowRight on an item without submenu is a no-op (no error, no expanded)", async () => {
+      const v = mount(Menu, { props: { groups: [{ items: [{ title: "A" }] }] } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "ArrowRight" })
+      await nextTick()
+      expect(v.find("[data-menu-item]").attributes("aria-expanded")).toBeUndefined()
+    })
+
+    it("typeahead with no match keeps focus unchanged", async () => {
+      const v = mount(Menu, { props: { groups: [{ items: [{ title: "Apple" }, { title: "Cherry" }] }] } })
+      await nextTick()
+      await v.find("[data-menu]").trigger("keydown", { key: "z" })
+      await nextTick()
+      expect(v.findAll("[data-menu-item]")[0].attributes("tabindex")).toBe("0")
     })
   })
 })
