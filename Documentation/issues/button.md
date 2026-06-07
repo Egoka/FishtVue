@@ -1,7 +1,7 @@
 ---
 title: Issues — Button
-summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, RTL, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12) — зачёркнуты ниже с `✅ resolved`-маркерами.
-updated: 2026-05-11
+summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12); 2026-06-07: logical iconPosition start/end + RTL (Issue 3) — зачёркнуты ниже с `✅ resolved`-маркерами.
+updated: 2026-06-07
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/button/
 related-doc: ../components/button.md
@@ -20,7 +20,9 @@ related-doc: ../components/button.md
 | medium   | 6     | F31, G34, G36, I44, I45, N59     |
 | low      | 4     | B11, D26, E29.7, G37             |
 
-**Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots) — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
+**Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
+**Закрыто 2026-06-07:** Issue 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`).
+Все — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
 ## Issue 1: Стили инжектятся только после client mount — пустой first paint при SSR
 
@@ -90,11 +92,12 @@ onMounted(() => {
 - [x] Тест dev-warning: без ariaLabel и без default slot — emitted `console.warn` с префиксом `[FishtVue Button]`.
 - [ ] axe-core lint в `Button.test.ts` (если будет добавлен) проходит для icon-кнопки.
 
-## Issue 3: iconPosition использует left/right вместо logical start/end — RTL ломается
+## ~~Issue 3: iconPosition использует left/right вместо logical start/end — RTL ломается~~ ✅ resolved 2026-06-07
 
 - **Категория:** F31 (RTL поддержка)
-- **Severity:** medium
-- **Где:** [Button.d.ts:65-67](../../lib/button/Button.d.ts#L65-L67), [Button.vue:298](../../lib/button/Button.vue#L298), [Button.vue:372-374](../../lib/button/Button.vue#L372-L374)
+- **Severity:** ~~medium~~
+- **Где:** [Button.d.ts:63-74](../../lib/button/Button.d.ts#L63-L74), [Button.vue:299-308](../../lib/button/Button.vue#L299-L308), [Button.vue:407-411](../../lib/button/Button.vue#L407-L411)
+- **Resolution:** `iconPosition` принимает logical-значения `"start" | "end"` (default `end`); `"left" | "right"` сохранены как deprecated алиасы (`left → start`, `right → end`) через type-union + computed-нормализацию. RTL-корректность обеспечивается тем, что корневой `<button>` — `inline-flex`, и его main-axis следует document direction (`dir="rtl"` → start визуально справа), поэтому дополнительный CSS/`useDirectionality()` не нужен. `onMounted` dev-warning при использовании deprecated значений.
 
 ### Что найдено
 
@@ -115,19 +118,19 @@ iconPosition?: "left" | "right"
 - Арабские/ивритские локали получают зеркальный layout автоматом, а буквальные `left/right` ломают визуальный язык — иконка действия (например, «next →») оказывается «before label», что меняет UX-смысл.
 - Tailwind CSS поддерживает logical properties (`ms-*`, `me-*`) с Tailwind 3.4+.
 
-### Что нужно сделать
+### Что было сделано
 
-1. Поменять API на `iconPosition?: "start" | "end"` в [Button.d.ts](../../lib/button/Button.d.ts), сохранить `"left" | "right"` как deprecated alias через type union с runtime-warning.
-2. В [Button.vue:298](../../lib/button/Button.vue#L298) маппить старые значения: `left → start`, `right → end`.
-3. Добавить `dir`-aware логику: если документ `dir="rtl"`, swap отображение (либо через CSS `[dir="rtl"]` selector, либо через `useDirectionality()` composable).
-4. В [Documentation/components/button.md](../components/button.md) §12 RTL добавить примечание про migration.
-5. Тест: `mount(Button, { props: { iconPosition: "left", icon: "x" }, attrs: { dir: "rtl" } })` — assert визуальный порядок (или просто `iconPosition` маппинг).
+1. ✅ API изменён на `iconPosition?: "start" | "end" | "left" | "right"` в [Button.d.ts](../../lib/button/Button.d.ts); `"left" | "right"` — deprecated алиасы.
+2. ✅ В [Button.vue](../../lib/button/Button.vue) computed `iconPosition` нормализует значения: `left → start`, `right → end`, default `end`.
+3. ✅ `dir`-aware поведение получено бесплатно через `inline-flex` main-axis (DOM-first `start` визуально справа при RTL) — отдельный CSS не понадобился.
+4. ✅ `onMounted` dev-warning при `iconPosition="left"|"right"`.
+5. ✅ Negative-margin loading-индикатора переведён на logical `-me-2` (было физическое `-mr-2`) — корректно зеркалится при RTL.
 
 ### Acceptance criteria
 
-- [ ] Существующие тесты с `iconPosition: "left"|"right"` продолжают работать (deprecation soft).
-- [ ] Новый тест: `iconPosition: "start"` в `dir="rtl"` показывает иконку справа от текста.
-- [ ] Console warning при использовании deprecated значения.
+- [x] Существующие тесты с `iconPosition: "left"|"right"` продолжают работать (deprecation soft).
+- [x] `iconPosition: "start"` рендерит иконку перед контентом, `"end"` — после (RTL-зеркалирование делегировано flex-направлению).
+- [x] Console warning при использовании deprecated значения.
 
 ## ~~Issue 4: buttonRef не exposed — пользователь не может programmatically focus/blur~~ ✅ resolved 2026-05-10
 

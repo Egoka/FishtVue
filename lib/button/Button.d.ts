@@ -61,10 +61,17 @@ type BaseButtonProps = ButtonStyle & {
   icon?: string
 
   /**
-   * Position of the icon in relation to the text.
-   * @type {"left" | "right" | undefined}
+   * Position of the icon relative to the default content, using logical
+   * (writing-direction-aware) values:
+   * - `"start"` — перед контентом (визуально слева в LTR, справа в RTL);
+   * - `"end"` — после контента (default; визуально справа в LTR, слева в RTL).
+   *
+   * Значения `"left"` / `"right"` — **deprecated** алиасы (`left → start`,
+   * `right → end`), сохранены для обратной совместимости и в dev-режиме
+   * выводят предупреждение. Используй logical-значения для корректного RTL.
+   * @type {"start" | "end" | "left" | "right" | undefined}
    */
-  iconPosition?: "left" | "right"
+  iconPosition?: "start" | "end" | "left" | "right"
 
   /**
    * Disables the button.
@@ -123,8 +130,9 @@ export declare type ButtonSlots = {
 
   /**
    * Контент перед `default`-slot'ом и до иконки. Используется для prepend-композиции
-   * (badge, status dot и т. п.). Имя `start` соответствует logical writing order и
-   * корректно при LTR; для будущей RTL-поддержки см. Issue 3 в `Documentation/issues/button.md`.
+   * (badge, status dot и т. п.). Имя `start` соответствует logical writing order: при
+   * `dir="rtl"` slot визуально оказывается справа (корневой `<button>` — `inline-flex`,
+   * main-axis следует document direction).
    */
   start?(): VNode[]
 
