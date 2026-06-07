@@ -296,7 +296,16 @@
   // ---PROPS-------------------------------
   const type = computed<ButtonProps["type"]>(() => props.type ?? "button")
   const icon = computed<ButtonProps["icon"]>(() => props.icon ?? "")
-  const iconPosition = computed<ButtonProps["iconPosition"] | null>(() => props.iconPosition ?? "right")
+  // Issue 3: logical start/end positioning. "left"/"right" — deprecated алиасы,
+  // мапятся на logical-значения (left → start, right → end). RTL-корректность
+  // обеспечивается тем, что корневой <button> — inline-flex, и его main-axis
+  // следует document direction; дополнительный CSS не нужен.
+  const iconPosition = computed<"start" | "end">(() => {
+    const raw = props.iconPosition ?? "end"
+    if (raw === "left") return "start"
+    if (raw === "right") return "end"
+    return raw
+  })
   const isLoading = computed<ButtonProps["loading"]>(() => props.loading)
   const disabled = computed<ButtonProps["disabled"]>(() => props.disabled ?? false)
   // Для icon-кнопок без явного ariaLabel и без default-slot fallback'имся
@@ -377,6 +386,13 @@
           "Pass `:aria-label` or provide a default slot with descriptive content."
       )
     }
+    // Dev-warning: deprecated iconPosition значения "left"/"right" не RTL-safe.
+    if (process.env.NODE_ENV !== "production" && (props.iconPosition === "left" || props.iconPosition === "right")) {
+      console.warn(
+        `[FishtVue Button] iconPosition="${props.iconPosition}" is deprecated; ` +
+          `use "${props.iconPosition === "left" ? "start" : "end"}" for RTL-safe logical positioning.`
+      )
+    }
   })
 </script>
 <template>
@@ -404,10 +420,10 @@
     </template>
     <template v-else>
       <slot v-if="slots.start" name="start" />
-      <Icons v-if="icon && iconPosition === 'left'" :type="icon" :class="classIcon" />
+      <Icons v-if="icon && iconPosition === 'start'" :type="icon" :class="classIcon" />
       <slot name="default" />
-      <Icons v-if="icon && iconPosition === 'right'" :type="icon" :class="classIcon" />
-      <Loading v-if="isLoading" type="simple" :class="['-mr-2']" />
+      <Icons v-if="icon && iconPosition === 'end'" :type="icon" :class="classIcon" />
+      <Loading v-if="isLoading" type="simple" :class="['-me-2']" />
       <slot v-if="slots.end" name="end" />
     </template>
   </button>

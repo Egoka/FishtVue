@@ -20,6 +20,7 @@ const pkg = JSON.parse(readFileSync(resolve(process.cwd(), "lib/package.json"), 
   sideEffects?: unknown
   files?: string[]
   engines?: { node?: string }
+  dependencies?: Record<string, string>
 }
 
 describe("lib/package.json publish contract", () => {
@@ -51,6 +52,15 @@ describe("lib/package.json publish contract", () => {
   it("keeps ESM entry points intact", () => {
     expect(pkg.main).toBe("./index.mjs")
     expect(pkg.types).toBe("./index.d.ts")
+  })
+
+  it("declares runtime deps for packages that stay bare-import in the build", () => {
+    // FixWindow импортит @floating-ui/vue + @vueuse/core; в rollup нет node-resolve,
+    // поэтому они остаются bare-`import` в dist/*.mjs и ОБЯЗАНЫ быть в dependencies —
+    // иначе чистая установка падает на `import "fishtvue/menu"` (Cannot find package …).
+    const deps = pkg.dependencies ?? {}
+    expect(deps["@floating-ui/vue"]).toBeDefined()
+    expect(deps["@vueuse/core"]).toBeDefined()
   })
 })
 

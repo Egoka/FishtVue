@@ -1,7 +1,7 @@
 ---
 title: Button
 summary: Универсальная кнопка с modes (primary/outline/ghost), color, size, rounded, icon, loading.
-updated: 2026-05-10
+updated: 2026-06-07
 stability: stable
 since: 0.2.11
 ---
@@ -62,7 +62,7 @@ Tree-shaking & bundle: `import Button from "fishtvue/button"` импортиру
 | -------------- | ----------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `type`         | `"button" \| "reset" \| "submit" \| "icon"`           | `"button"`                         | `"icon"` — icon-only кнопка с FixWindow tooltip.                                                                                                                   |
 | `icon`         | `string`                                              | `""`                               | Имя иконки (см. [Icons](./icons.md)).                                                                                                                              |
-| `iconPosition` | `"left" \| "right"`                                   | `"right"`                          | Позиция иконки в обычном режиме.                                                                                                                                   |
+| `iconPosition` | `"start" \| "end" \| "left" \| "right"`               | `"end"`                            | Logical-позиция иконки в обычном режиме (`start` — перед контентом, `end` — после; RTL-safe). `"left"`/`"right"` — deprecated алиасы (`left → start`, `right → end`) с dev-warning. См. §12. |
 | `disabled`     | `boolean`                                             | `false`                            | Стандартный disabled.                                                                                                                                              |
 | `loading`      | `boolean`                                             | `undefined`                        | Показывает [Loading](./loading.md) внутри кнопки.                                                                                                                  |
 | `ariaLabel`    | `string`                                              | `undefined`                        | Accessible name для screen-reader. Особенно важен для `type="icon"` без default-slot. Если опущен и `type="icon"` — fallback на имя иконки (`icon` prop). См. §12. |
@@ -94,8 +94,8 @@ v-model contract — не применимо.
 | Slot      | Slot props | Description                                                                                                                                                                 |
 | --------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `default` | —          | Текст или произвольная разметка. В режиме `type="icon"` — content tooltip'а через [FixWindow](./fix-window.md).                                                             |
-| `start`   | —          | Контент перед `default` и до иконки (`iconPosition="left"`). Используется для prepend-композиции — badge, status dot, counter и т. п. Не рендерится в `type="icon"` режиме. |
-| `end`     | —          | Контент после `default`, иконки (`iconPosition="right"`) и loading-индикатора. Append-композиция. Не рендерится в `type="icon"` режиме.                                     |
+| `start`   | —          | Контент перед `default` и до иконки (`iconPosition="start"`). Используется для prepend-композиции — badge, status dot, counter и т. п. Не рендерится в `type="icon"` режиме. |
+| `end`     | —          | Контент после `default`, иконки (`iconPosition="end"`) и loading-индикатора. Append-композиция. Не рендерится в `type="icon"` режиме.                                       |
 
 ## 8. Exposed methods
 
@@ -283,6 +283,7 @@ CSS root-класс — `fv fishtvue-button`. Override:
 - Keyboard: Tab/Enter/Space — нативное поведение. Стрелки не обрабатываются.
 - Focus management — нативный, `focus:outline-none focus-visible:ring-1` ([Button.vue:23](../../lib/button/Button.vue#L23)). Programmatic `focus()` / `blur()` — через exposed методы (см. §8).
 - `prefers-reduced-motion` учитывается: transition'ы применяются через `motion-safe:` вариант ([Button.vue:26](../../lib/button/Button.vue#L26)) — `@media (prefers-reduced-motion: reduce)` отключает их автоматически.
+- RTL: `iconPosition` использует logical-значения `"start"`/`"end"`. Так как корневой `<button>` — `inline-flex`, его main-axis следует document direction, поэтому при `dir="rtl"` иконка `start` визуально оказывается справа без дополнительного CSS. `"left"`/`"right"` остаются как deprecated алиасы (`left → start`, `right → end`) с DEV-warning ([Button.vue:299–308](../../lib/button/Button.vue#L299-L308)). Loading-индикатор использует logical-отступ `-me-2` (а не физический `-mr-2`), поэтому тоже корректен в RTL.
 
 ### Security
 

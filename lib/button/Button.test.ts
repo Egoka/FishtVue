@@ -384,5 +384,57 @@ describe("Button Component Tests", () => {
       expect(cls).not.toMatch(/(^|\s)transition-colors(\s|$)/)
       expect(cls).not.toMatch(/(^|\s)duration-200(\s|$)/)
     })
+
+    // ---Issue 3: logical iconPosition (start/end) + RTL-safe----
+    // true → label следует за иконкой в DOM (иконка перед контентом)
+    const iconBeforeLabel = (wrapper: ReturnType<typeof mount>) => {
+      const iconEl = wrapper.findComponent({ name: "Icons" }).element
+      const labelEl = wrapper.find(".lbl").element
+      return Boolean(iconEl.compareDocumentPosition(labelEl) & Node.DOCUMENT_POSITION_FOLLOWING)
+    }
+    const mountWithIcon = (iconPosition?: "start" | "end" | "left" | "right") =>
+      mount(Button, {
+        props: { icon: "check", ...(iconPosition ? { iconPosition } : {}) },
+        slots: { default: '<span class="lbl">L</span>' }
+      })
+
+    it('renders icon before content when iconPosition="start"', () => {
+      expect(iconBeforeLabel(mountWithIcon("start"))).toBe(true)
+    })
+
+    it('renders icon after content when iconPosition="end"', () => {
+      expect(iconBeforeLabel(mountWithIcon("end"))).toBe(false)
+    })
+
+    it("defaults to end position (icon after content) when iconPosition is omitted", () => {
+      expect(iconBeforeLabel(mountWithIcon())).toBe(false)
+    })
+
+    it('maps deprecated "left" → start (icon before content)', () => {
+      expect(iconBeforeLabel(mountWithIcon("left"))).toBe(true)
+    })
+
+    it('maps deprecated "right" → end (icon after content)', () => {
+      expect(iconBeforeLabel(mountWithIcon("right"))).toBe(false)
+    })
+
+    it("warns in dev when deprecated left/right iconPosition is used", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mountWithIcon("left")
+      mountWithIcon("right")
+      const messages = fishtVueButtonWarns(warn).map((call) => call[0])
+      expect(messages.some((m) => m.includes('iconPosition="left" is deprecated'))).toBe(true)
+      expect(messages.some((m) => m.includes('iconPosition="right" is deprecated'))).toBe(true)
+      warn.mockRestore()
+    })
+
+    it("does not warn for logical start/end iconPosition", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mountWithIcon("start")
+      mountWithIcon("end")
+      const messages = fishtVueButtonWarns(warn).map((call) => call[0])
+      expect(messages.some((m) => m.includes("deprecated"))).toBe(false)
+      warn.mockRestore()
+    })
   })
 })

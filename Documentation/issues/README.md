@@ -351,7 +351,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 #### 8.1 RTL support
 
 - [~] Глобальная замена `left/right` Tailwind classes на `start/end` (logical) во всех компонентах · cross-cutting issue. **Прогресс 2026-06-11:** Table ([Table.vue](../../lib/table/Table.vue) — resize-handle `pe-2` + `rtl:`-override inset + dir-aware `resizeColumn` width-math; group-label `start-*`/`ps-*`) ✅ [table.md Issue 11](./table.md). Движок поддерживает `rtl:`/`ltr:` + логические `start`/`end`/`pe`/`ps` — pattern готов к применению на остальных компонентах.
-- [ ] [Button.d.ts](../../lib/button/Button.d.ts) — `iconPosition: "start" | "end"` (deprecation `"left"|"right"`) · [button.md Issue 3](./button.md)
+- [x] [Button.d.ts](../../lib/button/Button.d.ts) — `iconPosition: "start" | "end"` (deprecation `"left"|"right"`) · [button.md Issue 3](./button.md) · RTL делегирован `inline-flex` main-axis (без отдельного CSS) · ✅ resolved 2026-06-07
 - [ ] [Separator.d.ts](../../lib/separator/Separator.d.ts) — `contentPosition: "start" | "end"` · [separator.md Issue 3](./separator.md)
 - [ ] Auto-detect `<html dir="rtl">` через `useDirectionality()` composable + соответствующий API в Locale (Issue 4 в [locale.md](./locale.md))
 - [ ] Тесты с `dir="rtl"` для каждого компонента (snapshot-based).
@@ -473,7 +473,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 - [ ] **Codemods для breaking changes:**
   - [ ] `Aria` → `Textarea` (rename + import-update) · [aria.md Issue 6](./aria.md)
-  - [ ] `iconPosition: "left"|"right"` → `"start"|"end"` · [button.md Issue 3](./button.md)
+  - [ ] `iconPosition: "left"|"right"` → `"start"|"end"` · [button.md Issue 3](./button.md) (codemod still TODO; soft deprecation already landed)
   - [ ] `stileIcon` → `variant` · [icons.md Issue 4](./icons.md)
   - [ ] `delete` emit → `close` for Badge · [badge.md Issue 5](./badge.md) (codemod still TODO; soft deprecation already landed)
   - [ ] `change:modelValue` type для Aria/TextEditor · [aria.md Issue 1](./aria.md)
