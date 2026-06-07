@@ -1,7 +1,7 @@
 ---
 title: Issues — Button
-summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, RTL, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12) — зачёркнуты ниже с `✅ resolved`-маркерами.
-updated: 2026-05-11
+summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, RTL, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07 (cross-cutting): SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 частично (ESM-only ратифицирован `engines`, root exports map отложен на build-verified заход). Зачёркнуты ниже с `✅ resolved`-маркерами.
+updated: 2026-06-07
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/button/
 related-doc: ../components/button.md
@@ -16,17 +16,19 @@ related-doc: ../components/button.md
 | Severity | Count | Categories                       |
 | -------- | ----- | -------------------------------- |
 | critical | 0     | —                                |
-| high     | 6     | A2, A4, A5, C17, E29.1, L53      |
+| high     | 4     | ~~A2~~ ✅, A4, A5, ~~C17~~ ✅, E29.1, L53 |
 | medium   | 6     | F31, G34, G36, I44, I45, N59     |
 | low      | 4     | B11, D26, E29.7, G37             |
 
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots) — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
-## Issue 1: Стили инжектятся только после client mount — пустой first paint при SSR
+## ~~Issue 1: Стили инжектятся только после client mount — пустой first paint при SSR~~ ✅ resolved 2026-06-07
 
 - **Категория:** C17 (`<style>` в `<head>` SSR)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [Button.vue:346-348](../../lib/button/Button.vue#L346-L348)
+
+> **Resolution (2026-06-07, cross-cutting).** Текст аудита устарел: канон давно перешёл с `onMounted(() => X.initStyle())` в SFC на базовый класс. `Component.__hooks()` ([component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) регистрирует **`onServerPrefetch(() => initStyle())`** (server) **и** `vueOnMounted(() => initStyle())` (client). `__setStyle()` пишет CSS в `cssComponents` Map БЕЗ guard `isClient()` ([component/index.ts:179](../../lib/component/index.ts#L179)) — client-gated только сам `useStyle()`-DOM-append. Nuxt server plugin ([plugins/nuxt.ts](../../lib/plugins/nuxt.ts)) на хуке `app:rendered` сливает `cssComponents` в `ssrContext.head` → критический CSS в SSR-HTML до hydration, без flash-of-unstyled-content. Это поведение общее для ВСЕХ 22 компонентов (не только Button). Регрессионный тест [lib/component/ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts): `renderToString` НЕ вызывает `onMounted`, поэтому заполнение `cssComponents` после server-render доказывает, что сработал именно `onServerPrefetch`-путь; ловит регрессию, если кто-то обернёт `cssComponents.set` в `isClient()` или снимет `onServerPrefetch`.
 
 ### Что найдено
 
@@ -260,11 +262,13 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - [ ] Сборка sandbox с одной `<Icons type="check" />` — bundle содержит только `CheckIcon`, не весь heroicons map.
 - [ ] Iconify по-прежнему lazy.
 
-## Issue 8: Нет `sideEffects` в корневом lib/package.json — cross-cutting
+## ~~Issue 8: Нет `sideEffects` в корневом lib/package.json — cross-cutting~~ ✅ resolved 2026-06-07
 
 - **Категория:** A2 (sideEffects разметка)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [lib/package.json:1-58](../../lib/package.json), [lib/button/package.json:1-5](../../lib/button/package.json)
+
+> **Resolution (2026-06-07, cross-cutting).** `"sideEffects": false` добавлен в корневой [lib/package.json](../../lib/package.json) (пробрасывается в `dist/package.json` через `addPackageJson()`). Выбран `false`, а не `["**/*.css","**/*.vue"]`: в опубликованном пакете нет `.vue`/`.css` (SFC скомпилированы в `.mjs`, CSS инжектится в рантайме через lifecycle — `onServerPrefetch`/`onMounted`, не на import-time), поэтому модули чисты на import и `false` безопасен. Дополнительно `copyDependencies()` ([rollup.config.js](../../lib/rollup.config.js)) инъектит `sideEffects:false` в КАЖДЫЙ под-пакет `dist/{name}/package.json` — это включает tree-shaking точечных импортов `fishtvue/{name}` (раньше per-component флаги ставились вручную; теперь единообразно на build-step). Проверено в `dist/button/package.json`. Контракт root-флага зафиксирован [lib/package.test.ts](../../lib/package.test.ts).
 
 ### Что найдено
 
@@ -283,11 +287,15 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - [ ] `sideEffects` явно определён в `lib/package.json`.
 - [ ] (Опционально) то же — для каждого `lib/{component}/package.json`.
 
-## Issue 9: ESM-only — нет CJS, нет exports map
+## Issue 9: ESM-only — нет CJS, нет exports map — частично resolved 2026-06-07
 
 - **Категория:** A4 (ESM/CJS dual-package), A5 (exports map)
 - **Severity:** high
 - **Где:** [lib/package.json:17-18](../../lib/package.json#L17-L18), [lib/button/package.json](../../lib/button/package.json), [lib/rollup.config.js:374-390](../../lib/rollup.config.js#L374-L390)
+
+> **Resolution (2026-06-07, partial).**
+> - **ESM-only ратифицирован ✅** — добавлен `"engines": { "node": ">=18" }` в [lib/package.json](../../lib/package.json); принято осознанное решение оставаться ESM-only (`.mjs`), `get_CJS_ESM()` остаётся выключенным. CJS-сборку НЕ включаем: аудитория — bundler-based Vue/Nuxt-приложения, для которых ESM нативен.
+> - **`exports` map (A5) ❌ отложено** — корректная карта требует перечислить все friendly-subpaths (`fishtvue/button` → `./button/button.mjs` — folder-main резолв через nested `package.json` ОТКЛЮЧАЕТСЯ при появлении root `exports`) И все self-referential внутренние `fishtvue/X/Y.mjs` импорты собранного кода (иначе пакет падает в рантайме). Раскладка нерегулярна (`module/index.mjs`, `plugins/nuxt.mjs`, `theme/themes/*`). Безопасный дизайн (явные entry points + catch-all `"./*"` / wildcard-reuse `"./*": "./*/*.mjs"`) требует build + `npm pack` + smoke-test реального `npm install` на Node `node16`/`bundler` resolver'ах. Сделать отдельным build-verified заходом (Wave 2.1).
 
 ### Что найдено
 

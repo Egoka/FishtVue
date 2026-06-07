@@ -1,7 +1,7 @@
 ---
 title: Installation
-summary: Установка fishtvue в Vite (Vue 3) и Nuxt 3/4 проектах.
-updated: 2026-05-09
+summary: Установка fishtvue в Vite (Vue 3) и Nuxt 3/4 проектах. §2.5 — publish contract (ESM-only, sideEffects, files-whitelist, sourcemaps).
+updated: 2026-06-07
 stability: stable
 since: 0.2.11
 ---
@@ -47,6 +47,17 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 
 **Peer dependencies (optional)** ([lib/package.json:30–43](../lib/package.json#L30-L43)):
 `@nuxt/kit ^4.1.2`, `@nuxt/schema ^4.1.2`, `nuxt >=3.0.0`. В Vite-проекте предупреждения о peer-deps игнорируются.
+
+### 2.5. Publish contract — что попадает в npm-пакет
+
+Пакет публикуется НЕ из `lib/`, а из собранного `dist/`: `@semantic-release/npm` берёт `pkgRoot: "dist"` ([release.config.cjs](../release.config.cjs)), а `dist/package.json` генерируется из [lib/package.json](../lib/package.json) функцией `addPackageJson()` ([rollup.config.js](../lib/rollup.config.js)) — она удаляет только поле `type`. Поэтому всё, что добавлено в `lib/package.json`, попадает в опубликованный манифест.
+
+- **ESM-only.** Пакет поставляется как `.mjs` (`main: ./index.mjs`). CJS-сборки нет (`get_CJS_ESM()` в rollup выключен сознательно). Декларирован `"engines": { "node": ">=18" }`. Аудитория — bundler-based Vue/Nuxt-приложения, где ESM нативен.
+- **Tree-shaking.** `"sideEffects": false` — на root И в каждом под-пакете `dist/{name}/package.json` (инъектится `copyDependencies()` на build-step). CSS инжектится в рантайме через lifecycle (`onServerPrefetch`/`onMounted`), не на import-time, поэтому модули чисты и неиспользуемые компоненты вырезаются.
+- **`files`-whitelist** контролирует содержимое tarball: `**/*.mjs`, `**/*.map`, `**/*.d.ts`, `**/package.json`, `README.md`, `LICENSE.md`, `CHANGELOG.md`. Это (1) **гарантирует публикацию sourcemaps** (`.mjs.map`, 1:1 к `.mjs`) и (2) **отсекает** тестовые/исходные артефакты — `copyDependencies()` дополнительно пропускает `*.test.*`. Контроль: `pnpm pack` (`cd dist && npm pack`).
+- **Контракт зафиксирован тестом** [lib/package.test.ts](../lib/package.test.ts) (`sideEffects`, `files` с `**/*.map`, `engines.node`, ESM entry points) — ломается при регрессии манифеста.
+
+> **Не покрыто (отложено, Wave 2.1):** root `exports` map с условиями `types`/`import`. Сейчас subpath-резолв `fishtvue/{name}` опирается на nested `package.json` (`main`/`module`/`types`), что работает у bundler-потребителей; добавление root `exports` отключит этот путь и требует enumerate всех subpath + self-referential `.mjs` с build-verified smoke-test. См. [issues/button.md Issue 9](./issues/button.md).
 
 ## 3. How it works
 
@@ -276,7 +287,7 @@ export default defineNuxtConfig({
 
 - **Vue:** `^3.5.11` (зафиксирована как dependency, но фактически peer-зависимость от Vue приложения).
 - **Nuxt:** `>=3.0.0` (включая Nuxt 4).
-- **Node:** актуальные LTS (18+, 20+).
+- **Node:** `>=18` (декларирован в `engines`, [lib/package.json](../lib/package.json)). Пакет **ESM-only** (`.mjs`) — для чистых CJS-проектов нужен bundler/ESM-loader. Публикуемый контракт (sideEffects, files-whitelist, sourcemaps) — см. §2.5.
 - **Браузеры:** evergreen (Chrome, Firefox, Safari, Edge — последние 2 версии). IE не поддерживается.
 - **Stability flag:** `stable`.
 - **Breaking changes:** см. [CHANGELOG.md](../CHANGELOG.md).

@@ -1,6 +1,6 @@
 ---
 title: Issues — Table
-summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%). Остаются: compound API, packaging/SSR, RTL.
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Остаются: compound API (Issue 3), root exports map (Issue 5c / A4-5), RTL/floating.
 updated: 2026-06-07
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
@@ -14,11 +14,11 @@ related-doc: ../components/table.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅ |
-| high | 5 | A2, A4-5, C17, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, P (dual-API), ~~J47~~ ✅, K51 |
-| medium | 3 | ~~E29.1~~ ✅, ~~E29.5~~ ✅, F31, G34, H39 |
+| high | 2 | ~~A2~~ ✅, A4-5, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, P (dual-API), ~~J47~~ ✅, ~~K51~~ ✅ |
+| medium | 3 | ~~E29.1~~ ✅, ~~E29.5~~ ✅, F31, G34, H39, ~~K52~~ ✅ |
 | low | 4 | E29.7, B10, N59, D26 |
 
-> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization) **и Issue 7** (branch coverage 67.74% → 80.01%). Остаются active: 3 (compound API), 5/13/14 (packaging/SSR), 10/11/12 (floating/RTL/motion).
+> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization), **Issue 7** (branch coverage 67.74% → 80.01%) **и packaging/SSR bundle (5 partial / 13 / 14)**: SSR-стили (C17) подтверждены работающими через `onServerPrefetch` + регрессионный тест; `sideEffects:false` (A2) на root + per-component; `files`-whitelist шлёт sourcemaps (K51) и отсекает junk (K52); ESM-only ратифицирован (`engines.node >=18`). Остаются active: 3 (compound API), **5c — root `exports` map (A4-5), отложен на build-verified заход**, 10/11/12 (floating/RTL/motion).
 
 ## ~~Issue 1: CRITICAL — XSS через 5 сайтов `v-html`~~ ✅ resolved 2026-06-07
 
@@ -247,11 +247,17 @@ API только schema-driven:
 - [ ] 10000 rows initial render <100ms.
 - [ ] Scroll 60fps in Chrome DevTools.
 
-## Issue 5: SSR styles + cross-cutting
+## Issue 5: SSR styles + cross-cutting — частично resolved 2026-06-07
 
 - **Категория:** C17, A2, A4, A5
 
 См. [button.md Issue 1, 8, 9](./button.md).
+
+> **Resolution (2026-06-07, partial).**
+> - **C17 (SSR-стили) ✅** — оказалось уже реализовано на уровне базового класса: `Component.__hooks()` ([component/index.ts:81](../../lib/component/index.ts#L81)) регистрирует `onServerPrefetch(() => initStyle())`, а `__setStyle()` пишет в `cssComponents` Map БЕЗ guard `isClient()` ([component/index.ts:179](../../lib/component/index.ts#L179)) — client-gated только `useStyle()`. Nuxt server plugin ([plugins/nuxt.ts](../../lib/plugins/nuxt.ts)) сливает `cssComponents` в `ssrContext.head` на `app:rendered`. Значит, критический CSS попадает в SSR-HTML до hydration (нет flash-of-unstyled-content). Текст аудита (ссылавшийся на `onMounted` в SFC) устарел — канон давно перешёл на `onServerPrefetch`. Добавлен регрессионный тест [ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts) (`renderToString` не вызывает `onMounted` → заполнение `cssComponents` доказывает работу `onServerPrefetch`-пути).
+> - **A2 (sideEffects) ✅** — `"sideEffects": false` в [lib/package.json](../../lib/package.json) (root, проброс в `dist/package.json` через `addPackageJson()`) + инъекция `sideEffects:false` в каждый под-пакет через `copyDependencies()` ([rollup.config.js](../../lib/rollup.config.js)) для tree-shaking точечных импортов `fishtvue/{name}`.
+> - **A4 (ESM-only) ✅ ратифицирован** — добавлен `"engines": { "node": ">=18" }`; пакет остаётся ESM-only (`.mjs`), CJS-сборка не включается.
+> - **A4-5 (root `exports` map) ❌ отложено** — Issue 5c. Корректная карта для нерегулярной dist-раскладки (`module/index`, `plugins/nuxt`, self-referential `fishtvue/X/Y.mjs` импорты) требует build + `npm pack` + smoke-test реального `npm install` на нескольких resolver'ах; неверная карта ломает резолв у ВСЕХ потребителей. Сделать отдельным build-verified заходом. См. [button.md Issue 9](./button.md).
 
 ## ~~Issue 6: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-06-07
 
@@ -335,11 +341,13 @@ Filter UI и cell-editor popovers — потенциально через FixWin
 
 Cross-cutting. См. [button.md](./button.md).
 
-## Issue 13: Источник sourcemaps при опубликованном пакете
+## ~~Issue 13: Источник sourcemaps при опубликованном пакете~~ ✅ resolved 2026-06-07
 
 - **Категория:** K51 (source maps)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [lib/rollup.config.js:365](../../lib/rollup.config.js#L365)
+
+> **Resolution (2026-06-07).** В [lib/package.json](../../lib/package.json) добавлен `files`-whitelist, включающий `**/*.map` — он пробрасывается в `dist/package.json` через `addPackageJson()` и применяется относительно `dist/` при публикации (`@semantic-release/npm` → `pkgRoot: "dist"`). Проверено `npm pack --dry-run` из `dist/`: **174 `.mjs` + 174 парных `.mjs.map`** (1:1), sourcemaps теперь гарантированно в tarball. Контракт зафиксирован тестом [lib/package.test.ts](../../lib/package.test.ts) (`files` обязан содержать `**/*.map`).
 
 ### Что найдено
 
@@ -358,11 +366,13 @@ Sourcemaps генерируются ✅. Но `addPackageJson()` ([rollup.config
 2. Проверить `npm pack` → tarball содержит `.map` файлы.
 3. Документировать в `02-installation.md`.
 
-## Issue 14: Лишние файлы в опубликованном пакете
+## ~~Issue 14: Лишние файлы в опубликованном пакете~~ ✅ resolved 2026-06-07
 
 - **Категория:** K52
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 - **Где:** [lib/rollup.config.js:528](../../lib/rollup.config.js#L528) (copyDependencies)
+
+> **Resolution (2026-06-07).** Двойная защита: (1) `files`-whitelist в [lib/package.json](../../lib/package.json) перечисляет только дистрибутивные паттерны (`**/*.mjs`, `**/*.map`, `**/*.d.ts`, `**/package.json`, README/LICENSE/CHANGELOG) — всё остальное в tarball не попадает; (2) `copyDependencies()` ([rollup.config.js](../../lib/rollup.config.js)) теперь пропускает любые `*.test.*` артефакты (`if (file.includes(".test.")) return`). Проверено `npm pack --dry-run`: **0** файлов `*.test.*`, **0** не-`.d.ts` `.ts`, **0** `.vue`, **0** sandbox/docs; tarball = 427 файлов / 2.14 MB.
 
 ### Что найдено
 

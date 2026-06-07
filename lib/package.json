@@ -16,6 +16,19 @@
   },
   "main": "./index.mjs",
   "types": "./index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "**/*.mjs",
+    "**/*.map",
+    "**/*.d.ts",
+    "**/package.json",
+    "README.md",
+    "LICENSE.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "keywords": [
     "fishtvue",
     "vue",
