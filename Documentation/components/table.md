@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Table` — самый объёмный компонент библиотеки (~1900 LOC SFC + 1471 LOC `.d.ts`). Поддерживает: sort, filter, search, grouping, summary rows, inline edit (Input/Select/Calendar editors), 4 режима асинхронной загрузки данных (`true`-flag, URL string, config object, custom function), column resizing, кастомные cell templates, dynamic slots по `dataField`.
 
-Stability: `stable` — 91 кейс (66 базовых + 18 audit: XSS/cleanup/a11y/unstyled + 7 virtualization). Тесты покрывают core flow + security/a11y/virtualization; edge cases в edit/group remain.
+Stability: `stable` — 110 кейсов (66 базовых + 18 audit + 7 virtualization + 19 coverage). Branch coverage `Table.vue` 80.01% / statements 92.57%. Тесты покрывают core flow + security/a11y/virtualization/edit-cells/asyncData.
 
 Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.d.ts), [Table.test.ts](../../lib/table/Table.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.
 lib/table/
 ├── Table.vue            # SFC ~1900 строк
 ├── Table.d.ts           # 1471 строка
-├── Table.test.ts        # 91 кейс
+├── Table.test.ts        # 110 кейсов
 └── package.json
 ```
 
@@ -331,7 +331,7 @@ describe("Table", () => {
 })
 ```
 
-Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (91 кейс).
+Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (110 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
@@ -359,7 +359,7 @@ describe("Table", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage: большая часть веток покрыта; edge cases в edit/group/asyncData режимах ([Table.vue](../../lib/table/Table.vue)) покрыты частично (см. [issues/table.md Issue 7](../issues/table.md)). Cell-render, empty-state, caption, aria-live и cleanup-ветви покрыты в рамках audit-фикса 2026-06-07.
+- Coverage: branch 80.01% / statements 92.57% ([Table.vue](../../lib/table/Table.vue)), цель >80% достигнута (см. [issues/table.md Issue 7 ✅](../issues/table.md)). Покрыты edit-cell editors, asyncData (4 режима), masks, summary/filter type-branches, loading-timeout, virtualization, security/a11y.
 - `IColumnPrivate.isEdit: boolean` ([Table.d.ts:393](../../lib/table/Table.d.ts#L393)) — внутренний флаг, expose'ится через TableExpose.
 - Virtualization (§10.5) — v1: только flat client-side (не grouping), **fixed** `rowHeight` (multi-line ячейки клипаются), edit-mode в окне работает, но не оптимизирован. Dynamic-height и virtual+grouping — отдельным заходом.
 

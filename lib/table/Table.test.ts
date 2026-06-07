@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import FishtVue from "fishtvue/config"
 import { addDays, format } from "date-fns"
 import * as functionHandler from "fishtvue/utils/functionHandler"
+import { convertToPhone, convertToNumber } from "fishtvue/utils/numberHandler"
 import Table from "fishtvue/table/Table.vue"
 import { TableOption, TableProps } from "fishtvue/table/Table"
 import { nextTick } from "vue"
@@ -1463,6 +1464,433 @@ describe("Table Component", () => {
       const removeSpy = vi.spyOn(el, "removeEventListener")
       wrapper.unmount()
       expect(removeSpy).toHaveBeenCalledWith("scroll", expect.any(Function))
+    })
+  })
+  describe("Table Component - Coverage (Issue 7)", () => {
+    const fruits = [
+      { name: "orange", color: "orange", shape: "round" },
+      { name: "banana", color: "yellow", shape: "long" },
+      { name: "grape", color: "purple", shape: "round" }
+    ]
+
+    describe("edit-cell editors", () => {
+      it("opens Input editor, saves via change:model-value, emits before/after-edit-cell", async () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            edit: true,
+            columns: [{ dataField: "name", type: "string", edit: true }]
+          } as TableProps
+        })
+        await wrapper.findAll("[data-table-tbody-td]")[0].trigger("click")
+        await nextTick()
+        const input = wrapper.findComponent({ name: "Input" })
+        expect(input.exists()).toBe(true)
+        input.vm.$emit("change:model-value", "kiwi")
+        await nextTick()
+        expect(wrapper.emitted("before-edit-cell")).toBeTruthy()
+        expect(wrapper.emitted("after-edit-cell")).toBeTruthy()
+        expect((wrapper.vm as any).allData[0].name).toBe("kiwi")
+      })
+
+      it("cancels the editor on is-active=false (clearEditableCell)", async () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            edit: true,
+            columns: [{ dataField: "name", type: "string", edit: true }]
+          } as TableProps
+        })
+        await wrapper.findAll("[data-table-tbody-td]")[0].trigger("click")
+        await nextTick()
+        wrapper.findComponent({ name: "Input" }).vm.$emit("is-active", false)
+        await nextTick()
+        expect((wrapper.vm as any).editableCell).toBeNull()
+      })
+
+      it("renders Select and Calendar editors for select/date columns", async () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ role: "admin", born: new Date("2020-01-01") }],
+            edit: true,
+            columns: [
+              { dataField: "role", type: "select", edit: true },
+              { dataField: "born", type: "date", edit: true }
+            ]
+          } as TableProps
+        })
+        const cells = wrapper.findAll("[data-table-tbody-td]")
+        await cells[0].trigger("click")
+        await nextTick()
+        const selectEditor = wrapper.findComponent({ name: "Select" })
+        expect(selectEditor.exists()).toBe(true)
+        // fire editor handlers: @update:model-value → updateCell, @is-active(false) → clearEditableCell
+        selectEditor.vm.$emit("update:model-value", "user")
+        selectEditor.vm.$emit("is-active", false)
+        await nextTick()
+        expect((wrapper.vm as any).allData[0].role).toBe("user")
+
+        await cells[1].trigger("click")
+        await nextTick()
+        const calendarEditor = wrapper.findComponent({ name: "Calendar" })
+        expect(calendarEditor.exists()).toBe(true)
+        calendarEditor.vm.$emit("update:model-value", new Date("2021-02-02"))
+        calendarEditor.vm.$emit("is-active", false)
+        await nextTick()
+        expect((wrapper.vm as any).editableCell).toBeNull()
+      })
+    })
+
+    describe("setCell masks + setCellValue", () => {
+      it("applies phone/number/price masks and setCellValue callback", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ phone: "1234567890", num: 1234567, price: 1234567, custom: "v" }],
+            columns: [
+              { dataField: "phone", type: "string", mask: "phone" },
+              { dataField: "num", type: "number", mask: "number" },
+              { dataField: "price", type: "number", mask: "price" },
+              { dataField: "custom", setCellValue: (_c: any, v: any) => `X:${v}` }
+            ]
+          } as TableProps
+        })
+        const cells = wrapper.findAll("[data-table-tbody-td]")
+        expect(cells[0].text()).toBe(convertToPhone("1234567890"))
+        expect(cells[1].text()).toBe(convertToNumber(1234567, 20, 0, ""))
+        expect(cells[2].text()).toBe(convertToNumber(1234567, 20, 0, " "))
+        expect(cells[3].text()).toBe("X:v")
+      })
+    })
+
+    describe("isEqualsValue select / date filtering", () => {
+      it("filters a select column by array value", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: { dataSource: fruits, columns: [{ dataField: "color", type: "select" }] } as TableProps
+        })
+        ;(wrapper.vm as any).filtering("color", ["orange"])
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect((wrapper.vm as any).dataSource.length).toBe(1)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("filters a date column by Date and by range", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ d: new Date("2023-10-13") }, { d: new Date("2023-11-20") }],
+            columns: [{ dataField: "d", type: "date" }]
+          } as TableProps
+        })
+        ;(wrapper.vm as any).filtering("d", new Date("2023-10-13"))
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect((wrapper.vm as any).dataSource.length).toBe(1)
+        ;(wrapper.vm as any).filtering("d", { start: new Date("2023-10-01"), end: new Date("2023-12-31") })
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect((wrapper.vm as any).dataSource.length).toBe(2)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("setSummary string / date branches", () => {
+      it("computes min/max/avg for string and min for date", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [
+              { t1: "aa", t2: "aa", t3: "aa", d: new Date("2023-01-01") },
+              { t1: "bbbb", t2: "bbbb", t3: "bbbb", d: new Date("2023-12-31") }
+            ],
+            columns: [
+              { dataField: "t1", type: "string" },
+              { dataField: "t2", type: "string" },
+              { dataField: "t3", type: "string" },
+              { dataField: "d", type: "date" }
+            ],
+            summary: [
+              { dataField: "t1", type: "min", displayFormat: "min:{0}" },
+              { dataField: "t2", type: "max", displayFormat: "max:{0}" },
+              { dataField: "t3", type: "avg", displayFormat: "avg:{0}" },
+              { dataField: "d", type: "min", displayFormat: "dmin:{0}" }
+            ]
+          } as TableProps
+        })
+        const sums = wrapper.findAll("[data-table-tfoot-th]")
+        expect(sums.length).toBe(4)
+        expect(sums[0].text()).toBe("min:aa") // min by length
+        expect(sums[1].text()).toBe("max:bbbb") // max by length
+        expect(sums[2].text()).toContain("avg:") // round(mean length)
+        expect(sums[3].text()).toContain("dmin:")
+      })
+    })
+
+    describe("loading-timeout (lengthData > countDataOnLoading)", () => {
+      it("toggles loading on sort / filter / search", () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            countDataOnLoading: 2,
+            columns: [{ dataField: "name", type: "string" }]
+          } as TableProps
+        })
+        const vm = wrapper.vm as any
+        for (const run of [() => vm.searching("a"), () => vm.sorting("name"), () => vm.filtering("name", "a")]) {
+          run()
+          expect(vm.isLoading).toBe(true)
+          vi.advanceTimersByTime(850)
+          expect(vm.isLoading).toBe(false)
+        }
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("clearFilter + column.onClick", () => {
+      it("clearFilter resets query and emits clear-filter", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            filter: { isClearAllFilter: true },
+            columns: [{ dataField: "name", type: "string" }]
+          } as TableProps
+        })
+        const vm = wrapper.vm as any
+        vm.searching("or")
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        vm.clearFilter()
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect(wrapper.emitted("clear-filter")).toBeTruthy()
+        expect(vm.queryTable).toBe("")
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("invokes column.onClick on cell click", async () => {
+        const onClick = vi.fn()
+        const wrapper = mount(Table, {
+          props: { dataSource: fruits, columns: [{ dataField: "name", onClick }] } as TableProps
+        })
+        await wrapper.findAll("[data-table-tbody-td]")[0].trigger("click")
+        expect(onClick).toHaveBeenCalled()
+        expect(onClick.mock.calls[0][2]).toBe(0) // indexRow
+      })
+    })
+
+    describe("configuration & style variants", () => {
+      it("resolves object-form configs (toolbar/sort/filter/grouping/pagination) in filled mode", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            mode: "filled",
+            toolbar: { visible: true, search: true },
+            sort: { visible: true, icon: "Bars" },
+            filter: { visible: true, isClearAllFilter: true },
+            grouping: { groupField: "color", visible: true },
+            pagination: {
+              visible: true,
+              sizePage: 2,
+              sizesSelector: [2, 5],
+              isInfoText: true,
+              isPageSizeSelector: true
+            },
+            search: true,
+            columns: [{ dataField: "name", isSort: true, isFilter: true }, { dataField: "color" }]
+          } as TableProps
+        })
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        expect(wrapper.vm.isGroup).toBe(true)
+        expect(wrapper.vm.isSort).toBe(true)
+        expect(wrapper.vm.isFilter).toBe(true)
+        expect(wrapper.vm.isPagination).toBe(true)
+        expect(wrapper.vm.isVisibleToolbar).toBe(true)
+        expect(wrapper.find("[data-table-thead]").exists()).toBe(true)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("applies a full styles object (filled, striped, lines, borders, dimensions)", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            mode: "filled",
+            styles: {
+              activeRow: true,
+              hoverRows: true,
+              isStripedRows: true,
+              width: 320,
+              height: 400,
+              borderRadiusPx: 10,
+              verticalLines: true,
+              horizontalLines: false,
+              filterLines: true,
+              heightCell: 30,
+              border: { default: "border-x", table: "border-y", head: "border-t", cell: "border-b" }
+            },
+            columns: [{ dataField: "name", isFilter: true, isSort: true }, { dataField: "color" }]
+          } as TableProps
+        })
+        vi.advanceTimersByTime(550)
+        await nextTick()
+        expect(wrapper.find("[data-table-component]").exists()).toBe(true)
+        expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(3)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("applies striping per mode (underlined / outlined)", () => {
+        for (const mode of ["underlined", "outlined"] as const) {
+          const wrapper = mount(Table, {
+            props: {
+              dataSource: fruits,
+              mode,
+              styles: { isStripedRows: true },
+              columns: [{ dataField: "name" }]
+            } as TableProps
+          })
+          expect(wrapper.vm.mode).toBe(mode)
+          expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(3)
+        }
+      })
+
+      it("renders date and select typed cells + filter editors", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ when: new Date("2023-05-01"), role: "admin" }],
+            columns: [
+              { dataField: "when", type: "date", isFilter: true },
+              { dataField: "role", type: "select", isFilter: true }
+            ]
+          } as TableProps
+        })
+        // date/select cells render (setCell date→formatDate, select→toMask)
+        expect(wrapper.findAll("[data-table-tbody-td]").length).toBe(2)
+        // filter editors: Calendar (date) + Select (select) in the header
+        expect(wrapper.findComponent({ name: "Calendar" }).exists()).toBe(true)
+        expect(wrapper.findComponent({ name: "Select" }).exists()).toBe(true)
+      })
+
+      it("marks the clicked row active (classTr active branch)", async () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: fruits, styles: { activeRow: true }, columns: [{ dataField: "name" }] } as TableProps
+        })
+        const row = wrapper.findAll("[data-table-tbody-tr]")[1]
+        await row.trigger("click")
+        await nextTick()
+        expect(wrapper.vm.activeRow).toContain("-1")
+      })
+
+      it("covers loading ternary branches (empty/null query, sort toggle, filter null/empty)", () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            countDataOnLoading: 2,
+            columns: [{ dataField: "name", type: "string" }]
+          } as TableProps
+        })
+        const vm = wrapper.vm as any
+        for (const run of [
+          () => vm.searching(""),
+          () => vm.searching(null),
+          () => vm.sorting("name", "asc"),
+          () => vm.sorting("name"),
+          () => vm.filtering("name", null),
+          () => vm.filtering("name", "")
+        ]) {
+          run()
+          vi.advanceTimersByTime(850)
+        }
+        expect(vm.isLoading).toBe(false)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("isEqualsValue number + select-string, and renders a null cell", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [
+              { n: 5, c: "a", x: null },
+              { n: 6, c: "ab", x: "y" }
+            ],
+            columns: [
+              { dataField: "n", type: "number" },
+              { dataField: "c", type: "select" },
+              { dataField: "x", type: "string" }
+            ]
+          } as TableProps
+        })
+        const vm = wrapper.vm as any
+        vm.filtering("n", "5") // number branch (=== Number(value))
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect(vm.dataSource.length).toBe(1)
+        vm.filtering("n", null)
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        vm.filtering("c", "ab") // select non-array → String.includes
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect(vm.dataSource.length).toBe(1)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("setSummary count(select) / sum(number) / max(date)", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [
+              { a: "x", n: 10, d: new Date("2023-01-01") },
+              { a: "y", n: 20, d: new Date("2023-06-01") }
+            ],
+            columns: [
+              { dataField: "a", type: "select" },
+              { dataField: "n", type: "number" },
+              { dataField: "d", type: "date" }
+            ],
+            summary: [
+              { dataField: "a", type: "count", displayFormat: "c:{0}" },
+              { dataField: "n", type: "sum", displayFormat: "s:{0}" },
+              { dataField: "d", type: "max", displayFormat: "mx:{0}" }
+            ]
+          } as TableProps
+        })
+        const sums = wrapper.findAll("[data-table-tfoot-th]")
+        expect(sums.length).toBe(3)
+        expect(sums[0].text()).toBe("c:2")
+        expect(sums[1].text()).toBe("s:30")
+        expect(sums[2].text()).toContain("mx:")
+      })
+
+      it("resolves string-form styles (border/activeRow/hoverRows) + string width/height", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            styles: {
+              border: "border-red-500",
+              activeRow: "bg-active",
+              hoverRows: "hover:bg-hover",
+              width: "50%",
+              height: "10rem"
+            },
+            columns: [{ dataField: "name" }]
+          } as TableProps
+        })
+        expect(wrapper.find("[data-table-component]").exists()).toBe(true)
+        expect(wrapper.vm.styles.width).toBe("50%")
+        expect(wrapper.vm.styles.height).toBe("10rem")
+      })
     })
   })
   describe("Table Component - asyncData Feature", () => {

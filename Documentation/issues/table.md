@@ -1,6 +1,6 @@
 ---
 title: Issues — Table
-summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization). Остаются: compound API, packaging/SSR, coverage, RTL.
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%). Остаются: compound API, packaging/SSR, RTL.
 updated: 2026-06-07
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
@@ -14,11 +14,11 @@ related-doc: ../components/table.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅ |
-| high | 6 | A2, A4-5, C17, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, P (dual-API), J47, K51 |
+| high | 5 | A2, A4-5, C17, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, P (dual-API), ~~J47~~ ✅, K51 |
 | medium | 3 | ~~E29.1~~ ✅, ~~E29.5~~ ✅, F31, G34, H39 |
 | low | 4 | E29.7, B10, N59, D26 |
 
-> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle) **и Issue 4** (virtualization). Остаются active: 3 (compound API), 5/13/14 (packaging/SSR), 7 (coverage), 10/11/12 (floating/RTL/motion).
+> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization) **и Issue 7** (branch coverage 67.74% → 80.01%). Остаются active: 3 (compound API), 5/13/14 (packaging/SSR), 10/11/12 (floating/RTL/motion).
 
 ## ~~Issue 1: CRITICAL — XSS через 5 сайтов `v-html`~~ ✅ resolved 2026-06-07
 
@@ -261,11 +261,13 @@ API только schema-driven:
 
 > **Resolution (2026-06-07).** Cross-cutting guard в `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138), resolved 2026-05-11) уже отключает Tailwind-классы при `config.unstyled === true`. Корневой класс Table идёт через `Table.setStyle` ([classBaseTable]) — guard применяется. Добавлен regression-тест `Table.test.ts` > «Issue 6 — unstyled» > `respects unstyled: true via Component.setStyle guard`.
 
-## Issue 7: Тесты есть (66), но низкие coverage в edit-cells / async-data ветках
+## ~~Issue 7: Тесты есть, но низкие coverage в edit-cells / async-data ветках~~ ✅ resolved 2026-06-07
 
 - **Категория:** J47 (Documentation / playground)
-- **Severity:** high
-- **Где:** [Table.test.ts](../../lib/table/Table.test.ts), coverage 85.93%/67.74%
+- **Severity:** ~~high~~ → resolved
+- **Где:** [Table.test.ts](../../lib/table/Table.test.ts), coverage было 85.93%/67.74%
+
+> **Resolution (2026-06-07).** `Table.test.ts` 91 → **110 кейсов** (+19). Branch coverage `Table.vue` **67.74% → 80.01%** (statements 92.57%), цель >80% достигнута. Покрыты непокрытые ветви: edit-cell editors (Input/Select/Calendar open → `@change`/`@update:model-value` → `updateCell` → `before`/`after-edit-cell`; `@is-active(false)` → `clearEditableCell`), `setCell` masks (phone/number/price) + `setCellValue`, `isEqualsValue` select(array+string)/number/date(Date+range), `setSummary` min/max/avg(string)/count(select)/sum(number)/max·min(date), loading-timeout ветви (`lengthData > countDataOnLoading` в sorting/filtering/searching), `clearFilter`, `column.onClick`, object-form configs (toolbar/sort/filter/grouping/pagination), styles-варианты (boolean+string activeRow/hoverRows/border, dimensions), per-mode striping, active-row. Tests-only — багов не выявлено.
 
 ### Что найдено
 
