@@ -1,6 +1,6 @@
 ---
 title: Issues — Table
-summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Issue 3 (compound `<Column>`/`<ColumnGroup>` + Pagination/Loading overrides) закрыт 2026-06-07. Остаются: root exports map (Issue 5c / A4-5), RTL/floating.
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Issue 3 (compound `<Column>`/`<ColumnGroup>` + Pagination/Loading overrides) закрыт 2026-06-07. 2026-06-11 закрыты Issue 10 (filter popovers via FixWindow scrollableEl), 11 (RTL — dir-aware resize + logical props), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map + Menu publish-gap fix, verified npm pack/install). Все аудит-issue 1–14 закрыты; остаются только cross-cutting категории G34 (medium) / D26 (low) без отдельной Table-секции.
 updated: 2026-06-11
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
@@ -11,14 +11,14 @@ related-doc: ../components/table.md
 
 ## Сводка
 
-| Severity | Count | Categories                                                                                                       |
-| -------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
-| critical | 0     | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅                                                    |
-| high     | 1     | ~~A2~~ ✅, A4-5, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, ~~P (dual-API)~~ ✅, ~~J47~~ ✅, ~~K51~~ ✅ |
-| medium   | 1     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, ~~F31~~ ✅, G34, ~~H39~~ ✅, ~~K52~~ ✅                                              |
-| low      | 1     | ~~E29.7~~ ✅, ~~B10~~ ✅, ~~N59~~ ✅, D26                                                                        |
+| Severity | Count | Categories                                                                                                              |
+| -------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
+| critical | 0     | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅                                                           |
+| high     | 0     | ~~A2~~ ✅, ~~A4-5~~ ✅, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, ~~P (dual-API)~~ ✅, ~~J47~~ ✅, ~~K51~~ ✅ |
+| medium   | 1     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, ~~F31~~ ✅, G34, ~~H39~~ ✅, ~~K52~~ ✅                                                     |
+| low      | 1     | ~~E29.7~~ ✅, ~~B10~~ ✅, ~~N59~~ ✅, D26                                                                               |
 
-> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization), **Issue 7** (branch coverage 67.74% → 80.01%) **и packaging/SSR bundle (5 partial / 13 / 14)**: SSR-стили (C17) подтверждены работающими через `onServerPrefetch` + регрессионный тест; `sideEffects:false` (A2) на root + per-component; `files`-whitelist шлёт sourcemaps (K51) и отсекает junk (K52); ESM-only ратифицирован (`engines.node >=18`). Остаются active: 3 (compound API), **5c — root `exports` map (A4-5), отложен на build-verified заход**, 10/11/12 (floating/RTL/motion).
+> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization), **Issue 7** (branch coverage 67.74% → 80.01%) **и packaging/SSR bundle (5 partial / 13 / 14)**: SSR-стили (C17) подтверждены работающими через `onServerPrefetch` + регрессионный тест; `sideEffects:false` (A2) на root + per-component; `files`-whitelist шлёт sourcemaps (K51) и отсекает junk (K52); ESM-only ратифицирован (`engines.node >=18`). **2026-06-11 — закрыты Issue 3 (compound API), 10 (filter popovers via FixWindow), 11 (RTL), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map — build-generated, verified npm pack + Node ESM/bundler/nodenext-резолв; + Menu publish-gap fix 5c-a).** Все аудит-issue 1–14 закрыты — остаются лишь cross-cutting G34 (medium) / D26 (low).
 
 ## ~~Issue 1: CRITICAL — XSS через 5 сайтов `v-html`~~ ✅ resolved 2026-06-07
 
@@ -271,18 +271,18 @@ API только schema-driven:
 - [ ] 10000 rows initial render <100ms.
 - [ ] Scroll 60fps in Chrome DevTools.
 
-## Issue 5: SSR styles + cross-cutting — частично resolved 2026-06-07
+## ~~Issue 5: SSR styles + cross-cutting~~ ✅ resolved 2026-06-11 (5c-b закрыл последний пункт)
 
 - **Категория:** C17, A2, A4, A5
 
 См. [button.md Issue 1, 8, 9](./button.md).
 
-> **Resolution (2026-06-07, partial).**
+> **Resolution (2026-06-07 / 2026-06-11).**
 >
 > - **C17 (SSR-стили) ✅** — оказалось уже реализовано на уровне базового класса: `Component.__hooks()` ([component/index.ts:81](../../lib/component/index.ts#L81)) регистрирует `onServerPrefetch(() => initStyle())`, а `__setStyle()` пишет в `cssComponents` Map БЕЗ guard `isClient()` ([component/index.ts:179](../../lib/component/index.ts#L179)) — client-gated только `useStyle()`. Nuxt server plugin ([plugins/nuxt.ts](../../lib/plugins/nuxt.ts)) сливает `cssComponents` в `ssrContext.head` на `app:rendered`. Значит, критический CSS попадает в SSR-HTML до hydration (нет flash-of-unstyled-content). Текст аудита (ссылавшийся на `onMounted` в SFC) устарел — канон давно перешёл на `onServerPrefetch`. Добавлен регрессионный тест [ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts) (`renderToString` не вызывает `onMounted` → заполнение `cssComponents` доказывает работу `onServerPrefetch`-пути).
 > - **A2 (sideEffects) ✅** — `"sideEffects": false` в [lib/package.json](../../lib/package.json) (root, проброс в `dist/package.json` через `addPackageJson()`) + инъекция `sideEffects:false` в каждый под-пакет через `copyDependencies()` ([rollup.config.js](../../lib/rollup.config.js)) для tree-shaking точечных импортов `fishtvue/{name}`.
 > - **A4 (ESM-only) ✅ ратифицирован** — добавлен `"engines": { "node": ">=18" }`; пакет остаётся ESM-only (`.mjs`), CJS-сборка не включается.
-> - **A4-5 (root `exports` map) ❌ отложено** — Issue 5c. Корректная карта для нерегулярной dist-раскладки (`module/index`, `plugins/nuxt`, self-referential `fishtvue/X/Y.mjs` импорты) требует build + `npm pack` + smoke-test реального `npm install` на нескольких resolver'ах; неверная карта ломает резолв у ВСЕХ потребителей. Сделать отдельным build-verified заходом. См. [button.md Issue 9](./button.md).
+> - **A4-5 (root `exports` map) ✅ resolved 2026-06-11 (Issue 5c-b).** Карта генерируется build-step'ом ([`buildRootExports()` в rollup.config.js](../../lib/rollup.config.js)) из авторитетного списка rollup-выходов + вложенных `package.json`/`.d.ts` (стратегия — **явные** entry на каждый emitted `.mjs`: identity `*.mjs` + extensionless + bare-dir из вложенного package.json; ноль wildcard-неоднозначности, strict superset). Обходит ключевую обструкцию — lowercase `.mjs` vs PascalCase `.d.ts` (`./table` → `import: ./table/table.mjs`, `types: ./table/Table.d.ts`). **Пререкизит — Issue 5c-a** (Menu publish-gap): `dist/index.mjs` ре-экспортил `MenuItem.vue`/`MenuGroup.vue`, которых нет в tarball; карта это форсила починить (Menu переведён на `index.ts`-bundle, зеркало Table). **Verified:** `npm pack` → install → `import.meta.resolve` 19/19 публичных субпутей резолвятся в pure Node ESM (раньше `fishtvue/menu`/`fishtvue/config`/`fishtvue/utils/domHandler` падали с «directory import not supported»); CSS-free субпуты исполняются (self-ref через карту работает); `tsc --moduleResolution bundler` И `nodenext` резолвят типы. Контракт — [lib/package.test.ts](../../lib/package.test.ts) (guarded по наличию `dist/`). См. [button.md Issue 9](./button.md).
 
 ## ~~Issue 6: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-06-07
 

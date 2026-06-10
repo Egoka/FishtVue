@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 /**
@@ -51,5 +51,39 @@ describe("lib/package.json publish contract", () => {
   it("keeps ESM entry points intact", () => {
     expect(pkg.main).toBe("./index.mjs")
     expect(pkg.types).toBe("./index.d.ts")
+  })
+})
+
+/**
+ * Контракт корневой `exports`-карты (Issue 5c-b / A4-5). Карта генерируется build-step'ом
+ * (`buildRootExports()` в rollup.config.js) из выходов rollup, поэтому проверяем по
+ * `dist/package.json` — но ТОЛЬКО если сборка присутствует (иначе skip, чтобы `pnpm test`
+ * без `lib:build` не падал). Полная проверка резолва — отдельным `npm pack` + import-смоком.
+ */
+const distPkgPath = resolve(process.cwd(), "dist/package.json")
+const hasDist = existsSync(distPkgPath)
+describe.skipIf(!hasDist)("dist/package.json root exports map (Issue 5c-b)", () => {
+  const dist = hasDist
+    ? (JSON.parse(readFileSync(distPkgPath, "utf-8")) as { exports?: Record<string, any> })
+    : { exports: undefined }
+  const exp = dist.exports ?? {}
+
+  it("exposes root + package.json conditions", () => {
+    expect(exp["."]).toMatchObject({ types: "./index.d.ts", import: "./index.mjs" })
+    expect(exp["./package.json"]).toBe("./package.json")
+  })
+
+  it("maps component bare subpaths to lowercase .mjs + PascalCase .d.ts", () => {
+    // ключевой обход обструкции: `./table` → import lowercase, types PascalCase.
+    expect(exp["./table"]).toMatchObject({ types: "./table/Table.d.ts", import: "./table/table.mjs" })
+    expect(exp["./menu"]).toMatchObject({ types: "./menu/Menu.d.ts", import: "./menu/menu.mjs" })
+    expect(exp["./config"]).toMatchObject({ import: "./config/config.mjs" })
+  })
+
+  it("keeps explicit deep .mjs (self-referential) + extensionless util subpaths resolvable", () => {
+    expect(exp["./table/table.mjs"]).toMatchObject({ import: "./table/table.mjs" })
+    expect(exp["./menu/menu.mjs"]).toMatchObject({ import: "./menu/menu.mjs" })
+    expect(exp["./utils/domHandler"]).toMatchObject({ import: "./utils/domHandler.mjs" })
+    expect(exp["./*/package.json"]).toBe("./*/package.json")
   })
 })

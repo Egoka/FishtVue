@@ -1,7 +1,7 @@
 ---
 title: Installation
 summary: Установка fishtvue в Vite (Vue 3) и Nuxt 3/4 проектах. §2.5 — publish contract (ESM-only, sideEffects, files-whitelist, sourcemaps).
-updated: 2026-06-07
+updated: 2026-06-11
 stability: stable
 since: 0.2.11
 ---
@@ -23,6 +23,7 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 - `fishtvue` — barrel из [lib/index.ts](../lib/index.ts) — все 22 компонента + `Config`.
 - `fishtvue/{name}` — точечный импорт компонента (например, `fishtvue/button`).
 - `fishtvue/table` дополнительно отдаёт named-экспорты compound-API: `import { Column, ColumnGroup } from "fishtvue/table"` (см. [Table §10.6](./components/table.md#106-compound-api-column--columngroup)). В Nuxt — auto-import глобально.
+- `fishtvue/menu` аналогично отдаёт named-экспорты `import { MenuItem, MenuGroup } from "fishtvue/menu"` (бандл `menu.mjs`, а не raw `.vue` — Issue 5c-a). В Nuxt — глобальны.
 - `fishtvue/config` — Vue plugin + глобальные функции `useFishtVue`, `getOptions`, `setActiveLocale`.
 - `fishtvue/component` — базовый класс `Component<T>` (для разработки внутри библиотеки).
 - `fishtvue/theme` — `tailwind`, `palette`, `toVarsCss`, `linksTheme`, `useStyle`, `NamesTheme`.
@@ -33,18 +34,18 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 
 **Внешние зависимости** ([lib/package.json:44–57](../lib/package.json#L44-L57)):
 
-| Пакет | Версия | Зачем |
-|---|---|---|
-| `@heroicons/vue` | `^2.1.5` | Icons компонент. |
-| `@iconify/vue` | `^4.1.2` | Icons компонент (Iconify backend). |
-| `@vueup/vue-quill` + `quill` | `^1.2.0` / `^2.0.2` | TextEditor. |
-| `v-calendar` | `^3.1.2` | Calendar. |
-| `date-fns` | `^4.1.0` | Calendar и `dateHandler`. |
-| `gsap` | `^3.12.5` | Анимации некоторых компонентов. |
-| `clsx` + `tailwind-merge` | `^2.1.x` / `^3.4.0` | `tailwindHandler.cn`. |
-| `lodash-es` | `^4.18.1` | Локальные утилиты. |
-| `csstype` | `^3.1.3` | Типы CSS-проперти. |
-| `vue` | `^3.5.11` | Runtime. |
+| Пакет                        | Версия              | Зачем                              |
+| ---------------------------- | ------------------- | ---------------------------------- |
+| `@heroicons/vue`             | `^2.1.5`            | Icons компонент.                   |
+| `@iconify/vue`               | `^4.1.2`            | Icons компонент (Iconify backend). |
+| `@vueup/vue-quill` + `quill` | `^1.2.0` / `^2.0.2` | TextEditor.                        |
+| `v-calendar`                 | `^3.1.2`            | Calendar.                          |
+| `date-fns`                   | `^4.1.0`            | Calendar и `dateHandler`.          |
+| `gsap`                       | `^3.12.5`           | Анимации некоторых компонентов.    |
+| `clsx` + `tailwind-merge`    | `^2.1.x` / `^3.4.0` | `tailwindHandler.cn`.              |
+| `lodash-es`                  | `^4.18.1`           | Локальные утилиты.                 |
+| `csstype`                    | `^3.1.3`            | Типы CSS-проперти.                 |
+| `vue`                        | `^3.5.11`           | Runtime.                           |
 
 **Peer dependencies (optional)** ([lib/package.json:30–43](../lib/package.json#L30-L43)):
 `@nuxt/kit ^4.1.2`, `@nuxt/schema ^4.1.2`, `nuxt >=3.0.0`. В Vite-проекте предупреждения о peer-deps игнорируются.
@@ -56,9 +57,8 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 - **ESM-only.** Пакет поставляется как `.mjs` (`main: ./index.mjs`). CJS-сборки нет (`get_CJS_ESM()` в rollup выключен сознательно). Декларирован `"engines": { "node": ">=18" }`. Аудитория — bundler-based Vue/Nuxt-приложения, где ESM нативен.
 - **Tree-shaking.** `"sideEffects": false` — на root И в каждом под-пакете `dist/{name}/package.json` (инъектится `copyDependencies()` на build-step). CSS инжектится в рантайме через lifecycle (`onServerPrefetch`/`onMounted`), не на import-time, поэтому модули чисты и неиспользуемые компоненты вырезаются.
 - **`files`-whitelist** контролирует содержимое tarball: `**/*.mjs`, `**/*.map`, `**/*.d.ts`, `**/package.json`, `README.md`, `LICENSE.md`, `CHANGELOG.md`. Это (1) **гарантирует публикацию sourcemaps** (`.mjs.map`, 1:1 к `.mjs`) и (2) **отсекает** тестовые/исходные артефакты — `copyDependencies()` дополнительно пропускает `*.test.*`. Контроль: `pnpm pack` (`cd dist && npm pack`).
-- **Контракт зафиксирован тестом** [lib/package.test.ts](../lib/package.test.ts) (`sideEffects`, `files` с `**/*.map`, `engines.node`, ESM entry points) — ломается при регрессии манифеста.
-
-> **Не покрыто (отложено, Wave 2.1):** root `exports` map с условиями `types`/`import`. Сейчас subpath-резолв `fishtvue/{name}` опирается на nested `package.json` (`main`/`module`/`types`), что работает у bundler-потребителей; добавление root `exports` отключит этот путь и требует enumerate всех subpath + self-referential `.mjs` с build-verified smoke-test. См. [issues/button.md Issue 9](./issues/button.md).
+- **Root `exports` map (Issue 5c-b).** `dist/package.json` несёт корневую `exports`-карту, сгенерированную build-step'ом (`buildRootExports()` в [rollup.config.js](../lib/rollup.config.js)) из rollup-выходов + вложенных `package.json`/`.d.ts`: ЯВНЫЙ entry на каждый emitted `.mjs` (identity `*.mjs` + extensionless субпуть) + bare-dir из вложенного package.json (`./table` → `import: ./table/table.mjs`, `types: ./table/Table.d.ts` — обход lowercase/PascalCase) + `./*/package.json`. Без карты пакет резолвился **только в бандлерах**; теперь `fishtvue/{name}` / `fishtvue/utils/{handler}` работают и в pure Node ESM. Verified: `npm pack` → install → `import.meta.resolve` всех публичных субпутей + `tsc` (`bundler`/`nodenext`).
+- **Контракт зафиксирован тестом** [lib/package.test.ts](../lib/package.test.ts) (`sideEffects`, `files` с `**/*.map`, `engines.node`, ESM entry points + `exports`-карта при наличии `dist/`) — ломается при регрессии манифеста.
 
 ## 3. How it works
 
@@ -69,6 +69,7 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 3. Каждый компонент при mount регистрирует свой layer.
 
 В Nuxt-проекте [module/nuxt.ts](../lib/module/nuxt.ts) дополнительно:
+
 - Регистрирует все 22 компонента в auto-import (если `autoImport: true` — default).
 - Добавляет server plugin из [plugins/nuxt.ts](../lib/plugins/nuxt.ts).
 - Создаёт generated plugin, который вызывает `nuxtApp.vueApp.use(FishtVue, options)` на уровне `mode: "all"`.
@@ -170,7 +171,9 @@ export default defineNuxtConfig({
     locale: {
       defaultLocale: "ru",
       messages: {
-        ru: { /* кастомные ключи */ }
+        ru: {
+          /* кастомные ключи */
+        }
       }
     }
   }
@@ -191,7 +194,7 @@ export default defineNuxtConfig({
 
 ```vue
 <script setup lang="ts">
-import Button from "fishtvue/button"
+  import Button from "fishtvue/button"
 </script>
 
 <template>
@@ -216,8 +219,8 @@ app.mount("#app")
 
 ```vue
 <script setup lang="ts">
-import Button from "fishtvue/button"
-import Input from "fishtvue/input"
+  import Button from "fishtvue/button"
+  import Input from "fishtvue/input"
 </script>
 ```
 
@@ -319,16 +322,16 @@ describe("Button after install", () => {
 
 ## 16. Troubleshooting / FAQ
 
-| Проблема | Причина | Решение |
-|---|---|---|
-| `Cannot resolve "fishtvue/config"` в Vite | Не установлен пакет `fishtvue`. | `pnpm add fishtvue`. |
-| `Cannot find module 'fishtvue/module'` в Nuxt | `nuxt.config.ts` подключает модуль до установки пакета. | Сначала `pnpm add fishtvue`, потом перезапусти `nuxi`. |
-| Auto-import не работает в Nuxt | `autoImport: false` или конфликт `prefix` с другим модулем. | Проверь `nuxt.config.ts#fishtvue.autoImport`. |
-| Компонент рендерится без стилей | Не подключён `app.use(FishtVue, {})` (Vite) или `disableGlobalStyles: true` (Nuxt). | Подключи плагин или сними флаг. |
-| Tailwind override не побеждает стили компонента | Стили в `@layer fishtvue` имеют тот же приоритет, что и другие layers, но проигрывают стилям вне layers. | См. §10.4 / [01-getting-started §10.4](./01-getting-started.md#104-css-layer-override). |
-| Конфликт версии `vue` | В пакете `vue ^3.5.11` зафиксирован как dependency. При другой major-версии в приложении возможен дубликат runtime'a. | Согласуй версию Vue (`^3.5`). |
-| `@vueup/vue-quill` тянет CSS, который ломает styles в Vite | TextEditor импортирует CSS quill, который не layered. | Импортируй TextEditor только там, где он нужен; либо оборачивай в свой layer. |
-| Build падает с `gsap` warning | GSAP — ESM-only в новых версиях. | Убедись, что bundler поддерживает ESM (Vite ≥ 4). |
+| Проблема                                                   | Причина                                                                                                               | Решение                                                                                 |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `Cannot resolve "fishtvue/config"` в Vite                  | Не установлен пакет `fishtvue`.                                                                                       | `pnpm add fishtvue`.                                                                    |
+| `Cannot find module 'fishtvue/module'` в Nuxt              | `nuxt.config.ts` подключает модуль до установки пакета.                                                               | Сначала `pnpm add fishtvue`, потом перезапусти `nuxi`.                                  |
+| Auto-import не работает в Nuxt                             | `autoImport: false` или конфликт `prefix` с другим модулем.                                                           | Проверь `nuxt.config.ts#fishtvue.autoImport`.                                           |
+| Компонент рендерится без стилей                            | Не подключён `app.use(FishtVue, {})` (Vite) или `disableGlobalStyles: true` (Nuxt).                                   | Подключи плагин или сними флаг.                                                         |
+| Tailwind override не побеждает стили компонента            | Стили в `@layer fishtvue` имеют тот же приоритет, что и другие layers, но проигрывают стилям вне layers.              | См. §10.4 / [01-getting-started §10.4](./01-getting-started.md#104-css-layer-override). |
+| Конфликт версии `vue`                                      | В пакете `vue ^3.5.11` зафиксирован как dependency. При другой major-версии в приложении возможен дубликат runtime'a. | Согласуй версию Vue (`^3.5`).                                                           |
+| `@vueup/vue-quill` тянет CSS, который ломает styles в Vite | TextEditor импортирует CSS quill, который не layered.                                                                 | Импортируй TextEditor только там, где он нужен; либо оборачивай в свой layer.           |
+| Build падает с `gsap` warning                              | GSAP — ESM-only в новых версиях.                                                                                      | Убедись, что bundler поддерживает ESM (Vite ≥ 4).                                       |
 
 ## 17. Related
 
