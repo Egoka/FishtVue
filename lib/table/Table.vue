@@ -2004,7 +2004,13 @@
                         <Select
                           v-else-if="column.type === 'select'"
                           :model-value="filterColumns[column?.dataField]"
-                          v-bind="column?.paramsFilter as BaseSelectProps"
+                          v-bind="{
+                            ...(column?.paramsFilter as BaseSelectProps),
+                            paramsFixWindow: {
+                              scrollableEl: tableBody,
+                              ...(column?.paramsFilter as Partial<BaseSelectProps>)?.paramsFixWindow
+                            }
+                          }"
                           :label="column.caption"
                           :mode="mode"
                           :class="['border-none font-normal', column.class?.colFilterClass as string]"
@@ -2018,7 +2024,13 @@
                         <Calendar
                           v-else-if="column.type === 'date'"
                           :model-value="filterColumns[column?.dataField]"
-                          v-bind="column?.paramsFilter as BaseCalendarProps"
+                          v-bind="{
+                            ...(column?.paramsFilter as BaseCalendarProps),
+                            paramsFixWindow: {
+                              scrollableEl: tableBody,
+                              ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.paramsFixWindow
+                            }
+                          }"
                           :label="column.caption"
                           :mode="mode"
                           label-mode="offsetDynamic"

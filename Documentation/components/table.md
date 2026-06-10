@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Table` — самый объёмный компонент библиотеки (~1900 LOC SFC + 1471 LOC `.d.ts`). Поддерживает: sort, filter, search, grouping, summary rows, inline edit (Input/Select/Calendar editors), 4 режима асинхронной загрузки данных (`true`-flag, URL string, config object, custom function), column resizing, кастомные cell templates, dynamic slots по `dataField`.
 
-Stability: `stable` — 119 кейсов (66 базовых + 18 audit + 7 virtualization + 19 coverage + 5 motion/print/forced-colors + 4 RTL). Branch coverage `Table.vue` 80%+ / statements 92%+. Тесты покрывают core flow + security/a11y/virtualization/edit-cells/asyncData + reduced-motion/print/RTL.
+Stability: `stable` — 122 кейса (66 базовых + 18 audit + 7 virtualization + 19 coverage + 5 motion/print/forced-colors + 4 RTL + 3 filter-popover). Branch coverage `Table.vue` 80%+ / statements 92%+. Тесты покрывают core flow + security/a11y/virtualization/edit-cells/asyncData + reduced-motion/print/RTL + floating filter-popovers.
 
 Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.d.ts), [Table.test.ts](../../lib/table/Table.test.ts).
 
@@ -227,6 +227,8 @@ v-model contract — не применимо: Table не имеет одного
   @after-edit-cell="(p) => api.update(p._key, { [p.column.dataField]: p.newValue })" />
 ```
 
+> **Floating popovers (filter + editor).** Dropdown'ы `type: "select"`/`"date"` (и в фильтре, и в cell-editor) плавают через `FixWindow` (обёртка над `@floating-ui/vue` — flip/shift). Таблица передаёт им `paramsFixWindow.scrollableEl = tableBody`, поэтому popover трекает скролл-контейнер и не «отрывается» при прокрутке. Переопределить позицию/teleport на колонку: `paramsFilter: { paramsFixWindow: { position, teleport } }` (фильтр) или `edit.editorOptions.paramsFixWindow` (редактор) — override выигрывает над дефолтом.
+
 ## 10. Configuration & Customization
 
 ### 10.1 Global
@@ -396,7 +398,7 @@ describe("Table", () => {
 })
 ```
 
-Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (119 кейсов).
+Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (122 кейса).
 
 ## 16. Troubleshooting / FAQ
 

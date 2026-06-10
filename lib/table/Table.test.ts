@@ -9,6 +9,8 @@ import { TableOption, TableProps } from "fishtvue/table/Table"
 import { nextTick } from "vue"
 import { tailwind } from "fishtvue/theme"
 import { cssComponents } from "fishtvue/component"
+import Select from "fishtvue/select/Select.vue"
+import Calendar from "fishtvue/calendar/Calendar.vue"
 
 describe("Table Component", () => {
   beforeAll(() => {
@@ -2758,5 +2760,61 @@ describe("Table — remaining audit (Issues 10/11/12)", () => {
     })
   }) // /Issue 11 describe
 
-  // Issue 10 describe добавляется ниже в этом же блоке
+  // ===================================================================================================================
+  // Issue 10 — filter popovers через FixWindow (H39): filter Select/Calendar получают scrollableEl: tableBody
+  // (паритет с cell-редакторами) — popover трекает скролл-контейнер. Per-column paramsFixWindow override уважается.
+  // ===================================================================================================================
+  describe("Issue 10 — filter popovers via FixWindow", () => {
+    it("filter Select получает paramsFixWindow.scrollableEl (= tableBody)", async () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ cat: "a" }, { cat: "b" }],
+          columns: [{ dataField: "cat", type: "select", isFilter: true }]
+        } as TableProps
+      })
+      await nextTick()
+      const select = wrapper.findComponent(Select)
+      expect(select.exists()).toBe(true)
+      const pfw = select.props("paramsFixWindow") as any
+      expect(pfw).toBeTruthy()
+      expect("scrollableEl" in pfw).toBe(true)
+      expect(pfw.scrollableEl).toBeTruthy()
+    })
+
+    it("filter Calendar получает paramsFixWindow.scrollableEl (= tableBody)", async () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ d: "2024-01-01" }, { d: "2024-02-02" }],
+          columns: [{ dataField: "d", type: "date", isFilter: true }]
+        } as TableProps
+      })
+      await nextTick()
+      const cal = wrapper.findComponent(Calendar)
+      expect(cal.exists()).toBe(true)
+      const pfw = cal.props("paramsFixWindow") as any
+      expect(pfw).toBeTruthy()
+      expect("scrollableEl" in pfw).toBe(true)
+      expect(pfw.scrollableEl).toBeTruthy()
+    })
+
+    it("per-column paramsFilter.paramsFixWindow override выигрывает над дефолтом", async () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ cat: "a" }, { cat: "b" }],
+          columns: [
+            {
+              dataField: "cat",
+              type: "select",
+              isFilter: true,
+              paramsFilter: { paramsFixWindow: { position: "top" } }
+            }
+          ]
+        } as unknown as TableProps
+      })
+      await nextTick()
+      const pfw = wrapper.findComponent(Select).props("paramsFixWindow") as any
+      expect(pfw.position).toBe("top") // override победил
+      expect(pfw.scrollableEl).toBeTruthy() // дефолт scrollableEl сохранён
+    })
+  }) // /Issue 10 describe
 }) // /Table — remaining audit (Issues 10/11/12)

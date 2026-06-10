@@ -15,7 +15,7 @@ related-doc: ../components/table.md
 | -------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
 | critical | 0     | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅                                                    |
 | high     | 1     | ~~A2~~ ✅, A4-5, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, ~~P (dual-API)~~ ✅, ~~J47~~ ✅, ~~K51~~ ✅ |
-| medium   | 2     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, ~~F31~~ ✅, G34, H39, ~~K52~~ ✅                                                     |
+| medium   | 1     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, ~~F31~~ ✅, G34, ~~H39~~ ✅, ~~K52~~ ✅                                              |
 | low      | 1     | ~~E29.7~~ ✅, ~~B10~~ ✅, ~~N59~~ ✅, D26                                                                        |
 
 > **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization), **Issue 7** (branch coverage 67.74% → 80.01%) **и packaging/SSR bundle (5 partial / 13 / 14)**: SSR-стили (C17) подтверждены работающими через `onServerPrefetch` + регрессионный тест; `sideEffects:false` (A2) на root + per-component; `files`-whitelist шлёт sourcemaps (K51) и отсекает junk (K52); ESM-only ратифицирован (`engines.node >=18`). Остаются active: 3 (compound API), **5c — root `exports` map (A4-5), отложен на build-verified заход**, 10/11/12 (floating/RTL/motion).
@@ -346,12 +346,18 @@ Coverage statements 85.93% — OK, но branch 67.74% — много untested у
 
 > **Resolution (2026-06-07).** Добавлен sr-only polite-регион `<div data-table-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>` первым child корня. `ariaResultsLabel` ([Table.vue](../../lib/table/Table.vue)) считает `lengthData` (отфильтрованный count) → новые locale-ключи `table.resultsCount` / `table.resultsCountOne` / `table.resultsCountNone` (en + ru + `TypesLocale.DefaultMessages`), с литеральным fallback (т.к. `Component.t()` возвращает сам ключ при отсутствии перевода). Тесты: `Table.test.ts` describe «Issue 9 — aria-live results announcement».
 
-## Issue 10: Floating UI для filter/edit popovers
+## ~~Issue 10: Floating UI для filter/edit popovers~~ ✅ resolved 2026-06-11
 
 - **Категория:** H39
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 
-Filter UI и cell-editor popovers — потенциально через FixWindow. См. [calendar.md Issue 9](./calendar.md) — единый fix через `@floating-ui/vue`.
+Filter UI и cell-editor popovers — через FixWindow (in-house обёртка над `@floating-ui/vue` — flip/shift/teleport/RTL placement). См. [calendar.md Issue 9](./calendar.md).
+
+> **Resolution (2026-06-11).** Без новых зависимостей — FixWindow уже использует `@floating-ui/vue` ([FixWindow.vue:5](../../lib/fixwindow/FixWindow.vue#L5)), и cell-**редакторы** Select/Calendar уже плавали через него с `paramsFixWindow.scrollableEl: tableBody` ([Table.vue](../../lib/table/Table.vue)). Реальный gap был у **filter**-Select/Calendar: они спредили `column.paramsFilter` БЕЗ `scrollableEl`, поэтому их dropdown не трекал скролл-контейнер таблицы.
+>
+> - **Fix:** filter-`<Select>`/`<Calendar>` теперь мёржат `paramsFixWindow: { scrollableEl: tableBody, ...(column.paramsFilter?.paramsFixWindow) }` — зеркало редакторского паттерна. FixWindow позиционирует popover относительно `tableBody` (Floating UI `update` на scroll). Per-column override (`paramsFilter.paramsFixWindow`, напр. `position`/`teleport`) **выигрывает** над дефолтом.
+> - **Editors** уже имели `scrollableEl` — паритет достигнут; teleport остаётся opt-in per-column (как у редакторов) — `<Table>` не навязывает его, чтобы не двигать popover из DOM-дерева по умолчанию.
+> - Тесты: `Table.test.ts` describe «Issue 10 — filter popovers via FixWindow» (3 кейса: filter Select/Calendar получают `scrollableEl`; per-column override побеждает).
 
 ## ~~Issue 11: RTL — column resize, scroll direction~~ ✅ resolved 2026-06-11
 
