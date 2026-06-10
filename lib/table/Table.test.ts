@@ -7,6 +7,8 @@ import { convertToPhone, convertToNumber } from "fishtvue/utils/numberHandler"
 import Table from "fishtvue/table/Table.vue"
 import { TableOption, TableProps } from "fishtvue/table/Table"
 import { nextTick } from "vue"
+import { tailwind } from "fishtvue/theme"
+import { cssComponents } from "fishtvue/component"
 
 describe("Table Component", () => {
   beforeAll(() => {
@@ -1147,7 +1149,7 @@ describe("Table Component", () => {
       expect(wrapper.vm.classBaseTable).toContain("optionClass")
       expect(wrapper.vm.styles).toEqual({
         activeRow: "",
-        animation: "transition-all duration-500",
+        animation: "motion-safe:transition-all motion-safe:duration-500",
         borderRadiusPx: 7,
         class: {
           body: "optionClassBody"
@@ -2598,3 +2600,84 @@ describe("Table Component", () => {
     })
   })
 })
+
+// =====================================================================================================================
+// Issues 10 / 11 / 12 — оставшийся аудит Table (filter popovers / RTL / reduced-motion·print·forced-colors)
+// =====================================================================================================================
+describe("Table — remaining audit (Issues 10/11/12)", () => {
+  beforeAll(() => {
+    // @ts-ignore — этот describe — sibling основного, нужен свой IO-mock
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] } as Response)
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  // ===================================================================================================================
+  // Issue 12 — prefers-reduced-motion / print / forced-colors
+  // Движок `tailwind()` понимает media-варианты (unoStatic.ts → media: motion-safe/print/forced-colors),
+  // канон FishtVue — анимировать только при motion-safe (как Button/Menu/Select), плюс print/forced-colors.
+  // ===================================================================================================================
+  describe("Issue 12 — reduced-motion / print / forced-colors", () => {
+    const baseData = [
+      { name: "orange", color: "orange" },
+      { name: "banana", color: "yellow" }
+    ]
+
+    describe("generator поддерживает media-варианты", () => {
+      it("motion-safe:transition-all → @media (prefers-reduced-motion: no-preference) + transition-property: all", () => {
+        const css = tailwind("motion-safe:transition-all", { selector: ".x", darkSelector: "" }) ?? ""
+        expect(css).toContain("prefers-reduced-motion: no-preference")
+        expect(css).toContain("transition-property: all")
+      })
+
+      it("print:hidden → @media print + display: none", () => {
+        const css = tailwind("print:hidden", { selector: ".x", darkSelector: "" }) ?? ""
+        expect(css).toMatch(/@media\s+print/)
+        expect(css).toContain("display: none")
+      })
+
+      it("forced-colors:outline → @media (forced-colors: active) + outline-style: solid", () => {
+        const css = tailwind("forced-colors:outline", { selector: ".x", darkSelector: "" }) ?? ""
+        expect(css).toContain("forced-colors: active")
+        expect(css).toContain("outline-style: solid")
+      })
+    })
+
+    describe("Table применяет варианты", () => {
+      it("resize-handle несёт motion-safe:transition-opacity и print:hidden", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            columns: [{ dataField: "name" }, { dataField: "color" }],
+            resizedColumns: true
+          } as TableProps
+        })
+        const handle = wrapper.find("[data-table-thead-col-resized]")
+        expect(handle.exists()).toBe(true)
+        expect(handle.attributes("class")).toContain("motion-safe:transition-opacity")
+        expect(handle.attributes("class")).toContain("print:hidden")
+      })
+
+      it("сгенерированный CSS Table содержит reduced-motion / print / forced-colors media", async () => {
+        mount(Table, {
+          props: {
+            dataSource: baseData,
+            columns: [{ dataField: "name" }],
+            activeRow: true
+          } as TableProps
+        })
+        await nextTick()
+        const css = cssComponents.get("Table") ?? ""
+        expect(css).toContain("prefers-reduced-motion")
+        expect(css).toMatch(/@media\s*print/)
+        expect(css).toContain("forced-colors")
+      })
+    })
+    // Issue 11 / Issue 10 describes добавляются ниже в этом же блоке
+  }) // /Issue 12 describe
+}) // /Table — remaining audit (Issues 10/11/12)

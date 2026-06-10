@@ -1,7 +1,7 @@
 ---
 title: Table
 summary: Полнофункциональная таблица: sort/filter/group/search/pagination, edit, summary, asyncData (4 режима).
-updated: 2026-06-07
+updated: 2026-06-11
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Table` — самый объёмный компонент библиотеки (~1900 LOC SFC + 1471 LOC `.d.ts`). Поддерживает: sort, filter, search, grouping, summary rows, inline edit (Input/Select/Calendar editors), 4 режима асинхронной загрузки данных (`true`-flag, URL string, config object, custom function), column resizing, кастомные cell templates, dynamic slots по `dataField`.
 
-Stability: `stable` — 110 кейсов (66 базовых + 18 audit + 7 virtualization + 19 coverage). Branch coverage `Table.vue` 80.01% / statements 92.57%. Тесты покрывают core flow + security/a11y/virtualization/edit-cells/asyncData.
+Stability: `stable` — 115 кейсов (66 базовых + 18 audit + 7 virtualization + 19 coverage + 5 motion/print/forced-colors). Branch coverage `Table.vue` 80%+ / statements 92%+. Тесты покрывают core flow + security/a11y/virtualization/edit-cells/asyncData + reduced-motion/print.
 
 Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.d.ts), [Table.test.ts](../../lib/table/Table.test.ts).
 
@@ -33,6 +33,7 @@ lib/table/
 Точечные импорты: `import Table from "fishtvue/table"`, `import { Column, ColumnGroup } from "fishtvue/table"`. В Nuxt — auto-import глобально (см. §10.6).
 
 Зависимости:
+
 - [Input](./input.md), [Select](./select.md), [Calendar](./calendar.md) — для filter и edit ячеек.
 - [Pagination](./pagination.md) — нижний пейджер.
 - [Component class](../architecture/component-class.md).
@@ -65,13 +66,13 @@ lib/table/
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import Table from "fishtvue/table"
+  import { ref } from "vue"
+  import Table from "fishtvue/table"
 
-const data = ref([
-  { id: 1, name: "Alice", age: 30 },
-  { id: 2, name: "Bob", age: 25 }
-])
+  const data = ref([
+    { id: 1, name: "Alice", age: 30 },
+    { id: 2, name: "Bob", age: 25 }
+  ])
 </script>
 
 <template>
@@ -85,67 +86,67 @@ const data = ref([
 
 `TableProps` ([Table.d.ts:688–860](../../lib/table/Table.d.ts#L688-L860)):
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `mode` | `StyleMode` | — | Визуальный режим. |
-| `dataSource` | `MaybeRef<Array<any>>` | — | Массив строк. Может быть ref или константой. |
-| `toolbar` | `MaybeRef<IToolbar \| boolean>` | — | Конфиг toolbar или `true/false`. |
-| `edit` | `boolean` | `false` | Inline-редактирование. |
-| `sort` | `MaybeRef<ISort \| boolean>` | — | Sort-конфиг. |
-| `filter` | `MaybeRef<IFilter \| boolean>` | — | Filter-конфиг. |
-| `grouping` | `MaybeRef<IGrouping \| string>` | — | Группировка по полю. |
-| `resizedColumns` | `boolean` | — | Resize колонок. |
-| `pagination` | `MaybeRef<TablePagination \| boolean>` | — | Pagination-конфиг. |
-| `search` | `boolean` | — | Поиск во всех колонках. |
-| `columns` | `MaybeRef<boolean \| Array<IColumn>>` | auto | Конфиг колонок. |
-| `summary` | `MaybeRef<boolean \| Array<ISummary>>` | — | Summary rows (sum/min/max/avg/count). |
-| `countVisibleRows` | `number` | — | Лимит видимых строк. |
-| `sizeLoadingRows` | `number` | — | Сколько skeleton-строк показывать. |
-| `noData` / `noColumn` | `string` | (locale) | Сообщения пустых состояний (рендерятся как текст; HTML — через slot `empty`/`empty-columns`). |
-| `caption` | `string` | — | Accessible `<caption>` (sr-only) для screen reader. HTML — через slot `caption`. |
-| `virtual` | `boolean \| { rowHeight?, overscan?, threshold? }` | auto | Виртуализация строк. `undefined` — auto при `> threshold` (client-side, без grouping/pagination); `false` — выключить; `true`/object — форс + config. См. §10.5. |
-| `countDataOnLoading` | `number` | — | Симулированное количество строк при loading. |
-| `totalCount` | `number` | — | Общий count для server-side pagination. |
-| `asyncData` | `true \| string \| IAsyncDataConfig \| ((params) => Promise<IAsyncDataResult>)` | — | См. §3. |
-| `class` | `StyleClass` | — | Класс контейнера. |
-| `styles` | `MaybeRef<ITableStyles>` | — | Полный override стилей. |
+| Prop                  | Type                                                                            | Default  | Description                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mode`                | `StyleMode`                                                                     | —        | Визуальный режим.                                                                                                                                                |
+| `dataSource`          | `MaybeRef<Array<any>>`                                                          | —        | Массив строк. Может быть ref или константой.                                                                                                                     |
+| `toolbar`             | `MaybeRef<IToolbar \| boolean>`                                                 | —        | Конфиг toolbar или `true/false`.                                                                                                                                 |
+| `edit`                | `boolean`                                                                       | `false`  | Inline-редактирование.                                                                                                                                           |
+| `sort`                | `MaybeRef<ISort \| boolean>`                                                    | —        | Sort-конфиг.                                                                                                                                                     |
+| `filter`              | `MaybeRef<IFilter \| boolean>`                                                  | —        | Filter-конфиг.                                                                                                                                                   |
+| `grouping`            | `MaybeRef<IGrouping \| string>`                                                 | —        | Группировка по полю.                                                                                                                                             |
+| `resizedColumns`      | `boolean`                                                                       | —        | Resize колонок.                                                                                                                                                  |
+| `pagination`          | `MaybeRef<TablePagination \| boolean>`                                          | —        | Pagination-конфиг.                                                                                                                                               |
+| `search`              | `boolean`                                                                       | —        | Поиск во всех колонках.                                                                                                                                          |
+| `columns`             | `MaybeRef<boolean \| Array<IColumn>>`                                           | auto     | Конфиг колонок.                                                                                                                                                  |
+| `summary`             | `MaybeRef<boolean \| Array<ISummary>>`                                          | —        | Summary rows (sum/min/max/avg/count).                                                                                                                            |
+| `countVisibleRows`    | `number`                                                                        | —        | Лимит видимых строк.                                                                                                                                             |
+| `sizeLoadingRows`     | `number`                                                                        | —        | Сколько skeleton-строк показывать.                                                                                                                               |
+| `noData` / `noColumn` | `string`                                                                        | (locale) | Сообщения пустых состояний (рендерятся как текст; HTML — через slot `empty`/`empty-columns`).                                                                    |
+| `caption`             | `string`                                                                        | —        | Accessible `<caption>` (sr-only) для screen reader. HTML — через slot `caption`.                                                                                 |
+| `virtual`             | `boolean \| { rowHeight?, overscan?, threshold? }`                              | auto     | Виртуализация строк. `undefined` — auto при `> threshold` (client-side, без grouping/pagination); `false` — выключить; `true`/object — форс + config. См. §10.5. |
+| `countDataOnLoading`  | `number`                                                                        | —        | Симулированное количество строк при loading.                                                                                                                     |
+| `totalCount`          | `number`                                                                        | —        | Общий count для server-side pagination.                                                                                                                          |
+| `asyncData`           | `true \| string \| IAsyncDataConfig \| ((params) => Promise<IAsyncDataResult>)` | —        | См. §3.                                                                                                                                                          |
+| `class`               | `StyleClass`                                                                    | —        | Класс контейнера.                                                                                                                                                |
+| `styles`              | `MaybeRef<ITableStyles>`                                                        | —        | Полный override стилей.                                                                                                                                          |
 
 `IColumn` ([Table.d.ts:228–388](../../lib/table/Table.d.ts#L228-L388)) — большой объект на колонку: `dataField`, `name`, `caption`, `visible`, `width`/`minWidth`/`maxWidth`, `isFilter`, `isSort`, `isResized`, `defaultFilter`, `defaultSort`, `mask`, `cellTemplate`, `setCellValue`, `onClick`, `class.{th,colFilter,colText,td,cellText,tf,sumText}`, `type` (`string`/`number`/`select`/`date`), `paramsFilter` (для filter editor), `edit` (`boolean | EditInput | EditSelect | EditDate`).
 
 ## 6. Events / Emits + v-model contract
 
-| Event | Payload | When fired |
-|---|---|---|
-| `sort` | `{ dataColumns, sortedFields }` | На toggle sort. |
-| `filter` | `{ dataColumns, filteredFields }` | На filter input change. |
-| `search` | `Search` (string) | На toolbar search. |
-| `result-data` | `ResultData` | После client-side processing. |
-| `switch-page` | `Page` | При смене страницы. |
-| `switch-size-page` | `Page` | При смене page-size. |
-| `before-edit-cell` / `after-edit-cell` | `{ newValue, oldValue, _key, column }` | До/после inline-edit. |
-| `before-edit-row` / `after-edit-row` | `{ newValue, oldValue, _key }` | Row-level edit. |
-| `add-row` | `{ value, index, _key }` | При добавлении. |
-| `delete-row` | `{ value, index, _key }` | При удалении. |
-| `click-row` | `{ eventEl, data, indexRow }` | На клик строки. |
-| `click-cell` | `{ eventEl, column, value, valueWithMarker, data, indexRow }` | На клик ячейки. |
-| `loading` | `boolean` | Loading on/off. |
-| `clear-filter` | — | На clear all. |
+| Event                                  | Payload                                                       | When fired                    |
+| -------------------------------------- | ------------------------------------------------------------- | ----------------------------- |
+| `sort`                                 | `{ dataColumns, sortedFields }`                               | На toggle sort.               |
+| `filter`                               | `{ dataColumns, filteredFields }`                             | На filter input change.       |
+| `search`                               | `Search` (string)                                             | На toolbar search.            |
+| `result-data`                          | `ResultData`                                                  | После client-side processing. |
+| `switch-page`                          | `Page`                                                        | При смене страницы.           |
+| `switch-size-page`                     | `Page`                                                        | При смене page-size.          |
+| `before-edit-cell` / `after-edit-cell` | `{ newValue, oldValue, _key, column }`                        | До/после inline-edit.         |
+| `before-edit-row` / `after-edit-row`   | `{ newValue, oldValue, _key }`                                | Row-level edit.               |
+| `add-row`                              | `{ value, index, _key }`                                      | При добавлении.               |
+| `delete-row`                           | `{ value, index, _key }`                                      | При удалении.                 |
+| `click-row`                            | `{ eventEl, data, indexRow }`                                 | На клик строки.               |
+| `click-cell`                           | `{ eventEl, column, value, valueWithMarker, data, indexRow }` | На клик ячейки.               |
+| `loading`                              | `boolean`                                                     | Loading on/off.               |
+| `clear-filter`                         | —                                                             | На clear all.                 |
 
 v-model contract — не применимо: Table не имеет одного `modelValue`.
 
 ## 7. Slots
 
-| Slot | Slot props | Description |
-|---|---|---|
-| `toolbar` | — | Override toolbar. |
-| `header` | — | Слот выше table (под toolbar). |
-| `footer` | — | Слот ниже table (над pagination). |
-| `caption` | — | HTML-контент для `<caption>` (sr-only). Переопределяет prop `caption`. |
-| `group` | `{ item, length }` | Override row группы. |
-| `empty` | — | Override пустого состояния «нет данных» (`noData`). |
-| `empty-columns` | — | Override пустого состояния «нет колонок» (`noColumn`). |
-| `empty-filter` | — | Override пустого состояния «фильтр без результатов» (`noFilter`). |
-| `[dataField]` | `{ key, column, rowData, value, valueWithMarker, isCloseEditor, editValue }` | Dynamic slot — кастомная отрисовка ячейки в колонке `dataField`. Имя slot'а = значение `dataField`. |
+| Slot            | Slot props                                                                   | Description                                                                                         |
+| --------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `toolbar`       | —                                                                            | Override toolbar.                                                                                   |
+| `header`        | —                                                                            | Слот выше table (под toolbar).                                                                      |
+| `footer`        | —                                                                            | Слот ниже table (над pagination).                                                                   |
+| `caption`       | —                                                                            | HTML-контент для `<caption>` (sr-only). Переопределяет prop `caption`.                              |
+| `group`         | `{ item, length }`                                                           | Override row группы.                                                                                |
+| `empty`         | —                                                                            | Override пустого состояния «нет данных» (`noData`).                                                 |
+| `empty-columns` | —                                                                            | Override пустого состояния «нет колонок» (`noColumn`).                                              |
+| `empty-filter`  | —                                                                            | Override пустого состояния «фильтр без результатов» (`noFilter`).                                   |
+| `[dataField]`   | `{ key, column, rowData, value, valueWithMarker, isCloseEditor, editValue }` | Dynamic slot — кастомная отрисовка ячейки в колонке `dataField`. Имя slot'а = значение `dataField`. |
 
 > Per-column slot'ы можно описывать и через compound `<Column>` (`#cell`/`#header`/`#filter`) — см. [§10.6 Compound API](#106-compound-api-column--columngroup).
 
@@ -165,10 +166,10 @@ v-model contract — не применимо: Table не имеет одного
 
 `TableExpose` ([Table.d.ts:1056–1480](../../lib/table/Table.d.ts#L1056-L1480)) — большой:
 
-| Name | Description |
-|---|---|
-| `activeRow`, `sortColumns`, `filterColumns`, `widthsColumns`, `queryTable`, `pageTable`, `sizeTable`, `allData`, `isLoading`, `resizableColumn` | Reactive state. |
-| Программные методы: `switchPage`, `switchSizePage`, `setQuery`, `clearFilter`, `addRow`, `deleteRow`, `editRow`, `editCell`, `setColumnWidth`, `reloadData()` (только для function-mode asyncData) | Управление. |
+| Name                                                                                                                                                                                               | Description     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `activeRow`, `sortColumns`, `filterColumns`, `widthsColumns`, `queryTable`, `pageTable`, `sizeTable`, `allData`, `isLoading`, `resizableColumn`                                                    | Reactive state. |
+| Программные методы: `switchPage`, `switchSizePage`, `setQuery`, `clearFilter`, `addRow`, `deleteRow`, `editRow`, `editCell`, `setColumnWidth`, `reloadData()` (только для function-mode asyncData) | Управление.     |
 
 См. полный список в [Table.d.ts:1056–1480](../../lib/table/Table.d.ts#L1056-L1480).
 
@@ -197,14 +198,14 @@ v-model contract — не применимо: Table не имеет одного
 
 ```vue
 <script setup lang="ts">
-import Table from "fishtvue/table"
-import type { IAsyncDataParams, IAsyncDataResult } from "fishtvue/table"
-import { api } from "@/api"
+  import Table from "fishtvue/table"
+  import type { IAsyncDataParams, IAsyncDataResult } from "fishtvue/table"
+  import { api } from "@/api"
 
-async function load(params: IAsyncDataParams): Promise<IAsyncDataResult> {
-  const { dataSource, totalCount } = await api.users.list(params)
-  return { dataSource, totalCount }
-}
+  async function load(params: IAsyncDataParams): Promise<IAsyncDataResult> {
+    const { dataSource, totalCount } = await api.users.list(params)
+    return { dataSource, totalCount }
+  }
 </script>
 
 <template>
@@ -276,15 +277,17 @@ ARIA: при активной виртуализации `<table>` получа�
 
 ```vue
 <script setup lang="ts">
-import { Table, Column, ColumnGroup } from "fishtvue/table"
-// В Nuxt компоненты auto-import'ятся глобально — импорт не нужен (как и Table).
+  import { Table, Column, ColumnGroup } from "fishtvue/table"
+  // В Nuxt компоненты auto-import'ятся глобально — импорт не нужен (как и Table).
 </script>
 
 <template>
   <Table :data-source="rows">
     <ColumnGroup caption="Личное">
       <Column data-field="name" caption="Имя" is-sort>
-        <template #cell="{ rowData }"><strong>{{ rowData.name }}</strong></template>
+        <template #cell="{ rowData }"
+          ><strong>{{ rowData.name }}</strong></template
+        >
       </Column>
       <Column data-field="age" caption="Возраст" type="number" is-filter />
     </ColumnGroup>
@@ -298,11 +301,11 @@ import { Table, Column, ColumnGroup } from "fishtvue/table"
 
 **`<Column>`** ([Column.vue](../../lib/table/Column.vue)) — props идентичны элементу `IColumn` (`data-field`, `caption`, `is-sort`, `is-filter`, `is-resized`, `type`, `params-filter`, `edit`, `width`/`min-width`/`max-width`, `visible`, …). Scoped-slots:
 
-| Slot | Slot props | Описание |
-|---|---|---|
-| `cell` | `{ rowData, value, valueWithMarker, column, isCloseEditor, editValue }` | Кастомная отрисовка ячейки (замена дефолтного safe-`<mark>`-рендера). |
-| `header` | `{ column }` | Кастомный заголовок (замена `caption`-текста). |
-| `filter` | `{ column }` | Кастомный фильтр (замена Input/Select/Calendar; рендерится только при `is-filter`). |
+| Slot     | Slot props                                                              | Описание                                                                            |
+| -------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `cell`   | `{ rowData, value, valueWithMarker, column, isCloseEditor, editValue }` | Кастомная отрисовка ячейки (замена дефолтного safe-`<mark>`-рендера).               |
+| `header` | `{ column }`                                                            | Кастомный заголовок (замена `caption`-текста).                                      |
+| `filter` | `{ column }`                                                            | Кастомный фильтр (замена Input/Select/Calendar; рендерится только при `is-filter`). |
 
 **`<ColumnGroup caption="…">`** ([ColumnGroup.vue](../../lib/table/ColumnGroup.vue)) — multi-level header: оборачивает несколько `<Column>` и рендерит над ними верхний ряд `<th scope="colgroup" :colspan>` с `caption`. Колонки вне групп получают пустой групповой `<th>` (span 1).
 
@@ -328,7 +331,9 @@ import { Table, Column, ColumnGroup } from "fishtvue/table"
 - `aria-sort` на колонках с sort'ом — проверь по DOM.
 - Keyboard: Tab/Shift+Tab по интерактивным элементам; ArrowKeys для sort-икон не привязаны.
 - Focus management в edit-mode: при открытии cell editor — focus автоматический.
-- `prefers-reduced-motion` не учтён в transitions.
+- `prefers-reduced-motion`: все transitions завязаны на `motion-safe:` (канон FishtVue) — под `prefers-reduced-motion: reduce` анимации отключаются.
+- Print (`@media print`): loading-overlay и resize-handle скрыты (`print:hidden`) — печатается чистая таблица без интерактивного chrome.
+- Forced-colors (Windows high-contrast): active-row сохраняет выделение через `forced-colors:outline` (где OS подменяет background-цвета).
 
 ### Security
 
@@ -342,10 +347,19 @@ import { Table, Column, ColumnGroup } from "fishtvue/table"
 
 ```ts
 import type {
-  TableProps, TableEmits, TableSlots, TableExpose,
-  IColumn, ISummary, ITableStyles,
-  IAsyncDataParams, IAsyncDataResult,
-  Sorted, Filters, Search, Page
+  TableProps,
+  TableEmits,
+  TableSlots,
+  TableExpose,
+  IColumn,
+  ISummary,
+  ITableStyles,
+  IAsyncDataParams,
+  IAsyncDataResult,
+  Sorted,
+  Filters,
+  Search,
+  Page
 } from "fishtvue/table"
 import Table from "fishtvue/table"
 import { useTemplateRef } from "vue"
@@ -381,18 +395,18 @@ describe("Table", () => {
 })
 ```
 
-Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (110 кейсов).
+Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (115 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
-| Проблема | Причина | Решение |
-|---|---|---|
-| Колонки не появляются | Не указаны `columns` и `dataSource[0]` пуст. | Передай `columns` явно. |
-| Sort/filter не работают при `asyncData: true` | По дизайну: client-side processing выключен. | Подпишись на events `sort`/`filter`/`search` и обновляй dataSource сам. |
-| `reloadData()` не работает | Метод доступен только при `asyncData` в function-режиме. | Используй function-mode. |
-| Custom slot per-column не рендерится | Имя slot'а должно совпадать с `dataField`. | Проверь spelling: `<template #fieldName>`. |
-| `summary` показывает ошибку формата | `displayFormat` ожидает `{0}` plaхolder. | Используй `"Sum: {0}"` или custom `customizeText`. |
-| `edit` не активирует editor | `edit: true` нужно на TableProps **и** на column. | Передай оба. |
+| Проблема                                      | Причина                                                  | Решение                                                                 |
+| --------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Колонки не появляются                         | Не указаны `columns` и `dataSource[0]` пуст.             | Передай `columns` явно.                                                 |
+| Sort/filter не работают при `asyncData: true` | По дизайну: client-side processing выключен.             | Подпишись на events `sort`/`filter`/`search` и обновляй dataSource сам. |
+| `reloadData()` не работает                    | Метод доступен только при `asyncData` в function-режиме. | Используй function-mode.                                                |
+| Custom slot per-column не рендерится          | Имя slot'а должно совпадать с `dataField`.               | Проверь spelling: `<template #fieldName>`.                              |
+| `summary` показывает ошибку формата           | `displayFormat` ожидает `{0}` plaхolder.                 | Используй `"Sum: {0}"` или custom `customizeText`.                      |
+| `edit` не активирует editor                   | `edit: true` нужно на TableProps **и** на column.        | Передай оба.                                                            |
 
 ## 17. Related
 

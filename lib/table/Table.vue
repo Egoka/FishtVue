@@ -752,7 +752,7 @@
             : "",
       width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
       height: s?.height ? (typeof s?.height === "number" ? `${s?.height}px` : s?.height) : "",
-      animation: s?.animation ?? "transition-all duration-500",
+      animation: s?.animation ?? "motion-safe:transition-all motion-safe:duration-500",
       borderRadiusPx: s?.borderRadiusPx ?? (mode.value === "underlined" ? 0 : 7),
       isStripedRows: s?.isStripedRows ?? false,
       horizontalLines: s?.horizontalLines ?? true
@@ -781,10 +781,15 @@
           ? "bg-stone-50 dark:bg-stone-950"
           : ""
   )
-  Table.setStyle("transition ease-in opacity-100 opacity-0")
-  Table.setStyle("duration-200")
-  Table.setStyle("duration-500")
-  Table.setStyle("duration-1000")
+  // Issue 12: reduced-motion канон FishtVue — анимируем только при motion-safe (как Button/Menu/Select).
+  // Inline-<transition>/Input-классы шаблона не проходят через computed → регистрируем их варианты явно.
+  Table.setStyle("motion-safe:transition motion-safe:transition-all ease-in opacity-100 opacity-0")
+  Table.setStyle("motion-safe:duration-200")
+  Table.setStyle("motion-safe:duration-500")
+  Table.setStyle("motion-safe:duration-1000")
+  // print / forced-colors варианты overlay/resize/active-row — явная регистрация для гарантии CSS.
+  Table.setStyle("print:hidden")
+  Table.setStyle("forced-colors:outline")
   const classBaseTable = computed<StyleClass>(() =>
     Table.setStyle([
       "componentTable classBody inline-block align-middle relative w-full p-1.5",
@@ -885,13 +890,13 @@
     ])
   const classIsSort = (column: IColumnPrivate) =>
     Table.setStyle([
-      "flex items-center transition-opacity duration-500 pr-1 cursor-pointer",
+      "flex items-center motion-safe:transition-opacity motion-safe:duration-500 pr-1 cursor-pointer",
       !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100" : "opacity-100"
     ])
   const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-gray-400 dark:text-gray-600"))
   const classResizedColumns = (column: IColumnPrivate, key: number) =>
     Table.setStyle([
-      "resizable absolute z-10 inset-y-0 flex items-center hover:opacity-100 pr-2 cursor-ew-resize transition-opacity duration-500",
+      "resizable absolute z-10 inset-y-0 flex items-center hover:opacity-100 pr-2 cursor-ew-resize motion-safe:transition-opacity motion-safe:duration-500 print:hidden",
       dataColumns.value.length - 1 > key ? "-right-3" : "right-3",
       resizableColumn.value === column.id ? "opacity-100" : "opacity-0"
     ])
@@ -933,8 +938,10 @@
   const classTr = (data: Record<string, any>, indexRow: number): string =>
     Table.setStyle([
       `tr--${indexRow} group/tr`,
-      activeRow.value === `${data?._key}-${indexRow}` ? `active-row ${styles.value.activeRow}` : "",
-      styles.value.hoverRows ? `${styles.value.hoverRows} transition-colors duration-200` : "",
+      activeRow.value === `${data?._key}-${indexRow}`
+        ? `active-row forced-colors:outline ${styles.value.activeRow}`
+        : "",
+      styles.value.hoverRows ? `${styles.value.hoverRows} motion-safe:transition-colors motion-safe:duration-200` : "",
       styles.value.isStripedRows
         ? mode.value === "filled"
           ? "odd:bg-stone-100 even:bg-stone-50 dark:odd:bg-stone-900 dark:even:bg-stone-950"
@@ -992,7 +999,9 @@
       : ""
   )
   const classIsLoading = ref(
-    Table.setStyle("absolute z-30 top-0 bottom-0 left-0 w-full select-none text-center text-sm text-gray-500")
+    Table.setStyle(
+      "absolute z-30 top-0 bottom-0 left-0 w-full select-none text-center text-sm text-gray-500 print:hidden"
+    )
   )
   const classIsLoadingBody = ref(
     Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-neutral-100/70 dark:bg-neutral-800/50")
@@ -1906,7 +1915,7 @@
           :mode="mode"
           label-mode="vanishing"
           autocomplete="off"
-          class-input="min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] transition-all duration-500"
+          class-input="min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] motion-safe:transition-all motion-safe:duration-500"
           :class-body="`sticky top-1 rounded-md ease-out ${modeStyle} mb-2`"
           @change:model-value="(v) => searching(v)"
           @update:model-value="(v) => lengthData > 100 || searching(v)">
@@ -1916,10 +1925,10 @@
         </Input>
       </div>
       <transition
-        leave-active-class="transition ease-in duration-1000"
+        leave-active-class="motion-safe:transition ease-in motion-safe:duration-1000"
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
-        enter-active-class="transition ease-in duration-1000"
+        enter-active-class="motion-safe:transition ease-in motion-safe:duration-1000"
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
         <Button
@@ -2278,10 +2287,10 @@
         </div>
         <!-- -------------------------------- -->
         <transition
-          leave-active-class="transition ease-in duration-500"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-500"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-500"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-500"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="isLoading" data-table-loading :class="classIsLoading">
@@ -2296,10 +2305,10 @@
         </transition>
         <!-- -------------------------------- -->
         <transition
-          leave-active-class="transition ease-in duration-200"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-200"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="!isLoading && !allData?.length" data-table-no-data :class="classNoData">
@@ -2310,10 +2319,10 @@
           </div>
         </transition>
         <transition
-          leave-active-class="transition ease-in duration-200"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-200"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="!isLoading && allData?.length && !dataColumns?.length" data-table-no-column :class="classNoData">
@@ -2324,10 +2333,10 @@
           </div>
         </transition>
         <transition
-          leave-active-class="transition-all ease-in duration-200"
+          leave-active-class="motion-safe:transition-all ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition-all ease-in duration-200"
+          enter-active-class="motion-safe:transition-all ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div
