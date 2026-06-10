@@ -15,7 +15,7 @@ related-doc: ../components/table.md
 | -------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
 | critical | 0     | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅                                                    |
 | high     | 1     | ~~A2~~ ✅, A4-5, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, ~~P (dual-API)~~ ✅, ~~J47~~ ✅, ~~K51~~ ✅ |
-| medium   | 3     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, F31, G34, H39, ~~K52~~ ✅                                                            |
+| medium   | 2     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, ~~F31~~ ✅, G34, H39, ~~K52~~ ✅                                                     |
 | low      | 1     | ~~E29.7~~ ✅, ~~B10~~ ✅, ~~N59~~ ✅, D26                                                                        |
 
 > **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization), **Issue 7** (branch coverage 67.74% → 80.01%) **и packaging/SSR bundle (5 partial / 13 / 14)**: SSR-стили (C17) подтверждены работающими через `onServerPrefetch` + регрессионный тест; `sideEffects:false` (A2) на root + per-component; `files`-whitelist шлёт sourcemaps (K51) и отсекает junk (K52); ESM-only ратифицирован (`engines.node >=18`). Остаются active: 3 (compound API), **5c — root `exports` map (A4-5), отложен на build-verified заход**, 10/11/12 (floating/RTL/motion).
@@ -353,12 +353,20 @@ Coverage statements 85.93% — OK, но branch 67.74% — много untested у
 
 Filter UI и cell-editor popovers — потенциально через FixWindow. См. [calendar.md Issue 9](./calendar.md) — единый fix через `@floating-ui/vue`.
 
-## Issue 11: RTL — column resize, scroll direction
+## ~~Issue 11: RTL — column resize, scroll direction~~ ✅ resolved 2026-06-11
 
 - **Категория:** F31
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 
-При `dir="rtl"` resize handle на «правой» стороне header'а оказывается слева. Scroll-shadow логика требует `inline-start/end` логических props.
+При `dir="rtl"` resize handle на «правой» стороне header'а оказывался слева.
+
+> **Resolution (2026-06-11).** RTL без новых зависимостей — движок уже понимает `rtl:`/`ltr:` (`specialStates` в [unoStatic.ts](../../lib/theme/unoStyle/unoStatic.ts#L555)) и логические `start`/`end`/`pe`/`ps` (`inset-inline-*` / `padding-inline-*`, [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts#L1550)):
+>
+> - **Resize-handle (CSS):** `pr-2` → `pe-2` (padding-inline-end, авто-флип по dir); inset `-right-3`/`right-3` → физический default (работает без `dir`-атрибута — `direction` дефолтит в ltr) + `rtl:`-override (`rtl:right-auto rtl:-left-3` / `rtl:left-3`), т.к. negative-логический inset (`-end-3`) движок не поддерживает (`start`/`end` regex без `negative`-группы). [classResizedColumns](../../lib/table/Table.vue).
+> - **Resize-математика (JS):** [`resizeColumn`](../../lib/table/Table.vue) детектит направление `getComputedStyle(columnEl).direction === "rtl"`: в RTL ширина считается от правого края (`rect.right - pageX`), в LTR — от левого (`pageX - rect.left`). Без нового prop — уважает ambient `dir`.
+> - **Group-label:** sticky-offset `left-10 sm:left-12` → `start-10 sm:start-12`; padding `pr-3 pl-10 sm:pl-12` → `pe-3 ps-10 sm:ps-12` (логические, авто-флип).
+> - **Scroll-shadow:** в Table отсутствует (нет sticky-теней по горизонтали — только нативный `overflow-x-auto`), отдельной логики не требуется. `overflow-x-auto` уважает `dir` нативно.
+> - Тесты: `Table.test.ts` describe «Issue 11 — RTL» (4 кейса: dir-aware handle-классы, resize-математика RTL + LTR-регресс, логический group-label).
 
 ## ~~Issue 12: prefers-reduced-motion + print + colors~~ ✅ resolved 2026-06-11
 

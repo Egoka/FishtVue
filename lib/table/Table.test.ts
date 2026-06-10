@@ -2678,6 +2678,85 @@ describe("Table — remaining audit (Issues 10/11/12)", () => {
         expect(css).toContain("forced-colors")
       })
     })
-    // Issue 11 / Issue 10 describes добавляются ниже в этом же блоке
   }) // /Issue 12 describe
+
+  // ===================================================================================================================
+  // Issue 11 — RTL (F31): resize-handle на логической стороне + dir-aware width-математика.
+  // Движок понимает rtl:/ltr: (specialStates) и логические start/end/pe (unoRules). Resize-handle:
+  // pe-2 (padding-inline-end, auto-flip) + rtl:-override для inset; width-math детектит dir через getComputedStyle.
+  // ===================================================================================================================
+  describe("Issue 11 — RTL", () => {
+    const baseData = [
+      { name: "orange", color: "orange" },
+      { name: "banana", color: "yellow" }
+    ]
+    const rect = (left: number, right: number) =>
+      ({ left, right, top: 0, bottom: 0, width: right - left, height: 0, x: left, y: 0, toJSON() {} }) as DOMRect
+
+    it("resize-handle несёт dir-aware классы (rtl: override + логический pe-)", () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: baseData,
+          columns: [{ dataField: "name" }, { dataField: "color" }],
+          resizedColumns: true
+        } as TableProps
+      })
+      const handle = wrapper.find("[data-table-thead-col-resized]")
+      expect(handle.exists()).toBe(true)
+      const cls = handle.attributes("class") ?? ""
+      expect(cls).toMatch(/rtl:/)
+      expect(cls).toContain("pe-2")
+    })
+
+    it("resizeColumn считает ширину от правого края под dir=rtl", async () => {
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(rect(100, 300))
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ name: "a" }],
+          columns: [{ dataField: "name", width: 200, minWidth: 50, maxWidth: 250 }],
+          resizedColumns: true
+        } as TableProps
+      })
+      await wrapper.find("[data-table-thead-col-resized]").trigger("mousedown")
+      // dir=rtl только на момент resize (после mount, чтобы не мешать рендеру)
+      vi.spyOn(window, "getComputedStyle").mockReturnValue({ direction: "rtl" } as any)
+      window.dispatchEvent(new MouseEvent("mousemove", { clientX: 250 }))
+      // RTL: ширина от правого края = rect.right(300) - pageX(250) = 50
+      expect((wrapper.vm as any).widthsColumns["name"]).toBe(50)
+    })
+
+    it("resizeColumn считает ширину от левого края под dir=ltr (регресс)", async () => {
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(rect(100, 300))
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ name: "a" }],
+          columns: [{ dataField: "name", width: 200, minWidth: 50, maxWidth: 250 }],
+          resizedColumns: true
+        } as TableProps
+      })
+      await wrapper.find("[data-table-thead-col-resized]").trigger("mousedown")
+      // без dir-атрибута getComputedStyle().direction === "" → LTR-ветка
+      window.dispatchEvent(new MouseEvent("mousemove", { clientX: 250 }))
+      // LTR: ширина от левого края = pageX(250) - rect.left(100) = 150
+      expect((wrapper.vm as any).widthsColumns["name"]).toBe(150)
+    })
+
+    it("group-label использует логические inset/padding (start-/ps-)", () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [
+            { name: "a", g: "x" },
+            { name: "b", g: "x" }
+          ],
+          columns: [{ dataField: "name" }],
+          grouping: "g"
+        } as unknown as TableProps
+      })
+      const groupText = wrapper.find("[data-table-tbody-colgroup] div")
+      expect(groupText.exists()).toBe(true)
+      expect(groupText.attributes("class") ?? "").toMatch(/start-/)
+    })
+  }) // /Issue 11 describe
+
+  // Issue 10 describe добавляется ниже в этом же блоке
 }) // /Table — remaining audit (Issues 10/11/12)

@@ -896,8 +896,10 @@
   const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-gray-400 dark:text-gray-600"))
   const classResizedColumns = (column: IColumnPrivate, key: number) =>
     Table.setStyle([
-      "resizable absolute z-10 inset-y-0 flex items-center hover:opacity-100 pr-2 cursor-ew-resize motion-safe:transition-opacity motion-safe:duration-500 print:hidden",
-      dataColumns.value.length - 1 > key ? "-right-3" : "right-3",
+      // Issue 11 (RTL): pe-2 (padding-inline-end) авто-флипается по dir; inset — физический default
+      // (работает без dir-атрибута) + rtl:-override (negative-логический inset движок не поддерживает).
+      "resizable absolute z-10 inset-y-0 flex items-center hover:opacity-100 pe-2 cursor-ew-resize motion-safe:transition-opacity motion-safe:duration-500 print:hidden",
+      dataColumns.value.length - 1 > key ? "-right-3 rtl:right-auto rtl:-left-3" : "right-3 rtl:right-auto rtl:left-3",
       resizableColumn.value === column.id ? "opacity-100" : "opacity-0"
     ])
   const classResize = computed(() =>
@@ -914,7 +916,7 @@
       "classGroup sticky",
       "border-t-2 border-b",
       "font-medium text-base whitespace-nowrap",
-      "text-left text-gray-800 dark:text-gray-300 px-6 py-2 pr-3 pl-10 sm:pl-12",
+      "text-left text-gray-800 dark:text-gray-300 px-6 py-2 pe-3 ps-10 sm:ps-12",
       styles.value.class?.group ?? modeStyle.value,
       defaultBorder.value,
       styles.value.border?.cell
@@ -923,7 +925,7 @@
   const styleGroup = computed(() => `top:${thead.value?.clientHeight ?? 1 - 1}px`)
   const classGroupText = computed(() =>
     Table.setStyle([
-      "sticky classGroupText left-10 sm:left-12 flex items-center w-fit min-h-[2.5rem] truncate",
+      "sticky classGroupText start-10 sm:start-12 flex items-center w-fit min-h-[2.5rem] truncate",
       styles.value.class?.groupText
     ])
   )
@@ -1779,7 +1781,10 @@
     if (columnEl) {
       const column = <IColumnPrivate>dataColumns.value.find((item) => item.id === columnId)
       const rect = columnEl.getBoundingClientRect()
-      let newW = $event.pageX - rect.left
+      // Issue 11 (RTL): resize-handle живёт на trailing-крае колонки. В RTL trailing = левый край,
+      // поэтому ширину считаем от ПРАВОГО края (rect.right - pageX), а не от левого.
+      const isRTL = isClient() && getComputedStyle(columnEl).direction === "rtl"
+      let newW = isRTL ? rect.right - $event.pageX : $event.pageX - rect.left
       const maxW = column.maxWidth
       if (maxW && newW > maxW) newW = maxW
       const minW = column.minWidth ?? 100

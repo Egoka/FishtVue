@@ -1,7 +1,7 @@
 ---
 title: Development patterns & documentation regulations
 summary: Конституция разработки внутри lib/ и регламенты внутренней документации.
-updated: 2026-05-16
+updated: 2026-06-11
 stability: stable
 since: 0.2.11
 ---
@@ -16,15 +16,16 @@ since: 0.2.11
 
 Реальные расхождения внутри `lib/` (на момент 2026-05-09), приоритеты выбора канона: TS-first → production-версии фреймворков → покрытие тестами → меньше boilerplate.
 
-| Расхождение | Найдено | Решение | Обоснование | Action item |
-|---|---|---|---|---|
-| `onMounted` vs `Component.onMounted` для инициализации стилей | Ранее [Button.vue:346](../lib/button/Button.vue#L346), [Label.vue:57](../lib/label/Label.vue#L57) — raw `onMounted(() => X.initStyle())`. При этом `Component.__hooks()` ([component/index.ts:79–84](../lib/component/index.ts#L79-L84)) уже регистрирует `vueOnMounted(() => this.initStyle())` в конструкторе. | Канон — **полагаться только на авто-хук** в конструкторе `Component`. Не вызывать `initStyle()` повторно из SFC. | Двойной вызов `initStyle()` — лишняя работа, риск race-conditions при будущих расширениях lifecycle. | ✅ Wave 2.3 done (2026-05-16) — sweep по 13 SFC (Alert, Aria, Calendar, Input, Label, Select, Switch + Button, Icons, InputLayout, Menu, Separator, Table); 8 SFC не используют initStyle. См. §12. |
-| Импорт SFC: `from "./Button"` или `from "fishtvue/button"` | `Button.vue` использует относительные `./Button`, `./Icons.vue`. Внешние компоненты — через `fishtvue/{name}`. | Канон — **внутренние типы из `./{Name}` (относительный)**, **сторонние компоненты — через `fishtvue/{name}`** (alias-импорт). | Относительные внутри собственного каталога — короче и устойчивы к refactor каталога. Через alias — для cross-component импортов, чтобы tree-shaking видел публичный entry. | Аудит на конфликты при переименовании. |
-| `defineEmits` отсутствует в части компонентов | [Button.d.ts:109](../lib/button/Button.d.ts#L109) — `ButtonEmits = null`. У form-controls (Input, Select) — полноценный type. | Канон — **`{Name}Emits = null` явно**, если компонент не эмитит ничего. Никаких пустых `defineEmits()`. | Сигнал в `.d.ts`: «компонент намеренно не эмитит». | Везде, где emits нет — type объявить как `null`, не пропускать. |
-| Класс-обёртка `class X extends ClassComponent<...>` в `.d.ts` | [Button.d.ts:11](../lib/button/Button.d.ts#L11), [Input.d.ts:12](../lib/input/Input.d.ts#L12) — везде объявлен. | Канон — **обязательная декларация** + `declare module "vue" { interface GlobalComponents { X: GlobalComponentConstructor<X> } }`. | Даёт IntelliSense в template'ах + правильную типизацию template-ref'ов. | Проверка в чек-листе нового компонента. |
-| Хранение Tailwind-подобных классов в `ref({...})` vs `const` | `Button.vue` — `ref({...})` для словарей классов, не реактивных. | Канон — **`const` для словарей классов** (нет реактивности — нет нужды в `ref`). | `ref({})` создаёт reactive proxy; для словаря классов это ненужный оверхед. | Refactor PR — переход на `const`. |
-| Pattern для resolve опций: `props ?? options ?? default` | Везде встречается в варианте `(props?.x as T) ?? options?.x ?? <default>`. | Канон — **fallback chain `props → componentsOptions → defaults`** через `??`, default — литерал, не вычисляемое выражение. | Предсказуемый порядок, работает с `undefined` без сюрпризов. | Сохранить. |
-| Compound child API (`<Menu><MenuItem>`, `<Table><Column>`) | [Menu.vue:199–284](../lib/menu/Menu.vue#L199) (MenuItem/MenuGroup), [Table.vue](../lib/table/Table.vue) (Column/ColumnGroup) — дети renderless. | Канон — **VNode-walk `slots.default()`**, НЕ provide/inject. Дети: renderless SFC (`<slot v-if="false"/>`, `defineOptions({ name, inheritAttrs: false })`, без `new Component()`); родитель сопоставляет по `vn.type.name`/`__name` (Fragment-flatten для `v-for`/`v-if`) и **НЕ импортирует child `.vue` в свой SFC** — это ломает type-resolver `@vue/compiler-sfc` на re-export `declare class extends ClassComponent`. Schema-driven prop (`:groups`/`:columns`) при наличии **выигрывает** (backward compat). Subcomponent — named-экспорт родительского модуля (entry = `index.ts`, бандлит детей в `{name}.mjs`) + Nuxt `addComponent({ filePath, export })`. | Меньше boilerplate чем provide/inject; нет registration-lifecycle и ordering-проблем; реактивность — через ре-рендер родителя. raw `.vue`-экспорт детей (как ранний MenuItem) **не** публикуется в npm — поэтому бандлить в `.mjs`. | Зеркалить Menu/Table при добавлении compound к новым collection-компонентам. |
+| Расхождение                                                        | Найдено                                                                                                                                                                                                                                                                                                          | Решение                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Обоснование                                                                                                                                                                                                                         | Action item                                                                                                                                                                                         |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onMounted` vs `Component.onMounted` для инициализации стилей      | Ранее [Button.vue:346](../lib/button/Button.vue#L346), [Label.vue:57](../lib/label/Label.vue#L57) — raw `onMounted(() => X.initStyle())`. При этом `Component.__hooks()` ([component/index.ts:79–84](../lib/component/index.ts#L79-L84)) уже регистрирует `vueOnMounted(() => this.initStyle())` в конструкторе. | Канон — **полагаться только на авто-хук** в конструкторе `Component`. Не вызывать `initStyle()` повторно из SFC.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Двойной вызов `initStyle()` — лишняя работа, риск race-conditions при будущих расширениях lifecycle.                                                                                                                                | ✅ Wave 2.3 done (2026-05-16) — sweep по 13 SFC (Alert, Aria, Calendar, Input, Label, Select, Switch + Button, Icons, InputLayout, Menu, Separator, Table); 8 SFC не используют initStyle. См. §12. |
+| Импорт SFC: `from "./Button"` или `from "fishtvue/button"`         | `Button.vue` использует относительные `./Button`, `./Icons.vue`. Внешние компоненты — через `fishtvue/{name}`.                                                                                                                                                                                                   | Канон — **внутренние типы из `./{Name}` (относительный)**, **сторонние компоненты — через `fishtvue/{name}`** (alias-импорт).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Относительные внутри собственного каталога — короче и устойчивы к refactor каталога. Через alias — для cross-component импортов, чтобы tree-shaking видел публичный entry.                                                          | Аудит на конфликты при переименовании.                                                                                                                                                              |
+| `defineEmits` отсутствует в части компонентов                      | [Button.d.ts:109](../lib/button/Button.d.ts#L109) — `ButtonEmits = null`. У form-controls (Input, Select) — полноценный type.                                                                                                                                                                                    | Канон — **`{Name}Emits = null` явно**, если компонент не эмитит ничего. Никаких пустых `defineEmits()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Сигнал в `.d.ts`: «компонент намеренно не эмитит».                                                                                                                                                                                  | Везде, где emits нет — type объявить как `null`, не пропускать.                                                                                                                                     |
+| Класс-обёртка `class X extends ClassComponent<...>` в `.d.ts`      | [Button.d.ts:11](../lib/button/Button.d.ts#L11), [Input.d.ts:12](../lib/input/Input.d.ts#L12) — везде объявлен.                                                                                                                                                                                                  | Канон — **обязательная декларация** + `declare module "vue" { interface GlobalComponents { X: GlobalComponentConstructor<X> } }`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Даёт IntelliSense в template'ах + правильную типизацию template-ref'ов.                                                                                                                                                             | Проверка в чек-листе нового компонента.                                                                                                                                                             |
+| Хранение Tailwind-подобных классов в `ref({...})` vs `const`       | `Button.vue` — `ref({...})` для словарей классов, не реактивных.                                                                                                                                                                                                                                                 | Канон — **`const` для словарей классов** (нет реактивности — нет нужды в `ref`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `ref({})` создаёт reactive proxy; для словаря классов это ненужный оверхед.                                                                                                                                                         | Refactor PR — переход на `const`.                                                                                                                                                                   |
+| Pattern для resolve опций: `props ?? options ?? default`           | Везде встречается в варианте `(props?.x as T) ?? options?.x ?? <default>`.                                                                                                                                                                                                                                       | Канон — **fallback chain `props → componentsOptions → defaults`** через `??`, default — литерал, не вычисляемое выражение.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Предсказуемый порядок, работает с `undefined` без сюрпризов.                                                                                                                                                                        | Сохранить.                                                                                                                                                                                          |
+| Compound child API (`<Menu><MenuItem>`, `<Table><Column>`)         | [Menu.vue:199–284](../lib/menu/Menu.vue#L199) (MenuItem/MenuGroup), [Table.vue](../lib/table/Table.vue) (Column/ColumnGroup) — дети renderless.                                                                                                                                                                  | Канон — **VNode-walk `slots.default()`**, НЕ provide/inject. Дети: renderless SFC (`<slot v-if="false"/>`, `defineOptions({ name, inheritAttrs: false })`, без `new Component()`); родитель сопоставляет по `vn.type.name`/`__name` (Fragment-flatten для `v-for`/`v-if`) и **НЕ импортирует child `.vue` в свой SFC** — это ломает type-resolver `@vue/compiler-sfc` на re-export `declare class extends ClassComponent`. Schema-driven prop (`:groups`/`:columns`) при наличии **выигрывает** (backward compat). Subcomponent — named-экспорт родительского модуля (entry = `index.ts`, бандлит детей в `{name}.mjs`) + Nuxt `addComponent({ filePath, export })`. | Меньше boilerplate чем provide/inject; нет registration-lifecycle и ordering-проблем; реактивность — через ре-рендер родителя. raw `.vue`-экспорт детей (как ранний MenuItem) **не** публикуется в npm — поэтому бандлить в `.mjs`. | Зеркалить Menu/Table при добавлении compound к новым collection-компонентам.                                                                                                                        |
+| RTL + reduced-motion через variant-классы (НЕ правки theme-движка) | Движок `tailwind()` уже знает media `motion-safe`/`print`/`forced-colors` и `specialStates` `rtl`/`ltr` ([unoStatic.ts:555,560](../lib/theme/unoStyle/unoStatic.ts#L555)) + логические `start`/`end`/`pe`/`ps` ([unoRules.ts:1550](../lib/theme/unoStyle/unoRules.ts#L1550)).                                    | Канон — **анимации только `motion-safe:*`** (Button/Menu/Select/Table); **RTL — логические props `pe`/`ps`/`start`/`end`** (авто-флип, работают без `dir`-атрибута: `direction` дефолтит в ltr). **Negative-логический inset (`-end-3`) НЕ поддержан** (regex `start`/`end` без `negative`-группы) → физический default + `rtl:`-override (`rtl:right-auto rtl:-left-3`). JS-направление — `getComputedStyle(el).direction === "rtl"`. Inline-`<transition>`/child-классы шаблона не идут через computed → их варианты регистрировать **явно** `X.setStyle("motion-safe:transition …")`.                                                                             | Нулевая стоимость (движок уже умеет), без рантайм-Tailwind у потребителя; единый идиом по компонентам.                                                                                                                              | Зеркалить Table при RTL/motion для остальных (Wave 8.1 / 10.1).                                                                                                                                     |
 
 ## 3. File structure of a component
 
@@ -46,33 +47,37 @@ lib/<name>/
 
 ```vue
 <script setup lang="ts">
-import { computed } from "vue"
-import type { XProps } from "./X"
-import Component from "fishtvue/component"
+  import { computed } from "vue"
+  import type { XProps } from "./X"
+  import Component from "fishtvue/component"
 
-// ---BASE-COMPONENT----------------------
-const X = new Component<"X">()
-const options = X.getOptions()
+  // ---BASE-COMPONENT----------------------
+  const X = new Component<"X">()
+  const options = X.getOptions()
 
-// ---PROPS-EMITS-SLOTS-------------------
-const props = withDefaults(defineProps<XProps>(), {
-  // только те, чьи defaults не зависят от global config
-})
-const emit = defineEmits<XEmits>() // если есть emits
+  // ---PROPS-EMITS-SLOTS-------------------
+  const props = withDefaults(defineProps<XProps>(), {
+    // только те, чьи defaults не зависят от global config
+  })
+  const emit = defineEmits<XEmits>() // если есть emits
 
-// ---STATE-------------------------------
-// const ... = ref(...)
+  // ---STATE-------------------------------
+  // const ... = ref(...)
 
-// ---PROPS-------------------------------
-const mode = computed<NonNullable<XProps["mode"]>>(
-  () => (props?.mode as XProps["mode"]) ?? options?.mode ?? "primary"
-)
-const classBase = computed(() => X.setStyle([/* tw-классы */]))
+  // ---PROPS-------------------------------
+  const mode = computed<NonNullable<XProps["mode"]>>(
+    () => (props?.mode as XProps["mode"]) ?? options?.mode ?? "primary"
+  )
+  const classBase = computed(() =>
+    X.setStyle([
+      /* tw-классы */
+    ])
+  )
 
-// ---EXPOSE------------------------------
-defineExpose({
-  // mode, ...
-})
+  // ---EXPOSE------------------------------
+  defineExpose({
+    // mode, ...
+  })
 </script>
 
 <template>
@@ -156,7 +161,9 @@ describe("X Component Tests", () => {
     })
 
     it("applies global options correctly", () => {
-      const app = createAppWithFishtVue({ /* ... */ })
+      const app = createAppWithFishtVue({
+        /* ... */
+      })
       const wrapper = mount(X, { global: { plugins: [app as any] } })
       expect((wrapper.vm as unknown as XExpose).mode).toBe(/* ... */)
     })
@@ -178,18 +185,18 @@ describe("X Component Tests", () => {
 
 ## 7. Naming
 
-| Сущность | Стиль | Пример |
-|---|---|---|
-| Каталог компонента | kebab-case | `lib/text-editor/`*, `lib/inputlayout/` |
-| `.vue` файл | PascalCase | `Button.vue`, `InputLayout.vue` |
-| `.ts` файл | camelCase | `arrayHandler.ts`, `domHandler.ts` |
-| `.d.ts` (по компоненту) | PascalCase | `Button.d.ts`, `Input.d.ts` |
-| `.test.ts` | PascalCase | `Button.test.ts` |
-| Props | camelCase | `iconPosition`, `modelValue` |
-| Events | kebab-case | `update:modelValue`, `change:modelValue` |
-| CSS root class | `fv {prefix}-{kebab-name}` | `fv fishtvue-button` |
-| Markdown файл документации | kebab-case | `text-editor.md`, `input-layout.md` |
-| Type alias / interface | PascalCase | `ButtonProps`, `XExpose` |
+| Сущность                   | Стиль                      | Пример                                   |
+| -------------------------- | -------------------------- | ---------------------------------------- |
+| Каталог компонента         | kebab-case                 | `lib/text-editor/`\*, `lib/inputlayout/` |
+| `.vue` файл                | PascalCase                 | `Button.vue`, `InputLayout.vue`          |
+| `.ts` файл                 | camelCase                  | `arrayHandler.ts`, `domHandler.ts`       |
+| `.d.ts` (по компоненту)    | PascalCase                 | `Button.d.ts`, `Input.d.ts`              |
+| `.test.ts`                 | PascalCase                 | `Button.test.ts`                         |
+| Props                      | camelCase                  | `iconPosition`, `modelValue`             |
+| Events                     | kebab-case                 | `update:modelValue`, `change:modelValue` |
+| CSS root class             | `fv {prefix}-{kebab-name}` | `fv fishtvue-button`                     |
+| Markdown файл документации | kebab-case                 | `text-editor.md`, `input-layout.md`      |
+| Type alias / interface     | PascalCase                 | `ButtonProps`, `XExpose`                 |
 
 \* Реальный каталог — `lib/texteditor/` (без дефиса). Это историческое отклонение, см. §12.
 
@@ -212,15 +219,15 @@ describe("X Component Tests", () => {
 
 ## 9. Tooling
 
-| Команда | Что делает | Скрипт в [package.json](../package.json) |
-|---|---|---|
-| `pnpm lint` | ESLint 9 + auto-fix всему репо. | `eslint --fix .` |
-| `pnpm format` | Prettier 3 для `js,ts,vue,d.ts` с кэшем. | `prettier --write "**/*.{js,ts,vue,d.ts}" --cache` |
-| `pnpm format:check` | Prettier dry-run. | `prettier --check ...` |
-| `pnpm typecheck` | `vue-tsc --noEmit --skipLibCheck`. | См. `package.json#scripts.typecheck`. |
-| `pnpm test` | Vitest 4, single run. | `vitest run` |
-| `pnpm coverage` | Vitest + v8 coverage. | `vitest run --coverage` |
-| `pnpm lib:build` | Production-сборка через Rollup 4. | `cd lib && NODE_ENV=production rollup -c` |
+| Команда             | Что делает                               | Скрипт в [package.json](../package.json)           |
+| ------------------- | ---------------------------------------- | -------------------------------------------------- |
+| `pnpm lint`         | ESLint 9 + auto-fix всему репо.          | `eslint --fix .`                                   |
+| `pnpm format`       | Prettier 3 для `js,ts,vue,d.ts` с кэшем. | `prettier --write "**/*.{js,ts,vue,d.ts}" --cache` |
+| `pnpm format:check` | Prettier dry-run.                        | `prettier --check ...`                             |
+| `pnpm typecheck`    | `vue-tsc --noEmit --skipLibCheck`.       | См. `package.json#scripts.typecheck`.              |
+| `pnpm test`         | Vitest 4, single run.                    | `vitest run`                                       |
+| `pnpm coverage`     | Vitest + v8 coverage.                    | `vitest run --coverage`                            |
+| `pnpm lib:build`    | Production-сборка через Rollup 4.        | `cd lib && NODE_ENV=production rollup -c`          |
 
 Husky + commitlint ([commitlint.config.js](../commitlint.config.js)) форсят conventional commits в `commit-msg` hook. ESLint flat config — [eslint.config.js](../eslint.config.js). Prettier — [.prettierrc](../.prettierrc).
 
@@ -267,6 +274,7 @@ since: <версия fishtvue>
 ```
 
 Поле `stability`:
+
 - `stable` — есть тесты (≥5 кейсов), нет TODO/FIXME с тэгом BREAKING, публичный API типизирован без `any`.
 - `beta` — есть тесты, но в коде есть TODO/FIXME или пропущенные тесты.
 - `experimental` — нет тестов, или большая часть API типизирована как `any`, или явные пометки в коде.

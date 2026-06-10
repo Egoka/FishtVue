@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Table` — самый объёмный компонент библиотеки (~1900 LOC SFC + 1471 LOC `.d.ts`). Поддерживает: sort, filter, search, grouping, summary rows, inline edit (Input/Select/Calendar editors), 4 режима асинхронной загрузки данных (`true`-flag, URL string, config object, custom function), column resizing, кастомные cell templates, dynamic slots по `dataField`.
 
-Stability: `stable` — 115 кейсов (66 базовых + 18 audit + 7 virtualization + 19 coverage + 5 motion/print/forced-colors). Branch coverage `Table.vue` 80%+ / statements 92%+. Тесты покрывают core flow + security/a11y/virtualization/edit-cells/asyncData + reduced-motion/print.
+Stability: `stable` — 119 кейсов (66 базовых + 18 audit + 7 virtualization + 19 coverage + 5 motion/print/forced-colors + 4 RTL). Branch coverage `Table.vue` 80%+ / statements 92%+. Тесты покрывают core flow + security/a11y/virtualization/edit-cells/asyncData + reduced-motion/print/RTL.
 
 Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.d.ts), [Table.test.ts](../../lib/table/Table.test.ts).
 
@@ -334,6 +334,7 @@ ARIA: при активной виртуализации `<table>` получа�
 - `prefers-reduced-motion`: все transitions завязаны на `motion-safe:` (канон FishtVue) — под `prefers-reduced-motion: reduce` анимации отключаются.
 - Print (`@media print`): loading-overlay и resize-handle скрыты (`print:hidden`) — печатается чистая таблица без интерактивного chrome.
 - Forced-colors (Windows high-contrast): active-row сохраняет выделение через `forced-colors:outline` (где OS подменяет background-цвета).
+- RTL (`dir="rtl"`): resize-handle живёт на логическом trailing-крае (`pe-2` + `rtl:`-override inset), `resizeColumn` считает ширину от правого края под RTL; group-label sticky-offset/padding — логические (`start-*`/`ps-*`). Включается ambient-атрибутом `dir="rtl"` (на любом предке) — отдельный prop не нужен. Scroll-shadow в Table нет (`overflow-x-auto` уважает `dir` нативно).
 
 ### Security
 
@@ -395,7 +396,7 @@ describe("Table", () => {
 })
 ```
 
-Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (115 кейсов).
+Реальные тесты — [Table.test.ts](../../lib/table/Table.test.ts) (119 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
