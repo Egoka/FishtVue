@@ -43,11 +43,10 @@ export { default as Label } from "fishtvue/label"
 // Loading
 export * from "fishtvue/loading"
 export { default as Loading } from "fishtvue/loading"
-// Menu
+// Menu (MenuItem/MenuGroup — named-экспорты бандла menu.mjs через `export *`, как Table/Column;
+// raw `.vue`-импорт не публикуется в tarball — Issue 5c-a)
 export * from "fishtvue/menu"
 export { default as Menu } from "fishtvue/menu"
-export { default as MenuItem } from "fishtvue/menu/MenuItem.vue"
-export { default as MenuGroup } from "fishtvue/menu/MenuGroup.vue"
 // Pagination
 export * from "fishtvue/pagination"
 export { default as Pagination } from "fishtvue/pagination"
