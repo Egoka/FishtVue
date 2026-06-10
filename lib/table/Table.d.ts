@@ -391,6 +391,14 @@ export interface IColumnPrivate extends Omit<IColumn, "dataField"> {
   id: string
   dataField: string
   isEdit: boolean
+  /** Compound-API: ключ родительской `<ColumnGroup>` (null — колонка вне группы). Internal. */
+  _groupKey?: number | null
+  /** Compound-API: захваченный `#cell` scoped-slot со `<Column>`. Internal. */
+  _cellSlot?: (props: any) => any
+  /** Compound-API: захваченный `#header` scoped-slot со `<Column>`. Internal. */
+  _headerSlot?: (props: any) => any
+  /** Compound-API: захваченный `#filter` scoped-slot со `<Column>`. Internal. */
+  _filterSlot?: (props: any) => any
 }
 
 /**
@@ -1492,12 +1500,110 @@ export declare type TableOption = Pick<
   | "styles"
 >
 
+// ---COMPOUND API (<Column> / <ColumnGroup>) -----------------------------------
+// Renderless descriptors для compound-режима `<Table><Column>`. Свой DOM не рендерят —
+// <Table> читает их props/slots через VNode-walk (см. Table.vue) и строит <th>/ячейки сам.
+// Schema-driven `:columns` при наличии выигрывает (backward compat).
+
+/**
+ * Props for the `<Column>` descriptor. Полностью повторяют [IColumn](#IColumn) — одна колонка
+ * в compound-режиме. В шаблоне kebab-case: `data-field`, `is-sort`, `is-filter`, `data-type`…
+ */
+export declare type ColumnProps = IColumn
+
+/**
+ * Scoped slots `<Column>`. Пробрасываются `<Table>` в рендер соответствующей колонки.
+ */
+export declare type ColumnSlots = {
+  /**
+   * Кастомный рендер ячейки колонки (замена дефолтного `markerParts`-рендера). Slot-props
+   * совпадают с `cellTemplate`-slot на `<Table>`.
+   */
+  cell(props: {
+    rowData: Record<string, any>
+    value: any
+    valueWithMarker: string
+    column: IColumnPrivate
+    isCloseEditor: (isActive: boolean) => void
+    editValue: (value: any) => void
+  }): VNode[]
+  /**
+   * Кастомный рендер заголовка колонки (замена `caption`-текста в `<th>`).
+   */
+  header(props: { column: IColumnPrivate }): VNode[]
+  /**
+   * Кастомный рендер фильтра колонки (замена встроенного Input/Select/Calendar-фильтра).
+   */
+  filter(props: { column: IColumnPrivate }): VNode[]
+  /**
+   * Default slot — для вложения `<Column>` внутрь `<ColumnGroup>`; напрямую не рендерится.
+   */
+  default(): VNode[]
+}
+
+/**
+ * `<Column>` — renderless column descriptor for the compound `<Table>` API.
+ *
+ * ```vue
+ * <Table :data-source="rows">
+ *   <Column data-field="name" caption="Имя" is-sort>
+ *     <template #cell="{ rowData }"><strong>{{ rowData.name }}</strong></template>
+ *   </Column>
+ * </Table>
+ * ```
+ */
+declare class Column extends ClassComponent<ColumnProps, ColumnSlots, null, NonNullable<unknown>> {}
+
+/**
+ * Props for the `<ColumnGroup>` descriptor (multi-level headers).
+ */
+export declare type ColumnGroupProps = {
+  /**
+   * Заголовок группы — рендерится в верхнем ряду шапки как `<th colspan>` над колонками группы.
+   * @type {string | undefined}
+   */
+  caption?: string
+
+  /**
+   * Custom CSS class для группового `<th>`.
+   * @type {StyleClass | undefined}
+   */
+  class?: StyleClass
+}
+
+/**
+ * Slots of the `<ColumnGroup>` descriptor.
+ */
+export declare type ColumnGroupSlots = {
+  /**
+   * Default slot — вложенные `<Column>` группы.
+   */
+  default(): VNode[]
+}
+
+/**
+ * `<ColumnGroup>` — renderless multi-level-header descriptor for the compound `<Table>` API.
+ *
+ * ```vue
+ * <Table :data-source="rows">
+ *   <ColumnGroup caption="Личное">
+ *     <Column data-field="name" />
+ *     <Column data-field="age" type="number" />
+ *   </ColumnGroup>
+ * </Table>
+ * ```
+ */
+declare class ColumnGroup extends ClassComponent<ColumnGroupProps, ColumnGroupSlots, null, NonNullable<unknown>> {}
+
 // ---------------------------------------
 
 declare module "vue" {
   export interface GlobalComponents {
     Table: GlobalComponentConstructor<Table>
+    Column: GlobalComponentConstructor<Column>
+    ColumnGroup: GlobalComponentConstructor<ColumnGroup>
   }
 }
 
 export default Table
+export { Column, ColumnGroup }

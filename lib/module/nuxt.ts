@@ -41,7 +41,7 @@ export default defineNuxtModule<FishtVueOptions>({
     const runtimeDir = resolve("./")
     if (nuxt.options.build?.transpile) nuxt.options.build.transpile.push(runtimeDir)
     if (nuxt.options.alias) nuxt.options.alias["#fishtvue"] = runtimeDir
-    if (autoImport)
+    if (autoImport) {
       FISHT_VUE_COMPONENTS.forEach((componentName) =>
         addComponent({
           name: `${options.prefix}${componentName}`,
@@ -50,6 +50,19 @@ export default defineNuxtModule<FishtVueOptions>({
           mode: options.mode
         })
       )
+      // Compound-subcomponents (Issue 3): живут как named-экспорты внутри родительского модуля
+      // (`fishtvue/table` → table.mjs), поэтому регистрируются через `export` + общий filePath —
+      // в отличие от top-level компонентов с папкой на каждый.
+      FISHT_VUE_SUBCOMPONENTS.forEach((sub) =>
+        addComponent({
+          name: `${options.prefix}${sub.name}`,
+          filePath: join(runtimeDir, sub.from),
+          export: sub.export,
+          global: options.global,
+          mode: options.mode
+        })
+      )
+    }
     addPlugin({
       src: resolve("./plugins/nuxt.mjs"),
       mode: "server"
@@ -99,4 +112,10 @@ const FISHT_VUE_COMPONENTS = [
   "Table",
   "TextEditor",
   "Form"
+]
+// Compound-дети (Issue 3) — named-экспорты модуля `fishtvue/table` (table.mjs). Pagination/Loading
+// уже top-level в FISHT_VUE_COMPONENTS — для compound-override отдельная регистрация не нужна.
+const FISHT_VUE_SUBCOMPONENTS: Array<{ name: string; from: string; export: string }> = [
+  { name: "Column", from: "table", export: "Column" },
+  { name: "ColumnGroup", from: "table", export: "ColumnGroup" }
 ]

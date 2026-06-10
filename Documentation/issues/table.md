@@ -1,6 +1,6 @@
 ---
 title: Issues — Table
-summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Остаются: compound API (Issue 3), root exports map (Issue 5c / A4-5), RTL/floating.
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Issue 3 (compound `<Column>`/`<ColumnGroup>` + Pagination/Loading overrides) закрыт 2026-06-07. Остаются: root exports map (Issue 5c / A4-5), RTL/floating.
 updated: 2026-06-07
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
@@ -14,7 +14,7 @@ related-doc: ../components/table.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅ |
-| high | 2 | ~~A2~~ ✅, A4-5, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, P (dual-API), ~~J47~~ ✅, ~~K51~~ ✅ |
+| high | 1 | ~~A2~~ ✅, A4-5, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, ~~P (dual-API)~~ ✅, ~~J47~~ ✅, ~~K51~~ ✅ |
 | medium | 3 | ~~E29.1~~ ✅, ~~E29.5~~ ✅, F31, G34, H39, ~~K52~~ ✅ |
 | low | 4 | E29.7, B10, N59, D26 |
 
@@ -143,11 +143,20 @@ onUnmounted(() => {
 - [ ] DevTools Memory snapshot до/после mount/unmount × 100 — observers count в `Detached HTMLElement` = 0.
 - [ ] Unit-тест mock'ает window listener, подтверждает remove после unmount.
 
-## Issue 3: Dual-API gap — нет compound `<Table><Column>` API
+## ~~Issue 3: Dual-API gap — нет compound `<Table><Column>` API~~ ✅ resolved 2026-06-07
 
 - **Категория:** P (Dual-API)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [Table.d.ts](../../lib/table/Table.d.ts), [Table.vue](../../lib/table/Table.vue)
+
+> **Resolution (2026-06-07).** Добавлен параллельный compound API **без breaking change** schema-режима — механизм **VNode-walk `slots.default()`** (канон FishtVue, зеркало Menu, НЕ provide/inject):
+> - **`<Column>`** ([lib/table/Column.vue](../../lib/table/Column.vue)) — renderless descriptor (props = `IColumn`, scoped-slots `#cell`/`#header`/`#filter`). `<Table>` читает props/slots ребёнка через VNode-walk (по имени компонента) и синтезирует descriptor (с `_cellSlot`/`_headerSlot`/`_filterSlot`/`_groupKey`), который кормит существующую нормализацию `columns → dataColumns` ([Table.vue](../../lib/table/Table.vue)). Per-column slot рендерится через стабильный `RenderColumnSlot` (declared-prop functional component — корректная передача slot-props).
+> - **`<ColumnGroup>`** ([lib/table/ColumnGroup.vue](../../lib/table/ColumnGroup.vue)) — multi-level headers: верхний ряд шапки `<th data-table-thead-group-col scope="colgroup" :colspan>` над колонками группы (`headerGroups` computed группирует видимые колонки по `_groupKey`).
+> - **`<Pagination>`/`<Loading>`-дети** — override встроенных конфигов (`compoundPaginationConfig` → `pagination` computed; `compoundLoadingProps` → `v-bind` на внутренний `<Loading>`). Явный `:pagination` prop выигрывает над `<Pagination>`-child.
+> - **Precedence:** schema `:columns` (массив или `false`) выигрывает; `<Column>`-дети — fallback, когда `:columns` не передан (backward compat).
+> - **Регистрация:** `import { Column, ColumnGroup } from "fishtvue/table"` (named-экспорты в `table.mjs` — собираются из нового [lib/table/index.ts](../../lib/table/index.ts), rollup-entry изменён с `Table.vue` на `index.ts`) + root barrel (`export *`) + Nuxt auto-import (`FISHT_VUE_SUBCOMPONENTS` в [module/nuxt.ts](../../lib/module/nuxt.ts) с `export`-формой) → глобальны в Nuxt, import в Vite — **точно как Table**.
+> - Типы: `ColumnProps`/`ColumnSlots`/`ColumnGroupProps`/`ColumnGroupSlots` + `class Column`/`ColumnGroup` + `GlobalComponents` в [Table.d.ts](../../lib/table/Table.d.ts).
+> - Тесты: [Column.test.ts](../../lib/table/Column.test.ts) — 14 кейсов (backward-compat, compound, precedence, per-column slots, ColumnGroup colspan, Pagination/Loading override, reactivity, vnode-hygiene, a11y, boundary). Whole suite 4856 → 4870 green; backward-compat (110 Table-кейсов) без регрессий. Build-verified: `dist/table/table.mjs` отдаёт named `Column`/`ColumnGroup`/`default`, raw `.vue` не публикуются.
 
 ### Что найдено
 
@@ -395,6 +404,6 @@ Sourcemaps генерируются ✅. Но `addPackageJson()` ([rollup.config
 | `t()` для текста | ⚠️ | частично — используется `Table.t()` для some strings |
 | Runtime locale switch | ⚠️ | те strings что через `t()` — реагируют |
 
-## Dual-API gap
+## Dual-API gap — ✅ resolved 2026-06-07
 
-См. [Issue 3](#issue-3-dual-api-gap-—-нет-compound-tablecolumn-api). Это **главная** dual-API задача FishtVue — Table обязан поддерживать compound `<Column>` для конкурентоспособности с AG Grid / Element Plus / Naive UI.
+См. [Issue 3](#issue-3-dual-api-gap--нет-compound-tablecolumn-api) (resolved). Главная dual-API задача FishtVue закрыта: Table поддерживает compound `<Column>`/`<ColumnGroup>` (+ `<Pagination>`/`<Loading>` overrides) параллельно schema-driven `:columns` — паритет с AG Grid / Element Plus / Naive UI / PrimeVue.

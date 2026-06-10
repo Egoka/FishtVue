@@ -22,6 +22,7 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 
 - `fishtvue` — barrel из [lib/index.ts](../lib/index.ts) — все 22 компонента + `Config`.
 - `fishtvue/{name}` — точечный импорт компонента (например, `fishtvue/button`).
+- `fishtvue/table` дополнительно отдаёт named-экспорты compound-API: `import { Column, ColumnGroup } from "fishtvue/table"` (см. [Table §10.6](./components/table.md#106-compound-api-column--columngroup)). В Nuxt — auto-import глобально.
 - `fishtvue/config` — Vue plugin + глобальные функции `useFishtVue`, `getOptions`, `setActiveLocale`.
 - `fishtvue/component` — базовый класс `Component<T>` (для разработки внутри библиотеки).
 - `fishtvue/theme` — `tailwind`, `palette`, `toVarsCss`, `linksTheme`, `useStyle`, `NamesTheme`.

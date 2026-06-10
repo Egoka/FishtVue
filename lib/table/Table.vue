@@ -1,5 +1,20 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, unref, useSlots, watch } from "vue"
+  import {
+    Comment,
+    Fragment,
+    Text,
+    computed,
+    defineComponent,
+    nextTick,
+    onMounted,
+    onUnmounted,
+    reactive,
+    ref,
+    toRaw,
+    unref,
+    useSlots,
+    watch
+  } from "vue"
   import * as LD from "lodash-es"
   import { isEqual, isWithinInterval, startOfDay } from "date-fns"
   import {
@@ -78,6 +93,86 @@
   })
   const emit = defineEmits<TableEmits>()
   const slots = useSlots()
+  // ---COMPOUND-API (VNode-walk <Column>/<ColumnGroup>/<Pagination>/<Loading>) ----------
+  // Считываем декларативные дети из default slot и синтезируем descriptor'ы колонок + header-группы
+  // + override-конфиги пейджера/лоадера. Schema-driven `:columns`/`:pagination` при наличии выигрывают
+  // (backward compat). Сопоставление по ИМЕНИ компонента — Column.vue/ColumnGroup.vue НЕ импортируем
+  // в этот SFC: импорт SFC в SFC ломает type-resolver @vue/compiler-sfc на re-export
+  // `declare class ... extends ClassComponent` (урок Menu.vue:206). Имя надёжно и не минифицируется.
+  function compoundNormalize(raw: unknown): Array<any> {
+    if (raw === null || raw === undefined) return []
+    return Array.isArray(raw) ? (raw as Array<any>) : [raw]
+  }
+  function isVNodeNamed(vn: any, name: string): boolean {
+    const t = vn?.type
+    return !!t && (t?.name === name || t?.__name === name)
+  }
+  function compoundFlatten(nodes: Array<any>): Array<any> {
+    const out: Array<any> = []
+    for (const n of nodes) {
+      if (n === null || n === undefined || typeof n !== "object") continue
+      if (n.type === Comment || n.type === Text) continue
+      if (n.type === Fragment) out.push(...compoundFlatten(compoundNormalize(n.children)))
+      else out.push(n)
+    }
+    return out
+  }
+  function compoundChildren(vn: any): Array<any> {
+    const def = vn?.children?.default
+    return typeof def === "function" ? compoundNormalize(def()) : []
+  }
+  // Извлекаем IColumn из <Column>-vnode: props + захваченные scoped-slots (cell/header/filter) + ключ группы.
+  function extractColumn(vn: any, groupKey: number | null): IColumn {
+    const childSlots = (vn?.children && typeof vn.children === "object" ? vn.children : {}) as Record<string, any>
+    return {
+      ...(vn?.props ?? {}),
+      _groupKey: groupKey,
+      _cellSlot: typeof childSlots.cell === "function" ? childSlots.cell : undefined,
+      _headerSlot: typeof childSlots.header === "function" ? childSlots.header : undefined,
+      _filterSlot: typeof childSlots.filter === "function" ? childSlots.filter : undefined
+    } as IColumn
+  }
+  type CompoundHeaderGroupMeta = { key: number; caption?: string; class?: any }
+  const compoundParsed = computed<{
+    columns: Array<IColumn>
+    groups: Array<CompoundHeaderGroupMeta>
+    pagination?: Record<string, any>
+    loading?: Record<string, any>
+  }>(() => {
+    const raw = typeof slots.default === "function" ? slots.default() : undefined
+    const top = compoundFlatten(compoundNormalize(raw))
+    const columnsAcc: Array<IColumn> = []
+    const groupsAcc: Array<CompoundHeaderGroupMeta> = []
+    let pagination: Record<string, any> | undefined
+    let loading: Record<string, any> | undefined
+    let groupKey = 0
+    for (const vn of top) {
+      if (isVNodeNamed(vn, "Column")) {
+        columnsAcc.push(extractColumn(vn, null))
+      } else if (isVNodeNamed(vn, "ColumnGroup")) {
+        const key = groupKey++
+        groupsAcc.push({ key, caption: vn?.props?.caption, class: vn?.props?.class })
+        for (const child of compoundFlatten(compoundChildren(vn)))
+          if (isVNodeNamed(child, "Column")) columnsAcc.push(extractColumn(child, key))
+      } else if (isVNodeNamed(vn, "Pagination")) {
+        pagination = { ...(vn?.props ?? {}) }
+      } else if (isVNodeNamed(vn, "Loading")) {
+        loading = { ...(vn?.props ?? {}) }
+      }
+    }
+    return { columns: columnsAcc, groups: groupsAcc, pagination, loading }
+  })
+  const compoundColumns = computed<Array<IColumn>>(() => compoundParsed.value.columns)
+  const compoundPaginationConfig = computed<Record<string, any> | undefined>(() => compoundParsed.value.pagination)
+  const compoundLoadingProps = computed<Record<string, any>>(() => compoundParsed.value.loading ?? {})
+  // Стабильный рендерер захваченного со <Column> scoped-slot (cell/header/filter): определён один раз,
+  // props (fn/args) объявлены — slot-props передаются корректно (в отличие от `<component :is="fn">`,
+  // где недекларированные атрибуты ушли бы в attrs, а не в первый аргумент slot-функции).
+  const RenderColumnSlot = defineComponent({
+    name: "RenderColumnSlot",
+    props: { render: { type: Function, default: undefined }, args: { type: Object, default: undefined } },
+    setup: (p) => () => (p.render ? (p.render as (a: any) => any)(p.args) : null)
+  })
   // ---REF-LINK----------------------------
   const componentTable = ref<HTMLElement>()
   const tableHeader = ref<HTMLElement>()
@@ -114,10 +209,18 @@
   const sort = computed<ISort | boolean>(() => deepMerge(options?.sort, unref(props?.sort)) ?? false)
   const filter = computed<IFilter | boolean>(() => deepMerge(options?.filter, unref(props?.filter)) ?? false)
   const grouping = computed<IGrouping | string>(() => deepMerge(options?.grouping, unref(props?.grouping)))
-  const pagination = computed<TablePagination | boolean>(
-    () => deepMerge(options?.pagination, unref(props?.pagination)) ?? false
-  )
-  const columns = computed<boolean | Array<IColumn>>(() => unref(props?.columns) ?? false)
+  const pagination = computed<TablePagination | boolean>(() => {
+    // Явный `:pagination` (object/false) выигрывает над compound `<Pagination>`-child.
+    const explicit = unref(props?.pagination)
+    if (explicit !== undefined && explicit !== null) return deepMerge(options?.pagination, explicit) ?? false
+    return (deepMerge(options?.pagination, compoundPaginationConfig.value) as TablePagination | boolean) ?? false
+  })
+  const columns = computed<boolean | Array<IColumn>>(() => {
+    // Schema `:columns` (массив ИЛИ false) выигрывает; иначе — compound `<Column>`-дети.
+    const schema = unref(props?.columns)
+    if (schema !== undefined && schema !== null) return schema as boolean | Array<IColumn>
+    return compoundColumns.value.length ? compoundColumns.value : false
+  })
   // -----------
   const isVisibleToolbar = computed<boolean>(
     () => (isSearch.value || !!toolbar.value) && ((toolbar.value as IToolbar)?.visible ?? true)
@@ -531,6 +634,24 @@
         return options
       })
     }
+  })
+  // Верхний ряд шапки для compound `<ColumnGroup>`: группируем ВИДИМЫЕ dataColumns по `_groupKey`.
+  // Подряд идущие колонки одной группы сливаются в один `<th colspan>`; не сгруппированные — span 1.
+  const hasColumnGroups = computed<boolean>(() => compoundParsed.value.groups.length > 0)
+  const headerGroups = computed<Array<{ key: number | null; caption?: string; class?: any; span: number }>>(() => {
+    if (!hasColumnGroups.value) return []
+    const groupsMeta = compoundParsed.value.groups
+    const out: Array<{ key: number | null; caption?: string; class?: any; span: number }> = []
+    for (const col of (dataColumns.value ?? []).filter((c) => c.visible)) {
+      const gk = col._groupKey ?? null
+      const last = out[out.length - 1]
+      if (last && gk !== null && last.key === gk) last.span += 1
+      else {
+        const meta = gk !== null ? groupsMeta.find((g) => g.key === gk) : undefined
+        out.push({ key: gk, caption: meta?.caption, class: meta?.class, span: 1 })
+      }
+    }
+    return out
   })
   const dataSummary = computed<Array<ISummaryPrivate>>(() => {
     if (!isSummary.value) return []
@@ -1825,6 +1946,19 @@
             </caption>
             <!-- -------------------------------- -->
             <thead v-if="isColumns" data-table-thead ref="thead" :class="classTHead">
+              <tr v-if="hasColumnGroups" data-table-thead-group-tr :class="classHeadTr">
+                <th
+                  v-for="(g, gi) in headerGroups"
+                  :key="`group-${gi}`"
+                  data-table-thead-group-col
+                  scope="colgroup"
+                  :colspan="g.span"
+                  :class="classTh({ class: { th: g.class } } as IColumnPrivate)">
+                  <div :class="classBodyFilter">
+                    <div :class="classNotFilter({} as IColumnPrivate)">{{ g.caption }}</div>
+                  </div>
+                </th>
+              </tr>
               <tr :class="classHeadTr">
                 <template v-for="(column, key) in dataColumns" :key="column.id">
                   <th
@@ -1835,8 +1969,9 @@
                     :style="styleTh(column)">
                     <div :class="classBodyFilter">
                       <div v-if="column.isFilter" data-table-thead-col-filter :class="classIsFilter(column)">
+                        <RenderColumnSlot v-if="column._filterSlot" :render="column._filterSlot" :args="{ column }" />
                         <Input
-                          v-if="column.type === 'string' || column.type === 'number'"
+                          v-else-if="column.type === 'string' || column.type === 'number'"
                           :model-value="filterColumns[column?.dataField]"
                           v-bind="column?.paramsFilter as BaseInputProps"
                           :label="column.caption"
@@ -1883,7 +2018,8 @@
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                       </div>
                       <div v-else data-table-thead-col-no-filter :class="classNotFilter(column)">
-                        {{ column.caption }}
+                        <RenderColumnSlot v-if="column._headerSlot" :render="column._headerSlot" :args="{ column }" />
+                        <template v-else>{{ column.caption }}</template>
                       </div>
                       <div
                         v-if="column.isSort ?? isSort"
@@ -1963,7 +2099,24 @@
                           )
                         ">
                         <div
-                          v-if="!column?.cellTemplate"
+                          v-if="column?._cellSlot"
+                          data-table-tbody-cell-slot
+                          :class="classTemplate(column)"
+                          :style="styleCellTable">
+                          <RenderColumnSlot
+                            :render="column._cellSlot"
+                            :args="{
+                              rowData: data,
+                              value: setCell(column, data[column.dataField], data),
+                              valueWithMarker: setMarker(column, setCell(column, data[column.dataField], data)),
+                              column,
+                              isCloseEditor: (isActive: boolean) =>
+                                isActive || clearEditableCell(absIndex(indexRow), indexCol),
+                              editValue: (value: any) => updateCell(data?._key, column, value)
+                            }" />
+                        </div>
+                        <div
+                          v-else-if="!column?.cellTemplate"
                           data-table-tbody-not-cell-template
                           :class="classCellTable(indexRow, column, indexCol)"
                           :style="styleCellTable">
@@ -2133,7 +2286,11 @@
           enter-to-class="opacity-100">
           <div v-if="isLoading" data-table-loading :class="classIsLoading">
             <div :class="classIsLoadingBody">
-              <Loading type="FingerprintSpinner" :size="100" :color="isDark ? 'theme.600' : 'theme.500'" />
+              <Loading
+                type="FingerprintSpinner"
+                :size="100"
+                :color="isDark ? 'theme.600' : 'theme.500'"
+                v-bind="compoundLoadingProps" />
             </div>
           </div>
         </transition>

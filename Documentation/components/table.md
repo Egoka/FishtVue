@@ -20,11 +20,17 @@ Source: [Source](../../lib/table/Table.vue), [Table.d.ts](../../lib/table/Table.
 
 ```
 lib/table/
-├── Table.vue            # SFC ~1900 строк
-├── Table.d.ts           # 1471 строка
+├── Table.vue            # SFC ~2200 строк
+├── Table.d.ts           # типы Table + Column/ColumnGroup
+├── Column.vue           # renderless descriptor (compound API, §10.6)
+├── ColumnGroup.vue      # renderless descriptor (multi-level headers, §10.6)
+├── index.ts             # runtime barrel: default Table + named Column/ColumnGroup
 ├── Table.test.ts        # 110 кейсов
+├── Column.test.ts       # 14 кейсов (compound API)
 └── package.json
 ```
+
+Точечные импорты: `import Table from "fishtvue/table"`, `import { Column, ColumnGroup } from "fishtvue/table"`. В Nuxt — auto-import глобально (см. §10.6).
 
 Зависимости:
 - [Input](./input.md), [Select](./select.md), [Calendar](./calendar.md) — для filter и edit ячеек.
@@ -141,6 +147,8 @@ v-model contract — не применимо: Table не имеет одного
 | `empty-filter` | — | Override пустого состояния «фильтр без результатов» (`noFilter`). |
 | `[dataField]` | `{ key, column, rowData, value, valueWithMarker, isCloseEditor, editValue }` | Dynamic slot — кастомная отрисовка ячейки в колонке `dataField`. Имя slot'а = значение `dataField`. |
 
+> Per-column slot'ы можно описывать и через compound `<Column>` (`#cell`/`#header`/`#filter`) — см. [§10.6 Compound API](#106-compound-api-column--columngroup).
+
 Пример dynamic slot:
 
 ```vue
@@ -155,14 +163,14 @@ v-model contract — не применимо: Table не имеет одного
 
 ## 8. Exposed methods
 
-`TableExpose` ([Table.d.ts:1048–1473](../../lib/table/Table.d.ts#L1048-L1473)) — большой:
+`TableExpose` ([Table.d.ts:1056–1480](../../lib/table/Table.d.ts#L1056-L1480)) — большой:
 
 | Name | Description |
 |---|---|
 | `activeRow`, `sortColumns`, `filterColumns`, `widthsColumns`, `queryTable`, `pageTable`, `sizeTable`, `allData`, `isLoading`, `resizableColumn` | Reactive state. |
 | Программные методы: `switchPage`, `switchSizePage`, `setQuery`, `clearFilter`, `addRow`, `deleteRow`, `editRow`, `editCell`, `setColumnWidth`, `reloadData()` (только для function-mode asyncData) | Управление. |
 
-См. полный список в [Table.d.ts:1048–1473](../../lib/table/Table.d.ts#L1048-L1473).
+См. полный список в [Table.d.ts:1056–1480](../../lib/table/Table.d.ts#L1056-L1480).
 
 ## 9. Examples
 
@@ -261,6 +269,48 @@ Root класс — `fv fishtvue-table`. См. [01-getting-started §10.4](../01
 ARIA: при активной виртуализации `<table>` получает `aria-rowcount` (полное число строк), а строки — `aria-rowindex` (абсолютный, 1-based). Виртуализация заменяет lazy-load через `countVisibleRows`/`lastRowVisibleObserver`.
 
 **Limitations (v1):** virtual + `grouping`, dynamic (измеряемая) высота строк, и оптимизация edit-mode в окне — отдельным заходом. SSR рендерит первое окно от начала; client догоняет при hydration.
+
+### 10.6 Compound API (`<Column>` / `<ColumnGroup>`)
+
+Параллельно schema-driven `:columns` Table поддерживает **compound API** — колонки описываются декларативно дочерними компонентами. Это даёт co-location per-column slot'ов и HTML-IntelliSense (в отличие от `cellTemplate`-by-name). Механизм — VNode-walk default-slot'а (`<Column>`/`<ColumnGroup>` — renderless, своего DOM не рендерят; `<Table>` читает их props/slots и строит шапку/ячейки сам).
+
+```vue
+<script setup lang="ts">
+import { Table, Column, ColumnGroup } from "fishtvue/table"
+// В Nuxt компоненты auto-import'ятся глобально — импорт не нужен (как и Table).
+</script>
+
+<template>
+  <Table :data-source="rows">
+    <ColumnGroup caption="Личное">
+      <Column data-field="name" caption="Имя" is-sort>
+        <template #cell="{ rowData }"><strong>{{ rowData.name }}</strong></template>
+      </Column>
+      <Column data-field="age" caption="Возраст" type="number" is-filter />
+    </ColumnGroup>
+    <Column data-field="email" caption="E-mail" />
+    <!-- override встроенных Pagination/Loading -->
+    <Pagination :sizes-selector="[10, 25, 50]" is-info-text />
+    <Loading type="simple" />
+  </Table>
+</template>
+```
+
+**`<Column>`** ([Column.vue](../../lib/table/Column.vue)) — props идентичны элементу `IColumn` (`data-field`, `caption`, `is-sort`, `is-filter`, `is-resized`, `type`, `params-filter`, `edit`, `width`/`min-width`/`max-width`, `visible`, …). Scoped-slots:
+
+| Slot | Slot props | Описание |
+|---|---|---|
+| `cell` | `{ rowData, value, valueWithMarker, column, isCloseEditor, editValue }` | Кастомная отрисовка ячейки (замена дефолтного safe-`<mark>`-рендера). |
+| `header` | `{ column }` | Кастомный заголовок (замена `caption`-текста). |
+| `filter` | `{ column }` | Кастомный фильтр (замена Input/Select/Calendar; рендерится только при `is-filter`). |
+
+**`<ColumnGroup caption="…">`** ([ColumnGroup.vue](../../lib/table/ColumnGroup.vue)) — multi-level header: оборачивает несколько `<Column>` и рендерит над ними верхний ряд `<th scope="colgroup" :colspan>` с `caption`. Колонки вне групп получают пустой групповой `<th>` (span 1).
+
+**`<Pagination>` / `<Loading>`-дети** — переопределяют конфиг встроенных пейджера/лоадера (props ребёнка мёржатся в конфигурацию; data-binding — total/page/события/isLoading — остаётся за Table).
+
+**Precedence (backward compat):** если явно передан `:columns` (массив или `false`) — он **выигрывает**, `<Column>`-дети игнорируются. Аналогично явный `:pagination` бьёт `<Pagination>`-child. Так существующие schema-driven таблицы не ломаются.
+
+**Registration:** `import { Column, ColumnGroup } from "fishtvue/table"` (Vite) либо глобально без импорта (Nuxt auto-import) — точно как `Table`.
 
 ## 11. Form integration & validation
 
