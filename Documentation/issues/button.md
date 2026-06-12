@@ -1,6 +1,6 @@
 ---
 title: Issues — Button
-summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07: logical iconPosition start/end + RTL (Issue 3); cross-cutting — SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 ✅ (ESM-only `engines` + root `exports` map через `buildRootExports()`, 2026-06-11). Doc-sync 2026-06-12: матрица severity пересчитана к фактически открытым (Issues 5/6/7/13/14/15/16), Issue 16 (darkModeSelector) делегирован cross-cutting [theme.md Issue 5](./theme.md). Зачёркнуты ниже с `✅ resolved`-маркерами.
+summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07: logical iconPosition start/end + RTL (Issue 3); cross-cutting — SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 ✅ (ESM-only `engines` + root `exports` map через `buildRootExports()`, 2026-06-11). Doc-sync 2026-06-12: матрица severity пересчитана к фактически открытым (Issues 5/6/7/13/14/15/16). Issue 16 (B11 — darkModeSelector) ✅ resolved 2026-06-12 — theme-движок уже транслировал config-селектор, добавлены regression-тесты ([theme.md Issue 5](./theme.md)). Зачёркнуты ниже с `✅ resolved`-маркерами.
 updated: 2026-06-12
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/button/
@@ -13,21 +13,21 @@ related-doc: ../components/button.md
 
 ## Сводка
 
-| Severity | Count | Categories                       |
-| -------- | ----- | -------------------------------- |
-| critical | 0     | —                                |
+| Severity | Count | Categories                                                                            |
+| -------- | ----- | ------------------------------------------------------------------------------------- |
+| critical | 0     | —                                                                                     |
 | high     | 0     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, ~~L53~~ ✅ (Issues 13, 14) |
-| medium   | 1     | ~~F31~~ ✅, G34, ~~G36~~ ✅, ~~I44~~ ✅, ~~I45~~ ✅, ~~N59~~ ✅ |
-| low      | 4     | B11, D26, E29.7, G37             |
+| medium   | 1     | ~~F31~~ ✅, G34, ~~G36~~ ✅, ~~I44~~ ✅, ~~I45~~ ✅, ~~N59~~ ✅                       |
+| low      | 3     | ~~B11~~ ✅, D26, E29.7, G37                                                           |
 
-Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 16 (cross-cutting darkModeSelector, deferred). G34/D26/E29.7/G37 — cross-cutting категории, локально решены.
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытых Button-локальных секций нет (Issue 16 закрыт 2026-06-12). G34/D26/E29.7/G37 — cross-cutting категории, локально решены.
 
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
 **Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
 **Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
 **Закрыто 2026-05-11 (cross-cutting; отмечено 2026-06-12):** Issue 14 (L53 — `unstyled` через `Component.setStyle` guard + Button regression-тест).
 **Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print); Issue 6 (I44 — lazy Loading/FixWindow через `defineAsyncComponent`); Issue 5 (G36 — polymorphic `as` через `<component :is>`); Issue 7 (I45 — heroicons точечный dynamic import, cross-cutting Icons.vue + icons.md Issue 1).
-**Deferred:** Issue 16 (B11 — `darkModeSelector`) делегирован cross-cutting [theme.md Issue 5](./theme.md) (Wave 3.4) — счётчик остаётся открытым (low).
+**Закрыто 2026-06-12:** Issue 16 (B11 — `darkModeSelector`) — движок уже транслировал config-селектор (`setStyle:150` → `tailwind.ts:95`), Button наследует автоматически; добавлены regression-тесты, cross-cutting [theme.md Issue 5](./theme.md) закрыт. Без правок `lib/button/`.
 Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
 ## ~~Issue 1: Стили инжектятся только после client mount — пустой first paint при SSR~~ ✅ resolved 2026-06-07
@@ -256,7 +256,7 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - **Severity:** ~~medium~~ → resolved
 - **Где:** [lib/icons/Icons.vue](../../lib/icons/Icons.vue) (cross-cutting — фикс в Icons, не в Button)
 
-> **Resolution (2026-06-12, cross-cutting).** Фикс не Button-локальный — heroicons грузятся в [Icons.vue](../../lib/icons/Icons.vue). Namespace-импорты всего набора заменены на точечный `import(\`@heroicons/vue/24/{outline|solid}/${Name}.js\`)` с Iconify-fallback. Закрывает также [icons.md Issue 1](./icons.md). **Trade-off:** heroicon резолвится async → нет в SSR-HTML, sync-доступ требует await (+8 cross-component тестов адаптированы). Точный bundle-замер не прогонялся; для гарантированного tree-shaking + SSR — `unplugin-icons` (см. [components/icons.md](../components/icons.md)). Детали и acceptance — [icons.md Issue 1](./icons.md).
+> **Resolution (2026-06-12, cross-cutting).** Фикс не Button-локальный — heroicons грузятся в [Icons.vue](../../lib/icons/Icons.vue). Namespace-импорты всего набора заменены на точечный `import(\`@heroicons/vue/24/{outline|solid}/${Name}.js\`)`с Iconify-fallback. Закрывает также [icons.md Issue 1](./icons.md). **Trade-off:** heroicon резолвится async → нет в SSR-HTML, sync-доступ требует await (+8 cross-component тестов адаптированы). Точный bundle-замер не прогонялся; для гарантированного tree-shaking + SSR —`unplugin-icons` (см. [components/icons.md](../components/icons.md)). Детали и acceptance — [icons.md Issue 1](./icons.md).
 
 ### Что найдено
 
@@ -309,6 +309,7 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - **Где:** [lib/package.json](../../lib/package.json), [lib/rollup.config.js `buildRootExports()`](../../lib/rollup.config.js), [lib/package.test.ts](../../lib/package.test.ts)
 
 > **Resolution (ESM-only 2026-06-07, exports map 2026-06-11; Issue 5c-b).**
+>
 > - **ESM-only ратифицирован ✅** — добавлен `"engines": { "node": ">=18" }` в [lib/package.json](../../lib/package.json); осознанное решение оставаться ESM-only (`.mjs`), `get_CJS_ESM()` выключен. CJS НЕ включаем: аудитория — bundler-based Vue/Nuxt, для которых ESM нативен.
 > - **`exports` map (A5) ✅** — корневая карта генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js) из авторитетных rollup-выходов + вложенных `package.json`/`.d.ts`: явный entry на каждый `.mjs` (identity `*.mjs` + extensionless) + bare-dir из вложенного `package.json` (`./button` → import `button.mjs`, types `Button.d.ts` — обходит lowercase-`.mjs`/PascalCase-`.d.ts` асимметрию) + `./*/package.json`. Strict superset, ноль wildcard-неоднозначности. Пререкизит **5c-a** (Menu publish-gap: `MenuItem.vue`/`MenuGroup.vue` не публиковались → переведены на `index.ts`-bundle, зеркало Table). **Verified:** `npm pack` → install → `import.meta.resolve` 19/19 субпутей в pure Node ESM (раньше падали «directory import not supported»); CSS-free субпуты исполняются (self-ref через карту); `tsc --moduleResolution bundler` И `nodenext` exit 0. Контракт — [lib/package.test.ts](../../lib/package.test.ts) (см. [README.md §2.1](./README.md)).
 
@@ -551,39 +552,36 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 
 - [x] ~~Button скрыт по умолчанию~~ → пересмотрено: style-for-print (кнопка печатается монохромно, не скрывается). DevTools → Rendering → Emulate CSS print — кнопка читаема ч/б.
 
-## Issue 16: Dark mode зависит от `.dark` класса родителя без учёта `darkModeSelector`
+## ~~Issue 16: Dark mode зависит от `.dark` класса родителя без учёта `darkModeSelector`~~ ✅ resolved 2026-06-12
 
 - **Категория:** B11 (dark mode + runtime theme switch)
 - **Severity:** low
-- **Где:** [Button.vue:31-49](../../lib/button/Button.vue) (все `dark:*` классы)
+- **Где:** [Button.vue:31-49](../../lib/button/Button.vue) (все `dark:*` классы), [theme.md Issue 5](./theme.md)
 
-> **Status (2026-06-12): deferred.** Фикс не Button-локальный — `darkModeSelector` транслируется в CSS на уровне theme-движка ([theme/uno.ts](../../lib/theme/uno.ts)), это cross-cutting Wave 3.4, отслеживаемая в [theme.md Issue 5](./theme.md). Button наследует поведение автоматически после её закрытия; отдельной правки в `lib/button/` не требуется. Счётчик остаётся открытым (low) до закрытия theme-wave.
+> **Status (2026-06-12): ✅ resolved.** Фикс был не Button-локальным и оказался **уже реализован** на уровне theme-движка: `Component.setStyle` прокидывает `darkSelector` из config ([component/index.ts:150](../../lib/component/index.ts#L150)), `tailwind()` генерирует `dark:*` на этот селектор ([tailwind.ts:95](../../lib/theme/unoStyle/tailwind.ts#L95)). Button наследует поведение автоматически — **правок в `lib/button/` не потребовалось**. Закрыто добавлением regression-тестов (cross-cutting [theme.md Issue 5](./theme.md)).
 
 ### Что найдено
 
-Tailwind dark variant — `darkMode: "class"` — реагирует на `.dark` класс на любом ancestor. Но публичная Configuration [docs/content/ru/3.Configuration/2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает `darkModeSelector` опцию (например, `"html.dark"` или `"[data-theme=dark]"`). Button игнорирует.
+Tailwind dark variant обычно реагирует на `.dark` класс на ancestor. Публичная Configuration [docs/content/ru/3.Configuration/2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает `darkModeSelector` опцию (например, `"html.dark"` или `"[data-theme=dark]"`). Аудит предполагал, что Button её игнорирует.
 
-### Почему это проблема
+**По факту** движок её уже учитывает (см. Status выше) — «coupling неявный» из исходного аудита оказался корректным coupling'ом, просто непокрытым тестом.
 
-- Если пользователь конфигурирует `darkModeSelector: "[data-theme='dark']"`, Button.dark классы продолжают слушать `.dark`.
-- Может работать через UnoCSS engine, но coupling неявный.
+### Что сделано
 
-### Что нужно сделать
-
-1. Проверить через [lib/theme/uno.ts](../../lib/theme/uno.ts), что `darkModeSelector` транслируется в правильный CSS-селектор для `dark:*` вариантов.
-2. Если не транслируется — добавить runtime hook в Component.initStyle для замены `.dark` на конфигурируемый селектор.
-3. Документировать связь в [Documentation/architecture/theme.md](../architecture/theme.md).
+1. ~~Проверить, что `darkModeSelector` транслируется в правильный CSS-селектор для `dark:*` вариантов.~~ ✅ транслируется (`setStyle:150` → `tailwind.ts:95`); дефолт без config — `@media (prefers-color-scheme: dark)`.
+2. ~~Если не транслируется — добавить runtime hook.~~ ✅ не требуется — транслируется.
+3. ~~Документировать связь в [architecture/theme.md](../architecture/theme.md).~~ ✅ уже задокументировано (theme.md §«Dark mode»), сверено.
 
 ### Acceptance criteria
 
-- [ ] `optionsTheme: { darkModeSelector: "[data-theme='dark']" }` — `<Button>` реагирует на `<html data-theme='dark'>`.
+- [x] `optionsTheme: { darkModeSelector: "[data-theme='dark']" }` — `dark:*` варианты Button генерируются на `[data-theme='dark']` (а не на дефолтный media-query). Покрыто [lib/theme/darkModeSelector.test.ts](../../lib/theme/darkModeSelector.test.ts) + [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts).
 
 ## Cross-cutting: Configuration support
 
 | Настройка                  | Поддержано? | Комментарий                                                                                                                                                                                     |
 | -------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `componentsOptions.Button` | ✅          | через `Button.getOptions()` (mode/size/rounded/color/class/classIcon — `ariaLabel`/`icon`/`type` не входят)                                                                                     |
-| `componentsStyle` global   | ✅          | Issue 13 — computed `componentsStyleMode` mapping (`filled→primary` / `outlined→outline` / `underlined→ghost`) в fallback chain `mode`                                                            |
+| `componentsStyle` global   | ✅          | Issue 13 — computed `componentsStyleMode` mapping (`filled→primary` / `outlined→outline` / `underlined→ghost`) в fallback chain `mode`                                                          |
 | `unstyled: true`           | ❌          | см. Issue 14 — игнорируется                                                                                                                                                                     |
 | Theme tokens vs hardcode   | ⚠️          | через Tailwind `theme-*`/`neutral-*`/`green-*`/`red-*` классы; design tokens из [theme/themes/Aurora.ts](../../lib/theme/themes/Aurora.ts) НЕ применяются напрямую — только через UnoCSS preset |
 | Runtime theme switch       | ⚠️          | работает через CSS-переменные `theme-*`, но смена палитры через `updatePrimaryPalette()` требует регенерации CSS — проверить корректность invalidation                                          |

@@ -1,7 +1,7 @@
 ---
 title: Issues — Theme system
 summary: Аудит theme — coverage themes/ и uno.ts 0%, нет публичного API usePreset/updatePreset/$dt/palette (заявлены в публичной доке но не экспортируются), no documented runtime theme switch path.
-updated: 2026-05-10
+updated: 2026-06-12
 audit-checklist: 60-point + Configuration support
 source: lib/theme/
 related-doc: ../architecture/theme.md
@@ -11,12 +11,12 @@ related-doc: ../architecture/theme.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 6 | A2, A4-5, J46 (themes 0% coverage), L53 (no usePreset/updatePreset API), C17 (CSS layers), B11 (darkModeSelector inconsistent) |
-| medium | 4 | D21, F31, B10, K46 (uno.ts 0%) |
-| low | 2 | E29, N59 |
+| Severity | Count | Categories                                                                                |
+| -------- | ----- | ----------------------------------------------------------------------------------------- |
+| critical | 0     | —                                                                                         |
+| high     | 5     | A2, A4-5, J46 (themes 0% coverage), L53 (no usePreset/updatePreset API), C17 (CSS layers) |
+| medium   | 4     | D21, F31, B10, K46 (uno.ts 0%)                                                            |
+| low      | 2     | E29, N59                                                                                  |
 
 ## Issue 1: Публичный API `usePreset`/`updatePreset`/`$dt`/`palette` НЕ существует — а заявлен в Documentation
 
@@ -27,6 +27,7 @@ related-doc: ../architecture/theme.md
 ### Что найдено
 
 Публичная Configuration документация [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает:
+
 - `usePreset(MyPreset)` — полная замена пресета.
 - `updatePreset({...})` — merge.
 - `updatePrimaryPalette({50: ..., 950: ...})`.
@@ -35,6 +36,7 @@ related-doc: ../architecture/theme.md
 - `palette('#color')` — генерация палитры.
 
 В коде lib/theme/:
+
 - index.ts (22 lines) — только linksTheme + NamesTheme exports.
 - helpers/themeHandler.ts (41 lines) — internal.
 - helpers/palette.ts (65 lines) — есть функция, но не exported в публичный API.
@@ -135,23 +137,27 @@ BaseStylesComponent.initStyle(() =>
 2. Если `optionsTheme.layers` указан — использовать настраиваемый layer name.
 3. Тест: пользовательский CSS вне layer перебивает FishtVue (предсказуемая cascade).
 
-## Issue 5: `darkModeSelector` — partially honored
+## ~~Issue 5: `darkModeSelector` — partially honored~~ ✅ resolved 2026-06-12
 
 - **Категория:** B11
 - **Severity:** high
-- **Где:** [theme/uno.ts](../../lib/theme/uno.ts), various components
+- **Где:** [theme/unoStyle/tailwind.ts:95](../../lib/theme/unoStyle/tailwind.ts#L95), [component/index.ts:150](../../lib/component/index.ts#L150)
 
-### Что найдено
+> **Status (2026-06-12): ✅ resolved.** Движок **уже** транслировал `darkModeSelector` — фикс приземлился ещё в `d120e4e` (Jan 2025), но не был ни покрыт тестом, ни сверен с аудитом (этот файл утверждал ❌, тогда как [architecture/theme.md](../architecture/theme.md) описывал фичу как работающую — внутреннее противоречие). Контракт теперь зафиксирован тестами; правок движка не потребовалось.
 
-Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает: `optionsTheme.darkModeSelector: "html.dark"` — настраиваемый dark-mode selector. Но Tailwind classes `dark:*` хардкоден на `.dark` (или `[data-theme=dark]` через UnoCSS preset). Component-level dark не реагирует на change `darkModeSelector`.
+### Что найдено (исходный аудит)
 
-См. [calendar.md Issue 1](./calendar.md) — Calendar пытается через MutationObserver, но утекает observer.
+Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает: `optionsTheme.darkModeSelector: "html.dark"` — настраиваемый dark-mode selector. Аудит считал, что `dark:*` хардкоден на media-query и не реагирует на config.
 
-### Что нужно сделать
+**По факту:** `Component.setStyle` прокидывает `darkSelector: this.__globalOptionsTheme?.darkModeSelector ?? ""` ([component/index.ts:150](../../lib/component/index.ts#L150)), а движок `tailwind()` подменяет дефолтный `@media (prefers-color-scheme: dark)` ([unoStatic.ts:561](../../lib/theme/unoStyle/unoStatic.ts#L561)) на этот селектор, когда он непустой ([tailwind.ts:95](../../lib/theme/unoStyle/tailwind.ts#L95)). Это в точности канон [dev-patterns.md](../dev-patterns.md) («движок `tailwind()` уже знает media/variant-фичи; не патчим theme-движок»).
 
-1. UnoCSS preset должен генерировать `dark:*` варианты на основе `darkModeSelector` config.
-2. Reactive — при смене `darkModeSelector` через `usePreset` — variants регенерируются.
-3. Тест: `<html data-theme="dark">` + `darkModeSelector: "[data-theme='dark']"` — Button рендерится в dark mode.
+### Что сделано
+
+1. ~~UnoCSS preset должен генерировать `dark:*` варианты на основе `darkModeSelector` config.~~ ✅ уже реализовано (`tailwind.ts:95` + `setStyle:150`), теперь покрыто тестом.
+2. **Reactive** — при смене `darkModeSelector` в рантайме через `usePreset` варианты НЕ регенерируются (дедуп `listOfStyledComponents` не инвалидируется). Это часть **Issue 1** (runtime theme switch / invalidation, выше в этом файле), не B11. Остаётся открытым там.
+3. ~~Тест: `<html data-theme="dark">` + `darkModeSelector: "[data-theme='dark']"` — компонент рендерится в dark mode.~~ ✅ [lib/theme/darkModeSelector.test.ts](../../lib/theme/darkModeSelector.test.ts) (probe-компонент через plugin-config) + engine-кейсы в [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts) (`describe("Dark mode selector …")`).
+
+> **Примечание:** `lightModeSelector` (типизирован в [OptionsTheme](../../lib/config/FishtVue.d.ts#L179)) пока НЕ транслируется — light это дефолт, dark — override; отдельная фича, вне B11.
 
 ## Issue 6: SSR styles + sideEffects + unstyled
 
@@ -184,18 +190,18 @@ Theme-токены типа `border-left-radius` хардкоден. Должн�
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `optionsTheme.nameTheme` | ✅ | Aurora/Harmony/Sapphire choice |
-| `optionsTheme.prefix` | ⚠️ | через UnoCSS preset — проверить |
-| `optionsTheme.lightModeSelector` | ⚠️ | проверить применение |
-| `optionsTheme.darkModeSelector` | ❌ | Issue 5 |
-| `optionsTheme.layers` | ⚠️ | только base-style (Issue 4) |
-| `optionsTheme.isNotMinifyCSS` | ⚠️ | проверить применение |
-| `usePreset` runtime | ❌ | Issue 1 |
-| `updatePreset` runtime | ❌ | Issue 1 |
-| `$dt` | ❌ | Issue 1 |
-| `palette` | ⚠️ | helper существует, не exported (Issue 1) |
+| Настройка                        | Поддержано? | Комментарий                                                                 |
+| -------------------------------- | ----------- | --------------------------------------------------------------------------- |
+| `optionsTheme.nameTheme`         | ✅          | Aurora/Harmony/Sapphire choice                                              |
+| `optionsTheme.prefix`            | ⚠️          | через UnoCSS preset — проверить                                             |
+| `optionsTheme.lightModeSelector` | ❌          | типизирован, но НЕ транслируется в движок (light — дефолт; не входит в B11) |
+| `optionsTheme.darkModeSelector`  | ✅          | Issue 5 — `setStyle:150` → `tailwind.ts:95`, test-locked                    |
+| `optionsTheme.layers`            | ⚠️          | только base-style (Issue 4)                                                 |
+| `optionsTheme.isNotMinifyCSS`    | ⚠️          | проверить применение                                                        |
+| `usePreset` runtime              | ❌          | Issue 1                                                                     |
+| `updatePreset` runtime           | ❌          | Issue 1                                                                     |
+| `$dt`                            | ❌          | Issue 1                                                                     |
+| `palette`                        | ⚠️          | helper существует, не exported (Issue 1)                                    |
 
 ## Dual-API gap
 

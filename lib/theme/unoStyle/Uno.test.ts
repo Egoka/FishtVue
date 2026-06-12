@@ -262,6 +262,37 @@ describe("unoStyle", () => {
           expect(tailwind(classValue)).toBe(expected)
         })
       })
+      describe("Dark mode selector (optionsTheme.darkModeSelector)", () => {
+        // Движок `tailwind()` подменяет default media-query `@media (prefers-color-scheme: dark)`
+        // на настраиваемый `darkSelector` (Component.setStyle прокидывает его из
+        // `optionsTheme.darkModeSelector`). Кейсы фиксируют контракт B11
+        // (button.md Issue 16 / theme.md Issue 5): `dark:*` варианты генерируются на указанный селектор.
+        it.each<{ classValue: string; darkSelector: string; expected: string }>([
+          {
+            classValue: "dark:p-0",
+            darkSelector: "[data-theme='dark']",
+            expected: "[data-theme='dark'] {\n.dark\\:p-0 {\n  padding: 0px;\n}\n}"
+          },
+          {
+            classValue: "dark:flex",
+            darkSelector: "html.dark",
+            expected: "html.dark {\n.dark\\:flex {\n  display: flex;\n}\n}"
+          },
+          {
+            classValue: "dark:flex",
+            darkSelector: ".dark",
+            expected: ".dark {\n.dark\\:flex {\n  display: flex;\n}\n}"
+          }
+        ])("tailwind($classValue, { darkSelector: $darkSelector })", ({ classValue, darkSelector, expected }) => {
+          expect(tailwind(classValue, { selector: "", darkSelector })).toBe(expected)
+        })
+
+        it("falls back to @media (prefers-color-scheme: dark) when darkSelector is empty", () => {
+          expect(tailwind("dark:p-0", { selector: "", darkSelector: "" })).toBe(
+            "@media (prefers-color-scheme: dark) {\n.dark\\:p-0 {\n  padding: 0px;\n}\n}"
+          )
+        })
+      })
       describe("Prefers reduced motion", () => {
         it.each<{ classValue: string; expected: string }>([
           {

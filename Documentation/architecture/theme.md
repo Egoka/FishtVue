@@ -1,7 +1,7 @@
 ---
 title: Theme
 summary: Token-инфраструктура, primitive/semantic, темы Aurora/Harmony/Sapphire, uno-engine.
-updated: 2026-05-09
+updated: 2026-06-12
 stability: stable
 since: 0.2.11
 ---
@@ -40,7 +40,7 @@ lib/theme/
 │   ├── unoStatic.ts       # списки pseudo-classes, media, selectors
 │   ├── helpers.ts
 │   ├── UnoTypes.d.ts
-│   ├── Uno.test.ts        # 1587 кейсов
+│   ├── Uno.test.ts        # 1591 кейс (вкл. darkModeSelector-кейсы)
 │   └── Uno.improved.test.ts # 1584 кейса
 ├── Theme.test.ts          # 20 кейсов
 └── package.json           # exports: index, themes/*, helpers/*, uno
@@ -105,10 +105,10 @@ Plugin сам подгрузит preset.
 
 Не применимо — это набор токенов и helpers. Параметры `Theme`:
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `primitive` | `Partial<ThemePrimitive>` | preset (Aurora) | Базовые токены. |
-| `semantic` | `Partial<ThemeSemantic>` | preset (Aurora) | Семантические алиасы и custom color params. |
+| Field       | Type                      | Default         | Description                                 |
+| ----------- | ------------------------- | --------------- | ------------------------------------------- |
+| `primitive` | `Partial<ThemePrimitive>` | preset (Aurora) | Базовые токены.                             |
+| `semantic`  | `Partial<ThemeSemantic>`  | preset (Aurora) | Семантические алиасы и custom color params. |
 
 `OptionsTheme` (через `FishtVueConfiguration.optionsTheme`) — см. [Config §5](./config.md#5-props).
 
@@ -124,14 +124,14 @@ Plugin сам подгрузит preset.
 
 Публичный API из `fishtvue/theme`:
 
-| Name | Type | Description |
-|---|---|---|
-| `linksTheme<T>(theme)` | `(theme?: Theme) => T \| undefined` | Резолвит ссылки в `semantic` на ключи `primitive`. Вызывается plugin'ом. |
-| `tailwind(class, options?)` | `(class: string, options?: { selector?, darkSelector? }) => string` | Конвертирует один Tailwind-подобный класс в CSS-сниппет. |
-| `palette(color)` | `(color: HEX) => ThemeColor` | Из одного HEX генерирует scale 50…950. |
-| `toVarsCss<T>(obj, prefix?)` | `(obj, prefix?) => string` | Сериализует объект в `--{prefix}-{key}: {value};` лист. |
-| `useStyle(css, options?)` | `(css: string, options?: StyleOptions) => Style` | Инжектит `<style>` в `document.head` (clientside). Возвращает `{ id, name, el, css, unload, load, isLoaded }`. |
-| `NamesTheme` | `(keyof typeof NamesTheme)[]` | Массив поддерживаемых имён тем: `["Aurora", "Harmony", "Sapphire"]`. |
+| Name                         | Type                                                                | Description                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `linksTheme<T>(theme)`       | `(theme?: Theme) => T \| undefined`                                 | Резолвит ссылки в `semantic` на ключи `primitive`. Вызывается plugin'ом.                                       |
+| `tailwind(class, options?)`  | `(class: string, options?: { selector?, darkSelector? }) => string` | Конвертирует один Tailwind-подобный класс в CSS-сниппет.                                                       |
+| `palette(color)`             | `(color: HEX) => ThemeColor`                                        | Из одного HEX генерирует scale 50…950.                                                                         |
+| `toVarsCss<T>(obj, prefix?)` | `(obj, prefix?) => string`                                          | Сериализует объект в `--{prefix}-{key}: {value};` лист.                                                        |
+| `useStyle(css, options?)`    | `(css: string, options?: StyleOptions) => Style`                    | Инжектит `<style>` в `document.head` (clientside). Возвращает `{ id, name, el, css, unload, load, isLoaded }`. |
+| `NamesTheme`                 | `(keyof typeof NamesTheme)[]`                                       | Массив поддерживаемых имён тем: `["Aurora", "Harmony", "Sapphire"]`.                                           |
 
 `StyleOptions` ([Theme.d.ts:175–188](../../lib/theme/Theme.d.ts#L175-L188)): `document`, `immediate`, `manual`, `name`, `id`, `media`, `nonce`, `props`, `first`, `onMounted`, `onUpdated`, `onLoad`.
 
@@ -201,7 +201,7 @@ unload()
 - **Имена цветов** ([Theme.d.ts:118–141](../../lib/theme/Theme.d.ts#L118-L141)): `theme | emerald | green | lime | red | orange | amber | yellow | teal | cyan | sky | blue | indigo | violet | purple | fuchsia | pink | rose | slate | gray | zinc | neutral | stone`. Шкала каждого цвета — 11 ступеней (50…950).
 - **`theme` colorslot** — динамический, через CSS-переменные `--theme` (hue) и `--theme-contrast` (saturation). Переопределяется через `semantic.customThemeColor` и `semantic.customThemeColorContrast`.
 - **Размеры** (`ThemeRounded`, `ThemeShadow`): `Size` (xs/sm/md/lg/xl) + `none/full` или `inner/none`.
-- **Dark mode** — через `optionsTheme.darkModeSelector` (например, `".dark"`). Все uno-классы с `dark:` префиксом получают этот селектор.
+- **Dark mode** — через `optionsTheme.darkModeSelector` (например, `".dark"`, `"html.dark"` или `"[data-theme='dark']"`). Все uno-классы с `dark:` префиксом генерируются на этот селектор: `Component.setStyle` прокидывает его как `darkSelector` ([component/index.ts:150](../../lib/component/index.ts#L150)) → `tailwind()` подставляет вместо дефолтного `@media (prefers-color-scheme: dark)` ([unoStyle/tailwind.ts:95](../../lib/theme/unoStyle/tailwind.ts#L95)). Без config (`darkModeSelector` не задан) `dark:*` остаётся OS-pref media-query. Контракт зафиксирован тестами: [lib/theme/darkModeSelector.test.ts](../../lib/theme/darkModeSelector.test.ts) + [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts). **`lightModeSelector`** пока НЕ транслируется (light — дефолт, dark — override).
 
 ### 10.4 CSS layer override
 
@@ -280,13 +280,13 @@ describe("Theme helpers", () => {
 
 ## 16. Troubleshooting / FAQ
 
-| Проблема | Причина | Решение |
-|---|---|---|
-| `--theme` всегда `0deg` | Не передан `semantic.customThemeColor`. | Установить число градусов или строку (`"180deg"`). |
-| Цвета `theme-50` … `theme-950` не реагируют на `customThemeColor` | Используется не CSS-переменная, а статический HEX в primitive. | Цвета `theme.*` в primitive используют `var(--theme)` — проверь, не переопределил ли пользовательский `theme.primitive.colors.theme` HEX-палитрой. |
-| `darkModeSelector` не применяет dark-классы | Селектор не совпадает с DOM (`html.dark` vs `[data-theme="dark"]`). | Согласуй селектор. |
-| `palette("#zzz")` падает | Невалидный HEX. | Передавай `"#rrggbb"` (6 hex digits). |
-| Layer overrides не работают | Стили вне `@layer` побеждают, см. CSS Cascade-4. | Используй дополнительный layer после `fishtvue`: `optionsTheme.layers = "fishtvue, app"`. |
+| Проблема                                                          | Причина                                                             | Решение                                                                                                                                            |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--theme` всегда `0deg`                                           | Не передан `semantic.customThemeColor`.                             | Установить число градусов или строку (`"180deg"`).                                                                                                 |
+| Цвета `theme-50` … `theme-950` не реагируют на `customThemeColor` | Используется не CSS-переменная, а статический HEX в primitive.      | Цвета `theme.*` в primitive используют `var(--theme)` — проверь, не переопределил ли пользовательский `theme.primitive.colors.theme` HEX-палитрой. |
+| `darkModeSelector` не применяет dark-классы                       | Селектор не совпадает с DOM (`html.dark` vs `[data-theme="dark"]`). | Согласуй селектор.                                                                                                                                 |
+| `palette("#zzz")` падает                                          | Невалидный HEX.                                                     | Передавай `"#rrggbb"` (6 hex digits).                                                                                                              |
+| Layer overrides не работают                                       | Стили вне `@layer` побеждают, см. CSS Cascade-4.                    | Используй дополнительный layer после `fishtvue`: `optionsTheme.layers = "fishtvue, app"`.                                                          |
 
 ## 17. Related
 
@@ -307,6 +307,8 @@ describe("Theme helpers", () => {
 - `theme.primitive.colors.theme` ([primitive.ts:4–16](../../lib/theme/primitive.ts#L4-L16)) — единственный цвет, использующий `var(--theme)`. Остальные 21 имя цвета — статические HEX. Если консумер хочет иметь второй динамический цвет (например, secondary), приходится дублировать механизм самостоятельно.
 - `unoStyle/test-helpers-advanced.ts` ([unoStyle/test-helpers-advanced.ts](../../lib/theme/unoStyle/test-helpers-advanced.ts)) — coverage 0% (не подключён в тестах).
 - `lib/theme/themes/{Aurora,Harmony,Sapphire}.ts` — coverage 0%, тестируется косвенно через config.
+- `optionsTheme.lightModeSelector` ([OptionsTheme](../../lib/config/FishtVue.d.ts#L179)) — типизирован, но НЕ транслируется в движок (в отличие от `darkModeSelector`). Light — дефолтное состояние, dark — override через `darkModeSelector`; отдельный `light:`-вариант не реализован.
+- Runtime-смена `darkModeSelector` (через будущий `usePreset`) НЕ регенерирует уже сгенерированные `dark:*` — дедуп `listOfStyledComponents` не инвалидируется (см. [issues/theme.md Issue 1](../issues/theme.md)).
 
 ### Skipped tests
 
