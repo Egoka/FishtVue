@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils"
+import { flushPromises, mount } from "@vue/test-utils"
 import { h, nextTick } from "vue"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
@@ -8,6 +8,13 @@ import MenuGroup from "fishtvue/menu/MenuGroup.vue"
 import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 import { GroupMenu, ItemMenuPrivate, MenuOption, MenuProps } from "fishtvue/menu/Menu"
 import { StyleMode } from "fishtvue/types"
+
+// Issue 7: heroicons (item / separator SVG) теперь резолвятся async — ждём microtasks + macrotask.
+const flushHero = async () => {
+  await flushPromises()
+  await new Promise((r) => setTimeout(r))
+  await flushPromises()
+}
 
 describe("Menu Component", () => {
   // Глобальные componentsOptions (через app.use(FishtVue, …)) пишутся в window.FishtVue и
@@ -81,6 +88,7 @@ describe("Menu Component", () => {
         props: { groups: mockGroups() }
       })
       await nextTick()
+      await flushHero()
 
       const separators = wrapper.findAll("[data-separator]")
       expect(separators.length).toBe(1)
@@ -88,13 +96,14 @@ describe("Menu Component", () => {
       const separatorIcon = separators[0].find("svg")
       expect(separatorIcon.exists()).toBe(true)
     })
-    it("renders items with only icons when 'only-icons' is true", () => {
+    it("renders items with only icons when 'only-icons' is true", async () => {
       const wrapper = mount(Menu, {
         props: {
           groups: mockGroups(),
           onlyIcons: true
         }
       })
+      await flushHero()
 
       const items = wrapper.findAll("[data-menu-item]")
       for (const item of items) {
@@ -388,7 +397,7 @@ describe("Menu Component", () => {
       expect(menuTitle.classes()).toContain("global-title-class")
     })
 
-    it("renders menu items with icons based on global options", () => {
+    it("renders menu items with icons based on global options", async () => {
       const app: any = createAppWithFishtVue({
         onlyIcons: true
       })
@@ -407,6 +416,7 @@ describe("Menu Component", () => {
           ]
         }
       })
+      await flushHero()
 
       const items = wrapper.findAll("[data-menu-item]")
       for (const item of items) {
@@ -440,6 +450,7 @@ describe("Menu Component", () => {
         }
       })
       await nextTick()
+      await flushHero()
 
       const separatorIcons = wrapper.findAll("svg")
       expect(separatorIcons.length).toBeGreaterThan(0)

@@ -1,7 +1,14 @@
-import { mount } from "@vue/test-utils"
+import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Icons from "fishtvue/icons/Icons.vue"
+
+// Issue 7: heroicons теперь резолвятся через dynamic import (async) — ждём microtasks + macrotask.
+const flushHero = async () => {
+  await flushPromises()
+  await new Promise((r) => setTimeout(r))
+  await flushPromises()
+}
 
 describe("Icons Component Tests", () => {
   describe("Icon Component - Without Library Initialization", () => {
@@ -11,6 +18,7 @@ describe("Icons Component Tests", () => {
           type: "Check"
         }
       })
+      await flushHero()
       expect(wrapper.html())
         .toBe(`<i data-icon=""><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-icons h-5 w-5 text-gray-900 dark:text-gray-100 select-none">
     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"></path>
@@ -38,6 +46,7 @@ describe("Icons Component Tests", () => {
         }
       })
 
+      await flushHero()
       const iconElement = wrapper.find("svg")
       expect(iconElement.attributes("class")).toContain("custom-class")
       expect(iconElement.attributes("style")).toContain("color: red;")
@@ -62,8 +71,9 @@ describe("Icons Component Tests", () => {
   // pattern сохраняет корректную семантику для screen-reader'ов.
   // -----------------------------------------------------------------------
   describe("ARIA — accessibility attrs", () => {
-    it("default (no label) — wrapper has no role/aria-label, SVG keeps built-in aria-hidden", () => {
+    it("default (no label) — wrapper has no role/aria-label, SVG keeps built-in aria-hidden", async () => {
       const wrapper = mount(Icons, { props: { type: "Check" } })
+      await flushHero()
       const root = wrapper.find("[data-icon]")
       expect(root.attributes("role")).toBeUndefined()
       expect(root.attributes("aria-label")).toBeUndefined()
@@ -111,16 +121,18 @@ describe("Icons Component Tests", () => {
       warnSpy.mockRestore()
     })
 
-    it('variant="solid" renders solid HeroIcon (fill="currentColor" instead of stroke)', () => {
+    it('variant="solid" renders solid HeroIcon (fill="currentColor" instead of stroke)', async () => {
       const wrapper = mount(Icons, { props: { type: "Check", variant: "solid" } })
+      await flushHero()
       const svg = wrapper.find("svg")
       // Solid heroicons use fill, outline use stroke-width.
       expect(svg.attributes("fill")).toBe("currentColor")
       expect(svg.attributes("stroke-width")).toBeUndefined()
     })
 
-    it('variant="outline" renders outline HeroIcon (default)', () => {
+    it('variant="outline" renders outline HeroIcon (default)', async () => {
       const wrapper = mount(Icons, { props: { type: "Check", variant: "outline" } })
+      await flushHero()
       const svg = wrapper.find("svg")
       expect(svg.attributes("stroke-width")).toBe("1.5")
       expect(svg.attributes("fill")).toBe("none")
@@ -133,17 +145,19 @@ describe("Icons Component Tests", () => {
     const deprecationCalls = (spy: ReturnType<typeof vi.spyOn>) =>
       spy.mock.calls.filter((c: unknown[]) => /stileIcon.*deprecated.*variant/i.test(String(c[0])))
 
-    it('stileIcon="solid" (without variant) still works AND emits dev console.warn', () => {
+    it('stileIcon="solid" (without variant) still works AND emits dev console.warn', async () => {
       const wrapper = mount(Icons, { props: { type: "Check", stileIcon: "solid" } })
+      await flushHero()
       const svg = wrapper.find("svg")
       expect(svg.attributes("fill")).toBe("currentColor")
       expect(deprecationCalls(warnSpy)).toHaveLength(1)
     })
 
-    it("variant overrides stileIcon (no deprecation warn fired when variant present)", () => {
+    it("variant overrides stileIcon (no deprecation warn fired when variant present)", async () => {
       const wrapper = mount(Icons, {
         props: { type: "Check", variant: "outline", stileIcon: "solid" }
       })
+      await flushHero()
       const svg = wrapper.find("svg")
       expect(svg.attributes("fill")).toBe("none")
       expect(svg.attributes("stroke-width")).toBe("1.5")
@@ -158,8 +172,9 @@ describe("Icons Component Tests", () => {
   // arbitrary string fallback) mount without throwing.
   // -----------------------------------------------------------------------
   describe("Type narrowing — IconType union accepts all branches at runtime", () => {
-    it("HeroIconName branch — 'check' mounts and renders", () => {
+    it("HeroIconName branch — 'check' mounts and renders", async () => {
       const wrapper = mount(Icons, { props: { type: "Check" } })
+      await flushHero()
       expect(wrapper.find("svg").exists()).toBe(true)
     })
 
@@ -198,27 +213,30 @@ describe("Icons Component Tests", () => {
         }
       })
 
+      await flushHero()
       // Проверяем, что иконка рендерится с глобальным классом
       const iconElement = wrapper.find("svg")
       expect(iconElement.attributes("class")).toContain("global-class")
     })
 
-    it('componentsOptions.Icons.variant="solid" applies when prop is absent', () => {
+    it('componentsOptions.Icons.variant="solid" applies when prop is absent', async () => {
       const app = createAppWithFishtVue({ variant: "solid" })
       const wrapper = mount(Icons, {
         props: { type: "Check" },
         global: { plugins: [app] }
       })
+      await flushHero()
       const svg = wrapper.find("svg")
       expect(svg.attributes("fill")).toBe("currentColor")
     })
 
-    it("per-instance variant overrides componentsOptions.variant", () => {
+    it("per-instance variant overrides componentsOptions.variant", async () => {
       const app = createAppWithFishtVue({ variant: "solid" })
       const wrapper = mount(Icons, {
         props: { type: "Check", variant: "outline" },
         global: { plugins: [app] }
       })
+      await flushHero()
       const svg = wrapper.find("svg")
       expect(svg.attributes("fill")).toBe("none")
       expect(svg.attributes("stroke-width")).toBe("1.5")

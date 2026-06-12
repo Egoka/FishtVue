@@ -1,7 +1,7 @@
 ---
 title: Icons
 summary: Универсальный icon — Heroicons + Iconify, два variant (outline/solid), wrapper-based a11y, narrow IconType union.
-updated: 2026-05-10
+updated: 2026-06-12
 stability: stable
 since: 0.2.11
 ---
@@ -36,12 +36,12 @@ lib/icons/
 ## 3. How it works
 
 - **Lifecycle:** `Component.__hooks()` инжектит стили; SFC также имеет дублирующий `onMounted(() => Icons.initStyle())` (известное cross-cutting отклонение, см. [dev-patterns §12](../dev-patterns.md#12-known-deviations-from-this-pattern)).
-- **Поток данных:** `type` → look-up в Heroicons map (`heroIcons[variant][PascalCase(type) + "Icon"]`) → если не найдено → fallback на `<Icon icon="type">` через `@iconify/vue`.
+- **Поток данных:** `type` → точечный **dynamic import** heroicon (`import(`@heroicons/vue/24/{outline\|solid}/${PascalCase(type)}Icon.js`)`, async, Issue 1) → если import не резолвится → fallback на `<Icon icon="type">` через `@iconify/vue`. Иконка появляется после резолва промиса (см. SSR-заметку ниже и §12 Bundle).
 - **A11y wrapper pattern:** root — `<i data-icon>`. Heroicons render-функции хардкодят `aria-hidden="true"` и не пробрасывают `$attrs`, поэтому role/aria-label применяются к wrapper'у, а SVG внутри остаётся `aria-hidden`. Это валидный screen-reader-pattern: AT читает wrapper как labelled image, внутренний SVG скрыт.
 - **Стили:** через `Icons.setStyle()`. Default — `h-5 w-5 text-gray-900 dark:text-gray-100 select-none`.
 - **Конфиг:** `componentsOptions.Icons` — `class` и `variant`.
 - **Локализация:** не использует.
-- **SSR:** SSR-safe для Heroicons. Iconify тянет иконки lazy с CDN — на сервере initial render может быть placeholder (см. §12 Security).
+- **SSR:** heroicons теперь грузятся через async dynamic import (Issue 1) — в SSR-HTML их **нет**, иконка появляется после hydration. Iconify аналогично lazy с CDN. Для SSR-критичных иконок используйте compile-time `unplugin-icons` (см. §12 Bundle).
 - **Animation:** нет (статический SVG).
 
 ## 4. Quick Start
@@ -217,7 +217,7 @@ Wrapper-based pattern:
 
 ### Security
 
-- **Heroicons** — статические импорты из `@heroicons/vue`, безопасны.
+- **Heroicons** — точечный dynamic import из `@heroicons/vue` (Issue 1), безопасны (модули из node_modules, без внешней сети).
 - **Iconify CDN risk.** `@iconify/vue` lazy-загружает SVG-data с `https://api.iconify.design` при первом render'е. Это создаёт:
   - **CSP-конфликт.** Strict-CSP `connect-src 'self'` блокирует загрузку — иконки не появятся (тихая ошибка). Multi-tenant SaaS и enterprise обычно имеют такой CSP.
   - **Supply-chain risk.** Зависимость от внешнего CDN; компрометация `api.iconify.design` повлияет на потребителей.
@@ -235,6 +235,12 @@ Wrapper-based pattern:
   После `addCollection` Iconify резолвит `"mdi:*"` локально, без сетевого вызова. Доступные JSON-коллекции — `@iconify-json/<collection>` (см. <https://iconify.design/docs/icons/iconify-icon.html#offline-use>). Доп. CSP: ничего не нужно для bundled-варианта.
 
   **Note.** Prop `:offline?: boolean` (env-detection для CDN fallback) — пока не реализован, см. [issues/icons.md](../issues/done/icons.md) Issue 2.
+
+### Bundle (heroicons tree-shaking)
+
+Heroicons грузятся точечно через dynamic import (`import(`@heroicons/vue/24/{outline|solid}/${Name}Icon.js`)`, Issue 1) — namespace-импорт всего набора `@heroicons/vue/24/{outline,solid}` убран. Bundler code-split'ит каждую иконку в отдельный chunk: в рантайме грузится только используемая.
+
+**Trade-off:** резолв async — иконка отсутствует в SSR-HTML (появляется после hydration), и sync-доступ к SVG (тесты, мгновенный клик по icon-target) требует ожидания резолва. Для **гарантированного** compile-time tree-shaking + сохранения SSR-рендера иконок используйте [`unplugin-icons`](https://github.com/unplugin/unplugin-icons) (build-time inline SVG вместо рантайм-резолва) — это устраняет и async-задержку, и SSR-потерю.
 
 ## 13. TypeScript
 

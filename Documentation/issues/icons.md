@@ -1,7 +1,7 @@
 ---
 title: Issues — Icons
-summary: Аудит Icons — heroicons тянутся целиком (~200kb), Iconify CSP-неблагонадёжен (CDN-загрузка). API-уровень — variant prop, label prop, narrow IconType union — закрыт в 0.2.x.
-updated: 2026-05-11
+summary: Аудит Icons — heroicons теперь грузятся точечно через dynamic import (Issue 1 ✅ 2026-06-12, trade-off — async/SSR); Iconify CSP-неблагонадёжен (CDN-загрузка). API-уровень — variant prop, label prop, narrow IconType union — закрыт в 0.2.x.
+updated: 2026-06-12
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/icons/
 related-doc: ../components/icons.md
@@ -14,17 +14,22 @@ related-doc: ../components/icons.md
 | Severity | Count | Categories                                                                                                                            |
 | -------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                                                                     |
-| high     | 4     | A2, A4-5, C17, I45 (heroicons bundle); ~~C13/security (Iconify CSP)~~ ⚠️ docs portion resolved, full mitigation requires offline-prop |
+| high     | 3     | A2, A4-5, C17, ~~I45 (heroicons bundle)~~ ✅; ~~C13/security (Iconify CSP)~~ ⚠️ docs portion resolved, full mitigation requires offline-prop |
 | medium   | 1     | L53 (`unstyled` cross-cutting)                                                                                                        |
 | low      | 2     | E29.7 (N/A — static SVG), B10 (hardcode class — cross-cutting Wave 9)                                                                 |
 
 **Closed (2026-05-10):** Issue 3 (ARIA), Issue 4 (variant deprecation), Issue 5 (type narrowing), Issue 2 docs portion, Issue 8 docs portion.
+**Closed (2026-06-12):** Issue 1 (I45 — heroicons точечный dynamic import; trade-off async/SSR + cross-component test-адаптация).
 
-## Issue 1: Heroicons тянутся целиком в bundle потребителя
+## ~~Issue 1: Heroicons тянутся целиком в bundle потребителя~~ ✅ resolved 2026-06-12
 
 - **Категория:** I45 (иконки точечно)
-- **Severity:** high
-- **Где:** [Icons.vue](../../lib/icons/Icons.vue), [rollup.config.js:54-57](../../lib/rollup.config.js#L54-L57)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [Icons.vue `resolveHeroIcon`](../../lib/icons/Icons.vue)
+
+> **Resolution (2026-06-12).** Namespace-импорты `import * as HeroIconsOutline/Solid from "@heroicons/vue/24/{outline,solid}"` (тянули весь набор ~2k иконок через runtime-lookup) заменены на точечный dynamic import конкретной иконки: `import(\`@heroicons/vue/24/{outline|solid}/${PascalCaseName}.js\`)` ([Icons.vue](../../lib/icons/Icons.vue)). Статический префикс на ветку (`outline`/`solid`) обязателен — двух-переменный шаблон Vite не глобит («Missing specifier»). На miss/ошибку — fallback на Iconify (как раньше).
+>
+> **Trade-off (важно).** Heroicon теперь резолвится **async** — отсутствует в SSR-HTML (появляется после hydration), и любой sync-доступ к SVG (тесты, быстрый клик по icon-target) требует await. Затронуты ВСЕ потребители Icons (Button/Menu/Input/Table/Select/…); +8 cross-component тестов адаптированы под async-резолв (`flushPromises` + macrotask helper). Точный bundle-замер (`pnpm sandbox:build`) в этом заходе НЕ прогонялся: Vite code-split'ит каждую иконку в отдельный chunk (грузится только используемая), но для **гарантированного** compile-time tree-shaking + сохранения SSR рекомендуется `unplugin-icons` (см. [components/icons.md](../components/icons.md)). Текущий runtime-подход — осознанный компромисс bundle↔SSR.
 
 ### Что найдено
 
@@ -45,7 +50,7 @@ const HeroIcon = defineAsyncComponent({
 
 ### Acceptance criteria
 
-- [ ] `<Icons type="check" />` в одиночку — bundle ~5kb (только CheckIcon), не ~200kb.
+- [~] `<Icons type="check" />` в одиночку — в рантайме грузится только CheckIcon (отдельный chunk), не весь namespace. Точный gzip-замер (`pnpm sandbox:build`) в этом заходе не прогонялся; гарантированный compile-time tree-shaking + SSR — через `unplugin-icons`.
 
 ## Issue 2: Iconify-загрузка через CDN — CSP risk
 

@@ -1,9 +1,16 @@
-import { mount } from "@vue/test-utils"
+import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue, { setActiveLocale } from "fishtvue/config"
 import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
 import type { InputLayoutExpose } from "fishtvue/inputlayout"
 import { InputProps } from "fishtvue/input"
+
+// Issue 7: heroicons (clear/copy SVG) теперь резолвятся async — ждём microtasks + macrotask.
+const flushHero = async () => {
+  await flushPromises()
+  await new Promise((r) => setTimeout(r))
+  await flushPromises()
+}
 
 describe("InputLayout Component", () => {
   describe("Without Library Initialization", () => {
@@ -88,6 +95,7 @@ describe("InputLayout Component", () => {
       const wrapper = mount(InputLayout, {
         props: { value: "test", clear: true }
       })
+      await flushHero()
       const clearButton = wrapper.find("[data-input-layout-clear] svg")
       await clearButton.trigger("click")
       expect(wrapper.emitted("clear")).toBeTruthy()
@@ -106,6 +114,7 @@ describe("InputLayout Component", () => {
         props: { value: "test value", disabled: true }
       })
 
+      await flushHero()
       const copyButton = wrapper.find("[data-input-layout-copy] svg")
       await copyButton.trigger("click")
 
@@ -132,6 +141,7 @@ describe("InputLayout Component", () => {
         props: { value: "test value", disabled: true }
       })
 
+      await flushHero()
       const copyButton = wrapper.find("[data-input-layout-copy] svg")
       await copyButton.trigger("click")
 

@@ -1,9 +1,16 @@
-import { mount } from "@vue/test-utils"
+import { flushPromises, mount } from "@vue/test-utils"
 import { describe, expect, it, vi } from "vitest"
 import Input from "fishtvue/input/Input.vue"
 import FishtVue from "fishtvue/config"
 import { createApp } from "vue"
 import { InputProps } from "fishtvue/input/Input"
+
+// Issue 7: heroicons (clear/eye SVG) теперь резолвятся async — ждём microtasks + macrotask.
+const flushHero = async () => {
+  await flushPromises()
+  await new Promise((r) => setTimeout(r))
+  await flushPromises()
+}
 
 describe("Input Component Tests", () => {
   describe("Without Library Initialization", () => {
@@ -139,6 +146,7 @@ describe("Input Component Tests", () => {
 
       // Удаление текста через кнопку очистки
       await wrapper.setProps({ clear: true })
+      await flushHero()
       const clearButton = wrapper.find("[data-input-layout-clear] .cursor-pointer")
       expect(clearButton.exists()).toBe(true)
 
@@ -315,16 +323,17 @@ describe("Input Component Tests", () => {
       // (см. lib/icons/Icons.vue:37, 94), а не на root `<i data-eye-slash>`,
       // поэтому проверка через `.html()` — единственный надёжный способ
       // подтвердить, что override-класс пробросился до DOM.
-      it("applies passwordToggleClass prop to eye-icon", () => {
+      it("applies passwordToggleClass prop to eye-icon", async () => {
         const wrapper = mount(Input, {
           props: { type: "password", passwordToggleClass: "text-blue-500" }
         })
         const eyeSlash = wrapper.find("[data-eye-slash]")
         expect(eyeSlash.exists()).toBe(true)
+        await flushHero()
         expect(eyeSlash.html()).toContain("text-blue-500")
       })
 
-      it("applies componentsOptions.Input.passwordToggleClass globally", () => {
+      it("applies componentsOptions.Input.passwordToggleClass globally", async () => {
         delete (window as any).FishtVue
         const app: any = createApp({})
         app.use(FishtVue, {
@@ -335,6 +344,7 @@ describe("Input Component Tests", () => {
           props: { type: "password" }
         })
         const eyeSlash = wrapper.find("[data-eye-slash]")
+        await flushHero()
         expect(eyeSlash.html()).toContain("text-red-500")
       })
     })
