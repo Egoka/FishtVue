@@ -1,7 +1,7 @@
 ---
 title: Issues — Button
-summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07: logical iconPosition start/end + RTL (Issue 3); cross-cutting — SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 ✅ (ESM-only `engines` + root `exports` map через `buildRootExports()`, 2026-06-11). Doc-sync 2026-06-12: матрица severity пересчитана к фактически открытым (Issues 5/6/7/13/14/15/16). Issue 16 (B11 — darkModeSelector) ✅ resolved 2026-06-12 — theme-движок уже транслировал config-селектор, добавлены regression-тесты ([theme.md Issue 5](./theme.md)). Зачёркнуты ниже с `✅ resolved`-маркерами.
-updated: 2026-06-12
+summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07: logical iconPosition start/end + RTL (Issue 3); cross-cutting — SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 ✅ (ESM-only `engines` + root `exports` map через `buildRootExports()`, 2026-06-11). Doc-sync 2026-06-12: матрица severity пересчитана к фактически открытым (Issues 5/6/7/13/14/15/16). Issue 16 (B11 — darkModeSelector) ✅ resolved 2026-06-12 — theme-движок уже транслировал config-селектор, добавлены regression-тесты ([theme.md Issue 5](./theme.md)). Зачёркнуты ниже с `✅ resolved`-маркерами. **Re-opened 2026-06-13:** Issue 7 (I45 — heroicons) — build-замер показал, что dynamic import не работает в prod-Vite (regression), см. [icons.md Issue 1](./icons.md).
+updated: 2026-06-13
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/button/
 related-doc: ../components/button.md
@@ -17,16 +17,17 @@ related-doc: ../components/button.md
 | -------- | ----- | ------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                     |
 | high     | 0     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, ~~L53~~ ✅ (Issues 13, 14) |
-| medium   | 1     | ~~F31~~ ✅, G34, ~~G36~~ ✅, ~~I44~~ ✅, ~~I45~~ ✅, ~~N59~~ ✅                       |
+| medium   | 2     | ~~F31~~ ✅, G34, ~~G36~~ ✅, ~~I44~~ ✅, I45 (**regression**, re-opened — см. Issue 7), ~~N59~~ ✅ |
 | low      | 3     | ~~B11~~ ✅, D26, E29.7, G37                                                           |
 
-Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытых Button-локальных секций нет (Issue 16 закрыт 2026-06-12). G34/D26/E29.7/G37 — cross-cutting категории, локально решены.
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Button-локальных открытых секций нет; Issue 7 (I45) re-opened 2026-06-13 как cross-cutting regression (фикс в Icons.vue, см. [icons.md Issue 1](./icons.md)). G34/D26/E29.7/G37 — cross-cutting категории, локально решены.
 
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
 **Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
 **Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
 **Закрыто 2026-05-11 (cross-cutting; отмечено 2026-06-12):** Issue 14 (L53 — `unstyled` через `Component.setStyle` guard + Button regression-тест).
-**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print); Issue 6 (I44 — lazy Loading/FixWindow через `defineAsyncComponent`); Issue 5 (G36 — polymorphic `as` через `<component :is>`); Issue 7 (I45 — heroicons точечный dynamic import, cross-cutting Icons.vue + icons.md Issue 1).
+**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print); Issue 6 (I44 — lazy Loading/FixWindow через `defineAsyncComponent`); Issue 5 (G36 — polymorphic `as` через `<component :is>`).
+**Re-opened 2026-06-13:** Issue 7 (I45 — heroicons точечный dynamic import) — build-замер показал regression (не работает в prod-Vite); cross-cutting Icons.vue + [icons.md Issue 1](./icons.md).
 **Закрыто 2026-06-12:** Issue 16 (B11 — `darkModeSelector`) — движок уже транслировал config-селектор (`setStyle:150` → `tailwind.ts:95`), Button наследует автоматически; добавлены regression-тесты, cross-cutting [theme.md Issue 5](./theme.md) закрыт. Без правок `lib/button/`.
 Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
@@ -250,13 +251,13 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - [~] `import Button from "fishtvue/button"` без других — Loading/FixWindow вынесены в async-chunks; точный gzip-замер `pnpm sandbox:build` в этом заходе не прогонялся.
 - [x] Все existing тесты Button проходят (43, адаптированы под async-резолв).
 
-## ~~Issue 7: Иконки из @heroicons/vue тянутся целиком~~ ✅ resolved 2026-06-12
+## Issue 7: Иконки из @heroicons/vue — dynamic import не работает в prod-Vite (regression)
 
 - **Категория:** I45 (иконки точечно)
-- **Severity:** ~~medium~~ → resolved
-- **Где:** [lib/icons/Icons.vue](../../lib/icons/Icons.vue) (cross-cutting — фикс в Icons, не в Button)
+- **Severity:** medium (re-opened 2026-06-13)
+- **Где:** [lib/icons/Icons.vue](../../lib/icons/Icons.vue#L72) (cross-cutting — фикс в Icons, не в Button)
 
-> **Resolution (2026-06-12, cross-cutting).** Фикс не Button-локальный — heroicons грузятся в [Icons.vue](../../lib/icons/Icons.vue). Namespace-импорты всего набора заменены на точечный `import(\`@heroicons/vue/24/{outline|solid}/${Name}.js\`)`с Iconify-fallback. Закрывает также [icons.md Issue 1](./icons.md). **Trade-off:** heroicon резолвится async → нет в SSR-HTML, sync-доступ требует await (+8 cross-component тестов адаптированы). Точный bundle-замер не прогонялся; для гарантированного tree-shaking + SSR —`unplugin-icons` (см. [components/icons.md](../components/icons.md)). Детали и acceptance — [icons.md Issue 1](./icons.md).
+> **История + regression (2026-06-13).** 2026-06-12 namespace-импорты всего набора заменены на точечный `import(\`@heroicons/vue/24/{outline|solid}/${Name}.js\`)` с Iconify-fallback (помечено resolved). Build-замер 2026-06-13 показал regression: Vite-плагин `dynamic-import-vars` **не глобит bare-спецификатор `@heroicons/vue/...`** → per-icon code-split не происходит, bare `import()` не резолвится в prod-браузере (нет import map) → heroicons ломаются в production (подтверждено `sandbox:build`: 2× bare `import()` в main-chunk, 0 heroicon-chunks). Re-opened. Детали, числа и fix path — [icons.md Issue 1](./icons.md).
 
 ### Что найдено
 
@@ -274,7 +275,7 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 
 ### Acceptance criteria
 
-- [~] Точечный dynamic import грузит только используемую иконку (отдельный chunk); точный bundle-замер — см. [icons.md Issue 1](./icons.md).
+- [ ] Точечный dynamic import грузит только используемую иконку (отдельный chunk). **НЕ выполнено (2026-06-13):** в prod-Vite per-icon split не происходит, bare `import()` ломается — см. [icons.md Issue 1](./icons.md).
 - [x] Iconify по-прежнему lazy (fallback-ветка не тронута).
 
 ## ~~Issue 8: Нет `sideEffects` в корневом lib/package.json — cross-cutting~~ ✅ resolved 2026-06-07

@@ -1,7 +1,7 @@
 ---
 title: Icons
-summary: Универсальный icon — Heroicons + Iconify, два variant (outline/solid), wrapper-based a11y, narrow IconType union.
-updated: 2026-06-12
+summary: Универсальный icon — Heroicons + Iconify, два variant (outline/solid), wrapper-based a11y, narrow IconType union. Known regression (2026-06-13): heroicons-резолв сломан в prod-Vite (Issue 1).
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -35,13 +35,13 @@ lib/icons/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили; SFC также имеет дублирующий `onMounted(() => Icons.initStyle())` (известное cross-cutting отклонение, см. [dev-patterns §12](../dev-patterns.md#12-known-deviations-from-this-pattern)).
+- **Lifecycle:** `Component.__hooks()` (конструктор) регистрирует `onServerPrefetch + vueOnMounted` → `initStyle()`. SFC **не** дублирует `onMounted(() => Icons.initStyle())` — дубль снят в Wave 2.3 (см. [dev-patterns §12](../dev-patterns.md#12-known-deviations-from-this-pattern)).
 - **Поток данных:** `type` → точечный **dynamic import** heroicon (`import(`@heroicons/vue/24/{outline\|solid}/${PascalCase(type)}Icon.js`)`, async, Issue 1) → если import не резолвится → fallback на `<Icon icon="type">` через `@iconify/vue`. Иконка появляется после резолва промиса (см. SSR-заметку ниже и §12 Bundle).
 - **A11y wrapper pattern:** root — `<i data-icon>`. Heroicons render-функции хардкодят `aria-hidden="true"` и не пробрасывают `$attrs`, поэтому role/aria-label применяются к wrapper'у, а SVG внутри остаётся `aria-hidden`. Это валидный screen-reader-pattern: AT читает wrapper как labelled image, внутренний SVG скрыт.
 - **Стили:** через `Icons.setStyle()`. Default — `h-5 w-5 text-gray-900 dark:text-gray-100 select-none`.
 - **Конфиг:** `componentsOptions.Icons` — `class` и `variant`.
 - **Локализация:** не использует.
-- **SSR:** heroicons теперь грузятся через async dynamic import (Issue 1) — в SSR-HTML их **нет**, иконка появляется после hydration. Iconify аналогично lazy с CDN. Для SSR-критичных иконок используйте compile-time `unplugin-icons` (см. §12 Bundle).
+- **SSR / prod-Vite (Issue 1 — regression):** heroicons резолвятся через runtime dynamic import с bare-спецификатором `@heroicons/vue/...`. Build-замер (2026-06-13) показал: Vite-плагин `dynamic-import-vars` его **не глобит** → нет code-split, в prod-сборке остаётся bare `import()`, который не резолвится в браузере (нет import map) → **иконка не рендерится в production** (и отсутствует в SSR-HTML). Работает только в `vite dev` / Vitest. Fix — sync `const`-реестр named-импортов или compile-time `unplugin-icons` (см. §12 Bundle). Iconify-fallback — lazy с CDN.
 - **Animation:** нет (статический SVG).
 
 ## 4. Quick Start
@@ -238,9 +238,18 @@ Wrapper-based pattern:
 
 ### Bundle (heroicons tree-shaking)
 
-Heroicons грузятся точечно через dynamic import (`import(`@heroicons/vue/24/{outline|solid}/${Name}Icon.js`)`, Issue 1) — namespace-импорт всего набора `@heroicons/vue/24/{outline,solid}` убран. Bundler code-split'ит каждую иконку в отдельный chunk: в рантайме грузится только используемая.
+> **Regression (измерено 2026-06-13).** Текущий runtime dynamic import с bare-спецификатором **не tree-shake'ит и ломает heroicons в production-сборке Vite.** Open issue: [issues/icons.md Issue 1](../issues/icons.md).
 
-**Trade-off:** резолв async — иконка отсутствует в SSR-HTML (появляется после hydration), и sync-доступ к SVG (тесты, мгновенный клик по icon-target) требует ожидания резолва. Для **гарантированного** compile-time tree-shaking + сохранения SSR-рендера иконок используйте [`unplugin-icons`](https://github.com/unplugin/unplugin-icons) (build-time inline SVG вместо рантайм-резолва) — это устраняет и async-задержку, и SSR-потерю.
+Heroicons резолвятся через `import("@heroicons/vue/24/{outline|solid}/${Name}Icon.js")` (Issue 1). Build-замер (минимальный Vite-consumer + `pnpm sandbox:build`; heroicons 2.2.0, vite 7, gzip):
+
+| Вариант                              | Initial JS (gzip)      | Иконки в bundle        | Per-icon chunks |
+| ------------------------------------ | ---------------------- | ---------------------- | --------------- |
+| namespace `import *` (до `7740c50`)  | **94.0 KB** (440 KB raw) | все 648 (outline+solid) | 0               |
+| текущий dynamic import (`7740c50`)   | **23.9 KB** (60 KB raw)  | **0**                  | **0**           |
+
+Меньший «after» — **не экономия**: Vite-плагин `dynamic-import-vars` глобит только относительные (`./`/`../`) спецификаторы, а bare `@heroicons/vue/...` **игнорирует** → per-icon code-split не происходит, в выходном chunk остаётся буквальный `import("@heroicons/vue/...")`, а в `dist/index.html` нет import map → в браузере `import("@heroicons/vue/24/outline/CheckIcon.js")` бросает `TypeError: Failed to resolve module specifier`. Иконки **не рендерятся в prod** (но видны в `vite dev` и проходят Vitest — там bare-спецификаторы резолвятся).
+
+**Fix.** Для tree-shaking + SSR + prod-корректности: sync `const`-реестр named-импортов (`import { CheckIcon } from "@heroicons/vue/24/outline"` — tree-shakeable, рендерится в SSR/prod, работает в Vite-сборке) либо compile-time [`unplugin-icons`](https://github.com/unplugin/unplugin-icons) (inline SVG). Dynamic/Iconify fallback — для произвольных имён. Кроме того, `dynamic-import-vars` относится к Vite/Rollup; под webpack context-модули могли бы сработать иначе, но основной сценарий Vue — Vite.
 
 ## 13. TypeScript
 
@@ -332,7 +341,7 @@ describe("Icons", () => {
 
 - Coverage `Icons.vue` ~93%+ — две строки исторически не покрыты.
 - `:offline` prop / env-detection для Iconify CDN fallback — пока не реализован (см. [issues/icons.md](../issues/done/icons.md) Issue 2).
-- Heroicons тянутся целиком (bundle ~200kb на client-Vite build) — open issue [icons.md Issue 1](../issues/done/icons.md), будет переведено на `defineAsyncComponent` в Wave 2.2.
+- Heroicons (`type`-резолв) **сломаны в production-Vite** (regression): точечный dynamic import оставляет bare-спецификатор `@heroicons/vue/...`, который `dynamic-import-vars` не глобит → иконка не резолвится в prod-браузере (работает только в `vite dev` / Vitest). Open issue [icons.md Issue 1](../issues/icons.md). Fix — sync `const`-реестр named-импортов или `unplugin-icons` (см. §12 Bundle).
 - Hardcoded default class `text-gray-900 dark:text-gray-100` (вместо semantic token) — Wave 9 cross-cutting, см. [icons.md Issue 9](../issues/done/icons.md).
 
 ### Skipped tests
