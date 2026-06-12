@@ -17,16 +17,16 @@ related-doc: ../components/button.md
 | -------- | ----- | -------------------------------- |
 | critical | 0     | —                                |
 | high     | 0     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, ~~L53~~ ✅ (Issues 13, 14) |
-| medium   | 4     | ~~F31~~ ✅, G34, G36, I44, I45, ~~N59~~ ✅ |
+| medium   | 3     | ~~F31~~ ✅, G34, G36, ~~I44~~ ✅, I45, ~~N59~~ ✅ |
 | low      | 4     | B11, D26, E29.7, G37             |
 
-Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 6, 7, 16.
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 7, 16.
 
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
 **Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
 **Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
 **Закрыто 2026-05-11 (cross-cutting; отмечено 2026-06-12):** Issue 14 (L53 — `unstyled` через `Component.setStyle` guard + Button regression-тест).
-**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print).
+**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print); Issue 6 (I44 — lazy Loading/FixWindow через `defineAsyncComponent`).
 **Deferred:** Issue 16 (B11 — `darkModeSelector`) делегирован cross-cutting [theme.md Issue 5](./theme.md) (Wave 3.4) — счётчик остаётся открытым (low).
 Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
@@ -200,11 +200,13 @@ Reactive ref `buttonRef` определён, но не возвращён чер
 - [ ] `<Button as={NuxtLink} to="/x">` работает в Nuxt.
 - [ ] Tab-keyboard navigation работает на не-button корне (через `tabindex="0"` если `as` не link/button).
 
-## Issue 6: Loading и FixWindow всегда тянутся в bundle — для текстовой Button это перерасход
+## ~~Issue 6: Loading и FixWindow всегда тянутся в bundle — для текстовой Button это перерасход~~ ✅ resolved 2026-06-12
 
 - **Категория:** I44 (peer-зависимости / bundle size)
-- **Severity:** medium
-- **Где:** [Button.vue:5](../../lib/button/Button.vue#L5), [Button.vue:6](../../lib/button/Button.vue#L6)
+- **Severity:** ~~medium~~ → resolved
+- **Где:** [Button.vue](../../lib/button/Button.vue) (imports → `defineAsyncComponent`)
+
+> **Resolution (2026-06-12).** `Loading` и `FixWindow` переведены со статических импортов на `defineAsyncComponent(() => import(...))` ([Button.vue](../../lib/button/Button.vue)). Грузятся отдельными chunk'ами только когда реально нужны (`loading` prop / `type="icon"` + tooltip-slot); текстовая `<Button>Save</Button>` их не тянет. `sideEffects: false` (Issue 8) уже позволял tree-shaking, async-split дополнительно убирает их из синхронного entry. Тесты Loading/FixWindow адаптированы под async-резолв (`await flushPromises()`); SSR-критичности нет — оба компонента client-interaction (spinner / tooltip).
 
 ### Что найдено
 
@@ -242,9 +244,9 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 
 ### Acceptance criteria
 
-- [ ] `sideEffects` определён в `lib/package.json` (явно).
-- [ ] `import Button from "fishtvue/button"` без других — bundle size <15kb gzipped.
-- [ ] Все existing тесты Button проходят.
+- [x] `sideEffects` определён в `lib/package.json` (явно) — Issue 8.
+- [~] `import Button from "fishtvue/button"` без других — Loading/FixWindow вынесены в async-chunks; точный gzip-замер `pnpm sandbox:build` в этом заходе не прогонялся.
+- [x] Все existing тесты Button проходят (43, адаптированы под async-резолв).
 
 ## Issue 7: Иконки из @heroicons/vue тянутся целиком
 

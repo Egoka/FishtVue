@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils"
+import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Button from "fishtvue/button/Button.vue"
@@ -53,7 +53,7 @@ describe("Button Component Tests", () => {
       expect(button.attributes("data-loading")).toBe("true")
     })
 
-    it("renders icon and loading indicators", () => {
+    it("renders icon and loading indicators", async () => {
       const wrapper = mount(Button, {
         props: {
           icon: "check",
@@ -64,6 +64,8 @@ describe("Button Component Tests", () => {
       const icon = wrapper.findComponent({ name: "Icons" })
       expect(icon.exists()).toBe(true)
 
+      // Loading подгружается лениво (Issue 6) — ждём резолва async-компонента.
+      await flushPromises()
       const loading = wrapper.findComponent({ name: "Loading" })
       expect(loading.exists()).toBe(true)
     })
@@ -113,7 +115,7 @@ describe("Button Component Tests", () => {
       expect(icon.props("type")).toBe("check")
     })
 
-    it("shows loading indicator when loading is true", () => {
+    it("shows loading indicator when loading is true", async () => {
       const wrapper = mount(Button, {
         props: {
           type: "icon",
@@ -121,11 +123,12 @@ describe("Button Component Tests", () => {
         }
       })
 
+      await flushPromises()
       const loading = wrapper.findComponent({ name: "Loading" })
       expect(loading.exists()).toBe(true)
     })
 
-    it('renders slot content inside FixWindow when type is "icon"', () => {
+    it('renders slot content inside FixWindow when type is "icon"', async () => {
       const wrapper = mount(Button, {
         props: {
           type: "icon"
@@ -135,6 +138,8 @@ describe("Button Component Tests", () => {
         }
       })
 
+      // FixWindow подгружается лениво (Issue 6) — ждём резолва перед проверкой slot/компонента.
+      await flushPromises()
       const slot = wrapper.find(".slot-content")
       expect(slot.exists()).toBe(true)
       expect(slot.text()).toBe("Slot Content")
@@ -143,7 +148,7 @@ describe("Button Component Tests", () => {
       expect(fixWindow.exists()).toBe(true)
     })
 
-    it('applies rounded style to FixWindow when type is "icon"', () => {
+    it('applies rounded style to FixWindow when type is "icon"', async () => {
       const wrapper = mount(Button, {
         props: {
           type: "icon",
@@ -154,6 +159,7 @@ describe("Button Component Tests", () => {
         }
       })
 
+      await flushPromises()
       const fixWindow = wrapper.findComponent({ name: "FixWindow" })
       expect(fixWindow.exists()).toBe(true)
       expect(fixWindow.props("mode")).toBe("filled")

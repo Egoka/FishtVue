@@ -1,11 +1,13 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, useSlots } from "vue"
+  import { computed, defineAsyncComponent, onMounted, ref, useSlots } from "vue"
   import { ButtonEmits, ButtonProps } from "./Button"
   import Icons from "fishtvue/icons/Icons.vue"
-  import Loading from "fishtvue/loading/Loading.vue"
-  import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import Component from "fishtvue/component"
   import { StyleClass } from "fishtvue/types"
+  // Issue 6: Loading/FixWindow подгружаются лениво (defineAsyncComponent) — текстовая
+  // <Button>Save</Button> без loading и без icon-tooltip не тянет их в синхронный chunk.
+  const Loading = defineAsyncComponent(() => import("fishtvue/loading/Loading.vue"))
+  const FixWindow = defineAsyncComponent(() => import("fishtvue/fixwindow/FixWindow.vue"))
   // ---BASE-COMPONENT----------------------
   const Button = new Component<"Button">()
   const options = Button.getOptions()

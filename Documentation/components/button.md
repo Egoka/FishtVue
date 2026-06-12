@@ -38,6 +38,7 @@ Tree-shaking & bundle: `import Button from "fishtvue/button"` импортиру
 - **Поток данных:** props + `Button.getOptions()` → computed (`type`, `icon`, `iconPosition`, `isLoading`, `disabled`, `resolvedAriaLabel`, `mode`, `size`, `rounded`, `color`) → `classBase` (через `Button.setStyle`) и `classIcon`. Resolve порядок: `props ?? options ?? default`. `resolvedAriaLabel` — `props.ariaLabel ?? (type === 'icon' ? icon : undefined)`.
 - **Стили:** `Button.setStyle(...)` вычисляется в computed `classBase` ([Button.vue:321–332](../../lib/button/Button.vue#L321-L332)), пересчитывается на изменение mode/size/rounded/color/disabled. Классы инжектятся в `@layer fishtvue`.
 - **Конфиг:** читает `componentsOptions.Button` (поля: `mode`, `size`, `rounded`, `color`, `class`, `classIcon`) + глобальный `componentsStyle` как fallback для `mode` (`filled→primary` / `outlined→outline` / `underlined→ghost`).
+- **Bundle:** `Loading` и `FixWindow` подключены через `defineAsyncComponent` — текстовая `<Button>` (без `loading` и без icon-tooltip) не тянет их в синхронный chunk (Issue 6).
 - **Локализация:** не использует `t()`.
 - **SSR / hydration:** SSR-safe — нет прямых `document`/`window`. `Component.__hooks()` инжектит CSS через `onServerPrefetch` + `onMounted`.
 - **Animation:** `motion-safe:transition-colors motion-safe:duration-200` ([Button.vue:26](../../lib/button/Button.vue#L26)) — `prefers-reduced-motion: reduce` отключает переходы автоматически.
