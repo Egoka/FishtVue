@@ -1,7 +1,7 @@
 ---
 title: Button
 summary: Универсальная кнопка с modes (primary/outline/ghost), color, size, rounded, icon, loading.
-updated: 2026-06-07
+updated: 2026-06-12
 stability: stable
 since: 0.2.11
 ---
@@ -37,7 +37,7 @@ Tree-shaking & bundle: `import Button from "fishtvue/button"` импортиру
 - **Lifecycle:** базовая инжекция стилей через `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) автоматически. Дополнительно `onMounted(() => Button.initStyle())` ([Button.vue:368–379](../../lib/button/Button.vue#L368-L379)) — дублирующий вызов (см. [dev-patterns §12](../dev-patterns.md#12-known-deviations-from-this-pattern)); тот же `onMounted` несёт dev-warning для unlabeled icon-кнопок.
 - **Поток данных:** props + `Button.getOptions()` → computed (`type`, `icon`, `iconPosition`, `isLoading`, `disabled`, `resolvedAriaLabel`, `mode`, `size`, `rounded`, `color`) → `classBase` (через `Button.setStyle`) и `classIcon`. Resolve порядок: `props ?? options ?? default`. `resolvedAriaLabel` — `props.ariaLabel ?? (type === 'icon' ? icon : undefined)`.
 - **Стили:** `Button.setStyle(...)` вычисляется в computed `classBase` ([Button.vue:321–332](../../lib/button/Button.vue#L321-L332)), пересчитывается на изменение mode/size/rounded/color/disabled. Классы инжектятся в `@layer fishtvue`.
-- **Конфиг:** читает `componentsOptions.Button` (поля: `mode`, `size`, `rounded`, `color`, `class`, `classIcon`).
+- **Конфиг:** читает `componentsOptions.Button` (поля: `mode`, `size`, `rounded`, `color`, `class`, `classIcon`) + глобальный `componentsStyle` как fallback для `mode` (`filled→primary` / `outlined→outline` / `underlined→ghost`).
 - **Локализация:** не использует `t()`.
 - **SSR / hydration:** SSR-safe — нет прямых `document`/`window`. `Component.__hooks()` инжектит CSS через `onServerPrefetch` + `onMounted`.
 - **Animation:** `motion-safe:transition-colors motion-safe:duration-200` ([Button.vue:26](../../lib/button/Button.vue#L26)) — `prefers-reduced-motion: reduce` отключает переходы автоматически.
@@ -239,6 +239,12 @@ app.use<FishtVueConfiguration>(FishtVue, {
     }
   }
 })
+```
+
+**Global `componentsStyle`.** Помимо `componentsOptions.Button.mode`, Button реагирует на глобальный `componentsStyle` (`"filled" | "outlined" | "underlined"`): он маппится в `mode` через computed `componentsStyleMode` ([Button.vue](../../lib/button/Button.vue)) — `filled → primary`, `outlined → outline`, `underlined → ghost`. Приоритет резолва: `props.mode` → `componentsOptions.Button.mode` → `componentsStyle`-mapping → `"primary"`.
+
+```ts
+app.use(FishtVue, { componentsStyle: "outlined" }) // <Button> по умолчанию рендерится как mode="outline"
 ```
 
 ### 10.2 Per-instance

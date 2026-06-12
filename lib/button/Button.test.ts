@@ -471,5 +471,56 @@ describe("Button Component Tests", () => {
       const cls = wrapper.find("[data-button]").attributes("class") ?? ""
       expect(cls).toContain("inline-flex")
     })
+
+    // ---Issue 13: global componentsStyle fallback (filled/outlined/underlined)----
+    const modeOf = (wrapper: ReturnType<typeof mount>) => (wrapper.vm as unknown as ButtonExpose).mode
+
+    it("maps global componentsStyle 'filled' -> mode 'primary'", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ componentsStyle: "filled" })] },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("primary")
+    })
+
+    it("maps global componentsStyle 'outlined' -> mode 'outline'", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ componentsStyle: "outlined" })] },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("outline")
+    })
+
+    it("maps global componentsStyle 'underlined' -> mode 'ghost'", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ componentsStyle: "underlined" })] },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("ghost")
+    })
+
+    it("per-instance mode prop overrides global componentsStyle", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ componentsStyle: "outlined" })] },
+        props: { mode: "primary" },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("primary")
+    })
+
+    it("componentsOptions.Button.mode overrides global componentsStyle", () => {
+      const wrapper = mount(Button, {
+        global: {
+          plugins: [appWithConfig({ componentsStyle: "outlined", componentsOptions: { Button: { mode: "ghost" } } })]
+        },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("ghost")
+    })
+
+    it("defaults to primary when neither componentsStyle nor mode is set", () => {
+      const wrapper = mount(Button, { slots: { default: "X" } })
+      expect(modeOf(wrapper)).toBe("primary")
+    })
   })
 })

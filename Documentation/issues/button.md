@@ -16,16 +16,17 @@ related-doc: ../components/button.md
 | Severity | Count | Categories                       |
 | -------- | ----- | -------------------------------- |
 | critical | 0     | —                                |
-| high     | 1     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, L53 (Issue 13; ~~14~~ ✅) |
+| high     | 0     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, ~~L53~~ ✅ (Issues 13, 14) |
 | medium   | 5     | ~~F31~~ ✅, G34, G36, I44, I45, N59 |
 | low      | 4     | B11, D26, E29.7, G37             |
 
-Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 6, 7, 13, 15, 16.
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 6, 7, 15, 16.
 
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
 **Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
 **Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
 **Закрыто 2026-05-11 (cross-cutting; отмечено 2026-06-12):** Issue 14 (L53 — `unstyled` через `Component.setStyle` guard + Button regression-тест).
+**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`).
 **Deferred:** Issue 16 (B11 — `darkModeSelector`) делегирован cross-cutting [theme.md Issue 5](./theme.md) (Wave 3.4) — счётчик остаётся открытым (low).
 Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
@@ -430,11 +431,13 @@ export declare type ButtonEmits = null
 
 - [x] `<Button><template #start><Icons type="Check" /></template>D<template #end>E</template></Button>` рендерит content в порядке S → D → E (text-ordering tests в `Button.test.ts`).
 
-## Issue 13: Не реагирует на componentsStyle ("filled"|"outlined"|"underlined") из global config
+## ~~Issue 13: Не реагирует на componentsStyle ("filled"|"outlined"|"underlined") из global config~~ ✅ resolved 2026-06-12
 
 - **Категория:** L53 (Configuration support)
-- **Severity:** high
-- **Где:** [Button.vue:301-309](../../lib/button/Button.vue#L301-L309)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [Button.vue](../../lib/button/Button.vue) (computed `componentsStyleMode` + `mode`)
+
+> **Resolution (2026-06-12).** Добавлен computed `componentsStyleMode` ([Button.vue](../../lib/button/Button.vue)): `Button.componentsStyle()` маппится `filled → primary`, `outlined → outline`, `underlined → ghost`. Вставлен в fallback chain `mode`: `props.mode ?? options.mode ?? componentsStyleMode ?? "primary"` — ниже props/componentsOptions, выше литерального default (зеркало Badge/Input/Select/Calendar, см. [README.md §3.2](./README.md)). +6 тестов в `Button.test.ts` (describe `Configuration support`): filled/outlined/underlined mapping, props-override, componentsOptions-override, default.
 
 ### Что найдено
 
@@ -467,8 +470,8 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 
 ### Acceptance criteria
 
-- [ ] `app.use(FishtVue, { componentsStyle: "outlined" })` — `<Button>X</Button>` рендерится с `mode="outline"`.
-- [ ] Per-instance `<Button mode="primary">` перебивает глобальное.
+- [x] `app.use(FishtVue, { componentsStyle: "outlined" })` — `<Button>X</Button>` рендерится с `mode="outline"`.
+- [x] Per-instance `<Button mode="primary">` перебивает глобальное.
 
 ## ~~Issue 14: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-05-11 (cross-cutting)
 
@@ -572,7 +575,7 @@ Tailwind dark variant — `darkMode: "class"` — реагирует на `.dark
 | Настройка                  | Поддержано? | Комментарий                                                                                                                                                                                     |
 | -------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `componentsOptions.Button` | ✅          | через `Button.getOptions()` (mode/size/rounded/color/class/classIcon — `ariaLabel`/`icon`/`type` не входят)                                                                                     |
-| `componentsStyle` global   | ❌          | см. Issue 13 — нет fallback к global enum                                                                                                                                                       |
+| `componentsStyle` global   | ✅          | Issue 13 — computed `componentsStyleMode` mapping (`filled→primary` / `outlined→outline` / `underlined→ghost`) в fallback chain `mode`                                                            |
 | `unstyled: true`           | ❌          | см. Issue 14 — игнорируется                                                                                                                                                                     |
 | Theme tokens vs hardcode   | ⚠️          | через Tailwind `theme-*`/`neutral-*`/`green-*`/`red-*` классы; design tokens из [theme/themes/Aurora.ts](../../lib/theme/themes/Aurora.ts) НЕ применяются напрямую — только через UnoCSS preset |
 | Runtime theme switch       | ⚠️          | работает через CSS-переменные `theme-*`, но смена палитры через `updatePrimaryPalette()` требует регенерации CSS — проверить корректность invalidation                                          |

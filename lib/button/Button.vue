@@ -315,8 +315,15 @@
     if (type.value === "icon" && icon.value) return icon.value
     return undefined
   })
+  // Issue 13: глобальный `componentsStyle` ("filled"|"outlined"|"underlined") → Button.mode.
+  // Маппинг filled→primary, outlined→outline, underlined→ghost. В fallback chain стоит ниже
+  // props/componentsOptions, но выше литерального default — как у Badge/Input/Select/Calendar.
+  const componentsStyleMode = computed<ButtonProps["mode"] | undefined>(() => {
+    const cs = Button.componentsStyle()
+    return cs === "filled" ? "primary" : cs === "outlined" ? "outline" : cs === "underlined" ? "ghost" : undefined
+  })
   const mode = computed<NonNullable<ButtonProps["mode"]>>(
-    () => (props?.mode as ButtonProps["mode"]) ?? options?.mode ?? "primary"
+    () => (props?.mode as ButtonProps["mode"]) ?? options?.mode ?? componentsStyleMode.value ?? "primary"
   )
   const size = computed<NonNullable<ButtonProps["size"]>>(
     () => (props?.size as ButtonProps["size"]) ?? options?.size ?? "md"
