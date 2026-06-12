@@ -35,6 +35,10 @@ export default <DefaultMessages>{
   loading: {
     label: "Loading"
   },
+  pagination: {
+    label: "Pagination",
+    page: "Page"
+  },
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

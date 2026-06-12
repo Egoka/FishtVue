@@ -1,4 +1,4 @@
-import { VNode } from "vue"
+import { Ref, VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import type { BaseSelectProps, SelectExpose } from "fishtvue/select"
 
@@ -108,6 +108,13 @@ export declare type PaginationEmits = {
 export declare type PaginationExpose = {
   // ---STATE-------------------------
   /**
+   * Ref на корневой `<nav>`-элемент пагинации. Позволяет programmatically делать
+   * `.focus()` / `.scrollIntoView()` без обращения к DOM-селекторам.
+   * @type {Readonly<Ref<HTMLElement | undefined>>}
+   */
+  paginationRef: Readonly<Ref<HTMLElement | undefined>>
+
+  /**
    * Reference to the page size selector.
    * @type {SelectExpose | undefined}
    */
@@ -198,6 +205,12 @@ export declare type PaginationExpose = {
    * @param {PaginationProps["modelValue"]} sizePageValue - The new page size.
    */
   switchSizePage(sizePageValue: PaginationProps["modelValue"]): void
+
+  /**
+   * Программно фокусирует корневой `<nav>` пагинации. Опционально принимает native
+   * `FocusOptions` (например, `{ preventScroll: true }`).
+   */
+  focus(options?: FocusOptions): void
 }
 export declare type PaginationOption = Pick<
   PaginationProps,

@@ -53,6 +53,10 @@ export declare interface DefaultMessages extends DeepPartial<TypeLocale> {
   loading?: {
     label?: string
   }
+  pagination?: {
+    label?: string
+    page?: string
+  }
 }
 
 export declare type Messages = DeepPartial<Record<NameLocale, DefaultMessages>>

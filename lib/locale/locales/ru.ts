@@ -35,6 +35,10 @@ export default <DefaultMessages>{
   loading: {
     label: "Загрузка"
   },
+  pagination: {
+    label: "Навигация по страницам",
+    page: "Страница"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

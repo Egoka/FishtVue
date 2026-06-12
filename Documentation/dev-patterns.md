@@ -1,7 +1,7 @@
 ---
 title: Development patterns & documentation regulations
 summary: Конституция разработки внутри lib/ и регламенты внутренней документации.
-updated: 2026-06-11
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -339,7 +339,7 @@ since: <версия fishtvue>
 
 ### ~~Дублирование `initStyle()`~~ ✅ resolved 2026-05-16 (Wave 2.3)
 
-`Component.__hooks()` ([component/index.ts:79–84](../lib/component/index.ts#L79-L84)) регистрирует `vueOnMounted(() => this.initStyle())` и `onServerPrefetch(() => this.initStyle())`. Раньше 6 SFC дублировали ручной `onMounted(() => X.initStyle())` (7 occurrences): Button, Icons, InputLayout (×2), Menu, Separator, Table. Wave 2.3 (2026-05-16) убрал все дубликаты и поставил comment-marker в каждом затронутом SFC. После sweep'а 21 of 21 core SFC соблюдают канон. Подробности — [Documentation/issues/component-class.md Issue 1](./issues/component-class.md).
+`Component.__hooks()` ([component/index.ts:79–84](../lib/component/index.ts#L79-L84)) регистрирует `vueOnMounted(() => this.initStyle())` и `onServerPrefetch(() => this.initStyle())`. Раньше 6 SFC дублировали ручной `onMounted(() => X.initStyle())` (7 occurrences): Button, Icons, InputLayout (×2), Menu, Separator, Table. Wave 2.3 (2026-05-16) убрал все дубликаты и поставил comment-marker в каждом затронутом SFC. После sweep'а 21 of 21 core SFC соблюдают канон. **Pagination** оказался пропущенным straggler'ом (ручной `onMounted(() => Pagination.initStyle())`) — снят 2026-06-13 при закрытии [pagination.md Issue 2](./issues/pagination.md); Wave 2.3 → 14/22. Подробности — [Documentation/issues/component-class.md Issue 1](./issues/component-class.md).
 
 ### Каталог `texteditor` без дефиса
 

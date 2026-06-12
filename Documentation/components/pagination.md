@@ -1,7 +1,7 @@
 ---
 title: Pagination
 summary: Пейджер с size-selector, info-text, кастомизируемым числом видимых страниц.
-updated: 2026-06-06
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Pagination` — навигатор по страницам данных. Поддерживает selector размера страницы (через [Select](./select.md)), info-text (`X of Y items`), 5–11 видимых номеров страниц, опциональное скрытие navigation-кнопок.
 
-Stability: `stable` — 28 кейсов, coverage `Pagination.vue` 98.42%.
+Stability: `stable` — 40 кейсов, coverage `Pagination.vue` 98.42%.
 
 Source: [Source](../../lib/pagination/Pagination.vue), [Pagination.d.ts](../../lib/pagination/Pagination.d.ts), [Pagination.test.ts](../../lib/pagination/Pagination.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/pagination/Pagination.vue), [Pagination.d.ts](../../l
 lib/pagination/
 ├── Pagination.vue
 ├── Pagination.d.ts        # 223 строки
-├── Pagination.test.ts     # 28 кейсов
+├── Pagination.test.ts     # 40 кейсов
 └── package.json
 ```
 
@@ -30,13 +30,13 @@ lib/pagination/
 
 ## 3. How it works
 
-- **Lifecycle:** автоматическая инжекция стилей.
+- **Lifecycle:** автоматическая инжекция стилей через `Component.__hooks()` (конструктор `Component`) — без ручного `initStyle()` в SFC.
 - **Поток данных:** `total` + `sizePage` → расчёт количества страниц → массив `pages` для отображения. `modelValue` — текущая активная страница.
 - **v-model contract:** стандартный для `update:modelValue` + `update:sizePage`.
-- **Стили:** через `Pagination.setStyle()`.
+- **Стили:** через `Pagination.setStyle()` (учитывает `unstyled: true`).
 - **Конфиг:** `componentsOptions.Pagination` — ключи см. §10.
-- **Локализация:** через `t("of")`, `t("items")`, `t("show")`, `t("previous")`, `t("next")`.
-- **SSR:** SSR-safe.
+- **Локализация:** через `t("of")`, `t("items")`, `t("show")`, `t("previous")`, `t("next")`, `t("pagination.label")`, `t("pagination.page")`.
+- **SSR:** SSR-safe (критический CSS через `onServerPrefetch`).
 
 ## 4. Quick Start
 
@@ -87,15 +87,17 @@ v-model: стандартный `v-model:modelValue`. Для size-page — `v-mo
 
 ## 8. Exposed methods
 
-`PaginationExpose` ([Pagination.d.ts:108–201](../../lib/pagination/Pagination.d.ts#L108-L201)):
+`PaginationExpose` ([Pagination.d.ts:108–214](../../lib/pagination/Pagination.d.ts#L108-L214)):
 
 | Name | Type | Description |
 |---|---|---|
+| `paginationRef` | `Readonly<Ref<HTMLElement \| undefined>>` | Ref на корневой `<nav>`. Для programmatic `.focus()` / `.scrollIntoView()`. |
 | `selectPageSize` | `SelectExpose \| undefined` | Ссылка на встроенный Select. |
 | `sizePage` | `number \| undefined` | Текущий размер. |
 | `visibleNumberPages`, `total`, `isInfoText`, `isPageSizeSelector`, `isNavigationButtons`, `arraySizesSelector`, `pages`, `activePage`, `mode`, `modeStyleSelect`, `paramsSelect` | Derived/computed. |
 | `switchPage(value)` | `(value: number \| Array<number>) => void` | Программное переключение страницы. |
 | `switchSizePage(value)` | `(value: number) => void` | Программная смена size. |
+| `focus(options?)` | `(options?: FocusOptions) => void` | Фокусирует корневой `<nav>`. |
 
 ## 9. Examples
 
@@ -178,10 +180,14 @@ Root класс — `fv fishtvue-pagination`.
 
 ### A11y
 
-- Кнопки `Previous`/`Next` — нативные `<button>`.
-- ARIA: `aria-current="page"` на активной странице (нужно проверить по DOM).
-- Keyboard: Tab по страницам и кнопкам, Enter для активации.
-- `prefers-reduced-motion` не учтён (transitions минимальные).
+- **Landmark:** корневой `<nav role="navigation" :aria-label>` ([Pagination.vue:292–297](../../lib/pagination/Pagination.vue#L292-L297)) — единственный navigation landmark; `aria-label` локализуется через `t("pagination.label")`.
+- **Page buttons:** `:aria-label="${t('pagination.page')} ${page}"` ([Pagination.vue:372](../../lib/pagination/Pagination.vue#L372)) + `aria-current="page"` на активной ([Pagination.vue:371](../../lib/pagination/Pagination.vue#L371)).
+- **aria-live:** sr-only `role="status" aria-live="polite"` region ([Pagination.vue:298–307](../../lib/pagination/Pagination.vue#L298-L307)) — при смене страницы screen reader объявляет «Page X of Y».
+- **RTL:** порядок prev/next зеркалится `inline-flex` нативно; directional иконки — `rtl:-scale-x-100`, отступы — logical `ms-3` ([Pagination.vue:182–183](../../lib/pagination/Pagination.vue#L182-L183)).
+- **prefers-reduced-motion:** собственных transitions нет; анимации дочерних `<Button>`/`<Select>` — `motion-safe:`.
+- **print / forced-colors:** style-for-print монохром (`print:*`) + `forced-colors:outline` на активной странице ([Pagination.vue:199–201](../../lib/pagination/Pagination.vue#L199-L201)).
+- **Keyboard:** Tab по страницам и кнопкам, Enter/Space для активации (нативные `<button>`).
+- **Programmatic focus:** через exposed `paginationRef` / `focus()`.
 
 ### Security
 
@@ -201,8 +207,8 @@ p.value?.switchPage(1)
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 28 кейсов, coverage 98.42%.
-- **Breaking changes:** на 2026-05-09 не зафиксировано.
+- **Stability flag:** `stable` — 40 кейсов, coverage 98.42%.
+- **Breaking changes:** 2026-06-13 — корневой DOM-узел `<div data-pagination>` → `<nav data-pagination>` (navigation landmark, a11y). `data-pagination` и публичный API (`Props`/`Emits`/`Slots`) без изменений; внутренний `<nav data-pagination-nav>` понижен до `<div>`.
 - **Deprecations:** нет.
 
 ## 15. Testing recipes
@@ -225,7 +231,7 @@ describe("Pagination", () => {
 })
 ```
 
-Реальные тесты — [Pagination.test.ts](../../lib/pagination/Pagination.test.ts) (28 кейсов).
+Реальные тесты — [Pagination.test.ts](../../lib/pagination/Pagination.test.ts) (40 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
@@ -241,7 +247,7 @@ describe("Pagination", () => {
 
 - [Table](./table.md) — основной потребитель.
 - [Select](./select.md) — встроенный для size-selector.
-- [architecture/locale.md](../architecture/locale.md) — `of`/`items`/`show`/`previous`/`next`.
+- [architecture/locale.md](../architecture/locale.md) — `of`/`items`/`show`/`previous`/`next` + namespace `pagination.label`/`pagination.page` (a11y).
 
 ## 18. Known issues & limitations
 
@@ -251,8 +257,8 @@ describe("Pagination", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 98.42% statements / 72.05% branch — несколько ветвей не покрыты ([Pagination.vue:262](../../lib/pagination/Pagination.vue#L262)).
-- `ResizeObserver`'ы для short-navigation сохраняются в локальный массив `navigationObservers` и отключаются в `onBeforeUnmount` ([Pagination.vue:222-225](../../lib/pagination/Pagination.vue#L222-L225)) — утечки памяти при unmount нет (regression-тесты в [Pagination.test.ts](../../lib/pagination/Pagination.test.ts)).
+- `ResizeObserver`-callback для short-navigation ([Pagination.vue:282-283](../../lib/pagination/Pagination.vue#L282-L283)) зависит от layout (`offsetWidth`) — ветвь не воспроизводится в jsdom, покрыта частично.
+- `ResizeObserver`'ы для short-navigation сохраняются в локальный массив `navigationObservers` и отключаются в `onBeforeUnmount` ([Pagination.vue:237-241](../../lib/pagination/Pagination.vue#L237-L241)) — утечки памяти при unmount нет (regression-тесты в [Pagination.test.ts](../../lib/pagination/Pagination.test.ts)).
 
 ### Skipped tests
 
@@ -269,7 +275,7 @@ describe("Pagination", () => {
 ### Behavioral caveats
 
 - При смене `sizePage` — текущая `modelValue` не сбрасывается. Если новая `total / sizePage < modelValue` — может быть «несуществующая страница». Сбрасывай в parent через `@update:size-page`.
-- `arraySizesSelector` ([Pagination.d.ts:155–157](../../lib/pagination/Pagination.d.ts#L155-L157)) формирует `{ key, value }` объекты для Select — кастомизация лимитирована.
+- `arraySizesSelector` ([Pagination.d.ts:160–164](../../lib/pagination/Pagination.d.ts#L160-L164)) формирует `{ key, value }` объекты для Select — кастомизация лимитирована.
 
 ### Bug report format
 

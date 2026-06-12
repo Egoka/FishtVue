@@ -1,5 +1,8 @@
 import { mount } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import FishtVue from "fishtvue/config"
 import Pagination from "fishtvue/pagination/Pagination.vue"
 import { nextTick } from "vue"
@@ -346,6 +349,153 @@ describe("Pagination Component Tests", () => {
 
       expect(wrapper.emitted("update:sizePage")).toBeTruthy()
       expect(wrapper.emitted("update:sizePage")?.[0]).toEqual([20])
+    })
+  })
+
+  // ---AUDIT CLOSE-OUT (Issues 2–8)--------------------------------------------
+
+  // Issue 2 (C17 / Wave 2.3) — SSR-инжекция наследуется от Component.__hooks();
+  // ручной initStyle() в SFC запрещён каноном (dev-patterns §2).
+  describe("Pagination Component - Initialization (no duplicate initStyle)", () => {
+    it("SFC does not call initStyle() manually (relies on Component.__hooks)", () => {
+      const here = dirname(fileURLToPath(import.meta.url))
+      // отбрасываем line-комментарии перед проверкой: comment-marker канона сам
+      // упоминает `Pagination.initStyle()`, иначе был бы false positive.
+      const code = readFileSync(join(here, "Pagination.vue"), "utf8").replace(/\/\/[^\n]*/g, "")
+      expect(code).not.toMatch(/Pagination\.initStyle\s*\(/)
+    })
+  })
+
+  // Issue 3 (L53) — cross-cutting unstyled guard в Component.setStyle().
+  describe("Pagination Component - Configuration support (unstyled)", () => {
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("renders empty root class when unstyled: true", () => {
+      const app = {
+        install(a: any) {
+          a.use(FishtVue, { unstyled: true })
+        }
+      }
+      const wrapper = mount(Pagination, {
+        global: { plugins: [app] },
+        props: { total: 50, sizePage: 10 }
+      })
+      expect(wrapper.find("[data-pagination]").classes()).toHaveLength(0)
+    })
+
+    it("renders styled root class when unstyled is not set", () => {
+      const wrapper = mount(Pagination, { props: { total: 50, sizePage: 10 } })
+      expect(wrapper.find("[data-pagination]").classes().join(" ")).toContain("fishtvue-pagination")
+    })
+  })
+
+  // Issues 4 & 5 (E29.1 / E29.5) — ARIA landmark, labels, live region.
+  describe("Pagination Component - Accessibility (ARIA)", () => {
+    const mountWithLocale = (props: Record<string, any> = {}) =>
+      mount(Pagination, {
+        global: {
+          plugins: [
+            {
+              install(app: any) {
+                app.use(FishtVue, {
+                  locale: {
+                    activeLocale: "en",
+                    defaultLocale: "en",
+                    messages: { en: { of: "of", pagination: { label: "Pagination", page: "Page" } } }
+                  }
+                })
+              }
+            }
+          ]
+        },
+        props
+      })
+
+    it("root is a <nav> landmark with role and localized aria-label", () => {
+      const wrapper = mountWithLocale({ total: 50, sizePage: 10, modelValue: 1 })
+      const root = wrapper.find("[data-pagination]")
+      expect(root.element.tagName).toBe("NAV")
+      expect(root.attributes("role")).toBe("navigation")
+      expect(root.attributes("aria-label")).toBe("Pagination")
+    })
+
+    it("does not render a nested second navigation landmark", () => {
+      const wrapper = mountWithLocale({ total: 50, sizePage: 10, modelValue: 1 })
+      expect(wrapper.findAll("nav")).toHaveLength(1)
+      // внутренний контейнер страниц больше не <nav>
+      expect(wrapper.find("[data-pagination-nav]").element.tagName).not.toBe("NAV")
+    })
+
+    it("page buttons expose aria-label and aria-current", () => {
+      const wrapper = mountWithLocale({ total: 50, sizePage: 10, modelValue: 2 })
+      const pageButtons = wrapper.findAll("button[data-pagination-nav-page]")
+      expect(pageButtons.length).toBeGreaterThan(0)
+      pageButtons.forEach((btn) => {
+        expect(btn.attributes("aria-label")).toMatch(/^Page \d+$/)
+      })
+      const active = pageButtons.find((b) => b.text() === "2")
+      expect(active?.attributes("aria-current")).toBe("page")
+    })
+
+    it("renders a polite live region announcing the active page", async () => {
+      const wrapper = mountWithLocale({ total: 100, sizePage: 10, modelValue: 1 })
+      const live = wrapper.find("[data-pagination-live]")
+      expect(live.exists()).toBe(true)
+      expect(live.attributes("aria-live")).toBe("polite")
+      expect(live.attributes("role")).toBe("status")
+      expect(live.text()).toContain("1")
+      expect(live.text()).toContain("10")
+      await wrapper.setProps({ modelValue: 3 })
+      expect(wrapper.find("[data-pagination-live]").text()).toContain("3")
+    })
+  })
+
+  // Issue 6 (F31) — RTL: directional иконки флипаются, физический ml-3 → logical ms-3.
+  describe("Pagination Component - RTL (direction-aware icons)", () => {
+    it("compact chevron icon carries rtl flip", () => {
+      const wrapper = mount(Pagination, {
+        props: { total: 100, sizePage: 10, modelValue: 1, isInfoText: true }
+      })
+      const prevIcon = wrapper.find("[data-pagination-nav-previous] svg")
+      expect(prevIcon.exists()).toBe(true)
+      expect(prevIcon.classes().join(" ")).toContain("rtl:-scale-x-100")
+    })
+
+    it("long-form arrow uses logical margin (ms) not physical (ml)", () => {
+      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 5 } })
+      const nextIcon = wrapper.find("[data-pagination-nav-next] svg")
+      expect(nextIcon.exists()).toBe(true)
+      const cls = nextIcon.classes().join(" ")
+      expect(cls).toContain("ms-3")
+      expect(cls).not.toContain("ml-3")
+      expect(cls).toContain("rtl:-scale-x-100")
+    })
+  })
+
+  // Issue 7 (G34) — expose root ref + focus().
+  describe("Pagination Component - Expose (paginationRef & focus)", () => {
+    it("exposes paginationRef pointing to the root nav and a focus() method", () => {
+      const wrapper = mount(Pagination, { props: { total: 50, sizePage: 10 } })
+      const vm = wrapper.vm as any
+      expect(vm.paginationRef).toBe(wrapper.find("[data-pagination]").element)
+      expect(typeof vm.focus).toBe("function")
+      expect(() => vm.focus()).not.toThrow()
+    })
+  })
+
+  // Issue 8 (N59 / B10) — print styles + forced-colors high-contrast.
+  describe("Pagination Component - Print & forced-colors", () => {
+    it("root container carries print styles", () => {
+      const wrapper = mount(Pagination, { props: { total: 50, sizePage: 10 } })
+      expect(wrapper.find("[data-pagination]").classes().join(" ")).toMatch(/print:/)
+    })
+
+    it("active page indicator is distinguishable in forced-colors mode", () => {
+      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
+      const active = wrapper.findAll("button[data-pagination-nav-page]").find((b) => b.text() === "1")
+      expect(active?.classes().join(" ")).toMatch(/forced-colors:/)
     })
   })
 })
