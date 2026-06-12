@@ -17,16 +17,16 @@ related-doc: ../components/button.md
 | -------- | ----- | -------------------------------- |
 | critical | 0     | —                                |
 | high     | 0     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, ~~L53~~ ✅ (Issues 13, 14) |
-| medium   | 5     | ~~F31~~ ✅, G34, G36, I44, I45, N59 |
+| medium   | 4     | ~~F31~~ ✅, G34, G36, I44, I45, ~~N59~~ ✅ |
 | low      | 4     | B11, D26, E29.7, G37             |
 
-Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 6, 7, 15, 16.
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 6, 7, 16.
 
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
 **Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
 **Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
 **Закрыто 2026-05-11 (cross-cutting; отмечено 2026-06-12):** Issue 14 (L53 — `unstyled` через `Component.setStyle` guard + Button regression-тест).
-**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`).
+**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print).
 **Deferred:** Issue 16 (B11 — `darkModeSelector`) делегирован cross-cutting [theme.md Issue 5](./theme.md) (Wave 3.4) — счётчик остаётся открытым (low).
 Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
@@ -507,11 +507,13 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 - [x] `unstyled: true` приводит к пустому `class` на корне (regression-тест `Button.test.ts`).
 - [ ] ~~Реактивно: переключение в runtime~~ — out of scope: `config.unstyled` задаётся на install; reactive runtime-toggle относится к theme runtime API ([theme.md Issue 1](./theme.md)).
 
-## Issue 15: Нет print styles
+## ~~Issue 15: Нет print styles~~ ✅ resolved 2026-06-12
 
 - **Категория:** N59 (print styles)
-- **Severity:** low
-- **Где:** [Button.vue](../../lib/button/Button.vue)
+- **Severity:** ~~low~~ → resolved
+- **Где:** [Button.vue](../../lib/button/Button.vue) (`baseClasses`)
+
+> **Resolution (2026-06-12, style-for-print).** В `baseClasses` ([Button.vue](../../lib/button/Button.vue)) добавлены `print:border print:border-black print:bg-white print:text-black print:shadow-none` — канон FishtVue: кнопка печатается монохромно и читаемо, а не `display:none`. Выбран style-not-hide (зеркало Input/Loading/Table); `printable`-prop не вводился. +1 тест в `Button.test.ts` (describe `Print styles`): assert `print:*` present, `print:hidden` absent.
 
 ### Что найдено
 
@@ -541,7 +543,7 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 
 ### Acceptance criteria
 
-- [ ] DevTools → Rendering → Emulate CSS print — Button скрыт по умолчанию.
+- [x] ~~Button скрыт по умолчанию~~ → пересмотрено: style-for-print (кнопка печатается монохромно, не скрывается). DevTools → Rendering → Emulate CSS print — кнопка читаема ч/б.
 
 ## Issue 16: Dark mode зависит от `.dark` класса родителя без учёта `darkModeSelector`
 

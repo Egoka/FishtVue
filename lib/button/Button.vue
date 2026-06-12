@@ -24,7 +24,9 @@
       "focus:outline-none focus-visible:ring-1 " +
       "disabled:opacity-50 disabled:cursor-not-allowed " +
       "data-[loading=true]:cursor-wait " +
-      "motion-safe:transition-colors motion-safe:duration-200"
+      "motion-safe:transition-colors motion-safe:duration-200 " +
+      // Issue 15: стилизуем кнопку для печати (канон Input/Loading/Table), не прячем display:none.
+      "print:border print:border-black print:bg-white print:text-black print:shadow-none"
   )
   const modesClasses = ref({
     outline: ["border", "disabled:hover:bg-transparent"],

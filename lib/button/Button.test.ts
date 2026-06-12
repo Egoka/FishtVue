@@ -523,4 +523,16 @@ describe("Button Component Tests", () => {
       expect(modeOf(wrapper)).toBe("primary")
     })
   })
+
+  describe("Print styles (Issue 15)", () => {
+    // Канон FishtVue: стилизуем для печати (Input/Loading/Table), не прячем display:none.
+    it("renders style-for-print classes on the root (not display:none)", () => {
+      const wrapper = mount(Button, { slots: { default: "X" } })
+      const cls = wrapper.find("[data-button]").attributes("class") ?? ""
+      expect(cls).toContain("print:bg-white")
+      expect(cls).toContain("print:text-black")
+      expect(cls).toContain("print:shadow-none")
+      expect(cls).not.toContain("print:hidden")
+    })
+  })
 })

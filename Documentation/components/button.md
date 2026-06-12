@@ -256,6 +256,7 @@ app.use(FishtVue, { componentsStyle: "outlined" }) // <Button> по умолча
 - Цветовые токены: `theme.*`, `neutral.*`, `green.*`, `red.*` (для `creative`/`destructive`). См. [Theme](../architecture/theme.md).
 - Dark mode классы (`dark:*`) включены в каждой ветке `mode/color`.
 - Кастомные токены через `theme.semantic.customThemeColor` влияют на `bg-theme-*`/`text-theme-*`.
+- **Print:** `baseClasses` содержит `print:*` варианты (`print:border print:bg-white print:text-black print:shadow-none`) — при печати кнопка рендерится монохромно и читаемо, а не скрывается (канон Input/Loading/Table).
 
 ### 10.4 CSS layer override
 
