@@ -1,7 +1,7 @@
 ---
 title: Issues — Button
-summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07: logical iconPosition start/end + RTL (Issue 3); cross-cutting — SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 частично (ESM-only ратифицирован `engines`, root exports map отложен на build-verified заход). Зачёркнуты ниже с `✅ resolved`-маркерами.
-updated: 2026-06-07
+summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07: logical iconPosition start/end + RTL (Issue 3); cross-cutting — SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 ✅ (ESM-only `engines` + root `exports` map через `buildRootExports()`, 2026-06-11). Doc-sync 2026-06-12: матрица severity пересчитана к фактически открытым (Issues 5/6/7/13/14/15/16), Issue 16 (darkModeSelector) делегирован cross-cutting [theme.md Issue 5](./theme.md). Зачёркнуты ниже с `✅ resolved`-маркерами.
+updated: 2026-06-12
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/button/
 related-doc: ../components/button.md
@@ -16,13 +16,17 @@ related-doc: ../components/button.md
 | Severity | Count | Categories                       |
 | -------- | ----- | -------------------------------- |
 | critical | 0     | —                                |
-| high     | 4     | ~~A2~~ ✅, A4, A5, ~~C17~~ ✅, E29.1, L53 |
-| medium   | 6     | F31, G34, G36, I44, I45, N59     |
+| high     | 2     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, L53 (Issues 13, 14) |
+| medium   | 5     | ~~F31~~ ✅, G34, G36, I44, I45, N59 |
 | low      | 4     | B11, D26, E29.7, G37             |
 
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 6, 7, 13, 14, 15, 16.
+
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
-**Закрыто 2026-06-07:** Issue 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`).
-Все — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
+**Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
+**Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
+**Deferred:** Issue 16 (B11 — `darkModeSelector`) делегирован cross-cutting [theme.md Issue 5](./theme.md) (Wave 3.4) — счётчик остаётся открытым (low).
+Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
 ## ~~Issue 1: Стили инжектятся только после client mount — пустой first paint при SSR~~ ✅ resolved 2026-06-07
 
@@ -290,15 +294,15 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - [ ] `sideEffects` явно определён в `lib/package.json`.
 - [ ] (Опционально) то же — для каждого `lib/{component}/package.json`.
 
-## Issue 9: ESM-only — нет CJS, нет exports map — частично resolved 2026-06-07
+## ~~Issue 9: ESM-only — нет CJS, нет exports map~~ ✅ resolved 2026-06-11
 
 - **Категория:** A4 (ESM/CJS dual-package), A5 (exports map)
-- **Severity:** high
-- **Где:** [lib/package.json:17-18](../../lib/package.json#L17-L18), [lib/button/package.json](../../lib/button/package.json), [lib/rollup.config.js:374-390](../../lib/rollup.config.js#L374-L390)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [lib/package.json](../../lib/package.json), [lib/rollup.config.js `buildRootExports()`](../../lib/rollup.config.js), [lib/package.test.ts](../../lib/package.test.ts)
 
-> **Resolution (2026-06-07, partial).**
-> - **ESM-only ратифицирован ✅** — добавлен `"engines": { "node": ">=18" }` в [lib/package.json](../../lib/package.json); принято осознанное решение оставаться ESM-only (`.mjs`), `get_CJS_ESM()` остаётся выключенным. CJS-сборку НЕ включаем: аудитория — bundler-based Vue/Nuxt-приложения, для которых ESM нативен.
-> - **`exports` map (A5) ❌ отложено** — корректная карта требует перечислить все friendly-subpaths (`fishtvue/button` → `./button/button.mjs` — folder-main резолв через nested `package.json` ОТКЛЮЧАЕТСЯ при появлении root `exports`) И все self-referential внутренние `fishtvue/X/Y.mjs` импорты собранного кода (иначе пакет падает в рантайме). Раскладка нерегулярна (`module/index.mjs`, `plugins/nuxt.mjs`, `theme/themes/*`). Безопасный дизайн (явные entry points + catch-all `"./*"` / wildcard-reuse `"./*": "./*/*.mjs"`) требует build + `npm pack` + smoke-test реального `npm install` на Node `node16`/`bundler` resolver'ах. Сделать отдельным build-verified заходом (Wave 2.1).
+> **Resolution (ESM-only 2026-06-07, exports map 2026-06-11; Issue 5c-b).**
+> - **ESM-only ратифицирован ✅** — добавлен `"engines": { "node": ">=18" }` в [lib/package.json](../../lib/package.json); осознанное решение оставаться ESM-only (`.mjs`), `get_CJS_ESM()` выключен. CJS НЕ включаем: аудитория — bundler-based Vue/Nuxt, для которых ESM нативен.
+> - **`exports` map (A5) ✅** — корневая карта генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js) из авторитетных rollup-выходов + вложенных `package.json`/`.d.ts`: явный entry на каждый `.mjs` (identity `*.mjs` + extensionless) + bare-dir из вложенного `package.json` (`./button` → import `button.mjs`, types `Button.d.ts` — обходит lowercase-`.mjs`/PascalCase-`.d.ts` асимметрию) + `./*/package.json`. Strict superset, ноль wildcard-неоднозначности. Пререкизит **5c-a** (Menu publish-gap: `MenuItem.vue`/`MenuGroup.vue` не публиковались → переведены на `index.ts`-bundle, зеркало Table). **Verified:** `npm pack` → install → `import.meta.resolve` 19/19 субпутей в pure Node ESM (раньше падали «directory import not supported»); CSS-free субпуты исполняются (self-ref через карту); `tsc --moduleResolution bundler` И `nodenext` exit 0. Контракт — [lib/package.test.ts](../../lib/package.test.ts) (см. [README.md §2.1](./README.md)).
 
 ### Что найдено
 
@@ -349,9 +353,9 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 
 ### Acceptance criteria
 
-- [ ] `pnpm pack` → tarball содержит exports map.
-- [ ] `import Button from "fishtvue/button"` работает в Nuxt 3 + Vite + TS strict.
-- [ ] Если CJS — `require("fishtvue/button")` тоже работает.
+- [x] `pnpm pack` → tarball содержит `exports` map (`buildRootExports()`; контракт в `package.test.ts`).
+- [x] `import Button from "fishtvue/button"` работает в Nuxt 3 + Vite + TS strict (`import.meta.resolve` 19/19; `tsc` bundler + nodenext).
+- [x] ~~Если CJS — `require("fishtvue/button")` тоже работает.~~ — **N/A**: ESM-only ратифицирован, CJS вне scope (`engines.node >=18`).
 
 ## ~~Issue 10: Анимации без `prefers-reduced-motion` guard~~ ✅ resolved 2026-05-10
 
@@ -538,6 +542,8 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 - **Категория:** B11 (dark mode + runtime theme switch)
 - **Severity:** low
 - **Где:** [Button.vue:31-49](../../lib/button/Button.vue) (все `dark:*` классы)
+
+> **Status (2026-06-12): deferred.** Фикс не Button-локальный — `darkModeSelector` транслируется в CSS на уровне theme-движка ([theme/uno.ts](../../lib/theme/uno.ts)), это cross-cutting Wave 3.4, отслеживаемая в [theme.md Issue 5](./theme.md). Button наследует поведение автоматически после её закрытия; отдельной правки в `lib/button/` не требуется. Счётчик остаётся открытым (low) до закрытия theme-wave.
 
 ### Что найдено
 
