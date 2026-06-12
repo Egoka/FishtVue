@@ -16,15 +16,16 @@ related-doc: ../components/button.md
 | Severity | Count | Categories                       |
 | -------- | ----- | -------------------------------- |
 | critical | 0     | —                                |
-| high     | 2     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, L53 (Issues 13, 14) |
+| high     | 1     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, L53 (Issue 13; ~~14~~ ✅) |
 | medium   | 5     | ~~F31~~ ✅, G34, G36, I44, I45, N59 |
 | low      | 4     | B11, D26, E29.7, G37             |
 
-Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 6, 7, 13, 14, 15, 16.
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 6, 7, 13, 15, 16.
 
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
 **Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
 **Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
+**Закрыто 2026-05-11 (cross-cutting; отмечено 2026-06-12):** Issue 14 (L53 — `unstyled` через `Component.setStyle` guard + Button regression-тест).
 **Deferred:** Issue 16 (B11 — `darkModeSelector`) делегирован cross-cutting [theme.md Issue 5](./theme.md) (Wave 3.4) — счётчик остаётся открытым (low).
 Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
@@ -469,11 +470,13 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 - [ ] `app.use(FishtVue, { componentsStyle: "outlined" })` — `<Button>X</Button>` рендерится с `mode="outline"`.
 - [ ] Per-instance `<Button mode="primary">` перебивает глобальное.
 
-## Issue 14: `unstyled: true` не обрабатывается
+## ~~Issue 14: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-05-11 (cross-cutting)
 
 - **Категория:** L53 (Configuration support)
-- **Severity:** high
-- **Где:** [Button.vue:313-323](../../lib/button/Button.vue#L313-L323)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [component/index.ts:138](../../lib/component/index.ts#L138) (`Component.setStyle()` guard)
+
+> **Resolution (cross-cutting 2026-05-11; Button regression-test 2026-06-12).** Guard `if (this.__globalConfig?.config?.unstyled) return ""` в `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138)) — одна правка закрывает `unstyled` во ВСЕХ 22 компонентах (см. [component-class.md Issue 6](./component-class.md)). Button наследует автоматически: `classBase` = `Button.setStyle([...])` ([Button.vue:330-341](../../lib/button/Button.vue#L330-L341)) → `""` при `unstyled: true`, корневой `<button>` рендерится без `class`. Добавлен Button-scoped regression-тест ([Button.test.ts](../../lib/button/Button.test.ts) → describe `Configuration support`): `app.use(FishtVue, { unstyled: true })` → root `class` пуст; контраст с `unstyled: false` → `inline-flex` присутствует; `afterEach` чистит `window.FishtVue` (singleton-leak guard).
 
 ### Что найдено
 
@@ -498,8 +501,8 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 
 ### Acceptance criteria
 
-- [ ] `unstyled: true` приводит к `class=""` (или отсутствию атрибута) на корне.
-- [ ] Реактивно: переключение в runtime → стили исчезают.
+- [x] `unstyled: true` приводит к пустому `class` на корне (regression-тест `Button.test.ts`).
+- [ ] ~~Реактивно: переключение в runtime~~ — out of scope: `config.unstyled` задаётся на install; reactive runtime-toggle относится к theme runtime API ([theme.md Issue 1](./theme.md)).
 
 ## Issue 15: Нет print styles
 

@@ -437,4 +437,39 @@ describe("Button Component Tests", () => {
       warn.mockRestore()
     })
   })
+
+  describe("Configuration support", () => {
+    // ---Issue 14: unstyled (cross-cutting Component.setStyle guard)----
+    const appWithConfig = (config: Record<string, unknown>) => ({
+      install(app: any) {
+        app.use(FishtVue, config)
+      }
+    })
+
+    // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback):
+    // чистим, чтобы unstyled:true из теста не протёк в соседние тесты/файлы.
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("strips all classes from the root when global unstyled: true", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        slots: { default: "X" }
+      })
+      // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
+      // ни `fv {prefix}-button`-префикса на корне.
+      const cls = (wrapper.find("[data-button]").attributes("class") ?? "").trim()
+      expect(cls).toBe("")
+    })
+
+    it("keeps base classes when unstyled is false (contrast)", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ unstyled: false })] },
+        slots: { default: "X" }
+      })
+      const cls = wrapper.find("[data-button]").attributes("class") ?? ""
+      expect(cls).toContain("inline-flex")
+    })
+  })
 })
