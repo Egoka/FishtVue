@@ -4,6 +4,14 @@ import FishtVue from "fishtvue/config"
 import Button from "fishtvue/button/Button.vue"
 import type { ButtonExpose } from "fishtvue/button/Button"
 
+// Дожидается резолва lazy Loading/FixWindow (defineAsyncComponent под polymorphic dynamic
+// root): помимо микротасков (flushPromises) нужен macrotask-тик.
+const flushAsyncComponents = async () => {
+  await flushPromises()
+  await new Promise((r) => setTimeout(r))
+  await flushPromises()
+}
+
 describe("Button Component Tests", () => {
   describe("Without Library Initialization", () => {
     it("renders correctly with default props", () => {
@@ -65,7 +73,7 @@ describe("Button Component Tests", () => {
       expect(icon.exists()).toBe(true)
 
       // Loading подгружается лениво (Issue 6) — ждём резолва async-компонента.
-      await flushPromises()
+      await flushAsyncComponents()
       const loading = wrapper.findComponent({ name: "Loading" })
       expect(loading.exists()).toBe(true)
     })
@@ -123,7 +131,7 @@ describe("Button Component Tests", () => {
         }
       })
 
-      await flushPromises()
+      await flushAsyncComponents()
       const loading = wrapper.findComponent({ name: "Loading" })
       expect(loading.exists()).toBe(true)
     })
@@ -139,7 +147,7 @@ describe("Button Component Tests", () => {
       })
 
       // FixWindow подгружается лениво (Issue 6) — ждём резолва перед проверкой slot/компонента.
-      await flushPromises()
+      await flushAsyncComponents()
       const slot = wrapper.find(".slot-content")
       expect(slot.exists()).toBe(true)
       expect(slot.text()).toBe("Slot Content")
@@ -159,7 +167,7 @@ describe("Button Component Tests", () => {
         }
       })
 
-      await flushPromises()
+      await flushAsyncComponents()
       const fixWindow = wrapper.findComponent({ name: "FixWindow" })
       expect(fixWindow.exists()).toBe(true)
       expect(fixWindow.props("mode")).toBe("filled")
@@ -539,6 +547,69 @@ describe("Button Component Tests", () => {
       expect(cls).toContain("print:text-black")
       expect(cls).toContain("print:shadow-none")
       expect(cls).not.toContain("print:hidden")
+    })
+  })
+
+  describe("Polymorphic as (Issue 5)", () => {
+    it("renders a native <button> by default", () => {
+      const wrapper = mount(Button, { slots: { default: "X" } })
+      expect(wrapper.find("[data-button]").element.tagName).toBe("BUTTON")
+    })
+
+    it('renders an <a> when as="a" and passes href through', () => {
+      const wrapper = mount(Button, {
+        props: { as: "a" },
+        attrs: { href: "/go" },
+        slots: { default: "Go" }
+      })
+      const el = wrapper.find("[data-button]").element
+      expect(el.tagName).toBe("A")
+      expect(el.getAttribute("href")).toBe("/go")
+      expect(el.textContent).toContain("Go")
+    })
+
+    it('does not set a type attribute on a non-button root (as="a")', () => {
+      const wrapper = mount(Button, {
+        props: { as: "a", type: "submit" },
+        slots: { default: "Go" }
+      })
+      expect(wrapper.find("[data-button]").attributes("type")).toBeUndefined()
+    })
+
+    it("keeps native button type='button' for type=icon", () => {
+      const wrapper = mount(Button, { props: { type: "icon", icon: "check", ariaLabel: "x" } })
+      expect(wrapper.find("[data-button]").attributes("type")).toBe("button")
+    })
+
+    it('sets role="button" on a non-button, non-anchor root', () => {
+      const wrapper = mount(Button, { props: { as: "span" }, slots: { default: "X" } })
+      expect(wrapper.find("[data-button]").attributes("role")).toBe("button")
+    })
+
+    it('sets tabindex="0" on a non-button, non-anchor root', () => {
+      const wrapper = mount(Button, { props: { as: "div" }, slots: { default: "X" } })
+      expect(wrapper.find("[data-button]").attributes("tabindex")).toBe("0")
+    })
+
+    it("does not set role/tabindex on a native button", () => {
+      const el = mount(Button, { slots: { default: "X" } }).find("[data-button]")
+      expect(el.attributes("role")).toBeUndefined()
+      expect(el.attributes("tabindex")).toBeUndefined()
+    })
+
+    it("does not set role on an <a> root (natively interactive)", () => {
+      const wrapper = mount(Button, { props: { as: "a" }, attrs: { href: "/x" }, slots: { default: "X" } })
+      expect(wrapper.find("[data-button]").attributes("role")).toBeUndefined()
+    })
+
+    it("marks a disabled non-button root with aria-disabled and tabindex=-1", () => {
+      const wrapper = mount(Button, {
+        props: { as: "span", disabled: true },
+        slots: { default: "X" }
+      })
+      const el = wrapper.find("[data-button]")
+      expect(el.attributes("aria-disabled")).toBe("true")
+      expect(el.attributes("tabindex")).toBe("-1")
     })
   })
 })

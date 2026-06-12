@@ -17,16 +17,16 @@ related-doc: ../components/button.md
 | -------- | ----- | -------------------------------- |
 | critical | 0     | —                                |
 | high     | 0     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, ~~L53~~ ✅ (Issues 13, 14) |
-| medium   | 3     | ~~F31~~ ✅, G34, G36, ~~I44~~ ✅, I45, ~~N59~~ ✅ |
+| medium   | 2     | ~~F31~~ ✅, G34, ~~G36~~ ✅, ~~I44~~ ✅, I45, ~~N59~~ ✅ |
 | low      | 4     | B11, D26, E29.7, G37             |
 
-Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 5, 7, 16.
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Фактически открытые Button-секции: 7, 16.
 
 **Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
 **Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
 **Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
 **Закрыто 2026-05-11 (cross-cutting; отмечено 2026-06-12):** Issue 14 (L53 — `unstyled` через `Component.setStyle` guard + Button regression-тест).
-**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print); Issue 6 (I44 — lazy Loading/FixWindow через `defineAsyncComponent`).
+**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print); Issue 6 (I44 — lazy Loading/FixWindow через `defineAsyncComponent`); Issue 5 (G36 — polymorphic `as` через `<component :is>`).
 **Deferred:** Issue 16 (B11 — `darkModeSelector`) делегирован cross-cutting [theme.md Issue 5](./theme.md) (Wave 3.4) — счётчик остаётся открытым (low).
 Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
 
@@ -170,11 +170,13 @@ Reactive ref `buttonRef` определён, но не возвращён чер
 - [x] `useTemplateRef<typeof Button>("btn").value?.focus()` фокусирует кнопку.
 - [x] Тест: `wrapper.vm.focus()` → `expect(document.activeElement).toBe(wrapper.find('button').element)`.
 
-## Issue 5: Нет polymorphic `as` prop — Button нельзя превратить в `<a>`
+## ~~Issue 5: Нет polymorphic `as` prop — Button нельзя превратить в `<a>`~~ ✅ resolved 2026-06-12
 
 - **Категория:** G36 (asChild / polymorphic)
-- **Severity:** medium
-- **Где:** [Button.vue:351](../../lib/button/Button.vue#L351), [Button.d.ts](../../lib/button/Button.d.ts)
+- **Severity:** ~~medium~~ → resolved
+- **Где:** [Button.vue](../../lib/button/Button.vue) (`<component :is="asTag">`), [Button.d.ts](../../lib/button/Button.d.ts) (`as?: string | Component`)
+
+> **Resolution (2026-06-12).** Добавлен prop `as?: string | Component` (default `"button"`); корень рендерится через `<component :is="asTag">`. Для `as="a"` — `<a>` с fallthrough `href`/`target` и без `role` (нативно интерактивен); для прочих тегов/компонентов — авто `role="button"` + `tabindex` (`0`, либо `-1` + `aria-disabled="true"` при `disabled`); нативный `type` — только на `<button>`. `buttonRef` расширен до `HTMLElement`. Из-за dynamic root `defineAsyncComponent`-дети (Issue 6) вынесены в module-scope `<script>` для стабильной идентичности; `@click` типизирован явно (`MouseEvent`). +9 тестов (`Button.test.ts` describe `Polymorphic as`).
 
 ### Что найдено
 
@@ -196,9 +198,9 @@ Reactive ref `buttonRef` определён, но не возвращён чер
 
 ### Acceptance criteria
 
-- [ ] `<Button as="a" href="/x">Go</Button>` рендерит `<a href="/x" class="...">Go</a>`.
-- [ ] `<Button as={NuxtLink} to="/x">` работает в Nuxt.
-- [ ] Tab-keyboard navigation работает на не-button корне (через `tabindex="0"` если `as` не link/button).
+- [x] `<Button as="a" href="/x">Go</Button>` рендерит `<a href="/x" class="...">Go</a>` (тест).
+- [~] `<Button :as="NuxtLink" to="/x">` — механизм через `<component :is>` поддержан; в unit-окружении (нет Nuxt) не покрыт тестом.
+- [x] Tab-keyboard navigation на не-button корне через `tabindex="0"` (тест `span`/`div`).
 
 ## ~~Issue 6: Loading и FixWindow всегда тянутся в bundle — для текстовой Button это перерасход~~ ✅ resolved 2026-06-12
 

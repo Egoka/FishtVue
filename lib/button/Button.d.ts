@@ -1,5 +1,5 @@
 import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
-import { Ref, VNode } from "vue"
+import { Component, Ref, VNode } from "vue"
 
 /**
  * ## Button
@@ -96,6 +96,16 @@ type BaseButtonProps = ButtonStyle & {
    * @type {string | undefined}
    */
   ariaLabel?: string
+
+  /**
+   * Polymorphic корневой тег/компонент. По умолчанию `"button"`. Позволяет рендерить
+   * Button как `<a>` / `<RouterLink>` / `<NuxtLink>` с сохранением стилей. Для
+   * не-`<button>`/не-`<a>` корней автоматически проставляются `role="button"` и
+   * `tabindex` (`0`, либо `-1` при `disabled`); нативный `type` ставится только на
+   * `<button>`. Атрибуты вроде `href`/`to`/`target` пробрасываются через fallthrough.
+   * @type {string | Component | undefined}
+   */
+  as?: string | Component
 }
 
 /**
@@ -156,11 +166,12 @@ export declare type ButtonEmits = {
 export declare type ButtonExpose = {
   // ---STATE-------------------------
   /**
-   * Ref на корневой `<button>` элемент. Позволяет programmatically делать
+   * Ref на корневой элемент. По умолчанию `<button>`; при polymorphic `as` —
+   * соответствующий тег (`<a>` и т. п.). Позволяет programmatically делать
    * `.focus()`/`.click()`/`.scrollIntoView()` без обращения к DOM-селекторам.
-   * @type {Readonly<Ref<HTMLButtonElement | undefined>>}
+   * @type {Readonly<Ref<HTMLElement | undefined>>}
    */
-  buttonRef: Readonly<Ref<HTMLButtonElement | undefined>>
+  buttonRef: Readonly<Ref<HTMLElement | undefined>>
 
   // ---PROPS-------------------------
   /**

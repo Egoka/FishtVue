@@ -1,13 +1,19 @@
+<script lang="ts">
+  import { defineAsyncComponent } from "vue"
+  // Issue 6: Loading/FixWindow подгружаются лениво — текстовая <Button>Save</Button> (без
+  // loading и без icon-tooltip) не тянет их в синхронный chunk. Объявлены в module-scope
+  // (а не в setup), чтобы определение async-компонента было стабильным для всех инстансов —
+  // под polymorphic dynamic root (Issue 5) per-instance-определение не резолвилось.
+  const Loading = defineAsyncComponent(() => import("fishtvue/loading/Loading.vue"))
+  const FixWindow = defineAsyncComponent(() => import("fishtvue/fixwindow/FixWindow.vue"))
+</script>
+
 <script setup lang="ts">
-  import { computed, defineAsyncComponent, onMounted, ref, useSlots } from "vue"
+  import { computed, onMounted, ref, useSlots } from "vue"
   import { ButtonEmits, ButtonProps } from "./Button"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
   import { StyleClass } from "fishtvue/types"
-  // Issue 6: Loading/FixWindow подгружаются лениво (defineAsyncComponent) — текстовая
-  // <Button>Save</Button> без loading и без icon-tooltip не тянет их в синхронный chunk.
-  const Loading = defineAsyncComponent(() => import("fishtvue/loading/Loading.vue"))
-  const FixWindow = defineAsyncComponent(() => import("fishtvue/fixwindow/FixWindow.vue"))
   // ---BASE-COMPONENT----------------------
   const Button = new Component<"Button">()
   const options = Button.getOptions()
@@ -19,7 +25,7 @@
   const emit = defineEmits<ButtonEmits>()
   const slots = useSlots()
   // ---STATE-------------------------------
-  const buttonRef = ref<HTMLButtonElement>()
+  const buttonRef = ref<HTMLElement>()
   // ---STATE-------------------------------
   const baseClasses = ref(
     "group/button relative gap-2 m-1 h-min rounded inline-flex items-center justify-center leading-none " +
@@ -312,6 +318,33 @@
   })
   const isLoading = computed<ButtonProps["loading"]>(() => props.loading)
   const disabled = computed<ButtonProps["disabled"]>(() => props.disabled ?? false)
+  // Issue 5: polymorphic root. По умолчанию <button>; `as` позволяет <a>/<NuxtLink>/….
+  const asTag = computed<NonNullable<ButtonProps["as"]>>(() => props.as ?? "button")
+  const isNativeButton = computed<boolean>(() => asTag.value === "button")
+  // Нативный type — только на <button>; type="icon" маппится в "button".
+  const resolvedType = computed<"button" | "reset" | "submit" | undefined>(() =>
+    isNativeButton.value
+      ? type.value === "icon"
+        ? "button"
+        : (type.value as "button" | "reset" | "submit")
+      : undefined
+  )
+  // role="button" для не-button/не-<a> корней (<a href> уже интерактивен).
+  const resolvedRole = computed<"button" | undefined>(() =>
+    isNativeButton.value || asTag.value === "a" ? undefined : "button"
+  )
+  // tabindex для не-нативно-фокусируемых корней; -1 при disabled.
+  const resolvedTabindex = computed<number | undefined>(() => {
+    if (isNativeButton.value || asTag.value === "a") return undefined
+    return disabled.value ? -1 : 0
+  })
+  // disabled: нативный атрибут только на <button>; иначе aria-disabled.
+  const resolvedDisabled = computed<boolean | undefined>(() =>
+    isNativeButton.value && disabled.value ? true : undefined
+  )
+  const resolvedAriaDisabled = computed<"true" | undefined>(() =>
+    !isNativeButton.value && disabled.value ? "true" : undefined
+  )
   // Для icon-кнопок без явного ariaLabel и без default-slot fallback'имся
   // на имя иконки — это хоть какой-то accessible name, лучше чем «button».
   const resolvedAriaLabel = computed<string | undefined>(() => {
@@ -407,15 +440,19 @@
   })
 </script>
 <template>
-  <button
+  <component
+    :is="asTag"
     ref="buttonRef"
     data-button
-    :type="type === 'icon' ? 'button' : type"
+    :type="resolvedType"
+    :role="resolvedRole"
+    :tabindex="resolvedTabindex"
     :class="classBase"
     :data-loading="isLoading"
     :aria-label="resolvedAriaLabel"
-    v-bind="{ disabled }"
-    @click="(e) => emit('click', e)">
+    :disabled="resolvedDisabled"
+    :aria-disabled="resolvedAriaDisabled"
+    @click="(e: MouseEvent) => emit('click', e)">
     <template v-if="type === 'icon'">
       <Icons v-if="icon" :type="icon" :class="classIcon" />
       <Loading v-if="isLoading" type="simple" :size="25" class="absolute" />
@@ -437,5 +474,5 @@
       <Loading v-if="isLoading" type="simple" :class="['-me-2']" />
       <slot v-if="slots.end" name="end" />
     </template>
-  </button>
+  </component>
 </template>

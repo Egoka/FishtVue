@@ -73,6 +73,7 @@ Tree-shaking & bundle: `import Button from "fishtvue/button"` импортиру
 | `color`        | `"theme" \| "neutral" \| "creative" \| "destructive"` | `"neutral"` (или из global config) | Цветовая тема.                                                                                                                                                     |
 | `class`        | `StyleClass`                                          | —                                  | Дополнительные классы для контейнера.                                                                                                                              |
 | `classIcon`    | `StyleClass`                                          | —                                  | Классы для иконки.                                                                                                                                                 |
+| `as`           | `string \| Component`                                 | `"button"`                         | Polymorphic корневой тег/компонент (`<a>` / `<RouterLink>` / `<NuxtLink>`). Для не-button/не-`<a>` — авто `role="button"` + `tabindex`; нативный `type` только на `<button>`; `href`/`to`/`target` пробрасываются. См. §10.5. |
 
 Defaults для `disabled` и `loading` — `undefined` через `withDefaults` ([Button.vue:13–17](../../lib/button/Button.vue#L13-L17)) — это намеренно: без значения работает auto-detect.
 
@@ -82,7 +83,7 @@ Defaults для `disabled` и `loading` — `undefined` через `withDefaults
 
 | Event   | Payload      | When fired                                                                                                                                |
 | ------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `click` | `MouseEvent` | На нативный click по корневому `<button>`. Payload — пробрасываемое native MouseEvent (с `target`/`currentTarget`/`button`/координатами). |
+| `click` | `MouseEvent` | На нативный click по корневому элементу (по умолчанию `<button>`; при polymorphic `as` — соответствующему тегу). Payload — пробрасываемое native MouseEvent (с `target`/`currentTarget`/`button`/координатами). |
 
 Кнопка не интерсептит и не превращает payload. `disabled`-кнопки native click не отправляют (стандартное браузерное поведение).
 
@@ -104,7 +105,7 @@ v-model contract — не применимо.
 
 | Name              | Type                                            | Description                                                                                                           |
 | ----------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `buttonRef`       | `Readonly<Ref<HTMLButtonElement \| undefined>>` | Ref на корневой `<button>`. Доступ к native DOM для `.click()`/`.scrollIntoView()`/etc.                               |
+| `buttonRef`       | `Readonly<Ref<HTMLElement \| undefined>>`       | Ref на корневой элемент (`<button>` по умолчанию; при polymorphic `as` — соответствующий тег). Доступ к native DOM.    |
 | `mode`            | `ButtonProps["mode"]`                           | Текущий mode (computed).                                                                                              |
 | `size`            | `ButtonProps["size"]`                           | Текущий size.                                                                                                         |
 | `rounded`         | `ButtonProps["rounded"]`                        | Текущий rounded.                                                                                                      |
@@ -121,7 +122,7 @@ import type Button from "fishtvue/button"
 const btnRef = useTemplateRef<InstanceType<typeof Button>>("btn")
 console.log(btnRef.value?.mode)
 btnRef.value?.focus() // programmatic focus
-btnRef.value?.buttonRef // native HTMLButtonElement
+btnRef.value?.buttonRef // корневой HTMLElement (по умолчанию <button>)
 ```
 
 ## 9. Examples
@@ -274,6 +275,25 @@ CSS root-класс — `fv fishtvue-button`. Override:
 ```
 
 См. [01-getting-started §10.4](../01-getting-started.md#104-css-layer-override).
+
+### 10.5 As link / NuxtLink (polymorphic `as`)
+
+Проп `as` меняет корневой тег/компонент, сохраняя стили и slot-композицию Button:
+
+```vue
+<!-- ссылка, выглядит как кнопка -->
+<Button as="a" href="/docs" color="theme">Docs</Button>
+
+<!-- Nuxt-навигация -->
+<Button :as="NuxtLink" to="/profile" mode="outline">Profile</Button>
+```
+
+Поведение:
+
+- Дефолт — нативный `<button>` (`type` применяется только к нему; `type="icon"` → `type="button"`).
+- `as="a"` — рендерит `<a>`; `href`/`target`/`rel` пробрасываются через attribute fallthrough; `role` не добавляется (ссылка уже интерактивна).
+- Любой другой тег (`"span"`, `"div"`) или компонент — добавляются `role="button"` + `tabindex="0"` (либо `-1` + `aria-disabled="true"` при `disabled`) для клавиатурной доступности.
+- `buttonRef` (expose) указывает на корневой элемент независимо от `as`.
 
 ## 11. Form integration & validation
 
