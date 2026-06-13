@@ -1,7 +1,7 @@
 ---
 title: Issues — Form
-summary: Аудит Form — schema-driven only (нет compound API), нет registration механизма для произвольных typeField, slow при глубокой структуре, отсутствие FormData submit. XSS (Issue 1), validation i18n (Issue 6) и branch coverage (Issue 8) закрыты 2026-06-03.
-updated: 2026-06-03
+summary: Аудит Form. Все numbered issues закрыты — XSS (1), validation i18n (6), branch coverage (8) 2026-06-03; compound `<Form><FormField>`/`<FormSection>` API (2), open typeField + registerFieldType (3), native submit + FormData (4), SSR/sideEffects/exports/unstyled (5), date locale via Calendar (7), motion/RTL/print + G34 expose (9) 2026-06-13. Severity matrix 0/0/0/0; файл остаётся active до Wave 9 (B10 theme-token hardcode).
+updated: 2026-06-13
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/form/
 related-doc: ../components/form.md
@@ -14,9 +14,11 @@ related-doc: ../components/form.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | ~~C13 (v-html в select-marker)~~ ✅ resolved 2026-06-03 |
-| high | 6 | A2, A4-5, C17, L53, P (dual-API), M55 (FormData) |
-| medium | 3 | D21 (typeField generic), ~~F30~~ ✅ resolved 2026-06-03, F32, G34 |
-| low | 2 | E29.7, B10, ~~K46 (branch coverage)~~ ✅ resolved 2026-06-03 |
+| high | 0 | ~~A2~~, ~~A4-5~~, ~~C17~~, ~~L53~~ ✅ (Issue 5), ~~P (dual-API)~~ ✅ (Issue 2), ~~M55 (FormData)~~ ✅ (Issue 4) |
+| medium | 0 | ~~D21 (typeField generic)~~ ✅ (Issue 3), ~~F30~~ ✅ 2026-06-03, ~~F32~~ ✅ (Issue 7), ~~G34~~ ✅ (formElement expose, Issue 9) |
+| low | 0 | ~~E29.7~~ + ~~N59~~ ✅ (Issue 9), ~~B10~~ (Wave 9 deferral — см. scope note), ~~K46~~ ✅ 2026-06-03 |
+
+> **Файл остаётся в `active/`** (не перемещён в `./done/`): numbered-issue matrix `0/0/0/0`, но B10 (миграция `gray-*`/`red-*` Tailwind-примитивов на semantic tokens) — библиотечная **Wave 9**, ещё не сделана ни для одного компонента. Зеркало `pagination.md`/`table.md`. См. [scope note](#scope-notes) ниже.
 
 ## ~~Issue 1: CRITICAL — XSS через select-marker (наследуется через Form-rendered Select)~~ ✅ resolved 2026-06-03
 
@@ -41,152 +43,156 @@ Form переопределял Select `#item` slot через `v-html` для m
 - [x] Form-rendered select option с XSS payload (`<img src=x onerror=…>`) не исполняется — рендерится как escaped-текст ([Form.test.ts](../../lib/form/Form.test.ts) → "does not execute an XSS payload from a Select option value"). ✅
 - [x] Form переиспользует Select-component вместо дублирования render-логики. ✅
 
-## Issue 2: Dual-API gap — нет compound `<Form><FormField>` API
+## ~~Issue 2: Dual-API gap — нет compound `<Form><FormField>` API~~ ✅ resolved 2026-06-13
 
 - **Категория:** P (Dual-API)
-- **Severity:** high
-- **Где:** [Form.d.ts](../../lib/form/Form.d.ts) (FormStructure type)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [Form.d.ts](../../lib/form/Form.d.ts) (FormFieldProps/FormSectionProps), [Form.vue:84–166](../../lib/form/Form.vue#L84-L166)
 
 ### Что найдено
 
-API только schema-driven через `structure: FormStructure[]`:
-```vue
-<Form :structure="[
-  { fields: [
-    { name: 'email', typeField: 'Input', label: 'Email', rules: [{type:'required'}] },
-    { name: 'role', typeField: 'Select', dataSelect: roles }
-  ]}
-]" v-model:form-fields="values" />
-```
+API был только schema-driven через `structure: FormStructure[]` — без compound `<Form><FormSection><FormField>` варианта (industry-стандарт: VueForm, FormKit, Element Plus).
 
-Нет:
-```vue
-<Form v-model:form-fields="values">
-  <FormSection title="User">
-    <FormField name="email" type="Input" label="Email" :rules="[{type:'required'}]" />
-    <FormField name="role" type="Select" :data-select="roles" />
-  </FormSection>
-</Form>
-```
+### Что сделано ✅
 
-### Почему это проблема
+Реализован параллельный **compound API** по канону FishtVue — **VNode-walk `slots.default()`** (НЕ provide/inject; зеркало Table/Menu, [dev-patterns.md §2](../dev-patterns.md)):
 
-- Industry: VueForm, FormKit, Element Plus el-form — все compound.
-- Schema-driven полезен для CMS-driven форм. Compound — для статически известных.
-- Custom typeField (e.g., `typeField: "MyCustomComponent"`) — сейчас невозможно без регистрации в Form internals. Compound сделал бы тривиальным:
-  ```vue
-  <FormField name="custom"><MyCustomComponent /></FormField>
-  ```
-
-### Что нужно сделать
-
-См. [table.md Issue 3](./table.md) — параллельный fix-план через `provide(FORM_CONTEXT, ...)` + child `<FormField>` registration.
-
-1. `lib/form/FormField.vue` — child компонент. Inject `FORM_CONTEXT` parent, register self.
-2. Resolve приоритет: `:structure` prop выигрывает; иначе используется children walk.
-3. Slot pattern: `<FormField name="x"><CustomInput /></FormField>` — рендер любого компонента.
-4. Validation: rules определяются через FormField props или custom validator function.
-5. v-model bridge: FormField emit `update:modelValue` → Form aggregate в formFields.
+1. NEW renderless-дети [FormField.vue](../../lib/form/FormField.vue) + [FormSection.vue](../../lib/form/FormSection.vue) (`defineOptions({ name, inheritAttrs: false })`, `Emits = null`; собственного DOM не рендерят).
+2. [Form.vue:84–166](../../lib/form/Form.vue#L84-L166) — `compoundParsed` walk (Fragment-flatten, matching по имени `"FormField"`/`"FormSection"`) синтезирует `FormStructure[]`; default-slot `<FormField>` рендерится как custom-контрол через `RenderFieldSlot` (с value-bridge). Form **не импортирует** child `.vue` (ломает type-resolver).
+3. [Form.vue:190–194](../../lib/form/Form.vue#L190-L194) — `structure` computed: schema `:structure` при наличии **выигрывает** (backward compat); иначе — compound-дети. `FormProps.structure` стал optional.
+4. Регистрация: NEW [lib/form/index.ts](../../lib/form/index.ts) (rollup entry → `form.mjs` с named `FormField`/`FormSection`), [rollup.config.js](../../lib/rollup.config.js) `addEntry("form", "index.ts", "form")` + skip-guard, Nuxt `FISHT_VUE_SUBCOMPONENTS`, root barrel `export * from "fishtvue/form"`. Типы `FormFieldProps`/`FormFieldSlots`/`FormSectionProps`/`FormSectionSlots` + `declare class FormField`/`FormSection` + `GlobalComponents` в [Form.d.ts](../../lib/form/Form.d.ts).
 
 ### Acceptance criteria
 
-- [ ] Schema-driven продолжает работать.
-- [ ] `<Form><FormField name="email" type="Input" /></Form>` рендерит Input с auto-binding.
-- [ ] Custom typeField через slot: `<FormField name="x"><MyComp /></FormField>`.
+- [x] Schema-driven продолжает работать (regression-тест "schema structure wins over compound children"). ✅
+- [x] `<Form><FormField name="email" type="Input" /></Form>` рендерит Input с auto-binding на `formFields.email`. ✅
+- [x] `<FormSection title>` группирует поля; custom typeField через slot: `<FormField name="x"><MyComp /></FormField>`. ✅
 
-## Issue 3: typeField string union — нельзя расширить custom компонентами
+## ~~Issue 3: typeField string union — нельзя расширить custom компонентами~~ ✅ resolved 2026-06-13
 
 - **Категория:** D21 (Generic типов)
-- **Severity:** medium
-- **Где:** [Form.d.ts](../../lib/form/Form.d.ts) (FieldType union)
+- **Severity:** ~~medium~~ → resolved
+- **Где:** [Form.d.ts](../../lib/form/Form.d.ts) (`FieldComponentType`), [fieldRegistry.ts](../../lib/form/fieldRegistry.ts), [Form.vue:80–82](../../lib/form/Form.vue#L80-L82)
 
 ### Что найдено
 
-`typeField` — closed union из FishtVue-компонентов: `"Input" | "Select" | "Calendar" | ...`. Нельзя добавить custom typeField (`"MyDatePicker"`).
+`typeComponent` — closed union (`"Input" | "Select" | …`). Нельзя добавить custom typeField без регистрации в Form internals.
 
-### Что нужно сделать
+### Что сделано ✅
 
-1. Расширить тип: `typeField: FieldType | string` (open union).
-2. Internal map для регистрации custom-типов:
-   ```ts
-   Form.registerFieldType("MyDatePicker", MyDatePickerComponent)
-   ```
-3. Documentation в [components/form.md](../components/form.md) §10 Custom field types.
-4. Compound API (Issue 2) — natural fit для custom rendering.
-
-## Issue 4: FormData/native submit не интегрируется
-
-- **Категория:** M55 (FormData)
-- **Severity:** high
-- **Где:** [Form.vue](../../lib/form/Form.vue) (нет `<form>` тега как корня)
-
-### Что найдено
-
-Form-компонент не использует native `<form>` element. Native submit, FormData, browser form-validation — недоступны.
-
-### Что нужно сделать
-
-1. Корень → `<form @submit.prevent="onSubmit">` (default action).
-2. Каждый field имеет `name` атрибут — native FormData собирает.
-3. Add prop `:nativeSubmit="true"` — позволяет native form submission.
-4. Документировать в [components/form.md](../components/form.md) §M.
+1. NEW [lib/form/fieldRegistry.ts](../../lib/form/fieldRegistry.ts) — module-level реестр: `registerFieldType(name, component)` / `getFieldType` / `hasFieldType` (экспорт через `index.ts`).
+2. `FieldComponentType` → открытый union `… | (string & {})`; `FieldType<T>` fallback `: any` → `: FieldRegistered` (concrete loose type — не коллапсит известные типы в `any`).
+3. [Form.vue:80–82](../../lib/form/Form.vue#L80-L82) — `resolveFieldComponent`: встроенный тип > зарегистрированный custom-тип > Custom-slot. Валидация ([Form.vue validateField](../../lib/form/Form.vue)) расширена: custom/registered поля валидируются при наличии `rules`.
 
 ### Acceptance criteria
 
-- [ ] `new FormData(formElement)` → собирает все field-values.
-- [ ] `<Form action="/api/submit" method="post">` отправляет POST на server.
+- [x] `registerFieldType("MyField", Comp)` + поле `typeComponent: "MyField"` рендерит `Comp` с auto-binding. ✅
+- [x] Неизвестный тип по-прежнему падает в Custom-slot. ✅
+- [x] Composes с compound API: `<FormField name="x" type="MyField" />`. ✅
 
-## Issue 5: SSR styles + sideEffects/exports map + unstyled
+## ~~Issue 4: FormData/native submit не интегрируется~~ ✅ resolved 2026-06-13
 
-См. [button.md Issue 1, 8, 9, 14](./button.md).
+- **Категория:** M55 (FormData)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [Form.vue:467–474](../../lib/form/Form.vue#L467-L474), [Form.d.ts](../../lib/form/Form.d.ts) (`action`/`method`/`enctype`/`nativeSubmit`)
+
+### Что найдено
+
+Корень формы уже был native `<form>`, но `@submit.prevent` всегда блокировал native-отправку; не было `action`/`method`/`nativeSubmit`. (Native `name` на инпутах уже присутствовал: Form биндит `id=field.name`, Input мапит `:name="id"`.)
+
+### Что сделано ✅
+
+1. Новые props `action` / `method` / `enctype` / `nativeSubmit` ([Form.d.ts](../../lib/form/Form.d.ts), computeds [Form.vue:180–184](../../lib/form/Form.vue#L180-L184)), проброшены на корневой `<form>`.
+2. `@submit.prevent="submit"` → `@submit="onSubmit"` ([Form.vue:467–474](../../lib/form/Form.vue#L467-L474)): невалидная форма **всегда** блокирует submit (`preventDefault`); валидная — эмитит `submit`; реальную browser-отправку (перезагрузка / POST на `action`) разрешает только при `nativeSubmit`/`action` (иначе SPA-режим).
+3. `new FormData(formElement)` собирает значения Input-полей по `name` (тест "exposes field name attributes and collects values via native FormData").
+
+### Acceptance criteria
+
+- [x] `new FormData(formEl)` → собирает values Input-полей. ✅
+- [x] `<Form action="/api/submit" method="post" :nativeSubmit="true">` — при валидной форме native submit не отменяется (атрибуты `action`/`method`/`enctype` на `<form>`). ✅
+
+### Known limitation
+
+FormData собирает только поля с native `name`-инпутом — сейчас это **Input** (Aria). Switch/Select/Calendar/TextEditor не рендерят hidden native input (их собственные issues — напр. [switch.md Issue 3](./switch.md), [texteditor.md Issue 10](./texteditor.md)); для них значения берутся через `v-model:form-fields`/`submit`-event, не через FormData. Form не правит другие компоненты.
+
+## Issue 5: SSR styles + sideEffects/exports map + unstyled ✅ resolved 2026-06-13
+
+См. [button.md Issue 1, 8, 9, 14](./button.md) — все четыре cross-cutting подпункта (C17 SSR-стили, A2 sideEffects, A4-5 exports map, L53 unstyled) **уже реализованы на уровне инфраструктуры** (`Component.__hooks()` → `onServerPrefetch`; root+per-component `sideEffects:false`; `buildRootExports()`; `Component.setStyle` unstyled-guard). Form наследует автоматически; дубль `Form.initStyle()` снят ещё 2026-06-03 (Wave 2.3). Закрыто Form-scoped regression-тестом unstyled ([Form.test.ts](../../lib/form/Form.test.ts) → "renders the form root without classes under unstyled: true").
+
+### Acceptance criteria
+
+- [x] `app.use(FishtVue, { unstyled: true })` → корневой `<form>` без `class` (regression-тест). ✅
+- [x] SSR/sideEffects/exports — наследуются от cross-cutting инфраструктуры (см. button.md). ✅
 
 ## ~~Issue 6: `t()` для validation error messages~~ ✅ resolved 2026-06-03
 
 - **Категория:** F30
 - **Severity:** medium
-- **Где:** [Form.vue:131–146](../../lib/form/Form.vue#L131), [lib/utils/rulesHandler.ts:171](../../lib/utils/rulesHandler.ts#L171)
+- **Где:** [Form.vue:249–263](../../lib/form/Form.vue#L249-L263), [lib/utils/rulesHandler.ts](../../lib/utils/rulesHandler.ts)
 
 ### Что найдено
 
-Validation rules возвращают error messages: «Required field», «Invalid email», и т. д. Хардкоден встроенные английские defaults в [rulesHandler.ts](../../lib/utils/rulesHandler.ts).
+Validation rules возвращали хардкоден английские defaults в [rulesHandler.ts](../../lib/utils/rulesHandler.ts).
 
 ### Что сделано ✅
 
-1. Form вызывает `setDefaultRuleMessages()` через `applyLocaleToRules()`, мапя 10 rule-типов на `Form.t(<localeKey>)` (`requiredField`, `invalidEmail`, `invalidPhone`, `invalidNumeric`, `regexMismatch`, `valueOutOfRange`, `invalidLength`, `invalidField`, `compareMismatch`). Ключи **уже** присутствуют в [en.ts](../../lib/locale/locales/en.ts) / [ru.ts](../../lib/locale/locales/ru.ts).
-2. Wiring guarded через `useFishtVue()` — standalone-Form (без plugin) сохраняет встроенные английские defaults. `watch(() => getActiveLocale(), …, { immediate: true })` переприменяет messages при runtime смене локали.
+1. Form вызывает `setDefaultRuleMessages()` через `applyLocaleToRules()` ([Form.vue:249–263](../../lib/form/Form.vue#L249-L263)), мапя 10 rule-типов на `Form.t(<localeKey>)`. Ключи присутствуют в [en.ts](../../lib/locale/locales/en.ts) / [ru.ts](../../lib/locale/locales/ru.ts).
+2. Wiring guarded через `useFishtVue()`; `watch(() => getActiveLocale(), …, { immediate: true })` переприменяет messages при runtime смене локали.
 3. Тест: [Form.test.ts](../../lib/form/Form.test.ts) → "localizes default validation messages to ru when active locale is ru" / "keeps en messages under the default locale".
 
 ### Known limitation
 
-`setDefaultRuleMessages` — global module state (shared между всеми instance'ами Form/Input/Select). Custom validator с `{ key, params }` interpolation не поддержан (требует `t(key, params)` — Wave 3.5). Per-rule `message` по-прежнему имеет высший приоритет.
+`setDefaultRuleMessages` — global module state (shared между Form/Input/Select). Custom validator с `{ key, params }` interpolation не поддержан (Wave 3.5). Per-rule `message` имеет высший приоритет.
 
-## Issue 7: Date fields не уважают locale
+## ~~Issue 7: Date fields не уважают locale~~ ✅ resolved 2026-06-13
 
 - **Категория:** F32
-
-См. [calendar.md Issue 8](./calendar.md). Form использует Calendar для date fields → наследует проблему.
-
-## ~~Issue 8: Тестов 32, но branch coverage 78.91% — много untested ветвей~~ ✅ resolved 2026-06-03
-
-- **Категория:** K46
-- **Severity:** low
-- **Где:** [Form.test.ts](../../lib/form/Form.test.ts)
+- **Severity:** ~~medium~~ → resolved
 
 ### Что найдено
 
-```
-lib/form (было): 91.41 / 78.91 / 88.67 / 92.30
-```
-
-Branch coverage <80%. Особенно в complex validation flows (async rules, compare, custom typeField).
+См. [calendar.md Issue 8](./calendar.md). Form использует Calendar для date fields → наследует проблему.
 
 ### Что сделано ✅
 
-Добавлены тесты (40 кейсов всего): async-valid path, `compare` rule с `compareFields`, `FieldCustom` slot (`updateModelValue`/`changeModelValue` bridge), multi-section required validation, Select-field branch (`closeButtonBadge` defaulting). Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%, functions 94.44%).
+[calendar.md Issue 8](./calendar.md) закрыт 2026-05-11: Calendar сам прокидывает `getActiveLocale()` в `<DatePicker :locale>` (priority `props > options > active > "en"`, [Calendar.vue:101–104](../../lib/calendar/Calendar.vue#L101-L104)). Form **не инжектит** `locale`/`paramsDatePicker.locale` — поэтому Calendar-поля внутри Form наследуют активную локаль автоматически. Закрыто Form-scoped тестом ([Form.test.ts](../../lib/form/Form.test.ts) → "leaves date-field locale to Calendar self-localization under active locale").
 
-## Issue 9: prefers-reduced-motion / RTL / colors / print
+### Acceptance criteria
 
-Cross-cutting. См. [button.md](./button.md).
+- [x] Calendar-поле в Form под `activeLocale: "ru"` резолвит локаль "ru" (Form не блокирует). ✅
+
+## ~~Issue 8: Тестов 32, но branch coverage 78.91%~~ ✅ resolved 2026-06-03
+
+- **Категория:** K46
+- **Severity:** low
+
+Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%, functions 94.44%) добавлением тестов async-valid / `compare` / `FieldCustom` slot / multi-section / Select-branch. (Текущий suite расширен ещё на 22 кейса при закрытии Issues 2–9.)
+
+## ~~Issue 9: prefers-reduced-motion / RTL / colors / print~~ ✅ resolved 2026-06-13 (B10 deferred — Wave 9)
+
+- **Категория:** E29.7 (motion) / F31 (RTL) / N59 (print) / B10 (colors) + G34 (root ref expose)
+- **Где:** [Form.vue:199](../../lib/form/Form.vue#L199), [Form.vue:203](../../lib/form/Form.vue#L203), [Form.vue:215](../../lib/form/Form.vue#L215), [Form.vue:218](../../lib/form/Form.vue#L218), [Form.vue:223](../../lib/form/Form.vue#L223)
+
+### Что сделано ✅
+
+Канон FishtVue (variant-классы, без правок theme-движка — [dev-patterns.md §2](../dev-patterns.md)):
+
+1. **E29.7 (motion-safe):** все `transition`/`duration` → `motion-safe:*` — registered style [Form.vue:199](../../lib/form/Form.vue#L199) (+ inline `<transition>` enter/leave классы), `classItemGrid` [Form.vue:215](../../lib/form/Form.vue#L215) (`grid motion-safe:transition`).
+2. **F31 (RTL):** физические `ml-1 mr-3` → логические `ms-1 me-3` (`classAfterSlot` [Form.vue:218](../../lib/form/Form.vue#L218)); inline `<Icons class="mr-2 …">` → `me-2`. Авто-флип при `dir="rtl"`.
+3. **N59 (print):** `print:border-black` на section-divider ([Form.vue:203](../../lib/form/Form.vue#L203)); submit-Button печатается через собственные print-стили Button.
+4. **G34 (root ref expose):** NEW `formElement: ref<HTMLFormElement>` на корневом `<form>`, наружу через `defineExpose` ([Form.vue:223](../../lib/form/Form.vue#L223)) — для native `requestSubmit()`/scroll/focus. Тест "exposes the root form element (G34)".
+
+### B10 (colors) — deferred to Wave 9 (см. scope note)
+
+Полная миграция `gray-*`/`red-*` Tailwind-примитивов на semantic tokens — библиотечная **Wave 9** ([README.md](./README.md)), ещё не сделана ни для одного компонента (нет `theme/uno.ts` semantic mappings). Form следует precedent (Pagination/Table): matrix-счёт закрыт, файл остаётся active. `forced-colors:` для собственного DOM Form — N/A (нет own active/selected-state; child-контролы Input/Select/Button уважают forced-colors сами).
+
+### Acceptance criteria
+
+- [x] Field-grid / inline-transitions используют `motion-safe:transition` (тест). ✅
+- [x] Inserted slot content использует логические `me-*` (тест). ✅
+- [x] Section-divider печатается читаемо (`print:border-black`). ✅
+- [x] `formElement` exposed (G34). ✅
+- [ ] B10 semantic tokens — Wave 9 (cross-cutting, вне scope этого захода).
 
 ## Cross-cutting: Configuration support
 
@@ -194,11 +200,19 @@ Cross-cutting. См. [button.md](./button.md).
 |---|---|---|
 | `componentsOptions.Form` | ✅ | через Form.getOptions() |
 | `componentsStyle` global | ⚠️ | пробрасывается в child fields через their own logic |
-| `unstyled: true` | ❌ | Issue 5 |
-| Theme tokens vs hardcode | ⚠️ | через child компоненты |
-| `t()` для текста | ✅ | Issue 6 ✅ — validation messages локализованы через `setDefaultRuleMessages` |
-| Runtime locale switch | ✅ | Issue 6 ✅ — `watch(getActiveLocale)` переприменяет rule-messages |
+| `unstyled: true` | ✅ | Issue 5 ✅ — `Component.setStyle` guard; корневой `<form>` без class |
+| Theme tokens vs hardcode | ⚠️ | B10 — Wave 9 (semantic tokens) |
+| `t()` для текста | ✅ | Issue 6 ✅ — validation messages локализованы |
+| Runtime locale switch | ✅ | Issue 6 ✅ — `watch(getActiveLocale)` |
+| Native submit / FormData | ✅ | Issue 4 ✅ — `action`/`method`/`nativeSubmit` + FormData (Input-поля) |
+| Compound API | ✅ | Issue 2 ✅ — `<Form><FormSection><FormField>` |
+| Custom field types | ✅ | Issue 3 ✅ — `registerFieldType` |
+
+## Scope notes
+
+1. **B10 (colors) — Wave 9.** Semantic-token миграция — библиотечная cross-cutting волна, ещё не выполненная ни для одного компонента. Form закрыл numbered-issue matrix `0/0/0/0`, но **файл остаётся в `active/`** до Wave 9 (зеркало `pagination.md`/`table.md`).
+2. **FormData для non-Input полей.** Только Input несёт native `name`-инпут. Switch/Select/Calendar/TextEditor — отдельные issues (их hidden-input работа вне scope Form). Значения этих полей доступны через `v-model:form-fields`/`submit`-event.
 
 ## Dual-API gap
 
-См. [Issue 2](#issue-2-dual-api-gap-—-нет-compound-formformfield-api). Это **второй ключевой dual-API** компонент после Table.
+✅ resolved (Issue 2) — Form стал **вторым** dual-API компонентом после Table: schema-driven `:structure` и compound `<Form><FormSection><FormField>` работают одновременно.

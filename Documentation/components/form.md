@@ -1,7 +1,7 @@
 ---
 title: Form
-summary: Динамическая форма из FormStructure, валидация в трёх режимах, поля Input/Select/Calendar/TextEditor/Switch/Custom. Validation messages локализуются через активную локаль.
-updated: 2026-06-03
+summary: Динамическая форма из FormStructure ИЛИ compound `<Form><FormSection><FormField>`. Валидация в трёх режимах, поля Input/Select/Calendar/TextEditor/Switch/Custom + произвольные через `registerFieldType`. Native submit + FormData. Validation messages локализуются через активную локаль.
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Form` — оркестратор формы из декларативной `FormStructure`. Поддерживает поля типов `Input`, `Select`, `Calendar`, `TextEditor`, `Switch`, `Custom` (через slot). Валидация в режимах `onSubmit`/`onChange`/`onInput`. Использует [rulesHandler](../utilities/rulesHandler.md).
 
-Stability: `stable` — 32 кейса, coverage `Form.vue` 91.41%.
+Stability: `stable` — 58 кейсов, coverage `Form.vue` 91.41%.
 
 Source: [Source](../../lib/form/Form.vue), [Form.d.ts](../../lib/form/Form.d.ts), [Form.test.ts](../../lib/form/Form.test.ts).
 
@@ -21,8 +21,12 @@ Source: [Source](../../lib/form/Form.vue), [Form.d.ts](../../lib/form/Form.d.ts)
 ```
 lib/form/
 ├── Form.vue
-├── Form.d.ts          # 495 строк
-├── Form.test.ts       # 32 кейса
+├── Form.d.ts          # типы Form + FormField/FormSection + FieldRegistered
+├── FormField.vue      # renderless descriptor (compound API)
+├── FormSection.vue    # renderless descriptor (compound API)
+├── fieldRegistry.ts   # registerFieldType / getFieldType / hasFieldType
+├── index.ts           # runtime barrel (form.mjs entry: default Form + named дети + registry)
+├── Form.test.ts
 └── package.json
 ```
 
@@ -76,7 +80,7 @@ const structure: FormStructure[] = [
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `structure` | `MaybeRef<FormStructure[]>` | — | Декларация секций и полей. **Обязателен**. |
+| `structure` | `MaybeRef<FormStructure[]>` | — | Декларация секций и полей. Optional — при отсутствии Form строит структуру из compound `<FormSection>`/`<FormField>` детей (§10.5). Schema выигрывает, если задан. |
 | `formFields` | `MaybeRef<FormValues>` | `{}` | Текущие значения. v-model. |
 | `name` | `string` | — | Имя формы. |
 | `class` | `StyleClass` | — | Класс контейнера. |
@@ -88,6 +92,10 @@ const structure: FormStructure[] = [
 | `structureClassGrid` | `string` | (preset grid 1/6 cols) | Класс grid внутри секции. |
 | `disabled` | `boolean` | — | Отключить всю форму. |
 | `autocomplete` | `"on" \| "off"` | — | Native autocomplete. |
+| `action` | `string` | — | Native `action` URL. Валидная отправка идёт native-сабмитом (§10.7). |
+| `method` | `"get" \| "post" \| "dialog"` | — | Native form method. |
+| `enctype` | `string` | — | Native form enctype (например `multipart/form-data`). |
+| `nativeSubmit` | `boolean` | `false` | Opt-in native browser submit для валидной формы без `action`. |
 
 `FormStructure` (фрагмент): `{ title?, description?, fields: FieldType[] }`.
 
@@ -124,6 +132,7 @@ v-model: `v-model:form-fields="..."` — стандартный pattern для s
 
 | Name | Type | Description |
 |---|---|---|
+| `formElement` | `HTMLFormElement \| undefined` | Ref на корневой `<form>` (native `requestSubmit()`, scroll, focus). |
 | `formFields` | `FormValues` | Текущие значения. |
 | `formInvalidFields` | `{ [key: string]: boolean }` | Map имя_поля → invalid. |
 | `formStructure` | `FormStructure[] \| undefined` | Резолвленная структура. |
@@ -224,6 +233,67 @@ async function onSubmit(values: any) {
 
 Root класс — `fv fishtvue-form`.
 
+### 10.5 Compound API
+
+Альтернатива schema-driven `:structure` — декларативные дети `<FormSection>`/`<FormField>` (canon: VNode-walk `slots.default()`, зеркало `<Table><Column>`). Если заданы и `:structure`, и дети — **schema выигрывает** (backward compat).
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue"
+import Form, { FormSection, FormField } from "fishtvue/form"
+
+const values = ref({})
+const roles = [{ id: 1, value: "Admin" }]
+</script>
+
+<template>
+  <Form v-model:form-fields="values" @submit="(v) => console.log(v)">
+    <FormSection title="User">
+      <FormField name="email" type="Input" label="Email" :rules="{ required: true, email: true }" />
+      <FormField name="role" type="Select" :data-select="roles" />
+    </FormSection>
+    <!-- custom-контрол через default-slot FormField -->
+    <FormField name="rating">
+      <template #default="{ data, updateModelValue }">
+        <MyRating :model-value="data.modelValue" @update:model-value="updateModelValue" />
+      </template>
+    </FormField>
+  </Form>
+</template>
+```
+
+`<FormField>` props: `name` (required), `type` / `typeComponent`, `label`, `rules`, `modelValue`, плюс passthrough. `<FormSection>` props: `title`, `description`, `class`, `classGrid`, `isHidden`. В Nuxt оба авто-импортируются.
+
+### 10.6 Custom field types
+
+Произвольный компонент рендерится по строковому `type`/`typeComponent`, зарегистрированному через `registerFieldType`:
+
+```ts
+import { registerFieldType } from "fishtvue/form"
+import MyDatePicker from "@/components/MyDatePicker.vue"
+
+registerFieldType("MyDatePicker", MyDatePicker)
+```
+
+```vue
+<Form :structure="[{ fields: [{ name: 'date', typeComponent: 'MyDatePicker' }] }]" v-model:form-fields="values" />
+<!-- или compound: <FormField name="date" type="MyDatePicker" /> -->
+```
+
+Зарегистрированный компонент получает `v-model:model-value` (auto-binding на `formFields[name]`) и passthrough props. Резолв: встроенный тип > registry > Custom-slot. Custom/registered-поле с `rules` валидируется.
+
+### 10.7 Native submit & FormData
+
+Корень Form — native `<form>`. По умолчанию (SPA-режим) валидный submit эмитит `submit` и предотвращает перезагрузку. Для реальной browser-отправки:
+
+```vue
+<Form :structure="structure" action="/api/submit" method="post">...</Form>
+<!-- или без action: -->
+<Form :structure="structure" :nativeSubmit="true">...</Form>
+```
+
+Невалидная форма всегда блокирует submit. `new FormData(form.formElement)` собирает значения Input-полей (несут native `name`); Switch/Select/Calendar/TextEditor — через `v-model:form-fields` (нет hidden native input — см. §18).
+
 ## 11. Form integration & validation
 
 Это и есть Form. Внутри использует [rulesHandler.getValidate](../utilities/rulesHandler.md). Для async-валидации (например, server-side username check) используй `rulesHandler.getAsyncValidate` — но Form его не вызывает автоматически; делай через ref-метод `validateFields` + custom rule с async validator.
@@ -250,22 +320,24 @@ Root класс — `fv fishtvue-form`.
 ## 13. TypeScript
 
 ```ts
+import Form, { FormField, FormSection, registerFieldType } from "fishtvue/form"
 import type {
   FormProps, FormEmits, FormSlots, FormExpose,
   FormStructure, FormValues, FieldType,
-  FieldInput, FieldSelect, FieldCalendar, FieldTextEditor, FieldSwitch, FieldCustom
+  FieldInput, FieldSelect, FieldCalendar, FieldTextEditor, FieldSwitch, FieldCustom,
+  FieldRegistered, FormFieldProps, FormSectionProps
 } from "fishtvue/form"
-import Form from "fishtvue/form"
 import { useTemplateRef } from "vue"
 
 const f = useTemplateRef<InstanceType<typeof Form>>("f")
 f.value?.validateFields()
+f.value?.formElement?.requestSubmit()
 ```
 
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 32 кейса, coverage 91.41%.
+- **Stability flag:** `stable` — 58 кейсов, coverage 91.41%.
 - **Breaking changes:** не зафиксировано.
 - **Deprecations:** нет.
 
@@ -288,7 +360,7 @@ describe("Form", () => {
 })
 ```
 
-Реальные тесты — [Form.test.ts](../../lib/form/Form.test.ts) (32 кейса).
+Реальные тесты — [Form.test.ts](../../lib/form/Form.test.ts) (58 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
@@ -317,6 +389,8 @@ describe("Form", () => {
 - Coverage `Form.vue` 95.73% statements / **80.6% branch** (было 78.91% — поднято 2026-06-03 в [issues/form.md Issue 8](../issues/form.md)). Непокрытые ветви — [Form.vue:159–164](../../lib/form/Form.vue#L159) (sync-watch при reassign внешнего `props.formFields`).
 - Validation messages локализуются глобально через `setDefaultRuleMessages` (global module state) — при нескольких Form с разными локалями последний mount выигрывает. Custom validator с `{ key, params }` interpolation не поддержан (нужен `t(key, params)` — Wave 3.5). См. [issues/form.md Issue 6](../issues/form.md).
 - В `FieldSelect`/`FieldCalendar`/`FieldTextEditor` rules-поле закомментировано в `.d.ts` (планируется).
+- **B10 (colors):** `gray-*`/`red-*` Tailwind-примитивы ещё не мигрированы на semantic tokens — библиотечная Wave 9 (cross-cutting, [issues/README.md](../issues/README.md)). `issues/form.md` остаётся active до Wave 9, хотя numbered-issue matrix `0/0/0/0`.
+- **FormData для non-Input полей:** `new FormData(formElement)` собирает только Input-поля (несут native `name`); Switch/Select/Calendar/TextEditor не рендерят hidden native input. Значения — через `v-model:form-fields`/`submit`-event. См. [issues/form.md Issue 4](../issues/form.md).
 
 ### Skipped tests
 
