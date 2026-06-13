@@ -117,5 +117,7 @@ const FISHT_VUE_COMPONENTS = [
 // уже top-level в FISHT_VUE_COMPONENTS — для compound-override отдельная регистрация не нужна.
 const FISHT_VUE_SUBCOMPONENTS: Array<{ name: string; from: string; export: string }> = [
   { name: "Column", from: "table", export: "Column" },
-  { name: "ColumnGroup", from: "table", export: "ColumnGroup" }
+  { name: "ColumnGroup", from: "table", export: "ColumnGroup" },
+  { name: "FormField", from: "form", export: "FormField" },
+  { name: "FormSection", from: "form", export: "FormSection" }
 ]

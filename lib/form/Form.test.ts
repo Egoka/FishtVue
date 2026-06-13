@@ -1,8 +1,12 @@
 import { flushPromises, mount } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import FishtVue from "fishtvue/config"
+import FishtVue, { getActiveLocale } from "fishtvue/config"
 import Form from "fishtvue/form/Form.vue"
-import { nextTick } from "vue"
+import Calendar from "fishtvue/calendar/Calendar.vue"
+import FormField from "fishtvue/form/FormField.vue"
+import FormSection from "fishtvue/form/FormSection.vue"
+import { registerFieldType } from "fishtvue/form/fieldRegistry"
+import { defineComponent, h, nextTick } from "vue"
 import type { FieldType, FormProps } from "fishtvue/form/Form"
 
 import type { RuleCallback, Rules } from "fishtvue/utils/rulesHandler"
@@ -1172,6 +1176,287 @@ describe("Form Component Tests", () => {
       await input.setValue("invalid-email")
 
       expect(wrapper.vm.getField<"Input">("email")?.messageInvalid).toBe("Invalid email")
+    })
+  })
+
+  // ---ISSUES 5, 7, 9 — cross-cutting closes (unstyled / date locale / motion-RTL-print) ---
+  describe("Form Component - Cross-cutting (Issues 5, 7, 9)", () => {
+    const createAppConfig = (config: Record<string, any>) => ({
+      install(app: any) {
+        app.use(FishtVue, config)
+      }
+    })
+
+    // ---ISSUE 9 — reduced-motion: field grid transitions are motion-safe ---
+    it("uses motion-safe transitions on the field grid (Issue 9)", () => {
+      const wrapper = mount(Form, { props: { structure: structure() } })
+      const groupClasses = wrapper.find("[data-form-group]").classes()
+      expect(groupClasses).toContain("motion-safe:transition")
+      expect(groupClasses).not.toContain("transition")
+    })
+
+    // ---ISSUE 9 — RTL: inserted slot content uses logical margins (me-*), not physical (mr-*) ---
+    it("uses RTL-safe logical margins on inserted slot content (Issue 9)", () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            {
+              fields: [
+                {
+                  name: "amount",
+                  typeComponent: "Input",
+                  label: "Amount",
+                  modelValue: "",
+                  insert: { afterText: "USD", afterIcon: "Check", beforeIcon: "Banknotes" }
+                }
+              ]
+            }
+          ]
+        }
+      })
+      const afterText = wrapper.findAll("p").find((p) => p.text().includes("USD"))
+      expect(afterText).toBeTruthy()
+      expect(afterText!.classes()).toContain("me-3")
+      expect(afterText!.classes()).not.toContain("mr-3")
+    })
+
+    // ---ISSUE 5 — unstyled config drops Form root styles (cross-cutting Component.setStyle guard) ---
+    it("renders the form root without classes under unstyled: true (Issue 5)", () => {
+      const wrapper = mount(Form, {
+        props: { structure: structure(), class: "user-form-class" },
+        global: { plugins: [createAppConfig({ unstyled: true })] }
+      })
+      const cls = wrapper.find("form[data-form]").attributes("class")
+      expect(cls === undefined || cls === "").toBe(true)
+    })
+
+    it("keeps the form root class when not unstyled (Issue 5 contrast)", () => {
+      const wrapper = mount(Form, {
+        props: { structure: structure(), class: "user-form-class" },
+        global: { plugins: [createAppConfig({ unstyled: false })] }
+      })
+      expect(wrapper.find("form[data-form]").classes()).toContain("user-form-class")
+    })
+
+    // ---ISSUE 7 — date fields inherit the active locale via Calendar self-localization ---
+    it("leaves date-field locale to Calendar self-localization under active locale (Issue 7)", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [{ fields: [{ name: "date", typeComponent: "Calendar", label: "Date" }] }]
+        },
+        global: { plugins: [createAppConfig({ locale: { activeLocale: "ru" } })] }
+      })
+      await flushPromises()
+      const cal = wrapper.findComponent(Calendar)
+      expect(cal.exists()).toBe(true)
+      // Form must not inject a paramsDatePicker.locale override — Calendar self-localizes.
+      expect((cal.props("paramsDatePicker") as any)?.locale).toBeUndefined()
+      // The active locale Calendar resolves to is "ru" in this plugin context.
+      expect(getActiveLocale()).toBe("ru")
+    })
+  })
+
+  // ---ISSUE 4 — native <form> submission + FormData integration ---
+  describe("Form Component - Native submit & FormData (Issue 4)", () => {
+    it("exposes field name attributes and collects values via native FormData", async () => {
+      const wrapper = mount(Form, {
+        props: { structure: structure(), formFields: formFields() },
+        attachTo: document.body
+      })
+      await nextTick()
+      // Input fields carry a native `name` (Form binds id=field.name → Input maps :name=id).
+      expect(wrapper.find('input[name="name"]').exists()).toBe(true)
+      expect(wrapper.find('input[name="email"]').exists()).toBe(true)
+
+      const formEl = wrapper.find("form[data-form]").element
+      const fd = new window.FormData(formEl as any)
+      expect(fd.get("name")).toBe("John Doe")
+      expect(fd.get("email")).toBe("john.doe@example.com")
+      wrapper.unmount()
+    })
+
+    it("reflects action/method/enctype on the native form element", () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: structure(),
+          action: "/api/submit",
+          method: "post",
+          enctype: "multipart/form-data"
+        }
+      })
+      const formEl = wrapper.find("form[data-form]")
+      expect(formEl.attributes("action")).toBe("/api/submit")
+      expect(formEl.attributes("method")).toBe("post")
+      expect(formEl.attributes("enctype")).toBe("multipart/form-data")
+    })
+
+    it("prevents native submission and does not emit when validation fails", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            { fields: [{ name: "req", typeComponent: "Input", label: "Req", required: true, modelValue: "" }] }
+          ],
+          nativeSubmit: true
+        }
+      })
+      await nextTick()
+      const submitEvent = new Event("submit", { cancelable: true, bubbles: true })
+      wrapper.find("form").element.dispatchEvent(submitEvent)
+      expect(submitEvent.defaultPrevented).toBe(true)
+      expect(wrapper.emitted("submit")).toBeFalsy()
+    })
+
+    it("emits submit and prevents page reload by default (SPA mode)", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [{ fields: [{ name: "a", typeComponent: "Input", label: "A", modelValue: "ok" }] }]
+        }
+      })
+      await nextTick()
+      const submitEvent = new Event("submit", { cancelable: true, bubbles: true })
+      wrapper.find("form").element.dispatchEvent(submitEvent)
+      expect(submitEvent.defaultPrevented).toBe(true)
+      expect(wrapper.emitted("submit")).toBeTruthy()
+    })
+
+    it("allows native submission when nativeSubmit is set and the form is valid", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [{ fields: [{ name: "a", typeComponent: "Input", label: "A", modelValue: "ok" }] }],
+          nativeSubmit: true
+        },
+        attachTo: document.body
+      })
+      await nextTick()
+      const submitEvent = new Event("submit", { cancelable: true, bubbles: true })
+      wrapper.find("form").element.dispatchEvent(submitEvent)
+      expect(submitEvent.defaultPrevented).toBe(false)
+      expect(wrapper.emitted("submit")).toBeTruthy()
+      wrapper.unmount()
+    })
+
+    it("exposes the root form element (G34)", () => {
+      const wrapper = mount(Form, { props: { structure: structure() } })
+      expect(wrapper.vm.formElement).toBeTruthy()
+      expect(wrapper.vm.formElement?.tagName).toBe("FORM")
+    })
+  })
+
+  // ---ISSUE 3 — custom field types via registerFieldType ---
+  describe("Form Component - Custom field types (Issue 3)", () => {
+    const StubField = defineComponent({
+      name: "StubField",
+      props: { modelValue: { type: String, default: "" }, id: { type: String, default: "" } },
+      emits: ["update:modelValue"],
+      template: `<input
+        data-stub-field
+        :name="id"
+        :value="modelValue"
+        @input="$emit('update:modelValue', $event.target.value)" />`
+    })
+
+    it("renders a registered custom field type", async () => {
+      registerFieldType("StubField", StubField)
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            { fields: [{ name: "custom", typeComponent: "StubField", label: "Custom", modelValue: "hi" } as any] }
+          ],
+          formFields: { custom: "hi" }
+        }
+      })
+      await nextTick()
+      expect(wrapper.find("[data-stub-field]").exists()).toBe(true)
+      expect(wrapper.find("[data-stub-field]").attributes("name")).toBe("custom")
+    })
+
+    it("bridges v-model for a registered field type", async () => {
+      registerFieldType("StubField", StubField)
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            { fields: [{ name: "custom", typeComponent: "StubField", label: "Custom", modelValue: "" } as any] }
+          ],
+          formFields: { custom: "" }
+        }
+      })
+      await nextTick()
+      await wrapper.find("[data-stub-field]").setValue("typed")
+      expect(wrapper.vm.formFields.custom).toBe("typed")
+    })
+
+    it("falls through to the Custom slot for unregistered types", () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            {
+              fields: [
+                { name: "rating", typeComponent: "Custom", nameTemplate: "rating", label: "R" } as FieldType<"Custom">
+              ]
+            }
+          ]
+        },
+        slots: { rating: `<div data-custom-slot>custom</div>` }
+      })
+      expect(wrapper.find("[data-custom-slot]").exists()).toBe(true)
+      expect(wrapper.find("[data-stub-field]").exists()).toBe(false)
+    })
+  })
+
+  // ---ISSUE 2 — compound <Form><FormSection><FormField> API (VNode-walk) ---
+  describe("Form Component - Compound API (Issue 2)", () => {
+    it("renders a compound FormField as an Input bound to formFields", async () => {
+      const wrapper = mount(Form, {
+        slots: {
+          default: () => h(FormField, { name: "email", type: "Input", label: "Email", modelValue: "" })
+        }
+      })
+      await nextTick()
+      expect(wrapper.find('input[id="email"]').exists()).toBe(true)
+      expect(wrapper.find('input[name="email"]').exists()).toBe(true)
+
+      await wrapper.find('input[id="email"]').setValue("a@b.com")
+      expect(wrapper.vm.formFields.email).toBe("a@b.com")
+    })
+
+    it("groups fields under a FormSection", async () => {
+      const wrapper = mount(Form, {
+        slots: {
+          default: () =>
+            h(FormSection, { title: "User" }, () => [
+              h(FormField, { name: "name", type: "Input", label: "Name", modelValue: "" }),
+              h(FormField, { name: "email", type: "Input", label: "Email", modelValue: "" })
+            ])
+        }
+      })
+      await nextTick()
+      expect(wrapper.findAll("[data-form-item]").length).toBe(1)
+      expect(wrapper.findAll("[data-form-group-item]").length).toBe(2)
+    })
+
+    it("renders a custom control via the FormField default slot", async () => {
+      const wrapper = mount(Form, {
+        slots: {
+          default: () =>
+            h(FormField, { name: "rating" }, { default: () => h("div", { "data-compound-custom": "" }, "custom") })
+        }
+      })
+      await nextTick()
+      expect(wrapper.find("[data-compound-custom]").exists()).toBe(true)
+    })
+
+    it("lets schema structure win over compound children (backward compat)", async () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [{ fields: [{ name: "schemaField", typeComponent: "Input", label: "S", modelValue: "" }] }]
+        },
+        slots: {
+          default: () => h(FormField, { name: "compoundField", type: "Input", modelValue: "" })
+        }
+      })
+      await nextTick()
+      expect(wrapper.find('input[id="schemaField"]').exists()).toBe(true)
+      expect(wrapper.find('input[id="compoundField"]').exists()).toBe(false)
     })
   })
 })

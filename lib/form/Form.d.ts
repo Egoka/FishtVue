@@ -1,4 +1,4 @@
-import { MaybeRef, VNode } from "vue"
+import { Component, MaybeRef, VNode } from "vue"
 import { Rules } from "fishtvue/utils/rulesHandler"
 import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import { LabelMode } from "fishtvue/label"
@@ -213,9 +213,47 @@ export type FieldCustom = Field & {
   [key: string]: unknown
 }
 /**
- * Type of component that determines which fields are available in the field object
+ * Field configuration for a custom field type registered via `registerFieldType` (Issue 3).
+ *
+ * `typeComponent` is an open string that does not match the built-in types — Form renders the
+ * registered component bound to the field value (`modelValue`) and passthrough props.
  */
-export type FieldComponentType = "Input" | "Aria" | "Select" | "Calendar" | "TextEditor" | "Switch" | "Custom"
+export type FieldRegistered = Field &
+  FieldAdditional & {
+    /**
+     * Open `typeComponent` name, registered through `registerFieldType`.
+     * @type {string}
+     */
+    typeComponent: string
+
+    /**
+     * The value of the registered field.
+     * @type {any | undefined}
+     */
+    modelValue?: any
+
+    /**
+     * Additional passthrough props forwarded to the registered component.
+     * @type {Record<string, unknown>}
+     */
+    [key: string]: unknown
+  }
+
+/**
+ * Type of component that determines which fields are available in the field object.
+ *
+ * Open union (Issue 3): besides the built-in types, any `string` is accepted for fields rendered
+ * through `registerFieldType`.
+ */
+export type FieldComponentType =
+  | "Input"
+  | "Aria"
+  | "Select"
+  | "Calendar"
+  | "TextEditor"
+  | "Switch"
+  | "Custom"
+  | (string & {})
 
 /**
  * Generic field type that determines available properties based on the component type
@@ -235,8 +273,32 @@ export type FieldType<T extends FieldComponentType = FieldComponentType> = T ext
             ? FieldSwitch
             : T extends "Custom"
               ? FieldCustom
-              : any
+              : FieldRegistered
 // : FieldInput | FieldAria | FieldSelect | FieldCalendar | FieldTextEditor | FieldSwitch | FieldCustom
+
+// ---ISSUE 3 — публичный API реестра пользовательских типов полей (runtime — ./fieldRegistry).
+/**
+ * Registers a custom field type under a string `typeComponent` name. Built-in types cannot be
+ * overridden — they resolve before the registry.
+ *
+ * @param {string} name - The `typeComponent` name used in the form structure.
+ * @param {Component} component - The Vue component Form renders for this type.
+ */
+export declare function registerFieldType(name: string, component: Component): void
+/**
+ * Returns the component registered for a field type, or `undefined`.
+ *
+ * @param {string} name - The field type name.
+ * @returns {Component | undefined}
+ */
+export declare function getFieldType(name: string): Component | undefined
+/**
+ * Checks whether a field type is registered.
+ *
+ * @param {string} name - The field type name.
+ * @returns {boolean}
+ */
+export declare function hasFieldType(name: string): boolean
 
 /**
  * Union type for fields that use InputLayout component
@@ -299,10 +361,11 @@ export interface FormProps {
 
   /**
    * The structure of the form, including fields and layout settings.
-   * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<Array<FormStructure>>}
+   * Can be passed as a constant value or as a ref. Optional (Issue 2): when omitted, Form builds the
+   * structure from compound `<FormSection>`/`<FormField>` children. Schema wins when both are present.
+   * @type {MaybeRef<Array<FormStructure>> | undefined}
    */
-  structure: MaybeRef<Array<FormStructure>>
+  structure?: MaybeRef<Array<FormStructure>>
 
   /**
    * The current values of the form fields.
@@ -364,6 +427,33 @@ export interface FormProps {
    * @type {"on" | "off" | undefined}
    */
   autocomplete?: "on" | "off"
+
+  /**
+   * Native form `action` URL. When set, a valid submit performs a real browser submission
+   * (Form does not call `preventDefault`); otherwise the form stays in SPA mode (`submit` event only).
+   * @type {string | undefined}
+   */
+  action?: string
+
+  /**
+   * Native form `method`. Forwarded to the root `<form>` element.
+   * @type {"get" | "post" | "dialog" | undefined}
+   */
+  method?: "get" | "post" | "dialog"
+
+  /**
+   * Native form `enctype`. Forwarded to the root `<form>` element (e.g. `multipart/form-data`).
+   * @type {string | undefined}
+   */
+  enctype?: string
+
+  /**
+   * Opt-in to native browser submission for a valid form even without `action`. When `false`
+   * (default), Form prevents the default submit and emits the `submit` event (SPA mode).
+   * Invalid forms always block submission regardless of this flag.
+   * @type {boolean | undefined}
+   */
+  nativeSubmit?: boolean
 }
 interface DynamicSlots {
   [key: string]: (args: {
@@ -400,6 +490,12 @@ export declare type FormEmits = {
  */
 export declare type FormExpose = {
   // ---PROPS-------------------------------
+  /**
+   * Ref to the root `<form>` element (G34) — for native `requestSubmit()`, scrolling, focus, etc.
+   * @type {HTMLFormElement | undefined}
+   */
+  formElement: HTMLFormElement | undefined
+
   /**
    * The current values of the form fields.
    * @type {FormValues}
@@ -485,11 +581,165 @@ export declare type FormOption = Pick<
 >
 
 // ---------------------------------------
+// ---ISSUE 2 — compound API: <Form><FormSection><FormField> (renderless descriptors).
+// `<Form>` reads these children via VNode-walk of slots.default() (canon — НЕ provide/inject,
+// зеркало Table/Menu) и синтезирует FormStructure[]. Schema `:structure` при наличии выигрывает.
+
+/**
+ * Props for the `<FormField>` descriptor (compound API). Declares a single field; `<Form>` reads
+ * these via VNode-walk and renders the matching control bound to `formFields[name]`. A default slot
+ * turns the field into a custom control with a value-bridge.
+ */
+export type FormFieldProps = {
+  /**
+   * Field name — key in form values.
+   * @type {string}
+   */
+  name: string
+
+  /**
+   * Field type (maps to `typeComponent`). Built-in or registered via `registerFieldType`.
+   * @type {FieldComponentType | undefined}
+   */
+  type?: FieldComponentType
+
+  /**
+   * Explicit `typeComponent` (alias of `type`; takes priority when both are set).
+   * @type {FieldComponentType | undefined}
+   */
+  typeComponent?: FieldComponentType
+
+  /**
+   * Field label.
+   * @type {string | undefined}
+   */
+  label?: string
+
+  /**
+   * Validation rules applied to the field.
+   * @type {Rules | undefined}
+   */
+  rules?: Rules
+
+  /**
+   * Initial value of the field.
+   * @type {any | undefined}
+   */
+  modelValue?: any
+
+  /**
+   * Custom-slot template name (for `Custom`-typed fields without a default slot).
+   * @type {string | undefined}
+   */
+  nameTemplate?: string
+
+  /**
+   * Custom CSS class for the column layout of the field.
+   * @type {string | undefined}
+   */
+  classCol?: string
+
+  /**
+   * Hides the field.
+   * @type {boolean | undefined}
+   */
+  isHidden?: boolean
+
+  /**
+   * Passthrough props forwarded to the resolved field control (e.g. `dataSelect`, `mask`).
+   * @type {unknown}
+   */
+  [key: string]: unknown
+}
+
+/**
+ * Slots of `<FormField>`. The default slot renders a custom control with a value-bridge
+ * (`updateModelValue`/`changeModelValue`) — identical contract to the schema-driven `Custom` field.
+ */
+export declare type FormFieldSlots = {
+  default(props: {
+    data: FieldCustom & FormValues
+    updateModelValue(value: any): void
+    changeModelValue(value: any): void
+  }): VNode[]
+}
+
+/**
+ * `<FormField>` — renderless field descriptor for the compound `<Form>` API.
+ *
+ * ```vue
+ * <Form v-model:form-fields="values">
+ *   <FormField name="email" type="Input" label="Email" :rules="{ required: true }" />
+ *   <FormField name="rating"><MyRating /></FormField>
+ * </Form>
+ * ```
+ */
+declare class FormField extends ClassComponent<FormFieldProps, FormFieldSlots, null, NonNullable<unknown>> {}
+
+/**
+ * Props for the `<FormSection>` descriptor (compound API) — groups `<FormField>` children into a
+ * form section.
+ */
+export type FormSectionProps = {
+  /**
+   * Section title — forwarded to the `itemTitle` slot.
+   * @type {string | undefined}
+   */
+  title?: string
+
+  /**
+   * Section description — forwarded to the `itemTitle` slot.
+   * @type {string | undefined}
+   */
+  description?: string
+
+  /**
+   * Custom CSS class for the section container.
+   * @type {StyleClass | undefined}
+   */
+  class?: StyleClass
+
+  /**
+   * CSS class for the grid layout of the section.
+   * @type {string | undefined}
+   */
+  classGrid?: string
+
+  /**
+   * Hides the section.
+   * @type {boolean | undefined}
+   */
+  isHidden?: boolean
+}
+
+/**
+ * Slots of `<FormSection>` — nested `<FormField>` descriptors.
+ */
+export declare type FormSectionSlots = {
+  default(): VNode[]
+}
+
+/**
+ * `<FormSection>` — renderless section descriptor for the compound `<Form>` API.
+ *
+ * ```vue
+ * <Form v-model:form-fields="values">
+ *   <FormSection title="User">
+ *     <FormField name="name" type="Input" />
+ *     <FormField name="email" type="Input" />
+ *   </FormSection>
+ * </Form>
+ * ```
+ */
+declare class FormSection extends ClassComponent<FormSectionProps, FormSectionSlots, null, NonNullable<unknown>> {}
 
 declare module "vue" {
   export interface GlobalComponents {
     Form: GlobalComponentConstructor<Form>
+    FormField: GlobalComponentConstructor<FormField>
+    FormSection: GlobalComponentConstructor<FormSection>
   }
 }
 
 export default Form
+export { FormField, FormSection }
