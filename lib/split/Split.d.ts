@@ -280,6 +280,14 @@ export declare type SplitExpose = {
    * @type {StyleClass}
    */
   classBase: StyleClass
+
+  // ---METHODS-----------------------------
+  /**
+   * Moves focus to the first resize handle (separator) of the group.
+   * No-op during SSR or before mount.
+   * @type {() => void}
+   */
+  focus: () => void
 }
 export declare type SplitOption = Pick<SplitProps, "separatorType" | "separatorNotHoverOpacity" | "class" | "styles">
 

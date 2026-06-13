@@ -76,7 +76,8 @@
   )
 
   const separatorClass = ref<StyleClass>([
-    "relative flex w-px items-center justify-center bg-gray-200 dark:bg-gray-800",
+    // B10: forced-colors:outline сохраняет разделитель видимым в Windows high-contrast (bg-* там сбрасывается)
+    "relative flex w-px items-center justify-center bg-gray-200 dark:bg-gray-800 forced-colors:outline",
     "touch-none select-none",
     "after:absolute after:inset-y-0 after:left-1/2 after:w-2 after:-translate-x-1/2 after:z-10",
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1",
@@ -121,16 +122,24 @@
       separatorNotHoverOpacity.value ? "" : resizablePanel.value === panel.name && isClient() ? "opacity-100" : ""
     ])
 
-  const classSeparatorStripStyle = ref(Split.setStyle("h-8 w-1.5 bg-neutral-300 dark:bg-neutral-600 rounded-full"))
+  // B10: грип-акцент через preset-aware токен theme-* (был hardcode bg-neutral-*)
+  const classSeparatorStripStyle = ref(Split.setStyle("h-8 w-1.5 bg-theme-300 dark:bg-theme-700 rounded-full"))
   const classSeparatorIcon = (panel: Panel) =>
     Split.setStyle([
       separatorIconClass.value,
       separatorNotHoverOpacity.value ? "" : resizablePanel.value === panel.name && isClient() ? "opacity-100" : "",
-      "h-4 w-3 rounded-sm bg-neutral-300 dark:bg-neutral-600"
+      "h-4 w-3 rounded-sm bg-theme-300 dark:bg-theme-700"
     ])
 
-  const classSeparatorHexagonStyle = ref(Split.setStyle("h-2.5 w-2.5 bg-neutral-300 dark:bg-neutral-600"))
+  const classSeparatorHexagonStyle = ref(Split.setStyle("h-2.5 w-2.5 bg-theme-300 dark:bg-theme-700"))
   const classSeparatorDisabled = ref(Split.setStyle([separatorClass.value, "group"]))
+
+  // ---FOCUS-------------------------------
+  // G34: программный фокус на первый resize handle (separator tabindex=0) — зеркало Button/Pagination focus()
+  function focus() {
+    if (!isClient() || !resizableGroup.value) return
+    resizableGroup.value.querySelector<HTMLElement>("[data-split-separator]")?.focus()
+  }
 
   // ---EXPOSE------------------------------
   defineExpose({
@@ -148,7 +157,9 @@
     separatorType,
     separatorNotHoverOpacity,
     styles,
-    classBase
+    classBase,
+    // ---METHODS-----------------------------
+    focus
   })
   // ---MOUNT-UNMOUNT-----------------------
   // initStyle() регистрируется автоматически в Component.__hooks() (dev-patterns §2) — не дублируем здесь
@@ -393,6 +404,16 @@
     }
   }
 
+  // F31: для horizontal в RTL drag/keyboard считают пиксели от другого края — движок знает rtl:, но математику флипаем тут
+  function isRtlHorizontal() {
+    return (
+      direction.value === "horizontal" &&
+      isClient() &&
+      !!resizableGroup.value &&
+      getComputedStyle(resizableGroup.value).direction === "rtl"
+    )
+  }
+
   // ---PERSISTENCE-------------------------
   const storageKey = () => `fv-split-${props.autoSaveName}`
 
@@ -455,8 +476,9 @@
     if (!isClient()) return
     const step = event.shiftKey ? 50 : 10
     const horizontal = direction.value === "horizontal"
-    const nextKey = horizontal ? "ArrowRight" : "ArrowDown"
-    const prevKey = horizontal ? "ArrowLeft" : "ArrowUp"
+    const rtl = isRtlHorizontal()
+    const nextKey = horizontal ? (rtl ? "ArrowLeft" : "ArrowRight") : "ArrowDown"
+    const prevKey = horizontal ? (rtl ? "ArrowRight" : "ArrowLeft") : "ArrowUp"
     if (event.key === nextKey) {
       event.preventDefault()
       keyboardResize(namePanel, step)
@@ -537,7 +559,9 @@
     //------------------
     let addedDistance =
       direction.value === "horizontal"
-        ? $event.clientX - panel.x - panel.width
+        ? isRtlHorizontal()
+          ? panel.x - $event.clientX
+          : $event.clientX - panel.x - panel.width
         : $event.clientY - panel.y - panel.height
     addedDistance = units.value === "percentages" ? addedDistance / ((group?.width ?? 0) / 100) : addedDistance
     //------------------
@@ -704,7 +728,7 @@
           <Icons
             v-else
             :type="separatorType"
-            :class="['h-2.5 w-2.5 text-gray-500', direction === 'vertical' ? 'rotate-90' : '']" />
+            :class="['h-2.5 w-2.5 text-theme-500', direction === 'vertical' ? 'rotate-90' : '']" />
         </div>
       </div>
       <div

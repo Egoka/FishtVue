@@ -637,6 +637,158 @@ describe("Split Component", () => {
     })
   })
 
+  // ---G34 — root element expose-----------------------------------------
+  describe("G34 — root element expose", () => {
+    it("exposes the root group element and a focus() method that focuses the first handle", () => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        },
+        attachTo: container
+      })
+      const vm = wrapper.vm as any
+      // корневой DOM-узел доступен наружу
+      expect(vm.resizableGroup).toBe(wrapper.element)
+      expect(typeof vm.focus).toBe("function")
+      // focus() переводит фокус на первый resize handle (separator tabindex=0)
+      vm.focus()
+      expect(document.activeElement).toBe(wrapper.find("[data-split-separator]").element)
+    })
+  })
+
+  // ---F31 — RTL---------------------------------------------------------
+  describe("F31 — RTL (logical direction)", () => {
+    const mockRtl = (el: Element) => {
+      const orig = window.getComputedStyle
+      ;(window as any).getComputedStyle = (target: Element, pseudo?: string) =>
+        target === el ? ({ direction: "rtl" } as any) : orig(target, pseudo as any)
+      return () => {
+        ;(window as any).getComputedStyle = orig
+      }
+    }
+    const setRect = (el: Element, rect: Partial<DOMRect>) => {
+      ;(el as any).getBoundingClientRect = () => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        toJSON() {},
+        ...rect
+      })
+    }
+
+    it("inverts keyboard arrows under dir=rtl (horizontal)", async () => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "horizontal"
+        },
+        attachTo: container
+      })
+      const restore = mockRtl(wrapper.element)
+      try {
+        const separator = wrapper.find("[data-split-separator]")
+        // RTL: ведущая панель "a" находится справа → ArrowLeft её увеличивает
+        await separator.trigger("keydown", { key: "ArrowLeft" })
+        expect((wrapper.vm as any).sizePanels.a).toBe(60)
+        expect((wrapper.vm as any).sizePanels.b).toBe(40)
+        // ArrowRight возвращает обратно
+        await separator.trigger("keydown", { key: "ArrowRight" })
+        expect((wrapper.vm as any).sizePanels.a).toBe(50)
+      } finally {
+        restore()
+      }
+    })
+
+    it("uses the left edge for horizontal pointer math under dir=rtl", async () => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "horizontal"
+        },
+        attachTo: container
+      })
+      setRect(wrapper.element, { x: 0, width: 1000 })
+      // в RTL панель "a" визуально справа: x=600, ширина 400
+      setRect(wrapper.find('[data-name="a"]').element, { x: 600, width: 400 })
+      const restore = mockRtl(wrapper.element)
+      try {
+        const sep = wrapper.find("[data-split-separator]")
+        await sep.trigger("pointerdown")
+        // указатель левее левого края панели "a" (600) → в RTL панель растёт
+        await sep.trigger("pointermove", { clientX: 500 })
+        await sep.trigger("pointerup")
+        const vm = wrapper.vm as any
+        expect(vm.sizePanels.a).toBeGreaterThan(50)
+        expect(wrapper.emitted("updated-panels")).toBeTruthy()
+      } finally {
+        restore()
+      }
+    })
+  })
+
+  // ---B10 — resize-handle colors (forced-colors + theme token)----------
+  describe("B10 — resize-handle colors", () => {
+    it("keeps the separator visible in forced-colors (high-contrast) mode", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      expect(wrapper.find("[data-split-separator]").attributes("class")).toContain("forced-colors:outline")
+    })
+
+    it("routes the strip grip through the preset-aware theme-* token", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          separatorType: "strip"
+        }
+      })
+      const grip = wrapper.find("[data-split-separator-strip] div")
+      expect(grip.attributes("class")).toContain("bg-theme-")
+      expect(grip.attributes("class")).not.toContain("bg-neutral-")
+    })
+
+    it("routes the hexagon grip through the theme-* token", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          separatorType: "hexagon"
+        }
+      })
+      expect(wrapper.find("[data-split-separator-icon] svg").attributes("class")).toContain("bg-theme-")
+    })
+  })
+
   describe("With Library Initialization", () => {
     const createAppWithFishtVue = (options: SplitOption = {}) => ({
       install(app: any) {
