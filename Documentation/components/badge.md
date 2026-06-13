@@ -1,7 +1,7 @@
 ---
 title: Badge
 summary: Компактная метка с modes (primary/secondary/outline/neutral), point-индикатором и close-кнопкой.
-updated: 2026-05-10
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -172,7 +172,9 @@ Root класс — `fv fishtvue-badge`.
 
 - Корневой элемент — `<span>` или `<div>`. Семантически — обычный текст.
 - Close-кнопка — `<button>` с нативной семантикой; нет `aria-label="Remove"` по умолчанию (см. Known issues).
-- `prefers-reduced-motion` не учтён.
+- `prefers-reduced-motion` — N/A: Badge собственных transition/animate-классов не имеет; close-кнопка (`Button`) уже `motion-safe:` на своей стороне.
+- **RTL:** отступы point/close-кнопки — логические `ps-1`/`pe-1` (`padding-inline-*`), авто-флип без `dir`-атрибута.
+- **Forced-colors:** `forced-colors:outline` на корне держит badge видимым в Windows high-contrast (там `bg-*` сбрасывается).
 
 ### Security
 

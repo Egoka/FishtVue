@@ -47,14 +47,16 @@
   })
   const classBase = computed(() =>
     Badge.setStyle([
-      "items-center w-max h-max m-[2px] px-2 py-1 text-xs font-medium rounded-md",
+      // Issue 6 (B10): forced-colors:outline сохраняет badge видимым в Windows high-contrast (bg-* там сбрасывается)
+      "items-center w-max h-max m-[2px] px-2 py-1 text-xs font-medium rounded-md forced-colors:outline",
       isPoint.value || isButton.value ? "gap-x-[2px]" : "",
+      // Issue 6 (F31): логические ps/pe (padding-inline-*) авто-флипают отступ point/close-кнопки в RTL
       isPoint.value && isButton.value
         ? "px-1"
         : isPoint.value && !isButton.value
-          ? "pl-1"
+          ? "ps-1"
           : !isPoint.value && isButton.value
-            ? "pr-1"
+            ? "pe-1"
             : "",
       modeStyle.value,
       options?.class ?? "",

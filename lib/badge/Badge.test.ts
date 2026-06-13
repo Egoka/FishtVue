@@ -1,6 +1,6 @@
 import { createApp } from "vue"
 import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Badge from "fishtvue/badge/Badge.vue"
 
@@ -299,6 +299,91 @@ describe("Badge Component Tests", () => {
         expect(classAttr).toContain("dark:ring-neutral-700")
         expect(classAttr).not.toContain("ring-neutral-500/30")
       })
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // F31 — RTL logical padding (Issue 6): физические pl/pr → логические ps/pe
+  // ---------------------------------------------------------------------------
+  describe("F31 — RTL logical padding", () => {
+    it("uses logical ps-1 (not physical pl-1) when point only", () => {
+      const wrapper = mount(Badge, {
+        props: { point: true, closeButton: false }
+      })
+      const cls = wrapper.find("[data-badge]").attributes("class") ?? ""
+      expect(cls).toContain("ps-1")
+      expect(cls).not.toContain("pl-1")
+    })
+
+    it("uses logical pe-1 (not physical pr-1) when close button only", () => {
+      const wrapper = mount(Badge, {
+        props: { point: false, closeButton: true }
+      })
+      const cls = wrapper.find("[data-badge]").attributes("class") ?? ""
+      expect(cls).toContain("pe-1")
+      expect(cls).not.toContain("pr-1")
+    })
+
+    it("keeps symmetric px-1 when both point and close button", () => {
+      const wrapper = mount(Badge, {
+        props: { point: true, closeButton: true }
+      })
+      const cls = wrapper.find("[data-badge]").attributes("class") ?? ""
+      expect(cls).toContain("px-1")
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // B10 — forced-colors visibility (Issue 6): badge виден в Windows high-contrast
+  // ---------------------------------------------------------------------------
+  describe("B10 — forced-colors", () => {
+    it("keeps the badge visible in forced-colors (high-contrast) mode", () => {
+      const wrapper = mount(Badge, { props: { mode: "primary" } })
+      const cls = wrapper.find("[data-badge]").attributes("class") ?? ""
+      expect(cls).toContain("forced-colors:outline")
+    })
+
+    it("applies forced-colors:outline regardless of mode", () => {
+      const wrapper = mount(Badge, { props: { mode: "outline", point: true } })
+      const cls = wrapper.find("[data-badge]").attributes("class") ?? ""
+      expect(cls).toContain("forced-colors:outline")
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Configuration support — unstyled (L53, cross-cutting Component.setStyle guard)
+  // ---------------------------------------------------------------------------
+  describe("Configuration support — unstyled", () => {
+    const appWithConfig = (config: Record<string, unknown>) => ({
+      install(app: any) {
+        app.use(FishtVue, config)
+      }
+    })
+
+    // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback):
+    // чистим, чтобы unstyled:true из теста не протёк в соседние тесты/файлы.
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("strips all classes from the root when global unstyled: true", () => {
+      const wrapper = mount(Badge, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { point: true, closeButton: true }
+      })
+      // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
+      // ни `fv fishtvue-badge`-префикса на корне.
+      const cls = (wrapper.find("[data-badge]").attributes("class") ?? "").trim()
+      expect(cls).toBe("")
+    })
+
+    it("keeps base classes when unstyled is false (contrast)", () => {
+      const wrapper = mount(Badge, {
+        global: { plugins: [appWithConfig({ unstyled: false })] },
+        props: { mode: "primary" }
+      })
+      const cls = wrapper.find("[data-badge]").attributes("class") ?? ""
+      expect(cls).toContain("rounded-md")
     })
   })
 })
