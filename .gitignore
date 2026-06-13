@@ -95,3 +95,4 @@ docs/.vitepress/cache
 
 # trace-mcp local cache
 .trace-mcp/
+!/.claude/launch.json

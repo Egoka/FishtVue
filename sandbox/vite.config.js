@@ -15,6 +15,10 @@ export default defineConfig({
     }
   },
   server: {
+    // Claude Code preview/менеджеры портов передают назначенный порт через env PORT.
+    // Vite сам PORT не читает — пробрасываем вручную. Без PORT — дефолтный 5173 с авто-инкрементом.
+    port: Number(process.env.PORT) || 5173,
+    strictPort: Boolean(process.env.PORT),
     fs: {
       allow: [".."]
     }
