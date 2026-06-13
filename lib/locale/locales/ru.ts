@@ -39,6 +39,9 @@ export default <DefaultMessages>{
     label: "Навигация по страницам",
     page: "Страница"
   },
+  virtualScroller: {
+    loading: "Загрузка…"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

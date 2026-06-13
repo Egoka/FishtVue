@@ -68,3 +68,6 @@ export { default as Table } from "fishtvue/table"
 // TextEditor
 export * from "fishtvue/texteditor"
 export { default as TextEditor } from "fishtvue/texteditor"
+// VirtualScroller
+export * from "fishtvue/virtualscroller"
+export { default as VirtualScroller } from "fishtvue/virtualscroller"

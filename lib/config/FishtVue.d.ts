@@ -25,6 +25,7 @@ import { MenuOption } from "fishtvue/menu"
 import { PaginationOption } from "fishtvue/pagination"
 import { SplitOption } from "fishtvue/split"
 import { TableOption } from "fishtvue/table"
+import { VirtualScrollerOption } from "fishtvue/virtualscroller"
 
 /**
  * Main FishtVue instance type that provides core functionality and configuration
@@ -214,4 +215,5 @@ export type ComponentsOptions = Partial<{
   Pagination: PaginationOption
   Split: SplitOption
   Table: TableOption
+  VirtualScroller: VirtualScrollerOption
 }>

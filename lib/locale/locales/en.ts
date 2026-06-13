@@ -39,6 +39,9 @@ export default <DefaultMessages>{
     label: "Pagination",
     page: "Page"
   },
+  virtualScroller: {
+    loading: "Loading…"
+  },
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

@@ -111,7 +111,8 @@ const FISHT_VUE_COMPONENTS = [
   "Switch",
   "Table",
   "TextEditor",
-  "Form"
+  "Form",
+  "VirtualScroller"
 ]
 // Compound-дети (Issue 3) — named-экспорты модуля `fishtvue/table` (table.mjs). Pagination/Loading
 // уже top-level в FISHT_VUE_COMPONENTS — для compound-override отдельная регистрация не нужна.

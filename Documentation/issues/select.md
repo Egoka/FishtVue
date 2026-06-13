@@ -1,6 +1,6 @@
 ---
 title: Issues — Select
-summary: 11/13 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports). Открытые — только Issue 7 (virtualization) и B10 (colors), оба deferred roadmap.
+summary: 11/13 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports). Открытые — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending) и B10 (colors, deferred Wave 9).
 updated: 2026-06-13
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
@@ -14,11 +14,11 @@ related-doc: ../components/select.md
 | Severity | Count (open) | Categories                                            |
 | -------- | ------------ | ----------------------------------------------------- |
 | critical | 0            | —                                                     |
-| high     | 1            | H43 (virtualization, deferred)                        |
+| high     | 1            | H43 (virtualization, unblocked — integration pending) |
 | medium   | 0            | —                                                     |
 | low      | 1            | B10 (colors → semantic tokens, deferred)              |
 
-> Оба открытых пункта — **deferred roadmap** (не баги): Issue 7 требует runtime-зависимости вопреки no-deps цели; B10 требует lib-wide token-слоя (Wave 9). Все остальные 11 пунктов закрыты.
+> Оба открытых пункта — **не баги**: Issue 7 **разблокирован** (2026-06-13) — добавлен dependency-free [VirtualScroller](../components/virtualscroller.md) + `useVirtualScroll`; осталась интеграция в Select (отдельным ТЗ). B10 требует lib-wide token-слоя (Wave 9). Все остальные 11 пунктов закрыты.
 
 ## ~~Issue 1: CRITICAL — XSS через `v-html` в `marker` и `noData`~~ ✅ resolved 2026-05-11
 
@@ -307,15 +307,12 @@ Custom rendering каждого option возможен только через 
 
 `Component.setStyle()` теперь проверяет `this.__globalConfig?.config?.unstyled` и возвращает `""` если true — это отключает рендер Tailwind-классов во всех компонентах, использующих базовый класс. Тест: `Select.test.ts` > `respects unstyled: true via Component.setStyle guard`. Roadmap Wave 3.1 — done.
 
-## Issue 7: Нет виртуализации списка — лагает при >500 items — ⏸️ deferred (roadmap)
+## Issue 7: Нет виртуализации списка — лагает при >500 items — 🔓 unblocked (integration pending)
 
 - **Категория:** H43 (виртуализация)
-- **Severity:** high (deferred)
+- **Severity:** high (integration pending)
 - **Где:** рендер dropdown списка в [Select.vue](../../lib/select/Select.vue) (`renderRows` / `<TransitionGroup>`)
-- **Status:** ⏸️ **deferred roadmap** (2026-06-13). Намеренно НЕ реализовано в текущем заходе: оба пути закрытия конфликтуют с каноном —
-  - внешняя библиотека (`@tanstack/vue-virtual` / `vue-virtual-scroller`) — это **runtime-зависимость у потребителя**, противоречит заявленной цели «без runtime-deps» (hard-don't на новые deps в `lib/` без approve);
-  - dependency-free windowing — нетривиально и рискует сломать существующую GSAP-анимацию раскрытия + `<TransitionGroup>`.
-  - Решение пользователя (2026-06-13): отложить. Пере-оценить при появлении реального performance-запроса.
+- **Status:** 🔓 **unblocked 2026-06-13.** Прежний блокер (нужна runtime-зависимость вопреки no-deps цели) снят: в `lib/` добавлен **dependency-free** примитив виртуализации — [VirtualScroller](../components/virtualscroller.md) + headless composable `useVirtualScroll` ([lib/virtualscroller/](../../lib/virtualscroller/useVirtualScroll.ts)). Осталась **интеграция** в Select (отдельным ТЗ/коммитом, см. план §10 спеки): при `count > threshold` рендерить опции через `useVirtualScroll`, переписать keyboard-nav с DOM-scan на index-математику + `scrollToIndex`, отключить GSAP-stagger в virtual-режиме. Группы (variable-height заголовки) — проверить отдельно.
 
 ### Что найдено
 
@@ -331,10 +328,10 @@ Custom rendering каждого option возможен только через 
 
 ### Что нужно сделать
 
-1. Интегрировать `vue-virtual-scroller` (или TanStack Virtual `@tanstack/vue-virtual`) для виртуализации dropdown list.
+1. Использовать **dependency-free** [`useVirtualScroll`](../../lib/virtualscroller/useVirtualScroll.ts) (НЕ внешнюю библиотеку — no-deps цель сохранена).
 2. Добавить prop `virtual?: boolean` (default false для backward compat) или `virtualThreshold?: number` (default 100 — auto-enable если items.length > threshold).
-3. При virtual mode: render только visible window + 1-2 buffer items.
-4. Tooltip в [Documentation/components/select.md](../components/select.md): performance benchmark до/после.
+3. При virtual mode: render только visible window + overscan-buffer; keyboard-nav на index-математику + `scrollToIndex`; отключить GSAP-stagger.
+4. В [Documentation/components/select.md](../components/select.md): performance benchmark до/после.
 
 ### Acceptance criteria
 

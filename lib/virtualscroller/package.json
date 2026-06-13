@@ -1,0 +1,5 @@
+{
+  "main": "./virtualscroller.mjs",
+  "module": "./virtualscroller.mjs",
+  "types": "./VirtualScroller.d.ts"
+}

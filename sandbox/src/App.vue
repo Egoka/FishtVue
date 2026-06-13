@@ -12,6 +12,7 @@
   import DemoButton from "@/components/demo/Button.vue"
   import DemoTable from "@/components/demo/Table.vue"
   import DemoPagination from "@/components/demo/Pagination.vue"
+  import DemoVirtualScroller from "@/components/demo/VirtualScroller.vue"
   import DemoAccordion from "@/components/demo/Accordion.vue"
   import DemoSplit from "@/components/demo/Split.vue"
   import Split from "fishtvue/split/Split.vue"
@@ -221,6 +222,12 @@
                 subtitle="Component for paginating large datasets with navigation controls."
                 class="sm:col-span-2">
                 <DemoPagination />
+              </DocComponent>
+              <DocComponent
+                title="Virtual Scroller"
+                subtitle="Windowing primitive that renders only the visible slice of a large list. Supports variable height, lazy loading, grid orientation and a macOS-style scrollbar (overlay / thin)."
+                class="sm:col-span-2">
+                <DemoVirtualScroller />
               </DocComponent>
             </div>
           </div>
