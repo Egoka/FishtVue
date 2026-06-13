@@ -417,12 +417,120 @@ export declare type SelectOption = Pick<
   | keyof InputLayoutOption
 >
 
+// ---COMPOUND API (Issue 3) --------------------------------------------------------------------------------
+// Параллельный декларативный API `<Select><SelectOption>` поверх schema-driven `:data-select` (schema
+// выигрывает при наличии). Имя value-компонента `SelectOption` сосуществует с options-типом `SelectOption`
+// выше в разных namespace TS (тип — выше, value — `export declare const` ниже).
+
+/**
+ * Props for the `<SelectOption>` descriptor (compound API). Declares a single option; `<Select>` reads
+ * these via VNode-walk and renders the matching list item. `value` is both the model value (`keySelect`)
+ * and the display fallback; `label` (or default-slot text) is the display text.
+ *
+ * Note: `key` is NOT a prop — it is Vue's reserved VNode key. Use `value` as the option identity.
+ */
+export declare type SelectOptionProps = {
+  /**
+   * Option value — becomes `modelValue` when selected and the identity key in the list.
+   * @type {string | number | boolean | object | null}
+   */
+  value: string | number | boolean | object | null
+
+  /**
+   * Display text. Overrides the default-slot text when set.
+   * @type {string | undefined}
+   */
+  label?: string
+
+  /**
+   * Disables the option — not selectable, marked `aria-disabled`.
+   * @type {boolean | undefined}
+   */
+  disabled?: boolean
+}
+
+/**
+ * Slots of `<SelectOption>`. The default slot provides the plain-text display label (rich content is not
+ * rendered per-option in the list — use the `#item` slot or schema-driven `:data-select` for that).
+ */
+export declare type SelectOptionSlots = {
+  default(): VNode[]
+}
+
+/**
+ * Props for the `<SelectGroup>` descriptor (compound API) — groups `<SelectOption>` children under a
+ * non-selectable label header.
+ */
+export declare type SelectGroupProps = {
+  /**
+   * Group header label.
+   * @type {string}
+   */
+  label: string
+
+  /**
+   * Alias of `label`.
+   * @type {string | undefined}
+   */
+  title?: string
+}
+
+/**
+ * Slots of `<SelectGroup>` — nested `<SelectOption>` descriptors.
+ */
+export declare type SelectGroupSlots = {
+  default(): VNode[]
+}
+
+/**
+ * `<SelectOption>` — renderless option descriptor for the compound `<Select>` API.
+ *
+ * ```vue
+ * <Select v-model="x">
+ *   <SelectOption value="a">Apple</SelectOption>
+ *   <SelectOption value="b" disabled>Banana</SelectOption>
+ * </Select>
+ * ```
+ */
+declare class SelectOptionComponent extends ClassComponent<
+  SelectOptionProps,
+  SelectOptionSlots,
+  null,
+  NonNullable<unknown>
+> {}
+
+/**
+ * `<SelectGroup>` — renderless group descriptor for the compound `<Select>` API.
+ *
+ * ```vue
+ * <Select v-model="x">
+ *   <SelectGroup label="Fruits">
+ *     <SelectOption value="a">Apple</SelectOption>
+ *   </SelectGroup>
+ * </Select>
+ * ```
+ */
+declare class SelectGroupComponent extends ClassComponent<
+  SelectGroupProps,
+  SelectGroupSlots,
+  null,
+  NonNullable<unknown>
+> {}
+
 // ---------------------------------------
 
 declare module "vue" {
   export interface GlobalComponents {
     Select: GlobalComponentConstructor<Select>
+    SelectOption: GlobalComponentConstructor<SelectOptionComponent>
+    SelectGroup: GlobalComponentConstructor<SelectGroupComponent>
   }
 }
 
 export default Select
+// value-экспорты compound-детей (для explicit-import: `import { SelectOption } from "fishtvue/select"`).
+// `SelectOption` объявлен как `const` (value-space) — не конфликтует с одноимённым options-типом (type-space):
+// TS допускает type+value под одним именем (companion pattern), а базовый ESLint no-redeclare этого не знает.
+// eslint-disable-next-line no-redeclare
+export declare const SelectOption: GlobalComponentConstructor<SelectOptionComponent>
+export { SelectGroupComponent as SelectGroup }

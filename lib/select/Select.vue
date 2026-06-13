@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onBeforeUnmount, onMounted, ref, unref, useSlots, watch } from "vue"
+  import { Comment, Fragment, Text, computed, onBeforeUnmount, onMounted, ref, unref, useSlots, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import { getActiveLocale } from "fishtvue/config"
   import type { BaseDataItem, IDataItem, SelectEmits, SelectProps } from "./Select"
@@ -30,6 +30,86 @@
   })
   const emit = defineEmits<SelectEmits>()
   const slots = useSlots()
+  // ---COMPOUND API (Issue 3) -------------
+  // Параллельный декларативный API `<Select><SelectOption>`/`<SelectGroup>` поверх schema-driven
+  // `:data-select`. Механизм — VNode-walk `slots.default()` в computed (зеркало Form.vue): renderless-дети
+  // не регистрируются в рантайме, родитель читает их VNode-дерево. Schema-driven `dataSelect` выигрывает.
+  type CompoundMeta = { disabled: boolean; group: string | null }
+  function compoundNormalize(raw: unknown): Array<any> {
+    if (raw === null || raw === undefined) return []
+    return Array.isArray(raw) ? raw : [raw]
+  }
+  function isVNodeNamed(vn: any, nameComponent: string): boolean {
+    const t = vn?.type
+    return !!t && (t?.name === nameComponent || t?.__name === nameComponent)
+  }
+  function compoundFlatten(nodes: Array<any>): Array<any> {
+    const out: Array<any> = []
+    for (const n of nodes) {
+      if (n === null || n === undefined || typeof n !== "object") continue
+      if (n.type === Comment || n.type === Text) continue
+      if (n.type === Fragment) out.push(...compoundFlatten(compoundNormalize(n.children)))
+      else out.push(n)
+    }
+    return out
+  }
+  function compoundChildren(vn: any): Array<any> {
+    const def = vn?.children?.default
+    return typeof def === "function" ? compoundNormalize(def()) : []
+  }
+  // Текст из default-slot опции — fallback-label, если нет prop `label`.
+  function compoundOptionText(vn: any): string {
+    const def = vn?.children?.default
+    if (typeof def !== "function") return ""
+    let text = ""
+    for (const k of compoundNormalize(def())) {
+      if (typeof k === "string") text += k
+      else if (k && typeof k === "object") {
+        if (k.type === Text) text += String(k.children ?? "")
+        else if (typeof k.children === "string") text += k.children
+      }
+    }
+    return text.trim()
+  }
+  const compoundParsed = computed<{
+    items: Array<Record<string, any>>
+    meta: Map<any, CompoundMeta>
+    hasGroups: boolean
+  }>(() => {
+    const raw = typeof slots.default === "function" ? slots.default() : undefined
+    const top = compoundFlatten(compoundNormalize(raw))
+    const items: Array<Record<string, any>> = []
+    const meta = new Map<any, CompoundMeta>()
+    let hasGroups = false
+    const pushOption = (vn: any, group: string | null) => {
+      const p = (vn?.props ?? {}) as Record<string, any>
+      if (!("value" in p)) return
+      const value = p.value
+      const label = p.label != null ? String(p.label) : compoundOptionText(vn) || String(value)
+      items.push({ id: value, value: label })
+      meta.set(value, { disabled: p.disabled === "" || p.disabled === true, group })
+    }
+    for (const vn of top) {
+      if (isVNodeNamed(vn, "SelectOption")) pushOption(vn, null)
+      else if (isVNodeNamed(vn, "SelectGroup")) {
+        hasGroups = true
+        const label = String(vn?.props?.label ?? vn?.props?.title ?? "")
+        for (const child of compoundFlatten(compoundChildren(vn)))
+          if (isVNodeNamed(child, "SelectOption")) pushOption(child, label)
+      }
+    }
+    return { items, meta, hasGroups }
+  })
+  // schema-driven `dataSelect` выигрывает (даже пустой массив = явный выбор); иначе — compound-опции.
+  const schemaActive = computed<boolean>(() => {
+    const s = unref(props?.dataSelect)
+    return s !== undefined && s !== null
+  })
+  const sourceData = computed<Array<BaseDataItem>>(() =>
+    schemaActive.value
+      ? ((unref(props?.dataSelect) ?? []) as Array<BaseDataItem>)
+      : (compoundParsed.value.items as Array<BaseDataItem>)
+  )
   // ---REF-LINK----------------------------
   const layout = ref<InputLayoutExpose>()
   const selectListWindow = ref<FixWindowExpose>()
@@ -58,7 +138,7 @@
     return keySelect.value ? visibleValue.value.map((item) => item[keySelect.value ?? ""]) : []
   })
   const keySelect = computed<NonNullable<SelectProps["keySelect"]>>(() => {
-    const data = unref(props?.dataSelect) ?? []
+    const data = sourceData.value ?? []
     return data && data.length
       ? typeof data[0] === "object"
         ? props?.keySelect && Object.keys(data[0]).includes(props.keySelect)
@@ -68,7 +148,7 @@
       : "id"
   })
   const valueSelect = computed<SelectProps["valueSelect"] | null>(() => {
-    const dataSelectValue = unref(props?.dataSelect)
+    const dataSelectValue = sourceData.value
     if (dataSelectValue && dataSelectValue.length) {
       if (typeof dataSelectValue[0] === "object") {
         if (props?.valueSelect && Object.keys(dataSelectValue[0]).includes(props.valueSelect)) {
@@ -84,7 +164,7 @@
     }
   })
   const dataSelect = computed<Array<BaseDataItem>>(() => {
-    const dataSelectValue = unref(props?.dataSelect) as Array<IDataItem> | undefined
+    const dataSelectValue = sourceData.value as Array<IDataItem> | undefined
     return !!keySelect.value && !!valueSelect.value
       ? (dataSelectValue ?? []).map((item) => ({
           [keySelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[keySelect.value ?? ""] : item,
@@ -192,6 +272,33 @@
     const raw = typeof item === "object" && valueSelect.value ? item[valueSelect.value as string] : item
     return splitByQuery(String(raw ?? ""), query.value)
   }
+  // ---ISSUE 3 — render-rows: вставляет non-selectable group-headers между опциями + несёт disabled-флаг.
+  // `index` сохраняет позицию в `dataList` (Enter выбирает dataList[activeItem]); headers исключены из
+  // selectable-списка (отдельный data-attr), keyboard-nav таргетит `[data-select-list-item]`.
+  type RenderRow = { type: "group"; label: string } | { type: "option"; item: any; index: number; disabled: boolean }
+  function isOptionDisabled(item: any): boolean {
+    if (schemaActive.value) return false
+    return !!compoundParsed.value.meta.get(item?.[keySelect.value ?? ""])?.disabled
+  }
+  const renderRows = computed<RenderRow[]>(() => {
+    const rows: RenderRow[] = []
+    const useMeta = !schemaActive.value
+    const meta = compoundParsed.value.meta
+    const showGroups = useMeta && compoundParsed.value.hasGroups
+    let lastGroup: string | null | undefined = undefined
+    dataList.value.forEach((item: any, index: number) => {
+      const m = useMeta ? meta.get(item?.[keySelect.value ?? ""]) : undefined
+      if (showGroups) {
+        const g = m?.group ?? null
+        if (g !== lastGroup) {
+          if (g) rows.push({ type: "group", label: g })
+          lastGroup = g
+        }
+      }
+      rows.push({ type: "option", item, index, disabled: !!m?.disabled })
+    })
+    return rows
+  })
   const paramsFixWindow = computed<NonNullable<SelectProps["paramsFixWindow"]>>(() => ({
     position: "bottom-left",
     eventOpen: "click",
@@ -244,7 +351,8 @@
     ])
   )
   const iconCheck = computed(() =>
-    Select.setStyle("flex absolute inset-y-0 left-0 items-center pl-2 text-theme-700 dark:text-theme-400")
+    // ---ISSUE 9 (RTL): логические start-0 / ps-2 вместо физических left-0 / pl-2 (авто-флип при dir="rtl")
+    Select.setStyle("flex absolute inset-y-0 start-0 items-center ps-2 text-theme-700 dark:text-theme-400")
   )
   const classGradientSelectListTop = computed(() =>
     Select.setStyle([classGradientSelectList.value, "bg-gradient-to-b top-0"])
@@ -255,7 +363,8 @@
   const classUl = computed(() => Select.setStyle("p-0"))
   const classLiItem = computed(() =>
     Select.setStyle([
-      "text-gray-900 dark:text-gray-100 items-center h-9 mt-2 mx-2 pl-8 pr-4 last:mb-5",
+      // ---ISSUE 9 (RTL): логические ps-8 / pe-4 вместо физических pl-8 / pr-4 (авто-флип при dir="rtl")
+      "text-gray-900 dark:text-gray-100 items-center h-9 mt-2 mx-2 ps-8 pe-4 last:mb-5",
       "hover:bg-theme-200 hover:dark:bg-theme-900 hover:text-theme-700 dark:hover:text-theme-100",
       "focus-visible:bg-theme-200 focus-visible:dark:bg-theme-900 focus-visible:text-theme-700 dark:focus-visible:text-theme-100 focus-visible:ring-1 focus-visible:ring-theme-100 focus-visible:dark:ring-theme-800 focus-visible:outline-none",
       mode.value === "outlined" ? "rounded-md" : "",
@@ -265,9 +374,15 @@
   )
   const classItemSelectValue = computed(() =>
     Select.setStyle(
-      "text-left text-gray-600 dark:text-gray-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200"
+      // ---ISSUE 9 (RTL): rtl:text-right override (движок сохраняет text-left как LTR-default)
+      "text-left rtl:text-right text-gray-600 dark:text-gray-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200"
     )
   )
+  // ---ISSUE 3 — non-selectable group-header + disabled-опция ---
+  const classGroupHeader = computed(() =>
+    Select.setStyle("px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 select-none")
+  )
+  const classOptionDisabled = computed(() => Select.setStyle("opacity-50 cursor-not-allowed"))
   // ---ISSUE 8 — aria-live announcement for filtered results count ---
   const ariaResultsLabel = computed<string>(() => {
     if (!isQuery.value || !query.value) return ""
@@ -402,7 +517,9 @@
   // ---METHODS-----------------------------
   // ---ISSUE 2 (defensive) — guards against undefined refs after unmount-while-open ---
   function changeFocus(currentIndex: number, direction: 1 | -1) {
-    const listItems = (selectItems.value as any)?.$el?.querySelectorAll("li") as NodeListOf<HTMLElement> | undefined
+    const listItems = (selectItems.value as any)?.$el?.querySelectorAll("li[data-select-list-item]") as
+      | NodeListOf<HTMLElement>
+      | undefined
     if (!listItems || !listItems.length) return
     let newIndex = currentIndex + direction
     const cur = listItems[currentIndex]
@@ -427,7 +544,9 @@
     else if (event.key === "Enter") select(dataList.value[activeItem.value])
     else if (["Escape", "Esc"].includes(event.key)) isOpenList.value = false
     else if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-      const items = (selectItems.value as any)?.$el?.querySelectorAll("li") as NodeListOf<HTMLElement> | undefined
+      const items = (selectItems.value as any)?.$el?.querySelectorAll("li[data-select-list-item]") as
+        | NodeListOf<HTMLElement>
+        | undefined
       if (!items || !items.length) return
       const currentIndex = Array.prototype.indexOf.call(items, document.activeElement)
       if (currentIndex !== -1) {
@@ -468,6 +587,8 @@
 
   // ---------------------------------------
   function select(selectValue: BaseDataItem | null): void {
+    // ---ISSUE 3 — disabled compound-опция не выбирается ---
+    if (selectValue && isOptionDisabled(selectValue)) return
     if (selectValue && keySelect.value) {
       activeItem.value = dataList.value.findIndex(
         (value) =>
@@ -500,7 +621,7 @@
     gsap.to(el, {
       opacity: 1,
       height: "38px",
-      delay: el.dataset.index * (dataList.value?.length >= 80 ? 0 : 0.01),
+      delay: (Number(el.dataset.index) || 0) * (dataList.value?.length >= 80 ? 0 : 0.01),
       onComplete: done
     })
   }
@@ -515,7 +636,7 @@
   })
 
   function onLeave(el: any, done: any) {
-    gsap.to(el, { opacity: 0, height: 0, delay: el.dataset.index * delay.value, onComplete: done })
+    gsap.to(el, { opacity: 0, height: 0, delay: (Number(el.dataset.index) || 0) * delay.value, onComplete: done })
   }
 </script>
 
@@ -560,10 +681,10 @@
                 <Badge
                   mode="neutral"
                   :close-button="closeButtonBadge"
-                  class="m-1 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
+                  class="m-1 ps-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
                   class-content="fill-theme-500 flex items-center"
                   @delete="select(null)">
-                  <Icons type="Funnel" class="h-3 w-3 mr-1 text-theme-400 dark:text-theme-600" />
+                  <Icons type="Funnel" class="h-3 w-3 me-1 text-theme-400 dark:text-theme-600" />
                   {{ visibleValue.length }}
                 </Badge>
               </slot>
@@ -584,7 +705,7 @@
         ref="selectListWindow"
         v-bind="paramsFixWindow"
         :model-value="isOpenList"
-        :class-body="['z-50', `ml-[${layout?.beforeWidth}px]`]"
+        :class-body="['z-50', `ms-[${layout?.beforeWidth}px]`]"
         @close="closeSelect">
         <div
           data-select-list
@@ -628,36 +749,47 @@
             @enter="onEnter"
             @leave="onLeave">
             <template v-if="dataSelect?.length">
-              <li
-                v-for="(item, index) in dataList"
-                :key="`${item[keySelect]}`"
-                data-select-list-item
-                :tabindex="activeItem === index ? 0 : -1"
-                :data-index="index"
-                :class="classLiItem"
-                @click="select(item)">
-                <slot name="item" :item="item" :key="valueSelect" :isQuery="isQuery && !!query">
-                  <slot
-                    name="marker"
-                    :item="item"
-                    :query="query"
-                    :isQuery="isQuery && !!query"
-                    :valueKey="valueSelect ?? null">
-                    <div :class="classItemSelectValue">
-                      <template v-if="isQuery && query">
-                        <template v-for="(part, pi) in markerParts(item)" :key="pi">
-                          <mark v-if="part.mark" :class="classMaskQuery">{{ part.text }}</mark>
-                          <template v-else>{{ part.text }}</template>
+              <template
+                v-for="row in renderRows"
+                :key="row.type === 'group' ? `g:${row.label}` : `${row.item[keySelect]}`">
+                <!-- ISSUE 3 — non-selectable group-header (compound <SelectGroup>) -->
+                <li v-if="row.type === 'group'" data-select-group role="presentation" :class="classGroupHeader">
+                  {{ row.label }}
+                </li>
+                <li
+                  v-else
+                  data-select-list-item
+                  :tabindex="activeItem === row.index ? 0 : -1"
+                  :data-index="row.index"
+                  :aria-disabled="row.disabled ? 'true' : undefined"
+                  :class="[classLiItem, row.disabled ? classOptionDisabled : '']"
+                  @click="row.disabled ? null : select(row.item)">
+                  <slot name="item" :item="row.item" :key="valueSelect" :isQuery="isQuery && !!query">
+                    <slot
+                      name="marker"
+                      :item="row.item"
+                      :query="query"
+                      :isQuery="isQuery && !!query"
+                      :valueKey="valueSelect ?? null">
+                      <div :class="classItemSelectValue">
+                        <template v-if="isQuery && query">
+                          <template v-for="(part, pi) in markerParts(row.item)" :key="pi">
+                            <mark v-if="part.mark" :class="classMaskQuery">{{ part.text }}</mark>
+                            <template v-else>{{ part.text }}</template>
+                          </template>
                         </template>
-                      </template>
-                      <template v-else>{{ valueSelect ? item[valueSelect] : item }}</template>
-                    </div>
+                        <template v-else>{{ valueSelect ? row.item[valueSelect] : row.item }}</template>
+                      </div>
+                    </slot>
                   </slot>
-                </slot>
-                <span v-if="visibleValue?.find((i) => i[keySelect] === item[keySelect])" :class="iconCheck">
-                  <Icons type="Check" class="w-5 h-5" />
-                </span>
-              </li>
+                  <span
+                    v-if="visibleValue?.find((i) => i[keySelect] === row.item[keySelect])"
+                    data-select-check
+                    :class="iconCheck">
+                    <Icons type="Check" class="w-5 h-5" />
+                  </span>
+                </li>
+              </template>
               <slot v-if="!dataList?.length" name="empty" :noData="noData" :query="query" :hasData="true">
                 <div :class="classDataListNoData">{{ noData }}</div>
               </slot>

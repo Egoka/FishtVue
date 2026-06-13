@@ -1,8 +1,10 @@
 import { mount, flushPromises } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { nextTick } from "vue"
+import { h, nextTick } from "vue"
 import FishtVue from "fishtvue/config"
 import Select from "fishtvue/select/Select.vue"
+import SelectOption from "fishtvue/select/SelectOption.vue"
+import SelectGroup from "fishtvue/select/SelectGroup.vue"
 import { SelectProps } from "fishtvue/select/Select"
 
 describe("Select Component Tests", () => {
@@ -471,5 +473,161 @@ describe("Select Component Tests", () => {
       // print: классы добавлены для печати
       expect(root.attributes("class")).toMatch(/print:/)
     })
+  })
+})
+
+// =====================================================================================================================
+// Audit fixes 2026-06-13 — Issue 3 (compound API) + Issue 9 (RTL)
+// =====================================================================================================================
+describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => {
+  // ---HAPPY PATH ------------------------------------------------------------
+  it("renders options from compound <SelectOption> children", async () => {
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [h(SelectOption, { value: "a" }, () => "Apple"), h(SelectOption, { value: "b" }, () => "Banana")]
+      }
+    })
+    await nextTick()
+    const options = wrapper.findAll("[data-select-list-item]")
+    expect(options.length).toBe(2)
+    expect(wrapper.text()).toContain("Apple")
+    expect(wrapper.text()).toContain("Banana")
+  })
+
+  it("uses `label` prop as display text when provided", async () => {
+    const wrapper = mount(Select, {
+      slots: { default: () => [h(SelectOption, { value: "a", label: "Custom Label" }, () => "ignored")] }
+    })
+    await nextTick()
+    expect(wrapper.text()).toContain("Custom Label")
+  })
+
+  // ---SCHEMA WINS ----------------------------------------------------------
+  it("schema-driven dataSelect wins over compound children", async () => {
+    const wrapper = mount(Select, {
+      props: { dataSelect: ["Schema 1", "Schema 2", "Schema 3"] },
+      slots: { default: () => [h(SelectOption, { value: "a" }, () => "Compound A")] }
+    })
+    await nextTick()
+    const options = wrapper.findAll("[data-select-list-item]")
+    expect(options.length).toBe(3)
+    expect(wrapper.text()).toContain("Schema 1")
+    expect(wrapper.text()).not.toContain("Compound A")
+  })
+
+  // ---SELECTION ------------------------------------------------------------
+  it("selecting a compound option emits its `value` as modelValue", async () => {
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [h(SelectOption, { value: "a" }, () => "Apple"), h(SelectOption, { value: "b" }, () => "Banana")]
+      }
+    })
+    await nextTick()
+    await wrapper.findAll("[data-select-list-item]")[1].trigger("click")
+    const emitted = wrapper.emitted("update:modelValue")
+    expect(emitted).toBeTruthy()
+    expect(emitted?.[emitted.length - 1][0]).toBe("b")
+  })
+
+  it("infers value type — numeric `value` round-trips through modelValue", async () => {
+    const wrapper = mount(Select, {
+      slots: { default: () => [h(SelectOption, { value: 42 }, () => "Answer")] }
+    })
+    await nextTick()
+    await wrapper.findAll("[data-select-list-item]")[0].trigger("click")
+    const emitted = wrapper.emitted("update:modelValue")
+    expect(emitted?.[emitted.length - 1][0]).toBe(42)
+  })
+
+  // ---DISABLED -------------------------------------------------------------
+  it("disabled compound option is marked aria-disabled and is not selectable", async () => {
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [
+          h(SelectOption, { value: "a", disabled: true }, () => "Locked"),
+          h(SelectOption, { value: "b" }, () => "Free")
+        ]
+      }
+    })
+    await nextTick()
+    const items = wrapper.findAll("[data-select-list-item]")
+    expect(items[0].attributes("aria-disabled")).toBe("true")
+    await items[0].trigger("click")
+    expect(wrapper.emitted("update:modelValue")).toBeFalsy()
+    // не-disabled опция по-прежнему выбирается
+    await items[1].trigger("click")
+    expect(wrapper.emitted("update:modelValue")).toBeTruthy()
+  })
+
+  // ---GROUPS ---------------------------------------------------------------
+  it("renders <SelectGroup> label header above its options", async () => {
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [
+          h(SelectGroup, { label: "Fruits" }, () => [
+            h(SelectOption, { value: "a" }, () => "Apple"),
+            h(SelectOption, { value: "b" }, () => "Banana")
+          ])
+        ]
+      }
+    })
+    await nextTick()
+    expect(wrapper.find("[data-select-group]").exists()).toBe(true)
+    expect(wrapper.find("[data-select-group]").text()).toContain("Fruits")
+    // опции группы — выбираемы и НЕ включают header в selectable-список
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(2)
+  })
+
+  // ---BOUNDARY -------------------------------------------------------------
+  it("falls back to empty state when no children and no dataSelect", async () => {
+    const wrapper = mount(Select)
+    await nextTick()
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(0)
+  })
+})
+
+describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
+  it("option row uses logical padding (ps-/pe-), not physical (pl-/pr-)", async () => {
+    const wrapper = mount(Select, { props: { dataSelect: ["a", "b"] } })
+    await nextTick()
+    const li = wrapper.find("[data-select-list-item]")
+    const cls = li.attributes("class") ?? ""
+    expect(cls).toMatch(/\bps-8\b/)
+    expect(cls).toMatch(/\bpe-4\b/)
+    expect(cls).not.toMatch(/\bpl-8\b/)
+    expect(cls).not.toMatch(/\bpr-4\b/)
+  })
+
+  it("item value uses rtl:text-right override for alignment", async () => {
+    const wrapper = mount(Select, { props: { dataSelect: ["a"] } })
+    await nextTick()
+    expect(wrapper.html()).toMatch(/rtl:text-right/)
+  })
+
+  it("check icon uses logical start-0 / ps-2 (not left-0 / pl-2)", async () => {
+    const wrapper = mount(Select, {
+      props: { dataSelect: ["a"], modelValue: "a", keySelect: "id", valueSelect: "value" }
+    })
+    await nextTick()
+    await flushPromises()
+    // выбранный элемент показывает check-иконку с логическими классами (scoped на сам span,
+    // т.к. left-0 встречается в разметке вложенного InputLayout-search — не относится к Select)
+    const check = wrapper.find("[data-select-check]")
+    expect(check.exists()).toBe(true)
+    const cls = check.attributes("class") ?? ""
+    expect(cls).toMatch(/\bstart-0\b/)
+    expect(cls).toMatch(/\bps-2\b/)
+    expect(cls).not.toMatch(/\bleft-0\b/)
+    expect(cls).not.toMatch(/\bpl-2\b/)
+  })
+
+  it("dropdown offset uses logical margin ms-[...] (not physical ml-[...])", async () => {
+    const wrapper = mount(Select, { props: { dataSelect: ["a"] }, attachTo: document.body })
+    await wrapper.find("[data-select]").trigger("click")
+    await flushPromises()
+    const html = wrapper.html()
+    expect(html).toMatch(/ms-\[/)
+    expect(html).not.toMatch(/ml-\[/)
+    wrapper.unmount()
   })
 })

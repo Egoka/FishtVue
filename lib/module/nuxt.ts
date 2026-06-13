@@ -119,5 +119,7 @@ const FISHT_VUE_SUBCOMPONENTS: Array<{ name: string; from: string; export: strin
   { name: "Column", from: "table", export: "Column" },
   { name: "ColumnGroup", from: "table", export: "ColumnGroup" },
   { name: "FormField", from: "form", export: "FormField" },
-  { name: "FormSection", from: "form", export: "FormSection" }
+  { name: "FormSection", from: "form", export: "FormSection" },
+  { name: "SelectOption", from: "select", export: "SelectOption" },
+  { name: "SelectGroup", from: "select", export: "SelectGroup" }
 ]
