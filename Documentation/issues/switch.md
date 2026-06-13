@@ -1,7 +1,7 @@
 ---
 title: Issues — Switch
-summary: Аудит Switch — 9 of 14 закрыто 2026-05-11 (CRITICAL XSS via v-html → slot, дубль updateModelValue, native form bridge, SSR initStyle dedup, contrast, logical CSS properties, closed-union types, inputRef expose, switchingType doc). Остались 5 cross-cutting (sideEffects/exports, prefers-reduced-motion, unstyled, semantic tokens, print).
-updated: 2026-05-11
+summary: Аудит Switch — 14 of 14 закрыто. 9 — 2026-05-11 (CRITICAL XSS via v-html → slot, дубль updateModelValue, native form bridge, SSR initStyle dedup, contrast, logical CSS properties, closed-union types, inputRef expose, switchingType doc). Последние 5 — 2026-06-13 (sideEffects/exports doc-sync, prefers-reduced-motion → motion-safe, unstyled regression-тест, B10 forced-colors + theme-accents canon-safe, print style-for-print). Matrix 0/0/0/0. Файл остаётся active как трекер Wave 9 (полная shadcn-style semantic-token миграция).
+updated: 2026-06-13
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/switch/
 related-doc: ../components/switch.md
@@ -11,14 +11,16 @@ related-doc: ../components/switch.md
 
 ## Сводка
 
-| Severity | Count | Categories                    |
-| -------- | ----- | ----------------------------- |
-| critical | 0     | — (Issue 1 resolved 2026-05-11) |
-| high     | 2     | A2/A4-5 (Issue 5), L53 (Issue 10) |
-| medium   | 0     | — (Issues 6/8/9/11/13 resolved 2026-05-11) |
-| low      | 3     | E29.7 (Issue 7), B10 (Issue 12), N59 (Issue 14) |
+| Severity | Count | Categories                               |
+| -------- | ----- | ---------------------------------------- |
+| critical | 0     | —                                        |
+| high     | 0     | — (Issues 5, 10 resolved 2026-06-13)     |
+| medium   | 0     | —                                        |
+| low      | 0     | — (Issues 7, 12, 14 resolved 2026-06-13) |
 
 **Закрыто 2026-05-11:** Issues 1 (XSS → `#help` slot), 2 (drop `updateModelValue` alias), 3 (hidden checkbox bridge для FormData), 4 (drop duplicate `onMounted(initStyle)`), 6 (contrast `text-gray-500`), 8 (logical `end-0`/`me-2`), 9 (closed-union типы), 11 (`inputRef` + `focus`/`blur` expose), 13 (документация `switchingType` vs `componentsStyle`) — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references сохраняются.
+
+**Закрыто 2026-06-13:** Issues 5 (sideEffects/exports — doc-sync, наследует cross-cutting Wave 2.1 инфру), 7 (prefers-reduced-motion → `motion-safe:` варианты), 10 (`unstyled` — cross-cutting `Component.setStyle` guard + regression-тест), 12 (B10 — canon-safe `forced-colors:outline` + preset-aware `theme-*` accents; полная semantic-token миграция → Wave 9), 14 (print — style-for-print). Severity matrix `0/2/0/3` → **`0/0/0/0`**. Файл **остаётся active** как трекер Wave 9 (зеркало Input/Split/Form/Pagination): полная shadcn-style `bg-surface`/`border-border` миграция требует расширения theme-движка + runtime `usePreset` ([theme.md Issue 1](./theme.md)).
 
 ## ~~Issue 1: CRITICAL — XSS через `v-html` в `help` prop~~ ✅ resolved 2026-05-11
 
@@ -147,11 +149,16 @@ function inputModelValue(value: any) {
 - **Где:** ~~`Switch.vue:158-160`~~ (блок удалён)
 - **Resolution:** Удалён дублирующий блок `onMounted(() => Switch.initStyle())`. Базовый `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) уже регистрирует `onServerPrefetch + vueOnMounted` → `initStyle()` в конструкторе — теперь Switch следует канону из [dev-patterns.md §2](../dev-patterns.md#2-decisions). Wave 2.3 progress: 2/22 SFC migrated (Input + Switch). Полный cross-cutting SSR-style fix (layer wrapping, HMR teardown) остаётся в [component-class.md Issue 3](./component-class.md) — общий вопрос, не switch-specific.
 
-## Issue 5: Нет sideEffects/exports map
+## ~~Issue 5: Нет sideEffects/exports map~~ ✅ resolved 2026-06-13 (doc-sync)
 
 - **Категория:** A2, A4, A5
-- **Severity:** high
+- **Severity:** ~~high~~
 - **Где:** [lib/package.json](../../lib/package.json), [lib/switch/package.json](../../lib/switch/package.json)
+- **Resolution:** Cross-cutting инфра уже в каноне (Wave 2.1), Switch наследует её без per-component правок — зеркало [input.md Issue 3](./input.md) / [split.md A4-5](./split.md):
+  - root `"sideEffects": false` ✅ 2026-06-07 + инъекция в каждый `dist/{name}/package.json` через `copyDependencies()` ([button.md Issue 8](./button.md)).
+  - корневая `exports` map генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js) ✅ 2026-06-11 — `fishtvue/switch` (`./switch/switch` + `.mjs` + PascalCase `.d.ts`) входит в strict-superset ([button.md Issue 9](./button.md)).
+  - ESM-only ратифицирован `engines.node >=18`.
+    Источниковый `lib/switch/package.json` намеренно минимален (main/module/types) — `sideEffects`/`exports` инжектятся на build, не в source. Контракт — [lib/package.test.ts](../../lib/package.test.ts).
 
 См. [button.md Issue 8 и Issue 9](./button.md) — cross-cutting.
 
@@ -188,13 +195,20 @@ Help icon `text-gray-400` (#9ca3af) на body `bg-stone-50` (#fafaf9) → contra
 - [ ] axe-core report → 0 contrast violations.
 - [ ] Lighthouse a11y score 100.
 
-## Issue 7: prefers-reduced-motion не учитывается
+## ~~Issue 7: prefers-reduced-motion не учитывается~~ ✅ resolved 2026-06-13
 
 - **Категория:** E29.7
-- **Severity:** low
-- **Где:** [Switch.vue:92](../../lib/switch/Switch.vue#L92), [Switch.vue:135](../../lib/switch/Switch.vue#L135), [Switch.vue:204](../../lib/switch/Switch.vue#L204)
+- **Severity:** ~~low~~
+- **Где:** [Switch.vue:64](../../lib/switch/Switch.vue#L64), [Switch.vue:98](../../lib/switch/Switch.vue#L98), [Switch.vue:106](../../lib/switch/Switch.vue#L106), [Switch.vue:136–156](../../lib/switch/Switch.vue#L136-L156)
+- **Resolution:** Применён канон FishtVue **motion-safe** (зеркало Button/Table/Split/Menu — без правок theme-движка: `unoStatic.ts` уже содержит `motion-safe`-медиа). Все `transition`/`transition-all`/`transition-colors` + `duration-*` обёрнуты в `motion-safe:`:
+  - root `classBaseSwitch` → `motion-safe:transition-all` ([Switch.vue:64](../../lib/switch/Switch.vue#L64));
+  - switch-track `classSwitch` → `motion-safe:transition-colors motion-safe:duration-200` ([Switch.vue:98](../../lib/switch/Switch.vue#L98));
+  - checkbox-track `classSwitch` → `motion-safe:transition` ([Switch.vue:106](../../lib/switch/Switch.vue#L106));
+  - thumb `classSwitchIcon` → `motion-safe:transition-all motion-safe:duration-300` ([Switch.vue:136](../../lib/switch/Switch.vue#L136)).
+  - Inline `<Icons>`-thumb (ветка `iconActive/iconInactive`) вынесен в NEW computed `classSwitchIconImg` через `Switch.setStyle` ([Switch.vue:148](../../lib/switch/Switch.vue#L148)) — inline-классы шаблона не регистрируются движком, поэтому их `motion-safe:`-варианты не попадали бы в инжектируемый CSS (зеркало [table.md Issue 12](./table.md)).
+    Тесты блока «Reduced motion — motion-safe transitions» (4 кейса) подтверждают `motion-safe:`-присутствие + отсутствие unconditional-вариантов.
 
-См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern. Switch имеет `transition-all duration-300` без guard.
+См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern.
 
 ## ~~Issue 8: RTL — left/right специфичные классы (`right-0`, `mr-2`, `translate-x-3.5`)~~ ✅ resolved 2026-05-11 (partial)
 
@@ -244,11 +258,12 @@ switchingType: "checkbox" | "switch" | string
 
 - [ ] `<Switch switchingType="swich">` (опечатка) — vue-tsc выдаёт ошибку.
 
-## Issue 10: `unstyled: true` не обрабатывается
+## ~~Issue 10: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-06-13
 
 - **Категория:** L53
-- **Severity:** high
-- **Где:** [Switch.vue:46-119](../../lib/switch/Switch.vue#L46-L119)
+- **Severity:** ~~high~~
+- **Где:** [Switch.vue:46-124](../../lib/switch/Switch.vue#L46-L124)
+- **Resolution:** Cross-cutting guard `Component.setStyle()` (`if (config.unstyled) return ""`, [component/index.ts:138](../../lib/component/index.ts#L138)) landed 2026-05-11 во всех 22 компонентах — Switch уже маршрутизирует **все** классы через `Switch.setStyle`, поэтому при `unstyled:true` корень `[data-switch]` и треки получают `""`. Правок исходника не потребовалось; добавлен Switch-scoped regression-тест (блок «Configuration support — unstyled», 2 кейса: `classBaseSwitch === ""` при `unstyled:true` + контраст базовых классов при `false`; `afterEach` чистит `window.FishtVue` singleton-leak). Зеркало [button.md Issue 14](./button.md) / [input.md Issue 4](./input.md).
 
 См. [button.md Issue 14](./button.md).
 
@@ -259,11 +274,16 @@ switchingType: "checkbox" | "switch" | string
 - **Где:** [Switch.vue:141–187](../../lib/switch/Switch.vue#L141-L187), [Switch.d.ts:213–234](../../lib/switch/Switch.d.ts#L213-L234)
 - **Resolution:** Единый `inputRef: Ref<HTMLElement | undefined>` объявлен на script-уровне; `ref="inputRef"` навешен и на `<button v-if="switchingType === 'switch'">` ([Switch.vue:212](../../lib/switch/Switch.vue#L212)), и на `<input v-else-if="switchingType === 'checkbox'">` ([Switch.vue:241](../../lib/switch/Switch.vue#L241)) — `v-if` гарантирует, что в DOM присутствует только один. `defineExpose` расширен `inputRef`, `focus(options?: FocusOptions)`, `blur()`. `SwitchExpose` обновлён с JSDoc. Паттерн зеркалит [Button Issue 4](./button.md) и [Input](../../lib/input/Input.vue) resolution. Тесты «Expose — inputRef + focus/blur» (6 кейсов) подтверждают ref-pointing для обоих режимов, focus/blur, и forward `FocusOptions`.
 
-## Issue 12: Хардкод цветов `gray-*`/`green-*`/`red-*` вместо semantic tokens
+## ~~Issue 12: Хардкод цветов `gray-*`/`green-*`/`red-*` вместо semantic tokens~~ ✅ resolved 2026-06-13 (canon-safe partial)
 
 - **Категория:** B10
-- **Severity:** low (кросс-режим)
-- **Где:** [Switch.vue:51](../../lib/switch/Switch.vue#L51), [Switch.vue:69](../../lib/switch/Switch.vue#L69), [Switch.vue:108](../../lib/switch/Switch.vue#L108) (множество)
+- **Severity:** ~~low (кросс-режим)~~
+- **Где:** [Switch.vue:95–98](../../lib/switch/Switch.vue#L95-L98) (switch-track + thumb)
+- **Resolution (canon-safe, без правок theme-движка):** зеркало [split.md Issue 12](./split.md) / [table.md Issue 12](./table.md) / [pagination.md Issue 8](./pagination.md):
+  - **Accents уже preset-aware:** on-state трека — `bg-theme-600 dark:bg-theme-400` ([Switch.vue:95](../../lib/switch/Switch.vue#L95)); on-state thumb — `bg-theme-100 dark:bg-theme-900` ([Switch.vue:139](../../lib/switch/Switch.vue#L139)); focus-ring — `ring-theme-*`/`outline-theme-600`. `theme` — единственный динамический цвет через `var(--theme)`, поэтому `usePreset` его уже перепишет.
+  - **NEW `forced-colors:outline`** на switch-track ([Switch.vue:98](../../lib/switch/Switch.vue#L98)) — в Windows high-contrast `bg-*` сбрасывается, и без outline трек был бы невидим; on/off остаются различимы по позиции thumb (`translate-x-3.5` vs `translate-x-0`, геометрия high-contrast не трогает). Native `<input type=checkbox>` в checkbox-режиме рендерится ОС нативно.
+  - **Структурные нейтрали** (`bg-gray-200`/`bg-stone-*`/`border-gray-*`, off-state thumb, label-текст, required-asterisk `text-red-500`) **оставлены** — полная shadcn-style `bg-surface`/`border-border` миграция требует расширения движка + runtime `usePreset` и остаётся cross-cutting [theme.md Issue 1](./theme.md) / **Wave 9**. Поэтому switch.md остаётся active как трекер волны (зеркало Split/Pagination/Form).
+    Тесты блока «B10 — forced-colors + theme tokens» (2 кейса) подтверждают `forced-colors:outline` + preset-aware thumb-token.
 
 ### Что найдено
 
@@ -297,24 +317,26 @@ switchingType: "checkbox" | "switch" | string
 
 Документировать в [Documentation/components/switch.md](../components/switch.md) §10, что `switchingType` не зависит от global `componentsStyle`.
 
-## Issue 14: Print styles отсутствуют
+## ~~Issue 14: Print styles отсутствуют~~ ✅ resolved 2026-06-13
 
 - **Категория:** N59
-- **Severity:** low
+- **Severity:** ~~low~~
+- **Где:** [Switch.vue:66](../../lib/switch/Switch.vue#L66), [Switch.vue:84](../../lib/switch/Switch.vue#L84)
+- **Resolution:** Канон FishtVue **style-for-print** (зеркало Button/Input/Aria — стилизуем для печати, не прячем `display:none`). Корневой `classBaseSwitch` (обе ветки `switch`/`checkbox`) получил `print:border print:border-black print:bg-white print:text-black print:shadow-none` — Switch печатается монохромным и читаемым. Тест блока «Print styles» подтверждает `print:*`-присутствие + отсутствие `print:hidden`.
 
 См. [button.md Issue 15](./button.md).
 
 ## Cross-cutting: Configuration support
 
-| Настройка                  | Поддержано? | Комментарий                                              |
-| -------------------------- | ----------- | -------------------------------------------------------- |
-| `componentsOptions.Switch` | ✅          | mode/rounded/iconActive/iconInactive/switchingType/class |
-| `componentsStyle` global   | ✅          | через `Switch.componentsStyle()`                         |
-| `unstyled: true`           | ❌          | Issue 10                                                 |
-| Theme tokens vs hardcode   | ❌          | Issue 12 — Tailwind primitives, не semantic tokens       |
-| Runtime theme switch       | ⚠️          | через theme-\* token, OK; gray/stone — НЕ реагируют      |
-| `t()` для текста           | N/A         | label — пользовательский                                 |
-| Runtime locale switch      | N/A         | —                                                        |
+| Настройка                  | Поддержано? | Комментарий                                                                                  |
+| -------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `componentsOptions.Switch` | ✅          | mode/rounded/iconActive/iconInactive/switchingType/class                                     |
+| `componentsStyle` global   | ✅          | через `Switch.componentsStyle()`                                                             |
+| `unstyled: true`           | ✅          | Issue 10 — cross-cutting `Component.setStyle` guard                                          |
+| Theme tokens vs hardcode   | ⚠️          | Issue 12 — accents `theme-*` (preset-aware) + `forced-colors`; структурные нейтрали → Wave 9 |
+| Runtime theme switch       | ⚠️          | через theme-\* token, OK; gray/stone — НЕ реагируют (Wave 9)                                 |
+| `t()` для текста           | N/A         | label — пользовательский                                                                     |
+| Runtime locale switch      | N/A         | —                                                                                            |
 
 ## Dual-API gap
 

@@ -61,7 +61,9 @@
           isActiveSwitch.value && mode.value !== "none"
             ? "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
             : "",
-          "relative flex gap-x-3 transition-all"
+          "relative flex gap-x-3 motion-safe:transition-all",
+          // Issue 14: стилизуем для печати (канон Button/Input), не прячем display:none.
+          "print:border print:border-black print:bg-white print:text-black print:shadow-none"
         ])
       : switchingType.value === "checkbox"
         ? Switch.setStyle([
@@ -77,7 +79,9 @@
               : "",
             options?.class ?? "",
             props.class ?? "",
-            "relative flex"
+            "relative flex",
+            // Issue 14: style-for-print (канон Button/Input).
+            "print:border print:border-black print:bg-white print:text-black print:shadow-none"
           ])
         : ""
   )
@@ -89,7 +93,9 @@
             ? `pointer-events-none border-dotted border-2 border-transparent w-9 ${modelValue.value ? "bg-gray-600 dark:bg-gray-400" : "bg-gray-200 dark:bg-gray-800"}`
             : "",
           modelValue.value ? "bg-theme-600 dark:bg-theme-400" : "bg-gray-200 dark:bg-gray-800",
-          "flex w-8 flex-none cursor-pointer p-px ring-2 ring-inset ring-gray-900/5 dark:ring-gray-900/5 transition-colors duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-theme-600"
+          // Issue 7: motion-safe transitions. Issue 12 (B10): forced-colors:outline сохраняет
+          // трек видимым в Windows high-contrast (bg-* там сбрасывается) — on/off различимы по позиции thumb.
+          "flex w-8 flex-none cursor-pointer p-px ring-2 ring-inset ring-gray-900/5 dark:ring-gray-900/5 motion-safe:transition-colors motion-safe:duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-theme-600 forced-colors:outline"
         ])
       : switchingType.value === "checkbox"
         ? Switch.setStyle([
@@ -97,7 +103,7 @@
             "border border-gray-300 dark:border-gray-700",
             "text-theme-500 dark:text-theme-700 checked:bg-theme-600 checked:dark:bg-theme-400",
             "focus:ring-offset-0 focus:ring-theme-200 focus:dark:ring-theme-700",
-            "transition cursor-pointer",
+            "motion-safe:transition cursor-pointer",
             "disabled:bg-slate-500 disabled:text-slate-500 disabled:accent-slate-500"
           ])
         : ""
@@ -132,7 +138,19 @@
       modelValue.value
         ? "translate-x-3.5 bg-theme-100 dark:bg-theme-900"
         : "translate-x-0 bg-gray-100 dark:bg-gray-950",
-      "h-4 w-4 shadow-sm ring-1 ring-gray-900/5 transition-all duration-300 ease-in-out"
+      // Issue 7: motion-safe transitions.
+      "h-4 w-4 shadow-sm ring-1 ring-gray-900/5 motion-safe:transition-all motion-safe:duration-300 ease-in-out"
+    ])
+  )
+  // Иконка-thumb (ветка iconActive/iconInactive) — зеркало classSwitchIcon + transform/цвет иконки.
+  // Через `setStyle`, а не inline в шаблоне: inline-классы не регистрируются движком,
+  // поэтому их `motion-safe:`-варианты не попадают в инжектируемый CSS (зеркало Table Issue 12).
+  const classSwitchIconImg = computed(() =>
+    Switch.setStyle([
+      modelValue.value
+        ? "translate-x-3.5 bg-theme-100 dark:bg-theme-900"
+        : "translate-x-0 bg-gray-100 dark:bg-gray-950",
+      "h-4 w-4 transform shadow-sm ring-1 ring-gray-900/5 motion-safe:transition-all motion-safe:duration-300 ease-in-out text-gray-400 dark:text-gray-600"
     ])
   )
   // ---TEMPLATE-REF------------------------
@@ -227,12 +245,7 @@
         <Icons
           v-if="iconActive && iconInactive"
           :type="modelValue ? iconActive : iconInactive"
-          :class="[
-            modelValue
-              ? 'translate-x-3.5 bg-theme-100 dark:bg-theme-900'
-              : 'translate-x-0 bg-gray-100 dark:bg-gray-950',
-            'h-4 w-4 transform shadow-sm ring-1 ring-gray-900/5 transition-all duration-300 ease-in-out text-gray-400 dark:text-gray-600'
-          ]"
+          :class="classSwitchIconImg"
           :style="{ borderRadius: `${rounded}px` }" />
         <span v-else aria-hidden="true" :class="classSwitchIcon" :style="`border-radius: ${rounded - 1}px`" />
       </button>

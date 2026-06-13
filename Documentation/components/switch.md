@@ -1,7 +1,7 @@
 ---
 title: Switch
-summary: Toggle (checkbox/switch) с modelValue, иконками active/inactive, label и help-slot. FormData submission поддерживается в обоих режимах через native <input type="checkbox"> (для switch — скрытый bridge).
-updated: 2026-05-11
+summary: Toggle (checkbox/switch) с modelValue, иконками active/inactive, label и help-slot. FormData submission поддерживается в обоих режимах через native <input type="checkbox"> (для switch — скрытый bridge). motion-safe transitions, print style-for-print, forced-colors high-contrast.
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Switch` — переключатель двух состояний. Поддерживает два механизма: `switch` (классический slider) и `checkbox`. Опционально показывает иконки `iconActive`/`iconInactive` (через [Icons](./icons.md)), label, help (через `#help` slot или text-prop). Реализует v-model contract FishtVue (`update:modelValue` + `change:modelValue`). В обоих режимах участвует в native `<form>` submission через `FormData` (в switch-режиме параллельно visible `<button role="switch">` рендерится скрытый `<input type="checkbox">` как form-bridge).
 
-Stability: `stable` (12 кейсов; coverage Switch.vue 96.36%).
+Stability: `stable` (39 кейсов; coverage Switch.vue 96.36%).
 
 Source: [Source](../../lib/switch/Switch.vue), [Switch.d.ts](../../lib/switch/Switch.d.ts), [Switch.test.ts](../../lib/switch/Switch.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/switch/Switch.vue), [Switch.d.ts](../../lib/switch/Sw
 lib/switch/
 ├── Switch.vue          # SFC
 ├── Switch.d.ts         # SwitchProps, SwitchSlots, SwitchEmits, SwitchExpose, SwitchOption
-├── Switch.test.ts      # 12 кейсов
+├── Switch.test.ts      # 39 кейсов
 └── package.json
 ```
 
@@ -41,16 +41,16 @@ lib/switch/
 - **Конфиг:** `componentsOptions.Switch` ключи — `mode`, `rounded`, `iconActive`, `iconInactive`, `switchingType`, `class`.
 - **Локализация:** не использует `t()`.
 - **SSR:** SSR-safe.
-- **Animation:** transition применяется к slider'у. `prefers-reduced-motion` не учтён.
+- **Animation:** transition применяется к slider'у через `motion-safe:`-варианты — при `prefers-reduced-motion: reduce` анимации отключаются.
 
 ## 4. Quick Start
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import Switch from "fishtvue/switch"
+  import { ref } from "vue"
+  import Switch from "fishtvue/switch"
 
-const enabled = ref(false)
+  const enabled = ref(false)
 </script>
 
 <template>
@@ -62,31 +62,32 @@ const enabled = ref(false)
 
 `SwitchProps extends Partial<BaseSwitchProps>` ([Switch.d.ts:54–96](../../lib/switch/Switch.d.ts#L54-L96)):
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `modelValue` | `boolean \| null \| undefined` | — | v-model. |
-| `id` | `string` | — | id для `<input>`. Также используется как `name` для FormData submission. |
-| `label` | `string` | — | Текст label (рядом со switch). |
-| `disabled` | `boolean` | `false` | Отключение. |
-| `help` | `string` | — | Text fallback для help-tooltip. Для rich HTML используй `#help` slot — prop рендерится как текст (без `v-html`). |
-| `required` | `boolean` | `false` | Visual-маркер. |
-| `mode` | `SwitchMode` (`"filled" \| "outlined" \| "underlined" \| "none"`) | from global config | Визуальный режим. |
-| `rounded` | `1..10 \| number \| "full"` | — | Радиус скругления (px scale). |
-| `iconActive` | `IconsProps["type"]` | — | Иконка в active-состоянии. |
-| `iconInactive` | `IconsProps["type"]` | — | Иконка в inactive. |
-| `switchingType` | `"checkbox" \| "switch"` | from global config | Механизм переключения. Closed union — typos ловятся `vue-tsc`. |
-| `class` | `StyleClass` | — | Кастомный класс. |
+| Prop            | Type                                                              | Default            | Description                                                                                                      |
+| --------------- | ----------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `modelValue`    | `boolean \| null \| undefined`                                    | —                  | v-model.                                                                                                         |
+| `id`            | `string`                                                          | —                  | id для `<input>`. Также используется как `name` для FormData submission.                                         |
+| `label`         | `string`                                                          | —                  | Текст label (рядом со switch).                                                                                   |
+| `disabled`      | `boolean`                                                         | `false`            | Отключение.                                                                                                      |
+| `help`          | `string`                                                          | —                  | Text fallback для help-tooltip. Для rich HTML используй `#help` slot — prop рендерится как текст (без `v-html`). |
+| `required`      | `boolean`                                                         | `false`            | Visual-маркер.                                                                                                   |
+| `mode`          | `SwitchMode` (`"filled" \| "outlined" \| "underlined" \| "none"`) | from global config | Визуальный режим.                                                                                                |
+| `rounded`       | `1..10 \| number \| "full"`                                       | —                  | Радиус скругления (px scale).                                                                                    |
+| `iconActive`    | `IconsProps["type"]`                                              | —                  | Иконка в active-состоянии.                                                                                       |
+| `iconInactive`  | `IconsProps["type"]`                                              | —                  | Иконка в inactive.                                                                                               |
+| `switchingType` | `"checkbox" \| "switch"`                                          | from global config | Механизм переключения. Closed union — typos ловятся `vue-tsc`.                                                   |
+| `class`         | `StyleClass`                                                      | —                  | Кастомный класс.                                                                                                 |
 
 ## 6. Events / Emits + v-model contract
 
 `SwitchEmits` ([Switch.d.ts:114–127](../../lib/switch/Switch.d.ts#L114-L127)):
 
-| Event | Payload | When fired |
-|---|---|---|
+| Event               | Payload   | When fired                                                             |
+| ------------------- | --------- | ---------------------------------------------------------------------- |
 | `update:modelValue` | `boolean` | На каждом toggle (после реактивного обновления внутреннего состояния). |
-| `change:modelValue` | `boolean` | После reactivity flush; для тяжёлых side-effect'ов. |
+| `change:modelValue` | `boolean` | После reactivity flush; для тяжёлых side-effect'ов.                    |
 
 **v-model contract** (стандарт FishtVue):
+
 1. native click/change на `<input>`,
 2. `update:modelValue` (синхронизация v-model),
 3. parent watcher'ы отрабатывают,
@@ -98,33 +99,33 @@ const enabled = ref(false)
 
 `SwitchSlots` ([Switch.d.ts:98–110](../../lib/switch/Switch.d.ts#L98-L110)).
 
-| Slot | Slot props | Description |
-|---|---|---|
-| `default` | — | Альтернатива `label` prop'у — произвольный контент рядом со switch. |
-| `help` | — | Кастомизация help-tooltip контента. Имеет приоритет над `help: string` (тот рендерится как text fallback). Рекомендуемый способ передачи rich HTML — `help` prop остаётся text-only для XSS safety. |
+| Slot      | Slot props | Description                                                                                                                                                                                         |
+| --------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default` | —          | Альтернатива `label` prop'у — произвольный контент рядом со switch.                                                                                                                                 |
+| `help`    | —          | Кастомизация help-tooltip контента. Имеет приоритет над `help: string` (тот рендерится как text fallback). Рекомендуемый способ передачи rich HTML — `help` prop остаётся text-only для XSS safety. |
 
 ## 8. Exposed methods
 
 `SwitchExpose` ([Switch.d.ts:133–235](../../lib/switch/Switch.d.ts#L133-L235)):
 
-| Name | Type | Description |
-|---|---|---|
-| `isActiveSwitch` | `boolean` | Текущее состояние (true/false). |
-| `inputRef` | `Ref<HTMLElement \| undefined>` | Template ref на native control — `<button role="switch">` в switch-режиме, `<input type="checkbox">` в checkbox-режиме. |
-| `id` | `SwitchProps["id"]` | id `<input>`. |
-| `mode` | `SwitchProps["mode"]` | Текущий mode. |
-| `label` | `SwitchProps["label"]` | Label. |
-| `rounded` | `SwitchProps["rounded"]` | Скругление. |
-| `isDisabled` | `SwitchProps["disabled"]` | Disabled. |
-| `isRequired` | `SwitchProps["required"]` | Required. |
-| `iconActive` | `SwitchProps["iconActive"]` | Active иконка. |
-| `iconInactive` | `SwitchProps["iconInactive"]` | Inactive иконка. |
-| `switchingType` | `SwitchProps["switchingType"]` | Механизм. |
-| `classBaseSwitch` | `StyleClass` | Класс контейнера. |
-| `classSwitch` | `StyleClass` | Класс самого switch. |
-| `inputEvent(value)` | `(value: boolean) => void` | Программный toggle. |
-| `focus(options?)` | `(options?: FocusOptions) => void` | Программный focus на native control. Принимает native `FocusOptions` (например `{ preventScroll: true }`). |
-| `blur()` | `() => void` | Программный blur с native control. |
+| Name                | Type                               | Description                                                                                                             |
+| ------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `isActiveSwitch`    | `boolean`                          | Текущее состояние (true/false).                                                                                         |
+| `inputRef`          | `Ref<HTMLElement \| undefined>`    | Template ref на native control — `<button role="switch">` в switch-режиме, `<input type="checkbox">` в checkbox-режиме. |
+| `id`                | `SwitchProps["id"]`                | id `<input>`.                                                                                                           |
+| `mode`              | `SwitchProps["mode"]`              | Текущий mode.                                                                                                           |
+| `label`             | `SwitchProps["label"]`             | Label.                                                                                                                  |
+| `rounded`           | `SwitchProps["rounded"]`           | Скругление.                                                                                                             |
+| `isDisabled`        | `SwitchProps["disabled"]`          | Disabled.                                                                                                               |
+| `isRequired`        | `SwitchProps["required"]`          | Required.                                                                                                               |
+| `iconActive`        | `SwitchProps["iconActive"]`        | Active иконка.                                                                                                          |
+| `iconInactive`      | `SwitchProps["iconInactive"]`      | Inactive иконка.                                                                                                        |
+| `switchingType`     | `SwitchProps["switchingType"]`     | Механизм.                                                                                                               |
+| `classBaseSwitch`   | `StyleClass`                       | Класс контейнера.                                                                                                       |
+| `classSwitch`       | `StyleClass`                       | Класс самого switch.                                                                                                    |
+| `inputEvent(value)` | `(value: boolean) => void`         | Программный toggle.                                                                                                     |
+| `focus(options?)`   | `(options?: FocusOptions) => void` | Программный focus на native control. Принимает native `FocusOptions` (например `{ preventScroll: true }`).              |
+| `blur()`            | `() => void`                       | Программный blur с native control.                                                                                      |
 
 ```ts
 const swRef = useTemplateRef<InstanceType<typeof Switch>>("sw")
@@ -138,10 +139,10 @@ swRef.value?.inputEvent(true)
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import Switch from "fishtvue/switch"
+  import { ref } from "vue"
+  import Switch from "fishtvue/switch"
 
-const on = ref(false)
+  const on = ref(false)
 </script>
 
 <template>
@@ -175,19 +176,16 @@ app.use(FishtVue, {
 
 ```vue
 <script setup lang="ts">
-import { storeToRefs } from "pinia"
-import Switch from "fishtvue/switch"
-import { useSettingsStore } from "@/stores/settings"
+  import { storeToRefs } from "pinia"
+  import Switch from "fishtvue/switch"
+  import { useSettingsStore } from "@/stores/settings"
 
-const store = useSettingsStore()
-const { darkMode } = storeToRefs(store)
+  const store = useSettingsStore()
+  const { darkMode } = storeToRefs(store)
 </script>
 
 <template>
-  <Switch
-    v-model="darkMode"
-    label="Dark mode"
-    @change:model-value="(v) => store.persist({ darkMode: v })" />
+  <Switch v-model="darkMode" label="Dark mode" @change:model-value="(v) => store.persist({ darkMode: v })" />
 </template>
 ```
 
@@ -205,8 +203,11 @@ const { darkMode } = storeToRefs(store)
 
 ### 10.3 Theming
 
-- Цвета active-state используют `theme.*` через CSS-переменную `--theme`.
+- Цвета active-state (трек, thumb, focus-ring) используют `theme.*` через CSS-переменную `--theme` — `usePreset` их перепишет.
 - Dark mode через `optionsTheme.darkModeSelector`.
+- **High-contrast (forced-colors):** switch-track несёт `forced-colors:outline` ([Switch.vue:98](../../lib/switch/Switch.vue#L98)) — остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается; on/off различимы по позиции thumb.
+- **Print:** style-for-print (`print:border print:bg-white print:text-black print:shadow-none`) — печатается монохромным и читаемым, не скрывается.
+- Структурные нейтрали (`gray-*`/`stone-*`) — пока Tailwind primitives; полная shadcn-style semantic-token миграция — Wave 9 ([issues/switch.md Issue 12](../issues/switch.md)).
 
 ### 10.4 `switchingType` и global `componentsStyle`
 
@@ -221,7 +222,7 @@ Root класс — `fv fishtvue-switch`. Override как обычно.
 - Поддерживается внутри [Form](./form.md) через `v-model`.
 - **Native `<form>` submission:** оба режима участвуют в `FormData`.
   - `switchingType: "checkbox"` — visible `<input type="checkbox" :name="id">` уже form-control.
-  - `switchingType: "switch"` — visible `<button role="switch">` не submitting (`type="button"`), поэтому рядом рендерится **скрытый bridge** `<input type="checkbox" :name="id" :checked="modelValue" :disabled="isDisabled" hidden tabindex="-1" aria-hidden="true">` ([Switch.vue:201–209](../../lib/switch/Switch.vue#L201-L209)). При `modelValue=true` `FormData.get(id) === "on"`; при `false` — ключ отсутствует (стандартное поведение native checkbox).
+  - `switchingType: "switch"` — visible `<button role="switch">` не submitting (`type="button"`), поэтому рядом рендерится **скрытый bridge** `<input type="checkbox" :name="id" :checked="modelValue" :disabled="isDisabled" hidden tabindex="-1" aria-hidden="true">` ([Switch.vue:218–227](../../lib/switch/Switch.vue#L218-L227)). При `modelValue=true` `FormData.get(id) === "on"`; при `false` — ключ отсутствует (стандартное поведение native checkbox).
 - `required: true` визуальный — для валидации используй [rulesHandler](../utilities/rulesHandler.md):
 
 ```ts
@@ -240,9 +241,11 @@ const rules = [{ type: "required", message: "Must be enabled" }]
 - `disabled` нативный (распространяется и на bridge-input в switch-режиме).
 - `label` через prop — но связь `<label for=id>` нужно проверить в шаблоне (см. Known issues — нет гарантии корректного `for=id`).
 - ARIA-атрибуты сверх native не выставляются (`aria-checked` нативно у checkbox/button[role=switch]).
-- `prefers-reduced-motion` не учтён.
-- Help icon trigger (`QuestionMarkCircle`) контраст в light mode ≥4.5:1 (`text-gray-500 dark:text-gray-400`, [Switch.vue:265](../../lib/switch/Switch.vue#L265)) — WCAG AA passes для UI текста.
-- RTL: `classAfterInput`/`classIconBody` используют logical properties (`end-0`, `me-2`, [Switch.vue:120–121](../../lib/switch/Switch.vue#L120-L121)) — корректно зеркалятся при `dir="rtl"`.
+- `prefers-reduced-motion` учтён: все transitions через `motion-safe:`-варианты ([Switch.vue:64, 98, 106, 136](../../lib/switch/Switch.vue#L64)) — при `reduce` анимации не проигрываются.
+- High-contrast (forced-colors): switch-track несёт `forced-colors:outline` ([Switch.vue:98](../../lib/switch/Switch.vue#L98)) — состояние видимо, когда ОС сбрасывает `bg-*`.
+- Print: style-for-print на корне ([Switch.vue:66, 84](../../lib/switch/Switch.vue#L66)) — Switch печатается, а не скрывается.
+- Help icon trigger (`QuestionMarkCircle`) контраст в light mode ≥4.5:1 (`text-gray-500 dark:text-gray-400`, [Switch.vue:277](../../lib/switch/Switch.vue#L277)) — WCAG AA passes для UI текста.
+- RTL: `classAfterInput`/`classIconBody` используют logical properties (`end-0`, `me-2`, [Switch.vue:126–127](../../lib/switch/Switch.vue#L126-L127)) — корректно зеркалятся при `dir="rtl"`.
 
 ### Security
 
@@ -266,7 +269,7 @@ Closed union типы: `switchingType: "checkbox" | "switch"` и `mode: StyleMod
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 30 кейсов, coverage 96.42%.
+- **Stability flag:** `stable` — 39 кейсов, coverage 96.36%.
 - **Breaking changes (2026-05-11):**
   - Удалён alias-emit `updateModelValue` ([Switch.d.ts:114–127](../../lib/switch/Switch.d.ts#L114-L127)) — подписчики `@update-model-value="..."` должны мигрировать на `@update:model-value="..."`.
   - `switchingType` и `SwitchMode` сужены до closed-union (`"checkbox" | "switch"`, `StyleMode | "none"` соответственно) — `| string` убран. Кастомные строковые значения больше не принимаются.
@@ -293,17 +296,17 @@ describe("Switch", () => {
 })
 ```
 
-Реальные тесты — [Switch.test.ts](../../lib/switch/Switch.test.ts) (30 кейсов: XSS guard, help slot, no-dup-emit, FormData submit в switch+checkbox режимах, expose `inputRef`/`focus`/`blur`, logical CSS properties).
+Реальные тесты — [Switch.test.ts](../../lib/switch/Switch.test.ts) (39 кейсов: XSS guard, help slot, no-dup-emit, FormData submit в switch+checkbox режимах, expose `inputRef`/`focus`/`blur`, logical CSS properties, motion-safe transitions, print styles, B10 forced-colors + theme tokens, unstyled).
 
 ## 16. Troubleshooting / FAQ
 
-| Проблема | Причина | Решение |
-|---|---|---|
-| `v-model` не реагирует | Нет plugin'а — `componentsOptions` не подхвачен. | `app.use(FishtVue, {})`. |
-| Tap on label не toggle'ит switch | Связь `<label for=id>` не настроена — см. Known issues. | Используй [InputLayout](./input-layout.md) или передавай `id` явно. |
-| `change:modelValue` не срабатывает | Возможно nextTick не отработал. | Используй `@update:modelValue` для немедленного отклика. |
-| `iconActive`/`iconInactive` не показываются | Нет компонента Icons или указано несуществующее имя. | Проверь [Icons](./icons.md) каталог. |
-| Tab переходит мимо switch | `tabindex` не установлен — нативный input должен фокусироваться. | Проверь `disabled` и наличие native input в DOM. |
+| Проблема                                    | Причина                                                          | Решение                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `v-model` не реагирует                      | Нет plugin'а — `componentsOptions` не подхвачен.                 | `app.use(FishtVue, {})`.                                            |
+| Tap on label не toggle'ит switch            | Связь `<label for=id>` не настроена — см. Known issues.          | Используй [InputLayout](./input-layout.md) или передавай `id` явно. |
+| `change:modelValue` не срабатывает          | Возможно nextTick не отработал.                                  | Используй `@update:modelValue` для немедленного отклика.            |
+| `iconActive`/`iconInactive` не показываются | Нет компонента Icons или указано несуществующее имя.             | Проверь [Icons](./icons.md) каталог.                                |
+| Tab переходит мимо switch                   | `tabindex` не установлен — нативный input должен фокусироваться. | Проверь `disabled` и наличие native input в DOM.                    |
 
 ## 17. Related
 
@@ -320,7 +323,7 @@ describe("Switch", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 96.42% — две строки ([Switch.vue:251, 257](../../lib/switch/Switch.vue#L251)) не покрыты тестами (ветка icons-only rendering).
+- Coverage 96.36% — две строки ([Switch.vue:264, 270](../../lib/switch/Switch.vue#L264-L270)) не покрыты: checkbox `@keydown.enter` и label `@click` обработчики. Ветка icons-only rendering теперь покрыта (тест icon-thumb motion-safe).
 
 ### Skipped tests
 

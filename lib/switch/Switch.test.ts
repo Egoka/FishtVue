@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Switch from "fishtvue/switch/Switch.vue"
 
@@ -403,6 +403,116 @@ describe("Switch Component Tests", () => {
       const cls = help.attributes("class") ?? ""
       expect(cls).toMatch(/(^|\s)me-2(\s|$)/)
       expect(cls).not.toMatch(/(^|\s)mr-2(\s|$)/)
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Reduced motion — motion-safe transitions (Issue 7)
+  // ---------------------------------------------------------------------------
+  describe("Reduced motion — motion-safe transitions", () => {
+    it("wraps switch-track transitions in motion-safe: (switch mode)", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "switch" } })
+      const cls = wrapper.find("[data-input-switch]").attributes("class") ?? ""
+      expect(cls).toContain("motion-safe:transition-colors")
+      expect(cls).toContain("motion-safe:duration-200")
+      expect(cls).not.toMatch(/(^|\s)transition-colors(\s|$)/)
+      expect(cls).not.toMatch(/(^|\s)duration-200(\s|$)/)
+    })
+
+    it("wraps the checkbox-track transition in motion-safe: (checkbox mode)", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "checkbox" } })
+      const cls = wrapper.find("[data-input-checkbox]").attributes("class") ?? ""
+      expect(cls).toContain("motion-safe:transition")
+      expect(cls).not.toMatch(/(^|\s)transition(\s|$)/)
+    })
+
+    it("wraps the root container transition in motion-safe:", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "switch" } })
+      const cls = wrapper.find("[data-switch]").attributes("class") ?? ""
+      expect(cls).toContain("motion-safe:transition-all")
+      expect(cls).not.toMatch(/(^|\s)transition-all(\s|$)/)
+    })
+
+    it("routes the icon-thumb (iconActive/iconInactive branch) through motion-safe + theme via setStyle", () => {
+      const wrapper = mount(Switch, {
+        props: { switchingType: "switch", modelValue: true, iconActive: "Check", iconInactive: "X" }
+      })
+      // Switch передаёт thumb-классы в Icons как `class`-prop (Icons прокидывает их
+      // на async-резолвящуюся иконку); сам heroicon в jsdom не резолвится синхронно,
+      // поэтому ассертим на prop, а не на DOM.
+      const cls = String(wrapper.findComponent({ name: "Icons" }).props("class") ?? "")
+      expect(cls).toContain("motion-safe:transition-all")
+      expect(cls).toContain("motion-safe:duration-300")
+      expect(cls).toContain("bg-theme-100")
+      expect(cls).not.toMatch(/(^|\s)transition-all(\s|$)/)
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Print styles (Issue 14) — style-for-print, not display:none
+  // ---------------------------------------------------------------------------
+  describe("Print styles", () => {
+    it("renders style-for-print classes on the root (not display:none)", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "switch" } })
+      const cls = wrapper.find("[data-switch]").attributes("class") ?? ""
+      expect(cls).toContain("print:bg-white")
+      expect(cls).toContain("print:text-black")
+      expect(cls).toContain("print:shadow-none")
+      expect(cls).not.toContain("print:hidden")
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // B10 — forced-colors visibility + preset-aware theme tokens (Issue 12)
+  // ---------------------------------------------------------------------------
+  describe("B10 — forced-colors + theme tokens", () => {
+    it("keeps the switch track visible in forced-colors (high-contrast) mode", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "switch" } })
+      const cls = wrapper.find("[data-input-switch]").attributes("class") ?? ""
+      expect(cls).toContain("forced-colors:outline")
+    })
+
+    it("routes the active thumb through the preset-aware theme-* token", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "switch", modelValue: true } })
+      const thumb = wrapper.find("[data-input-switch] span")
+      expect(thumb.attributes("class") ?? "").toContain("bg-theme-")
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Configuration support — unstyled (Issue 10, cross-cutting Component.setStyle guard)
+  // ---------------------------------------------------------------------------
+  describe("Configuration support — unstyled", () => {
+    const appWithConfig = (config: Record<string, unknown>) => ({
+      install(app: any) {
+        app.use(FishtVue, config)
+      }
+    })
+
+    // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback):
+    // чистим, чтобы unstyled:true из теста не протёк в соседние тесты/файлы.
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("strips all classes from the root when global unstyled: true", () => {
+      const wrapper = mount(Switch, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { switchingType: "switch" }
+      })
+      // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
+      // ни `fv {prefix}-switch`-префикса на корне.
+      const cls = (wrapper.find("[data-switch]").attributes("class") ?? "").trim()
+      expect(cls).toBe("")
+    })
+
+    it("keeps base classes when unstyled is false (contrast)", () => {
+      const wrapper = mount(Switch, {
+        global: { plugins: [appWithConfig({ unstyled: false })] },
+        props: { switchingType: "switch" }
+      })
+      const cls = wrapper.find("[data-switch]").attributes("class") ?? ""
+      expect(cls).toContain("relative")
     })
   })
 })
