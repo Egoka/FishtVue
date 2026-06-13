@@ -1,7 +1,7 @@
 ---
 title: Issues — Select
-summary: 7/13 issues закрыты 2026-05-11 (XSS via slots, observer/listener cleanup, componentsStyle fallback, unstyled, aria-live, Intl.Collator, motion-safe + bonus drop dup initStyle). Открытые — Issue 3 (dual-API), 4 (cross-cutting SSR/exports), 7 (virtualization), 9 (RTL).
-updated: 2026-05-11
+summary: 11/13 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports). Открытые — только Issue 7 (virtualization) и B10 (colors), оба deferred roadmap.
+updated: 2026-06-13
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
 related-doc: ../components/select.md
@@ -14,9 +14,11 @@ related-doc: ../components/select.md
 | Severity | Count (open) | Categories                                            |
 | -------- | ------------ | ----------------------------------------------------- |
 | critical | 0            | —                                                     |
-| high     | 4            | A2, A4-5, C17, P (dual-API), H43 (virtualization)     |
-| medium   | 2            | F31 (RTL), F32                                        |
-| low      | 2            | B10, N59                                              |
+| high     | 1            | H43 (virtualization, deferred)                        |
+| medium   | 0            | —                                                     |
+| low      | 1            | B10 (colors → semantic tokens, deferred)              |
+
+> Оба открытых пункта — **deferred roadmap** (не баги): Issue 7 требует runtime-зависимости вопреки no-deps цели; B10 требует lib-wide token-слоя (Wave 9). Все остальные 11 пунктов закрыты.
 
 ## ~~Issue 1: CRITICAL — XSS через `v-html` в `marker` и `noData`~~ ✅ resolved 2026-05-11
 
@@ -179,11 +181,33 @@ watch(isOpenList, (value) => {
 - [ ] `onBeforeUnmount` существует и вызывает disconnect/removeEventListener.
 - [ ] Unit-тест на listener cleanup.
 
-## Issue 3: Dual-API gap — нет compound `<Select><Option>` API
+## ~~Issue 3: Dual-API gap — нет compound `<Select><Option>` API~~ ✅ resolved 2026-06-13
 
 - **Категория:** P (Dual-API)
-- **Severity:** high
-- **Где:** [Select.d.ts:25-34](../../lib/select/Select.d.ts), вся [Select.vue](../../lib/select/Select.vue)
+- **Severity:** ~~high~~
+- **Status:** ✅ resolved 2026-06-13
+
+**Что сделано (2026-06-13):**
+
+- Добавлены renderless-дети [SelectOption.vue](../../lib/select/SelectOption.vue) (props `value` required, `label?`, `disabled?`) и [SelectGroup.vue](../../lib/select/SelectGroup.vue) (props `label`/`title`) — зеркало [FormField](../../lib/form/FormField.vue)/[FormSection](../../lib/form/FormSection.vue).
+- В [Select.vue](../../lib/select/Select.vue) — VNode-walk `slots.default()` в computed `compoundParsed` (helpers `compoundFlatten`/`isVNodeNamed`/`compoundChildren`, обработка Fragment/Comment/Text); `sourceData` computed подменяет `props.dataSelect` в `keySelect`/`valueSelect`/`dataSelect` пайплайне. **Schema-driven `dataSelect` выигрывает** (`schemaActive`), иначе — compound-опции.
+- `renderRows` computed вставляет non-selectable group-headers (`[data-select-group]`, `role="presentation"`) между опциями; keyboard-nav таргетит `li[data-select-list-item]` (headers исключены). `disabled`-опции — `aria-disabled`, guard в `select()`, dimmed-класс.
+- Runtime barrel [index.ts](../../lib/select/index.ts) (rollup-entry, зеркало form/table/menu); типы `SelectOptionProps`/`SelectGroupProps` + `declare class` + `GlobalComponents` в [Select.d.ts](../../lib/select/Select.d.ts). Naming: value-`SelectOption` сосуществует с options-типом `SelectOption` (разные namespace TS, companion pattern).
+- Nuxt auto-import: `SelectOption`/`SelectGroup` добавлены в `FISHT_VUE_SUBCOMPONENTS` ([module/nuxt.ts](../../lib/module/nuxt.ts)). Build: `select` переключён на `index.ts`-entry в [rollup.config.js](../../lib/rollup.config.js) (`select.mjs` экспортирует default + named).
+- Документация: [select.md §9.5 «Compound API»](../components/select.md).
+
+**Acceptance criteria:**
+
+- [x] Schema-driven `<Select :data-select=[...]>` работает без изменений (regression-тесты зелёные).
+- [x] Compound `<Select><SelectOption value="a">A</SelectOption></Select>` рендерит 1 опцию. Тест: `Select.test.ts` > `renders options from compound <SelectOption> children`.
+- [x] Mix `:data-select` + дети → schema выигрывает. Тест: `schema-driven dataSelect wins over compound children`.
+- [x] Type-safe value: `<SelectOption :value="42">` → `modelValue === 42`. Тест: `infers value type — numeric value round-trips through modelValue`.
+- [x] `disabled` опция не выбирается + `aria-disabled`. Тест: `disabled compound option is marked aria-disabled and is not selectable`.
+- [x] `<SelectGroup>` рендерит header. Тест: `renders <SelectGroup> label header above its options`.
+
+**Ограничение:** rich per-option контент (иконки) compound-API не рендерит — используй `#item` slot / schema-driven `:data-select`.
+
+### Историческая запись (что было)
 
 ### Что найдено
 
@@ -253,12 +277,19 @@ Custom rendering каждого option возможен только через 
 - [ ] Можно смешивать (но schema выигрывает / документировано).
 - [ ] Type-safe: `<SelectOption :value=42>` инфёрит value type.
 
-## Issue 4: SSR styles + sideEffects/exports map (cross-cutting)
+## ~~Issue 4: SSR styles + sideEffects/exports map (cross-cutting)~~ ✅ resolved (inherited)
 
 - **Категория:** C17, A2, A4, A5
-- **Severity:** high
+- **Severity:** ~~high~~
+- **Status:** ✅ resolved (inherited) — закрыт на уровне фреймворка, кода Select не требует.
 
-См. [button.md Issue 1, Issue 8, Issue 9](./button.md).
+**Почему inherited:**
+
+- **C17 (SSR styles):** Select инстанцирует `new Component<"Select">()` → `Component.__hooks()` ([component/index.ts](../../lib/component/index.ts)) регистрирует `onServerPrefetch(() => initStyle())` + `onMounted` → стили попадают в `cssComponents` Map и инлайнятся Nuxt server-плагином до hydration. Дубль `initStyle()` в SFC убран ещё в Issue 2 (см. ниже).
+- **A2 (sideEffects):** root `lib/package.json` → `"sideEffects": false`; build инжектит то же в `dist/select/package.json` (проверено: `dist/select/package.json` содержит `"sideEffects": false`).
+- **A4/A5 (exports map + ESM-only):** root exports-map генерит `buildRootExports()` в [rollup.config.js](../../lib/rollup.config.js); `dist/package.json` содержит `"./select": { types, import, default }`. Переключение select на `index.ts`-entry (Issue 3) build-инфраструктурой обработано идентично form/table/menu — exports/sideEffects сохранены.
+
+Канонический паттерн — [button.md Issue 1, Issue 8, Issue 9](./button.md).
 
 ## ~~Issue 5: Нет componentsStyle global fallback~~ ✅ resolved 2026-05-11
 
@@ -276,11 +307,15 @@ Custom rendering каждого option возможен только через 
 
 `Component.setStyle()` теперь проверяет `this.__globalConfig?.config?.unstyled` и возвращает `""` если true — это отключает рендер Tailwind-классов во всех компонентах, использующих базовый класс. Тест: `Select.test.ts` > `respects unstyled: true via Component.setStyle guard`. Roadmap Wave 3.1 — done.
 
-## Issue 7: Нет виртуализации списка — лагает при >500 items
+## Issue 7: Нет виртуализации списка — лагает при >500 items — ⏸️ deferred (roadmap)
 
 - **Категория:** H43 (виртуализация)
-- **Severity:** high
-- **Где:** [Select.vue:540-570](../../lib/select/Select.vue) (рендер dropdown списка)
+- **Severity:** high (deferred)
+- **Где:** рендер dropdown списка в [Select.vue](../../lib/select/Select.vue) (`renderRows` / `<TransitionGroup>`)
+- **Status:** ⏸️ **deferred roadmap** (2026-06-13). Намеренно НЕ реализовано в текущем заходе: оба пути закрытия конфликтуют с каноном —
+  - внешняя библиотека (`@tanstack/vue-virtual` / `vue-virtual-scroller`) — это **runtime-зависимость у потребителя**, противоречит заявленной цели «без runtime-deps» (hard-don't на новые deps в `lib/` без approve);
+  - dependency-free windowing — нетривиально и рискует сломать существующую GSAP-анимацию раскрытия + `<TransitionGroup>`.
+  - Решение пользователя (2026-06-13): отложить. Пере-оценить при появлении реального performance-запроса.
 
 ### Что найдено
 
@@ -314,11 +349,21 @@ Custom rendering каждого option возможен только через 
 
 `<div data-select-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>` рендерится внутри dropdown. `ariaResultsLabel` computed формирует строку через `Select.t("select.resultsCount" | "select.resultsCountOne" | "select.resultsCountNone")` с подстановкой `%d`. Новые locale-ключи добавлены в [TypesLocale.d.ts](../../lib/locale/TypesLocale.d.ts), [locales/en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts). Тест: `Select.test.ts` > `renders aria-live region with results count when query is active`.
 
-## Issue 9: RTL — left/right в `right-0`, `mr-2`, etc.
+## ~~Issue 9: RTL — left/right в `right-0`, `mr-2`, etc.~~ ✅ resolved 2026-06-13
 
 - **Категория:** F31
+- **Severity:** ~~medium~~
+- **Status:** ✅ resolved 2026-06-13
 
-См. [switch.md Issue 8](./switch.md). Select имеет много left/right в dropdown позиционировании.
+**Что сделано (2026-06-13):** физические left/right Tailwind-классы в [Select.vue](../../lib/select/Select.vue) заменены на логические (авто-флип при `dir="rtl"`, зеркало [switch.md Issue 8](./switch.md) / [table.md](./table.md)):
+
+- `iconCheck`: `left-0` → `start-0`, `pl-2` → `ps-2`.
+- `classLiItem`: `pl-8 pr-4` → `ps-8 pe-4`.
+- `classItemSelectValue`: добавлен `rtl:text-right` override (движок сохраняет `text-left` как LTR-default).
+- maxVisible-badge: `pl-2` → `ps-2`; Funnel-иконка: `mr-1` → `me-1`.
+- Динамический dropdown-оффсет: `ml-[${beforeWidth}px]` → `ms-[${beforeWidth}px]` (arbitrary logical margin — подтверждено `unoRules.ts` margin-rule поддерживает axis `s`/`e` + arbitrary).
+
+Тесты: `Select.test.ts` > блок «Issue 9: RTL via logical Tailwind properties» (`ps-/pe-` вместо `pl-/pr-`, `start-0`/`ps-2` на check-иконке, `ms-[` вместо `ml-[`, `rtl:text-right`).
 
 ## ~~Issue 10: Локаль для filtering search query~~ ✅ resolved 2026-05-11
 
@@ -345,25 +390,24 @@ Custom rendering каждого option возможен только через 
 **Что осталось открытым:**
 
 - GSAP-анимация раскрытия списка не учитывает `prefers-reduced-motion` — потребует JS-проверки media query или Motion-One интеграцию. Wave 10.1 follow-up.
-- Hardcoded `text-gray-500`, `bg-stone-100` и т. д. через Tailwind primitives — Wave 9 (semantic tokens).
+- **B10 — hardcoded `text-gray-500`, `bg-stone-100`, `bg-white dark:bg-black` и т. д.** → ⏸️ **deferred (Wave 9, lib-wide)**. Research 2026-06-13: в `lib/theme/primitive.ts` semantic-токенов (`bg-background`/`text-muted-foreground`/`border-border`) **не существует** — только примитивная палитра (22 цвета × 11 тонов) + динамический брендовый `theme-*`. **Ни один из 22 компонентов** semantic-токены не использует (Form/Split тоже хардкодят gray). «Полная миграция» требует сначала построить token-слой (`primitive.ts` + `semantic.ts` + `unoRules.ts`) — cross-cutting изменение критичного `lib/theme/`, ideally раскатывать lib-wide отдельным ТЗ, а не select-only. Решение пользователя (2026-06-13): отложить.
 
 ## Cross-cutting: Configuration support
 
 | Настройка                  | Поддержано? | Комментарий                                                  |
 | -------------------------- | ----------- | ------------------------------------------------------------ |
 | `componentsOptions.Select` | ✅          | mode, autoFocus, valueSelect, keySelect, и др.               |
-| `componentsStyle` global   | ❌          | Issue 5                                                      |
-| `unstyled: true`           | ❌          | Issue 6                                                      |
-| Theme tokens vs hardcode   | ⚠️          | через theme-\* tokens частично                               |
+| `componentsStyle` global   | ✅          | Issue 5 (resolved) — fallback chain в `mode`                 |
+| `unstyled: true`           | ✅          | Issue 6 (resolved) — `Component.setStyle` guard              |
+| Theme tokens vs hardcode   | ⚠️          | theme-\* для акцентов; нейтральные gray/stone хардкод — B10 (deferred) |
 | Runtime theme switch       | ⚠️          | через CSS-vars OK                                            |
-| `t()` для текста           | ❌          | `noData` хардкоден prop, нет fallback к `t("select.noData")` |
-| Runtime locale switch      | ❌          | search-filter не использует locale (Issue 10)                |
+| `t()` для текста           | ⚠️          | `noData` имеет fallback `Select.t("noData")` (Select.vue)    |
+| Runtime locale switch      | ✅          | Issue 10 (resolved) — `Intl.Collator(getActiveLocale())`     |
 
-## Dual-API gap
+## Dual-API gap — ✅ resolved 2026-06-13
 
-См. [Issue 3](#issue-3-dual-api-gap-—-нет-compound-selectoption-api).
+См. Issue 3 выше (✅ resolved).
 
-**Текущий API:** schema-driven `<Select :data-select="[...]" />`.
-**Предлагаемый параллельный compound API:** `<Select><SelectOption /></Select>`.
+**Текущий API:** schema-driven `<Select :data-select="[...]" />` (primary, не breaking).
+**Параллельный compound API (реализован):** `<Select><SelectOption value=".." />` + `<SelectGroup label="..">` — opt-in через children, schema выигрывает при совместном использовании.
 **Industry parallel:** Element Plus `<el-select><el-option>`, Naive UI `<n-select :options>` + `<n-select-option>`, PrimeVue `<Dropdown :options>` + `<DropdownItem>`.
-**Migration:** schema-driven остаётся primary; compound — opt-in через children. Не breaking.

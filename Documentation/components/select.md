@@ -1,7 +1,7 @@
 ---
 title: Select
-summary: Single/multiple select с фильтрацией (Intl.Collator), кастомным dataSelect, slot'ами values/item/marker/empty.
-updated: 2026-05-11
+summary: Single/multiple select с фильтрацией (Intl.Collator), schema + compound API (<SelectOption>/<SelectGroup>), RTL (logical props), slot'ами values/item/marker/empty.
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -21,8 +21,11 @@ Source: [Source](../../lib/select/Select.vue), [Select.d.ts](../../lib/select/Se
 ```
 lib/select/
 ├── Select.vue
-├── Select.d.ts        # 410 строк
-├── Select.test.ts     # 11 кейсов
+├── SelectOption.vue   # renderless compound-дитя (Issue 3)
+├── SelectGroup.vue    # renderless compound-дитя (Issue 3)
+├── index.ts           # runtime barrel (default Select + named SelectOption/SelectGroup)
+├── Select.d.ts
+├── Select.test.ts
 └── package.json
 ```
 
@@ -188,6 +191,36 @@ watch(query, debounce((q) => store.fetchUsers(q), 300))
 </template>
 ```
 
+### 9.5 Compound API (`<SelectOption>` / `<SelectGroup>`)
+
+Параллельно schema-driven `:data-select` поддерживается декларативный compound-API (canon: VNode-walk
+`slots.default()`, зеркало `<Form><FormField>` / `<Table><Column>`). Если заданы **и** `:data-select`,
+**и** дети — **schema выигрывает** (backward compat).
+
+```vue
+<Select v-model="x">
+  <SelectOption value="a">Apple</SelectOption>
+  <SelectOption value="b" disabled>Banana (locked)</SelectOption>
+  <SelectGroup label="Citrus">
+    <SelectOption value="c" label="Orange" />
+    <SelectOption value="d">Lemon</SelectOption>
+  </SelectGroup>
+</Select>
+```
+
+- `<SelectOption>` props: `value` (required — становится `modelValue` при выборе и identity-ключом),
+  `label?` (display-текст; перекрывает текст default-slot), `disabled?` (не выбирается, `aria-disabled`).
+  Текст опции берётся из `label` → текста default-slot → `String(value)`.
+- `<SelectGroup>` props: `label` (required; алиас `title`) — рендерит non-selectable header-строку
+  (`[data-select-group]`, `role="presentation"`) над вложенными `<SelectOption>`.
+- `value` сохраняет тип: `<SelectOption :value="42">` → `modelValue === 42` (number).
+- В Nuxt оба компонента авто-импортируются; для explicit-import — `import { SelectOption, SelectGroup } from "fishtvue/select"`.
+- Ограничение: rich per-option контент (иконки и т.п.) compound-API не рендерит — для этого используй
+  scoped slot `#item` или schema-driven `:data-select` с `#item`.
+
+См. [Select.vue](../../lib/select/Select.vue) (helpers `compoundParsed`/`renderRows`),
+[SelectOption.vue](../../lib/select/SelectOption.vue), [SelectGroup.vue](../../lib/select/SelectGroup.vue).
+
 ## 10. Configuration & Customization
 
 ### 10.1 Global
@@ -320,7 +353,8 @@ describe("Select", () => {
 - `multiple` + `modelValue: null` → отображается как пустой массив. Передавай `[]`, не `null`.
 - **GSAP-анимация** открытия списка не отключается через `prefers-reduced-motion` (Tailwind transitions — уже да). Override через CSS `[data-select-list] * { transition: none !important; }`. Полная интеграция — Wave 10.1 follow-up.
 - При `noQuery: true` — input для query всё равно рендерится (или нет — проверь поведение в текущей версии).
-- **RTL** (`<html dir="rtl">`) не поддерживается на уровне dropdown позиционирования — Wave 8.1.
+- **RTL** (`<html dir="rtl">`): поддержан через логические Tailwind-классы (`ps-`/`pe-`/`start-`/`me-`/`ms-[...]` + `rtl:text-right`) — авто-флип отступов, check-иконки и dropdown-оффсета (Issue 9 / F31, resolved 2026-06-13). Виртуализация больших списков — см. ниже.
+- **Виртуализация** dropdown >500 items не реализована (рендерятся все элементы) — defer roadmap (Issue 7), требует runtime-зависимости вопреки no-deps цели.
 - **`IDataItem.marker` deprecated** (2026-05-11): передача поля игнорируется + `console.warn`. Используй `#marker` scoped slot.
 
 ### Bug report format
