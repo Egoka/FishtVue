@@ -42,6 +42,8 @@ const globals = {
   HTMLInputElement: "readonly",
   HTMLTextAreaElement: "readonly",
   HTMLButtonElement: "readonly",
+  HTMLFormElement: "readonly",
+  FormData: "readonly",
   HTMLStyleElement: "readonly",
   Response: "readonly",
   MouseEvent: "readonly",
