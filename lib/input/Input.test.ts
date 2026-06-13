@@ -479,5 +479,37 @@ describe("Input Component Tests", () => {
         }
       })
     })
+
+    describe("Issue 4 — unstyled: true (cross-cutting Component.setStyle guard)", () => {
+      // Component.constructor читает window.FishtVue как fallback (lib/component/index.ts:67-68),
+      // поэтому флаг unstyled протекает между сценариями без явной очистки singleton'а.
+      const resetGlobalFishtVue = () => {
+        delete (window as any).FishtVue
+      }
+
+      it("strips classBaseInput to '' and removes base classes from root input when unstyled: true", () => {
+        resetGlobalFishtVue()
+        const app: any = createApp({})
+        app.use(FishtVue, { unstyled: true })
+        const wrapper = mount(Input, { global: { plugins: [app] } })
+        // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
+        // ни `fv {prefix}-input`-префикса на корне.
+        expect(String((wrapper.vm as any).classBaseInput ?? "")).toBe("")
+        const cls = wrapper.find("input[data-input]").attributes("class") ?? ""
+        expect(cls).not.toContain("caret-theme-500")
+        expect(cls).not.toContain("fishtvue-input")
+        resetGlobalFishtVue()
+      })
+
+      it("keeps base classes when unstyled is false (contrast)", () => {
+        resetGlobalFishtVue()
+        const app: any = createApp({})
+        app.use(FishtVue, { unstyled: false })
+        const wrapper = mount(Input, { global: { plugins: [app] } })
+        const cls = String((wrapper.vm as any).classBaseInput ?? "")
+        expect(cls).toContain("caret-theme-500")
+        resetGlobalFishtVue()
+      })
+    })
   })
 })

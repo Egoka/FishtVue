@@ -1,7 +1,7 @@
 ---
 title: Issues — Input
-summary: Аудит Input. 11/13 issues закрыты 2026-05-11 (initStyle dedup, componentsStyle fallback, password-toggle override, extended types, phoneFormats prop/option, autocomplete defaults, motion-safe, argless focus, print styles, RTL test, emit semantics docs). Открытыми остаются cross-cutting Issues 3 (packaging) и 4 (unstyled) — трекаются через Wave 2.1 / 3.1.
-updated: 2026-05-11
+summary: Аудит Input. Все 13/13 issues закрыты. 11 закрыты 2026-05-11 (initStyle dedup, componentsStyle fallback, password-toggle override, extended types, phoneFormats prop/option, autocomplete defaults, motion-safe, argless focus, print styles, RTL test, emit semantics docs). Последние 2 cross-cutting закрыты 2026-06-13 (doc-sync к Wave 2.1/3.1 — packaging `sideEffects`+`exports` map и `unstyled` guard уже в каноне; добавлен Input-scoped unstyled regression-тест).
+updated: 2026-06-13
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/input/
 related-doc: ../components/input.md
@@ -14,11 +14,13 @@ related-doc: ../components/input.md
 | Severity | Count (open) | Categories          |
 | -------- | ------------ | ------------------- |
 | critical | 0            | —                   |
-| high     | 2            | A2, A4-5 (Issue 3); L53 (Issue 4) |
+| high     | 0            | — (все закрыты)     |
 | medium   | 0            | — (все закрыты)     |
 | low      | 0            | — (все закрыты)     |
 
-Закрытые 2026-05-11: Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (4 high + 5 medium + 3 low − 2 cross-cutting high остаются).
+Закрытые 2026-05-11: Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (4 high + 5 medium + 3 low). Закрытые 2026-06-13: Issues 3, 4 (2 cross-cutting high — doc-sync к Wave 2.1 / 3.1, фиксы уже в каноне).
+
+> **Файл остаётся active** (не перенесён в `./done/`) — зеркало Pagination/Form/Split: все numbered issues закрыты (0/0/0/0), но сохраняются deferred cross-cutting вне матрицы: runtime theme switch (Wave 3.3) и locale auto-binding `phoneFormats` (см. Issue 7 deferred + Configuration support ниже).
 
 ## ~~Issue 1: Стили SSR не инжектятся~~ ✅ resolved 2026-05-11
 
@@ -38,21 +40,32 @@ related-doc: ../components/input.md
 
 - [x] `app.use(FishtVue, { componentsStyle: "filled" })` + `<Input />` без `mode` prop — рендерится как filled.
 
-## Issue 3: Нет sideEffects/exports map (cross-cutting) — **open**
+## ~~Issue 3: Нет sideEffects/exports map (cross-cutting)~~ ✅ resolved 2026-06-13 (doc-sync)
 
 - **Категория:** A2, A4, A5
-- **Severity:** high
-- **Tracker:** [Wave 2.1 в issues/README.md](./README.md). Single PR на `lib/package.json` (`"sideEffects": ["**/*.css", "**/*.vue"]` + полная `exports` map для всех 22 subpath).
+- **Severity:** ~~high~~
+- **Где:** [lib/package.json:19](../../lib/package.json#L19), [lib/rollup.config.js (`buildRootExports()`)](../../lib/rollup.config.js)
+- **Resolution (cross-cutting, фиксы уже в каноне):**
+  1. **`sideEffects` (A2)** — `"sideEffects": false` на root `lib/package.json` (✅ 2026-06-07) + инъекция в каждый `dist/{name}/package.json` через `copyDependencies()`. Выбран `false`, **а не** изначально предложенный `["**/*.css","**/*.vue"]`: в опубликованном пакете нет `.vue`/`.css` (SFC скомпилированы в `.mjs`, CSS инжектится в рантайме через lifecycle, не на import-time), поэтому модули чисты на import. Обоснование — [button.md Issue 8](./button.md).
+  2. **ESM-only + `engines` (A4)** — `"engines": { "node": ">=18" }`; CJS осознанно не включается (аудитория — bundler-based Vue/Nuxt). См. [button.md Issue 9](./button.md).
+  3. **`exports` map (A5)** — корневая карта генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js) (✅ 2026-06-11, Issue 5c-b): явный entry на каждый emitted `.mjs` + extensionless субпуть + bare-dir из вложенного `package.json` (обходит lowercase-`.mjs`/PascalCase-`.d.ts` асимметрию) + `./*/package.json`. `fishtvue/input` входит в strict-superset.
+  4. Контракт манифеста зафиксирован [lib/package.test.ts](../../lib/package.test.ts). Input-specific правок не потребовалось — наследуется от cross-cutting Wave 2.1.
 
-См. [button.md Issue 8 и Issue 9](./button.md).
+См. [button.md Issue 8 и Issue 9](./button.md), [issues/README.md Wave 2.1](./README.md).
 
-## Issue 4: `unstyled: true` не обрабатывается — **open**
+## ~~Issue 4: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-06-13
 
 - **Категория:** L53
-- **Severity:** high
-- **Tracker:** [Wave 3.1 в issues/README.md](./README.md). Один guard `if (this.config?.unstyled) return ""` в [Component.setStyle()](../../lib/component/index.ts#L134) закрывает поведение для всех 22 SFC.
+- **Severity:** ~~high~~
+- **Где:** [Component.setStyle() guard — component/index.ts:138](../../lib/component/index.ts#L138)
+- **Resolution (cross-cutting guard уже в каноне 2026-05-11; Input regression-тест 2026-06-13):** Guard `if (this.__globalConfig?.config?.unstyled) return ""` стоит первой строкой `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138)) — одна правка отключает Tailwind-классы во ВСЕХ 22 компонентах (см. [component-class.md Issue 6](./component-class.md), [button.md Issue 14](./button.md)). Input наследует автоматически: `classBaseInput` = `Input.setStyle([...])` → `""` при `unstyled: true`, корневой `<input>` рендерится без базовых классов и `fv {prefix}-input`-префикса. Добавлен Input-scoped regression-тест в [Input.test.ts](../../lib/input/Input.test.ts) (describe `Issue 4 — unstyled`): `app.use(FishtVue, { unstyled: true })` → `classBaseInput` пуст; контраст с `unstyled: false` → `caret-theme-500` присутствует; `resetGlobalFishtVue()` чистит `window.FishtVue` singleton-leak.
 
-См. [button.md Issue 14](./button.md).
+### Acceptance criteria
+
+- [x] `app.use(FishtVue, { unstyled: true })` + `<Input />` — `classBaseInput === ""`, root `<input>` без базовых классов.
+- [x] `unstyled: false` — базовые классы (`caret-theme-500`) присутствуют.
+
+См. [button.md Issue 14](./button.md), [component-class.md Issue 6](./component-class.md), [issues/README.md Wave 3.1](./README.md).
 
 ## ~~Issue 5: Eye/EyeSlash иконки имеют хардкоден class — нельзя перебить~~ ✅ resolved 2026-05-11
 
@@ -189,7 +202,7 @@ related-doc: ../components/input.md
 | ------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
 | `componentsOptions.Input` | ✅          | mode/clear/class/classInput/**passwordToggleClass**/**phoneFormats**/**autocomplete** (расширено 2026-05-11)      |
 | `componentsStyle` global  | ✅          | Issue 2 closed — fallback chain `props ?? options ?? Input.componentsStyle() ?? "outlined"`                       |
-| `unstyled: true`          | ❌          | Issue 4 — cross-cutting Wave 3.1                                                                                  |
+| `unstyled: true`          | ✅          | Issue 4 closed 2026-06-13 — guard `Component.setStyle()` ([index.ts:138](../../lib/component/index.ts#L138)) возвращает `""`; Input наследует cross-cutting Wave 3.1 |
 | Theme tokens vs hardcode  | ✅          | caret-theme-500, hover:text-theme-500/700 — все design-tokens (cyan-_ удалён)                                     |
 | Runtime theme switch      | ⚠️          | theme-tokens OK, остальное — Tailwind (Wave 3.3)                                                                  |
 | `t()` для текста          | N/A         | placeholder/label — пользовательские                                                                              |

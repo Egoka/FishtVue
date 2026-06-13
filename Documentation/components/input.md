@@ -1,7 +1,7 @@
 ---
 title: Input
-summary: Текстовый input с masks (phone/number/price), v-model, focus/blur/clear emits, валидацией; password toggle override, кастомные phoneFormats, auto-defaults autocomplete, motion-safe + print стили.
-updated: 2026-05-11
+summary: Текстовый input с masks (phone/number/price), v-model, focus/blur/clear emits, валидацией; password toggle override, кастомные phoneFormats, auto-defaults autocomplete, motion-safe + print стили; unstyled-режим (cross-cutting guard).
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -413,10 +413,12 @@ describe("Input", () => {
 
 ### Open audit issues
 
-Cross-cutting (закрываются вместе с остальными 22 компонентами):
+Все numbered audit-issues Input закрыты (см. [issues/input.md](../issues/input.md), матрица 0/0/0/0). Последними закрыты cross-cutting (2026-06-13):
 
-- **[Issue 3](../issues/input.md) — sideEffects + exports map** в `lib/package.json` — Wave 2.1.
-- **[Issue 4](../issues/input.md) — `unstyled: true` guard** в `Component.setStyle()` — Wave 3.1.
+- ~~**Issue 3** — sideEffects + exports map в `lib/package.json`~~ ✅ Wave 2.1 (`sideEffects: false` + build-генерируемая `exports` map).
+- ~~**Issue 4** — `unstyled: true` guard в `Component.setStyle()`~~ ✅ Wave 3.1 ([component/index.ts:138](../../lib/component/index.ts#L138)).
+
+Остаются deferred cross-cutting (вне матрицы, отдельные waves): runtime theme switch (Wave 3.3) и auto-binding `phoneFormats` к активной локали (см. [issues/input.md](../issues/input.md) Issue 7 deferred).
 
 См. [Documentation/issues/README.md](../issues/README.md) roadmap.
 
