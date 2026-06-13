@@ -1,4 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils"
+import { nextTick } from "vue"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue, { setActiveLocale } from "fishtvue/config"
 import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
@@ -538,6 +539,91 @@ describe("InputLayout Component", () => {
     it("RU locale dictionary contains inputLayout.copied = 'Скопировано'", async () => {
       const Locales = (await import("fishtvue/locale")).default as any
       expect(Locales.ru?.inputLayout?.copied).toBe("Скопировано")
+    })
+  })
+
+  // Issue 8 — prefers-reduced-motion (E29.7): анимации только через motion-safe: (канон Switch/Button/Badge).
+  describe("Reduced motion — motion-safe transitions (E29.7)", () => {
+    it("wraps the root animation in motion-safe: after the mount tick", async () => {
+      // animation появляется только когда isTick флипается через setTimeout(…, 100) в onMounted
+      vi.useFakeTimers()
+      try {
+        const wrapper = mount(InputLayout, { props: { value: "" } })
+        vi.advanceTimersByTime(150)
+        await nextTick()
+        const cls = wrapper.find("[data-input-layout]").attributes("class") ?? ""
+        expect(cls).toContain("motion-safe:transition-all")
+        expect(cls).toContain("motion-safe:duration-550")
+        // никаких безусловных transition-* — иначе reduced-motion проигнорирован
+        expect(cls).not.toMatch(/(^|\s)transition-all(\s|$)/)
+        expect(cls).not.toMatch(/(^|\s)duration-550(\s|$)/)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("wraps decorative help-icon transition in motion-safe:", async () => {
+      const wrapper = mount(InputLayout, { props: { value: "", help: "Help text" } })
+      await flushHero()
+      const helpHtml = wrapper.find("[data-input-layout-help]").html()
+      expect(helpHtml).toContain("motion-safe:transition")
+    })
+  })
+
+  // Issue 8 — print styles (N59): style-for-print, НЕ display:none (канон Switch/Button/Input).
+  describe("Print styles (N59)", () => {
+    it("renders style-for-print classes on the root (not display:none)", () => {
+      const wrapper = mount(InputLayout, { props: { value: "" } })
+      const cls = wrapper.find("[data-input-layout]").attributes("class") ?? ""
+      expect(cls).toContain("print:border")
+      expect(cls).toContain("print:border-black")
+      expect(cls).toContain("print:bg-white")
+      expect(cls).toContain("print:text-black")
+      expect(cls).toContain("print:shadow-none")
+      expect(cls).not.toContain("print:hidden")
+    })
+  })
+
+  // Issue 8 — forced-colors (B10): high-contrast — border-* сбрасывается, outline сохраняет границу поля.
+  describe("Forced-colors / high-contrast (B10)", () => {
+    it("keeps the field outline visible in forced-colors mode", () => {
+      const wrapper = mount(InputLayout, { props: { value: "" } })
+      const cls = wrapper.find("[data-input-layout-base]").attributes("class") ?? ""
+      expect(cls).toContain("forced-colors:outline")
+    })
+  })
+
+  // Issue 4 — unstyled (L53): cross-cutting guard Component.setStyle() (config.unstyled → "") уже покрывает
+  // все 22 компонента; этот блок — regression-guard для InputLayout.
+  describe("Configuration support — unstyled (L53)", () => {
+    const appWithConfig = (config: Record<string, unknown>) => ({
+      install(app: any) {
+        app.use(FishtVue, config)
+      }
+    })
+
+    // window.FishtVue — глобальный singleton; чистим, чтобы unstyled:true не протёк в соседние тесты/файлы.
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("strips all classes from the root when global unstyled: true", () => {
+      const wrapper = mount(InputLayout, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { value: "" }
+      })
+      // InputLayout.setStyle() возвращает "" при unstyled → ни базовых классов, ни fv-префикса на корне
+      const cls = (wrapper.find("[data-input-layout]").attributes("class") ?? "").trim()
+      expect(cls).toBe("")
+    })
+
+    it("keeps base classes when unstyled is false (contrast)", () => {
+      const wrapper = mount(InputLayout, {
+        global: { plugins: [appWithConfig({ unstyled: false })] },
+        props: { value: "" }
+      })
+      const cls = wrapper.find("[data-input-layout]").attributes("class") ?? ""
+      expect(cls).toContain("rounded-md")
     })
   })
 })

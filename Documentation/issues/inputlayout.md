@@ -1,7 +1,7 @@
 ---
 title: Issues — InputLayout
-summary: Аудит InputLayout — Issues 1/2/3/5/6/7 ✅ resolved 2026-05-11 (XSS slot, ResizeObserver cleanup, clipboard feature-detect, offsetTop prop, aria-live, i18n copied). Остаются cross-cutting Issues 4 / 8.
-updated: 2026-05-11
+summary: Аудит InputLayout — все issues ✅ resolved (1/2/3/5/6/7 — 2026-05-11; 4/8 — 2026-06-13: motion-safe, print, forced-colors, unstyled + packaging inherited). Остаётся active как Wave 9 tracker (semantic-token migration, B10 residual).
+updated: 2026-06-13
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/inputlayout/
 related-doc: ../components/input-layout.md
@@ -14,15 +14,17 @@ related-doc: ../components/input-layout.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | (2 closed: ~~C13 v-html × 2~~, ~~H41 ResizeObservers leak~~) |
-| high | 4 | A2, A4-5, C17, L53 (cross-cutting → button.md) |
+| high | 0 | (4 closed: ~~A2, A4-5, C17~~ inherited cross-cutting, ~~L53 unstyled~~) |
 | medium | 0 | (4 closed: ~~C14 clipboard SSR~~, ~~E29.5 aria-live~~, ~~F30 i18n copied~~, ~~G34 querySelector coupling~~) |
-| low | 3 | E29.7, B10, N59 |
+| low | 0 | (3 closed: ~~E29.7 motion-safe~~, ~~B10 forced-colors~~, ~~N59 print~~) |
+
+> **Wave 9 residual:** B10 — структурные нейтрали (`gray-*`/`neutral-*`/`stone-*`) на semantic-токены (`bg-surface`/`border-border`) ещё не мигрированы; трекается cross-cutting [theme.md](./theme.md) / Wave 9. Сам `forced-colors:outline` (high-contrast видимость) добавлен.
 
 ## Issue 1: ~~CRITICAL — XSS через `help` и `messageInvalid` (v-html)~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 + security
 - **Severity:** **critical**
-- **Где (was):** ~~[InputLayout.vue:294, 313]~~ → [InputLayout.vue:359-364](../../lib/inputlayout/InputLayout.vue#L359-L364) и [InputLayout.vue:382-388](../../lib/inputlayout/InputLayout.vue#L382-L388) — теперь slot-fallback на text-node.
+- **Где (was):** ~~[InputLayout.vue:294, 313]~~ → [InputLayout.vue:372-375](../../lib/inputlayout/InputLayout.vue#L372-L375) и [InputLayout.vue:394-398](../../lib/inputlayout/InputLayout.vue#L394-L398) — теперь slot-fallback на text-node.
 - **Status:** ✅ resolved 2026-05-11
 
 ### Что найдено (исторически)
@@ -62,7 +64,7 @@ related-doc: ../components/input-layout.md
 
 - **Категория:** H41
 - **Severity:** **critical**
-- **Где (was):** ~~[InputLayout.vue:177, 181]~~ → теперь [InputLayout.vue:196-208](../../lib/inputlayout/InputLayout.vue#L196-L208) (сохранены в `let beforeObserver` / `let afterObserver`) + [InputLayout.vue:232-237](../../lib/inputlayout/InputLayout.vue#L232-L237) (`onUnmounted` disconnect всех трёх).
+- **Где (was):** ~~[InputLayout.vue:177, 181]~~ → теперь [InputLayout.vue:210-220](../../lib/inputlayout/InputLayout.vue#L210-L220) (сохранены в `let beforeObserver` / `let afterObserver`) + [InputLayout.vue:243-248](../../lib/inputlayout/InputLayout.vue#L243-L248) (`onUnmounted` disconnect всех трёх).
 - **Status:** ✅ resolved 2026-05-11
 
 ### Что найдено (исторически)
@@ -123,7 +125,7 @@ onUnmounted(() => {
 
 - **Категория:** C14 (SSR + non-secure context)
 - **Severity:** medium
-- **Где (was):** ~~[InputLayout.vue:226]~~ → теперь [InputLayout.vue:274-298](../../lib/inputlayout/InputLayout.vue#L274-L298) (feature-detect) + [InputLayout.vue:253-271](../../lib/inputlayout/InputLayout.vue#L253-L271) (`legacyCopy` execCommand fallback).
+- **Где (was):** ~~[InputLayout.vue:226]~~ → теперь [InputLayout.vue:285-309](../../lib/inputlayout/InputLayout.vue#L285-L309) (feature-detect) + [InputLayout.vue:264-283](../../lib/inputlayout/InputLayout.vue#L264-L283) (`legacyCopy` execCommand fallback).
 - **Status:** ✅ resolved 2026-05-11
 
 ### Что найдено (исторически)
@@ -171,17 +173,28 @@ async function copy() {
 - [x] `clipboard.writeText` бросает → fallback на `execCommand` (тест `falls back to execCommand when clipboard.writeText throws`).
 - [x] SSR-render не падает (`isClient()` guard в начале `copy()` и `legacyCopy()`).
 
-## Issue 4: SSR styles + sideEffects/exports map / unstyled
+## Issue 4: ~~SSR styles + sideEffects/exports map / unstyled~~ ✅ resolved 2026-06-13
 
 - **Категория:** C17, A2, A4, A5, L53
+- **Status:** ✅ resolved 2026-06-13
 
-См. [button.md Issue 1, 8, 9, 14](./button.md).
+### A2 / A4-5 / C17 — inherited cross-cutting (правок исходника нет)
+
+Зеркало [button.md Issue 1/8/9](./button.md), [switch.md Issue 5](./switch.md), [badge.md Issue 1](./badge.md):
+
+- **A2 (`sideEffects`):** root [lib/package.json](../../lib/package.json) `"sideEffects": false` ✅ 2026-06-07; `copyDependencies()` инъектит `sideEffects:false` в каждый `dist/{name}/package.json`. В опубликованном пакете нет `.vue`/`.css` (SFC → `.mjs`, CSS инжектится в рантайме через `onServerPrefetch`/`vueOnMounted`) — модули чисты на import.
+- **A4-5 (ESM-only + `exports` map):** `engines.node >=18` ратифицирован; корневая `exports`-карта генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js) ✅ 2026-06-11 — `fishtvue/inputlayout` (`./inputlayout` + identity `./inputlayout/inputlayout.mjs` + PascalCase `InputLayout.d.ts`) входит в strict-superset.
+- **C17 (SSR styles):** канон `Component.__hooks()` ([component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) регистрирует `onServerPrefetch + vueOnMounted` → `initStyle()`; `__setStyle()` пишет CSS в `cssComponents` Map без `isClient()`-guard, Nuxt server plugin сливает критический CSS в SSR-HTML до hydration. InputLayout не дублирует `initStyle()` в SFC ([InputLayout.vue:207-208](../../lib/inputlayout/InputLayout.vue#L207-L208)).
+
+### L53 — unstyled ✅
+
+Cross-cutting guard `if (this.__globalConfig?.config?.unstyled) return ""` в `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138), landed 2026-05-11) покрывает все 22 компонента. InputLayout маршрутизирует **все** классы через `InputLayout.setStyle` → при `unstyled: true` корень `[data-input-layout]` (`:class="classBody"`) и все вложенные классы получают `""`. Правок исходника не потребовалось; добавлен regression-тест (блок `Configuration support — unstyled (L53)`, 2 кейса, `afterEach` чистит `window.FishtVue` singleton-leak).
 
 ## Issue 5: ~~`document.querySelector("header")` — coupling с конкретным DOM в потребителе~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 (утечка структуры)
 - **Severity:** medium
-- **Где (was):** ~~[InputLayout.vue:184]~~ — удалено. Заменено на `offsetTop` prop ([InputLayout.vue:177-191](../../lib/inputlayout/InputLayout.vue#L177-L191) — `resolveOffsetTop()`). Тип: `number | string | (() => number)`. По умолчанию `0`.
+- **Где (was):** ~~[InputLayout.vue:184]~~ — удалено. Заменено на `offsetTop` prop ([InputLayout.vue:188-203](../../lib/inputlayout/InputLayout.vue#L188-L203) — `resolveOffsetTop()`). Тип: `number | string | (() => number)`. По умолчанию `0`.
 - **Status:** ✅ resolved 2026-05-11
 
 ### Что найдено (исторически)
@@ -213,7 +226,7 @@ if (isClient()) headerHeight.value = <number>document.querySelector("header")?.o
 
 - **Категория:** E29.5
 - **Severity:** medium
-- **Где:** [InputLayout.vue:432-440](../../lib/inputlayout/InputLayout.vue#L432-L440) — `<p data-input-layout-message-invalid aria-live="assertive" aria-atomic="true">`.
+- **Где:** [InputLayout.vue:443-451](../../lib/inputlayout/InputLayout.vue#L443-L451) — `<p data-input-layout-message-invalid aria-live="assertive" aria-atomic="true">`.
 - **Status:** ✅ resolved 2026-05-11
 
 `messageInvalid` появляется при validation error. Screen reader озвучивает изменения сразу. Тест: `Accessibility — aria-live on error region` в `InputLayout.test.ts`.
@@ -222,23 +235,45 @@ if (isClient()) headerHeight.value = <number>document.querySelector("header")?.o
 
 - **Категория:** F30 (i18n)
 - **Severity:** medium
-- **Где:** Локализованный ключ `inputLayout.copied` ([locale/locales/en.ts:16-18](../../lib/locale/locales/en.ts#L16-L18), [ru.ts:16-18](../../lib/locale/locales/ru.ts#L16-L18)). Тип в [TypesLocale.d.ts:34-36](../../lib/locale/TypesLocale.d.ts#L34-L36). Использование — [InputLayout.vue:420-428](../../lib/inputlayout/InputLayout.vue#L420-L428) (FixWindow tooltip + `aria-label` на Check-иконке).
+- **Где:** Локализованный ключ `inputLayout.copied` ([locale/locales/en.ts:16-18](../../lib/locale/locales/en.ts#L16-L18), [ru.ts:16-18](../../lib/locale/locales/ru.ts#L16-L18)). Тип в [TypesLocale.d.ts:34-36](../../lib/locale/TypesLocale.d.ts#L34-L36). Использование — [InputLayout.vue:431-439](../../lib/inputlayout/InputLayout.vue#L431-L439) (FixWindow tooltip + `aria-label` на Check-иконке).
 - **Status:** ✅ resolved 2026-05-11
 
 Confirm-feedback после успешного copy теперь рендерит FixWindow с локализованным текстом + `aria-label`. Тесты: `Locale — inputLayout.copied` (EN / RU dictionary).
 
-## Issue 8: prefers-reduced-motion / colors / print
+## Issue 8: ~~prefers-reduced-motion / colors / print~~ ✅ resolved 2026-06-13
 
-См. cross-cutting [button.md](./button.md), [switch.md](./switch.md).
+- **Категория:** E29.7, B10, N59
+- **Status:** ✅ resolved 2026-06-13
+
+Канон FishtVue (зеркало [switch.md Issue 7/12/14](./switch.md), [button.md](./button.md)) — без правок theme-движка (`unoStatic.ts` уже знает media `motion-safe`/`forced-colors`/`print`).
+
+### E29.7 — prefers-reduced-motion ✅
+
+Все собственные transitions InputLayout обёрнуты в `motion-safe:`:
+
+- root `animation` (`classBody`/`classBase`) → `motion-safe:transition-all motion-safe:duration-550` ([InputLayout.vue:67-72](../../lib/inputlayout/InputLayout.vue#L67-L72)).
+- Inline-классы шаблона движок сам не регистрирует — их `motion-safe:`-варианты явно зарегистрированы module-scope `InputLayout.setStyle(...)` ([InputLayout.vue:149-154](../../lib/inputlayout/InputLayout.vue#L149-L154)).
+- Оба `<transition>`-блока (loading / clear): `enter/leave-active-class` → `motion-safe:transition motion-safe:ease-in motion-safe:duration-200` (`opacity-*` from/to — состояния, не тайминг).
+- Hover-иконки (help / invalid / clear / copy): `transition`/`transition-all duration-300` → `motion-safe:*`.
+- Тесты: блок `Reduced motion — motion-safe transitions (E29.7)` — root после tick содержит `motion-safe:transition-all`/`duration-550` и НЕ содержит bare-варианты; help-icon содержит `motion-safe:transition`.
+
+### N59 — print ✅
+
+Style-for-print (не `display:none`) — корневой `classBody` получил `print:border print:border-black print:bg-white print:text-black print:shadow-none` ([InputLayout.vue:92](../../lib/inputlayout/InputLayout.vue#L92)). Тест: блок `Print styles (N59)` (`print:*` присутствует, `print:hidden` отсутствует).
+
+### B10 — forced-colors + theme tokens ⚠️ (forced-colors ✅, semantic-токены → Wave 9)
+
+- **NEW `forced-colors:outline`** на поле `classBase` ([InputLayout.vue:115](../../lib/inputlayout/InputLayout.vue#L115)) — в Windows high-contrast `border-*` сбрасывается, outline сохраняет границу поля. Тест: блок `Forced-colors / high-contrast (B10)`.
+- **Структурные нейтрали** (`gray-*`/`neutral-*`/`stone-*`) и semantic-красный (`red-*`) **оставлены** — полная shadcn-style `bg-surface`/`border-border` миграция остаётся cross-cutting [theme.md Issue 1](./theme.md) / **Wave 9**. InputLayout не имеет собственного accent-цвета (нет `theme-*`-токенов вне дочерних Label/Icons).
 
 ## Cross-cutting: Configuration support
 
 | Настройка | Поддержано? | Комментарий |
 |---|---|---|
 | `componentsOptions.InputLayout` | ✅ | mode, animation, `offsetTop` и др. |
-| `componentsStyle` global | ✅ | `InputLayout.componentsStyle()` ([InputLayout.vue:40](../../lib/inputlayout/InputLayout.vue#L40)) |
-| `unstyled: true` | ❌ | Issue 4 |
-| Theme tokens vs hardcode | ⚠️ | через theme-* частично |
+| `componentsStyle` global | ✅ | `InputLayout.componentsStyle()` ([InputLayout.vue:43](../../lib/inputlayout/InputLayout.vue#L43)) |
+| `unstyled: true` | ✅ | Issue 4 ✅ — cross-cutting guard `Component.setStyle()` |
+| Theme tokens vs hardcode | ⚠️ | `forced-colors:outline` добавлен (Issue 8); semantic-токены `neutral-*` → Wave 9 |
 | Runtime theme switch | ✅ | через CSS-variables |
 | `t()` для текста | ✅ | clear, copy, `inputLayout.copied` confirm — все локализованы (Issue 7 ✅) |
 | Runtime locale switch | ✅ | если использует t() — реагирует |

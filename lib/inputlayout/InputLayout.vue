@@ -66,7 +66,9 @@
   })
   const animation = computed<NonNullable<InputLayoutProps["animation"]>>(() =>
     isTick.value
-      ? ((props?.animation as InputLayoutProps["animation"]) ?? options?.animation ?? "transition-all duration-550")
+      ? ((props?.animation as InputLayoutProps["animation"]) ??
+        options?.animation ??
+        "motion-safe:transition-all motion-safe:duration-550")
       : ""
   )
   const background = computed(() =>
@@ -85,7 +87,9 @@
       animation.value ?? "",
       options?.classBody ?? "",
       props?.classBody ?? "",
-      isInvalid.value ? "is-invalid" : ""
+      isInvalid.value ? "is-invalid" : "",
+      // N59: style-for-print — печатаем монохромно и читаемо, без display:none
+      "print:border print:border-black print:bg-white print:text-black print:shadow-none"
     ])
   )
   const classBase = computed(() =>
@@ -106,7 +110,9 @@
       isInvalid.value
         ? "border-red-500 dark:border-red-500 ring-1 ring-inset ring-red-500 dark:ring-red-500 scroll-mt-10"
         : "",
-      "flex items-center peer overflow-auto"
+      "flex items-center peer overflow-auto",
+      // B10: high-contrast — border-* сбрасывается forced-colors, outline сохраняет границу поля
+      "forced-colors:outline"
     ])
   )
   const styleBase = computed(
@@ -140,7 +146,12 @@
         "ring-1 ring-black/20 focus:outline-none"
     )
   )
-  InputLayout.setStyle("transition ease-in duration-200 opacity-100 opacity-0")
+  // E29.7: inline-классы шаблона (<transition>-блоки + hover-иконки) движок сам не регистрирует —
+  // явно регистрируем их motion-safe:-варианты, чтобы reduced-motion уважался.
+  InputLayout.setStyle(
+    "motion-safe:transition motion-safe:transition-all motion-safe:ease-in " +
+      "motion-safe:duration-200 motion-safe:duration-300 opacity-100 opacity-0"
+  )
   // ---EXPOSE------------------------------
   defineExpose({
     // ---STATE-------------------------
@@ -332,10 +343,10 @@
         <slot name="after" />
       </div>
       <transition
-        leave-active-class="transition ease-in duration-200"
+        leave-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
-        enter-active-class="transition ease-in duration-200"
+        enter-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
         <div v-if="isLoading" data-loading :class="classLoading">
@@ -346,7 +357,7 @@
         <Icons
           type="QuestionMarkCircle"
           stile-icon="solid"
-          class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 transition cursor-help" />
+          class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 motion-safe:transition cursor-help" />
         <FixWindow
           :mode="mode"
           event-open="click"
@@ -369,7 +380,7 @@
           <Icons
             type="ExclamationCircle"
             stile-icon="solid"
-            class="text-red-500 dark:text-red-500 transition cursor-pointer" />
+            class="text-red-500 dark:text-red-500 motion-safe:transition cursor-pointer" />
           <FixWindow
             :mode="mode"
             event-open="click"
@@ -398,7 +409,7 @@
             <Icons
               type="XCircle"
               stile-icon="solid"
-              class="text-gray-400 dark:text-gray-600 hover:text-red-600 hover:dark:text-red-500 transition-all duration-300 cursor-pointer"
+              class="text-gray-400 dark:text-gray-600 hover:text-red-600 hover:dark:text-red-500 motion-safe:transition-all motion-safe:duration-300 cursor-pointer"
               @click.stop="emit('clear')" />
             <FixWindow v-if="slots.default" mode="filled" :delay="1000" :padding-window="40">
               {{ InputLayout.t("clear") ?? "Clear" }}
@@ -411,7 +422,7 @@
           <Icons
             type="square-2-stack"
             stile-icon="solid"
-            class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 transition"
+            class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 motion-safe:transition"
             @click.stop="copy" />
           <FixWindow :mode="mode" :delay="1000" :padding-window="40">
             {{ InputLayout.t("copy") ?? "Copy" }}

@@ -1,7 +1,7 @@
 ---
 title: InputLayout
 summary: Контейнер-обёртка для form-controls — label, error, help, clear/copy кнопки.
-updated: 2026-05-11
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `InputLayout` — внутренняя обёртка для всех form-controls. Содержит `Label`, error-message, help-text, опциональные copy/clear-кнопки. Используется внутри [Input](./input.md), [Select](./select.md), [Calendar](./calendar.md), [TextEditor](./text-editor.md). `InputLayoutProps` — родительский тип для всех form-controls (через `Omit<InputLayoutProps, "value" | "isValue">`).
 
-Stability: `stable` — 24 кейса, coverage 89.91%.
+Stability: `stable` — 47 кейсов.
 
 Source: [Source](../../lib/inputlayout/InputLayout.vue), [InputLayout.d.ts](../../lib/inputlayout/InputLayout.d.ts), [InputLayout.test.ts](../../lib/inputlayout/InputLayout.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/inputlayout/InputLayout.vue), [InputLayout.d.ts](../.
 lib/inputlayout/
 ├── InputLayout.vue
 ├── InputLayout.d.ts        # 316 строк
-├── InputLayout.test.ts     # 24 кейса
+├── InputLayout.test.ts     # 47 кейсов
 └── package.json
 ```
 
@@ -36,7 +36,9 @@ lib/inputlayout/
 - **Конфиг:** `componentsOptions.InputLayout` — см. §10.
 - **Локализация:** `InputLayout.t("clear")`, `InputLayout.t("copy")`, `InputLayout.t("inputLayout.copied")` (confirm после copy).
 - **SSR:** все DOM-доступы guard'ятся `isClient()`. `headerHeight` синхронно резолвится из `offsetTop` prop ещё до mount — без coupling с потребительской разметкой (`<header>`). `navigator.clipboard.writeText` — feature-detect + fallback на `document.execCommand("copy")` через скрытый `<textarea>`.
-- **Animation:** CSS transitions ("transition-all duration-550", "transition ease-in duration-200").
+- **Animation:** все transitions обёрнуты в `motion-safe:` (`motion-safe:transition-all motion-safe:duration-550` для root, `motion-safe:transition motion-safe:ease-in motion-safe:duration-200` для loading/clear `<transition>`-блоков) — при `prefers-reduced-motion: reduce` анимации отключаются. Inline-классы шаблона зарегистрированы явно через module-scope `InputLayout.setStyle`.
+- **Print / high-contrast:** style-for-print (`print:border print:bg-white print:text-black print:shadow-none` на `classBody` — печатается монохромным, не `display:none`); `forced-colors:outline` на поле (`classBase`) — граница видима в Windows high-contrast.
+- **Unstyled:** при `app.use(FishtVue, { unstyled: true })` корень `[data-input-layout]` и все вложенные классы пусты (cross-cutting guard `Component.setStyle()`).
 
 ## 4. Quick Start
 
@@ -196,6 +198,8 @@ Root класс — `fv fishtvue-input-layout`.
 - Связь Label ↔ input — управляется родительским form-control'ом (передаёт `id` в slot).
 - **Error-region** `<p data-input-layout-message-invalid>` имеет `aria-live="assertive"` + `aria-atomic="true"` — screen reader озвучивает появление / изменение `messageInvalid` сразу.
 - Clear/copy кнопки — `<button>` с tooltip через [FixWindow](./fix-window.md). После успешного copy — confirm-icon с `aria-label` и FixWindow tooltip, локализованные через `InputLayout.t("inputLayout.copied")` (`"Copied"` / `"Скопировано"`).
+- **Reduced motion:** все transitions через `motion-safe:` — при `prefers-reduced-motion: reduce` поле и иконки не анимируются.
+- **Forced colors:** `forced-colors:outline` на поле сохраняет видимую границу в Windows high-contrast (где `border-*`/`bg-*` сбрасываются).
 
 ### Security
 
@@ -214,7 +218,7 @@ import InputLayout from "fishtvue/inputlayout"
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 24 кейса, coverage 89.91%.
+- **Stability flag:** `stable` — 47 кейсов.
 - **Breaking changes:** не зафиксировано.
 - **Deprecations:** нет.
 
@@ -237,7 +241,7 @@ describe("InputLayout", () => {
 })
 ```
 
-Реальные тесты — [InputLayout.test.ts](../../lib/inputlayout/InputLayout.test.ts) (24 кейса).
+Реальные тесты — [InputLayout.test.ts](../../lib/inputlayout/InputLayout.test.ts) (47 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
@@ -263,7 +267,7 @@ describe("InputLayout", () => {
 
 ### Incomplete or stubbed behavior
 
-- Открытые cross-cutting findings — `unstyled: true`, sideEffects/exports map, prefers-reduced-motion — см. активные пункты в [issues/inputlayout.md](../issues/inputlayout.md) (Issues 4, 8).
+- Все numbered issues закрыты ([issues/inputlayout.md](../issues/inputlayout.md): Issues 1–8 ✅). Остаётся cross-cutting residual: полная shadcn-style миграция структурных нейтралей (`gray-*`/`neutral-*`/`stone-*`) на semantic-токены (`bg-surface`/`border-border`) — трекается [theme.md](../issues/theme.md) / Wave 9. `forced-colors:outline` (high-contrast видимость) уже добавлен.
 
 ### Skipped tests
 
