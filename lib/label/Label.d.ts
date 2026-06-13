@@ -75,6 +75,15 @@ export declare type LabelProps = {
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Включает CSS-transition позиционирования лейбла. По умолчанию `true`.
+   * `InputLayout` пробрасывает сюда mount-tick (`isTick`): на первом кадре `false`,
+   * чтобы floating-label сразу отрисовался в нужной позиции без «переезда» из исходной
+   * точки, а после mount — `true`, и переход при focus / изменении value анимируется.
+   * @type {boolean | undefined}
+   */
+  animate?: boolean
 }
 
 /**

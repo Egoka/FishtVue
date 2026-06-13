@@ -419,11 +419,16 @@ describe("Input Component Tests", () => {
     })
 
     describe("Issue 9 — motion-safe transitions", () => {
-      it("classBaseInput uses motion-safe:transition-all (not unconditional)", () => {
+      it("classBaseInput uses narrow motion-safe:transition-colors (no transition-all flash on mount/focus)", () => {
         const wrapper = mount(Input)
         const cls = String((wrapper.vm as any).classBaseInput ?? "")
-        expect(cls).toContain("motion-safe:transition-all")
-        expect(cls).not.toMatch(/(?:^|\s)transition-all(?:\s|$)/)
+        // E29.7: переход motion-safe-gated (reduced-motion уважается).
+        expect(cls).toContain("motion-safe:transition-colors")
+        // Issue 14: широкий transition-all анимировал geometry/outline → вспышка один кадр
+        // на mount и фокусе (у обёртки он gated через isTick, у инпута — нет). Запрещаем его.
+        expect(cls).not.toContain("transition-all")
+        // и никакого unconditional (не-motion-safe) transition.
+        expect(cls).not.toMatch(/(?:^|\s)transition(?:-colors)?(?:\s|$)/)
       })
     })
 

@@ -319,6 +319,29 @@ describe("Label Component Tests", () => {
     })
   })
 
+  // Issue: floating-label «переезжал» из исходной точки в финальную на mount.
+  // Transition теперь гейтится prop `animate` (InputLayout передаёт isTick), чтобы
+  // на первом кадре лейбл стоял на месте без анимации.
+  describe("Label Component - animate prop (position transition gate)", () => {
+    it("keeps the motion-safe transition by default (animate defaults to true)", () => {
+      const classes = mount(Label, { props: { title: "L" } })
+        .find("[data-label]")
+        .classes()
+      expect(classes).toContain("motion-safe:transition-all")
+      expect(classes).toContain("motion-safe:duration-200")
+    })
+
+    it("drops the position transition when animate=false (no mount slide)", () => {
+      const classes = mount(Label, { props: { title: "L", animate: false } })
+        .find("[data-label]")
+        .classes()
+      expect(classes).not.toContain("motion-safe:transition-all")
+      expect(classes).not.toContain("motion-safe:duration-200")
+      // позиционные классы остаются — лейбл сразу в нужном месте, просто без анимации перехода
+      expect(classes).toContain("-translate-y-7")
+    })
+  })
+
   // Issue 10 (G37, audit 2026-05-10) — default slot for custom title content
   describe("Label Component - default slot", () => {
     it("renders title prop as fallback when no default slot is provided", () => {

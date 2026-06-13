@@ -1,7 +1,7 @@
 ---
 title: Issues — InputLayout
-summary: Аудит InputLayout — все issues ✅ resolved (1/2/3/5/6/7 — 2026-05-11; 4/8 — 2026-06-13: motion-safe, print, forced-colors, unstyled + packaging inherited). Остаётся active как Wave 9 tracker (semantic-token migration, B10 residual).
-updated: 2026-06-13
+summary: Аудит InputLayout — все issues ✅ resolved (1/2/3/5/6/7 — 2026-05-11; 4/8 — 2026-06-13: motion-safe, print, forced-colors, unstyled + packaging inherited; 9 — 2026-06-14: floating-label mount-slide gate). Остаётся active как Wave 9 tracker (semantic-token migration, B10 residual).
+updated: 2026-06-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/inputlayout/
 related-doc: ../components/input-layout.md
@@ -16,7 +16,7 @@ related-doc: ../components/input-layout.md
 | critical | 0 | (2 closed: ~~C13 v-html × 2~~, ~~H41 ResizeObservers leak~~) |
 | high | 0 | (4 closed: ~~A2, A4-5, C17~~ inherited cross-cutting, ~~L53 unstyled~~) |
 | medium | 0 | (4 closed: ~~C14 clipboard SSR~~, ~~E29.5 aria-live~~, ~~F30 i18n copied~~, ~~G34 querySelector coupling~~) |
-| low | 0 | (3 closed: ~~E29.7 motion-safe~~, ~~B10 forced-colors~~, ~~N59 print~~) |
+| low | 0 | (4 closed: ~~E29.7 motion-safe~~, ~~B10 forced-colors~~, ~~N59 print~~, ~~C18 label mount-slide~~) |
 
 > **Wave 9 residual:** B10 — структурные нейтрали (`gray-*`/`neutral-*`/`stone-*`) на semantic-токены (`bg-surface`/`border-border`) ещё не мигрированы; трекается cross-cutting [theme.md](./theme.md) / Wave 9. Сам `forced-colors:outline` (high-contrast видимость) добавлен.
 
@@ -265,6 +265,17 @@ Style-for-print (не `display:none`) — корневой `classBody` полу�
 
 - **NEW `forced-colors:outline`** на поле `classBase` ([InputLayout.vue:115](../../lib/inputlayout/InputLayout.vue#L115)) — в Windows high-contrast `border-*` сбрасывается, outline сохраняет границу поля. Тест: блок `Forced-colors / high-contrast (B10)`.
 - **Структурные нейтрали** (`gray-*`/`neutral-*`/`stone-*`) и semantic-красный (`red-*`) **оставлены** — полная shadcn-style `bg-surface`/`border-border` миграция остаётся cross-cutting [theme.md Issue 1](./theme.md) / **Wave 9**. InputLayout не имеет собственного accent-цвета (нет `theme-*`-токенов вне дочерних Label/Icons).
+
+## Issue 9: ~~floating-label «переезжает» из исходной точки в финальную на mount~~ ✅ resolved 2026-06-14
+
+- **Категория:** C18 (visual / motion)
+- **Severity:** ~~low~~
+- **Где:** [Label.vue:40](../../lib/label/Label.vue#L40), [InputLayout.vue:338](../../lib/inputlayout/InputLayout.vue#L338)
+- **Симптом:** после перезагрузки на первом кадре floating-label `[data-label]` ехал из исходной точки (нижний-левый угол) в финальную позицию.
+- **Причина:** `classBase` дочернего `Label` нёс **негейтнутый** `motion-safe:transition-all motion-safe:duration-200`. Свой transition InputLayout гейтит через `isTick` (`setTimeout 100ms` после mount — [InputLayout.vue:67-73](../../lib/inputlayout/InputLayout.vue#L67-L73)), но у Label такого гейта не было. На mount позиция лейбла меняется (инжект стилей в `onMounted` + устаканивание измерений `beforeWidth`/`labelType`), и live-transition анимировал это смещение один кадр.
+- **Resolution:** у Label появился опциональный prop `animate?: boolean` (default `true` — поведение standalone Label не изменилось), который гейтит `motion-safe:transition-all motion-safe:duration-200` в `classBase`. `InputLayout` передаёт `:animate="isTick"` ([InputLayout.vue:338](../../lib/inputlayout/InputLayout.vue#L338)) — на первом кадре `false` (лейбл сразу в нужной позиции, без анимации), после mount-tick `true` (focus / value-float анимируется как раньше). E29.7 не нарушен — переход остаётся `motion-safe:`-gated.
+- **Тесты:** `Label.test.ts` блок `animate prop (position transition gate)` (default → transition есть; `animate:false` → нет, позиционные классы остаются); `InputLayout.test.ts` (E29.7) — `gates the floating-label transition behind the mount tick` (до тика у `[data-label]` нет `motion-safe:transition-all`, после `advanceTimersByTime(150)` — есть).
+- **Verified:** browser-preview после рестарта dev-сервера — post-settle `props.animate === true`, `isTick === true`, label `transitionDuration: 0.2s`; лейблы Input/Select/Calendar отрисованы в покое без «переезда».
 
 ## Cross-cutting: Configuration support
 

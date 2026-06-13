@@ -1,6 +1,6 @@
 ---
 title: Issues — Input
-summary: Аудит Input. Все 13/13 issues закрыты. 11 закрыты 2026-05-11 (initStyle dedup, componentsStyle fallback, password-toggle override, extended types, phoneFormats prop/option, autocomplete defaults, motion-safe, argless focus, print styles, RTL test, emit semantics docs). Последние 2 cross-cutting закрыты 2026-06-13 (doc-sync к Wave 2.1/3.1 — packaging `sideEffects`+`exports` map и `unstyled` guard уже в каноне; добавлен Input-scoped unstyled regression-тест).
+summary: Аудит Input. Все 14/14 issues закрыты. 11 закрыты 2026-05-11 (initStyle dedup, componentsStyle fallback, password-toggle override, extended types, phoneFormats prop/option, autocomplete defaults, motion-safe, argless focus, print styles, RTL test, emit semantics docs). 2 cross-cutting закрыты 2026-06-13 (doc-sync к Wave 2.1/3.1 — packaging `sideEffects`+`exports` map и `unstyled` guard уже в каноне; добавлен Input-scoped unstyled regression-тест). Issue 14 закрыт 2026-06-13 (вспышка один кадр при mount/фокусе — широкий `motion-safe:transition-all` на инпуте → узкий `motion-safe:transition-colors`; пересмотрен acceptance Issue 9, E29.7 сохранён).
 updated: 2026-06-13
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/input/
@@ -18,7 +18,7 @@ related-doc: ../components/input.md
 | medium   | 0            | — (все закрыты)     |
 | low      | 0            | — (все закрыты)     |
 
-Закрытые 2026-05-11: Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (4 high + 5 medium + 3 low). Закрытые 2026-06-13: Issues 3, 4 (2 cross-cutting high — doc-sync к Wave 2.1 / 3.1, фиксы уже в каноне).
+Закрытые 2026-05-11: Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (4 high + 5 medium + 3 low). Закрытые 2026-06-13: Issues 3, 4 (2 cross-cutting high — doc-sync к Wave 2.1 / 3.1, фиксы уже в каноне) + Issue 14 (1 low — outline-flash при фокусе).
 
 > **Файл остаётся active** (не перенесён в `./done/`) — зеркало Pagination/Form/Split: все numbered issues закрыты (0/0/0/0), но сохраняются deferred cross-cutting вне матрицы: runtime theme switch (Wave 3.3) и locale auto-binding `phoneFormats` (см. Issue 7 deferred + Configuration support ниже).
 
@@ -195,6 +195,17 @@ related-doc: ../components/input.md
   2. Поведение `update:isInvalid(false)` как **reset-сигнал** объяснено в [§6.2](../components/input.md#62-почему-updateisinvalid-всегда-false): Input сам не валидирует, `true` ставит родитель/Form через `isInvalid` prop. Записано в API inconsistencies в [§18](../components/input.md#18-known-issues--limitations).
   3. Разница между `update:modelValue` и `change:modelValue` (когда что использовать) в [§6.3](../components/input.md#63-когда-нужен-changemodelvalue-vs-updatemodelvalue).
 - **Out of scope (deferred):** переименование `update:isInvalid` → `reset:invalid` и удаление `change:modelValue` — breaking changes, требуют отдельного RFC и cross-cutting consideration (TextEditor/Select имеют тот же паттерн).
+
+## ~~Issue 14: вспышка один кадр при mount и фокусе (broad `transition-all` на инпуте)~~ ✅ resolved 2026-06-13
+
+- **Категория:** C18 (visual / motion)
+- **Severity:** ~~low~~
+- **Где:** [Input.vue:89](../../lib/input/Input.vue#L89)
+- **Симптом:** на `input[data-input]` один кадр мелькала граница/outline — и при фокусе, и при mount/перезагрузке.
+- **Причина:** широкий `motion-safe:transition-all` в `classBaseInput`. Обёртка `InputLayout` гейтит свой `transition-all` через `isTick` (включается через `setTimeout 100ms` после mount — [InputLayout.vue:67-73](../../lib/inputlayout/InputLayout.vue#L67-L73), [:223](../../lib/inputlayout/InputLayout.vue#L223)), а у самого инпута такого гейта **не было**. Поэтому `transition-all` анимировал geometry/outline один кадр: (1) при mount — когда стили инжектятся в `onMounted` (`Component.__hooks()`), свойства анимируются из UA-дефолта в стилизованное состояние; (2) при фокусе — `outline-width` UA-initial → `focus:outline-0`. У `Aria.vue:67` тот же набор классов, но **без** `transition-all` — там дефекта нет.
+- **Resolution:** широкий `motion-safe:transition-all` → узкий `motion-safe:transition-colors` ([Input.vue:89](../../lib/input/Input.vue#L89)). `transition-colors` покрывает только `color/background-color/border-color/...` — **не** `outline` и не geometry → анимировать на mount/фокусе нечего (поле пустое, фон `bg-transparent`, `border-0`). Переход остаётся `motion-safe:`-gated → **E29.7 не нарушен** (см. Issue 9). `outline` возвращён к исходному `focus:outline-0` (без transition он применяется мгновенно, вспышки нет); видимый focus-индикатор обеспечивает `ring-2 ring-theme-600` обёртки `InputLayout` (a11y не затронут).
+- **Связь с Issue 9:** acceptance Issue 9 (motion-safe transitions) пересмотрен — тест `Issue 9 — motion-safe transitions` теперь требует `motion-safe:transition-colors` (узкий) и **запрещает** `transition-all`. Requirement E29.7 (reduced-motion) выполняется по-прежнему.
+- **Verified:** browser-preview — `getComputedStyle(input).transitionProperty` = color-список (не `all`), outline вне transition-набора; `pnpm typecheck` + Input suite (43) зелёные.
 
 ## Cross-cutting: Configuration support
 

@@ -1,7 +1,7 @@
 ---
 title: Label
-summary: Label с пятью режимами (dynamic/static/offset*/vanishing/none), required-маркером, нативной for-связкой с input и default-слотом для кастомного контента.
-updated: 2026-05-11
+summary: Label с пятью режимами (dynamic/static/offset*/vanishing/none), required-маркером, нативной for-связкой с input, default-слотом для кастомного контента и prop `animate` (mount-tick gate против «переезда» позиции).
+updated: 2026-06-14
 stability: stable
 since: 0.2.11
 ---
@@ -58,7 +58,7 @@ import Label from "fishtvue/label"
 
 ## 5. Props
 
-`LabelProps` ([Label.d.ts:19-78](../../lib/label/Label.d.ts#L19-L78)):
+`LabelProps` ([Label.d.ts:19-87](../../lib/label/Label.d.ts#L19-L87)):
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -71,6 +71,7 @@ import Label from "fishtvue/label"
 | `forId` | `string` | — | `id` целевого form-control. Устанавливает нативный `for` атрибут — клик на label фокусирует input, screen-reader озвучивает связку (WCAG 2.1 SC 1.3.1). |
 | `classBody` | `StyleClass` | — | Класс контейнера label. |
 | `class` | `StyleClass` | — | Класс текста. |
+| `animate` | `boolean` | `true` | Включает CSS-transition позиционирования метки. `InputLayout` передаёт сюда mount-tick (`isTick`): `false` на первом кадре — floating-label сразу рисуется в нужной позиции без «переезда» из исходной точки, `true` после mount — переход при focus / изменении value анимируется. |
 
 ## 6. Events / Emits + v-model contract
 

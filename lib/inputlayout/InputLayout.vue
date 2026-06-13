@@ -334,7 +334,8 @@
       :mode="mode"
       :is-required="isRequired"
       :translate-x="beforeWidth || 10"
-      :max-width="widthInput" />
+      :max-width="widthInput"
+      :animate="isTick" />
     <span
       ref="afterInput"
       :class="classAfterInput"

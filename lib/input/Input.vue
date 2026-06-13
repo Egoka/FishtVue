@@ -86,7 +86,7 @@
       "placeholder:select-none focus:placeholder:text-gray-400 focus:placeholder:dark:text-gray-500",
       props.label?.length ? "placeholder:text-transparent motion-safe:placeholder:transition-all" : "",
       "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-      "focus:outline-0 focus:ring-0 motion-safe:transition-all caret-theme-500",
+      "focus:outline-0 focus:ring-0 motion-safe:transition-colors caret-theme-500",
       "print:border print:border-black print:bg-white print:text-black print:shadow-none",
       options?.classInput ?? "",
       props?.classInput ?? "",

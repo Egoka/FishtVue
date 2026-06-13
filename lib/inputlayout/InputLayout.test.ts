@@ -568,6 +568,23 @@ describe("InputLayout Component", () => {
       const helpHtml = wrapper.find("[data-input-layout-help]").html()
       expect(helpHtml).toContain("motion-safe:transition")
     })
+
+    it("gates the floating-label transition behind the mount tick (no position slide on mount)", async () => {
+      // Label получает :animate="isTick". До тика transition выключен → лейбл стоит на месте
+      // (не «переезжает» из исходной точки); после тика — включён, фокус-анимация работает.
+      vi.useFakeTimers()
+      try {
+        const wrapper = mount(InputLayout, { props: { value: "", label: "Name" } })
+        let cls = wrapper.find("[data-label]").attributes("class") ?? ""
+        expect(cls).not.toContain("motion-safe:transition-all")
+        vi.advanceTimersByTime(150)
+        await nextTick()
+        cls = wrapper.find("[data-label]").attributes("class") ?? ""
+        expect(cls).toContain("motion-safe:transition-all")
+      } finally {
+        vi.useRealTimers()
+      }
+    })
   })
 
   // Issue 8 — print styles (N59): style-for-print, НЕ display:none (канон Switch/Button/Input).
