@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Icons from "fishtvue/icons/Icons.vue"
 
-// Issue 7: heroicons теперь резолвятся через dynamic import (async) — ждём microtasks + macrotask.
+// Issue 1: heroicons резолвятся sync (eager namespace) — flush нужен только для Iconify-fallback
+// (async CDN/offline-коллекция). Heroicon-кейсы рендерятся без flush; helper оставлен для Iconify.
 const flushHero = async () => {
   await flushPromises()
   await new Promise((r) => setTimeout(r))
@@ -188,6 +189,39 @@ describe("Icons Component Tests", () => {
       expect(wrapper.exists()).toBe(true)
       // graceful: neither heroicon nor iconify resolved → no <svg>
       expect(wrapper.find("svg").exists()).toBe(false)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // Heroicons — eager sync resolution — Issue 1 (icons.md, regression fix)
+  // Heroicon резолвится через eager namespace import + sync lookup по имени, а
+  // НЕ через per-icon dynamic import. Поэтому SVG обязан появляться на первом
+  // paint — без flushHero(). Это и есть суть фикса: bare-specifier dynamic
+  // import (`import(`@heroicons/...${name}.js`)`) не глобится Vite/Rollup
+  // `dynamic-import-vars` → ломался в prod-Vite + отсутствовал в SSR-HTML.
+  // Если кто-то вернёт async dynamic import — эти кейсы покраснеют.
+  // -----------------------------------------------------------------------
+  describe("Heroicons — eager sync resolution (Issue 1 / prod-Vite + SSR)", () => {
+    it("renders the heroicon SVG synchronously on first paint (no async flush)", () => {
+      const wrapper = mount(Icons, { props: { type: "Check" } })
+      expect(wrapper.find("svg").exists()).toBe(true)
+    })
+
+    it('"XMark" (Alert close-button icon name) resolves to an SVG synchronously', () => {
+      const wrapper = mount(Icons, { props: { type: "XMark" } })
+      expect(wrapper.find("svg").exists()).toBe(true)
+    })
+
+    it("kebab-case 'x-mark' resolves to the same heroicon synchronously", () => {
+      const wrapper = mount(Icons, { props: { type: "x-mark" } })
+      expect(wrapper.find("svg").exists()).toBe(true)
+    })
+
+    it("solid variant resolves synchronously (fill=currentColor, no flush)", () => {
+      const wrapper = mount(Icons, { props: { type: "Check", variant: "solid" } })
+      const svg = wrapper.find("svg")
+      expect(svg.exists()).toBe(true)
+      expect(svg.attributes("fill")).toBe("currentColor")
     })
   })
 
