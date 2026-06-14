@@ -1,8 +1,8 @@
 ---
 title: Issues — Component class (`Component<T>`)
-summary: Issues 1-6 закрыты + B11 doc-sync. Issue 3 (HMR teardown) ✅ — механизм дедупа `<style>` через `data-fishtvue-style-id` уже в `useStyle.ts`, verified regression-тестом. Issue 4 (generic narrowing D21) ✅ — контракт `keyof ComponentsOptions` задокументирован в architecture §3/§13. Issue 5 (coverage K46) ✅ — добавлены HMR-dedup + default-`__stylesBase` тесты, стабилизирован flaky `getOptions`. Остаются low-трекеры E29.7/N59 (N/A by design для базового класса).
+summary: Issues 1-6 закрыты + B11 doc-sync. Issue 3 (HMR teardown) ✅ — механизм дедупа `<style>` через `data-fishtvue-style-id` уже в `useStyle.ts`, verified regression-тестом. Issue 4 (generic narrowing D21) ✅ — контракт `keyof ComponentsOptions` задокументирован в architecture §3/§13. Issue 5 (coverage K46) ✅ — добавлены HMR-dedup + default-`__stylesBase` тесты, стабилизирован flaky `getOptions`. E29.7/N59 (motion/print) закрыты как N/A by design (базовый класс не рендерит DOM, motion/print = per-SFC concern) — **matrix 0/0/0/0**.
 updated: 2026-06-14
-last-changes: 2026-06-14 — Issues 3/4/5 закрыты (test+doc only, без правок source). **Issue 3** (C17/HMR) — рекомендация fix #2 («replace content existing element») уже реализована в [useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45) через переиспользование `style[data-fishtvue-style-id="${name}"]`; добавлен regression-кейс в [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` (3× инжекция с одним name → один `<style>`, контент заменён). **Issue 4** (D21) — generic уже `keyof ComponentsOptions` (auto-derive не нужен); контракт «новый компонент → ключ в ComponentsOptions» задокументирован в [architecture/component-class.md](../architecture/component-class.md) §3/§13. **Issue 5** (K46) — HMR-test ✅ (Theme.test.ts), default-`__stylesBase` тест ✅ + flaky `should return the correct options with getOptions` стабилизирован (явный name вместо order-dependent undefined-резолва под isolate:false); Component.test.ts 25 → 26. **B11** (darkModeSelector) — doc-sync: закрыт глобально 2026-06-12 ([component/index.ts:150](../../lib/component/index.ts#L150)), снят из open-счёта. Severity matrix 0/2/3/2 → 0/0/0/2.
+last-changes: 2026-06-14 — Issues 3/4/5 закрыты (test+doc only, без правок source). **Issue 3** (C17/HMR) — рекомендация fix #2 («replace content existing element») уже реализована в [useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45) через переиспользование `style[data-fishtvue-style-id="${name}"]`; добавлен regression-кейс в [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` (3× инжекция с одним name → один `<style>`, контент заменён). **Issue 4** (D21) — generic уже `keyof ComponentsOptions` (auto-derive не нужен); контракт «новый компонент → ключ в ComponentsOptions» задокументирован в [architecture/component-class.md](../architecture/component-class.md) §3/§13. **Issue 5** (K46) — HMR-test ✅ (Theme.test.ts), default-`__stylesBase` тест ✅ + flaky `should return the correct options with getOptions` стабилизирован (явный name вместо order-dependent undefined-резолва под isolate:false); Component.test.ts 25 → 26. **B11** (darkModeSelector) — doc-sync: закрыт глобально 2026-06-12 ([component/index.ts:150](../../lib/component/index.ts#L150)), снят из open-счёта. **E29.7/N59** (motion/print, low) закрыты как N/A by design — базовый класс не рендерит DOM (architecture §3/§12), motion/print = per-SFC concern. Severity matrix 0/2/3/2 → **0/0/0/0**; файл переведён в «Завершённые», остаётся в `active/` как трекер watcher-leak limitation (Issue 3).
 audit-checklist: 60-point + Configuration support
 source: lib/component/
 related-doc: ../architecture/component-class.md
@@ -17,7 +17,7 @@ related-doc: ../architecture/component-class.md
 | critical | 0            | —                                                                                    |
 | high     | 0            | —                                                                                    |
 | medium   | 0            | —                                                                                    |
-| low      | 2            | E29.7 (motion not at base — N/A by design), N59 (print — N/A by design)              |
+| low      | 0            | —                                                                                    |
 
 ## ~~Issue 1: Double initStyle — onServerPrefetch + onMounted + manual call в каждом компоненте~~ ✅ resolved 2026-05-16
 
@@ -160,6 +160,23 @@ public setStyle = (...) => {
 
 - Issue 1 (Double initStyle) — Wave 2.3, progress 3/22 после Select.
 - SSR styles + sideEffects + exports map в lib/package.json — `button.md` Issues 1, 8, 9 (Wave 2.1).
+
+## ~~Cross-cutting low: E29.7 (motion) / N59 (print)~~ ✅ resolved 2026-06-14 (N/A by design)
+
+- **Категория:** E29.7 (prefers-reduced-motion), N59 (print)
+- **Severity:** ~~low~~
+- **Где:** [component/index.ts](../../lib/component/index.ts) — базовый класс
+
+### Что найдено / resolution
+
+Эти cross-cutting low-пункты жили только в severity-матрице, без тела issue. Для **базового класса** они **N/A by design**: `Component<T>` не рендерит DOM и не задаёт собственных стилей/анимаций — он лишь резолвит options, локаль и инжектит CSS-классы в `@layer fishtvue`. Подтверждено каноном:
+
+- [architecture/component-class.md §3](../architecture/component-class.md#3-how-it-works) — «**Animation / transitions:** базовый класс анимаций не предоставляет. Анимации — на стороне SFC».
+- [architecture/component-class.md §12](../architecture/component-class.md#12-accessibility--security) — «Класс не вносит a11y-атрибутов. Наследуется semantics корневого DOM-узла SFC».
+
+Поэтому `prefers-reduced-motion` (E29.7) и print-стили (N59) — это **per-SFC concerns**, а не базового класса. Они трекаются и закрываются в issue-файлах конкретных компонентов (motion-safe canon — Button/Menu/Select/Table/Switch/InputLayout; print — Button/Input/Table/Switch/Pagination/InputLayout; см. Wave 10.1/10.2 в [README](./README.md)). На уровне `Component<T>` правок не требуется.
+
+Severity matrix Component class: low 2 → 0 → **row 0/0/0/0**.
 
 ## Cross-cutting: Configuration support
 
