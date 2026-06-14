@@ -1,7 +1,7 @@
 ---
 title: Issues — Separator
-summary: Аудит Separator — преимущественно cross-cutting, отсутствие role="separator" ARIA, RTL.
-updated: 2026-06-06
+summary: Аудит Separator — остался только B10 (semantic tokens, Wave 9). A4-5/C17/E29.1/F31/L53/A2 закрыты.
+updated: 2026-06-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/separator/
 related-doc: ../components/separator.md
@@ -14,22 +14,23 @@ related-doc: ../components/separator.md
 | Severity | Count | Categories |
 | -------- | ----- | ---------- |
 | critical | 0     | —          |
-| high     | 2     | A4-5, C17  |
-| medium   | 1     | F31        |
+| high     | 0     | —          |
+| medium   | 0     | —          |
 | low      | 1     | B10        |
 
+**Закрыто 2026-06-14:** A4-5 (exports map — наследуется от root `buildRootExports()`, ✅ 2026-06-11), C17 (SSR styles — `Component.__hooks()` → `onServerPrefetch`, regression-probe именно на Separator в [ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts)), F31 (logical `contentPosition` start/end + deprecated left/right + dev-warn + RTL gradient — зеркало [button.md Issue 3](./button.md)). Остаётся только **B10** (semantic tokens → Wave 9) — файл остаётся active как трекер.
 **Закрыто 2026-06-06:** A2 (per-component `sideEffects`), E29.1 (`role="separator"` + `aria-orientation`), L53 (`unstyled` — regression-тест к cross-cutting guard). E29.7 (motion) — N/A (нет анимаций). Зачёркнуто ниже с `✅ resolved`-маркерами.
 
 ## Issue 1: SSR styles + sideEffects/exports map / unstyled
 
 См. [button.md Issue 1, 8, 9, 14](./button.md).
 
-**Статус (2026-06-06):**
+**Статус (2026-06-14):**
 
 - **sideEffects (A2):** ✅ resolved — [lib/separator/package.json](../../lib/separator/package.json) помечен `"sideEffects": false` (нет SFC `<style>`, стили инжектятся в runtime через `setStyle`; precedent — Dialog/FixWindow).
 - **unstyled (L53):** ✅ resolved — наследуется из cross-cutting guard `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138), ✅ 2026-05-11); regression-тест добавлен в [Separator.test.ts](../../lib/separator/Separator.test.ts) (describe "Unstyled mode").
-- **SSR styles (C17):** дубль `Separator.initStyle()` уже снят в Wave 2.3 (comment-marker канона в [Separator.vue](../../lib/separator/Separator.vue)); SSR-инжекция наследуется из `Component.__hooks()`. Остаётся базовый `renderToString`-критерий на уровне `Component` — общий для всех компонентов.
-- **exports map (A4-5):** ⏳ deferred → root [lib/package.json](../../lib/package.json) (Wave 2.1, one-time для всех 22 компонентов).
+- **SSR styles (C17):** ✅ resolved 2026-06-14 — дубль `Separator.initStyle()` снят в Wave 2.3 (comment-marker канона в [Separator.vue:134](../../lib/separator/Separator.vue#L134)); SSR-инжекция наследуется из `Component.__hooks()` → `onServerPrefetch` ([button.md Issue 1](./button.md)). Базовый `renderToString`-критерий на уровне `Component` **выполнен** и проверяется regression-probe'ом именно на Separator: [lib/component/ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts) (`renderToString(createSSRApp(Separator))` → `cssComponents.has("Separator")` без client mount → доказывает `onServerPrefetch`-путь).
+- **exports map (A4-5):** ✅ resolved 2026-06-14 — корневая `exports`-карта генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js) strict-superset'ом (✅ 2026-06-11, [button.md Issue 9](./button.md), [table.md Issue 5](./table.md)); субпуть `fishtvue/separator` собирается из вложенного [lib/separator/package.json](../../lib/separator/package.json) (lowercase `import` `separator.mjs` + PascalCase `types` `Separator.d.ts`). Per-component правок не требуется; контракт — [lib/package.test.ts](../../lib/package.test.ts).
 
 ## ~~Issue 2: Нет ARIA role="separator"~~ ✅ resolved 2026-06-06
 
@@ -48,15 +49,29 @@ related-doc: ../components/separator.md
 2. ~~Если есть content (текст, иконка) → `role="separator" aria-orientation="horizontal|vertical"`.~~ → `aria-orientation` выставляется всегда.
 3. Decorative-режим (`aria-hidden`) не реализован — разделитель всегда семантический (нет `decorative` prop).
 
-## Issue 3: RTL — `contentPosition: "left" | "right"` буквальное
+## ~~Issue 3: RTL — `contentPosition: "left" | "right"` буквальное~~ ✅ resolved 2026-06-14
 
 - **Категория:** F31
-- **Severity:** medium
-- **Статус:** ⏳ deferred → Wave 8.1. Зависит от `useDirectionality()` composable (ещё не существует); зеркалит [button.md Issue 3](./button.md) (тоже открыт). Преждевременная point-fix миграция создала бы частичный RTL-паттерн.
+- **Severity:** ~~medium~~
+- **Где:** [Separator.d.ts:28-41](../../lib/separator/Separator.d.ts#L28-L41), [Separator.vue:20-25](../../lib/separator/Separator.vue#L20-L25), [Separator.vue:152-161](../../lib/separator/Separator.vue#L152-L161)
+- **Resolution:** `contentPosition` принимает logical `"start" | "end"` (+ `"center" | "full"`); `"left" | "right"` сохранены как deprecated алиасы (`left → start`, `right → end`) через type-union + computed-нормализацию ([Separator.vue:20](../../lib/separator/Separator.vue#L20)). Порядок line-сегментов зеркалится **бесплатно** через flex main-axis корня (`relative flex`) — под `dir="rtl"` сегмент `data-separator-left` визуально уходит вправо, поэтому `start`-контент остаётся у логического начала; отдельный CSS/`useDirectionality()` не нужен (зеркало [button.md Issue 3](./button.md)). Градиентная заливка горизонтальных сегментов зеркалится `rtl:`-вариантом (`bg-gradient-to-r rtl:bg-gradient-to-l` / `bg-gradient-to-l rtl:bg-gradient-to-r`, движок знает `specialStates rtl/ltr`). `onMounted` dev-warn при использовании deprecated значений ([Separator.vue:136-147](../../lib/separator/Separator.vue#L136-L147)). Тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) describe "RTL & logical contentPosition (Issue 3 / F31)".
 
-### Что нужно сделать
+> **Примечание о старом deferral.** Прежний статус «⏳ deferred → зависит от `useDirectionality()`» был ошибочным: [button.md Issue 3](./button.md) (закрыт 2026-06-07) доказал, что composable не нужен — RTL-порядок делегируется flex-направлению. Roadmap-пункт `useDirectionality()` ([README.md 8.1](./README.md)) остаётся отдельной задачей auto-detect `<html dir>`, но не блокирует logical-миграцию `contentPosition`.
 
-Заменить `"left"|"right"` на `"start"|"end"` (deprecation soft) или auto-mirror через `dir="rtl"` selector.
+### Что было сделано
+
+1. ✅ API изменён на `contentPosition?: "start" | "end" | "center" | "full" | "left" | "right"` в [Separator.d.ts](../../lib/separator/Separator.d.ts); `"left" | "right"` — deprecated алиасы (JSDoc-нота).
+2. ✅ computed `content` нормализует `left → start`, `right → end`, default `center`; exposed-тип сужен до logical-union.
+3. ✅ Template-условия сегментов: `!['start','full']` (левый) / `!['end','full']` (правый); RTL-флип — через flex, без `dir`-атрибута (`direction` дефолтит ltr).
+4. ✅ `rtl:bg-gradient-to-*` зеркало направления градиента (горизонтальная ветка).
+5. ✅ `onMounted` dev-warn (`[FishtVue Separator] contentPosition="…" is deprecated; use "…"`).
+
+### Acceptance criteria
+
+- [x] `contentPosition: "start"` скрывает левый сегмент (логическое начало), `"end"` — правый; exposed `content` нормализован.
+- [x] Существующие `"left"/"right"` продолжают работать (deprecation soft) и рендерят идентично logical-эквиваленту.
+- [x] Console-warn при deprecated значении; нет warn для logical.
+- [x] Горизонтальный градиент несёт `rtl:`-вариант направления.
 
 ## Issue 4: prefers-reduced-motion / colors
 

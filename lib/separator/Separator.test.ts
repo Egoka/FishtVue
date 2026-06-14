@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Separator from "fishtvue/separator/Separator.vue"
 import { SeparatorProps } from "fishtvue/separator/Separator"
@@ -141,6 +141,60 @@ describe("Separator Component", () => {
       expect(content.exists()).toBe(true)
       expect(content.attributes("aria-hidden")).toBeUndefined()
       expect(content.text()).toBe("OR")
+    })
+  })
+
+  describe("RTL & logical contentPosition (Issue 3 / F31)", () => {
+    it.each([
+      { position: "start", hidden: "left", visible: "right" },
+      { position: "end", hidden: "right", visible: "left" }
+    ] as const)("logical $position hides $hidden segment, keeps $visible", ({ position, hidden, visible }) => {
+      const wrapper = mount(Separator, { props: { contentPosition: position } })
+      expect(wrapper.find(`[data-separator-${hidden}]`).exists()).toBe(false)
+      expect(wrapper.find(`[data-separator-${visible}]`).exists()).toBe(true)
+      expect((wrapper.vm as any).content).toBe(position)
+    })
+
+    it.each([
+      { deprecated: "left", logical: "start" },
+      { deprecated: "right", logical: "end" }
+    ] as const)("normalizes deprecated $deprecated → $logical (backward compat)", ({ deprecated, logical }) => {
+      const wrapper = mount(Separator, { props: { contentPosition: deprecated as any } })
+      // exposed value нормализован в logical
+      expect((wrapper.vm as any).content).toBe(logical)
+      // рендеринг идентичен logical-эквиваленту
+      const hidden = logical === "start" ? "left" : "right"
+      expect(wrapper.find(`[data-separator-${hidden}]`).exists()).toBe(false)
+    })
+
+    it.each(["left", "right"] as const)("dev-warns on deprecated contentPosition=%s", (position) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mount(Separator, { props: { contentPosition: position as any } })
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0][0]).toContain("[FishtVue Separator]")
+      warn.mockRestore()
+    })
+
+    it.each(["start", "end", "center", "full"] as const)("does not warn for logical contentPosition=%s", (position) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mount(Separator, { props: { contentPosition: position } })
+      expect(warn).not.toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    it("mirrors horizontal gradient direction under RTL via rtl: variants", () => {
+      const wrapper = mount(Separator, { props: { gradient: true, contentPosition: "center" } })
+      const leftLine = wrapper.find("[data-separator-left] div")
+      const rightLine = wrapper.find("[data-separator-right] div")
+      expect(leftLine.classes()).toContain("rtl:bg-gradient-to-l")
+      expect(rightLine.classes()).toContain("rtl:bg-gradient-to-r")
+    })
+
+    it("defaults to center when contentPosition is omitted", () => {
+      const wrapper = mount(Separator)
+      expect((wrapper.vm as any).content).toBe("center")
+      expect(wrapper.find("[data-separator-left]").exists()).toBe(true)
+      expect(wrapper.find("[data-separator-right]").exists()).toBe(true)
     })
   })
 
