@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, ref, useSlots, watch } from "vue"
+  import { computed, onMounted, ref, useSlots, watch } from "vue"
   import type { AlertEmits, AlertProps } from "./Alert"
   import {
     ChatBubbleOvalLeftIcon,
@@ -11,6 +11,7 @@
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
   import { StyleClass } from "fishtvue/types"
+  import { sanitizeHtml } from "./sanitizeHtml"
   // ---BASE-COMPONENT----------------------
   const Alert = new Component<"Alert">()
   const options = Alert.getOptions()
@@ -35,6 +36,12 @@
     () => props.closeButton ?? options?.closeButton ?? false
   )
   const position = computed<NonNullable<AlertProps["position"]>>(() => props.position ?? options?.position ?? "top")
+  // Issue 7 / F31 (RTL): logical start/end. Физические "left"/"right" — deprecated алиасы,
+  // нормализуются в logical (left → start, right → end). Tailwind logical-utilities (ms/ps/start/end)
+  // авто-зеркалятся при dir="rtl"; для не-логического translate анимации добавлен rtl:-флип.
+  const positionLogical = computed<string>(() =>
+    (position.value as string).replace("left", "start").replace("right", "end")
+  )
   // ARIA mapping per type (Issue 3, audit 2026-05-11):
   // error/warning → assertive alert; success/info/neutral → polite status.
   const ariaRole = computed<"alert" | "status">(() =>
@@ -48,10 +55,12 @@
   const startEnterAndLeaveClass = computed<string>(() => {
     let classAnimate
     if (!notAnimate.value) {
-      if ((position.value as string).includes("left")) classAnimate = "-translate-x-[200%] opacity-0"
-      else if ((position.value as string).includes("right")) classAnimate = "translate-x-[200%] opacity-0"
-      else if ((position.value as string).includes("top")) classAnimate = "-translate-y-[200%] opacity-0"
-      else if ((position.value as string).includes("bottom")) classAnimate = "translate-y-[200%] opacity-0"
+      // start → off-screen в logical-начало (LTR: влево, RTL: вправо) — rtl: флипает translate.
+      if (positionLogical.value.includes("start")) classAnimate = "-translate-x-[200%] rtl:translate-x-[200%] opacity-0"
+      else if (positionLogical.value.includes("end"))
+        classAnimate = "translate-x-[200%] rtl:-translate-x-[200%] opacity-0"
+      else if (positionLogical.value.includes("top")) classAnimate = "-translate-y-[200%] opacity-0"
+      else if (positionLogical.value.includes("bottom")) classAnimate = "translate-y-[200%] opacity-0"
       else classAnimate = "opacity-0"
     } else classAnimate = "opacity-0"
     return Alert.setStyle(classAnimate)
@@ -59,10 +68,10 @@
   const endEnterAndLeaveClass = computed<string>(() => {
     let classAnimate
     if (!notAnimate.value) {
-      if ((position.value as string).includes("left")) classAnimate = "translate-x-0 opacity-100"
-      else if ((position.value as string).includes("right")) classAnimate = "translate-x-0 opacity-100"
-      else if ((position.value as string).includes("top")) classAnimate = "translate-y-0 opacity-100"
-      else if ((position.value as string).includes("bottom")) classAnimate = "translate-y-0 opacity-100"
+      if (positionLogical.value.includes("start")) classAnimate = "translate-x-0 opacity-100"
+      else if (positionLogical.value.includes("end")) classAnimate = "translate-x-0 opacity-100"
+      else if (positionLogical.value.includes("top")) classAnimate = "translate-y-0 opacity-100"
+      else if (positionLogical.value.includes("bottom")) classAnimate = "translate-y-0 opacity-100"
       else classAnimate = "opacity-100"
     } else classAnimate = "opacity-100"
     return Alert.setStyle(classAnimate)
@@ -177,7 +186,8 @@
   Alert.setStyle(`motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500`)
   const classBase = computed<StyleClass>(() =>
     Alert.setStyle([
-      "alert-body p-4 w-auto max-w-[89vw] rounded-md",
+      // mobile-first: компактный padding на телефоне, sm: на desktop; max-w-[89vw] держит safe-gutters.
+      "alert-body p-3 sm:p-4 w-auto max-w-[89vw] rounded-md",
       classesStyle.value.body,
       props?.class ?? "",
       options?.class ?? "",
@@ -188,15 +198,19 @@
   const classBody = computed(() => Alert.setStyle("flex"))
   const classDivIcon = computed(() => Alert.setStyle("shrink-0"))
   const classIcon = computed(() => Alert.setStyle(["h-5 w-5", classesStyle.value.icon]))
-  const classContent = computed(() => Alert.setStyle("ml-3 mt-0.5"))
+  const classContent = computed(() => Alert.setStyle("ms-3 mt-0.5"))
   const classTitle = computed(() => Alert.setStyle(["text-sm font-medium", classesStyle.value.title]))
   const classSubtitle = computed(() =>
     Alert.setStyle(["text-sm", title.value?.length ? "mt-2" : "", classesStyle.value.subtitle])
   )
+  // `subtitle` поддерживает HTML-разметку, но проходит через best-effort sanitizer
+  // (вырезает <script>/<style>/<iframe>/…, on*-обработчики, javascript:/vbscript: протоколы).
+  // SSR-safe (чисто строковый). Для полного контроля над rich-разметкой — slot `#subtitle`.
+  const sanitizedSubtitle = computed<string>(() => sanitizeHtml(subtitle.value))
   const classSlotDefault = computed(() =>
     Alert.setStyle(["text-sm", title.value?.length ? "mt-2" : "", classesStyle.value.subtitle])
   )
-  const classDivCloseButton = ref(Alert.setStyle("relative bottom-[2px] ml-auto pl-3"))
+  const classDivCloseButton = ref(Alert.setStyle("relative bottom-[2px] ms-auto ps-3"))
   // ---EXPOSE------------------------------
   defineExpose({
     // ---STATE-------------------------
@@ -208,6 +222,9 @@
     displayTime,
     isCloseButton,
     position,
+    positionLogical,
+    startEnterAndLeaveClass,
+    endEnterAndLeaveClass,
     classesStyle,
     size,
     classBase,
@@ -217,6 +234,16 @@
   // `Alert.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
   // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84,
   // Documentation/dev-patterns.md §2 decision row 1).
+  // ---MOUNT-------------------------------
+  onMounted(() => {
+    // Dev-warning: deprecated физические "left"/"right" не RTL-safe (Issue 7 / F31; зеркало Separator.vue).
+    if (process.env.NODE_ENV !== "production" && (props.position === "left" || props.position === "right")) {
+      console.warn(
+        `[FishtVue Alert] position="${props.position}" is deprecated; ` +
+          `use "${props.position === "left" ? "start" : "end"}" for RTL-safe logical positioning.`
+      )
+    }
+  })
   // ---WATCHERS----------------------------
   watch(
     () => props.modelValue,
@@ -261,7 +288,7 @@
           <div data-alert-content :class="classContent">
             <h3 v-if="title?.length" data-alert-title :class="classTitle">{{ title }}</h3>
             <div v-if="subtitle || slots?.subtitle" data-alert-subtitle :class="classSubtitle">
-              <slot name="subtitle">{{ subtitle }}</slot>
+              <slot name="subtitle"><span data-alert-subtitle-html v-html="sanitizedSubtitle" /></slot>
             </div>
             <div v-if="slots?.default" data-alert-slot :class="classSlotDefault">
               <slot />

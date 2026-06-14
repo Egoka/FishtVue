@@ -1,11 +1,11 @@
 import { mount } from "@vue/test-utils"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import { createApp } from "vue"
 import Alert from "fishtvue/alert/Alert.vue"
 import { openAlert } from "fishtvue/alert/openAlert"
-import { PositionShort } from "fishtvue/types"
-import { AlertProps } from "fishtvue/alert/Alert"
+import { sanitizeHtml } from "fishtvue/alert/sanitizeHtml"
+import { AlertPosition, AlertProps } from "fishtvue/alert/Alert"
 
 describe("Alert Component", () => {
   describe("Without Library Initialization", () => {
@@ -266,9 +266,9 @@ describe("Alert Component", () => {
     })
 
     it("should set custom position and create the corresponding container", () => {
-      openAlert({ position: "bottom-right" })
+      openAlert({ position: "bottom-end" })
 
-      const alertElement = document.querySelector(".alert-bottom-right")
+      const alertElement = document.querySelector(".alert-bottom-end")
       expect(alertElement).not.toBeNull()
       expect(alertElement?.className).toContain("items-end")
     })
@@ -384,39 +384,39 @@ describe("Alert Component", () => {
 
       expect(alertTitles).toEqual(["Third Alert", "Second Alert", "First Alert"])
     })
-    describe("openAlert Function - Position Tests", () => {
-      const positions: PositionShort[] = [
+    describe("openAlert Function - Position Tests (logical, RTL-safe)", () => {
+      const positions: AlertPosition[] = [
         "top",
         "bottom",
-        "left",
-        "right",
+        "start",
+        "end",
         "center",
-        "bottom-left",
-        "top-left",
-        "bottom-right",
-        "top-right"
+        "bottom-start",
+        "top-start",
+        "bottom-end",
+        "top-end"
       ]
 
       /**
-       * Возвращает ожидаемые классы для заданной позиции
+       * Возвращает ожидаемые logical-классы для заданной позиции (RTL-safe + mobile-first gutters).
        */
       function getExpectedClassesForPosition(position: string): string[] {
         const positionClasses: Record<string, string[]> = {
-          top: ["top-0", "pt-5", "items-center"],
-          bottom: ["bottom-0", "pb-5", "items-center", "flex-col-reverse"],
-          left: ["left-0", "pl-5", "top-1/2", "-translate-y-1/2"],
-          right: ["right-0", "pr-5", "top-1/2", "-translate-y-1/2"],
+          top: ["top-0", "pt-3", "sm:pt-5", "items-center"],
+          bottom: ["bottom-0", "pb-3", "sm:pb-5", "items-center", "flex-col-reverse"],
+          start: ["start-0", "ps-3", "sm:ps-5", "top-1/2", "-translate-y-1/2", "items-start"],
+          end: ["end-0", "pe-3", "sm:pe-5", "top-1/2", "-translate-y-1/2", "items-end"],
           center: ["top-1/2", "left-1/2", "-translate-y-1/2", "-translate-x-1/2"],
-          "bottom-left": ["bottom-0", "pb-5", "left-0", "pl-5", "flex-col-reverse"],
-          "top-left": ["top-0", "pt-5", "left-0", "pl-5"],
-          "bottom-right": ["bottom-0", "pb-5", "right-0", "pr-5", "flex-col-reverse"],
-          "top-right": ["top-0", "pt-5", "right-0", "pr-5"]
+          "bottom-start": ["bottom-0", "pb-3", "start-0", "ps-3", "flex-col-reverse", "items-start"],
+          "top-start": ["top-0", "pt-3", "start-0", "ps-3", "items-start"],
+          "bottom-end": ["bottom-0", "pb-3", "end-0", "pe-3", "flex-col-reverse", "items-end"],
+          "top-end": ["top-0", "pt-3", "end-0", "pe-3", "items-end"]
         }
 
         return positionClasses[position] || []
       }
 
-      it.each(positions)("should create an alert with position '%s'", (position) => {
+      it.each(positions)("should create an alert with logical position '%s'", (position) => {
         openAlert({ position })
 
         const alertContainer = document.querySelector(`.alert-${position}`)
@@ -425,12 +425,32 @@ describe("Alert Component", () => {
         const alertElement = alertContainer?.querySelector(`[data-alert]`)
         expect(alertElement).not.toBeNull()
 
-        // Проверяем наличие классов, соответствующих позиции
+        // Проверяем наличие logical-классов, соответствующих позиции
         const expectedClasses = getExpectedClassesForPosition(position)
         expectedClasses.forEach((cls) => {
           expect(alertContainer?.className).toContain(cls)
         })
       })
+
+      it.each([
+        { physical: "left", logical: "start" },
+        { physical: "right", logical: "end" },
+        { physical: "top-left", logical: "top-start" },
+        { physical: "top-right", logical: "top-end" },
+        { physical: "bottom-left", logical: "bottom-start" },
+        { physical: "bottom-right", logical: "bottom-end" }
+      ])(
+        "maps deprecated physical '$physical' → logical container '.alert-$logical' (+ dev-warn)",
+        ({ physical, logical }) => {
+          const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+          openAlert({ position: physical as AlertPosition })
+
+          expect(document.querySelector(`.alert-${logical}`)).not.toBeNull()
+          expect(document.querySelector(`.alert-${physical}`)).toBeNull()
+          expect(warn).toHaveBeenCalled()
+          warn.mockRestore()
+        }
+      )
     })
   })
 
@@ -439,35 +459,48 @@ describe("Alert Component", () => {
   // 3 (ARIA role/aria-live), 6-partial (close-button locale), 9 (motion-safe).
   // -------------------------------------------------------------------------
 
-  describe("Security — XSS guard in subtitle prop (Issue 1)", () => {
+  describe("Security — XSS guard in subtitle prop (Issue 1, sanitized v-html)", () => {
     beforeEach(() => {
       document.body.innerHTML = ""
       delete (window as any).__xssTriggered
     })
 
-    it("does not render <script> tag from subtitle prop (template usage)", () => {
+    it("strips <script> tag from subtitle prop (template usage)", () => {
       const payload = "<script>window.__xssTriggered=true</script>"
       const wrapper = mount(Alert, {
         props: { modelValue: true, subtitle: payload }
       })
 
       expect(wrapper.find("[data-alert-subtitle] script").exists()).toBe(false)
+      expect(wrapper.find("[data-alert-subtitle]").html()).not.toContain("<script>")
       expect((window as any).__xssTriggered).toBeUndefined()
-      // subtitle escapes as plain text:
-      expect(wrapper.find("[data-alert-subtitle]").text()).toContain("<script>")
     })
 
-    it("does not execute <img onerror> payload from subtitle prop (template usage)", () => {
+    it("strips on* handler from <img onerror> payload (template usage)", () => {
       const payload = '<img src=x onerror="window.__xssTriggered=true">'
       const wrapper = mount(Alert, {
         props: { modelValue: true, subtitle: payload }
       })
 
-      expect(wrapper.find("[data-alert-subtitle] img").exists()).toBe(false)
+      const img = wrapper.find("[data-alert-subtitle] img")
+      // <img> рендерится (safe-тег), но onerror-обработчик вырезан → исполнения нет.
+      expect(img.attributes("onerror")).toBeUndefined()
+      expect(wrapper.find("[data-alert-subtitle]").html()).not.toContain("onerror")
       expect((window as any).__xssTriggered).toBeUndefined()
     })
 
-    it("does not execute XSS payload from openAlert programmatic subtitle", () => {
+    it("strips javascript: protocol from anchor href (template usage)", () => {
+      const payload = '<a href="javascript:window.__xssTriggered=true">link</a>'
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, subtitle: payload }
+      })
+
+      const anchor = wrapper.find("[data-alert-subtitle] a")
+      expect(anchor.attributes("href")).toBeUndefined()
+      expect(wrapper.find("[data-alert-subtitle]").html()).not.toContain("javascript:")
+    })
+
+    it("strips XSS payload from openAlert programmatic subtitle", () => {
       const payload = "<script>window.__xssTriggered=true</script>"
       openAlert({ subtitle: payload })
 
@@ -475,6 +508,87 @@ describe("Alert Component", () => {
       expect(subtitle).not.toBeNull()
       expect(subtitle?.querySelector("script")).toBeNull()
       expect((window as any).__xssTriggered).toBeUndefined()
+    })
+  })
+
+  describe("Subtitle — sanitized HTML support (Issue 1 amended 2026-06-14)", () => {
+    beforeEach(() => {
+      document.body.innerHTML = ""
+    })
+
+    it("renders safe HTML markup (<span>, <b>) from subtitle prop", () => {
+      const wrapper = mount(Alert, {
+        props: {
+          modelValue: true,
+          subtitle: "An example <span class='badge'>html markup</span> can be <b>used</b>"
+        }
+      })
+      const subtitle = wrapper.find("[data-alert-subtitle]")
+      expect(subtitle.find("span.badge").exists()).toBe(true)
+      expect(subtitle.find("b").exists()).toBe(true)
+      expect(subtitle.text()).toContain("html markup")
+    })
+
+    it("renders <img> with a safe src from subtitle prop", () => {
+      const wrapper = mount(Alert, {
+        props: {
+          modelValue: true,
+          subtitle: "<img class='rounded-lg' src='https://example.com/a.jpg' alt=''>"
+        }
+      })
+      const img = wrapper.find("[data-alert-subtitle] img")
+      expect(img.exists()).toBe(true)
+      expect(img.attributes("src")).toBe("https://example.com/a.jpg")
+    })
+
+    it("renders safe HTML from openAlert programmatic subtitle", () => {
+      openAlert({ subtitle: "<span class='badge'>ok</span>" })
+      const subtitle = document.querySelector("[data-alert-subtitle]")
+      expect(subtitle?.querySelector("span.badge")).not.toBeNull()
+    })
+  })
+
+  describe("sanitizeHtml() — unit", () => {
+    it("removes <script> blocks with content", () => {
+      expect(sanitizeHtml("a<script>alert(1)</script>b")).toBe("ab")
+    })
+
+    it("removes <style> and <iframe> blocks", () => {
+      expect(sanitizeHtml("<style>body{}</style>x")).toBe("x")
+      expect(sanitizeHtml("<iframe src='evil'></iframe>y")).toBe("y")
+    })
+
+    it("removes nested / obfuscated script constructions", () => {
+      expect(sanitizeHtml("<scr<script>ipt>alert(1)</script>")).not.toContain("script>alert")
+      expect(sanitizeHtml("<scr<script>ipt>alert(1)</script>")).not.toContain("alert(1)")
+    })
+
+    it("strips on* event-handler attributes", () => {
+      expect(sanitizeHtml('<img src="x" onerror="alert(1)">')).not.toContain("onerror")
+      expect(sanitizeHtml("<div onclick=alert(1)>x</div>")).not.toContain("onclick")
+    })
+
+    it("strips javascript:/vbscript: protocols from attributes", () => {
+      expect(sanitizeHtml('<a href="javascript:alert(1)">x</a>')).not.toContain("javascript:")
+      expect(sanitizeHtml("<a href='vbscript:msgbox(1)'>x</a>")).not.toContain("vbscript:")
+    })
+
+    it("keeps safe tags, classes and http(s)/relative attributes", () => {
+      const safe = "<span class='badge'>ok</span> <a href='https://x.io'>l</a> <img src='/a.png'>"
+      const out = sanitizeHtml(safe)
+      expect(out).toContain("<span class='badge'>")
+      expect(out).toContain("href='https://x.io'")
+      expect(out).toContain("src='/a.png'")
+    })
+
+    it("does not strip safe attributes that merely start differently (data-*)", () => {
+      expect(sanitizeHtml("<div data-on='x'>y</div>")).toContain("data-on='x'")
+    })
+
+    it("handles empty / null / undefined", () => {
+      expect(sanitizeHtml("")).toBe("")
+      expect(sanitizeHtml(null)).toBe("")
+      expect(sanitizeHtml(undefined)).toBe("")
     })
   })
 
@@ -599,6 +713,123 @@ describe("Alert Component", () => {
       const container = document.querySelector(".alert-top")
       expect(container).not.toBeNull()
       expect(container?.querySelectorAll("[data-alert]").length).toBe(3)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Audit fixes (2026-06-14): unstyled (L53), RTL logical position (Issue 7 /
+  // F31), mobile-first responsive gutters.
+  // -------------------------------------------------------------------------
+
+  describe("Configuration support — unstyled (L53)", () => {
+    afterEach(() => {
+      // window.FishtVue — глобальный singleton, утекает между тестами (см. memory).
+      delete (window as any).FishtVue
+    })
+
+    it("strips all classes from the styled root when global unstyled: true", () => {
+      const app: any = createApp({})
+      app.use(FishtVue, { unstyled: true })
+
+      const wrapper = mount(Alert, {
+        global: { plugins: [app] },
+        props: { modelValue: true }
+      })
+
+      const styled = wrapper.find("[data-alert] > div")
+      expect((styled.attributes("class") ?? "").trim()).toBe("")
+    })
+
+    it("keeps classes when unstyled is not set (contrast)", () => {
+      const wrapper = mount(Alert, { props: { modelValue: true } })
+      const styled = wrapper.find("[data-alert] > div")
+      expect(styled.attributes("class")).toContain("alert-body")
+    })
+  })
+
+  describe("RTL & logical position (Issue 7 / F31)", () => {
+    it.each([
+      { input: "left", logical: "start" },
+      { input: "right", logical: "end" }
+    ])("maps deprecated physical position '$input' → '$logical' (positionLogical)", ({ input, logical }) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, position: input as AlertProps["position"] }
+      })
+      expect(wrapper.vm.positionLogical).toBe(logical)
+      warn.mockRestore()
+    })
+
+    it.each(["top", "bottom", "center", "start", "end"] as AlertProps["position"][])(
+      "passes through logical position '%s'",
+      (position) => {
+        const wrapper = mount(Alert, { props: { modelValue: true, position } })
+        expect(wrapper.vm.positionLogical).toBe(position)
+      }
+    )
+
+    it("uses logical margin (ms-3) on content, not physical ml-3", () => {
+      const wrapper = mount(Alert, { props: { modelValue: true, title: "t", subtitle: "s" } })
+      const content = wrapper.find("[data-alert-content]")
+      expect(content.attributes("class")).toContain("ms-3")
+      expect(content.attributes("class")).not.toContain("ml-3")
+    })
+
+    it("uses logical close-button spacing (ms-auto ps-3), not physical ml-auto pl-3", () => {
+      const wrapper = mount(Alert, { props: { modelValue: true, closeButton: true } })
+      const btnBox = wrapper.find("[data-alert-button]")
+      expect(btnBox.attributes("class")).toContain("ms-auto")
+      expect(btnBox.attributes("class")).toContain("ps-3")
+      expect(btnBox.attributes("class")).not.toContain("ml-auto")
+      expect(btnBox.attributes("class")).not.toContain("pl-3")
+    })
+
+    it("flips slide-in translate in RTL for logical 'start'", () => {
+      const wrapper = mount(Alert, { props: { modelValue: true, position: "start" } })
+      expect(wrapper.vm.startEnterAndLeaveClass).toContain("-translate-x-[200%]")
+      expect(wrapper.vm.startEnterAndLeaveClass).toContain("rtl:translate-x-[200%]")
+    })
+
+    it("flips slide-in translate in RTL for logical 'end'", () => {
+      const wrapper = mount(Alert, { props: { modelValue: true, position: "end" } })
+      expect(wrapper.vm.startEnterAndLeaveClass).toContain("translate-x-[200%]")
+      expect(wrapper.vm.startEnterAndLeaveClass).toContain("rtl:-translate-x-[200%]")
+    })
+
+    it("warns in dev when deprecated physical position is used", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mount(Alert, { props: { modelValue: true, position: "left" } })
+      expect(warn).toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    it("does not warn for logical position", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mount(Alert, { props: { modelValue: true, position: "start" } })
+      expect(warn).not.toHaveBeenCalled()
+      warn.mockRestore()
+    })
+  })
+
+  describe("Mobile-first responsive gutters", () => {
+    beforeEach(() => {
+      document.body.innerHTML = ""
+    })
+
+    it("uses smaller body padding on mobile (p-3) + sm: on desktop (sm:p-4)", () => {
+      const wrapper = mount(Alert, { props: { modelValue: true } })
+      const body = wrapper.find("[data-alert] > div")
+      expect(body.attributes("class")).toContain("p-3")
+      expect(body.attributes("class")).toContain("sm:p-4")
+    })
+
+    it("openAlert container uses mobile-first gutters (gap-3 / sm:gap-4, pt-3 / sm:pt-5)", () => {
+      openAlert({ position: "top" })
+      const container = document.querySelector(".alert-top")
+      expect(container?.className).toContain("gap-3")
+      expect(container?.className).toContain("sm:gap-4")
+      expect(container?.className).toContain("pt-3")
+      expect(container?.className).toContain("sm:pt-5")
     })
   })
 })

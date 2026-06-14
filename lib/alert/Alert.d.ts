@@ -1,5 +1,35 @@
 import { CSSProperties, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, PositionShort, Size, StyleClass } from "../types"
+import { ClassComponent, GlobalComponentConstructor, Size, StyleClass } from "../types"
+
+/**
+ * Logical, RTL-safe position values for the alert.
+ *
+ * `start`/`end` — логические стороны (`start` = слева в LTR, справа в RTL).
+ * Физические `left`/`right`/`top-left`/… — deprecated алиасы, мапятся на logical
+ * (`left → start`, `right → end`) с dev-warning. Используй logical-значения для RTL-корректности.
+ */
+export declare type AlertPosition =
+  | "top"
+  | "bottom"
+  | "center"
+  | "start"
+  | "end"
+  | "top-start"
+  | "top-end"
+  | "bottom-start"
+  | "bottom-end"
+  /** @deprecated физический алиас — используй logical `start` (RTL-safe) */
+  | "left"
+  /** @deprecated физический алиас — используй logical `end` (RTL-safe) */
+  | "right"
+  /** @deprecated физический алиас — используй logical `top-start` (RTL-safe) */
+  | "top-left"
+  /** @deprecated физический алиас — используй logical `top-end` (RTL-safe) */
+  | "top-right"
+  /** @deprecated физический алиас — используй logical `bottom-start` (RTL-safe) */
+  | "bottom-left"
+  /** @deprecated физический алиас — используй logical `bottom-end` (RTL-safe) */
+  | "bottom-right"
 
 /**
  * ## Alert
@@ -25,10 +55,10 @@ export declare type BaseAlert = {
   type?: "success" | "warning" | "info" | "error" | "neutral"
 
   /**
-   * Position of the alert on the screen.
-   * @type {PositionShort | undefined}
+   * Position of the alert on the screen (logical, RTL-safe).
+   * @type {AlertPosition | undefined}
    */
-  position?: PositionShort
+  position?: AlertPosition
 
   /**
    * Size of the alert.
@@ -90,19 +120,23 @@ export declare type BaseAlert = {
  */
 export interface AlertProps extends Omit<BaseAlert, "position" | "toTeleport"> {
   /**
-   * Position of the alert on the screen.
-   * @type {"top" | "bottom" | "left" | "right" | "center" | undefined}
+   * Position of the alert on the screen (logical, RTL-safe).
+   *
+   * Logical `start`/`end` зеркалятся в RTL. Физические `left`/`right` — deprecated алиасы
+   * (`left → start`, `right → end`) с dev-warning.
+   * @type {"top" | "bottom" | "center" | "start" | "end" | "left" | "right" | undefined}
    */
-  position?: "top" | "bottom" | "left" | "right" | "center"
+  position?: "top" | "bottom" | "center" | "start" | "end" | "left" | "right"
 }
 
 export declare type AlertSlots = {
   default(): VNode[]
   /**
-   * Custom rendering for the alert subtitle. Fallback — `subtitle` prop as plain text.
+   * Custom rendering for the alert subtitle. Fallback — `subtitle` prop rendered as
+   * **sanitized HTML** (best-effort sanitizer: strips `<script>`/`on*`/`javascript:` etc.).
    *
-   * Use this slot when richer markup is required. Native HTML in `subtitle` prop is
-   * intentionally rendered as text (XSS guard) — supply your own markup through this slot.
+   * Use this slot for full control over rich markup, or when the content is untrusted and
+   * needs a stronger sanitizer (e.g. DOMPurify) than the built-in best-effort one.
    */
   subtitle(): VNode[]
 }
@@ -158,10 +192,29 @@ export declare type AlertExpose = {
   isCloseButton: AlertProps["closeButton"]
 
   /**
-   * Current position of the alert.
+   * Current position of the alert (raw, как передано в prop/option).
    * @type {AlertProps["position"]}
    */
   position: AlertProps["position"]
+
+  /**
+   * Logical (RTL-safe) позиция: физические `left`/`right` нормализованы в `start`/`end`.
+   * @type {"top" | "bottom" | "center" | "start" | "end" | "top-start" | "top-end" | "bottom-start" | "bottom-end"}
+   */
+  positionLogical: string
+
+  /**
+   * Off-screen transition-класс (enter-from / leave-to). Для logical `start`/`end`
+   * содержит `rtl:`-флип translate-направления.
+   * @type {string}
+   */
+  startEnterAndLeaveClass: string
+
+  /**
+   * On-screen transition-класс (enter-to / leave-from).
+   * @type {string}
+   */
+  endEnterAndLeaveClass: string
 
   /**
    * CSS classes for various parts of the alert.
