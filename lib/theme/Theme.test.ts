@@ -465,5 +465,24 @@ describe("Testing theme", () => {
       styleTag = document.head.querySelector("#test-style") as HTMLStyleElement
       expect(styleTag.textContent).toBe(updatedCss)
     })
+
+    it("does not duplicate <style> across re-instantiation with the same name (HMR — Issue 3)", () => {
+      // Каждый вызов useStyle() — отдельный closure, как при HMR-re-mount компонента
+      // (Component.__setStyle вызывает useStyle(css, { name }) заново на каждом mount).
+      // load() переиспользует существующий style[data-fishtvue-style-id] вместо append нового —
+      // это и есть teardown-эквивалент: один тег, контент заменяется, дубли не копятся.
+      const name = "Issue3HmrProbe"
+      useStyle(".a { color: red }", { name })
+      useStyle(".a { color: blue }", { name })
+      const { unload } = useStyle(".a { color: green }", { name })
+
+      const tags = document.head.querySelectorAll(`style[data-fishtvue-style-id="${name}"]`)
+      expect(tags.length).toBe(1) // acceptance Issue 3: один <style> в head, не дубль
+      expect(tags[0].textContent).toBe(".a { color: green }") // контент заменён, не добавлен
+
+      // cleanup: isolate:false шарит document.head между тест-файлами в одном worker
+      unload()
+      document.head.querySelectorAll(`style[data-fishtvue-style-id="${name}"]`).forEach((t) => t.remove())
+    })
   })
 })

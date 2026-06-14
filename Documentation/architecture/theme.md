@@ -1,7 +1,7 @@
 ---
 title: Theme
-summary: Token-инфраструктура, primitive/semantic, темы Aurora/Harmony/Sapphire, uno-engine.
-updated: 2026-06-12
+summary: Token-инфраструктура, primitive/semantic, темы Aurora/Harmony/Sapphire, uno-engine. useStyle HMR-дедуп через data-fishtvue-style-id (2026-06-14).
+updated: 2026-06-14
 stability: stable
 since: 0.2.11
 ---
@@ -255,7 +255,7 @@ const { unload } = useStyle(":root { --foo: bar }")
 
 ## 15. Testing recipes
 
-`Theme.test.ts` — 20 кейсов на helpers (`linksTheme`, `palette`, `toVarsCss`, `useStyle`).
+`Theme.test.ts` — 21 кейс на helpers (`linksTheme`, `palette`, `toVarsCss`, `useStyle`). Блок `describe("useStyle")` делает `vi.unmock("fishtvue/theme")` (глобальный setup мокает `useStyle` в no-op) и проверяет реальную инжекцию: атрибуты, media, `unload`, replace-on-load и HMR-дедуп (повторная инжекция с одним `name` → один `<style>`, см. [Issues — Component class Issue 3](../issues/component-class.md)).
 `unoStyle/Uno.test.ts` — 1587 кейсов (4 skipped) на uno-engine.
 `unoStyle/Uno.improved.test.ts` — 1584 кейсa.
 
@@ -323,6 +323,7 @@ describe("Theme helpers", () => {
 ### Behavioral caveats
 
 - `useStyle` без `manual: true` инжектит сразу. Для отложенной инжекции — `manual: true` + ручной `load()`.
+- `useStyle` дедуплицирует `<style>` по `data-fishtvue-style-id` (= `name`): `load()` переиспользует существующий тег вместо append нового ([useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45)) — поэтому при HMR-re-mount компонента дубли не копятся. Caveat: каждый вызов `useStyle()` создаёт новый незакрытый `watch` (minor dev-only leak; элемент при этом один). Подробнее — [Component class §18](./component-class.md#18-known-issues--limitations).
 - `palette` использует HSL-конверсию — результат может отличаться от visual-tools (Coolors, Tailwind palette generator) на 2–3% по светлоте.
 - `tailwind-merge` дополнительно нормализует классы перед передачей в `tailwind()` — нестандартные пользовательские классы могут быть отфильтрованы.
 

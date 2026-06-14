@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
-import Component from "fishtvue/component"
+import Component, { cssComponents } from "fishtvue/component"
 import type { App } from "vue"
 import { createApp, defineComponent, getCurrentInstance } from "vue"
 import type { FishtVueConfiguration } from "fishtvue/config"
@@ -84,11 +84,12 @@ describe("Testing class Component", () => {
   })
 
   it("should return the correct options with getOptions", () => {
-    expect(component.getOptions()).toEqual({
-      FixWindow: {
-        closeButton: true
-      }
-    })
+    // Передаём name явно → getOptions резолвит componentsOptions["FixWindow"] детерминированно.
+    // Прежний вариант (`new Component()` без name) полагался на то, что this.name резолвится
+    // в undefined → getOptions() возвращал весь map; под isolate:false это order-dependent
+    // (file-wide vi.mock("vue") применяется не всегда) → flaky. Явный name убирает зависимость.
+    const c = new Component<"FixWindow">("FixWindow")
+    expect(c.getOptions()).toEqual({ closeButton: true })
   })
 
   it("should return the correct prefix with getPrefix", () => {
@@ -161,6 +162,17 @@ describe("Testing class Component", () => {
     component.initStyle(mockStyle)
     expect(mockStyle).toHaveBeenCalledTimes(2)
     expect(mockStyle.mock.calls[0]).toEqual(mockStyle.mock.calls[1])
+  })
+
+  it("initStyle() without a custom function uses the default __stylesBase (Issue 5)", () => {
+    // Без аргумента initStyle применяет встроенный `__stylesBase` (ветка `stylesComp ?? this.__stylesBase`,
+    // index.ts:130) и пишет результат в `cssComponents`. В тестах onMounted/onServerPrefetch замоканы →
+    // авто-вызов из __hooks() не срабатывает, поэтому эта ветка иначе не покрыта.
+    // Явный name делает запись детерминированной независимо от резолва getCurrentInstance (isolate:false).
+    const c = new Component<"FixWindow">("FixWindow")
+    expect(() => c.initStyle()).not.toThrow()
+    expect(cssComponents.has("FixWindow")).toBe(true)
+    expect(typeof cssComponents.get("FixWindow")).toBe("string")
   })
 
   describe("__globalConfig fallback chain", () => {

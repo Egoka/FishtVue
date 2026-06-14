@@ -1,7 +1,7 @@
 ---
 title: Component class
-summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20.
-updated: 2026-05-20
+summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20. Generic narrowing contract (D21) + HMR style-dedup задокументированы 2026-06-14.
+updated: 2026-06-14
 stability: stable
 since: 0.2.11
 ---
@@ -22,7 +22,7 @@ Source: [lib/component/index.ts](../../lib/component/index.ts), [lib/component/T
 lib/component/
 ├── index.ts            # реализация Component<T>
 ├── TypeComponent.d.ts  # внешние типы: Component, NamesComponents, PublicFields, StylesComponent, setStyleOptions
-├── Component.test.ts   # 19 кейсов (Vitest)
+├── Component.test.ts   # 26 кейсов (Vitest)
 └── package.json        # main "./component.mjs", types "./TypeComponent.d.ts"
 ```
 
@@ -50,6 +50,8 @@ lib/component/
 5. `prefix` — из `optionsTheme.prefix` или `"fishtvue"` по умолчанию.
 6. `__options = $fishtVue.getOptions(name)` — frozen-копия `componentsOptions[name]`.
 7. `__hooks()` регистрирует `onServerPrefetch(() => initStyle())` и `vueOnMounted(() => initStyle())` — стили инициализируются автоматически. **Это единственный источник вызова `initStyle()` на mount/SSR-prefetch.** Дополнительный ручной `onMounted(() => X.initStyle())` в SFC — антипаттерн (двойная инициализация), см. [dev-patterns.md §2 row 1](../dev-patterns.md#2-decisions). Wave 2.3 sweep (2026-05-16) убрал все ручные дубликаты из 6 SFC; в чистых SFC стоит comment-marker, фиксирующий канон.
+
+> **Generic narrowing (D21).** `T` в `Component<T>` — только для options-typing; runtime использует `this.name`. При добавлении нового компонента нужно расширить `ComponentsOptions` (шаг 7 чек-листа [dev-patterns.md §8](../dev-patterns.md#8-adding-a-new-component-checklist)). Подробнее — [§13 Generic narrowing contract](#13-typescript).
 
 Шаги стилизации:
 
@@ -262,6 +264,14 @@ X.setStyle(["px-2", "py-1"], { selector: ".my-scope ", isBaseClasses: true })
 
 `NamesComponents = keyof ComponentsOptions | "BaseComponent"` ([TypeComponent.d.ts:5](../../lib/component/TypeComponent.d.ts#L5)).
 
+### Generic narrowing contract (D21)
+
+Тип-параметр `T extends keyof ComponentsOptions` существует **только для options-typing**: он определяет тип, который вернёт `getOptions()`. В runtime класс оперирует строкой `this.name` (аргумент конструктора или `__instance.type.__name`), а не `T`. Следствия контракта:
+
+- `T` уже выводится из интерфейса `ComponentsOptions` — отдельный auto-derive type-helper не нужен. Опечатка `new Component<"Bttuon">()` ловится `vue-tsc` на compile-time.
+- **При добавлении нового компонента** обязательно расширить `ComponentsOptions` ключом этого компонента — иначе `new Component<"X">()` не пройдёт type-check, а `getOptions()` не будет типизирован. Это шаг 7 чек-листа [dev-patterns.md §8](../dev-patterns.md#8-adding-a-new-component-checklist) («Добавить опции в `lib/config/FishtVue.d.ts` (`ComponentsOptions`)»).
+- Если SFC объявляет `defineOptions({ name: "Custom" })` с именем вне `ComponentsOptions`, `this.name` типизируется как `undefined` — см. [§18 API inconsistencies](#18-known-issues--limitations).
+
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x` (использует `getCurrentInstance`, `onServerPrefetch`, lifecycle hooks Composition API).
@@ -272,7 +282,9 @@ X.setStyle(["px-2", "py-1"], { selector: ".my-scope ", isBaseClasses: true })
 
 ## 15. Testing recipes
 
-Тесты — [Component.test.ts](../../lib/component/Component.test.ts) (19 кейсов). Wave 2.3 (2026-05-16) добавил 4 it-блока: SSR/client hook registration coverage, idempotence `initStyle()`, fallback chain на `window.FishtVue`, graceful no-config.
+Тесты — [Component.test.ts](../../lib/component/Component.test.ts) (26 кейсов). Wave 2.3 (2026-05-16) добавил SSR/client hook registration coverage, idempotence `initStyle()`, fallback chain на `window.FishtVue`, graceful no-config. 2026-06-14 (Issue 5): default-`__stylesBase` path (`initStyle()` без аргумента) + стабилизация flaky `getOptions` (явный `name` вместо order-dependent undefined-резолва под `isolate: false`).
+
+Инжекция `<style>` тестируется отдельно в [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` (`vi.unmock("fishtvue/theme")` → реальный `useStyle` вместо глобального no-op мока): среди кейсов — HMR-дедуп (повторная инжекция с одним `name` → один `<style>`, контент заменён, не дубль; см. [Issues — Component class Issue 3](../issues/component-class.md)).
 
 Минимальный кейс:
 
@@ -345,6 +357,7 @@ describe("Component class", () => {
 
 - `Component.__hooks()` вызывает `initStyle()` и на `onServerPrefetch`, и на `onMounted` — на клиенте после SSR это двойная инициализация. Ручной `onMounted(() => X.initStyle())` в SFC давал бы **третий** вызов; Wave 2.3 (2026-05-16) убрал все такие дубликаты из 6 SFC (Button, Icons, InputLayout × 2, Menu, Separator, Table). См. [dev-patterns.md §2 row 1](../dev-patterns.md#2-decisions).
 - `cssComponents: Map` — растёт по мере уникальных классов. Без TTL и cleanup. На long-running приложениях с тысячами разных динамических классов память будет расти.
+- ~~HMR: дубли `<style>` в `<head>`~~ — ✅ resolved 2026-06-14. `useStyle.load()` переиспользует существующий `style[data-fishtvue-style-id="${name}"]` ([useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45)); при HMR-re-mount тот же `name` → один тег, контент заменяется. Verified: [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")`. См. [Issues — Component class Issue 3](../issues/component-class.md). **Minor dev-only limitation:** каждый вызов `useStyle()` создаёт новый незакрытый `watch(cssRef, …)` (прошлый closure не вызывает `unload()`) — старый watch инертен (его `cssRef` больше не мутируется), элемент один; полноценный teardown отложен как нетривиальный (трекинг handle'ов в `__setStyle`).
 - ~~`FishtVueSymbol` пере-инициализируется при каждом `app.use(FishtVue, ...)`~~ — ✅ resolved 2026-05-20: symbol теперь `const`, multi-app safe.
 - ~~Fallback на `window.FishtVue` ломается в multi-instance/multi-app сценариях~~ — ✅ resolved 2026-05-20: inject-first path в `isExistFishtVue` ([config/index.ts:81](../../lib/config/index.ts#L82)); window fallback используется только вне Vue setup context (например, imperative API).
 

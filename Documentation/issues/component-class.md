@@ -1,8 +1,8 @@
 ---
 title: Issues — Component class (`Component<T>`)
-summary: 3/10 issues закрыто (Issue 6 — unstyled enforcement через setStyle guard cross-cutting; Issue 1 — dup initStyle sweep done 2026-05-16; Issue 2 — window.FishtVue coupling resolved 2026-05-20 через inject-first path в config Issue 1 fix). Issue 5 — частично resolved (SSR + idempotence + fallback chain tests added; HMR test переехал в Issue 3). Открытые — Issue 3 (HMR teardown), Issue 4 (generic narrowing).
-updated: 2026-05-20
-last-changes: 2026-05-20 — Issue 2 (window.FishtVue coupling) ✅ resolved через config Issue 1 fix (inject(FishtVueSymbol) primary path + const Symbol, window.FishtVue теперь только для imperative API вне Vue setup). Wave 1.3 architecture blocker закрыт.
+summary: Issues 1-6 закрыты + B11 doc-sync. Issue 3 (HMR teardown) ✅ — механизм дедупа `<style>` через `data-fishtvue-style-id` уже в `useStyle.ts`, verified regression-тестом. Issue 4 (generic narrowing D21) ✅ — контракт `keyof ComponentsOptions` задокументирован в architecture §3/§13. Issue 5 (coverage K46) ✅ — добавлены HMR-dedup + default-`__stylesBase` тесты, стабилизирован flaky `getOptions`. Остаются low-трекеры E29.7/N59 (N/A by design для базового класса).
+updated: 2026-06-14
+last-changes: 2026-06-14 — Issues 3/4/5 закрыты (test+doc only, без правок source). **Issue 3** (C17/HMR) — рекомендация fix #2 («replace content existing element») уже реализована в [useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45) через переиспользование `style[data-fishtvue-style-id="${name}"]`; добавлен regression-кейс в [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` (3× инжекция с одним name → один `<style>`, контент заменён). **Issue 4** (D21) — generic уже `keyof ComponentsOptions` (auto-derive не нужен); контракт «новый компонент → ключ в ComponentsOptions» задокументирован в [architecture/component-class.md](../architecture/component-class.md) §3/§13. **Issue 5** (K46) — HMR-test ✅ (Theme.test.ts), default-`__stylesBase` тест ✅ + flaky `should return the correct options with getOptions` стабилизирован (явный name вместо order-dependent undefined-резолва под isolate:false); Component.test.ts 25 → 26. **B11** (darkModeSelector) — doc-sync: закрыт глобально 2026-06-12 ([component/index.ts:150](../../lib/component/index.ts#L150)), снят из open-счёта. Severity matrix 0/2/3/2 → 0/0/0/2.
 audit-checklist: 60-point + Configuration support
 source: lib/component/
 related-doc: ../architecture/component-class.md
@@ -15,9 +15,9 @@ related-doc: ../architecture/component-class.md
 | Severity | Count (open) | Categories                                                                           |
 | -------- | ------------ | ------------------------------------------------------------------------------------ |
 | critical | 0            | —                                                                                    |
-| high     | 2            | C17 (HMR teardown), K46 (coverage, частично закрыто)                                  |
-| medium   | 3            | D21 (generic narrowing), B11, K46 (HMR-test pending)                                 |
-| low      | 2            | E29.7 (motion not at base), N59                                                      |
+| high     | 0            | —                                                                                    |
+| medium   | 0            | —                                                                                    |
+| low      | 2            | E29.7 (motion not at base — N/A by design), N59 (print — N/A by design)              |
 
 ## ~~Issue 1: Double initStyle — onServerPrefetch + onMounted + manual call в каждом компоненте~~ ✅ resolved 2026-05-16
 
@@ -68,46 +68,60 @@ Acceptance criteria:
 - **Resolution:** через config Issue 1 fix. `isExistFishtVue` ([config/index.ts:82–92](../../lib/config/index.ts#L82-L92)) теперь использует `inject(FishtVueSymbol)` primary path (через `hasInjectionContext`), fallback на `window.FishtVue` — только когда нет inject context (imperative API, например `openAlert`). `FishtVueSymbol` стабилизирован как `const InjectionKey<FishtVue>` — multi-app safe.
 - Component class ([component/index.ts:68](../../lib/component/index.ts#L68)) сохраняет window fallback для backward compat, но теперь это исключительный путь, не primary.
 
-## Issue 3: SSR style injection — нет teardown при HMR
+## ~~Issue 3: SSR style injection — нет teardown при HMR~~ ✅ resolved 2026-06-14
 
 - **Категория:** C17 + I19 (HMR)
-- **Severity:** high
-- **Где:** [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts)
+- **Severity:** ~~high~~
+- **Где:** [theme/helpers/useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45)
 
-### Что найдено
+### Что найдено (аудит)
 
-При HMR (Vite dev) — компонент перезагружается, но старые `<style>` теги в `<head>` остаются. После 50 hot-reloads — десятки стилевых тегов с одинаковыми селекторами.
+Опасение: при HMR (Vite dev) компонент перезагружается, старые `<style>` теги в `<head>` остаются, после N hot-reloads копятся десятки тегов с одинаковыми селекторами.
 
-### Что нужно сделать
+### Что найдено при верификации
 
-1. В `Component.setStyle` сохранять `<style>` element в `private __styleEl: HTMLStyleElement`.
-2. На new `setStyle` — replace content existing element, не append new.
-3. Альтернативно — VueUse `useStyleTag` (handles HMR cleanup).
+Рекомендованный fix #2 («replace content existing element, не append new») **уже реализован** в `useStyle.ts`. `load()` сначала ищет существующий тег по стабильному ключу и переиспользует его:
+
+```ts
+styleRef.value = (document.querySelector(`style[data-fishtvue-style-id="${_name}"]`) ??
+  (_id ? document.getElementById(_id) : undefined) ??
+  document.createElement("style")) as HTMLElement
+```
+
+`Component.__setStyle()` вызывает `useStyle(css, { name: this.name })` ([component/index.ts:180](../../lib/component/index.ts#L180)) — `name` стабилен между HMR-re-mount'ами, поэтому каждый новый closure находит тот же `<style>` и заменяет его `textContent` через watch (`appendChild` существующего узла его лишь перемещает, дубля не создаёт). Утверждение аудита про «десятки тегов» было спекулятивным — дедуп через `data-fishtvue-style-id` уже работает.
 
 ### Acceptance criteria
 
-- [ ] DevTools Elements: после HMR-обновления Button — только один `<style>` в head, не дубль.
+- [x] DevTools Elements / jsdom: после повторной инжекции с тем же `name` — только один `<style>` в head, контент заменён, не дубль. Verified: [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` → `does not duplicate <style> across re-instantiation with the same name (HMR — Issue 3)` (3× инжекция → `querySelectorAll(...).length === 1`).
 
-## Issue 4: `__hooks` хардкод 'Button' / 'Label' / etc — typing fragile
+### Не сделано (осознанно)
+
+Каждый вызов `useStyle()` создаёт новый незакрытый `watch(cssRef, …)` (прошлый closure не вызывает `unload()`). Это minor dev-only leak (старый watch инертен — его `cssRef` больше не мутируется; элемент один). Полноценный teardown потребовал бы cross-cutting трекинга handle'ов в `Component.__setStyle` → отложено как known-limitation (канон: минимальная дельта, не патчим без нужды). См. [architecture/component-class.md §18](../architecture/component-class.md#18-known-issues--limitations).
+
+## ~~Issue 4: `__hooks` хардкод 'Button' / 'Label' / etc — typing fragile~~ ✅ resolved 2026-06-14
 
 - **Категория:** D21 (Generic narrowing)
-- **Severity:** medium
+- **Severity:** ~~medium~~
 - **Где:** [component/index.ts:53](../../lib/component/index.ts#L53), TypeComponent.d.ts
 
 ### Что найдено
 
 `Component<T extends keyof ComponentsOptions>` — `T` это string literal `"Button" | "Label" | ...`. Каждый компонент: `new Component<"Button">()`. Generic параметр позиционирует только options-типизацию, runtime использует `this.name`. Если разработчик ошибётся `new Component<"Bttuon">()` — TS поймает (✅), но при добавлении нового компонента нужно расширять `ComponentsOptions` тип.
 
-### Что нужно сделать
+### Что сделано (2026-06-14)
 
-1. Документировать в [architecture/component-class.md](../architecture/component-class.md) §3: «при добавлении нового компонента: добавить ключ в ComponentsOptions interface».
-2. Альтернатива — derive автоматически через type-helper.
+Generic уже выводится из `ComponentsOptions` (`T extends keyof ComponentsOptions`) — auto-derive type-helper не нужен (рекомендация #2 отклонена как избыточная: тип уже derived). Закрыто документированием контракта (рекомендация #1):
 
-## Issue 5: Тесты 213 строк — coverage 87%, есть untested ветви (частично resolved 2026-05-16)
+1. [architecture/component-class.md §13](../architecture/component-class.md#13-typescript) — абзац про D21-контракт: `T` только для options-typing, runtime — `this.name`; добавление нового компонента требует ключа в `ComponentsOptions`; typo в `Component<"Bttuon">()` ловится compile-time.
+2. [architecture/component-class.md §3](../architecture/component-class.md#3-how-it-works) — заметка-связка к контракту + cross-ref [dev-patterns.md §8 step 7](../dev-patterns.md#8-adding-a-new-component-checklist) (шаг «Добавить опции в `lib/config/FishtVue.d.ts` (`ComponentsOptions`)»).
+
+Код `lib/` не менялся.
+
+## ~~Issue 5: Тесты — coverage 87%, есть untested ветви~~ ✅ resolved 2026-06-14
 
 - **Категория:** K46
-- **Severity:** medium
-- **Где:** [Component.test.ts](../../lib/component/Component.test.ts), ранее coverage 87.36/78.68 (15 it-блоков)
+- **Severity:** ~~medium~~
+- **Где:** [Component.test.ts](../../lib/component/Component.test.ts) (26 it-блоков), [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` (21 it-блок)
 
 ### Что сделано (2026-05-16, Wave 2.3)
 
@@ -118,11 +132,11 @@ Acceptance criteria:
 3. ~~`__globalConfig` fallback chain (window.FishtVue)~~ — `falls back to window.FishtVue when appContext.globalProperties.$fishtVue is undefined` (в nested `describe` с afterEach cleanup для предотвращения утечки в другие test-файлы под `isolate: false`).
 4. ~~Graceful no-config~~ — `does not throw when neither appContext.$fishtVue nor window.FishtVue is set`.
 
-### Что осталось
+### Что сделано (2026-06-14)
 
-- [ ] **HMR teardown test** — переехал в Issue 3 (нужен сначала фикс самого HMR-механизма или явная верификация, что `useStyle.ts:43-45` уже дедуплицирует через `data-fishtvue-style-id`).
-- [ ] **`initStyle(stylesComp)` с custom function**, выходящей за пределы текущего dual-call test — оставить как опциональное улучшение, нет высокого приоритета.
-- [ ] **Pre-existing flaky test** `should return the correct options with getOptions` падает соло (verified `git stash` на baseline), passes в batch. Не введён моими правками — фиксить отдельно. Возможная причина — order-dependent mock state из-за `isolate: false`.
+- [x] **HMR teardown test** — добавлен в [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` (он `vi.unmock("fishtvue/theme")` → реальный `useStyle`, в отличие от глобального no-op мока). Кейс `does not duplicate <style> across re-instantiation with the same name (HMR — Issue 3)` верифицировал дедуп `useStyle.ts:43-45`. См. Issue 3.
+- [x] **`initStyle()` без custom function** — кейс `initStyle() without a custom function uses the default __stylesBase` покрыл ветку `stylesComp ?? this.__stylesBase` ([component/index.ts:130](../../lib/component/index.ts#L130)) + `__stylesBase` else-ветку: в тестах `onMounted`/`onServerPrefetch` замоканы → авто-вызов из `__hooks()` не срабатывает, ветка иначе не покрыта. Явный `name` → детерминированная запись в `cssComponents`.
+- [x] **Flaky `should return the correct options with getOptions`** — стабилизирован. Root cause: тест ждал shape всего map'а (`{ FixWindow: {...} }`), который `getOptions()` возвращает только когда `this.name` резолвится в `undefined`; под `isolate: false` file-wide `vi.mock("vue")` применяется не всегда → соло `name="FixWindow"` → `getOptions("FixWindow")` → `{ closeButton: true }` → падал. Fix: явный `new Component<"FixWindow">("FixWindow")` + assert `{ closeButton: true }` — детерминированно и под mock-, и под real-config-путём. Verified: 3× solo + whole suite зелёные.
 
 ## ~~Issue 6: SSR styles + sideEffects + unstyled~~ ✅ resolved 2026-05-11 (unstyled part)
 
