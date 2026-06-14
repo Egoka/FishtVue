@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { Comment, Fragment, Text, computed, onMounted, ref, unref, useSlots, watch } from "vue"
+  import { Comment, Fragment, Text, computed, nextTick, onMounted, ref, unref, useSlots, watch } from "vue"
   import { ChevronRightIcon } from "@heroicons/vue/20/solid"
   import {
     GroupMenu,
@@ -50,6 +50,9 @@
   // ---STATE-------------------------------
   const selectedItemIndex = ref<_key>()
   const activeItemIndex = ref<_key>()
+  // Корневой DOM-элемент `[data-menu]` (expose G34) + RTL-флаг (детект в onMounted).
+  const rootRef = ref<HTMLElement | null>(null)
+  const isRtl = ref(false)
   const notPublicParamsMenu = ref(["menu", "class", "disabled", "onClick", "onActive", "onInactive"] as Array<
     keyof ItemMenuPrivate
   >)
@@ -81,6 +84,19 @@
     ...fieldsPick(options?.paramsWindowMenu ?? {}, arrayParamsWindowMenu),
     ...fieldsPick(props?.paramsWindowMenu ?? {}, arrayParamsWindowMenu)
   }))
+  // ---RTL---------------------------------
+  // FixWindow зеркалит под RTL только alignment (start/end), но НЕ физическую сторону → флипаем
+  // сторону submenu/tooltip-позиции сами (канон-идиом Table/Split, dev-patterns §2).
+  function flipPosition(position?: FixWindowProps["position"]): FixWindowProps["position"] {
+    if (!isRtl.value || !position) return position
+    return position.replace(/left|right/g, (m) => (m === "left" ? "right" : "left")) as FixWindowProps["position"]
+  }
+  function submenuParams(item: ItemMenuPrivate): FixWindowProps {
+    const params = (item?.menu?.paramsWindowMenu ?? paramsWindowMenu.value) as FixWindowProps
+    return isRtl.value && params?.position
+      ? ({ ...params, position: flipPosition(params.position) } as FixWindowProps)
+      : params
+  }
   const baseSeparator = computed<MenuSeparator>(() => ({
     class: horizontal.value ? "my-1" : "-mx-1",
     ...options?.separator,
@@ -144,7 +160,7 @@
   }
   const classGroupTitle = computed<StyleClass>(() =>
     MenuComponent.setStyle([
-      "mt-[10px] ml-4 mr-2 leading-4 text-left text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-bold",
+      "mt-[10px] ms-4 me-2 leading-4 text-start text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-bold",
       styles.value?.class?.groupTitle ?? ""
     ])
   )
@@ -161,7 +177,7 @@
       styles.value?.animation ?? "",
       styles.value?.class?.item ?? "",
       item?.class ?? "",
-      horizontal.value ? "mr-0.5 last:mr-0" : "",
+      horizontal.value ? "me-0.5 last:me-0" : "",
       activeItemIndex.value === item?._key ? (styles.value?.activeRows as StyleClass) : "",
       selectedItemIndex.value === item?._key ? `${styles.value?.selectedRows} font-semibold` : "",
       item?.disabled ? "pointer-events-none opacity-50" : "",
@@ -179,7 +195,7 @@
   )
   const classItemInfoOnlyIcons = computed<StyleClass>(() =>
     MenuComponent.setStyle([
-      "ml-auto text-xs tracking-widest opacity-50 data-[info=true]:pl-2",
+      "ms-auto text-xs tracking-widest opacity-50 data-[info=true]:ps-2",
       styles.value?.class?.itemInfo ?? ""
     ])
   )
@@ -188,12 +204,12 @@
   )
   const classItemInfoFixWindow = computed<StyleClass>(() =>
     MenuComponent.setStyle([
-      "ml-auto text-xs tracking-widest opacity-50 data-[info=true]:pl-2",
+      "ms-auto text-xs tracking-widest opacity-50 data-[info=true]:ps-2",
       styles.value?.class?.itemInfo ?? ""
     ])
   )
   const classItemRightIcon = computed<StyleClass>(() =>
-    MenuComponent.setStyle(["h-4 w-4 opacity-60", styles.value?.class?.itemRightIcon ?? ""])
+    MenuComponent.setStyle(["h-4 w-4 opacity-60 rtl:-scale-x-100", styles.value?.class?.itemRightIcon ?? ""])
   )
   const listGroups = ref<Array<GroupMenuPrivate>>([])
   // ---COMPOUND-API (VNode-walk) ----------
@@ -458,6 +474,8 @@
     classItemTitleFixWindow,
     classItemInfoFixWindow,
     classItemRightIcon,
+    // ---ELEMENTS----------------------
+    rootRef,
     // ---METHODS-----------------------
     setSelectedItem,
     setActiveItem,
@@ -470,7 +488,13 @@
   function rebuildItems(): void {
     listGroups.value = setItems({ ...props, groups: sourceGroups.value } as MenuItemPrivate)?.groups ?? []
   }
-  onMounted(rebuildItems)
+  onMounted(() => {
+    rebuildItems()
+    // RTL-детект только после populate `listGroups` — корень под `v-if`, до этого `rootRef` === null.
+    void nextTick(() => {
+      if (rootRef.value) isRtl.value = getComputedStyle(rootRef.value).direction === "rtl"
+    })
+  })
   // ---WATCHERS----------------------------
   watch(props, rebuildItems, { deep: true })
   watch(compoundGroups, rebuildItems, { deep: true })
@@ -551,6 +575,7 @@
 <template>
   <div
     v-if="listGroups.length"
+    ref="rootRef"
     data-menu
     role="menu"
     :aria-orientation="horizontal ? 'horizontal' : 'vertical'"
@@ -631,7 +656,12 @@
                 }}</slot>
               </span>
             </template>
-            <FixWindow v-else :position="horizontal ? 'top' : 'right'" :delay="500" :margin-px="10" :mode="mode">
+            <FixWindow
+              v-else
+              :position="flipPosition(horizontal ? 'top' : 'right')"
+              :delay="500"
+              :margin-px="10"
+              :mode="mode">
               <span :data-title="!!item?.title" :class="classItemTitleFixWindow">{{ item?.title }}</span>
               <span :data-info="!!item?.info" :class="classItemInfoFixWindow">
                 <slot name="item-info" :item="fieldsOmit(item, notPublicParamsMenu)" :info="item?.info">{{
@@ -644,7 +674,7 @@
           <FixWindow
             v-if="!!item?.menu"
             :ref="(el) => setSubmenuRef(el, item._key)"
-            v-bind="(item?.menu?.paramsWindowMenu ?? paramsWindowMenu) as FixWindowProps"
+            v-bind="submenuParams(item)"
             :focus-trap="usingKeyboard"
             class-body="z-10"
             @open="() => onSubmenuOpen(item)"

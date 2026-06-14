@@ -816,4 +816,129 @@ describe("Menu Component", () => {
       expect(v.findAll("[data-menu-item]")[0].attributes("tabindex")).toBe("0")
     })
   })
+
+  // ---G34 — root element ref expose --------------------------------------------------------------
+  describe("Menu Component - Expose root element ref (G34)", () => {
+    it("exposes rootRef pointing at the [data-menu] root", async () => {
+      const wrapper = mount(Menu, { props: { groups: [{ items: [{ title: "A" }] }] } })
+      await nextTick()
+      const root = wrapper.find("[data-menu]")
+      expect(root.exists()).toBe(true)
+      expect((wrapper.vm as any).rootRef).toBe(root.element)
+    })
+
+    it("rootRef is null until groups render (root behind v-if)", () => {
+      const wrapper = mount(Menu, { props: { groups: [] } })
+      expect((wrapper.vm as any).rootRef).toBeNull()
+    })
+  })
+
+  // ---F31 — RTL logical classes -----------------------------------------------------------------
+  describe("Menu Component - RTL logical classes (F31)", () => {
+    it("group title uses logical ms/me/text-start (not ml/mr/text-left)", async () => {
+      const wrapper = mount(Menu, {
+        props: {
+          groups: [
+            { title: "G1", items: [{ title: "A" }] },
+            { title: "G2", items: [{ title: "B" }] }
+          ]
+        }
+      })
+      await nextTick()
+      const cls = wrapper.find("[data-menu-group-title]").classes()
+      expect(cls).toContain("ms-4")
+      expect(cls).toContain("me-2")
+      expect(cls).toContain("text-start")
+      expect(cls).not.toContain("ml-4")
+      expect(cls).not.toContain("mr-2")
+      expect(cls).not.toContain("text-left")
+    })
+
+    it("horizontal item uses logical me-0.5 (not mr-0.5)", async () => {
+      const wrapper = mount(Menu, {
+        props: { horizontal: true, groups: [{ items: [{ title: "A" }, { title: "B" }] }] }
+      })
+      await nextTick()
+      const cls = wrapper.find("[data-menu-item]").classes()
+      expect(cls).toContain("me-0.5")
+      expect(cls).not.toContain("mr-0.5")
+    })
+
+    it("item info uses logical ms-auto/ps (not ml-auto/pl)", async () => {
+      const wrapper = mount(Menu, { props: { groups: [{ items: [{ title: "A", info: "⌘K" }] }] } })
+      await nextTick()
+      const info = wrapper.find("[data-info='true']")
+      expect(info.exists()).toBe(true)
+      expect(info.classes()).toContain("ms-auto")
+      expect(info.classes()).not.toContain("ml-auto")
+      expect(info.classes().join(" ")).toContain("ps-2")
+      expect(info.classes().join(" ")).not.toContain("pl-2")
+    })
+
+    it("submenu chevron mirrors under RTL via rtl:-scale-x-100", async () => {
+      const wrapper = mount(Menu, {
+        props: { groups: [{ items: [{ title: "P", menu: { groups: [{ items: [{ title: "S" }] }] } }] }] }
+      })
+      await nextTick()
+      expect((wrapper.vm as any).classItemRightIcon).toContain("rtl:-scale-x-100")
+    })
+  })
+
+  // ---F31 — RTL submenu placement flip ----------------------------------------------------------
+  describe("Menu Component - RTL submenu placement flip (F31)", () => {
+    // Таргетированный mock: getComputedStyle([data-menu] root) → rtl; остальные элементы —
+    // оригинал (чтобы не ломать FixWindow и прочие getComputedStyle-вызовы).
+    let restoreGCS: (() => void) | null = null
+    const mockRtl = () => {
+      const orig = window.getComputedStyle
+      ;(window as any).getComputedStyle = (el: Element, pseudo?: string) =>
+        el?.matches?.("[data-menu]") ? ({ direction: "rtl" } as any) : orig(el, pseudo as any)
+      restoreGCS = () => {
+        ;(window as any).getComputedStyle = orig
+      }
+    }
+    afterEach(() => {
+      restoreGCS?.()
+      restoreGCS = null
+    })
+
+    const submenuGroups = () => [{ items: [{ title: "P", menu: { groups: [{ items: [{ title: "S" }] }] } }] }]
+    const onlyIconsGroups = () => [{ items: [{ title: "A", icon: "user" }] }]
+
+    it("keeps physical submenu position in LTR (right-top)", async () => {
+      const wrapper = mount(Menu, { props: { groups: submenuGroups() } })
+      await flushPromises()
+      await nextTick()
+      const fw = wrapper.findComponent(FixWindow)
+      expect(fw.exists()).toBe(true)
+      expect(fw.props("position")).toBe("right-top")
+    })
+
+    it("flips submenu side to left-top under dir=rtl", async () => {
+      mockRtl()
+      const wrapper = mount(Menu, { props: { groups: submenuGroups() } })
+      await flushPromises()
+      await nextTick()
+      const fw = wrapper.findComponent(FixWindow)
+      expect(fw.props("position")).toBe("left-top")
+    })
+
+    it("keeps onlyIcons tooltip physical (right) in LTR", async () => {
+      const wrapper = mount(Menu, { props: { onlyIcons: true, groups: onlyIconsGroups() } })
+      await flushHero()
+      await nextTick()
+      const fw = wrapper.findComponent(FixWindow)
+      expect(fw.exists()).toBe(true)
+      expect(fw.props("position")).toBe("right")
+    })
+
+    it("flips onlyIcons tooltip side from right to left under dir=rtl", async () => {
+      mockRtl()
+      const wrapper = mount(Menu, { props: { onlyIcons: true, groups: onlyIconsGroups() } })
+      await flushHero()
+      await nextTick()
+      const fw = wrapper.findComponent(FixWindow)
+      expect(fw.props("position")).toBe("left")
+    })
+  })
 })

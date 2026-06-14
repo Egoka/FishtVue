@@ -1,7 +1,7 @@
 ---
 title: Menu
-summary: Структурированное меню с группами, подменю через FixWindow, separators, иконками. Два API (schema-driven `groups` + compound `<MenuItem>`/`<MenuGroup>`), полная keyboard navigation и WAI-ARIA menu.
-updated: 2026-06-06
+summary: Структурированное меню с группами, подменю через FixWindow, separators, иконками. Два API (schema-driven `groups` + compound `<MenuItem>`/`<MenuGroup>`), полная keyboard navigation, WAI-ARIA menu, RTL-aware (logical classes + флип стороны submenu).
+updated: 2026-06-14
 stability: stable
 since: 0.2.11
 ---
@@ -122,6 +122,7 @@ v-model contract — не применимо.
 | `selectedItemIndex`, `activeItemIndex` | `_key \| undefined` | State selection и active. |
 | `mode`, `selected`, `horizontal`, `useFirstLetter`, `onlyIcons`, `title` | derived | Computed props. |
 | `iconSeparator`, `isSeparator`, `listGroups`, `paramsWindowMenu`, `baseSeparator`, `styles`, `modeStyle`, `classMenu`, `classSeparator`, `classSeparatorIcon`, `classGroupTitle`, `classTitle`, `classItemIcon`, `classItemTitleOnlyIcons`, `classItemInfoOnlyIcons`, `classItemTitleFixWindow`, `classItemInfoFixWindow`, `classItemRightIcon` | derived | CSS computed. |
+| `rootRef` | `Ref<HTMLElement \| null>` | Ref на корневой `[data-menu]` (G34). `null`, пока групп нет (root под `v-if`). Для скролла/измерений/интеграций. |
 | `setSelectedItem(itemKey)` | function | Программный выбор. |
 | `setActiveItem(itemKey)` | function | Программное «hover». |
 | `setItems(menu, depth)` | function | Перестроить tree (для динамических меню). |
@@ -257,6 +258,7 @@ Root класс — `fv fishtvue-menu`.
   - **Roving tabindex:** только один пункт имеет `tabindex=0`, остальные `-1`; Tab входит в меню на активный пункт.
 - **Focus trap для submenu:** дочернее submenu через [FixWindow](./fix-window.md) получает `:focus-trap`, когда меню используется с клавиатуры (`usingKeyboard`). При hover focus не крадётся; при keyboard-открытии фокус уходит внутрь submenu и возвращается на trigger при закрытии (focus return — на стороне FixWindow).
 - **`prefers-reduced-motion`:** анимация по умолчанию использует `motion-safe:`-префиксы (`styles.animation = "motion-safe:transition-all motion-safe:duration-500"`).
+- **RTL (logical, F31):** направленные классы — логические (`ms`/`me`/`ps`/`text-start`), submenu-chevron зеркалится через `rtl:-scale-x-100` — авто-флип при `dir="rtl"` без атрибута на компоненте. Submenu и tooltip ([FixWindow](./fix-window.md)) раскрываются на логической стороне: FixWindow зеркалит только alignment, поэтому Menu сам флипает физическую сторону `position` (`right`↔`left`) по `getComputedStyle(rootRef).direction` (детект после mount). Если потребитель оборачивает меню в `dir="rtl"` — подменю уходит влево, а не вправо.
 
 ### Security
 

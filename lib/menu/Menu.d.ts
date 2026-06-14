@@ -1,4 +1,4 @@
-import { MaybeRef, VNode } from "vue"
+import { MaybeRef, Ref, VNode } from "vue"
 import { _key, ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode, THeight, TWidth } from "../types"
 import { FixWindowProps } from "fishtvue/fixwindow"
 import { SeparatorProps } from "fishtvue/separator"
@@ -562,6 +562,15 @@ export declare type MenuExpose = {
    * @type {StyleClass}
    */
   classItemRightIcon: StyleClass
+
+  // ---ELEMENTS----------------------
+  /**
+   * Ref на корневой DOM-элемент меню (`[data-menu]`). `null`, пока групп нет
+   * (root скрыт через `v-if="listGroups.length"`). Полезно для скролла, измерений
+   * и интеграций со стороны потребителя.
+   * @type {Ref<HTMLElement | null>}
+   */
+  rootRef: Ref<HTMLElement | null>
 
   // ---METHODS-----------------------
   /**
