@@ -59,6 +59,9 @@ const globals = {
   DOMRect: "readonly",
   ScrollToOptions: "readonly",
   ScrollBehavior: "readonly",
+  Window: "readonly",
+  EventTarget: "readonly",
+  EventListenerOptions: "readonly",
   crypto: "readonly",
   // Vue and Nuxt
   defineAppConfig: "readonly",

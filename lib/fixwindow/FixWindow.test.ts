@@ -621,6 +621,38 @@ describe("FixWindow Component Tests", () => {
     })
   })
 
+  // marginPx выражается ТОЛЬКО прозрачным border'ом (он же зазор + hover-bridge:
+  // border-box-кромка окна вплотную к триггеру, курсор не уходит в пустоту при
+  // переходе trigger → window). main-axis offset = translatePx — геометрия покрыта
+  // детерминированно в useFloating.test.ts (computePosition). Здесь — SFC-интеграция.
+  describe("marginPx hover-bridge (transparent border, flush to trigger)", () => {
+    afterEach(() => {
+      document.body.innerHTML = ""
+    })
+
+    it("keeps the transparent border as the marginPx hover-bridge", async () => {
+      const wrapper = mount(FixWindow, {
+        attachTo: document.body,
+        props: { modelValue: true, position: "bottom", marginPx: 5 }
+      })
+      await nextTick()
+      const styles = wrapper.find("[data-fix-window]").attributes("style") ?? ""
+      expect(styles).toContain("border-top: 5px solid transparent")
+      wrapper.unmount()
+    })
+
+    it("adds no transparent border when marginPx=0 (truly flush)", async () => {
+      const wrapper = mount(FixWindow, {
+        attachTo: document.body,
+        props: { modelValue: true, position: "bottom", marginPx: 0 }
+      })
+      await nextTick()
+      const styles = wrapper.find("[data-fix-window]").attributes("style") ?? ""
+      expect(styles).not.toContain("border-top: 0px solid transparent")
+      wrapper.unmount()
+    })
+  })
+
   describe("Issue 3 — Click-outside via Teleport (H40)", () => {
     afterEach(() => {
       document.body.innerHTML = ""
@@ -654,19 +686,38 @@ describe("FixWindow Component Tests", () => {
       wrapper.unmount()
     })
 
-    it("click on document outside popover closes the window", async () => {
+    it("outside click closes the window (useClickOutside listens on eventClose)", async () => {
       const wrapper = mount(FixWindow, {
         attachTo: document.body,
         props: { eventOpen: "click", eventClose: "click", modelValue: true }
       })
       await nextTick()
+      await nextTick() // setupClickOutside подписывается в watch(isOpen) → nextTick
       expect(wrapper.vm.isOpen).toBe(true)
-      // Simulate outside click via direct close (VueUse onClickOutside in jsdom not always reliable).
       const outside = document.createElement("div")
       document.body.appendChild(outside)
-      outside.click()
-      // Result depends on VueUse's onClickOutside behavior in jsdom — assert no crash.
-      expect(() => wrapper.unmount()).not.toThrow()
+      // eventClose="click" → слушаем "click"; собственный useClickOutside детерминирован в jsdom
+      outside.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+      await nextTick()
+      expect(wrapper.vm.isOpen).toBe(false)
+      wrapper.unmount()
+    })
+
+    it("click inside popover content keeps it open", async () => {
+      const target = document.createElement("div")
+      document.body.appendChild(target)
+      const wrapper = mount(FixWindow, {
+        attachTo: document.body,
+        props: { eventOpen: "click", eventClose: "click", teleport: target, modelValue: true },
+        slots: { default: '<button class="inside">click me</button>' }
+      })
+      await nextTick()
+      await nextTick()
+      const inside = target.querySelector(".inside") as HTMLElement
+      inside.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+      await nextTick()
+      expect(wrapper.vm.isOpen).toBe(true)
+      wrapper.unmount()
     })
   })
 

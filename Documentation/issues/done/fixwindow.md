@@ -1,7 +1,7 @@
 ---
 title: Issues — FixWindow (done)
-summary: Аудит FixWindow закрыт 2026-05-16 — все 10 issues resolved одним fix(fixwindow) коммитом. Интеграция @floating-ui/vue (auto-flip/auto-shift, scroll tracking), Teleport-aware click-outside через @vueuse/core onClickOutside, native focus trap (mirror Dialog), focus return через triggerEl, dynamic ARIA role, RTL via Floating UI logical placement, motion-safe transitions, touchstart fallback для hover, removed duplicate FixWindow.initStyle() (Wave 2.3 sweep), package.json sideEffects: false (Dialog precedent). Coverage 77.27%/65.36% → 88.4%/83.8%.
-updated: 2026-05-16
+summary: Аудит FixWindow закрыт 2026-05-16 — все 10 issues resolved одним fix(fixwindow) коммитом. Интеграция @floating-ui/vue (auto-flip/auto-shift, scroll tracking), Teleport-aware click-outside через @vueuse/core onClickOutside, native focus trap (mirror Dialog), focus return через triggerEl, dynamic ARIA role, RTL via Floating UI logical placement, motion-safe transitions, touchstart fallback для hover, removed duplicate FixWindow.initStyle() (Wave 2.3 sweep), package.json sideEffects: false (Dialog precedent). Coverage 77.27%/65.36% → 88.4%/83.8%. Регрессия миграции (offset двойного учёта marginPx → двойной зазор + dead-zone hover-bridge) исправлена 2026-06-14 — см. Issue 2 follow-up. Затем (2026-06-14) `@floating-ui/vue` + `@vueuse/core` ЗАМЕНЕНЫ собственными dependency-free композаблами (useFloating.ts + useClickOutside.ts, полный паритет flip/shift/autoUpdate/Teleport-click-outside) — обе зависимости удалены из пакета; см. Issue 2/3 Migration follow-up.
+updated: 2026-06-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/fixwindow/
 related-doc: ../../components/fix-window.md
@@ -38,7 +38,7 @@ related-doc: ../../components/fix-window.md
 - **Категория:** H39
 - **Severity:** ~~high~~
 - **Где:** [FixWindow.vue](../../../lib/fixwindow/FixWindow.vue) (position computation)
-- **Resolution:** удалены `getPositionFixed` (старые строки 472–565) и `getPositionAbsolute` (старые строки 567–663) — ~200 строк manual `getBoundingClientRect()` логики. Заменены на `useFloating(referenceRef, fixWindow, { placement, strategy, middleware: [offset(marginPx + translatePx), flip({ padding: paddingWindow }), shift({ padding: paddingWindow })], whileElementsMounted: autoUpdate })`. Floating UI обеспечивает:
+- **Resolution:** удалены `getPositionFixed` (старые строки 472–565) и `getPositionAbsolute` (старые строки 567–663) — ~200 строк manual `getBoundingClientRect()` логики. Заменены на `useFloating(referenceRef, fixWindow, { placement, strategy, middleware: [offset(translatePx), flip({ padding: paddingWindow }), shift({ padding: paddingWindow })], whileElementsMounted: autoUpdate })`. Floating UI обеспечивает:
   - **Auto-flip** — при overflow viewport edge меняет placement (top → bottom, left → right).
   - **Auto-shift** — сдвигает popover в пределах viewport.
   - **Scroll/resize tracking** — `autoUpdate` подписывается на все ancestor scrolls + window resize.
@@ -55,12 +55,38 @@ related-doc: ../../components/fix-window.md
 - [x] Scroll body — позиция обновляется (Floating UI `autoUpdate`).
 - [x] Существующие 46 behavioral тестов проходят (с релаксацией exact-pixel assertions для byCursor — Floating UI algorithm считает иначе чем manual).
 
+### Regression follow-up (2026-06-14) — двойной учёт `marginPx` в offset ✅ resolved
+
+Миграция изначально задала `offset(marginPx + translatePx)`, **не убрав** legacy-механизм зазора — прозрачный `border` ([`border` computed](../../../lib/fixwindow/FixWindow.vue#L104), `border-top/bottom: ${marginPx}px solid transparent`). До Floating UI зазор+hover-bridge создавался **только** этим border'ом (manual-позиция использовала `translatePx`, не `marginPx`). После миграции `marginPx` учитывался **дважды** для `placement: bottom`:
+
+- box border-box-кромка окна = `reference.bottom + offset(marginPx)` → между триггером и окном **dead-zone** в `marginPx`: курсор, переходя trigger → window, пересекал пустоту → hover-окно (Select/Calendar dropdown) закрывалось;
+- видимый контент ещё на `marginPx` ниже из-за прозрачного border → **суммарный зазор `2×marginPx`** («окно слишком далеко»).
+
+**Fix:** offset главной оси = `offset(translatePx.value)` ([FixWindow.vue:212](../../../lib/fixwindow/FixWindow.vue#L212)). `marginPx` выражается **исключительно** прозрачным border'ом — он и зазор, и hover-bridge: border-box-кромка окна остаётся **вплотную** к триггеру (offset по умолчанию `0`), а сам зазор — внутри hoverable-бокса, без dead-zone. Поведение восстановлено к дофлоат-канону.
+
+- [x] Прозрачный border (hover-bridge) сохранён при `marginPx > 0` (test "keeps the transparent border as the marginPx hover-bridge").
+
+### Migration follow-up (2026-06-14) — собственный dependency-free движок ✅ resolved
+
+`@floating-ui/vue` (`useFloating`/`offset`/`flip`/`shift`/`autoUpdate`) **заменён** собственным движком [lib/fixwindow/useFloating.ts](../../../lib/fixwindow/useFloating.ts) — по запросу пользователя (цель проекта: минимум рантайм-зависимостей). Полный паритет:
+
+- **Чистое ядро** `computePosition(reference, floating, { placement, strategy, offset, padding, rtl, boundary, offsetParent })` — DOM-free/Vue-free: placement (12 + center→top) → offset (`translatePx`) → flip (least-overflow, противоположная сторона) → shift (clamp по cross-оси) → вычитание `offsetParent` для absolute. Тестируется детерминированно (rects in → coords out, **без моков** — уходит хрупкость прежних mock-based offset-тестов).
+- **Реактивная обёртка** `useFloating(reference, floating, options)` — rects через `getBoundingClientRect`, RTL-детект (`getComputedStyle(ref).direction`), boundary = `window.innerWidth/Height` (fixed) / rect scroll-контейнера (absolute), autoUpdate = scroll всех scroll-parents + window resize + `ResizeObserver`, привязан к `open` (whileElementsMounted-семантика), teardown через `onScopeDispose`.
+- Форма возврата `{ x, y, placement, strategy, update }` совместима с прежней — SFC почти не изменился (Math.floor/`"auto"`-wrap + `updatePosition()` те же).
+
+Дроп зависимостей: `@floating-ui/vue` удалён из `lib/package.json` + root `package.json` (был единственным консьюмером). +46 тестов: [useFloating.test.ts](../../../lib/fixwindow/useFloating.test.ts) (ядро 33 + обёртка 6) + [useClickOutside.test.ts](../../../lib/fixwindow/useClickOutside.test.ts) (7). Build-verified: `dist/` не содержит `@floating-ui`. Browser-verified в sandbox: окно вплотную к триггеру + auto-flip вверх у нижнего края viewport. Conventional commit: `refactor(fixwindow): replace @floating-ui/vue + @vueuse/core with dependency-free engine`.
+
+- [x] `offset` использует только `translatePx`, `marginPx` не попадает в main-axis offset (test "offset uses translatePx only — marginPx is NOT added to the main-axis offset").
+- [x] `offset` учитывает `translatePx`, но НЕ `marginPx + translatePx` (test "offset honors translatePx but still excludes marginPx" — оба в `useFloating.test.ts`, ядро `computePosition`).
+- [x] flip/shift/RTL/byCursor/absolute-strategy покрыты unit-тестами ядра; autoUpdate attach/detach + SSR-no-op — тестами обёртки.
+
 ## ~~Issue 3: Click-outside не работает при Teleport / iframe / Shadow DOM~~ ✅ resolved 2026-05-16
 
 - **Категория:** H40
 - **Severity:** ~~high~~
 - **Где:** [FixWindow.vue](../../../lib/fixwindow/FixWindow.vue) (старый `closeOnClick` с `composedPath().includes(...)`)
-- **Resolution:** удалён manual `closeOnClick(event)` с composedPath check (ломался при Teleport). Заменён на VueUse `onClickOutside(fixWindow, callback, { ignore: [element] })` — Teleport-aware, корректно учитывает события на trigger element (через `ignore` массив) и события снаружи popover'а. Активируется условно — только когда `eventClose` ∈ `{click, mousedown, mouseup, dblclick, contextmenu}`. Teardown в `onBeforeUnmount` через `stopClickOutside.value()`.
+- **Resolution:** удалён manual `closeOnClick(event)` с composedPath check (ломался при Teleport). Заменён на Teleport-aware click-outside с `ignore` массивом (trigger) и проверкой снаружи через `composedPath()`. Активируется условно — только когда `eventClose` ∈ `{click, mousedown, mouseup, dblclick, contextmenu}`. Teardown в `onBeforeUnmount` через `stopClickOutside.value()`.
+- **Migration (2026-06-14):** `@vueuse/core onClickOutside` → собственный [lib/fixwindow/useClickOutside.ts](../../../lib/fixwindow/useClickOutside.ts) (dependency-free). Контракт тот же (`(target, handler, { ignore })` → `stop()`); слушает именно `eventClose`-событие (`events: [eventClose]`) вместо always-`pointerdown` — outside-`click` закрывает при `eventClose="click"` и т.д. (исправляет Select/Calendar/Menu close-on-outside в их default-конфиге). `@vueuse/core` удалён из `lib/package.json` + root (был единственным консьюмером). +7 тестов ([useClickOutside.test.ts](../../../lib/fixwindow/useClickOutside.test.ts)).
 
 ### Acceptance criteria
 

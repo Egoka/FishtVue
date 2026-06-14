@@ -227,7 +227,7 @@ v-model contract — не применимо: Table не имеет одного
   @after-edit-cell="(p) => api.update(p._key, { [p.column.dataField]: p.newValue })" />
 ```
 
-> **Floating popovers (filter + editor).** Dropdown'ы `type: "select"`/`"date"` (и в фильтре, и в cell-editor) плавают через `FixWindow` (обёртка над `@floating-ui/vue` — flip/shift). Таблица передаёт им `paramsFixWindow.scrollableEl = tableBody`, поэтому popover трекает скролл-контейнер и не «отрывается» при прокрутке. Переопределить позицию/teleport на колонку: `paramsFilter: { paramsFixWindow: { position, teleport } }` (фильтр) или `edit.editorOptions.paramsFixWindow` (редактор) — override выигрывает над дефолтом.
+> **Floating popovers (filter + editor).** Dropdown'ы `type: "select"`/`"date"` (и в фильтре, и в cell-editor) плавают через `FixWindow` (собственный dependency-free движок позиционирования — flip/shift). Таблица передаёт им `paramsFixWindow.scrollableEl = tableBody`, поэтому popover трекает скролл-контейнер (`absolute`-стратегия) и не «отрывается» при прокрутке. Переопределить позицию/teleport на колонку: `paramsFilter: { paramsFixWindow: { position, teleport } }` (фильтр) или `edit.editorOptions.paramsFixWindow` (редактор) — override выигрывает над дефолтом.
 
 ## 10. Configuration & Customization
 

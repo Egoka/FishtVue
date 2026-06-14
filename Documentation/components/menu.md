@@ -346,7 +346,7 @@ describe("Menu", () => {
 
 - **Compound API:** `MenuItem` / `MenuGroup` — renderless descriptors; их сопоставление в VNode-walk идёт по имени компонента (`name === "MenuItem"`/`"MenuGroup"`), импорт самих SFC в `Menu.vue` не выполняется (он ломал бы type-resolver `@vue/compiler-sfc`). Богатый (нетекстовый) label у `<MenuItem>` не поддержан — для произвольного содержимого используй prop `title` или slot `#item`; текстовое содержимое default slot мапится только в `title`.
 - Compound-структура считывается из default slot и подаётся в тот же `setItems`-конвейер; `_key` генерируются в `onMounted` (client-only) — на SSR меню рендерится пустым (наследуется от текущей архитектуры + FixWindow).
-- Вложенные menu рендерятся через FixWindow — наследуют его поведение (Floating UI positioning, focus trap, SSR).
+- Вложенные menu рендерятся через FixWindow — наследуют его поведение (собственный dependency-free движок позиционирования с auto-flip/shift, focus trap, SSR).
 - При горизонтальном layout с большим количеством items overflow не управляется автоматически — добавь scroll или collapse.
 - `useFirstLetter: true` берёт `title[0]` без учёта Unicode-нормализации — для эмодзи или сложных символов может быть некорректно.
 - Keyboard-активация (`Enter`/`Space`) эмитит `onClick` с `KeyboardEvent` (приводится к типу `MouseEvent` в payload — поля, специфичные для мыши, будут `undefined`).

@@ -2,8 +2,8 @@
   import type { ComponentInternalInstance } from "vue"
   import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
   import { XMarkIcon } from "@heroicons/vue/20/solid"
-  import { autoUpdate, flip, offset, type Placement, shift, useFloating } from "@floating-ui/vue"
-  import { onClickOutside } from "@vueuse/core"
+  import { useFloating, type Placement } from "./useFloating"
+  import { useClickOutside } from "./useClickOutside"
   import { isClient } from "fishtvue/utils/domHandler"
   import type { FixWindowEmits, FixWindowEvent, FixWindowExpose, FixWindowProps, FixWindowRole } from "./FixWindow"
   import Button from "fishtvue/button/Button.vue"
@@ -197,6 +197,11 @@
   const referenceRef = computed(() => virtualReferenceEl.value ?? element.value ?? null)
   const placement = computed<Placement>(() => positionToPlacement(position.value))
   const strategy = computed<"absolute" | "fixed">(() => (typePosition.value === "absolute" ? "absolute" : "fixed"))
+  // Собственный движок (lib/fixwindow/useFloating.ts) — без рантайм-зависимостей.
+  // offset = translatePx ТОЛЬКО: marginPx выражается прозрачным `border` (см. computed
+  // `border`) — это и зазор, и hover-bridge (border-box-кромка окна вплотную к триггеру,
+  // курсор не выходит в пустоту при переходе trigger → window); иначе marginPx учитывался
+  // бы дважды (двойной зазор + dead-zone). flip/shift/autoUpdate — паритет с прежним Floating UI.
   const {
     x: floatX,
     y: floatY,
@@ -204,12 +209,10 @@
   } = useFloating(referenceRef, fixWindow, {
     placement,
     strategy,
-    middleware: computed(() => [
-      offset(marginPx.value + translatePx.value),
-      flip({ padding: paddingWindow.value }),
-      shift({ padding: paddingWindow.value })
-    ]),
-    whileElementsMounted: autoUpdate
+    offset: translatePx,
+    padding: paddingWindow,
+    scrollableEl,
+    open: isOpen
   })
   // Backward-compat expose: x / y как CSS строки. Math.floor для стабильности
   // существующих тестов; "auto" пока popover не открыт.
@@ -494,13 +497,15 @@
     teardownClickOutside()
     const e = eventClose.value
     if (e === "click" || e === "mousedown" || e === "mouseup" || e === "dblclick" || e === "contextmenu") {
-      const ignore = element.value ? [element as any] : []
-      stopClickOutside.value = onClickOutside(
-        fixWindow as any,
+      const ignore = element.value ? [element] : []
+      // Слушаем именно `eventClose`-событие (как у прежнего onClickOutside по факту):
+      // outside-`click` закрывает при eventClose="click", outside-`mousedown` — при "mousedown" и т.д.
+      stopClickOutside.value = useClickOutside(
+        fixWindow,
         (event) => {
           close(event as MouseEvent)
         },
-        { ignore }
+        { ignore, events: [e] }
       )
     }
   }

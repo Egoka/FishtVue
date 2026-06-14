@@ -32,12 +32,10 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 - `fishtvue/module` — Nuxt module (`defineNuxtModule`).
 - `fishtvue/plugins/nuxt` — Nuxt plugin (`nuxtInitPlugin`).
 
-**Внешние зависимости** ([lib/package.json:57–72](../lib/package.json#L57-L72)):
+**Внешние зависимости** ([lib/package.json:57–70](../lib/package.json#L57-L70)):
 
 | Пакет                        | Версия              | Зачем                                                                          |
 | ---------------------------- | ------------------- | ------------------------------------------------------------------------------ |
-| `@floating-ui/vue`           | `^1.1.11`           | FixWindow positioning (`useFloating`/`offset`/`flip`/`shift`) — транзитивно нужен Calendar, Select, Menu, Table. |
-| `@vueuse/core`               | `^14.3.0`           | FixWindow `onClickOutside` (close-on-outside) — та же транзитивная цепочка.     |
 | `@heroicons/vue`             | `^2.1.5`            | Icons компонент.                                                               |
 | `@iconify/vue`               | `^4.1.2`            | Icons компонент (Iconify backend).                                             |
 | `@vueup/vue-quill` + `quill` | `^1.2.0` / `^2.0.2` | TextEditor.                                                                    |
@@ -49,7 +47,7 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 | `csstype`                    | `^3.1.3`            | Типы CSS-проперти.                                                            |
 | `vue`                        | `^3.5.11`           | Runtime.                                                                       |
 
-> `@floating-ui/vue` и `@vueuse/core` не бандлятся, а остаются bare-`import` в собранном `dist/fixwindow/fixwindow.mjs` (в rollup нет `@rollup/plugin-node-resolve` — неразрешённые bare-specifier'ы трактуются как external). Поэтому они обязаны быть в `dependencies`: без них `import "fishtvue/menu"` (и любой компонент, тянущий FixWindow) падает в чистой установке с `Cannot find package '@floating-ui/vue'`.
+> **FixWindow — dependency-free.** Позиционирование (placement/offset/flip/shift/autoUpdate) и close-on-outside реализованы собственными композаблами `lib/fixwindow/useFloating.ts` + `lib/fixwindow/useClickOutside.ts` — **без рантайм-зависимостей**. Раньше FixWindow тянул `@floating-ui/vue` + `@vueuse/core` bare-`import`'ом (оба обязаны были быть в `dependencies`); миграция на собственный движок (2026-06-14) убрала обе зависимости из пакета. Контракт зафиксирован тестом [lib/package.test.ts](../lib/package.test.ts) (deps не содержат `@floating-ui/vue`/`@vueuse/core`).
 
 **Peer dependencies (optional)** ([lib/package.json:41–45](../lib/package.json#L41-L45)):
 `@nuxt/kit ^4.1.2`, `@nuxt/schema ^4.1.2`, `nuxt >=3.0.0`. В Vite-проекте предупреждения о peer-deps игнорируются.

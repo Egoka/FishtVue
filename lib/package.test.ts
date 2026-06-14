@@ -54,13 +54,14 @@ describe("lib/package.json publish contract", () => {
     expect(pkg.types).toBe("./index.d.ts")
   })
 
-  it("declares runtime deps for packages that stay bare-import in the build", () => {
-    // FixWindow импортит @floating-ui/vue + @vueuse/core; в rollup нет node-resolve,
-    // поэтому они остаются bare-`import` в dist/*.mjs и ОБЯЗАНЫ быть в dependencies —
-    // иначе чистая установка падает на `import "fishtvue/menu"` (Cannot find package …).
+  it("does not declare @floating-ui/vue or @vueuse/core (FixWindow is dependency-free)", () => {
+    // Раньше FixWindow тянул @floating-ui/vue + @vueuse/core bare-import'ом → они были
+    // обязаны быть в dependencies. Миграция на собственный движок (lib/fixwindow/useFloating.ts
+    // + useClickOutside.ts) убрала обе зависимости из рантайма — пакет больше не требует их
+    // при чистой установке. Регрессия-guard: они не должны вернуться в dependencies.
     const deps = pkg.dependencies ?? {}
-    expect(deps["@floating-ui/vue"]).toBeDefined()
-    expect(deps["@vueuse/core"]).toBeDefined()
+    expect(deps["@floating-ui/vue"]).toBeUndefined()
+    expect(deps["@vueuse/core"]).toBeUndefined()
   })
 })
 

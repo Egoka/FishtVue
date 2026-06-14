@@ -351,11 +351,11 @@ Coverage statements 85.93% — OK, но branch 67.74% — много untested у
 - **Категория:** H39
 - **Severity:** ~~medium~~ → resolved
 
-Filter UI и cell-editor popovers — через FixWindow (in-house обёртка над `@floating-ui/vue` — flip/shift/teleport/RTL placement). См. [calendar.md Issue 9](./calendar.md).
+Filter UI и cell-editor popovers — через FixWindow (in-house движок позиционирования — flip/shift/teleport/RTL placement; с 2026-06-14 собственный, без `@floating-ui/vue`). См. [calendar.md Issue 9](./calendar.md).
 
-> **Resolution (2026-06-11).** Без новых зависимостей — FixWindow уже использует `@floating-ui/vue` ([FixWindow.vue:5](../../lib/fixwindow/FixWindow.vue#L5)), и cell-**редакторы** Select/Calendar уже плавали через него с `paramsFixWindow.scrollableEl: tableBody` ([Table.vue](../../lib/table/Table.vue)). Реальный gap был у **filter**-Select/Calendar: они спредили `column.paramsFilter` БЕЗ `scrollableEl`, поэтому их dropdown не трекал скролл-контейнер таблицы.
+> **Resolution (2026-06-11).** Без новых зависимостей — FixWindow уже давал scroll-aware позиционирование ([FixWindow.vue](../../lib/fixwindow/FixWindow.vue)), и cell-**редакторы** Select/Calendar уже плавали через него с `paramsFixWindow.scrollableEl: tableBody` ([Table.vue](../../lib/table/Table.vue)). Реальный gap был у **filter**-Select/Calendar: они спредили `column.paramsFilter` БЕЗ `scrollableEl`, поэтому их dropdown не трекал скролл-контейнер таблицы.
 >
-> - **Fix:** filter-`<Select>`/`<Calendar>` теперь мёржат `paramsFixWindow: { scrollableEl: tableBody, ...(column.paramsFilter?.paramsFixWindow) }` — зеркало редакторского паттерна. FixWindow позиционирует popover относительно `tableBody` (Floating UI `update` на scroll). Per-column override (`paramsFilter.paramsFixWindow`, напр. `position`/`teleport`) **выигрывает** над дефолтом.
+> - **Fix:** filter-`<Select>`/`<Calendar>` теперь мёржат `paramsFixWindow: { scrollableEl: tableBody, ...(column.paramsFilter?.paramsFixWindow) }` — зеркало редакторского паттерна. FixWindow позиционирует popover относительно `tableBody` (autoUpdate движка пересчитывает позицию на scroll). Per-column override (`paramsFilter.paramsFixWindow`, напр. `position`/`teleport`) **выигрывает** над дефолтом.
 > - **Editors** уже имели `scrollableEl` — паритет достигнут; teleport остаётся opt-in per-column (как у редакторов) — `<Table>` не навязывает его, чтобы не двигать popover из DOM-дерева по умолчанию.
 > - Тесты: `Table.test.ts` describe «Issue 10 — filter popovers via FixWindow» (3 кейса: filter Select/Calendar получают `scrollableEl`; per-column override побеждает).
 

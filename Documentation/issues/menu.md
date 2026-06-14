@@ -197,8 +197,9 @@ Submenu открывается через FixWindow. Focus trap нужен вн�
 Submenu позиционируется через FixWindow. См. [done/fixwindow.md Issue 2](./done/fixwindow.md).
 
 > ✅ **resolved 2026-06-06** — наследуется от done/FixWindow: submenu рендерится через FixWindow, который
-> уже переписан на `@floating-ui/vue` (`useFloating` + `autoUpdate` + `flip`/`shift`). Отдельного кода в Menu
-> не требуется. Проверено: nested `<Menu>` в submenu FixWindow рендерится корректно (`Menu.test.ts`).
+> имеет собственный dependency-free движок позиционирования (`useFloating` + `autoUpdate` + `flip`/`shift`;
+> с 2026-06-14 без `@floating-ui/vue`). Отдельного кода в Menu не требуется. Проверено: nested `<Menu>` в
+> submenu FixWindow рендерится корректно (`Menu.test.ts`).
 
 ## Issue 9: prefers-reduced-motion / RTL / colors — ⚠️ partially resolved 2026-06-06
 
