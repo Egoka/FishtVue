@@ -71,6 +71,18 @@ describe("Loading Component", () => {
       expect(sr.text().length).toBeGreaterThan(0)
     })
 
+    it("routes the visually-hidden label class through the setStyle factory", () => {
+      // `sr-only` должен генерироваться движком через `Loading.setStyle`, а не быть
+      // литеральным `class="sr-only"`: у потребителя без Tailwind литеральный класс не
+      // сгенерит CSS → текст скринридера потеряет visually-hidden-позиционирование.
+      // setStyle возвращает `fv {prefix}-{name} {classes}` — проверяем эти маркеры.
+      const wrapper = mount(Loading)
+      const cls = wrapper.find("[data-loading] .sr-only").attributes("class") ?? ""
+      expect(cls).toContain("fv")
+      expect(cls).toContain("fishtvue-loading")
+      expect(cls).toContain("sr-only")
+    })
+
     it("localizes the label via t('loading.label')", () => {
       const en = createAppWithFishtVue({
         locale: { activeLocale: "en", messages: { en: { loading: { label: "Loading" } } } }

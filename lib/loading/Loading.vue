@@ -133,6 +133,6 @@
     :style="containerStyle">
     <SimpleLoading v-if="prefersReducedMotion" :size="size" :color="color" :animation-duration="0" />
     <component v-else :is="ComponentLoad" :size="size" :color="color" :animationDuration="animationDuration" />
-    <span class="sr-only">{{ ariaLabel }}</span>
+    <span :class="Loading.setStyle('sr-only')">{{ ariaLabel }}</span>
   </div>
 </template>

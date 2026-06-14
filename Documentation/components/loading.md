@@ -32,7 +32,7 @@ lib/loading/
 
 - **Lifecycle:** стили инжектит базовый `Component.__hooks()` (`onServerPrefetch + vueOnMounted`) — ручной `onMounted(() => initStyle())` в SFC отсутствует (канон, см. [dev-patterns §2](../dev-patterns.md)).
 - **Поток данных:** `resolvedType` (`props.type ?? options?.type ?? "simple"`) → resolve в один из мап `componentsMapEpic`/`componentsMapSvg` → ленивый `defineAsyncComponent`. `size`/`color`/`animationDuration` управляются как inline-styles.
-- **Стили:** через `Loading.setStyle()`. CSS-анимации через `animation-duration` inline.
+- **Стили:** все Tailwind-классы (контейнер + `sr-only` visually-hidden-лейбл) — только через `Loading.setStyle()` factory: движок генерирует CSS, у потребителя нет рантайм-зависимости от Tailwind. Литеральных `class="…"` в шаблоне нет. Динамические runtime-значения (`size`/`color` → `width`/`height`/`fill`) — inline `:style` (plain CSS, канон всей либы). CSS-анимации через `animation-duration` inline.
 - **Конфиг:** `componentsOptions.Loading` (включая `type`) — см. §10.
 - **Локализация:** `aria-label` статус-региона через `Loading.t("loading.label")` (ключ `loading.label` в en/ru).
 - **SSR:** SSR-safe (CSS-анимации работают и на сервере при initial render).
