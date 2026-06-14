@@ -1,4 +1,5 @@
-// Accordion
+// Accordion (AccordionItem — named-экспорт бандла accordion.mjs через `export *`, как Menu/MenuItem;
+// compound `<Accordion><AccordionItem>` собирается из accordion/index.ts)
 export * from "fishtvue/accordion"
 export { default as Accordion } from "fishtvue/accordion"
 // Alert

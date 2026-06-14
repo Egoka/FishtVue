@@ -1,4 +1,4 @@
-import { MaybeRef, VNode } from "vue"
+import { MaybeRef, Ref, VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
 
 /**
@@ -39,6 +39,15 @@ export type AccordionItem = {
    * @type {string | undefined}
    */
   template?: string
+
+  /**
+   * Internal: захваченный render-функционал содержимого секции для compound-API
+   * (`<AccordionItem>…</AccordionItem>`). Заполняется родительским `<Accordion>` при VNode-walk,
+   * не предназначен для прямого использования в schema-`dataSource`.
+   * @type {(() => any) | undefined}
+   * @internal
+   */
+  _content?: () => any
 
   /**
    * Any additional properties for the accordion item.
@@ -171,6 +180,15 @@ export declare type AccordionExpose = {
    * @type {ReadRef<AccordionProps["classSubtitle"]>}
    */
   classSubtitle: ReadRef<AccordionProps["classSubtitle"]>
+
+  // ---ELEMENTS----------------------
+
+  /**
+   * Ref на корневой DOM-элемент аккордеона (`[data-accordion]`). `null`, пока секций нет
+   * (root скрыт через `v-if`). Полезно для скролла/измерений/интеграций со стороны потребителя.
+   * @type {Ref<HTMLElement | null>}
+   */
+  rootRef: Ref<HTMLElement | null>
 
   // ---METHODS-----------------------
 
