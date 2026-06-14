@@ -1,7 +1,7 @@
 ---
 title: Issues — Loading
-summary: Аудит Loading. Закрыто 2026-06-03 — coverage loadingTypes 3% → 100% (Issue 1), ARIA role="status"+aria-live+sr-only+локализованный aria-label (Issue 3), LoadingOption.type (Issue 4), снят dup initStyle + sideEffects (Issue 5), reduced-motion static fallback (Issue 6), print:hidden (Issue 8); lazy import (Issue 2) уже был. Открыто — hardcoded HEX в Epic/SVG (Issue 7, deferred Wave 9) + root exports map (Wave 2.1).
-updated: 2026-06-03
+summary: Аудит Loading. Закрыто 2026-06-03 — coverage loadingTypes 3% → 100% (Issue 1), ARIA role="status"+aria-live+sr-only+локализованный aria-label (Issue 3), LoadingOption.type (Issue 4), снят dup initStyle + sideEffects (Issue 5), reduced-motion static fallback (Issue 6), print:hidden (Issue 8); lazy import (Issue 2) уже был. Закрыто 2026-06-14 — root exports map A4-5 (Issue 5, doc-sync inherited из buildRootExports()). Открыто — hardcoded HEX в Epic/SVG (Issue 7, deferred Wave 9).
+updated: 2026-06-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/loading/
 related-doc: ../components/loading.md
@@ -15,11 +15,11 @@ stability: beta
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 1 | A4-5 (root exports map — deferred Wave 2.1) |
+| high | 0 | — |
 | medium | 0 | — |
 | low | 1 | B10 (hardcoded HEX — deferred Wave 9) |
 
-> Закрыто 2026-06-03: Issue 1 (J46), Issue 2 (I44), Issue 3 (E29.1/E29.5/F30), Issue 4 (L53), Issue 5 частично — A2 (sideEffects) + C17 (dup initStyle) + #14 unstyled (cross-cutting), Issue 6 (E29.7), Issue 8 (N59). Остаётся Issue 7 (B10) и root-level exports map (A4-5).
+> Закрыто 2026-06-03: Issue 1 (J46), Issue 2 (I44), Issue 3 (E29.1/E29.5/F30), Issue 4 (L53), Issue 5 частично — A2 (sideEffects) + C17 (dup initStyle) + #14 unstyled (cross-cutting), Issue 6 (E29.7), Issue 8 (N59). Закрыто 2026-06-14: Issue 5 финально — A4-5 (root exports map, doc-sync inherited). Остаётся только Issue 7 (B10).
 
 ## ~~Issue 1: loadingTypes.ts coverage 3% — большинство EpicLoading вариаций нигде не tested~~ ✅ resolved 2026-06-03
 
@@ -119,14 +119,14 @@ LoadingOption = Pick<LoadingProps, "animationDuration" | "size" | "color" | "cla
    ```
 2. В [Loading.vue](../../lib/loading/Loading.vue) подбирать `type` через `options?.type ?? "simple"`.
 
-## ~~Issue 5: SSR styles + sideEffects + unstyled~~ ✅ resolved 2026-06-03 (exports map — deferred Wave 2.1)
+## ~~Issue 5: SSR styles + sideEffects + unstyled + exports map~~ ✅ resolved 2026-06-03 (exports map ✅ 2026-06-14)
 
 См. [button.md Issue 1, 8, 9, 14](./button.md).
 
 - **C17 (SSR / dup initStyle, button #1):** ✅ снят `onMounted(() => Loading.initStyle())` — базовый `Component.__hooks()` уже регистрирует `onServerPrefetch + vueOnMounted` → `initStyle()`. Comment-marker по канону Wave 2.3. Прогресс Wave 2.3: 10/22 → **11/22**.
 - **A2 (sideEffects, button #8):** ✅ `lib/loading/package.json` → `"sideEffects": ["**/*.css", "**/*.vue"]` (см. Issue 2).
 - **L14 (unstyled, button #14):** ✅ уже закрыт cross-cutting — `Component.setStyle()` guard. Добавлен regression-тест (`unstyled: true` → `classLoading` без utility-классов).
-- **A4-5 (ESM/exports map, button #9):** ⏳ root-level задача ([lib/package.json](../../lib/package.json), Wave 2.1) — **не** per-component, остаётся открытой.
+- **A4-5 (ESM/exports map, button #9):** ✅ resolved 2026-06-14 (doc-sync inherited). Корневая `exports`-карта генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js) (Issue 5c-b, landed ✅ 2026-06-11) из авторитетных rollup-выходов — ЯВНЫЙ identity (`*.mjs`) + extensionless entry на каждый emitted `.mjs` + bare-dir из вложенного `package.json`. Per-component правок Loading **не требует** (зеркало accordion/separator/switch/badge/menu). `fishtvue/loading` резолвится через [lib/loading/package.json](../../lib/loading/package.json) (`module`/`main` → `loading.mjs`, `types` → `Loading.d.ts`). **Loading-specific значимость:** Loading — единственный компонент, чей runtime делает глубокий динамический `import("./epic/*.mjs")` / `import("./svg/*.mjs")` (126 lazy-вариаций: [`addLoadingVariants()`](../../lib/rollup.config.js) собирает каждую отдельным `.mjs`, rewrite `.vue → .mjs` ретаргетит сам `import()`). В pure Node ESM эти чанки резолвятся ТОЛЬКО через identity-entry карты → добавлен Loading-specific контракт-guard в [lib/package.test.ts](../../lib/package.test.ts) (`covers fishtvue/loading bare subpath + its lazy epic/svg chunks (A4-5)`).
 
 ## ~~Issue 6: prefers-reduced-motion — для loader особенно важен~~ ✅ resolved 2026-06-03
 

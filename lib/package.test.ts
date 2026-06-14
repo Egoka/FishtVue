@@ -97,4 +97,26 @@ describe.skipIf(!hasDist)("dist/package.json root exports map (Issue 5c-b)", () 
     expect(exp["./utils/domHandler"]).toMatchObject({ import: "./utils/domHandler.mjs" })
     expect(exp["./*/package.json"]).toBe("./*/package.json")
   })
+
+  // A4-5 (loading.md Issue 5). Loading — ЕДИНСТВЕННЫЙ компонент, чей runtime делает глубокий
+  // динамический `import("./epic/*.mjs")` / `import("./svg/*.mjs")` (126 lazy-вариаций, см.
+  // addLoadingVariants() + .vue→.mjs rewrite в rollup.config.js). В pure Node ESM эти чанки
+  // резолвятся ТОЛЬКО через identity-entry в exports-карте — generic-спот-чеки выше (table/menu/
+  // config/utils) этого deep-chunk-кейса не покрывают. Guard ломается, если buildRootExports()
+  // перестанет эмитить per-`.mjs` identity-entry (тогда Loading молча сломается у потребителя).
+  it("covers fishtvue/loading bare subpath + its lazy epic/svg chunks (A4-5)", () => {
+    expect(exp["./loading"]).toMatchObject({ types: "./loading/Loading.d.ts", import: "./loading/loading.mjs" })
+
+    for (const variant of ["epic", "svg"] as const) {
+      const keys = Object.keys(exp)
+      const identity = keys.filter((k) => new RegExp(`^\\./loading/${variant}/[^/]+\\.mjs$`).test(k))
+      expect(identity.length, `expected ≥1 lazy ${variant} chunk identity entry`).toBeGreaterThan(0)
+      // каждый identity-чанк имеет парный extensionless субпуть (`fishtvue/loading/epic/Foo`)
+      for (const id of identity) {
+        const noExt = id.slice(0, -4)
+        expect(exp[noExt], `missing extensionless entry for ${id}`).toBeDefined()
+        expect(exp[id]).toMatchObject({ import: id })
+      }
+    }
+  })
 })

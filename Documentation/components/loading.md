@@ -1,7 +1,7 @@
 ---
 title: Loading
 summary: Лоадер с типами Epic/SVG/simple, configurable size, color, animationDuration; ARIA status-регион, reduced-motion fallback.
-updated: 2026-06-03
+updated: 2026-06-14
 stability: beta
 since: 0.2.11
 ---
@@ -156,7 +156,7 @@ import Loading from "fishtvue/loading"
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `beta` — coverage `loadingTypes.ts` 100%; до `stable` остаётся [Issue 7](../issues/loading.md) (hardcoded HEX, Wave 9) + root exports map (Wave 2.1).
+- **Stability flag:** `beta` — coverage `loadingTypes.ts` 100%; до `stable` остаётся [Issue 7](../issues/loading.md) (hardcoded HEX, Wave 9). Root exports map (A4-5, Wave 2.1) — ✅ resolved 2026-06-14 (см. [issues/loading.md Issue 5](../issues/loading.md)).
 - **Breaking changes:** не зафиксировано.
 - **Deprecations:** нет.
 
