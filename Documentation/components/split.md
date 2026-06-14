@@ -1,7 +1,7 @@
 ---
 title: Split
 summary: Resizable панели с persistence через localStorage, horizontal/vertical, Pointer Events (mouse+touch+pen), keyboard resize и ARIA separator.
-updated: 2026-06-13
+updated: 2026-06-14
 stability: stable
 since: 0.2.11
 ---
@@ -30,11 +30,11 @@ lib/split/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` сам регистрирует `onServerPrefetch + vueOnMounted → initStyle()` — в SFC нет ручного `Split.initStyle()`. `onMounted` инициализирует `ResizeObserver` для отслеживания смены размеров контейнера и восстанавливает сохранённые размеры ([Split.vue:165-178](../../lib/split/Split.vue#L165-L178)).
+- **Lifecycle:** `Component.__hooks()` сам регистрирует `onServerPrefetch + vueOnMounted → initStyle()` — в SFC нет ручного `Split.initStyle()`. `onMounted` инициализирует `ResizeObserver` для отслеживания смены размеров контейнера и восстанавливает сохранённые размеры ([Split.vue:167-180](../../lib/split/Split.vue#L167-L180)).
 - **Поток данных:** `panels` (массив с `name`/`size`/`minSize`/`maxSize`) → reactive `sizePanels` map → CSS `flex-basis` или абсолютные размеры → emits.
-- **Resize:** Pointer Events (`pointerdown/move/up/cancel` + `setPointerCapture`) покрывают mouse + touch + pen; либо стрелки на focused separator (см. §12).
-- **Persistence:** при `autoSaveName: "myKey"` размеры пишутся в `localStorage["fv-split-{key}"]` по окончании resize (pointer и keyboard) и восстанавливаются на mount. Чтение/запись guarded через `isClient()` ([restoreSizes/persistSizes — Split.vue:418-447](../../lib/split/Split.vue#L418-L447)). При повреждённых данных значения игнорируются (остаются initial sizes).
-- **Стили:** через `setStyle`. Курсор во время drag задаётся overlay-элементом `<div data-split-drag-overlay class="fixed inset-0">` ([Split.vue:104-106](../../lib/split/Split.vue#L104-L106), [Split.vue:742](../../lib/split/Split.vue#L742)) — `document.body.classList` **не** мутируется (несколько Split на странице не конфликтуют).
+- **Resize:** Pointer Events (`pointerdown/move/up/cancel` + `setPointerCapture`) покрывают mouse + touch + pen; либо стрелки на focused separator (см. §12). Завершение drag (`stopResizePanel`) подстраховано window-листенерами `pointerup`/`pointercancel`, которые ставятся на `startResizePanel` и снимаются на stop/unmount — поэтому отпускание указателя **вне** компонента (или viewport) корректно гасит overlay, а не оставляет курсор-resize залипшим ([startResizePanel/stopResizePanel — Split.vue:636-685](../../lib/split/Split.vue#L636-L685)).
+- **Persistence:** при `autoSaveName: "myKey"` размеры пишутся в `localStorage["fv-split-{key}"]` по окончании resize (pointer и keyboard) и восстанавливаются на mount. Чтение/запись guarded через `isClient()` ([restoreSizes/persistSizes — Split.vue:422-451](../../lib/split/Split.vue#L422-L451)). При повреждённых данных значения игнорируются (остаются initial sizes).
+- **Стили:** через `setStyle`. Курсор во время drag задаётся overlay-элементом `<div data-split-drag-overlay class="fixed inset-0">` ([Split.vue:106-108](../../lib/split/Split.vue#L106-L108), [Split.vue:762](../../lib/split/Split.vue#L762)) — `document.body.classList` **не** мутируется (несколько Split на странице не конфликтуют).
 - **Конфиг:** `componentsOptions.Split` — см. §10.
 - **Локализация:** не использует.
 - **SSR:** `isClient()` guard перед DOM-доступом, `ResizeObserver` и persistence. На сервере панели рендерятся с initial sizes; observer не подключается, localStorage не читается.
@@ -194,11 +194,11 @@ Root класс — `fv fishtvue-split`.
 
 ### A11y
 
-- Resize handle — `<div role="separator" tabindex="0">` с `aria-orientation` (= `direction`), `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (по размеру и `min`/`max` панели) и `aria-controls`, ссылающимся на `id` управляемой панели ([Split.vue:688-710](../../lib/split/Split.vue#L688-L710)). Disabled-разделитель помечается `aria-disabled="true"`.
-- Keyboard для resize на focused separator ([onSeparatorKeydown — Split.vue:475](../../lib/split/Split.vue#L475)): `ArrowRight`/`ArrowLeft` (horizontal) либо `ArrowDown`/`ArrowUp` (vertical) — шаг 10 (с `Shift` — 50); `Home`/`End` — к минимуму/максимуму. В RTL (`dir="rtl"`) стрелки horizontal инвертируются (`ArrowLeft` растит ведущую панель). Размер переносится между смежными панелями с учётом `min`/`max`.
+- Resize handle — `<div role="separator" tabindex="0">` с `aria-orientation` (= `direction`), `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (по размеру и `min`/`max` панели) и `aria-controls`, ссылающимся на `id` управляемой панели ([Split.vue:708-730](../../lib/split/Split.vue#L708-L730)). Disabled-разделитель помечается `aria-disabled="true"`.
+- Keyboard для resize на focused separator ([onSeparatorKeydown — Split.vue:479](../../lib/split/Split.vue#L479)): `ArrowRight`/`ArrowLeft` (horizontal) либо `ArrowDown`/`ArrowUp` (vertical) — шаг 10 (с `Shift` — 50); `Home`/`End` — к минимуму/максимуму. В RTL (`dir="rtl"`) стрелки horizontal инвертируются (`ArrowLeft` растит ведущую панель). Размер переносится между смежными панелями с учётом `min`/`max`.
 - Resize доступен с touch/pen — через Pointer Events (`touch-none` на разделителе предотвращает scroll-конфликт).
-- `prefers-reduced-motion`: transition корня обёрнут в `motion-safe:` ([Split.vue:96](../../lib/split/Split.vue#L96)) — при `reduce` анимации отключаются (WCAG 2.3.3).
-- **RTL:** для horizontal direction resize работает в обе стороны — `isRtlHorizontal()` ([Split.vue:408](../../lib/split/Split.vue#L408)) детектит `getComputedStyle(...).direction === "rtl"` и зеркалит pointer-математику и стрелки. Физических `left/right` CSS-offset'ов у Split нет, поэтому логические-классы не требуются.
+- `prefers-reduced-motion`: transition корня обёрнут в `motion-safe:` ([Split.vue:98](../../lib/split/Split.vue#L98)) — при `reduce` анимации отключаются (WCAG 2.3.3).
+- **RTL:** для horizontal direction resize работает в обе стороны — `isRtlHorizontal()` ([Split.vue:412](../../lib/split/Split.vue#L412)) детектит `getComputedStyle(...).direction === "rtl"` и зеркалит pointer-математику и стрелки. Физических `left/right` CSS-offset'ов у Split нет, поэтому логические-классы не требуются.
 - **forced-colors (high-contrast):** разделитель несёт `forced-colors:outline` ([Split.vue:80](../../lib/split/Split.vue#L80)) — остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается.
 
 ### Security
@@ -252,6 +252,7 @@ describe("Split", () => {
 | Размеры не сохраняются | `autoSaveName` не задан, либо localStorage недоступен (private mode / quota). | Проверь `autoSaveName`; запись isClient-guarded и не падает при ошибке. |
 | Resize рывками | `ResizeObserver` срабатывает на каждое движение. | Это by design; для smoother — debounce на стороне consumer. |
 | Курсор при drag не на весь экран | overlay `[data-split-drag-overlay]` рендерится только во время drag. | На SSR drag нет; курсор задаётся overlay, а не `document.body`. |
+| Курсор-resize залип после drag | Указатель отпущен вне компонента — раньше `stopResizePanel` ждал `@pointerup` только на separator. | Исправлено: drag завершается window-листенерами `pointerup`/`pointercancel` (ставятся на start, снимаются на stop/unmount). |
 | Sum sizes ≠ 100% (percentages) | Округление + min/max constraints. | Перенормируй на стороне consumer через `updated-panels` event. |
 | Touch resize не работает | Перехвачен браузерным scroll. | Resize идёт через Pointer Events; `touch-none` на разделителе уже отключает scroll-жест. |
 

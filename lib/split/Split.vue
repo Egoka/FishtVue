@@ -22,6 +22,8 @@
 
   // ---REF-LINK----------------------------
   let splitObserver: ResizeObserver | undefined
+  // teardown window-listeners активного drag (см. startResizePanel) — снимается на stop/unmount
+  let stopGlobalDragListeners: (() => void) | null = null
   const resizableGroup = ref<HTMLElement>()
   const resizablePanels = ref<Record<string, HTMLElement>>({})
 
@@ -178,6 +180,8 @@
   })
 
   onUnmounted(() => {
+    // снять window-listeners drag, если компонент размонтировали во время active resize
+    stopGlobalDragListeners?.()
     if (isClient() && splitObserver && resizableGroup.value) {
       splitObserver.unobserve(resizableGroup.value)
       splitObserver.disconnect()
@@ -633,14 +637,30 @@
     if (!isClient()) return
     resizablePanel.value = namePanel
     isStartResize.value = true
-    if ($event.target instanceof HTMLElement && $event?.pointerId)
+    // pointerId === 0 — валидный id (touch/pen), поэтому проверяем именно != null, а не truthy
+    if ($event.target instanceof HTMLElement && $event.pointerId != null)
       ($event.target as HTMLElement).setPointerCapture($event.pointerId)
+    // safety-net: завершить drag, даже если pointerup/pointercancel пришёл вне separator
+    // (курсор ушёл за пределы компонента/viewport) — иначе overlay с cursor-*-resize залипает
+    const onWindowEnd = (event: Event) => stopResizePanel(event as PointerEvent, namePanel)
+    window.addEventListener("pointerup", onWindowEnd)
+    window.addEventListener("pointercancel", onWindowEnd)
+    stopGlobalDragListeners = () => {
+      window.removeEventListener("pointerup", onWindowEnd)
+      window.removeEventListener("pointercancel", onWindowEnd)
+      stopGlobalDragListeners = null
+    }
     emit("start-resize-panel", $event, namePanel)
   }
 
   function stopResizePanel($event: PointerEvent, namePanel?: Panel["name"]) {
     if (!isClient()) return
-    if ($event.target instanceof HTMLElement && $event?.pointerId) $event.target.releasePointerCapture($event.pointerId)
+    // идемпотентность: при release внутри компонента separator @pointerup и window-safety-net
+    // могут вызвать stop дважды — второй вызов не должен повторно эмитить/писать persistence
+    if (!isStartResize.value) return
+    stopGlobalDragListeners?.()
+    if ($event.target instanceof HTMLElement && $event.pointerId != null)
+      $event.target.releasePointerCapture($event.pointerId)
     isStartResize.value = false
     if (!isStartMove.value) resizablePanel.value = null
     persistSizes()

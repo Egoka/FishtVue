@@ -183,6 +183,69 @@ describe("Split Component", () => {
     })
   })
 
+  // ---REGRESSION — drag teardown при release вне компонента----------------
+  // Overlay (cursor-*-resize, fixed inset-0) гасится только когда isStartResize → false,
+  // а это делает stopResizePanel. Раньше он висел исключительно на separator @pointerup:
+  // если курсор уходил за пределы компонента и кнопку отпускали там, separator-событие
+  // не приходило, overlay залипал и курсор-resize блокировал весь сайт.
+  describe("drag teardown on pointerup outside the component", () => {
+    const mountAttached = () => {
+      const container = document.createElement("div")
+      container.style.width = "200px"
+      container.style.height = "200px"
+      document.body.appendChild(container)
+      return mount(Split, {
+        props: {
+          panels: [
+            { name: "panel1", size: 50 },
+            { name: "panel2", size: 50 }
+          ]
+        },
+        attachTo: container
+      })
+    }
+
+    it("removes the drag overlay when the pointer is released outside the separator (window pointerup)", async () => {
+      const wrapper = mountAttached()
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("pointerdown")
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(true)
+
+      // курсор ушёл за пределы компонента — separator @pointerup не сработает,
+      // приходит только window-level pointerup (safety-net должен завершить drag).
+      window.dispatchEvent(new Event("pointerup"))
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(false)
+      expect(wrapper.emitted("stop-resize-panel")).toHaveLength(1)
+    })
+
+    it("ends drag on a window pointercancel fired outside the separator", async () => {
+      const wrapper = mountAttached()
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("pointerdown")
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(true)
+
+      window.dispatchEvent(new Event("pointercancel"))
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(false)
+    })
+
+    it("does not emit a second stop-resize-panel on a stray window pointerup after drag ended", async () => {
+      const wrapper = mountAttached()
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("pointerdown")
+      await separator.trigger("pointerup")
+      expect(wrapper.emitted("stop-resize-panel")).toHaveLength(1)
+
+      // safety-net снят на stop — посторонний window pointerup не должен доэмитить stop
+      window.dispatchEvent(new Event("pointerup"))
+      await wrapper.vm.$nextTick()
+      expect(wrapper.emitted("stop-resize-panel")).toHaveLength(1)
+    })
+  })
+
   // ---ISSUE 4 — ARIA separator-------------------------------------------
   describe("Issue 4 — ARIA on resize handle", () => {
     it("exposes aria-orientation matching direction", () => {
