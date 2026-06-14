@@ -11,9 +11,16 @@ import { CSSProperties } from "vue"
 declare class Icons extends ClassComponent<IconsProps, IconsSlots, IconsEmits, IconsExpose> {}
 
 /**
- * Hand-curated subset of frequently used Heroicons names.
- * Volar предложит autocomplete для этих значений. Любая другая строка остаётся валидной
- * через `(string & {})`-fallback в `IconType`.
+ * Curated-набор имён Heroicons, которые библиотека бандлит и резолвит offline.
+ *
+ * Этот union === runtime const-реестр в [Icons.vue](./Icons.vue) (HERO_OUTLINE/HERO_SOLID,
+ * Issue 1 — tree-shaking): только эти 37 имён резолвятся как heroicon (outline + solid).
+ * Любое другое имя (в т.ч. валидный heroicon вне набора — `"camera"`, `"beaker"`) валидно
+ * через `(string & {})`-fallback в `IconType`, но в runtime уходит в Iconify-fallback,
+ * а не в heroicons. Расширение набора — добавить имя сюда И импорт в оба реестра Icons.vue.
+ *
+ * 30 публичных + 7 internal (используются `lib/`-компонентами): `arrow-long-right`,
+ * `arrows-pointing-in`/`-out`, `ellipsis-vertical`, `exclamation-circle`, `funnel`, `square-2-stack`.
  */
 export declare type HeroIconName =
   | "check"
@@ -46,6 +53,13 @@ export declare type HeroIconName =
   | "question-mark-circle"
   | "check-circle"
   | "x-circle"
+  | "arrow-long-right"
+  | "arrows-pointing-in"
+  | "arrows-pointing-out"
+  | "ellipsis-vertical"
+  | "exclamation-circle"
+  | "funnel"
+  | "square-2-stack"
 
 /**
  * Iconify icon name pattern — `${collection}:${name}`, например `"mdi:home"`, `"ph:user"`.

@@ -11,6 +11,52 @@ const flushHero = async () => {
   await flushPromises()
 }
 
+// Issue 1 (icons.md): heroicons резолвятся через tree-shakeable const-реестр explicit
+// named-импортов (НЕ namespace `import *`). Реестр покрывает curated-набор из 37 имён
+// (30 публичных `HeroIconName` + 7 internal, которые `lib/`-компоненты хардкодят через
+// <Icons type=...>: arrow-long-right (Calendar), arrows-pointing-in/out (Split),
+// ellipsis-vertical (Calendar/Table), exclamation-circle (InputLayout), funnel (Table),
+// square-2-stack (Table)). Список — drift-guard: удаление импорта из реестра краснит тест.
+const CURATED_HERO_NAMES = [
+  "check",
+  "x-mark",
+  "user",
+  "users",
+  "home",
+  "cog-6-tooth",
+  "bell",
+  "envelope",
+  "magnifying-glass",
+  "plus",
+  "minus",
+  "chevron-up",
+  "chevron-down",
+  "chevron-left",
+  "chevron-right",
+  "arrow-up",
+  "arrow-down",
+  "arrow-left",
+  "arrow-right",
+  "trash",
+  "pencil",
+  "eye",
+  "eye-slash",
+  "lock-closed",
+  "lock-open",
+  "exclamation-triangle",
+  "information-circle",
+  "question-mark-circle",
+  "check-circle",
+  "x-circle",
+  "arrow-long-right",
+  "arrows-pointing-in",
+  "arrows-pointing-out",
+  "ellipsis-vertical",
+  "exclamation-circle",
+  "funnel",
+  "square-2-stack"
+] as const
+
 describe("Icons Component Tests", () => {
   describe("Icon Component - Without Library Initialization", () => {
     it("renders a HeroIcon when type matches", async () => {
@@ -222,6 +268,79 @@ describe("Icons Component Tests", () => {
       const svg = wrapper.find("svg")
       expect(svg.exists()).toBe(true)
       expect(svg.attributes("fill")).toBe("currentColor")
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // Tree-shakeable const registry — Issue 1 (icons.md)
+  // Heroicons резолвятся из explicit named-импортов (const-реестр), а НЕ из
+  // namespace `import *` с dynamic `set[name]`. Это позволяет bundler'у
+  // tree-shake'ить набор до curated-37 вместо всех 648 иконок. Цена — имена
+  // вне реестра больше не резолвятся как heroicon (уходят в Iconify-fallback).
+  // -----------------------------------------------------------------------
+  describe("Heroicons — tree-shakeable const registry (Issue 1)", () => {
+    it.each(CURATED_HERO_NAMES)("'%s' resolves to a heroicon SVG synchronously (outline)", (name) => {
+      const wrapper = mount(Icons, { props: { type: name } })
+      expect(wrapper.find("svg").exists()).toBe(true)
+    })
+
+    it.each(CURATED_HERO_NAMES)("'%s' resolves to a heroicon SVG synchronously (solid)", (name) => {
+      const wrapper = mount(Icons, { props: { type: name, variant: "solid" } })
+      expect(wrapper.find("svg").exists()).toBe(true)
+    })
+
+    it("outline vs solid spot-check ('bell'): outline has stroke-width, solid has fill", () => {
+      const outline = mount(Icons, { props: { type: "bell" } })
+      expect(outline.find("svg").attributes("stroke-width")).toBe("1.5")
+      const solid = mount(Icons, { props: { type: "bell", variant: "solid" } })
+      expect(solid.find("svg").attributes("fill")).toBe("currentColor")
+    })
+
+    // Tree-shaking boundary: валидное heroicon-имя ВНЕ curated-реестра ('camera',
+    // 'beaker' существуют в @heroicons/vue, но не импортированы) НЕ должно резолвиться
+    // как heroicon → нет синхронного <svg>. На старом namespace-коде они резолвились
+    // (RED) → после перехода на const-реестр их нет в bundle (GREEN).
+    it("non-curated heroicon name 'camera' is not bundled → no sync heroicon SVG", () => {
+      const wrapper = mount(Icons, { props: { type: "camera" } })
+      expect(wrapper.find("svg").exists()).toBe(false)
+    })
+
+    it("non-curated heroicon name 'beaker' is not bundled → no sync heroicon SVG", () => {
+      const wrapper = mount(Icons, { props: { type: "beaker" } })
+      expect(wrapper.find("svg").exists()).toBe(false)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // unstyled — Issue 6 / L53 (icons.md)
+  // Наследует cross-cutting guard `Component.setStyle()` (config.unstyled → "").
+  // -----------------------------------------------------------------------
+  describe("Configuration support — unstyled (L53)", () => {
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    const appWith = (config: Record<string, unknown>) => ({
+      install(app: any) {
+        app.use(FishtVue, config)
+      }
+    })
+
+    it("classIcon is an empty string when unstyled:true", () => {
+      const wrapper = mount(Icons, {
+        props: { type: "Check" },
+        global: { plugins: [appWith({ unstyled: true })] }
+      })
+      expect((wrapper.vm as any).classIcon).toBe("")
+    })
+
+    it("classIcon keeps the default class when unstyled:false", () => {
+      const wrapper = mount(Icons, {
+        props: { type: "Check" },
+        global: { plugins: [appWith({ unstyled: false })] }
+      })
+      expect((wrapper.vm as any).classIcon).not.toBe("")
+      expect((wrapper.vm as any).classIcon).toContain("h-5")
     })
   })
 

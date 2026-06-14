@@ -1,6 +1,6 @@
 ---
 title: Issues — Icons
-summary: Аудит Icons — heroicons вернулись на eager namespace import + sync lookup (2026-06-14): prod-Vite/SSR-регрессия точечного dynamic import закрыта, иконки рендерятся; остаётся bundle-weight (весь набор в bundle, tree-shaking — future). Iconify CSP-неблагонадёжен (CDN-загрузка). API-уровень — variant prop, label prop, narrow IconType union — закрыт в 0.2.x.
+summary: Аудит Icons — heroicons переведены на tree-shakeable const-реестр explicit named-импортов (2026-06-14, Issue 1): bundler оставляет только curated-набор (37 имён ≈ 11 KB gzip) вместо всех 648 (~94 KB); sync lookup сохранён → prod-Vite/SSR-корректность не теряется; имена вне набора → Iconify-fallback. Iconify CSP — docs-only (offline-prop declined, addCollection-mitigation в §12). API-уровень (variant, label, narrow IconType) закрыт в 0.2.x. Остаётся только B10 (semantic-token hardcode → Wave 9).
 updated: 2026-06-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/icons/
@@ -11,50 +11,55 @@ related-doc: ../components/icons.md
 
 ## Сводка
 
-| Severity | Count | Categories                                                                                                                                                                                                                                                  |
-| -------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| critical | 0     | —                                                                                                                                                                                                                                                           |
-| high     | 4     | A2, A4-5, C17, I45 (heroicons **bundle-weight** — eager namespace, tree-shaking deferred; ~~prod-Vite/SSR regression~~ ✅ resolved 2026-06-14, см. Issue 1); ~~C13/security (Iconify CSP)~~ ⚠️ docs portion resolved, full mitigation requires offline-prop |
-| medium   | 1     | L53 (`unstyled` cross-cutting)                                                                                                                                                                                                                              |
-| low      | 2     | E29.7 (N/A — static SVG), B10 (hardcode class — cross-cutting Wave 9)                                                                                                                                                                                       |
+| Severity | Count | Categories                                              |
+| -------- | ----- | ------------------------------------------------------- |
+| critical | 0     | —                                                       |
+| high     | 0     | —                                                       |
+| medium   | 0     | —                                                       |
+| low      | 1     | B10 (hardcode class → semantic token — cross-cutting Wave 9) |
 
 **Closed (2026-05-10):** Issue 3 (ARIA), Issue 4 (variant deprecation), Issue 5 (type narrowing), Issue 2 docs portion, Issue 8 docs portion.
 **Re-opened (2026-06-13):** Issue 1 (I45) — build-замер показал, что точечный dynamic import не работает в prod-Vite (bare specifier `@heroicons/vue/...` не глобится плагином `dynamic-import-vars` → no code-split, иконка не резолвится в браузере без import map).
-**Resolved-facet (2026-06-14):** prod-Vite/SSR-**регрессия** Issue 1 закрыта — heroicons возвращены на eager namespace import + sync lookup ([Icons.vue:15-16](../../lib/icons/Icons.vue#L15-L16)); иконки снова рендерятся в prod/SSR/любом bundler (browser-verified: close-button `XMark` + все демо-иконки). Остаётся **bundle-weight** (весь набор в bundle) — tree-shaking отложен (см. ниже).
+**Resolved-facet (2026-06-14):** prod-Vite/SSR-**регрессия** Issue 1 закрыта переходом на eager namespace import + sync lookup (промежуточно); иконки снова рендерились в prod/SSR.
+**Resolved (2026-06-14, tree-shaking):** Issue 1 закрыт полностью — namespace `import *` заменён на **tree-shakeable const-реестр explicit named-импортов** ([Icons.vue module-scope `<script>`](../../lib/icons/Icons.vue#L1)); bundler оставляет только curated-набор. Issue 2 — `:offline` prop declined (docs-only). Issue 6 — A2/A4-5/C17 inherited + L53 unstyled regression-тест. Issue 7 — N/A (static SVG). **Остаётся только B10** (semantic-token hardcode → Wave 9, cross-cutting) → Icons `0/0/0/1`, файл active как Wave 9-трекер.
 
-## Issue 1: Heroicons — bundle-weight (eager namespace; regression resolved, tree-shaking deferred)
+## ~~Issue 1: Heroicons — bundle-weight~~ ✅ resolved 2026-06-14 (tree-shakeable const-реестр)
 
 - **Категория:** I45 (иконки), A2/A4-5/C17 (bundle/SSR facets)
-- **Severity:** ~~high (prod-Vite/SSR regression)~~ ✅ regression resolved 2026-06-14 → остаётся **high (bundle-weight)**
-- **Где:** [Icons.vue `resolveHeroIcon`](../../lib/icons/Icons.vue#L80), [eager namespace import](../../lib/icons/Icons.vue#L15-L16)
+- **Severity:** ~~high (prod-Vite/SSR regression → bundle-weight)~~ → ✅ resolved
+- **Где:** [Icons.vue const-реестр `HERO_OUTLINE`/`HERO_SOLID`](../../lib/icons/Icons.vue#L97-L175), [`resolveHeroIcon`](../../lib/icons/Icons.vue#L245)
 
-> **Resolution (2026-06-14) — regression closed.** Точечный dynamic import откатан на **eager namespace import** `import * as HeroIconsOutline/Solid from "@heroicons/vue/24/{outline,solid}"` + **синхронный** lookup `set[convertToCamelCase(type) + "Icon"]` ([Icons.vue:77-89](../../lib/icons/Icons.vue#L77-L89)). Корректно в prod-Vite, SSR (sync — heroIcon резолвится до первого `await` в immediate-watcher, попадает в SSR-HTML) и любом bundler. Симптом, из-за которого пере-открыли: close-button Alert (`icon="XMark"`) рендерил `<i data-icon><!--v-if--></i>` — теперь рендерит SVG (browser-verified, 0 console-errors). +4 регрессионных теста (`Heroicons — eager sync resolution`), проверяют sync-рендер без flush.
+> **Resolution (2026-06-14) — tree-shaking.** namespace `import * as HeroIconsOutline/Solid` + dynamic `set[name]` lookup заменён на **const-реестр explicit named-импортов** ([Icons.vue module-scope `<script>`](../../lib/icons/Icons.vue#L1)): `import { CheckIcon, XMarkIcon, … } from "@heroicons/vue/24/{outline,solid}"` → `HERO_OUTLINE`/`HERO_SOLID` ([Icons.vue:97](../../lib/icons/Icons.vue#L97), [:136](../../lib/icons/Icons.vue#L136)). `resolveHeroIcon` lookup'ит в реестре синхронно (тело почти не изменилось, ключ = `convertToCamelCase(type) + "Icon"`, [Icons.vue:245](../../lib/icons/Icons.vue#L245)). Explicit named-импорты статичны → bundler tree-shake'ит heroicons до curated-набора. Sync lookup сохранён → prod-Vite/SSR-корректность не теряется.
 >
-> **Остаётся (bundle-weight).** `set[name]` — dynamic property access, поэтому bundler **не** tree-shake'ит: в bundle попадает весь heroicons-набор (замер 2026-06-13: **94.0 KB gzip**, 648 иконок outline+solid). Это осознанный trade-off (по запросу владельца 2026-06-14): для published-либы с open `IconType` union потребитель передаёт произвольные имена, которые нельзя предугадать в lib-build, поэтому namespace «работает для любого имени offline». Цена — bundle-вес.
+> **Trade-off (подтверждён владельцем 2026-06-14).** Реестр покрывает 37 имён (30 публичных `HeroIconName` + 7 internal, см. ниже). Имя heroicon **вне** реестра (например `"camera"`, `"beaker"`) больше не резолвится как heroicon → уходит в Iconify-fallback (offline недоступно без `addCollection`). Это осознанная цена tree-shaking: bundler не может предугадать произвольное runtime-имя, поэтому offline-набор ограничен curated-списком.
 >
-> **История.** 2026-06-12 namespace-импорты заменены на точечный dynamic import (`import("@heroicons/vue/24/{outline|solid}/${Name}.js")`), на miss — Iconify-fallback; помечено resolved. **Measurement (2026-06-13) — regression:** build-замер (минимальный Vite-consumer + `sandbox:build`; heroicons 2.2.0, vite 7) показал, что `dynamic-import-vars` глобит только `./`/`../`, а bare `@heroicons/vue/...` игнорирует → 0 per-icon chunks, в выходном chunk остаётся буквальный `import()`, в `dist/index.html` нет import map → `TypeError: Failed to resolve module specifier` → иконка не рендерится в prod. Не видно в `vite dev` / Vitest (там bare-спецификаторы резолвятся), что маскировало проблему.
+> **Реестр = 30 публичных + 7 internal.** 7 internal-имён хардкодят `lib/`-компоненты через `<Icons type=...>` и обязаны рендериться: `arrow-long-right` (Calendar), `arrows-pointing-in`/`-out` (Split fullscreen), `ellipsis-vertical` (Calendar/Table), `exclamation-circle` (InputLayout), `funnel` (Table filter), `square-2-stack` (Table copy). Компоненты с прямыми named-импортами heroicons (Pagination/Accordion/Menu `@heroicons/vue/20/solid`, Alert `/24`) tree-shaken независимо и реестр не используют.
 >
-> **Future (tree-shaking).** Для уменьшения bundle без потери prod-корректности: sync `const`-реестр named-импортов (`import { CheckIcon } from "@heroicons/vue/24/outline"` — tree-shakeable, но покрывает только curated-набор; произвольные имена → Iconify) либо compile-time [`unplugin-icons`](https://github.com/unplugin/unplugin-icons) (inline SVG, требует build-плагина у потребителя). См. [components/icons.md §12](../components/icons.md#bundle-heroicons-tree-shaking).
+> **Замер (build).** `dist/icons/icons.mjs` эмитит named-импорты ровно 37 иконок из outline + 37 из solid, **0** namespace-импортов (`import * as @heroicons`). До: 648 иконок (~94 KB gzip). После: 74 named heroicon-импорта ≈ **~11 KB gzip** (≈ −88%; точный consumer-замер — best-effort). `HeroIconName` union ([Icons.d.ts:18](../../lib/icons/Icons.d.ts#L18)) расширен 30 → 37 и теперь === runtime-реестр.
+>
+> **История.** 2026-06-12 namespace → точечный dynamic import (помечено resolved). 2026-06-13 build-замер: regression — `dynamic-import-vars` не глобит bare `@heroicons/vue/...` → `TypeError: Failed to resolve module specifier` в prod, иконка не рендерится (видно только в `vite dev`/Vitest). 2026-06-14 откат на eager namespace (regression closed, но весь набор в bundle) → затем **tree-shakeable const-реестр** (текущее, regression + bundle-weight закрыты вместе).
 
 ### Что найдено
 
-Runtime lookup по имени (`set[name]`) не позволяет bundler'у tree-shake'ить — heroicons-набор попадает в bundle целиком (~94 KB gzip). Регрессия точечного dynamic import (bare specifier не резолвится в prod-Vite) закрыта откатом на namespace.
+~~Runtime lookup по имени (`set[name]`) на namespace-импорте не позволял bundler'у tree-shake'ить — heroicons-набор попадал в bundle целиком (~94 KB gzip).~~ ✅ закрыто переходом на const-реестр explicit named-импортов.
 
-### Что нужно сделать
+### Что сделано
 
-- [x] **Регрессия:** вернуть корректный prod/SSR-рендер heroicons — ✅ eager namespace + sync lookup (2026-06-14).
-- [ ] **Bundle-weight:** tree-shakeable резолв (const-реестр named-импортов / `unplugin-icons`) — deferred, см. Future выше. **Cross-cutting [Wave 2.2](../README.md#22-lazy-import-тяжёлых-deps)**.
+- [x] **Регрессия:** корректный prod/SSR-рендер heroicons (sync lookup — heroIcon до первого `await` в immediate-watcher → в SSR-HTML и на первый paint).
+- [x] **Bundle-weight:** tree-shakeable const-реестр named-импортов ([Icons.vue:97](../../lib/icons/Icons.vue#L97)) — bundler оставляет только curated-набор (37 имён). Имена вне набора → Iconify-fallback.
 
 ### Acceptance criteria
 
-- [x] `<Icons type="check" />` (и `"XMark"`, `"x-mark"`) рендерит SVG в prod-Vite / SSR (sync namespace lookup, не dynamic import) — browser-verified + 4 теста `Heroicons — eager sync resolution`.
-- [ ] `<Icons type="check" />` в одиночку — в bundle попадает только CheckIcon (tree-shaking), не весь namespace. **Deferred** — текущий namespace-подход тянет весь набор; tree-shaking через const-реестр / `unplugin-icons` отложен (Wave 2.2).
+- [x] `<Icons type="check" />` (и `"XMark"`, `"x-mark"`, все 37 curated × outline/solid) рендерит SVG синхронно в prod-Vite / SSR — `it.each(CURATED_HERO_NAMES)` (×74) + spot-check outline/solid.
+- [x] `<Icons type="check" />` тянет в bundle только curated-набор (37 named-импортов), не весь namespace — build-замер `dist/icons.mjs` (named-импорты, 0× `import *`) + contract-тесты `'camera'`/`'beaker'` не рендерят heroicon-SVG (tree-shaking boundary).
 
-## Issue 2: Iconify-загрузка через CDN — CSP risk
+## ~~Issue 2: Iconify-загрузка через CDN — CSP risk~~ ✅ resolved 2026-06-14 (docs-only; `:offline` declined)
 
 - **Категория:** C13 / security (CSP)
-- **Severity:** high
+- **Severity:** ~~high~~ → ✅ resolved (docs-only)
 - **Где:** [Icons.vue](../../lib/icons/Icons.vue) (через `@iconify/vue`)
+
+> **Resolution (2026-06-14).** Mitigation через `addCollection(<json>)` полностью задокументирован ([components/icons.md §12 Security](../components/icons.md#12-accessibility--security)). Prop `:offline?: boolean` **declined** (по запросу владельца): `addCollection` уже даёт offline-резолв `"mdi:*"`/любой коллекции без сети и без CSP-конфликта, а сам prop добавил бы публичную API-поверхность без выигрыша поверх рекомендованного паттерна. CDN-fallback остаётся default-поведением для потребителей без strict-CSP.
 
 ### Что найдено
 
@@ -70,12 +75,12 @@ Runtime lookup по имени (`set[name]`) не позволяет bundler'у 
 
 1. ~~Документировать в [components/icons.md](../components/icons.md) §12 как обязательный параграф.~~ ✅ **resolved 2026-05-10** — §12 Security содержит полный mitigation-блок с CSP-impact, supply-chain risk, offline failure и кодом `addCollection(<json>)`.
 2. ~~Предложить bundling через `@iconify/tools`~~ ✅ **resolved 2026-05-10** — рекомендация документирована.
-3. Добавить prop `:offline?: boolean` или env-detection — если CDN недоступен, fallback на placeholder. **deferred** — отдельный PR, рассматривается как future enhancement в Wave 8 i18n / RTL polish.
+3. ~~Добавить prop `:offline?: boolean` или env-detection~~ ✅ **declined 2026-06-14** — `addCollection` уже покрывает offline/CSP-сценарий без новой API-поверхности (по запросу владельца).
 
 ### Acceptance criteria
 
 - [x] Documentation §12 Security содержит CSP-risk блок и offline mitigation через `addCollection`.
-- [ ] `:offline?: boolean` prop — отложен (future PR).
+- [x] `:offline?: boolean` prop — declined (docs-only достаточно; `addCollection`-mitigation).
 
 ## ~~Issue 3: ARIA — нет aria-label для семантических иконок~~ ✅ resolved 2026-05-10
 
@@ -183,16 +188,21 @@ Volar даёт autocomplete для:
 - [x] `pnpm typecheck` clean.
 - [ ] Build-script для полного heroicon union — Wave 10.4.
 
-## Issue 6: SSR styles + sideEffects + unstyled
+## ~~Issue 6: SSR styles + sideEffects + unstyled~~ ✅ resolved 2026-06-14
 
-См. [button.md Issue 1, 8, 9, 14](../button.md). **Cross-cutting** Wave 2.1 / 2.3 / 3.1 — не входит в scope icons-уровня.
+- **Категория:** A2/A4-5/C17 (packaging/SSR), L53 (unstyled)
+- **Severity:** ~~high (A2/A4-5/C17), medium (L53)~~ → ✅ resolved
 
-## Issue 7: prefers-reduced-motion — нет (если иконка animated)
+> **A2/A4-5/C17 (packaging/SSR) — inherited doc-sync.** Закрыто глобально (зеркало separator/menu/loading): root `"sideEffects": false` (✅2026-06-07), корневая `exports`-карта `buildRootExports()` (✅2026-06-11, контракт — [package.test.ts](../../lib/package.test.ts)) покрывает `fishtvue/icons` strict-superset'ом, SSR-инжекция стилей через `Component.__hooks()` → `onServerPrefetch`. Per-component правок не требуется.
+>
+> **L53 (unstyled) — regression-тест.** Cross-cutting guard `Component.setStyle()` (`if (config.unstyled) return ""`, [component/index.ts:138](../../lib/component/index.ts#L138)) уже покрывает Icons (весь `classIcon` идёт через `setStyle`). Добавлен Icons-scoped regression-тест (`describe("Configuration support — unstyled (L53)")`: `classIcon === ""` при `unstyled:true`, непустой при `false`; `afterEach` чистит `window.FishtVue` singleton-leak).
+
+## ~~Issue 7: prefers-reduced-motion — нет (если иконка animated)~~ ✅ resolved (N/A by design)
 
 - **Категория:** E29.7
-- **Severity:** low → **N/A**
+- **Severity:** ~~low~~ → **N/A**
 
-Static SVG — OK. Если animated icons (например, через CSS) — добавить guard. На текущей реализации не применимо.
+Static SVG — компонент не рендерит transitions/animations, гейтить нечего. Если в будущем появятся animated-иконки (например, через CSS) — добавить `motion-safe:` guard. На текущей реализации не применимо → закрыто as N/A by design.
 
 ## ~~Issue 8: RTL — иконки направления (arrow-left/right)~~ ✅ docs resolved 2026-05-10
 
@@ -206,13 +216,14 @@ Static SVG — OK. Если animated icons (например, через CSS) �
 - §12 A11y — упоминание RTL caveat.
 - §16 FAQ — практический рецепт с CSS `[dir="rtl"] [data-rtl-mirror] { transform: scaleX(-1); }` + per-instance `:style` вариант.
 
-Прямой код-фикс (`useDirectionality()` composable, `dir`-aware Tailwind logical classes) — Wave 8.1 cross-cutting RTL effort.
+Кода для фикса на icons-уровне **нет**: `Icons.vue` не имеет физических `left`/`right`-классов (зеркалить нужно конкретную direction-иконку, что решает потребитель через CSS-рецепт из §16). Поэтому на уровне Icons issue закрыт полностью (docs = резолюция); зеркаление — consumer-side concern, не cross-cutting код-долг библиотеки.
 
 ## Issue 9: Hardcoded default class
 
 - **Категория:** B10
 - **Severity:** low
-- **Где:** [Icons.d.ts:113](../../lib/icons/Icons.d.ts#L113), [Icons.vue:40](../../lib/icons/Icons.vue#L40)
+- **Статус:** open — **единственный оставшийся issue** (Icons `0/0/0/1`); cross-cutting Wave 9, файл active как трекер.
+- **Где:** [Icons.d.ts:127](../../lib/icons/Icons.d.ts#L127), [Icons.vue:204](../../lib/icons/Icons.vue#L204)
 
 ### Что найдено
 
@@ -230,9 +241,9 @@ class: "h-5 w-5 text-gray-900 dark:text-gray-100" | StyleClass
 
 | Настройка                 | Поддержано? | Комментарий                                                             |
 | ------------------------- | ----------- | ----------------------------------------------------------------------- |
-| `componentsOptions.Icons` | ✅          | `class` + `variant` ([Icons.d.ts:158](../../lib/icons/Icons.d.ts#L158)) |
+| `componentsOptions.Icons` | ✅          | `class` + `variant` ([Icons.d.ts:172](../../lib/icons/Icons.d.ts#L172)) |
 | `componentsStyle` global  | N/A         | Icons не имеет mode-enum, использует `variant` локально                 |
-| `unstyled: true`          | ❌          | default class всегда применяется — Wave 3.1 cross-cutting               |
+| `unstyled: true`          | ✅          | `Component.setStyle` guard → `classIcon === ""` (Issue 6 / L53, regression-тест)        |
 | Theme tokens vs hardcode  | ⚠️          | `text-gray-900 dark:text-gray-100` хардкоден (Issue 9) — Wave 9         |
 | Runtime theme switch      | ⚠️          | через class только                                                      |
 | `t()` для текста          | N/A         | label передаётся пользователем — он отвечает за локализацию             |

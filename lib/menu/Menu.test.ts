@@ -33,7 +33,7 @@ describe("Menu Component", () => {
         title: "Group 1",
         items: [
           { title: "Profile", icon: "user" },
-          { title: "Billing", icon: "credit-card" },
+          { title: "Billing", icon: "envelope" },
           { title: "Settings", icon: "cog-6-tooth" }
         ]
       },
@@ -41,8 +41,8 @@ describe("Menu Component", () => {
         title: "Group 2",
         separator: { icon: "chevron-right" },
         items: [
-          { title: "Support", icon: "lifebuoy", disabled: true },
-          { title: "API", icon: "cloud" }
+          { title: "Support", icon: "question-mark-circle", disabled: true },
+          { title: "API", icon: "bell" }
         ]
       }
     ]
@@ -410,7 +410,7 @@ describe("Menu Component", () => {
               title: "Group 1",
               items: [
                 { title: "Profile", icon: "user" },
-                { title: "Billing", icon: "credit-card" }
+                { title: "Billing", icon: "envelope" }
               ]
             }
           ]
