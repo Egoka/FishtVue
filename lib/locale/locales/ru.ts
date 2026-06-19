@@ -17,12 +17,14 @@ export default <DefaultMessages>{
     copied: "Скопировано"
   },
   select: {
-    resultsCount: "Результатов: %d",
+    resultsCount:
+      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата",
     resultsCountOne: "1 результат",
     resultsCountNone: "Результатов не найдено"
   },
   table: {
-    resultsCount: "Результатов: %d",
+    resultsCount:
+      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата",
     resultsCountOne: "1 результат",
     resultsCountNone: "Результатов не найдено"
   },

@@ -1,7 +1,7 @@
 ---
 title: Table
 summary: Полнофункциональная таблица: sort/filter/group/search/pagination, edit, summary, asyncData (4 режима).
-updated: 2026-06-11
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -328,7 +328,7 @@ ARIA: при активной виртуализации `<table>` получа�
 - Семантика `<table>`/`<thead>`/`<tbody>`/`<tfoot>` нативная.
 - `<caption>` (sr-only): prop `caption` или slot `#caption` — объявляет назначение таблицы screen reader'у.
 - `<th scope="col">` на заголовках, `scope="colgroup"` на group-строках, `scope="col"` в tfoot — связь header↔column для SR.
-- aria-live: sr-only `[data-table-aria-live]` (`aria-live="polite"`, `aria-atomic="true"`) озвучивает количество строк после filter/search/sort (локаль `table.resultsCount*`).
+- aria-live: sr-only `[data-table-aria-live]` (`aria-live="polite"`, `aria-atomic="true"`) озвучивает количество строк после filter/search/sort через единый pluralized-ключ `Table.t("table.resultsCount", { count })` (Wave 3.5: CLDR-формы активной локали, `Intl.PluralRules`; `resultsCountOne`/`resultsCountNone` — `@deprecated`).
 - При виртуализации (§10.5): `<table aria-rowcount>` (полное число строк) + строки `aria-rowindex` (абсолютный, 1-based) — screen reader корректно объявляет позицию в неполном DOM.
 - `aria-sort` на колонках с sort'ом — проверь по DOM.
 - Keyboard: Tab/Shift+Tab по интерактивным элементам; ArrowKeys для sort-икон не привязаны.

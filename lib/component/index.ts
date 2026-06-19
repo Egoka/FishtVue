@@ -11,7 +11,7 @@ import {
 } from "vue"
 import { tailwind, useStyle } from "fishtvue/theme"
 import { cn } from "fishtvue/utils/tailwindHandler"
-import { toKebabCase } from "fishtvue/utils/stringHandler"
+import { interpolate, selectPlural, toKebabCase } from "fishtvue/utils/stringHandler"
 import { fieldsPick, get } from "fishtvue/utils/objectHandler"
 import { isClient, minifyCSS } from "fishtvue/utils/domHandler"
 import { DefaultMessages, Locales } from "fishtvue/locale"
@@ -181,21 +181,31 @@ export default class Component<T extends keyof ComponentsOptions> {
     listComponents.add(this.name)
   }
 
-  // Issue 3: fallback chain `messages[active][key] → messages[default][key] → key`.
+  // Issue 3 / Wave 3.5: fallback chain `messages[active][key] → messages[default][key] → key`
+  // + опциональные interpolation/pluralization через `params`.
   // Возвращаемый тип сужен с `string | undefined` до `string` — key используется как last resort,
   // что делает t() безопасным для template/computed без дополнительного `?? "literal"` fallback.
-  public t(key: keyof DefaultMessages | string): string {
+  // Без `params` поведение байт-в-байт прежнее (backward-compatible для всех single-arg вызовов):
+  //   - pluralization: если в строке есть `|`-формы и `params.count` — число, форма выбирается selectPlural по CLDR-правилам активной локали;
+  //   - interpolation: `{name}` подставляется из `params` (неизвестный плейсхолдер остаётся литералом — dev-сигнал).
+  public t(key: keyof DefaultMessages | string, params?: Record<string, string | number>): string {
     if (!key) return ""
     const active = this.__globalConfig?.getActiveLocale() ?? "en"
     const def = this.__globalConfig?.getDefaultLocale() ?? "en"
     const messages = this.__globalLocale?.messages
+    let value: string | undefined
     const fromActive = get<unknown>(messages?.[active], key)
-    if (typeof fromActive === "string") return fromActive
-    if (def && def !== active) {
+    if (typeof fromActive === "string") value = fromActive
+    else if (def && def !== active) {
       const fromDefault = get<unknown>(messages?.[def], key)
-      if (typeof fromDefault === "string") return fromDefault
+      if (typeof fromDefault === "string") value = fromDefault
     }
-    return String(key)
+    if (value === undefined) value = String(key)
+    if (params) {
+      if (typeof params.count === "number" && value.includes("|")) value = selectPlural(value, params.count, active)
+      value = interpolate(value, params)
+    }
+    return value
   }
 
   public componentsStyle(): StyleMode | undefined {

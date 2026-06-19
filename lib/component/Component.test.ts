@@ -302,6 +302,84 @@ describe("Testing class Component", () => {
     })
   })
 
+  describe("t() — interpolation & pluralization (Wave 3.5 / Issue 3)", () => {
+    const buildComponent = (cfg: FishtVueConfiguration): Component<"FixWindow"> => {
+      let captured: Component<"FixWindow"> | undefined
+      const Probe = defineComponent({
+        name: "FixWindow",
+        setup() {
+          captured = new Component<"FixWindow">()
+          return () => null
+        }
+      })
+      mount(Probe, { global: { plugins: [[FishtVue as any, cfg]] } })
+      // @ts-ignore — captured is set synchronously inside setup before mount returns.
+      return captured
+    }
+
+    it("interpolates {name} placeholders from params", () => {
+      const c = buildComponent({
+        locale: { defaultLocale: "en", activeLocale: "en", messages: { en: { welcome: "Hello, {name}!" } } }
+      })
+      expect(c.t("welcome", { name: "Egor" })).toBe("Hello, Egor!")
+    })
+
+    it("pluralizes English messages by params.count", () => {
+      const c = buildComponent({
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "en",
+          messages: { en: { items: "=0 No items|one 1 item|other {count} items" } }
+        }
+      })
+      expect(c.t("items", { count: 0 })).toBe("No items")
+      expect(c.t("items", { count: 1 })).toBe("1 item")
+      expect(c.t("items", { count: 5 })).toBe("5 items")
+    })
+
+    it("pluralizes Russian messages with 4 CLDR forms", () => {
+      const c = buildComponent({
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "ru",
+          messages: {
+            ru: { items: "=0 нет|one {count} файл|few {count} файла|many {count} файлов|other {count} файла" }
+          }
+        }
+      })
+      expect(c.t("items", { count: 1 })).toBe("1 файл")
+      expect(c.t("items", { count: 2 })).toBe("2 файла")
+      expect(c.t("items", { count: 5 })).toBe("5 файлов")
+      expect(c.t("items", { count: 21 })).toBe("21 файл") // Intl ru: 21 → one
+    })
+
+    it("combines pluralization and interpolation in one call", () => {
+      const c = buildComponent({
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "en",
+          messages: { en: { row: "one {count} item by {name}|other {count} items by {name}" } }
+        }
+      })
+      expect(c.t("row", { count: 1, name: "Egor" })).toBe("1 item by Egor")
+      expect(c.t("row", { count: 3, name: "Egor" })).toBe("3 items by Egor")
+    })
+
+    it("keeps backward compatibility: no params leaves placeholders untouched", () => {
+      const c = buildComponent({
+        locale: { defaultLocale: "en", activeLocale: "en", messages: { en: { welcome: "Hello, {name}!" } } }
+      })
+      expect(c.t("welcome")).toBe("Hello, {name}!")
+    })
+
+    it("interpolates against the key returned as last resort without throwing", () => {
+      const c = buildComponent({
+        locale: { defaultLocale: "en", activeLocale: "en", messages: { en: {} } }
+      })
+      expect(c.t("missing.key", { name: "x" })).toBe("missing.key")
+    })
+  })
+
   describe("Component Lifecycle Hooks", () => {
     let component: Component<"FixWindow">
     const options: FishtVueConfiguration = {

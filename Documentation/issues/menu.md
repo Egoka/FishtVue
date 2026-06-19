@@ -38,7 +38,7 @@ related-doc: ../components/menu.md
 ## ~~Issue 1: CRITICAL — XSS через `item.info` v-html~~ ✅ resolved 2026-06-06
 
 - **Категория:** C13 + security
-- **Severity:** **critical**
+- **Severity:** ~~critical~~ ✅ resolved (Wave 1 закрыта 2026-06-19 — matrix Critical 0)
 - **Где:** [Menu.vue:653](../../lib/menu/Menu.vue#L653), [Menu.vue:666](../../lib/menu/Menu.vue#L666) (бывшие v-html сайты)
 
 > ✅ **resolved 2026-06-06** — оба `v-html="item?.info"` заменены на scoped slot

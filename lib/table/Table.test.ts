@@ -1346,7 +1346,10 @@ describe("Table Component", () => {
 
     describe("Issue 9 — aria-live results announcement", () => {
       it("renders a polite sr-only live region reflecting the result count", () => {
-        const wrapper = mount(Table, { props: { dataSource: baseData } })
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData },
+          global: { plugins: [[FishtVue as any, {}]] }
+        })
         const live = wrapper.find("[data-table-aria-live]")
         expect(live.exists()).toBe(true)
         expect(live.attributes("aria-live")).toBe("polite")
@@ -1358,7 +1361,8 @@ describe("Table Component", () => {
       it("announces one / none after filtering", async () => {
         vi.useFakeTimers()
         const wrapper = mount(Table, {
-          props: { dataSource: baseData, columns: [{ dataField: "name", isFilter: true }] } as TableProps
+          props: { dataSource: baseData, columns: [{ dataField: "name", isFilter: true }] } as TableProps,
+          global: { plugins: [[FishtVue as any, {}]] }
         })
         await wrapper.find("[data-table-thead-col-filter] input").setValue("orange")
         vi.advanceTimersByTime(50)
@@ -1370,6 +1374,15 @@ describe("Table Component", () => {
         expect(wrapper.find("[data-table-aria-live]").text()).toBe("No results")
         vi.clearAllTimers()
         vi.useRealTimers()
+      })
+
+      it("localizes the results count via Russian pluralization (Wave 3.5)", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData },
+          global: { plugins: [[FishtVue as any, { locale: { defaultLocale: "ru" } }]] }
+        })
+        // 5 rows → Russian "many" form: "5 результатов".
+        expect(wrapper.find("[data-table-aria-live]").text()).toBe("5 результатов")
       })
     })
 

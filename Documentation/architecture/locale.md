@@ -1,7 +1,7 @@
 ---
 title: Locale
-summary: Структура Locales/Messages, встроенные en/ru, setActiveLocale, расширение. Optional validation keys для интеграции с rulesHandler. t() fallback chain (active → default → key) с 2026-05-20.
-updated: 2026-05-20
+summary: Структура Locales/Messages, встроенные en/ru, setActiveLocale, расширение. Optional validation keys для интеграции с rulesHandler. t() fallback chain (active → default → key) с 2026-05-20; interpolation `{name}` + CLDR-pluralization через `Intl.PluralRules` (Wave 3.5) с 2026-06-19.
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -63,12 +63,24 @@ type Locales = Partial<{
 
 **Чтение:**
 
-- `Component.t(key)` ([component/index.ts:184–199](../../lib/component/index.ts#L184-L199)) с 2026-05-20 — fallback chain:
+- `Component.t(key, params?)` ([component/index.ts:191](../../lib/component/index.ts#L191)) — fallback chain (с 2026-05-20):
   1. `getActiveLocale()` → `messages[active][key]` через `get()` ([utils/objectHandler.get](../../lib/utils/objectHandler.ts), поддержка dot-path: `"alert.close"`). Если строка — возвращается.
   2. Если в active нет — `getDefaultLocale()` → `messages[default][key]`. Если строка — возвращается.
   3. Last resort — возвращается **сам key как строка** (например, `"alert.close"`).
   4. Empty/falsy key — возвращается `""`.
-  5. Сигнатура: `(key) => string` (раньше `string | undefined`).
+  5. Сигнатура: `(key, params?) => string` (раньше `string | undefined`).
+
+- **Interpolation + pluralization** (с 2026-06-19, Wave 3.5) — опциональный `params: Record<string, string | number>`. Без `params` поведение байт-в-байт прежнее (backward-compatible). Когда `params` передан, к разрешённой строке применяются:
+  1. **Pluralization** — если строка содержит `|`-формы и `params.count` — число, форма выбирается через [`selectPlural`](../../lib/utils/stringHandler.ts) по CLDR-правилам активной локали (`Intl.PluralRules`). Формат формы — `<selector> <text>`, где `selector` это `=N` (точное совпадение) или CLDR-категория (`zero|one|two|few|many|other`); порядок выбора `=count → категория → other → первая форма`.
+  2. **Interpolation** — [`interpolate`](../../lib/utils/stringHandler.ts) подставляет `{name}` → `params[name]`; неизвестный плейсхолдер остаётся литералом (dev-сигнал о незаполненном параметре).
+
+  ```ts
+  X.t("welcome", { name: "Egor" })              // "Hello, Egor!"
+  X.t("select.resultsCount", { count: 5 })      // en: "Results: 5" · ru: "5 результатов"
+  X.t("select.resultsCount", { count: 21 })     // ru: "21 результат" (CLDR "one" — n===1 эвристика дала бы неверно)
+  ```
+
+  `Intl.PluralRules` — платформенный API (evergreen), новой npm-зависимости не вводит.
 
 **Переключение:**
 
@@ -174,7 +186,7 @@ Optional ключи добавлены 2026-05-10 в связке с `setDefault
 
 | Name | Type | Description |
 |---|---|---|
-| `Component.t(key)` | `(key: keyof DefaultMessages \| string) => string` | Возвращает строку для текущей локали с fallback chain `active → default → key`. Поддерживает dot-path. Никогда не возвращает `undefined` (key как last resort). |
+| `Component.t(key, params?)` | `(key: keyof DefaultMessages \| string, params?: Record<string, string \| number>) => string` | Возвращает строку для текущей локали с fallback chain `active → default → key`. Поддерживает dot-path. Опциональный `params` включает interpolation (`{name}`) и pluralization (`params.count` + `\|`-формы, CLDR через `Intl.PluralRules`). Никогда не возвращает `undefined` (key как last resort). |
 
 Из `fishtvue/locale` (default export):
 
@@ -276,6 +288,33 @@ function pick(name: "en" | "ru") {
   <button @click="pick('ru')">RU</button>
   <p>Active: {{ current }}</p>
 </template>
+```
+
+### 9.5 Interpolation и pluralization (Wave 3.5)
+
+```vue
+<script setup lang="ts">
+import Component from "fishtvue/component"
+
+const X = new Component<"Select">()
+
+// interpolation: {name} → params.name (messages.*.welcome = "Hello, {name}!")
+const greeting = X.t("welcome", { name: "Egor" }) // "Hello, Egor!"
+
+// pluralization: {count} + |-формы, выбор по CLDR-правилам активной локали
+const results = (n: number) => X.t("select.resultsCount", { count: n })
+// en:  results(0) → "No results" · results(1) → "1 result" · results(5) → "Results: 5"
+// ru:  results(1) → "1 результат" · results(2) → "2 результата" · results(5) → "5 результатов" · results(21) → "21 результат"
+</script>
+```
+
+Формат pluralized-сообщения — `<selector> <text>`-формы через `|` (selector = `=N` либо CLDR-категория):
+
+```ts
+// en
+"=0 No results|one 1 result|other Results: {count}"
+// ru (4 CLDR-формы + точное =0)
+"=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата"
 ```
 
 ## 10. Configuration & Customization
@@ -409,6 +448,7 @@ describe("Pagination locale", () => {
 - При `setActiveLocale(name)` если `messages[name]` не существует, реактивность сработает; `t()` начнёт возвращать значения из `defaultLocale` (через fallback chain), а не undefined как раньше.
 - SFC-сайты с pattern `X.t("key") ?? "fallback"` — `??` теперь dead code (t() не возвращает nullish). Сохранены для backward compat, могут быть очищены в будущем cleanup'е.
 - Default messages импортируются из `lib/locale/locales/{en,ru}.ts` напрямую; если bundler не корректно tree-shake'ит, ru может попасть в bundle даже при использовании только en.
+- **Wave 3.5 (2026-06-19) — смена формата `select.resultsCount`/`table.resultsCount`:** мёртвый `%d`-плейсхолдер заменён на pluralized-формат (`<selector> <text>`-формы через `\|`, интерполяция через `{count}`). Потребитель, переопределявший эти ключи в старом `%d`-стиле, должен мигрировать на `{count}` + `\|`-формы — иначе `%d` останется литералом, а единственная форма будет применяться ко всем числам. Ключи `resultsCountOne`/`resultsCountNone` помечены `@deprecated` (формы единичного/нулевого результата теперь кодируются в `resultsCount` через `one`/`=0`), оставлены для backward compat.
 
 ### Bug report format
 

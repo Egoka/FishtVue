@@ -1,7 +1,7 @@
 ---
 title: Component class
-summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20. Generic narrowing contract (D21) + HMR style-dedup задокументированы 2026-06-14.
-updated: 2026-06-14
+summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20 + опциональный params для interpolation/CLDR-pluralization (Wave 3.5) с 2026-06-19. Generic narrowing contract (D21) + HMR style-dedup задокументированы 2026-06-14.
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -126,7 +126,7 @@ Note: тип-параметр `T extends keyof ComponentsOptions` — обяза
 | `getPrefix()` | `() => string \| undefined` | Возвращает `prefix`. |
 | `initStyle(stylesComp?)` | `(stylesComp?: StylesComponent) => void` | Применяет накопленный CSS через `useStyle`. Авто-вызывается из `__hooks()` на mount/SSR-prefetch. |
 | `setStyle<T>(stylesComp, options?)` | `(stylesComp: T \| T[], options?: setStyleOptions) => string` | Главный API: преобразует tw-классы в CSS, добавляет в реестр и возвращает `"fv {prefix}-{kebab-name} {merged-classes}"` для `:class=`. |
-| `t(key)` | `(key: keyof DefaultMessages \| string) => string` | Локализация с fallback chain `messages[active][key] → messages[default][key] → key`. Поддерживает dot-path. См. [locale.md §3](./locale.md#3-how-it-works). |
+| `t(key, params?)` | `(key: keyof DefaultMessages \| string, params?: Record<string, string \| number>) => string` | Локализация с fallback chain `messages[active][key] → messages[default][key] → key`. Поддерживает dot-path. Опциональный `params` — interpolation (`{name}`) + pluralization (`params.count` + `\|`-формы через CLDR `Intl.PluralRules`); без `params` поведение прежнее. См. [locale.md §3](./locale.md#3-how-it-works). |
 | `componentsStyle()` | `() => StyleMode \| undefined` | Возвращает `componentsStyle` из global config: `"filled" \| "outlined" \| "underlined"`. |
 
 `PublicFields` ([TypeComponent.d.ts:89–100](../../lib/component/TypeComponent.d.ts#L89-L100)) — список ключей, доступных в lifecycle-хуке: `name`, `prefix`, `onBefore*`, `on*`, `getOptions`, `getPrefix`, `initStyle`. `setStyle` и `t` через хук не пробрасываются.

@@ -384,13 +384,12 @@
   )
   const classOptionDisabled = computed(() => Select.setStyle("opacity-50 cursor-not-allowed"))
   // ---ISSUE 8 — aria-live announcement for filtered results count ---
+  // Wave 3.5: локализация + плюрализация одним ключом через Component.t(key, { count }) —
+  // CLDR-формы активной локали (см. select.resultsCount в locale messages).
   const ariaResultsLabel = computed<string>(() => {
     if (!isQuery.value || !query.value) return ""
     const n = dataList.value?.length ?? 0
-    if (n === 0) return Select.t("select.resultsCountNone") ?? "No results"
-    if (n === 1) return Select.t("select.resultsCountOne") ?? "1 result"
-    const tpl = Select.t("select.resultsCount") ?? "Results: %d"
-    return tpl.replace("%d", String(n))
+    return Select.t("select.resultsCount", { count: n })
   })
   const inputLayout = computed(() => ({
     isValue: isValue.value,

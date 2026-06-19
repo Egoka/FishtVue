@@ -437,6 +437,23 @@ describe("Select Component Tests", () => {
       wrapper.unmount()
     })
 
+    it("localizes the results count via Russian pluralization (Wave 3.5)", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Apple", "Banana", "Bandana"], modelValue: null },
+        attachTo: document.body,
+        global: { plugins: [[FishtVue as any, { locale: { defaultLocale: "ru" } }]] }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      await search.setValue("an")
+      await search.trigger("input")
+      await flushPromises()
+      // Two matches → Russian "few" form: "2 результата".
+      expect(wrapper.find("[data-select-aria-live]").text()).toBe("2 результата")
+      wrapper.unmount()
+    })
+
     // ---ISSUE 10 — Intl.Collator (diacritic-insensitive) ----------
     it("filters dataList through Intl.Collator (diacritic-insensitive)", async () => {
       const wrapper = mount(Select, {

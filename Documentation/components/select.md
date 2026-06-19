@@ -1,7 +1,7 @@
 ---
 title: Select
 summary: Single/multiple select с фильтрацией (Intl.Collator), schema + compound API (<SelectOption>/<SelectGroup>), RTL (logical props), slot'ами values/item/marker/empty.
-updated: 2026-06-13
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -42,7 +42,7 @@ lib/select/
 - **v-model contract:** стандартный, см. §6.
 - **Стили:** `Select.setStyle()` в computed. При `app.use(FishtVue, { unstyled: true })` все стили отключены (см. [Component class](../architecture/component-class.md)).
 - **Конфиг:** `componentsOptions.Select` + global `componentsStyle` fallback chain (`props ?? options ?? Select.componentsStyle() ?? "outlined"`) — см. §10.
-- **Локализация:** `noData` prop — сообщение, когда массив пуст. Live-region для filtered results count берёт ключи `select.resultsCount` / `select.resultsCountOne` / `select.resultsCountNone` через `Select.t(...)`.
+- **Локализация:** `noData` prop — сообщение, когда массив пуст. Live-region для filtered results count берёт один pluralized-ключ `select.resultsCount` через `Select.t("select.resultsCount", { count })` (Wave 3.5: CLDR-формы активной локали, `Intl.PluralRules`; `=0`/`one`/`other` для en, 4 формы для ru). Старые `resultsCountOne` / `resultsCountNone` — `@deprecated` (формы кодируются в `resultsCount`).
 - **SSR:** `isClient()` guard перед DOM-работой [FixWindow](./fix-window.md). Hydration mismatch нет — initial state совпадает.
 - **Animation:** Tailwind-переходы обёрнуты в `motion-safe:` префикс (CSS variant `@media (prefers-reduced-motion: no-preference)`). GSAP-анимация раскрытия списка пока не учитывает `prefers-reduced-motion` — см. §18.
 
@@ -259,7 +259,7 @@ Root класс — `fv fishtvue-select`.
 - ARIA-атрибуты `role="combobox"`/`role="listbox"`/`role="option"` — проверь по DOM (см. Known issues).
 - Keyboard: ArrowDown/Up для навигации, Enter для выбора, Escape для закрытия.
 - Focus management: при открытии — focus на input query, при закрытии — на trigger.
-- **Live-region**: hidden `<div data-select-aria-live aria-live="polite" aria-atomic="true">` объявляет количество отфильтрованных результатов при печати в search-поле. Скриноридер озвучивает `Results: N` / `1 result` / `No results` (локализовано через `Select.t("select.resultsCount*")`).
+- **Live-region**: hidden `<div data-select-aria-live aria-live="polite" aria-atomic="true">` объявляет количество отфильтрованных результатов при печати в search-поле. Скриноридер озвучивает `Results: N` / `1 result` / `No results` (en) — локализовано и плюрализовано через единый ключ `Select.t("select.resultsCount", { count })` (Wave 3.5).
 - `motion-safe:` префикс на Tailwind-переходах respects `prefers-reduced-motion: reduce` пользовательских настроек. **GSAP-анимация раскрытия списка** не учитывает это media-query — см. Known issues.
 
 ### Security

@@ -263,13 +263,11 @@
   const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props?.edit ?? options?.edit ?? false)
   const lengthData = computed<number>(() => totalCountAsync.value ?? props.totalCount ?? dataSource.value.length)
   // aria-live: озвучивание количества строк после filter/search/sort (polite, sr-only).
-  // Table.t() возвращает сам ключ, если перевода нет, — в этом случае берём литеральный fallback.
+  // Wave 3.5: локализация + плюрализация одним ключом через Component.t(key, { count }) —
+  // CLDR-формы активной локали (например, ru: 21 → "результат", 5 → "результатов"; см. table.resultsCount в locale messages).
   const ariaResultsLabel = computed<string>(() => {
     const count = lengthData.value ?? 0
-    const key = count === 0 ? "table.resultsCountNone" : count === 1 ? "table.resultsCountOne" : "table.resultsCount"
-    const fallback = count === 0 ? "No results" : count === 1 ? "1 result" : "Results: %d"
-    const message = Table.t(key)
-    return (message && message !== key ? message : fallback).replace(/%d/g, String(count))
+    return Table.t("table.resultsCount", { count })
   })
   const isFilter = computed<boolean>(() =>
     typeof filter.value === "object"

@@ -23,7 +23,7 @@ related-doc: ../components/form.md
 ## ~~Issue 1: CRITICAL — XSS через select-marker (наследуется через Form-rendered Select)~~ ✅ resolved 2026-06-03
 
 - **Категория:** C13 + security
-- **Severity:** **critical**
+- **Severity:** ~~critical~~ ✅ resolved (Wave 1 закрыта 2026-06-19 — matrix Critical 0)
 - **Где:** ~~[Form.vue:380]~~ (template `#item` override удалён)
 
 ### Что найдено
