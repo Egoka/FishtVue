@@ -39,6 +39,16 @@ export declare type InputLayoutProps = {
   mode?: StyleMode
 
   /**
+   * Explicit id for the slotted control. When omitted, InputLayout
+   * auto-generates a stable id via `useId()` (SSR-safe). The id is exposed
+   * through the default slot scope and used to wire `<label for>` /
+   * `aria-labelledby` (label↔control association — see
+   * [Issue 9](../../Documentation/issues/inputlayout.md)).
+   * @type {string | undefined}
+   */
+  id?: string
+
+  /**
    * The label text for the input.
    * @type {string | undefined}
    */
@@ -134,7 +144,15 @@ export declare type InputLayoutProps = {
 }
 
 export declare type InputLayoutSlots = {
-  default(): VNode[]
+  /**
+   * Default slot for the control element. Receives the association scope:
+   * - `id` — stable control id (explicit `id` prop or auto-generated `useId()`).
+   *   Bind to the control's `id` so `<label for>` resolves.
+   * - `labelledby` — id of the rendered `<Label>` (or `undefined` when no
+   *   `label`). Non-labelable triggers (Select/Calendar/TextEditor) bind it to
+   *   `aria-labelledby` for screen-reader name.
+   */
+  default(props: { id: string; labelledby?: string }): VNode[]
   before(): VNode[]
   after(): VNode[]
   body(): VNode[]

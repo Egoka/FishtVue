@@ -1,7 +1,7 @@
 ---
 title: Issues — InputLayout
-summary: Аудит InputLayout — все issues ✅ resolved (1/2/3/5/6/7 — 2026-05-11; 4/8 — 2026-06-13: motion-safe, print, forced-colors, unstyled + packaging inherited; 9 — 2026-06-14: floating-label mount-slide gate). Остаётся active как Wave 9 tracker (semantic-token migration, B10 residual).
-updated: 2026-06-14
+summary: Аудит InputLayout — все issues ✅ resolved (1/2/3/5/6/7 — 2026-05-11; 4/8 — 2026-06-13: motion-safe, print, forced-colors, unstyled + packaging inherited; 9 — 2026-06-14: floating-label mount-slide gate; 10 — 2026-06-19: label↔control association через useId + for/aria-labelledby, Wave 4). Остаётся active как Wave 9 tracker (semantic-token migration, B10 residual).
+updated: 2026-06-19
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/inputlayout/
 related-doc: ../components/input-layout.md
@@ -14,7 +14,7 @@ related-doc: ../components/input-layout.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | (2 closed: ~~C13 v-html × 2~~, ~~H41 ResizeObservers leak~~) |
-| high | 0 | (4 closed: ~~A2, A4-5, C17~~ inherited cross-cutting, ~~L53 unstyled~~) |
+| high | 0 | (4 closed: ~~A2, A4-5, C17~~ inherited cross-cutting, ~~L53 unstyled~~; + ~~E29 label↔control association~~ Issue 10 найден+закрыт 2026-06-19, open-counts не затрагивает) |
 | medium | 0 | (4 closed: ~~C14 clipboard SSR~~, ~~E29.5 aria-live~~, ~~F30 i18n copied~~, ~~G34 querySelector coupling~~) |
 | low | 0 | (4 closed: ~~E29.7 motion-safe~~, ~~B10 forced-colors~~, ~~N59 print~~, ~~C18 label mount-slide~~) |
 
@@ -276,6 +276,16 @@ Style-for-print (не `display:none`) — корневой `classBody` полу�
 - **Resolution:** у Label появился опциональный prop `animate?: boolean` (default `true` — поведение standalone Label не изменилось), который гейтит `motion-safe:transition-all motion-safe:duration-200` в `classBase`. `InputLayout` передаёт `:animate="isTick"` ([InputLayout.vue:338](../../lib/inputlayout/InputLayout.vue#L338)) — на первом кадре `false` (лейбл сразу в нужной позиции, без анимации), после mount-tick `true` (focus / value-float анимируется как раньше). E29.7 не нарушен — переход остаётся `motion-safe:`-gated.
 - **Тесты:** `Label.test.ts` блок `animate prop (position transition gate)` (default → transition есть; `animate:false` → нет, позиционные классы остаются); `InputLayout.test.ts` (E29.7) — `gates the floating-label transition behind the mount tick` (до тика у `[data-label]` нет `motion-safe:transition-all`, после `advanceTimersByTime(150)` — есть).
 - **Verified:** browser-preview после рестарта dev-сервера — post-settle `props.animate === true`, `isTick === true`, label `transitionDuration: 0.2s`; лейблы Input/Select/Calendar отрисованы в покое без «переезда».
+
+## Issue 10: ~~`<label>` не связан с control — `forId` не пробрасывается, у контролов нет стабильного id~~ ✅ resolved 2026-06-19
+
+- **Категория:** E29 (a11y — WCAG 1.3.1 Info & Relationships, 3.3.2 Labels, 4.1.2 Name Role Value)
+- **Severity:** ~~high~~ (Wave 4; найден и закрыт в одной сессии → open-counts матрицы не затрагивает — остаётся 0/0/0/0)
+- **Где (was):** [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) (`<Label>` без `:for-id`, сейчас [:338](../../lib/inputlayout/InputLayout.vue#L338)), плюс все 5 потребителей.
+- **Симптом:** `Label` уже умел `<label :for="forId">` ([Issue 1 label.md](./label.md) ✅ 2026-05-11), но InputLayout рендерил `<Label v-if="label" :title …>` **без `:forId`** → у `<label>` пустой `for`. Контролы (`<input>`/`<textarea>`/триггеры) принимали `id?` опционально и **без автогенерации**; `inputLayout`-computed потребителей даже не пробрасывал `id`. Итог: клик по метке не фокусировал контрол, screen-reader не озвучивал связку — во **всех** form-controls (Input/Aria/Select/Calendar/TextEditor).
+- **Resolution (single source of truth = InputLayout):** добавлен `InputLayoutProps.id?` + автогенерация `useId()` (SSR-stable, зеркало Accordion/Split). Computed `fieldId = props.id ?? autoId`, `labelId = label ? `${fieldId}-label` : undefined` ([InputLayout.vue](../../lib/inputlayout/InputLayout.vue)). `<Label :id="labelId" :for-id="fieldId">`, дефолт-слот стал scoped — `<slot :id="fieldId" :labelledby="labelId" />`. Потребители забиндили scope: **Input/Aria** (labelable нативные) — `:id="fieldId"` → `<label for>` срабатывает нативно; **Select** — `:id` + `role="combobox"` + `:aria-labelledby="labelledby"` + `:aria-expanded="isOpenList"`; **Calendar/TextEditor** (div-триггеры) — `:id` + `:aria-labelledby="labelledby"`. Каждый добавил `id: props.id` в `inputLayout`-computed (явный `props.id` выигрывает над автогенерацией). Backward-compatible: внешние консьюмеры без `<template #default>` рендерятся как прежде.
+- **Тесты:** `InputLayout.test.ts` блок «label↔control association» (auto-id, props.id wins, `<Label>` `for`+`id`, slot `{id, labelledby}`, нет `labelledby` без label); `Input.test.ts`/`Aria.test.ts` (id всегда есть, `<label for>` === control id, явный id уважается); `Select.test.ts` (`role=combobox` + `aria-labelledby` + `aria-expanded` реактивен); `Calendar.test.ts` (aria-labelledby на триггере); `TextEditor.test.ts` source-scan (`#default` scope + `aria-labelledby` binding — mount Quill крашит jsdom rAF, см. Issue 1 todo); `Label.test.ts` (`id` fallthrough на `<label>`).
+- **Note (Switch):** Switch не использует InputLayout (собственный label-рендер) → вне scope этого fix.
 
 ## Cross-cutting: Configuration support
 

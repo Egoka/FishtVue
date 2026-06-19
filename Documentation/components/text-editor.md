@@ -1,7 +1,7 @@
 ---
 title: TextEditor
 summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar.
-updated: 2026-05-11
+updated: 2026-06-19
 stability: experimental
 since: 0.2.11
 ---
@@ -209,6 +209,7 @@ Quill CSS импортируется вне `@layer fishtvue` — он имее�
 
 ### A11y
 
+- **Editor-контейнер** (`<div :id>`) связан с меткой через `:aria-labelledby` → id `<Label>` (Wave 4, 2026-06-19); id раздаётся [InputLayout](./input-layout.md) (`useId()`, либо `id` prop). См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - Quill поддерживает базовую a11y: keyboard-shortcuts (Cmd/Ctrl+B/I/U), ARIA-атрибуты на toolbar.
 - Focus management при open/close Dialog — на стороне [Dialog](./dialog.md).
 - Screen-reader: Quill использует contenteditable; SR может не идеально читать формат.

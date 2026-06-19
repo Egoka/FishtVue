@@ -101,6 +101,7 @@
     ...props?.paramsTextEditor
   }))
   const inputLayout = computed<Omit<InputLayoutProps, "value">>(() => ({
+    id: props.id,
     isValue: isValue.value,
     mode: mode.value,
     label: props.label,
@@ -195,18 +196,20 @@
     :class="classLayout"
     v-bind="inputLayout"
     @clear="clear">
-    <div :id="id" :class="editorSmall">
-      <component
-        :is="QuillEditor"
-        v-if="QuillEditor && theme === 'bubble'"
-        ref="quillEditorLink"
-        theme="bubble"
-        v-bind="paramsQuillEditor"
-        @update:content="inputModelValue"
-        @focus="isActiveTextEditor = true"
-        @blur="isActiveTextEditor = false"
-        @ready="ready" />
-    </div>
+    <template #default="{ id: fieldId, labelledby }">
+      <div :id="fieldId" :aria-labelledby="labelledby" :class="editorSmall">
+        <component
+          :is="QuillEditor"
+          v-if="QuillEditor && theme === 'bubble'"
+          ref="quillEditorLink"
+          theme="bubble"
+          v-bind="paramsQuillEditor"
+          @update:content="inputModelValue"
+          @focus="isActiveTextEditor = true"
+          @blur="isActiveTextEditor = false"
+          @ready="ready" />
+      </div>
+    </template>
     <template #body>
       <Dialog
         v-model="open"

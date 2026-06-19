@@ -1,7 +1,7 @@
 ---
 title: Input
 summary: Текстовый input с masks (phone/number/price), v-model, focus/blur/clear emits, валидацией; password toggle override, кастомные phoneFormats, auto-defaults autocomplete, motion-safe + print стили; unstyled-режим (cross-cutting guard).
-updated: 2026-06-13
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -323,7 +323,7 @@ Root класс — `fv fishtvue-input`. См. [01-getting-started §10.4](../01
 
 - Корневой `<input>` — нативные семантика и keyboard.
 - `disabled`/`required` нативные.
-- Связь label ↔ input через `id` — обеспечена при использовании [InputLayout](./input-layout.md).
+- Связь label ↔ input через `id`/`for` — автоматическая внутри [InputLayout](./input-layout.md): id генерится `useId()` (или берётся из `id` prop), биндится на `<input :id>` и `<label :for>` → клик по метке фокусирует поле, screen-reader озвучивает связку (Wave 4, см. [inputlayout.md Issue 10](../issues/inputlayout.md)).
 - Error-сообщения через `aria-describedby` — реализация в InputLayout.
 - `prefers-reduced-motion` учтён: все transitions завернуты в `motion-safe:`, при `@media (prefers-reduced-motion: reduce)` они отключаются автоматически.
 - `@media print`: input получает контрастные `print:border print:border-black print:bg-white print:text-black print:shadow-none` для читабельной печати.

@@ -1,7 +1,7 @@
 ---
 title: InputLayout
 summary: Контейнер-обёртка для form-controls — label, error, help, clear/copy кнопки.
-updated: 2026-06-13
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -68,6 +68,7 @@ import InputLayout from "fishtvue/inputlayout"
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `value` | `any` | — | Текущее значение (для отображения dynamic-label). **Обязателен**. |
+| `id` | `string` | (auto `useId()`) | Id slotted-контрола. Если не передан — генерируется стабильный SSR-safe id. Прокидывается в default-слот (`scope.id`) и связывает `<label for>` / `aria-labelledby` (см. §12 A11y). |
 | `isValue` | `boolean` | — | Есть ли значение (для label-стейта). |
 | `mode` | `StyleMode` (`"filled" \| "outlined" \| "underlined"`) | — | Визуальный режим. |
 | `label` | `string` | — | Текст label. |
@@ -97,7 +98,7 @@ v-model: не применимо — InputLayout не имеет собстве�
 
 | Slot | Slot props | Description |
 |---|---|---|
-| `default` | — | Сам input/select/calendar — основной element. |
+| `default` | `{ id: string; labelledby?: string }` | Сам input/select/calendar — основной element. `id` — стабильный id контрола (бинди на `id` → `<label for>` срабатывает); `labelledby` — id `<Label>` (или `undefined` без `label`), для non-labelable триггеров бинди на `aria-labelledby`. |
 | `before` | — | Контент перед input. |
 | `after` | — | Контент после input. |
 | `body` | — | Полный override body (вместо default). |
@@ -141,7 +142,10 @@ const value = ref("")
     mode="outlined"
     :clear="true"
     @clear="value = ''">
-    <textarea v-model="value" rows="3" />
+    <!-- scoped default slot отдаёт id (для <label for>) и labelledby (для aria-labelledby) -->
+    <template #default="{ id }">
+      <textarea :id="id" v-model="value" rows="3" />
+    </template>
   </InputLayout>
 </template>
 ```
@@ -195,7 +199,7 @@ Root класс — `fv fishtvue-input-layout`.
 
 ### A11y
 
-- Связь Label ↔ input — управляется родительским form-control'ом (передаёт `id` в slot).
+- **Связь Label ↔ control (WCAG 1.3.1 / 3.3.2 / 4.1.2).** InputLayout — single source of truth: генерит стабильный id (`useId()`, либо `id` prop) и раздаёт его. `<Label :for-id="fieldId" :id="labelId">`, а default-слот scoped — `<slot :id="fieldId" :labelledby="labelId" />`. Потребитель биндит `scope.id` на контрол: для нативных `<input>`/`<textarea>` (Input/Aria) этого достаточно — клик по метке фокусирует контрол через `<label for>`. Для non-labelable триггеров (Select/Calendar/TextEditor `<div>`) дополнительно биндится `:aria-labelledby="scope.labelledby"` → screen reader озвучивает метку. См. [Issue 10 inputlayout.md](../issues/inputlayout.md).
 - **Error-region** `<p data-input-layout-message-invalid>` имеет `aria-live="assertive"` + `aria-atomic="true"` — screen reader озвучивает появление / изменение `messageInvalid` сразу.
 - Clear/copy кнопки — `<button>` с tooltip через [FixWindow](./fix-window.md). После успешного copy — confirm-icon с `aria-label` и FixWindow tooltip, локализованные через `InputLayout.t("inputLayout.copied")` (`"Copied"` / `"Скопировано"`).
 - **Reduced motion:** все transitions через `motion-safe:` — при `prefers-reduced-motion: reduce` поле и иконки не анимируются.

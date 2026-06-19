@@ -189,6 +189,7 @@
   const classSeparatorNone = ref(Calendar.setStyle("h-5 w-1"))
   const classPlaceholder = ref(Calendar.setStyle("text-gray-400 dark:text-gray-600"))
   const inputLayout = computed<Omit<InputLayoutProps, "value">>(() => ({
+    id: props.id,
     isValue: isValue.value,
     mode: mode.value,
     label: props.label,
@@ -347,40 +348,43 @@
 
 <template>
   <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="clearDataPicker">
-    <div
-      ref="datePickerLink"
-      :id="id"
-      data-calendar
-      tabindex="0"
-      :class="classDataPicker"
-      @focusin="focus(true)"
-      @focusout="focus(false)"
-      @click="openCalendar">
-      <div v-if="datePickerOptions?.isRange" :class="classDateText">
-        {{ (visibleDate as IRangeValue)?.start }}
-        <Icons
-          v-if="separator === 'arrow' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
-          type="ArrowLongRight"
-          :class="[isDisabled ? 'text-slate-500 dark:text-slate-500' : 'text-gray-400 dark:text-gray-400', 'mx-1']" />
-        <Icons
-          v-if="separator === 'points' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
-          type="EllipsisVertical"
-          :class="[isDisabled ? 'text-slate-500 dark:text-slate-500' : 'text-gray-600 dark:text-gray-400']" />
-        <div
-          v-if="separator === 'none' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
-          :class="classSeparatorNone" />
-        <div
-          v-if="!(visibleDate as IRangeValue)?.start && !(visibleDate as IRangeValue)?.end && isOpenPicker"
-          :class="classPlaceholder">
-          {{ placeholder }}
+    <template #default="{ id: fieldId, labelledby }">
+      <div
+        ref="datePickerLink"
+        :id="fieldId"
+        :aria-labelledby="labelledby"
+        data-calendar
+        tabindex="0"
+        :class="classDataPicker"
+        @focusin="focus(true)"
+        @focusout="focus(false)"
+        @click="openCalendar">
+        <div v-if="datePickerOptions?.isRange" :class="classDateText">
+          {{ (visibleDate as IRangeValue)?.start }}
+          <Icons
+            v-if="separator === 'arrow' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
+            type="ArrowLongRight"
+            :class="[isDisabled ? 'text-slate-500 dark:text-slate-500' : 'text-gray-400 dark:text-gray-400', 'mx-1']" />
+          <Icons
+            v-if="separator === 'points' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
+            type="EllipsisVertical"
+            :class="[isDisabled ? 'text-slate-500 dark:text-slate-500' : 'text-gray-600 dark:text-gray-400']" />
+          <div
+            v-if="separator === 'none' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
+            :class="classSeparatorNone" />
+          <div
+            v-if="!(visibleDate as IRangeValue)?.start && !(visibleDate as IRangeValue)?.end && isOpenPicker"
+            :class="classPlaceholder">
+            {{ placeholder }}
+          </div>
+          {{ (visibleDate as IRangeValue)?.end }}
         </div>
-        {{ (visibleDate as IRangeValue)?.end }}
+        <div v-else :class="classDateText">
+          <span v-if="!visibleDate && isOpenPicker" :class="classPlaceholder">{{ placeholder }}</span>
+          {{ visibleDate }}
+        </div>
       </div>
-      <div v-else :class="classDateText">
-        <span v-if="!visibleDate && isOpenPicker" :class="classPlaceholder">{{ placeholder }}</span>
-        {{ visibleDate }}
-      </div>
-    </div>
+    </template>
     <template #body>
       <FixWindow
         v-bind="paramsFixWindow"

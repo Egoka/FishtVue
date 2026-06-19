@@ -235,6 +235,16 @@ describe("Label Component Tests", () => {
     // Note: click-to-focus is a native browser behavior on `<label for>` and
     // is not reliably implemented in jsdom. Asserting the `for` attribute is
     // sufficient — the browser handles the rest per WHATWG HTML spec.
+
+    it("passes through an `id` attribute to the root <label> (used by aria-labelledby)", () => {
+      // InputLayout relies on attribute fall-through to stamp the label id that
+      // non-native controls reference via aria-labelledby (Wave 4).
+      const wrapper = mount(Label, {
+        attrs: { id: "email-input-label" },
+        props: { forId: "email-input", title: "Email" }
+      })
+      expect(wrapper.find("label").attributes("id")).toBe("email-input-label")
+    })
   })
 
   // Issue 4 (D25, audit 2026-05-10) — translateX / maxWidth accept number | string

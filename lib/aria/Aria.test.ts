@@ -339,4 +339,20 @@ describe("Aria Component Tests", () => {
       expect(code).not.toMatch(/Aria\.initStyle\s*\(/)
     })
   })
+
+  describe("Accessibility — label/for association (Wave 4)", () => {
+    it("auto-generates an id on the textarea and links the label via `for`", () => {
+      const wrapper = mount(Aria, { props: { label: "Bio" } })
+      const ta = wrapper.find("textarea")
+      const id = ta.attributes("id")
+      expect(id).toBeTruthy()
+      expect(wrapper.find("label[data-label]").attributes("for")).toBe(id)
+    })
+
+    it("respects an explicit `id` prop for both textarea and label `for`", () => {
+      const wrapper = mount(Aria, { props: { label: "Bio", id: "bio-field" } })
+      expect(wrapper.find("textarea").attributes("id")).toBe("bio-field")
+      expect(wrapper.find("label[data-label]").attributes("for")).toBe("bio-field")
+    })
+  })
 })

@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils"
-import { nextTick } from "vue"
+import { h, nextTick } from "vue"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import FishtVue, { setActiveLocale } from "fishtvue/config"
 import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
@@ -384,6 +384,47 @@ describe("InputLayout Component", () => {
       const region = wrapper.find("[data-input-layout-message-invalid]")
       expect(region.attributes("aria-live")).toBe("assertive")
       expect(region.attributes("aria-atomic")).toBe("true")
+    })
+  })
+
+  describe("Accessibility — label↔control association (Wave 4)", () => {
+    const mountWithControl = (props: Record<string, unknown>) =>
+      mount(InputLayout, {
+        props: { value: "", ...props },
+        slots: {
+          default: (scope: any) => h("input", { "data-probe": "", id: scope?.id, "aria-labelledby": scope?.labelledby })
+        }
+      })
+
+    it("exposes an auto-generated control id via the default slot scope", () => {
+      const wrapper = mountWithControl({ label: "Email" })
+      const id = wrapper.find("[data-probe]").attributes("id")
+      expect(id).toBeTruthy()
+      expect(typeof id).toBe("string")
+    })
+
+    it("forwards an explicit `id` prop to the slot scope (props.id wins)", () => {
+      const wrapper = mountWithControl({ label: "Email", id: "email-field" })
+      expect(wrapper.find("[data-probe]").attributes("id")).toBe("email-field")
+    })
+
+    it("renders <Label> with `for` matching the control id and its own label id", () => {
+      const wrapper = mountWithControl({ label: "Email", id: "email-field" })
+      const labelEl = wrapper.find("label[data-label]")
+      expect(labelEl.exists()).toBe(true)
+      expect(labelEl.attributes("for")).toBe("email-field")
+      expect(labelEl.attributes("id")).toBe("email-field-label")
+    })
+
+    it("exposes `labelledby` (the label id) via slot scope when a label is present", () => {
+      const wrapper = mountWithControl({ label: "Email", id: "email-field" })
+      expect(wrapper.find("[data-probe]").attributes("aria-labelledby")).toBe("email-field-label")
+    })
+
+    it("omits `labelledby` and renders no <Label> when no label is provided", () => {
+      const wrapper = mountWithControl({ id: "email-field" })
+      expect(wrapper.find("[data-probe]").attributes("aria-labelledby")).toBeUndefined()
+      expect(wrapper.find("label[data-label]").exists()).toBe(false)
     })
   })
 

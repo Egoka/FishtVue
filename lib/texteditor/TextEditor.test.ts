@@ -269,3 +269,20 @@ describe.todo("TextEditor Component", () => {
     })
   })
 })
+
+// Standalone (non-todo) block. Mounting TextEditor boots Quill, whose
+// requestAnimationFrame callbacks fire after jsdom teardown and crash the run
+// (the very fragility that keeps the suite above `todo`). So the label↔control
+// association is verified at the source level — mirrors Aria.test's source scan.
+describe("TextEditor — accessibility label association (Wave 4)", () => {
+  it("binds the editor container to the InputLayout label via aria-labelledby", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+    // Editor container consumes the scoped default slot and links the label.
+    expect(src).toMatch(/#default="\{[^}]*\bid:\s*fieldId/)
+    expect(src).toMatch(/:aria-labelledby="labelledby"/)
+  })
+})

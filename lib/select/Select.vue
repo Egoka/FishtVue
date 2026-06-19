@@ -392,6 +392,7 @@
     return Select.t("select.resultsCount", { count: n })
   })
   const inputLayout = computed(() => ({
+    id: props.id,
     isValue: isValue.value,
     mode: mode.value,
     label: props.label,
@@ -641,64 +642,73 @@
 
 <template>
   <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="select(null)">
-    <div
-      data-select
-      ref="selectBody"
-      :id="id"
-      tabindex="0"
-      :class="classBase"
-      @focusin="focusSelect(true)"
-      @focusout="focusSelect(false)"
-      @click="openSelect">
-      <div data-select-content :class="classSelectContent">
-        <template v-if="isMultiple">
-          <transition-group
-            leave-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300"
-            leave-from-class="opacity-100 translate-x-0"
-            leave-to-class="opacity-0 -translate-x-5"
-            enter-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300"
-            enter-from-class="opacity-0 -translate-x-5"
-            enter-to-class="opacity-100 translate-x-0">
-            <div
-              v-for="item in typeof maxVisible === 'number' ? visibleValue.slice(0, maxVisible) : visibleValue"
-              :key="item[keySelect]"
-              data-select-item
-              :class="classSelectItem">
-              <slot name="values" :selected="item" :key="valueSelect ? valueSelect : keySelect" :delete-select="select">
-                <Badge
-                  mode="neutral"
-                  :close-button="closeButtonBadge"
-                  class-content="fill-theme-500"
-                  @delete="select(item)"
-                  class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500">
-                  {{ valueSelect ? item[valueSelect] : item[keySelect] }}
-                </Badge>
+    <template #default="{ id: fieldId, labelledby }">
+      <div
+        data-select
+        ref="selectBody"
+        :id="fieldId"
+        role="combobox"
+        :aria-labelledby="labelledby"
+        :aria-expanded="isOpenList"
+        tabindex="0"
+        :class="classBase"
+        @focusin="focusSelect(true)"
+        @focusout="focusSelect(false)"
+        @click="openSelect">
+        <div data-select-content :class="classSelectContent">
+          <template v-if="isMultiple">
+            <transition-group
+              leave-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300"
+              leave-from-class="opacity-100 translate-x-0"
+              leave-to-class="opacity-0 -translate-x-5"
+              enter-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300"
+              enter-from-class="opacity-0 -translate-x-5"
+              enter-to-class="opacity-100 translate-x-0">
+              <div
+                v-for="item in typeof maxVisible === 'number' ? visibleValue.slice(0, maxVisible) : visibleValue"
+                :key="item[keySelect]"
+                data-select-item
+                :class="classSelectItem">
+                <slot
+                  name="values"
+                  :selected="item"
+                  :key="valueSelect ? valueSelect : keySelect"
+                  :delete-select="select">
+                  <Badge
+                    mode="neutral"
+                    :close-button="closeButtonBadge"
+                    class-content="fill-theme-500"
+                    @delete="select(item)"
+                    class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500">
+                    {{ valueSelect ? item[valueSelect] : item[keySelect] }}
+                  </Badge>
+                </slot>
+              </div>
+              <div v-if="typeof maxVisible === 'number' && visibleValue.length > maxVisible" :class="classSelectItem">
+                <slot name="values" :selected="visibleValue.length" :delete-select="select">
+                  <Badge
+                    mode="neutral"
+                    :close-button="closeButtonBadge"
+                    class="m-1 ps-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
+                    class-content="fill-theme-500 flex items-center"
+                    @delete="select(null)">
+                    <Icons type="Funnel" class="h-3 w-3 me-1 text-theme-400 dark:text-theme-600" />
+                    {{ visibleValue.length }}
+                  </Badge>
+                </slot>
+              </div>
+            </transition-group>
+          </template>
+          <template v-else>
+            <div v-for="(item, key) in visibleValue" :key="`${item[keySelect]}-${key}`" :class="classSelectItem">
+              <slot name="values" :selected="item" :key="valueSelect ? valueSelect : keySelect">
+                <div>{{ valueSelect ? item[valueSelect] : item[keySelect] }}</div>
               </slot>
             </div>
-            <div v-if="typeof maxVisible === 'number' && visibleValue.length > maxVisible" :class="classSelectItem">
-              <slot name="values" :selected="visibleValue.length" :delete-select="select">
-                <Badge
-                  mode="neutral"
-                  :close-button="closeButtonBadge"
-                  class="m-1 ps-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
-                  class-content="fill-theme-500 flex items-center"
-                  @delete="select(null)">
-                  <Icons type="Funnel" class="h-3 w-3 me-1 text-theme-400 dark:text-theme-600" />
-                  {{ visibleValue.length }}
-                </Badge>
-              </slot>
-            </div>
-          </transition-group>
-        </template>
-        <template v-else>
-          <div v-for="(item, key) in visibleValue" :key="`${item[keySelect]}-${key}`" :class="classSelectItem">
-            <slot name="values" :selected="item" :key="valueSelect ? valueSelect : keySelect">
-              <div>{{ valueSelect ? item[valueSelect] : item[keySelect] }}</div>
-            </slot>
-          </div>
-        </template>
+          </template>
+        </div>
       </div>
-    </div>
+    </template>
     <template #body>
       <FixWindow
         ref="selectListWindow"

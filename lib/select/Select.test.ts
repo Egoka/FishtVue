@@ -647,4 +647,31 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
     expect(html).not.toMatch(/ml-\[/)
     wrapper.unmount()
   })
+
+  describe("Accessibility — combobox role & label association (Wave 4)", () => {
+    it("marks the trigger as role=combobox with aria-expanded reflecting the closed state", () => {
+      const wrapper = mount(Select, { props: { dataSelect: [], label: "Country" } })
+      const trigger = wrapper.find("[data-select]")
+      expect(trigger.attributes("role")).toBe("combobox")
+      expect(trigger.attributes("aria-expanded")).toBe("false")
+    })
+
+    it("links the trigger to the label via aria-labelledby and a shared id", () => {
+      const wrapper = mount(Select, { props: { dataSelect: [], label: "Country", id: "country" } })
+      const trigger = wrapper.find("[data-select]")
+      expect(trigger.attributes("id")).toBe("country")
+      expect(trigger.attributes("aria-labelledby")).toBe("country-label")
+      // Select's dropdown carries its own search <Input> (with an auto-id label),
+      // so scope to the label the trigger actually references.
+      expect(wrapper.find("label[data-label]#country-label").exists()).toBe(true)
+    })
+
+    it("toggles aria-expanded to true when the dropdown opens", async () => {
+      const wrapper = mount(Select, { props: { dataSelect: ["a"], label: "Country" }, attachTo: document.body })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      expect(wrapper.find("[data-select]").attributes("aria-expanded")).toBe("true")
+      wrapper.unmount()
+    })
+  })
 })

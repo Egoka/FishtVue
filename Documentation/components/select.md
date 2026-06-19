@@ -256,8 +256,9 @@ Root класс — `fv fishtvue-select`.
 
 ### A11y
 
-- ARIA-атрибуты `role="combobox"`/`role="listbox"`/`role="option"` — проверь по DOM (см. Known issues).
-- Keyboard: ArrowDown/Up для навигации, Enter для выбора, Escape для закрытия.
+- **Trigger:** `<div data-select role="combobox">` с `:aria-expanded` (реактивен по `isOpenList`) и `:aria-labelledby`, указывающим на id `<Label>` (Wave 4, 2026-06-19) — screen reader озвучивает метку и состояние раскрытия. Связка id↔label обеспечивается [InputLayout](./input-layout.md) (single source, `useId()`); явный `id` prop выигрывает. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
+- ARIA-атрибуты списка `role="listbox"`/`role="option"` — проверь по DOM (см. Known issues).
+- Keyboard: ArrowDown/Up для навигации, Enter для выбора, Escape для закрытия (Home/End/typeahead — см. Known issues / Wave 4.3).
 - Focus management: при открытии — focus на input query, при закрытии — на trigger.
 - **Live-region**: hidden `<div data-select-aria-live aria-live="polite" aria-atomic="true">` объявляет количество отфильтрованных результатов при печати в search-поле. Скриноридер озвучивает `Results: N` / `1 result` / `No results` (en) — локализовано и плюрализовано через единый ключ `Select.t("select.resultsCount", { count })` (Wave 3.5).
 - `motion-safe:` префикс на Tailwind-переходах respects `prefers-reduced-motion: reduce` пользовательских настроек. **GSAP-анимация раскрытия списка** не учитывает это media-query — см. Known issues.

@@ -1,7 +1,7 @@
 ---
 title: Calendar
 summary: Date picker на v-calendar — single/range, date/time/dateTime, кастомные шаблоны.
-updated: 2026-05-11
+updated: 2026-06-19
 stability: beta
 since: 0.2.11
 ---
@@ -212,6 +212,7 @@ Calendar инжектит часть стилей через `Calendar.setStyle(
 
 ### A11y
 
+- **Trigger** (`<div data-calendar>`) связан с меткой через `:aria-labelledby` → id `<Label>` (Wave 4, 2026-06-19); id раздаётся [InputLayout](./input-layout.md) (`useId()`, либо `id` prop). См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - v-calendar содержит a11y-семантику для grid и кнопок навигации. Проверь актуальность по версии.
 - Keyboard: ArrowKeys для навигации по сетке, Enter для выбора, Escape — close popover.
 - Focus management: open → focus на picker, close → return.

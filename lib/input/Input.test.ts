@@ -517,4 +517,20 @@ describe("Input Component Tests", () => {
       })
     })
   })
+
+  describe("Accessibility — label/for association (Wave 4)", () => {
+    it("auto-generates an id on the input and links the label via `for`", () => {
+      const wrapper = mount(Input, { props: { label: "Email" } })
+      const input = wrapper.find("input[data-input]")
+      const id = input.attributes("id")
+      expect(id).toBeTruthy()
+      expect(wrapper.find("label[data-label]").attributes("for")).toBe(id)
+    })
+
+    it("respects an explicit `id` prop for both input and label `for`", () => {
+      const wrapper = mount(Input, { props: { label: "Email", id: "my-input" } })
+      expect(wrapper.find("input[data-input]").attributes("id")).toBe("my-input")
+      expect(wrapper.find("label[data-label]").attributes("for")).toBe("my-input")
+    })
+  })
 })

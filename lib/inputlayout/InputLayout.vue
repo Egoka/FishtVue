@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, onUnmounted, ref, useSlots } from "vue"
+  import { computed, onMounted, onUnmounted, ref, useId, useSlots } from "vue"
   import type { InputLayoutEmits, InputLayoutProps } from "./InputLayout"
   import Label from "fishtvue/label/Label.vue"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -50,6 +50,14 @@
   const labelType = computed<NonNullable<InputLayoutProps["labelMode"]>>(() =>
     getLabelType(isValue.value, label.value, labelMode.value)
   )
+  // ---A11Y: label↔control association (single source of truth) -----
+  // `useId()` — SSR-stable, hydration-safe (зеркало Accordion/Split).
+  const autoId = useId() ?? ""
+  // id контрола: явный props.id выигрывает, иначе автогенерация.
+  const fieldId = computed<string>(() => props.id ?? autoId)
+  // id самой метки (для aria-labelledby у non-labelable триггеров);
+  // undefined без label → атрибут не виснет на dangling-id.
+  const labelId = computed<string | undefined>(() => (label.value ? `${fieldId.value}-label` : undefined))
   const isRequired = computed<NonNullable<InputLayoutProps["required"]>>(() => props.required ?? false)
   const isLoading = computed<InputLayoutProps["loading"]>(() => props.loading ?? false)
   const isDisabled = computed<InputLayoutProps["disabled"]>(() => props.disabled ?? false)
@@ -324,11 +332,13 @@
       <slot name="before" />
     </div>
     <div data-input-layout-base ref="input" :class="classBase" :style="styleBase">
-      <slot />
+      <slot :id="fieldId" :labelledby="labelId" />
     </div>
     <slot name="body" />
     <Label
       v-if="label"
+      :id="labelId"
+      :for-id="fieldId"
       :title="label"
       :type="labelType"
       :mode="mode"

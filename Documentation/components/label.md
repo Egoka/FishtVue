@@ -1,7 +1,7 @@
 ---
 title: Label
 summary: Label с пятью режимами (dynamic/static/offset*/vanishing/none), required-маркером, нативной for-связкой с input, default-слотом для кастомного контента и prop `animate` (mount-tick gate против «переезда» позиции).
-updated: 2026-06-14
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -33,11 +33,11 @@ lib/label/
 - **Lifecycle:** автоматическая инжекция стилей через `Component.__hooks()` (`onServerPrefetch + vueOnMounted -> initStyle`). SFC не дублирует вызов — см. [dev-patterns §2](../dev-patterns.md) decision row 1.
 - **Поток данных:** props + `Label.getOptions()` → computed `mode`/`type`/`translateX`/`maxWidth` → `classBase` (через `Label.setStyle`) и `classContent`. Resolve: `props ?? options ?? Label.componentsStyle() ?? "outlined"`.
 - **Стили:** transform-классы зависят от `type`. Для `dynamic`: `peer-focus:-translate-y-[60px] peer-focus:translate-x-4 -translate-y-7` ([Label.vue:37](../../lib/label/Label.vue#L37)). Required-маркер `*` через `after:content-['*']` ([Label.vue:43-45](../../lib/label/Label.vue#L43-L45)).
-- **For-id association:** при заданном `forId` корневой `<label>` получает нативный `for="<id>"` ([Label.vue:71](../../lib/label/Label.vue#L71)) — браузер автоматически связывает label и input, click фокусирует input, screen-reader озвучивает связку.
+- **For-id association:** при заданном `forId` корневой `<label>` получает нативный `for="<id>"` ([Label.vue:71](../../lib/label/Label.vue#L76)) — браузер автоматически связывает label и input, click фокусирует input, screen-reader озвучивает связку.
 - **Конфиг:** `componentsOptions.Label` ключи — `mode`, `type`, `translateX`, `maxWidth`, `class`, `classBody`.
 - **Локализация:** не использует.
 - **SSR:** SSR-safe (Component.__hooks регистрирует `onServerPrefetch`).
-- **Animation:** `motion-safe:transition-all motion-safe:duration-200` ([Label.vue:36](../../lib/label/Label.vue#L36)) — анимации отключаются при `prefers-reduced-motion: reduce`.
+- **Animation:** `motion-safe:transition-all motion-safe:duration-200` ([Label.vue:36](../../lib/label/Label.vue#L40)) — анимации отключаются при `prefers-reduced-motion: reduce`.
 
 ## 4. Quick Start
 
@@ -203,10 +203,11 @@ Visual `*`-маркер для `required` — чисто косметическ�
 
 ### A11y
 
-- **Семантика:** Корневой узел — нативный `<label data-label>` ([Label.vue:71](../../lib/label/Label.vue#L71)). При заданном `for-id` атрибут `for` устанавливается и работает нативная браузерная связка: click на label фокусирует input, screen-reader озвучивает «{title}, edit text» при focus на input.
+- **Семантика:** Корневой узел — нативный `<label data-label>` ([Label.vue:71](../../lib/label/Label.vue#L76)). При заданном `for-id` атрибут `for` устанавливается и работает нативная браузерная связка: click на label фокусирует input, screen-reader озвучивает «{title}, edit text» при focus на input.
+- **Внутри InputLayout `for-id` проставляется автоматически** ([InputLayout.vue](../../lib/inputlayout/InputLayout.vue) генерит стабильный id через `useId()` и передаёт `:for-id` + `:id` метке) — все form-controls (Input/Aria/Select/Calendar/TextEditor) получают связь без ручной настройки. Standalone-Label вне InputLayout требует явного `for-id`. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - **Required-индикатор:** `*` через CSS `after:content-['*']` — не озвучивается screen-reader'ом. Добавь `aria-required="true"` на input самостоятельно или используй InputLayout-обёртку.
 - **Focus management:** не применимо — сам Label не focusable.
-- **Reduced motion:** анимации помечены `motion-safe:` ([Label.vue:36](../../lib/label/Label.vue#L36)) — отключаются при `prefers-reduced-motion: reduce`.
+- **Reduced motion:** анимации помечены `motion-safe:` ([Label.vue:36](../../lib/label/Label.vue#L40)) — отключаются при `prefers-reduced-motion: reduce`.
 
 ### Security
 

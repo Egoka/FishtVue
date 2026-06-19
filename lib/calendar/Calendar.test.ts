@@ -369,4 +369,14 @@ describe("Calendar Component", () => {
       expect(datePicker.props("locale")).toBe("en")
     })
   })
+
+  describe("Accessibility — label association (Wave 4)", () => {
+    it("links the calendar trigger to the label via aria-labelledby", () => {
+      const wrapper = mount(Calendar, { props: { label: "Date", id: "date" } })
+      const trigger = wrapper.find("[data-calendar]")
+      expect(trigger.exists()).toBe(true)
+      expect(trigger.attributes("aria-labelledby")).toBe("date-label")
+      expect(wrapper.find("label[data-label]").attributes("id")).toBe("date-label")
+    })
+  })
 })

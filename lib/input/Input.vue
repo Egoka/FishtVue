@@ -101,6 +101,7 @@
     ])
   )
   const inputLayout = computed(() => ({
+    id: props.id,
     isValue: isValue.value,
     mode: mode.value,
     label: props.label,
@@ -228,22 +229,24 @@
 
 <template>
   <InputLayout ref="layout" :value="modelValue" :class="classLayout ?? ''" v-bind="inputLayout" @clear="clear">
-    <input
-      data-input
-      ref="inputRef"
-      :id="id"
-      :name="id"
-      :type="privateType"
-      :disabled="isDisabled"
-      :placeholder="placeholder"
-      :autocomplete="autocomplete"
-      :value="modelValue"
-      :class="classBaseInput"
-      @focus="focus"
-      @blur="blur"
-      @input="inputEvent"
-      @keydown="onkeydown"
-      @change="changeModelValue(($event.target as HTMLInputElement).value)" />
+    <template #default="{ id: fieldId }">
+      <input
+        data-input
+        ref="inputRef"
+        :id="fieldId"
+        :name="id"
+        :type="privateType"
+        :disabled="isDisabled"
+        :placeholder="placeholder"
+        :autocomplete="autocomplete"
+        :value="modelValue"
+        :class="classBaseInput"
+        @focus="focus"
+        @blur="blur"
+        @input="inputEvent"
+        @keydown="onkeydown"
+        @change="changeModelValue(($event.target as HTMLInputElement).value)" />
+    </template>
     <template #body>
       <slot />
     </template>
