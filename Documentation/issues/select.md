@@ -1,7 +1,7 @@
 ---
 title: Issues — Select
-summary: 11/13 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports). Открытые — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending) и B10 (colors, deferred Wave 9).
-updated: 2026-06-13
+summary: 11/13 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports). Открытые — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending) и B10 (colors, deferred Wave 9). Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
+updated: 2026-06-20
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
 related-doc: ../components/select.md
@@ -19,6 +19,8 @@ related-doc: ../components/select.md
 | low      | 1            | B10 (colors → semantic tokens, deferred)              |
 
 > Оба открытых пункта — **не баги**: Issue 7 **разблокирован** (2026-06-13) — добавлен dependency-free [VirtualScroller](../components/virtualscroller.md) + `useVirtualScroll`; осталась интеграция в Select (отдельным ТЗ). B10 требует lib-wide token-слоя (Wave 9). Все остальные 11 пунктов закрыты.
+
+> **Wave 4.3 keyboard (✅ 2026-06-20):** в [keydownSelect](../../lib/select/Select.vue#L586) добавлены **Home/End** (`focusItemAt`) и **first-char typeahead** для `noQuery`-listbox (`typeaheadFocus`, APG-циклирование). Это roadmap-only пункт ([issues/README.md Wave 4.3](./README.md)) без numbered issue — **матрица severity не меняется**. См. [components/select.md §12](../components/select.md).
 
 ## ~~Issue 1: CRITICAL — XSS через `v-html` в `marker` и `noData`~~ ✅ resolved 2026-05-11
 

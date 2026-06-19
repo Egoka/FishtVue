@@ -1,7 +1,7 @@
 ---
 title: Select
-summary: Single/multiple select с фильтрацией (Intl.Collator), schema + compound API (<SelectOption>/<SelectGroup>), RTL (logical props), slot'ами values/item/marker/empty.
-updated: 2026-06-19
+summary: Single/multiple select с фильтрацией (Intl.Collator), schema + compound API (<SelectOption>/<SelectGroup>), RTL (logical props), keyboard nav (Arrow/Home/End/typeahead), slot'ами values/item/marker/empty.
+updated: 2026-06-20
 stability: stable
 since: 0.2.11
 ---
@@ -258,7 +258,7 @@ Root класс — `fv fishtvue-select`.
 
 - **Trigger:** `<div data-select role="combobox">` с `:aria-expanded` (реактивен по `isOpenList`) и `:aria-labelledby`, указывающим на id `<Label>` (Wave 4, 2026-06-19) — screen reader озвучивает метку и состояние раскрытия. Связка id↔label обеспечивается [InputLayout](./input-layout.md) (single source, `useId()`); явный `id` prop выигрывает. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - ARIA-атрибуты списка `role="listbox"`/`role="option"` — проверь по DOM (см. Known issues).
-- Keyboard: ArrowDown/Up для навигации, Enter для выбора, Escape для закрытия (Home/End/typeahead — см. Known issues / Wave 4.3).
+- Keyboard (Wave 4.3, 2026-06-20): **ArrowDown/Up** — навигация по опциям (roving tabindex), **Enter** — выбор, **Escape** — закрытие, **Home/End** — прыжок к первой/последней опции, **first-char typeahead** — печать буквы фокусирует первую опцию, начинающуюся с неё; повтор той же буквы (в пределах 500 мс) циклически перебирает совпадения. В режиме с поиском (default) печать символа фокусит search-поле → фильтрация работает как typeahead; чистый listbox (`noQuery: true`) использует встроенный first-char typeahead. Когда фокус в search-поле, Home/End сохраняют нативное поведение курсора.
 - Focus management: при открытии — focus на input query, при закрытии — на trigger.
 - **Live-region**: hidden `<div data-select-aria-live aria-live="polite" aria-atomic="true">` объявляет количество отфильтрованных результатов при печати в search-поле. Скриноридер озвучивает `Results: N` / `1 result` / `No results` (en) — локализовано и плюрализовано через единый ключ `Select.t("select.resultsCount", { count })` (Wave 3.5).
 - `motion-safe:` префикс на Tailwind-переходах respects `prefers-reduced-motion: reduce` пользовательских настроек. **GSAP-анимация раскрытия списка** не учитывает это media-query — см. Known issues.
@@ -355,7 +355,7 @@ describe("Select", () => {
 - `multiple` + `modelValue: null` → отображается как пустой массив. Передавай `[]`, не `null`.
 - **GSAP-анимация** открытия списка не отключается через `prefers-reduced-motion` (Tailwind transitions — уже да). Override через CSS `[data-select-list] * { transition: none !important; }`. Полная интеграция — Wave 10.1 follow-up.
 - **GSAP — optional peer (Wave 2.1).** `gsap` больше не runtime-dependency; грузится lazy (`await import("gsap")`, кэшируется при первой анимации). Без установленного `gsap` список открывается/закрывается мгновенно (без анимации), но функционально полностью рабочий — анимация деградирует gracefully. Установка плавности: `pnpm add gsap`.
-- При `noQuery: true` — input для query всё равно рендерится (или нет — проверь поведение в текущей версии).
+- При `noQuery: true` search-input **не рендерится** (`v-if="isQuery"`, `isQuery = !noQuery`) — компонент работает как чистый listbox; навигация по опциям доступна через ArrowDown/Up, Home/End и first-char typeahead (Wave 4.3).
 - **RTL** (`<html dir="rtl">`): поддержан через логические Tailwind-классы (`ps-`/`pe-`/`start-`/`me-`/`ms-[...]` + `rtl:text-right`) — авто-флип отступов, check-иконки и dropdown-оффсета (Issue 9 / F31, resolved 2026-06-13). Виртуализация больших списков — см. ниже.
 - **Виртуализация** dropdown >500 items не реализована (рендерятся все элементы) — defer roadmap (Issue 7), требует runtime-зависимости вопреки no-deps цели.
 - **`IDataItem.marker` deprecated** (2026-05-11): передача поля игнорируется + `console.warn`. Используй `#marker` scoped slot.

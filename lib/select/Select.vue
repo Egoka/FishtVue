@@ -119,6 +119,9 @@
   // ---STATE-------------------------------
   const isFocus = ref<boolean>(false)
   const activeItem = ref<number>(0)
+  // typeahead-буфер для first-char навигации по listbox (Wave 4.3)
+  let typeaheadBuffer = ""
+  let typeaheadTimer: ReturnType<typeof setTimeout> | undefined
   const query = ref<string>("")
   const isOpenList = ref<boolean>(false)
   const classLayout = ref<SelectProps["class"]>()
@@ -467,6 +470,7 @@
   onBeforeUnmount(() => {
     resizeObserver?.disconnect()
     resizeObserver = undefined
+    if (typeaheadTimer) clearTimeout(typeaheadTimer)
     if (isClient()) {
       document.removeEventListener("keydown", openSelectOnEnter)
       document.removeEventListener("keydown", keydownSelect)
@@ -515,10 +519,13 @@
 
   // ---METHODS-----------------------------
   // ---ISSUE 2 (defensive) — guards against undefined refs after unmount-while-open ---
-  function changeFocus(currentIndex: number, direction: 1 | -1) {
-    const listItems = (selectItems.value as any)?.$el?.querySelectorAll("li[data-select-list-item]") as
+  function listItemEls(): NodeListOf<HTMLElement> | undefined {
+    return (selectItems.value as any)?.$el?.querySelectorAll("li[data-select-list-item]") as
       | NodeListOf<HTMLElement>
       | undefined
+  }
+  function changeFocus(currentIndex: number, direction: 1 | -1) {
+    const listItems = listItemEls()
     if (!listItems || !listItems.length) return
     let newIndex = currentIndex + direction
     const cur = listItems[currentIndex]
@@ -535,17 +542,58 @@
     }
     activeItem.value = newIndex
   }
+  // абсолютный roving-focus (Home/End/typeahead) — индекс клампится в границы, без wrap
+  function focusItemAt(index: number) {
+    const listItems = listItemEls()
+    if (!listItems || !listItems.length) return
+    let newIndex = index
+    if (newIndex < 0) newIndex = 0
+    else if (newIndex >= listItems.length) newIndex = listItems.length - 1
+    const cur = listItems[activeItem.value]
+    if (cur) {
+      cur.setAttribute("tabindex", "-1")
+      cur.blur()
+    }
+    const next = listItems[newIndex]
+    if (next) {
+      next.setAttribute("tabindex", "0")
+      next.focus()
+    }
+    activeItem.value = newIndex
+  }
+  // first-char typeahead для noQuery-listbox: матч по textContent опции;
+  // повтор одного символа в пределах 500 мс циклически перебирает совпадения (APG-паттерн).
+  function typeaheadFocus(char: string) {
+    const items = listItemEls()
+    if (!items || !items.length) return
+    const wasEmpty = typeaheadBuffer === ""
+    if (typeaheadTimer) clearTimeout(typeaheadTimer)
+    typeaheadBuffer += char.toLowerCase()
+    typeaheadTimer = setTimeout(() => (typeaheadBuffer = ""), 500)
+    const allSame = [...typeaheadBuffer].every((c) => c === typeaheadBuffer[0])
+    const needle = allSame ? typeaheadBuffer[0] : typeaheadBuffer
+    // свежий буфер ищет с текущей позиции (включительно), повтор символа — со следующей
+    const from = allSame && !wasEmpty ? activeItem.value + 1 : activeItem.value
+    for (let i = 0; i < items.length; i++) {
+      const idx = (from + i) % items.length
+      if ((items[idx]?.textContent ?? "").trim().toLowerCase().startsWith(needle)) {
+        focusItemAt(idx)
+        return
+      }
+    }
+  }
 
   function keydownSelect(event: KeyboardEvent) {
     // ---ISSUE 2 (defensive) — bail out if component already unmounted ---
     if (!selectItems.value) return
+    // когда фокус в поле поиска — Home/End и печать символов отдаём нативно (курсор/набор текста)
+    const searchActive =
+      isQuery.value && !!(document.activeElement as HTMLElement | null)?.closest?.("[data-select-search]")
     if (event.key === "Tab") activeItem.value += 1
     else if (event.key === "Enter") select(dataList.value[activeItem.value])
     else if (["Escape", "Esc"].includes(event.key)) isOpenList.value = false
     else if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-      const items = (selectItems.value as any)?.$el?.querySelectorAll("li[data-select-list-item]") as
-        | NodeListOf<HTMLElement>
-        | undefined
+      const items = listItemEls()
       if (!items || !items.length) return
       const currentIndex = Array.prototype.indexOf.call(items, document.activeElement)
       if (currentIndex !== -1) {
@@ -553,7 +601,22 @@
         if (event.key === "ArrowDown") changeFocus(currentIndex, 1)
         else if (event.key === "ArrowUp") changeFocus(currentIndex, -1)
       } else changeFocus(1, -1)
-    } else if ("which" in event ? event.which : (event as any).keyCode >= 32) selectSearch.value?.focus()
+    } else if (["Home", "End"].includes(event.key)) {
+      if (searchActive) return
+      const items = listItemEls()
+      if (!items || !items.length) return
+      event.preventDefault()
+      focusItemAt(event.key === "Home" ? 0 : items.length - 1)
+    } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (searchActive) return
+      // есть поиск (default) → печать фокусит поле и фильтрует (de-facto typeahead);
+      // noQuery (чистый listbox) → first-char typeahead по списку
+      if (isQuery.value) selectSearch.value?.focus()
+      else {
+        event.preventDefault()
+        typeaheadFocus(event.key)
+      }
+    }
   }
 
   function openSelectOnEnter(event: KeyboardEvent) {

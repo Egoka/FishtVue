@@ -710,4 +710,70 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       wrapper.unmount()
     })
   })
+
+  // Wave 4.3 — keyboard nav: Home/End прыжки + first-char typeahead (для noQuery-listbox).
+  describe("Select Component - Keyboard Home/End/typeahead (Wave 4.3)", () => {
+    async function openList(props: Record<string, unknown>) {
+      const wrapper = mount(Select, { props, attachTo: document.body })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      expect(wrapper.vm.isOpenList).toBe(true)
+      return wrapper
+    }
+
+    it("End focuses the last list item, Home focuses the first", async () => {
+      const wrapper = await openList({ dataSelect: ["Apple", "Banana", "Cherry"], modelValue: null })
+
+      await wrapper.trigger("keydown", { key: "End" })
+      await nextTick()
+      let items = wrapper.findAll("[data-select-list-item]")
+      expect(items[items.length - 1].attributes("tabindex")).toBe("0")
+      expect(items[0].attributes("tabindex")).toBe("-1")
+
+      await wrapper.trigger("keydown", { key: "Home" })
+      await nextTick()
+      items = wrapper.findAll("[data-select-list-item]")
+      expect(items[0].attributes("tabindex")).toBe("0")
+      expect(items[items.length - 1].attributes("tabindex")).toBe("-1")
+
+      wrapper.unmount()
+    })
+
+    it("noQuery: true renders no search input (typeahead branch reachable)", async () => {
+      const wrapper = await openList({ dataSelect: ["Apple", "Banana"], modelValue: null, noQuery: true })
+      expect(wrapper.find("[data-select-search]").exists()).toBe(false)
+      wrapper.unmount()
+    })
+
+    it("typeahead (noQuery) focuses first item starting with the typed character", async () => {
+      const wrapper = await openList({ dataSelect: ["Apple", "Banana", "Cherry"], modelValue: null, noQuery: true })
+
+      await wrapper.trigger("keydown", { key: "b" })
+      await nextTick()
+      const items = wrapper.findAll("[data-select-list-item]")
+      expect(items[1].attributes("tabindex")).toBe("0") // Banana
+      expect(items[0].attributes("tabindex")).toBe("-1")
+      expect(items[2].attributes("tabindex")).toBe("-1")
+
+      wrapper.unmount()
+    })
+
+    it("typeahead (noQuery) cycles through items sharing the first character on repeat", async () => {
+      const wrapper = await openList({ dataSelect: ["Apple", "Avocado", "Banana"], modelValue: null, noQuery: true })
+
+      await wrapper.trigger("keydown", { key: "a" })
+      await nextTick()
+      let items = wrapper.findAll("[data-select-list-item]")
+      expect(items[0].attributes("tabindex")).toBe("0") // Apple
+
+      await wrapper.trigger("keydown", { key: "a" })
+      await nextTick()
+      items = wrapper.findAll("[data-select-list-item]")
+      expect(items[1].attributes("tabindex")).toBe("0") // Avocado
+      expect(items[0].attributes("tabindex")).toBe("-1")
+
+      wrapper.unmount()
+    })
+  })
 })
