@@ -54,49 +54,6 @@
 </script>
 <template>
   <div class="w-full h-full grow">
-    <Split
-      :panels="panelsNew"
-      units="pixels"
-      :styles="{ separator: 'bg-transparent dark:bg-transparent' }"
-      class="overflow-auto bg-white dark:bg-zinc-800 sm:p-3">
-      <template #menu><div class="bg-red-600">test</div></template>
-      <template #main><div class="bg-blue-600">item</div></template>
-    </Split>
-    <Split
-      :panels="[
-        {
-          name: 'table',
-          minSize: 10
-        },
-        {
-          name: 'item',
-          minSize: 10,
-          size: 30
-          // hidden: true
-        }
-      ]"
-      units="pixels">
-      <template #table><div class="bg-red-600">test</div></template>
-      <template #item><div class="bg-blue-600">item</div></template>
-    </Split>
-    <!--    <Split-->
-    <!--      :panels="[{ name: 'right' }, { name: 'left' }]"-->
-    <!--      class="relative rounded-lg overflow-auto border dark:border-gray-800"-->
-    <!--      units="percentages">-->
-    <!--      <template #right>-->
-    <!--        <div class="relative overflow-hidden w-full h-full flex justify-center items-center">-->
-    <!--          <div class="absolute left-0 max-w-[246px] w-[250px] text-center font-asap font-bold text-6xl">Fisht</div>-->
-    <!--        </div>-->
-    <!--      </template>-->
-    <!--      <template #left>-->
-    <!--        <div class="relative overflow-hidden w-full h-full flex justify-center items-center">-->
-    <!--          <div-->
-    <!--            class="absolute right-0 max-w-[250px] w-[250px] text-center font-asap font-bold text-6xl text-theme-600 dark:text-theme-400">-->
-    <!--            Fisht-->
-    <!--          </div>-->
-    <!--        </div>-->
-    <!--      </template>-->
-    <!--    </Split>-->
     <div class="w-full">
       <div
         class="-z-1 w-full h-max absolute top-0 left-0 inset-0 pointer-events-none flex justify-center overflow-hidden">
