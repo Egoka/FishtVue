@@ -10,8 +10,6 @@
     SimpleDateRange
   } from "./Calendar"
   import { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
-  import { DatePicker } from "v-calendar"
-  import "v-calendar/style.css"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -20,6 +18,13 @@
   import { isClient } from "fishtvue/utils/domHandler"
   import type { FishtVue } from "fishtvue/config"
   import { FishtVueSymbol } from "fishtvue/config"
+  // ---LAZY V-CALENDAR (Wave 2.1)----------------------
+  // v-calendar — optional peerDependency: грузим DatePicker динамически в onMounted (зеркало
+  // TextEditor/QuillEditor) + CSS lazy (client-only → SSR-safe). Ref-based (НЕ
+  // defineAsyncComponent) специально: template-ref `calendarPicker` должен указывать на РЕАЛЬНЫЙ
+  // инстанс DatePicker — Calendar читает его `inputValue`/`dateParts`; async-wrapper их не отдаёт.
+  // Bundle без Calendar не тянет v-calendar; потребитель Calendar ставит peer сам.
+  const DatePicker = ref<any>()
   // ---BASE-COMPONENT----------------------
   const Calendar = new Component<"Calendar">()
   const options = Calendar.getOptions()
@@ -248,14 +253,22 @@
   // ---MOUNT-UNMOUNT-----------------------
   // ---Wave 2.3 — drop duplicate Calendar.initStyle() — Component.__hooks() already registers it.
   // ---ISSUE 1 — onBeforeUnmount cleanup for MutationObserver + keydown listeners (memory leak fix).
-  onMounted(() => {
+  onMounted(async () => {
     initDarkModeObserver()
     if (autoFocus.value) openCalendar()
-    nextTick(() => {
-      visibleDate.value = <ICalendarPicker["inputValue"]>(
-        (calendarPicker.value?.inputValue as ICalendarPicker["inputValue"])
-      )
-    })
+    // ---Wave 2.1 — lazy v-calendar (optional peer): компонент + CSS грузятся на клиенте при mount,
+    // не на import-time (SSR-safe, bundle без Calendar не тянет). Отсутствие peer → picker не рендерится.
+    try {
+      DatePicker.value = (await import("v-calendar")).DatePicker
+      import("v-calendar/style.css").catch(() => {})
+    } catch {
+      /* v-calendar не установлен (optional peer) — picker остаётся нерендеренным */
+    }
+    // читаем начальный inputValue после того, как picker смонтировался (await nextTick)
+    await nextTick()
+    visibleDate.value = <ICalendarPicker["inputValue"]>(
+      (calendarPicker.value?.inputValue as ICalendarPicker["inputValue"])
+    )
   })
   onBeforeUnmount(() => {
     darkObserver?.disconnect()
@@ -266,7 +279,19 @@
     }
   })
   // ---WATCHERS----------------------------
-  watch(calendarPicker, () => emit("getCalendar", calendarPicker.value as ICalendarPicker), { deep: true })
+  watch(
+    calendarPicker,
+    () => {
+      emit("getCalendar", calendarPicker.value as ICalendarPicker)
+      // ---Wave 2.1 — DatePicker грузится lazy (v-calendar = optional peer) и монтируется ПОСЛЕ
+      // onMounted: когда picker впервые стал доступен, инициализируем `visibleDate` из его
+      // `inputValue` (только если значение ещё не выставлено) — на случай гонки с onMounted-read.
+      if (calendarPicker.value && visibleDate.value == null) {
+        visibleDate.value = calendarPicker.value?.inputValue as ICalendarPicker["inputValue"]
+      }
+    },
+    { deep: true }
+  )
   watch(isOpenPicker, (value) => {
     if (!isClient()) return
     if (value) document.addEventListener("keydown", keydownCalendar)
@@ -393,8 +418,9 @@
         class="px-0 rounded-[0.4rem]"
         @close="(env) => closeCalendar(env)">
         <div data-calendar-picker ref="picker" :class="classPicker">
-          <DatePicker
-            v-if="datePickerOptions?.isRange"
+          <component
+            :is="DatePicker"
+            v-if="DatePicker && datePickerOptions?.isRange"
             v-model.range.string="value"
             v-bind="fieldsOmit(datePickerOptions, ['isRange', 'locale'])"
             ref="calendarPicker"
@@ -405,9 +431,10 @@
             <template #footer>
               <slot name="footerPicker" />
             </template>
-          </DatePicker>
-          <DatePicker
-            v-else
+          </component>
+          <component
+            :is="DatePicker"
+            v-else-if="DatePicker"
             v-model.string="value"
             v-bind="fieldsOmit(datePickerOptions, ['isRange', 'locale'])"
             :is-dark="isDark"
@@ -418,7 +445,7 @@
             <template #footer>
               <slot name="footerPicker" />
             </template>
-          </DatePicker>
+          </component>
         </div>
       </FixWindow>
       <slot />

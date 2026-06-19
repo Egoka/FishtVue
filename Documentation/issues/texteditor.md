@@ -1,7 +1,7 @@
 ---
 title: Issues — TextEditor
-summary: Аудит TextEditor — coverage 0% (skipped tests), хардкод HEX цветов в style, Quill peer-dep потенциал, image upload не задокументирован. Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11 cross-cutting вместе с aria.md Issue 1.
-updated: 2026-05-11
+summary: Аудит TextEditor — coverage 0% (skipped tests), хардкод HEX цветов в style, image upload не задокументирован. Issue 3 (Quill → optional peer + lazy CSS) закрыт 2026-06-19 (Wave 2.1). Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11 cross-cutting вместе с aria.md Issue 1.
+updated: 2026-06-19
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/texteditor/
 related-doc: ../components/text-editor.md
@@ -15,7 +15,7 @@ stability: experimental (на момент аудита 17 тестов skipped)
 | Severity | Count (open) | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 7 | A2, A4-5, B10 (HEX hardcode), C17, I44 (Quill peer), J46 (tests skipped), L53 |
+| high | 6 | A2, A4-5, B10 (HEX hardcode), C17, J46 (tests skipped), L53 |
 | medium | 4 | F30, F32, M55, security (image upload) — Issue 5 D26 closed 2026-05-11 |
 | low | 3 | E29.7, N59, G34 |
 
@@ -98,47 +98,32 @@ HEX-значения хардкодом в `<style>` блоке. Не привя
 
 - [ ] `usePreset(SapphireTheme)` — TextEditor background меняется автоматически.
 
-## Issue 3: Quill в `dependencies` — должен быть optional peer
+## ~~Issue 3: Quill в `dependencies` — должен быть optional peer~~ ✅ resolved 2026-06-19 (Wave 2.1)
 
-- **Категория:** I44 (peer-зависимости), A3 (дубль)
-- **Severity:** high
-- **Где:** [lib/package.json:47](../../lib/package.json#L47), [lib/package.json:53](../../lib/package.json#L53)
+> **Status:** ✅ resolved 2026-06-19 (Wave 2.1). `@vueup/vue-quill` + `quill` переведены из `dependencies` в **optional `peerDependencies`** (`^1.2.0` / `^2.0.0`); компонент и его CSS грузятся lazy.
 
-### Что найдено
+**Что сделано (2026-06-19):**
+
+- [lib/package.json](../../lib/package.json) — `@vueup/vue-quill` + `quill` убраны из `dependencies`, добавлены в `peerDependencies` + `peerDependenciesMeta.optional: true`.
+- [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — компонент уже грузился lazy (`QuillEditor.value = (await import("@vueup/vue-quill")).QuillEditor`); top-level CSS-импорты (`vue-quill.snow.css` / `.bubble.css`) перенесены в тот же `onMounted` через dynamic `import()` под `try/catch` (при отсутствии peer редактор не рендерится — `template v-if="QuillEditor"`). Заодно снят последний дубль `TextEditor.initStyle()` (Wave 2.3 → 22/22).
+- Контракт — [lib/package.test.ts](../../lib/package.test.ts) (Quill — optional peer, не в `dependencies`); lazy CSS — source-scan в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts).
+
+### Что найдено (was)
 
 ```json
-"dependencies": {
-  "@vueup/vue-quill": "^1.2.0",
-  "quill": "^2.0.2",
-  ...
-}
+"dependencies": { "@vueup/vue-quill": "^1.2.0", "quill": "^2.0.2", ... }
 ```
 
-Quill ≈ 200kb minified. Тянется ВСЕМИ потребителями fishtvue, даже если TextEditor не используется. Без `sideEffects: false` (см. [button.md Issue 8](./button.md)) — невозможно tree-shake.
+Quill ≈ 200kb minified тянулся ВСЕМИ потребителями fishtvue, даже без TextEditor (top-level CSS-импорты исполнялись на import-time).
 
-### Что нужно сделать
-
-См. [calendar.md Issue 2](./calendar.md). Перенести в optional peer + lazy import.
-
-```ts
-// TextEditor.vue
-const QuillEditor = defineAsyncComponent(() =>
-  import("@vueup/vue-quill").then((m) => m.QuillEditor)
-)
-```
-
-CSS imports также lazy:
-```ts
-onMounted(async () => {
-  await import("@vueup/vue-quill/dist/vue-quill.snow.css")
-  await import("@vueup/vue-quill/dist/vue-quill.bubble.css")
-})
-```
+- **Категория:** ~~I44 (peer-зависимости), A3 (дубль)~~ — закрыто
+- **Severity:** ~~high~~
+- **Где (was):** [lib/package.json](../../lib/package.json)
 
 ### Acceptance criteria
 
-- [ ] Bundle without TextEditor — без quill в chunk.
-- [ ] Установка `npm i fishtvue` без явного quill — не падает (optional peer).
+- [x] Bundle без TextEditor — без quill в chunk (точечный импорт `fishtvue/button` не грузит `texteditor.mjs`).
+- [x] Установка `npm i fishtvue` без явного quill — не падает (optional peer).
 
 ## Issue 4: SSR styles + sideEffects/exports map
 

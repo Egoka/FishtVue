@@ -1,7 +1,7 @@
 ---
 title: Issues — Nuxt module + plugins
-summary: Аудит lib/module + lib/plugins — coverage 0%, hardcoded version detection через require (Nuxt 3 vs 4), нет тестов SSR injection, FISHT_VUE_COMPONENTS list требует ручной поддержки.
-updated: 2026-05-10
+summary: Аудит lib/module + lib/plugins — coverage 0%, hardcoded version detection через require (Nuxt 3 vs 4), нет тестов SSR injection, FISHT_VUE_COMPONENTS list требует ручной поддержки. Issue 4 (peer range @nuxt/kit ^4.1.2 → >=3.0.0) закрыт 2026-06-19 (Wave 2.1).
+updated: 2026-06-19
 audit-checklist: 60-point + Configuration support
 source: lib/module/, lib/plugins/
 related-doc: ../architecture/nuxt-module.md
@@ -14,7 +14,7 @@ related-doc: ../architecture/nuxt-module.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 6 | A2, A4-5, C18 (Nuxt module), J46 (0% coverage), K49 (peer-range Nuxt 3+4 conflict), L53 (disableGlobalStyles нет тестов) |
+| high | 5 | A2, A4-5, C18 (Nuxt module), J46 (0% coverage), L53 (disableGlobalStyles нет тестов) |
 | medium | 4 | D21, K52 (require dynamic), F30, K46 |
 | low | 2 | E29, B10 |
 
@@ -93,40 +93,32 @@ const getNuxtVersion = () => {
 1. Auto-derive из [lib/index.ts](../../lib/index.ts) или из filesystem (`fs.readdirSync('./lib').filter(...)`).
 2. Тест: `FISHT_VUE_COMPONENTS` соответствует реальным экспортам.
 
-## Issue 4: peer Nuxt range — `nuxt: ">=3.0.0"` и `@nuxt/kit ^4.1.2` несогласованы
+## ~~Issue 4: peer Nuxt range — `nuxt: ">=3.0.0"` и `@nuxt/kit ^4.1.2` несогласованы~~ ✅ resolved 2026-06-19 (Wave 2.1)
 
-- **Категория:** K49 (Vue/Nuxt peer ranges)
-- **Severity:** high
-- **Где:** [lib/package.json:28-32](../../lib/package.json#L28-L32)
+> **Status:** ✅ resolved 2026-06-19 (Wave 2.1). `@nuxt/kit`/`@nuxt/schema` peer-range расширен `^4.1.2` → `>=3.0.0` — согласован с `nuxt: ">=3.0.0"`. Nuxt 3 больше не получает несовместимый `@nuxt/kit` major 4.
 
-### Что найдено
+**Что сделано (2026-06-19):**
+
+- [lib/package.json](../../lib/package.json) — `@nuxt/kit`/`@nuxt/schema` peer = `>=3.0.0` (были `^4.1.2`); оба остаются optional. Сам monorepo собирается на Nuxt 3 (`@nuxt/kit ^3.17.3` в root) — старый `^4.1.2` противоречил реальности.
+- Контракт — [lib/package.test.ts](../../lib/package.test.ts) (`@nuxt/kit`/`@nuxt/schema` peer === `>=3.0.0`, optional).
+- Runtime detection `isNuxt4()` уже есть для разных API paths.
+
+### Что найдено (was)
 
 ```json
-"peerDependencies": {
-  "@nuxt/kit": "^4.1.2",
-  "@nuxt/schema": "^4.1.2",
-  "nuxt": ">=3.0.0"
-}
+"peerDependencies": { "@nuxt/kit": "^4.1.2", "@nuxt/schema": "^4.1.2", "nuxt": ">=3.0.0" }
 ```
 
-`nuxt: ">=3.0.0"` — соглашается с Nuxt 3+. Но `@nuxt/kit: ^4.1.2` — только Nuxt 4 schema. Nuxt 3 имеет `@nuxt/kit: ^3.x`.
+`nuxt: ">=3.0.0"` допускал Nuxt 3+, но `@nuxt/kit: ^4.1.2` — только Nuxt 4. Пользователь Nuxt 3 получал `@nuxt/kit ^4.1.2` (новый major) → runtime-ошибки.
 
-Если пользователь Nuxt 3 — установится `@nuxt/kit ^4.1.2` (новая major) что приведёт к runtime ошибкам.
-
-### Что нужно сделать
-
-1. Расширить peer ranges:
-   ```json
-   "@nuxt/kit": ">=3.0.0",
-   "@nuxt/schema": ">=3.0.0"
-   ```
-2. Runtime detection — `isNuxt4()` уже есть, использовать correctly для разных API paths.
-3. Документировать в [Documentation/architecture/nuxt-module.md](../architecture/nuxt-module.md): «Tested with Nuxt 3.x and 4.x».
+- **Категория:** ~~K49 (Vue/Nuxt peer ranges)~~ — закрыто
+- **Severity:** ~~high~~
+- **Где (was):** [lib/package.json:28-32](../../lib/package.json#L28-L32)
 
 ### Acceptance criteria
 
-- [ ] Установка fishtvue в Nuxt 3 проект — работает без version conflicts.
-- [ ] Аналогично для Nuxt 4.
+- [x] Установка fishtvue в Nuxt 3 проект — peer-range допускает `@nuxt/kit ^3.x` (нет принудительного major 4).
+- [x] Аналогично для Nuxt 4 (`>=3.0.0` покрывает обе major).
 
 ## Issue 5: `disableGlobalStyles: false` default — но что именно отключается?
 

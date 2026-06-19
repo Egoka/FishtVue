@@ -286,3 +286,24 @@ describe("TextEditor — accessibility label association (Wave 4)", () => {
     expect(src).toMatch(/:aria-labelledby="labelledby"/)
   })
 })
+
+// @vueup/vue-quill + quill = optional peerDependencies (Wave 2.1). Компонент уже грузит сам
+// QuillEditor через `await import("@vueup/vue-quill")` в onMounted; Quill-CSS не должен висеть
+// top-level side-effect-импортом (иначе тянется в каждый bundle с `fishtvue/texteditor` и
+// исполняется на import-time даже без mount). Mount грузит Quill → rAF крашит jsdom после
+// teardown (та же хрупкость, что держит суиту выше `todo`), поэтому проверяем на уровне source.
+describe("TextEditor — lazy Quill assets (Wave 2.1 — optional peer)", () => {
+  it("loads Quill component + CSS lazily, not as top-level imports", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+    // нет top-level side-effect css-импортов
+    expect(src).not.toMatch(/^\s*import\s+["']@vueup\/vue-quill\/dist\/[^"']+\.css["']/m)
+    // компонент и css грузятся динамически
+    expect(src).toMatch(/import\(["']@vueup\/vue-quill["']\)/)
+    expect(src).toMatch(/import\(["']@vueup\/vue-quill\/dist\/vue-quill\.snow\.css["']\)/)
+    expect(src).toMatch(/import\(["']@vueup\/vue-quill\/dist\/vue-quill\.bubble\.css["']\)/)
+  })
+})

@@ -674,4 +674,40 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       wrapper.unmount()
     })
   })
+
+  // gsap = optional peerDependency (Wave 2.1): не должен быть top-level eager-импортом, иначе
+  // ~50KB тянутся в каждый bundle с `fishtvue/select` даже без анимации. Грузится lazy через
+  // `import("gsap")` в transition-хуках; без gsap анимация деградирует до мгновенной (но список
+  // обязан стать видимым). Прямой mock-reject здесь не годится — hoisted `vi.mock("gsap")`
+  // протёк бы на весь файл и сломал остальные Select-тесты с реальным gsap; поэтому lazy + ветка
+  // graceful-fallback проверяются на уровне source, а видимость списка — поведенчески (real gsap).
+  describe("Lazy gsap (Wave 2.1 — optional peer)", () => {
+    it("loads gsap lazily with a graceful no-gsap fallback in transition hooks", async () => {
+      const fs = await import("node:fs/promises")
+      const path = await import("node:path")
+      const url = await import("node:url")
+      const here = path.dirname(url.fileURLToPath(import.meta.url))
+      const src = await fs.readFile(path.join(here, "Select.vue"), "utf8")
+      // нет top-level `import gsap from "gsap"`
+      expect(src).not.toMatch(/^\s*import\s+gsap\s+from\s+["']gsap["']/m)
+      // lazy dynamic import + try/catch graceful degradation
+      expect(src).toMatch(/import\(["']gsap["']\)/)
+      // fallback без gsap выставляет финальные стили (иначе onBeforeEnter оставит список невидимым)
+      expect(src).toMatch(/el\.style\.opacity/)
+      expect(src).toMatch(/el\.style\.height/)
+    })
+
+    it("still renders dropdown items when opened (animation = progressive enhancement)", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1", "Option 2", "Option 3"], modelValue: null },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      expect(wrapper.vm.isOpenList).toBe(true)
+      expect(wrapper.findAll("[data-select-list-item]").length).toBe(3)
+      wrapper.unmount()
+    })
+  })
 })

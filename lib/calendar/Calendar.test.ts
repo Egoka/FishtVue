@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils"
+import { mount, flushPromises } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import Calendar from "fishtvue/calendar/Calendar.vue"
 import { CalendarProps } from "fishtvue/calendar/Calendar"
@@ -71,6 +71,7 @@ describe("Calendar Component", () => {
           modelValue: value
         }
       })
+      await flushPromises() // DatePicker — defineAsyncComponent (Wave 2.1): дожидаемся mount
       await nextTick()
       // Открываем календарь
       const inputElement = wrapper.find("[data-calendar]")
@@ -201,6 +202,7 @@ describe("Calendar Component", () => {
           }
         }
       })
+      await flushPromises() // DatePicker — defineAsyncComponent (Wave 2.1): дожидаемся mount
       await nextTick()
       const dateDisplay = wrapper.find("[data-calendar]")
       await nextTick()
@@ -220,6 +222,7 @@ describe("Calendar Component", () => {
           }
         }
       })
+      await flushPromises() // DatePicker — defineAsyncComponent (Wave 2.1): дожидаемся mount
       await nextTick()
       const dateDisplay = wrapper.find("[data-calendar]")
       await nextTick()
@@ -334,7 +337,7 @@ describe("Calendar Component", () => {
     })
 
     // ---ISSUE 8 — locale propagation ----------------------------------------
-    it("passes FishtVue active locale to DatePicker", () => {
+    it("passes FishtVue active locale to DatePicker", async () => {
       const app = {
         install(app: any) {
           app.use(FishtVue, {
@@ -345,12 +348,14 @@ describe("Calendar Component", () => {
       const wrapper = mount(Calendar, {
         global: { plugins: [app as any] }
       })
+      // DatePicker — defineAsyncComponent (v-calendar = optional peer, Wave 2.1): резолвится async.
+      await flushPromises()
       const datePicker = wrapper.findComponent(DatePicker as any)
       expect(datePicker.exists()).toBe(true)
       expect(datePicker.props("locale")).toBe("ru")
     })
 
-    it("paramsDatePicker.locale (consumer override) wins over active locale", () => {
+    it("paramsDatePicker.locale (consumer override) wins over active locale", async () => {
       const app = {
         install(app: any) {
           app.use(FishtVue, {
@@ -364,6 +369,7 @@ describe("Calendar Component", () => {
           paramsDatePicker: { locale: "en" }
         }
       })
+      await flushPromises()
       const datePicker = wrapper.findComponent(DatePicker as any)
       expect(datePicker.exists()).toBe(true)
       expect(datePicker.props("locale")).toBe("en")
@@ -377,6 +383,35 @@ describe("Calendar Component", () => {
       expect(trigger.exists()).toBe(true)
       expect(trigger.attributes("aria-labelledby")).toBe("date-label")
       expect(wrapper.find("label[data-label]").attributes("id")).toBe("date-label")
+    })
+  })
+
+  // v-calendar = optional peerDependency (Wave 2.1): не должен быть top-level eager-импортом,
+  // иначе тянется в каждый bundle с `fishtvue/calendar`. DatePicker грузится динамически в
+  // onMounted (ref-based, зеркало TextEditor/QuillEditor — чтобы template-ref указывал на реальный
+  // инстанс), CSS — lazy там же (client-only, SSR-safe).
+  describe("Lazy v-calendar (Wave 2.1 — optional peer)", () => {
+    it("loads DatePicker via a dynamic import, not a top-level static import", async () => {
+      const fs = await import("node:fs/promises")
+      const path = await import("node:path")
+      const url = await import("node:url")
+      const here = path.dirname(url.fileURLToPath(import.meta.url))
+      const src = await fs.readFile(path.join(here, "Calendar.vue"), "utf8")
+      // нет eager `import { DatePicker } from "v-calendar"`
+      expect(src).not.toMatch(/import\s*\{[^}]*\bDatePicker\b[^}]*\}\s*from\s*["']v-calendar["']/)
+      // DatePicker — ref, заполняемый dynamic-импортом; рендерится через <component :is>
+      expect(src).toMatch(/const\s+DatePicker\s*=\s*ref/)
+      expect(src).toMatch(/import\(["']v-calendar["']\)/)
+    })
+
+    it("loads v-calendar CSS lazily (not a top-level side-effect import)", async () => {
+      const fs = await import("node:fs/promises")
+      const path = await import("node:path")
+      const url = await import("node:url")
+      const here = path.dirname(url.fileURLToPath(import.meta.url))
+      const src = await fs.readFile(path.join(here, "Calendar.vue"), "utf8")
+      expect(src).not.toMatch(/^\s*import\s+["']v-calendar\/style\.css["']/m)
+      expect(src).toMatch(/import\(["']v-calendar\/style\.css["']\)/)
     })
   })
 })

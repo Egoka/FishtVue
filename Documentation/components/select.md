@@ -32,8 +32,8 @@ lib/select/
 Зависимости:
 - [InputLayout](./input-layout.md), [Badge](./badge.md), [FixWindow](./fix-window.md).
 - [Component class](../architecture/component-class.md).
-- `lodash-es` (debounce, get) ([lib/package.json:52](../../lib/package.json#L52)).
-- `gsap` (анимация раскрытия списка) ([lib/package.json:51](../../lib/package.json#L51)).
+- `lodash-es` (debounce, get) — runtime-dependency ([lib/package.json](../../lib/package.json)).
+- `gsap` (анимация раскрытия списка) — **Wave 2.1: optional `peerDependency`**. Грузится lazy (`await import("gsap")` при первой анимации, кэшируется). Без установленного `gsap` список открывается/закрывается **мгновенно** (анимация = progressive enhancement); функционально Select полностью работает. Для плавности — `pnpm add gsap`.
 
 ## 3. How it works
 
@@ -318,6 +318,7 @@ describe("Select", () => {
 | Список открывается мимо trigger | `paramsFixWindow.position` некорректен. | Передай `paramsFixWindow: { position: "bottom-start" }`. |
 | Badge `×` не удаляет | `closeButtonBadge` не задан. | Передай объект с конфигом. |
 | GSAP-анимация дёргается | Старая версия `gsap`. | Проверь `pnpm list gsap`. |
+| Список открывается без анимации | `gsap` не установлен (Wave 2.1: optional peer). Функционально список работает (мгновенное раскрытие). | `pnpm add gsap` для плавности. |
 
 ## 17. Related
 
@@ -353,6 +354,7 @@ describe("Select", () => {
 - При смене `dataSelect` с открытым списком — query не сбрасывается; selection может стать невалидным.
 - `multiple` + `modelValue: null` → отображается как пустой массив. Передавай `[]`, не `null`.
 - **GSAP-анимация** открытия списка не отключается через `prefers-reduced-motion` (Tailwind transitions — уже да). Override через CSS `[data-select-list] * { transition: none !important; }`. Полная интеграция — Wave 10.1 follow-up.
+- **GSAP — optional peer (Wave 2.1).** `gsap` больше не runtime-dependency; грузится lazy (`await import("gsap")`, кэшируется при первой анимации). Без установленного `gsap` список открывается/закрывается мгновенно (без анимации), но функционально полностью рабочий — анимация деградирует gracefully. Установка плавности: `pnpm add gsap`.
 - При `noQuery: true` — input для query всё равно рендерится (или нет — проверь поведение в текущей версии).
 - **RTL** (`<html dir="rtl">`): поддержан через логические Tailwind-классы (`ps-`/`pe-`/`start-`/`me-`/`ms-[...]` + `rtl:text-right`) — авто-флип отступов, check-иконки и dropdown-оффсета (Issue 9 / F31, resolved 2026-06-13). Виртуализация больших списков — см. ниже.
 - **Виртуализация** dropdown >500 items не реализована (рендерятся все элементы) — defer roadmap (Issue 7), требует runtime-зависимости вопреки no-deps цели.

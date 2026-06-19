@@ -1,7 +1,7 @@
 ---
 title: Issues — Calendar
-summary: 3/10 issues закрыты 2026-05-11 (memory leaks: MutationObserver disconnect + keydown cleanup, componentsStyle fallback, locale propagation) + Wave 2.3 dup initStyle снят. Открытые — packaging (Issue 2/3/4), dual-API (5), unstyled (7, framework-level), floating-ui (9), RTL/print/motion (10).
-updated: 2026-05-11
+summary: 5/10 issues закрыты — memory leaks (MutationObserver disconnect + keydown cleanup), componentsStyle fallback, locale propagation, Wave 2.3 dup initStyle, + Wave 2.1 packaging (Issue 2 v-calendar → optional peer + lazy, Issue 3 vue → peer). Открытые — SSR-packaging cross-cutting (Issue 4), dual-API (5), unstyled (7, framework-level), floating-ui (9), RTL/print/motion (10).
+updated: 2026-06-19
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/calendar/
 related-doc: ../components/calendar.md
@@ -14,7 +14,7 @@ related-doc: ../components/calendar.md
 | Severity | Count (open) | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 5 | A2, A4-5 (packaging), C17 (SSR), I44, L53 (unstyled — framework-level), P (dual-API) |
+| high | 3 | A2, A4-5 (packaging — Issue 4), C17 (SSR), L53 (unstyled — framework-level), P (dual-API) |
 | medium | 3 | F31, G34, H39 |
 | low | 3 | E29.7, B10, N59 |
 
@@ -62,13 +62,32 @@ function initDarkModeObserver() {
 
 > **Future direction (не входит в этот fix):** вынести dark-mode detection в shared composable `useDarkMode()` (singleton — ОДИН observer на app). См. [VueUse useDark](https://vueuse.org/core/useDark/). Текущий fix решает leak, но каждая Calendar-инстанция всё ещё держит свой observer.
 
-## Issue 2: v-calendar dependency может конфликтовать с пользовательской версией
+## ~~Issue 2: v-calendar dependency может конфликтовать с пользовательской версией~~ ✅ resolved 2026-06-19 (Wave 2.1)
 
-> **Status:** deferred to packaging audit — cross-cutting (v-calendar, @vueup/vue-quill, quill, vue, lodash-es, date-fns, gsap всё в `lib/package.json` `dependencies`). Решается одним PR для всей библиотеки, не Calendar-specific.
+> **Status:** ✅ resolved 2026-06-19 (Wave 2.1). `v-calendar` переведён из `dependencies` в **optional `peerDependencies` (`^3.0.0`)** + lazy-загрузка в Calendar. Дубль Vue plugin'а исключён (потребитель ставит свою версию), bundle без Calendar не тянет v-calendar.
 
-- **Категория:** A3 (дубли библиотеки), I44 (peer)
-- **Severity:** high
-- **Где:** [lib/package.json:55](../../lib/package.json#L55)
+**Что сделано (2026-06-19):**
+
+- [lib/package.json](../../lib/package.json) — `v-calendar` убран из `dependencies`, добавлен в `peerDependencies` + `peerDependenciesMeta: { "v-calendar": { optional: true } }`.
+- [Calendar.vue](../../lib/calendar/Calendar.vue) — `DatePicker` грузится lazy: `const DatePicker = ref()` + `DatePicker.value = (await import("v-calendar")).DatePicker` в `onMounted` (ref-based, чтобы template-ref `calendarPicker` указывал на реальный инстанс — Calendar читает его `inputValue`/`dateParts`; `defineAsyncComponent` отдал бы async-wrapper). CSS — lazy `import("v-calendar/style.css")` там же (client-only → SSR-safe). Шаблон — `<component :is="DatePicker" v-if="DatePicker …">`. Без peer редактор просто не рендерится.
+- Контракт — [lib/package.test.ts](../../lib/package.test.ts) (`v-calendar` — optional peer, не в `dependencies`); lazy-загрузка — source-scan в [Calendar.test.ts](../../lib/calendar/Calendar.test.ts).
+
+**Acceptance criteria:**
+
+- [x] `pnpm install fishtvue` без явной установки v-calendar — Calendar-импорт пакета не падает (optional peer; чанк грузится только при использовании Calendar).
+- [x] При установке v-calendar потребителем — нет дубля (одна копия из node_modules приложения).
+
+### Историческая запись (что было)
+
+```json
+"dependencies": { ..., "v-calendar": "^3.1.2" }
+```
+
+`v-calendar` находился в `dependencies` (не peer) + импортировался eager (`import { DatePicker } from "v-calendar"`). Если потребитель использовал свою версию v-calendar — npm мог установить две копии (два Vue plugin'а → конфликт `<DatePicker>`). Bundle inflation — каждая копия ~50kb.
+
+- **Категория:** ~~A3 (дубли библиотеки), I44 (peer)~~ — закрыто
+- **Severity:** ~~high~~
+- **Где (was):** [lib/package.json:55](../../lib/package.json#L55)
 
 ### Что найдено
 
@@ -109,31 +128,30 @@ function initDarkModeObserver() {
 - [ ] `pnpm install fishtvue` без явной установки v-calendar — Calendar TypeScript-import не падает (optional peer).
 - [ ] При установке v-calendar 4.x потребителем + fishtvue — нет дубля.
 
-## Issue 3: Vue в dependencies — duplicate Vue в потребителе
+## ~~Issue 3: Vue в dependencies — duplicate Vue в потребителе~~ ✅ resolved 2026-06-19 (Wave 2.1)
 
-> **Status:** deferred to packaging audit — cross-cutting (same PR как Issue 2).
+> **Status:** ✅ resolved 2026-06-19 (Wave 2.1). `vue` перенесён из `dependencies` в **required `peerDependencies` (`^3.5.0`)**. Vue приложения — единственный runtime; дубль исключён.
 
-- **Категория:** A3 (дубль Vue)
-- **Severity:** high
-- **Где:** [lib/package.json:56](../../lib/package.json#L56)
+**Что сделано (2026-06-19):**
 
-### Что найдено
+- [lib/package.json](../../lib/package.json) — `vue` убран из `dependencies`, добавлен в `peerDependencies: { "vue": "^3.5.0" }` (НЕ optional — обязателен). В rollup vue уже был external — build не изменился, это чисто packaging.
+- Контракт — [lib/package.test.ts](../../lib/package.test.ts): `vue` не в `dependencies`, в `peerDependencies` (`^3.5`), не optional.
+
+### Что найдено (was)
 
 ```json
 "dependencies": { ..., "vue": "^3.5.11" }
 ```
 
-Vue должен быть `peerDependency`, иначе npm может установить вторую копию Vue для fishtvue, что вызовет два разных Vue runtime → reactive контексты не работают, plugins дублируются.
+Vue должен быть `peerDependency`, иначе npm мог установить вторую копию Vue для fishtvue → два разных Vue runtime → reactive-контексты не работают, plugins дублируются.
 
-### Что нужно сделать
-
-1. Перенести vue из `dependencies` в `peerDependencies` с диапазоном `"^3.5.0"`.
-2. В rollup config vue уже external (line 50), build корректен — это только packaging.
-3. Cross-cutting — same fix актуален для всех runtime-deps.
+- **Категория:** ~~A3 (дубль Vue)~~ — закрыто
+- **Severity:** ~~high~~
+- **Где (was):** [lib/package.json:56](../../lib/package.json#L56)
 
 ### Acceptance criteria
 
-- [ ] `npm ls vue` в Nuxt-проекте + fishtvue — одна копия Vue.
+- [x] `npm ls vue` в Nuxt-проекте + fishtvue — одна копия Vue (vue резолвится из приложения).
 
 ## Issue 4: SSR styles + cross-cutting (sideEffects, exports map)
 

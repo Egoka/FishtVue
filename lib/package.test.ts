@@ -21,6 +21,8 @@ const pkg = JSON.parse(readFileSync(resolve(process.cwd(), "lib/package.json"), 
   files?: string[]
   engines?: { node?: string }
   dependencies?: Record<string, string>
+  peerDependencies?: Record<string, string>
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>
 }
 
 describe("lib/package.json publish contract", () => {
@@ -62,6 +64,54 @@ describe("lib/package.json publish contract", () => {
     const deps = pkg.dependencies ?? {}
     expect(deps["@floating-ui/vue"]).toBeUndefined()
     expect(deps["@vueuse/core"]).toBeUndefined()
+  })
+})
+
+/**
+ * Контракт зависимостей (Wave 2.1, категории A3 / I44 / K49). Vue-библиотека НЕ должна нести
+ * `vue` в `dependencies` — иначе npm может поставить вторую копию Vue у потребителя (ломается
+ * provide/inject, reactivity-контексты, plugin-дубли). Тяжёлые single-purpose deps
+ * (v-calendar / @vueup/vue-quill / quill / gsap) тянулись ВСЕМИ потребителями даже без
+ * Calendar/TextEditor/Select-анимации → переведены в optional peerDependencies (Calendar/
+ * TextEditor lazy-грузят их, Select деградирует без gsap). См. calendar.md Issue 2/3,
+ * texteditor.md Issue 3, nuxt-module.md Issue 4.
+ */
+describe("lib/package.json dependency contract (Wave 2.1)", () => {
+  const deps = pkg.dependencies ?? {}
+  const peers = pkg.peerDependencies ?? {}
+  const peersMeta = pkg.peerDependenciesMeta ?? {}
+
+  it("declares vue as a REQUIRED peer dependency, not a runtime dependency (A3)", () => {
+    expect(deps.vue).toBeUndefined()
+    expect(peers.vue).toBeDefined()
+    expect(peers.vue).toMatch(/3\.5/)
+    // vue — required peer: НЕ помечается optional.
+    expect(peersMeta.vue?.optional).not.toBe(true)
+  })
+
+  it("moves heavy single-purpose deps to OPTIONAL peers (I44 — bundle bloat)", () => {
+    for (const dep of ["v-calendar", "@vueup/vue-quill", "quill", "gsap"]) {
+      expect(deps[dep], `${dep} must NOT be a runtime dependency`).toBeUndefined()
+      expect(peers[dep], `${dep} must be a peer dependency`).toBeDefined()
+      expect(peersMeta[dep]?.optional, `${dep} must be optional`).toBe(true)
+    }
+  })
+
+  it("widens Nuxt peer ranges to support Nuxt 3 + 4 (K49)", () => {
+    // Раньше @nuxt/kit/@nuxt/schema были прибиты к ^4.1.2, ломая Nuxt 3 (хотя nuxt: >=3.0.0).
+    expect(peers["@nuxt/kit"]).toBe(">=3.0.0")
+    expect(peers["@nuxt/schema"]).toBe(">=3.0.0")
+    for (const dep of ["@nuxt/kit", "@nuxt/schema", "nuxt"]) {
+      expect(peersMeta[dep]?.optional, `${dep} must stay optional`).toBe(true)
+    }
+  })
+
+  it("keeps core utility deps as runtime dependencies (cn()/dateHandler/Select/Table)", () => {
+    // clsx/tailwind-merge (→ cn()), date-fns (→ dateHandler), lodash-es (Select/Table) —
+    // always-imported core; перевод в optional ухудшил бы DX без выигрыша по bundle.
+    for (const dep of ["clsx", "tailwind-merge", "date-fns", "lodash-es"]) {
+      expect(deps[dep], `${dep} must remain a runtime dependency`).toBeDefined()
+    }
   })
 })
 

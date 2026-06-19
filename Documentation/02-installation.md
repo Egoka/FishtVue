@@ -1,7 +1,7 @@
 ---
 title: Installation
-summary: Установка fishtvue в Vite (Vue 3) и Nuxt 3/4 проектах. §2.5 — publish contract (ESM-only, sideEffects, files-whitelist, sourcemaps).
-updated: 2026-06-11
+summary: Установка fishtvue в Vite (Vue 3) и Nuxt 3/4 проектах. §2.5 — publish contract (ESM-only, sideEffects, files-whitelist, sourcemaps). Wave 2.1 — vue → required peer, тяжёлые deps (v-calendar/quill/gsap) → optional peer.
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -32,25 +32,39 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 - `fishtvue/module` — Nuxt module (`defineNuxtModule`).
 - `fishtvue/plugins/nuxt` — Nuxt plugin (`nuxtInitPlugin`).
 
-**Внешние зависимости** ([lib/package.json:57–70](../lib/package.json#L57-L70)):
+**Runtime dependencies** ([lib/package.json `dependencies`](../lib/package.json#L74)) — устанавливаются автоматически вместе с `fishtvue`:
 
-| Пакет                        | Версия              | Зачем                                                                          |
-| ---------------------------- | ------------------- | ------------------------------------------------------------------------------ |
-| `@heroicons/vue`             | `^2.1.5`            | Icons компонент.                                                               |
-| `@iconify/vue`               | `^4.1.2`            | Icons компонент (Iconify backend).                                             |
-| `@vueup/vue-quill` + `quill` | `^1.2.0` / `^2.0.2` | TextEditor.                                                                    |
-| `v-calendar`                 | `^3.1.2`            | Calendar.                                                                      |
-| `date-fns`                   | `^4.1.0`            | Calendar и `dateHandler`.                                                      |
-| `gsap`                       | `^3.12.5`           | Анимации некоторых компонентов.                                                |
-| `clsx` + `tailwind-merge`    | `^2.1.x` / `^3.4.0` | `tailwindHandler.cn`.                                                          |
-| `lodash-es`                  | `^4.18.1`           | Локальные утилиты.                                                            |
-| `csstype`                    | `^3.1.3`            | Типы CSS-проперти.                                                            |
-| `vue`                        | `^3.5.11`           | Runtime.                                                                       |
+| Пакет                     | Версия              | Зачем                                |
+| ------------------------- | ------------------- | ------------------------------------ |
+| `@heroicons/vue`          | `^2.1.5`            | Icons компонент.                     |
+| `@iconify/vue`            | `^4.1.2`            | Icons компонент (Iconify backend).   |
+| `date-fns`                | `^4.1.0`            | Calendar и `dateHandler`.            |
+| `clsx` + `tailwind-merge` | `^2.1.x` / `^3.4.0` | `tailwindHandler.cn`.                |
+| `lodash-es`               | `^4.18.1`           | Локальные утилиты (Select / Table).  |
+| `csstype`                 | `^3.1.3`            | Типы CSS-проперти.                   |
+
+**Peer dependencies** ([lib/package.json `peerDependencies`](../lib/package.json#L41)) — устанавливает приложение:
+
+| Пакет                        | Версия      | Optional | Нужен для                                          |
+| ---------------------------- | ----------- | -------- | -------------------------------------------------- |
+| `vue`                        | `^3.5.0`    | **нет**  | Runtime (обязателен).                              |
+| `v-calendar`                 | `^3.0.0`    | да       | `Calendar`.                                        |
+| `@vueup/vue-quill` + `quill` | `^1.2.0` / `^2.0.0` | да | `TextEditor`.                                      |
+| `gsap`                       | `^3.12.0`   | да       | Анимация раскрытия списка `Select` (опционально).  |
+| `@nuxt/kit` + `@nuxt/schema` | `>=3.0.0`   | да       | Nuxt module (Nuxt 3 и 4).                          |
+| `nuxt`                       | `>=3.0.0`   | да       | Nuxt module.                                       |
+
+> **Wave 2.1 — vue как peer, тяжёлые deps как optional peer.** `vue` переведён из `dependencies` в **required `peerDependencies` (`^3.5.0`)**: иначе npm мог поставить вторую копию Vue → ломались `provide/inject`, reactivity-контексты и plugin-дубли. Тяжёлые single-purpose deps (`v-calendar`, `@vueup/vue-quill`, `quill`, `gsap`) переведены в **optional `peerDependencies`** — они больше не тянутся ко ВСЕМ потребителям, а грузятся lazy теми компонентами, что их используют (`Calendar`/`TextEditor` — `defineAsyncComponent`/dynamic `import()` + CSS в `onMounted`; `Select` деградирует на мгновенную анимацию без `gsap`). **Поэтому при использовании `Calendar`/`TextEditor` установи соответствующий peer вручную:**
+>
+> ```bash
+> pnpm add v-calendar                  # для Calendar
+> pnpm add @vueup/vue-quill quill      # для TextEditor
+> pnpm add gsap                        # опционально — плавная анимация списка Select
+> ```
+>
+> Без установленного optional-peer соответствующий компонент не падает «жёстко»: при точечном импорте `fishtvue/button` чанк `calendar.mjs`/`texteditor.mjs` вообще не грузится. Контракт зафиксирован тестом [lib/package.test.ts](../lib/package.test.ts) (`vue` — required peer; `v-calendar`/`@vueup/vue-quill`/`quill`/`gsap` — optional peers; не в `dependencies`).
 
 > **FixWindow — dependency-free.** Позиционирование (placement/offset/flip/shift/autoUpdate) и close-on-outside реализованы собственными композаблами `lib/fixwindow/useFloating.ts` + `lib/fixwindow/useClickOutside.ts` — **без рантайм-зависимостей**. Раньше FixWindow тянул `@floating-ui/vue` + `@vueuse/core` bare-`import`'ом (оба обязаны были быть в `dependencies`); миграция на собственный движок (2026-06-14) убрала обе зависимости из пакета. Контракт зафиксирован тестом [lib/package.test.ts](../lib/package.test.ts) (deps не содержат `@floating-ui/vue`/`@vueuse/core`).
-
-**Peer dependencies (optional)** ([lib/package.json:41–45](../lib/package.json#L41-L45)):
-`@nuxt/kit ^4.1.2`, `@nuxt/schema ^4.1.2`, `nuxt >=3.0.0`. В Vite-проекте предупреждения о peer-deps игнорируются.
 
 ### 2.5. Publish contract — что попадает в npm-пакет
 
@@ -291,8 +305,8 @@ export default defineNuxtConfig({
 
 ## 14. Compatibility & Stability
 
-- **Vue:** `^3.5.11` (зафиксирована как dependency, но фактически peer-зависимость от Vue приложения).
-- **Nuxt:** `>=3.0.0` (включая Nuxt 4).
+- **Vue:** `^3.5.0` — **required `peerDependency`** (Wave 2.1; раньше была в `dependencies`). Приложение поставляет свою копию Vue; дубль runtime'а исключён.
+- **Nuxt:** `>=3.0.0` (включая Nuxt 4). `@nuxt/kit`/`@nuxt/schema` — optional peer `>=3.0.0` (раньше `^4.1.2` ломал Nuxt 3).
 - **Node:** `>=18` (декларирован в `engines`, [lib/package.json](../lib/package.json)). Пакет **ESM-only** (`.mjs`) — для чистых CJS-проектов нужен bundler/ESM-loader. Публикуемый контракт (sideEffects, files-whitelist, sourcemaps) — см. §2.5.
 - **Браузеры:** evergreen (Chrome, Firefox, Safari, Edge — последние 2 версии). IE не поддерживается.
 - **Stability flag:** `stable`.
@@ -331,7 +345,9 @@ describe("Button after install", () => {
 | Auto-import не работает в Nuxt                             | `autoImport: false` или конфликт `prefix` с другим модулем.                                                           | Проверь `nuxt.config.ts#fishtvue.autoImport`.                                           |
 | Компонент рендерится без стилей                            | Не подключён `app.use(FishtVue, {})` (Vite) или `disableGlobalStyles: true` (Nuxt).                                   | Подключи плагин или сними флаг.                                                         |
 | Tailwind override не побеждает стили компонента            | Стили в `@layer fishtvue` имеют тот же приоритет, что и другие layers, но проигрывают стилям вне layers.              | См. §10.4 / [01-getting-started §10.4](./01-getting-started.md#104-css-layer-override). |
-| Конфликт версии `vue`                                      | В пакете `vue ^3.5.11` зафиксирован как dependency. При другой major-версии в приложении возможен дубликат runtime'a. | Согласуй версию Vue (`^3.5`).                                                           |
+| Конфликт версии `vue`                                      | `vue` теперь **required peer (`^3.5.0`)** — копию ставит приложение. Дубль runtime'а исключён, но при Vue < 3.5 — peer-warning.   | Используй Vue `^3.5`.                                                                   |
+| `Cannot find module 'v-calendar'` / `'@vueup/vue-quill'` при использовании Calendar/TextEditor | Они теперь **optional peers** — не ставятся автоматически. | `pnpm add v-calendar` (Calendar) / `pnpm add @vueup/vue-quill quill` (TextEditor). |
+| Список `Select` открывается без анимации                   | `gsap` — optional peer, не установлен. Анимация = progressive enhancement; функционально список работает.            | `pnpm add gsap` для плавного раскрытия.                                                 |
 | `@vueup/vue-quill` тянет CSS, который ломает styles в Vite | TextEditor импортирует CSS quill, который не layered.                                                                 | Импортируй TextEditor только там, где он нужен; либо оборачивай в свой layer.           |
 | Build падает с `gsap` warning                              | GSAP — ESM-only в новых версиях.                                                                                      | Убедись, что bundler поддерживает ESM (Vite ≥ 4).                                       |
 

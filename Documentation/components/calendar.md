@@ -27,11 +27,11 @@ lib/calendar/
 ```
 
 Зависимости:
-- [v-calendar](../../lib/package.json) `^3.1.2` — core engine.
+- [v-calendar](../../lib/package.json) `^3.0.0` — core engine. **Wave 2.1: optional `peerDependency` + lazy.** v-calendar больше не runtime-dependency: его ставит приложение (`pnpm add v-calendar`), а `DatePicker` грузится lazy в `onMounted` (`DatePicker.value = (await import("v-calendar")).DatePicker`; ref-based, не `defineAsyncComponent` — template-ref `calendarPicker` должен указывать на реальный инстанс для чтения `inputValue`/`dateParts`). Без установленного peer Calendar не падает «жёстко» — picker просто не рендерится (`<component :is="DatePicker" v-if="DatePicker …">`).
 - [InputLayout](./input-layout.md), [FixWindow](./fix-window.md).
 - [Component class](../architecture/component-class.md).
-- `date-fns` для форматирования через [dateHandler](../utilities/dateHandler.md).
-- Css импортируется явно: `v-calendar/style.css` ([rollup.config.js:65](../../lib/rollup.config.js#L65)).
+- `date-fns` для форматирования через [dateHandler](../utilities/dateHandler.md) (остаётся runtime-dependency).
+- CSS грузится lazy в `onMounted` (`import("v-calendar/style.css")`, client-only → SSR-safe), а не top-level side-effect-импортом ([rollup.config.js:65](../../lib/rollup.config.js#L65) — external).
 
 Лицензия v-calendar — MIT (не копилефт).
 

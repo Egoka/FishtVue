@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
   import { IQuillEditor, TextEditorEmits, TextEditorProps } from "./TextEditor"
-  import "@vueup/vue-quill/dist/vue-quill.snow.css"
-  import "@vueup/vue-quill/dist/vue-quill.bubble.css"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Dialog from "fishtvue/dialog/Dialog.vue"
   import Button from "fishtvue/button/Button.vue"
@@ -147,8 +145,20 @@
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(async () => {
-    TextEditor.initStyle()
-    QuillEditor.value = (await import("@vueup/vue-quill")).QuillEditor
+    // ---CANON (Wave 2.3) — без ручного TextEditor.initStyle(): базовый Component.__hooks() уже
+    // регистрирует onServerPrefetch + vueOnMounted → initStyle() (см. lib/component/index.ts:79–84).
+    // ---Wave 2.1 — Quill (@vueup/vue-quill + quill) = optional peerDependencies: и компонент, и его
+    // CSS грузятся lazy на клиенте при mount, не на import-time (bundle без TextEditor их не тянет,
+    // SSR-safe). При отсутствии peer редактор просто не рендерится (template v-if="QuillEditor").
+    try {
+      QuillEditor.value = (await import("@vueup/vue-quill")).QuillEditor
+      await Promise.all([
+        import("@vueup/vue-quill/dist/vue-quill.snow.css"),
+        import("@vueup/vue-quill/dist/vue-quill.bubble.css")
+      ])
+    } catch {
+      /* @vueup/vue-quill не установлен (optional peer) — редактор остаётся нерендеренным */
+    }
   })
   // ---WATCHERS----------------------------
   watch(theme, (theme) => {

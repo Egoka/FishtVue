@@ -27,9 +27,8 @@ lib/texteditor/
 ```
 
 Зависимости:
-- [@vueup/vue-quill](../../lib/package.json) `^1.2.0` — Vue 3 wrapper для Quill.
-- [quill](../../lib/package.json) `^2.0.2` — core editor.
-- CSS-импорты темы Snow/Bubble: `@vueup/vue-quill/dist/vue-quill.snow.css`, `@vueup/vue-quill/dist/vue-quill.bubble.css` ([rollup.config.js:59–60](../../lib/rollup.config.js#L59-L60)).
+- [@vueup/vue-quill](../../lib/package.json) `^1.2.0` + [quill](../../lib/package.json) `^2.0.0` — Vue 3 wrapper + core editor. **Wave 2.1: optional `peerDependencies` + lazy.** Больше не runtime-deps (~200kb quill не тянулся ко всем потребителям): ставит приложение (`pnpm add @vueup/vue-quill quill`). `QuillEditor` грузится lazy в `onMounted` (`(await import("@vueup/vue-quill")).QuillEditor`); без peer редактор не рендерится (`template v-if="QuillEditor"`).
+- CSS темы Snow/Bubble грузятся lazy в том же `onMounted` (`import("@vueup/vue-quill/dist/vue-quill.snow.css")` + `.bubble.css`), а не top-level side-effect-импортом ([rollup.config.js:59–60](../../lib/rollup.config.js#L59-L60) — external).
 - [Dialog](./dialog.md), [InputLayout](./input-layout.md).
 
 Лицензия quill — BSD-3, vue-quill — MIT (не копилефт).

@@ -6,7 +6,6 @@
   import type { FixWindowExpose } from "fishtvue/fixwindow"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import * as LD from "lodash-es"
-  import gsap from "gsap"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Input from "fishtvue/input/Input.vue"
   import Badge from "fishtvue/badge/Badge.vue"
@@ -611,13 +610,38 @@
     emit("update:modelValue", value.value, visibleValue.value)
   }
 
+  // ---LAZY GSAP (Wave 2.1)----------------------
+  // gsap — optional peerDependency: грузим динамически при первой анимации и кэшируем. Без gsap
+  // дропдаун открывается/закрывается мгновенно (анимация = progressive enhancement); bundle без
+  // Select не тянет ~50KB gsap.
+  let gsapModule: (typeof import("gsap"))["default"] | undefined
+  let gsapTried = false
+  async function loadGsap() {
+    if (gsapTried) return gsapModule
+    gsapTried = true
+    try {
+      gsapModule = (await import("gsap")).default
+    } catch {
+      gsapModule = undefined
+    }
+    return gsapModule
+  }
+
   // ---------------------------------------
   function onBeforeEnter(el: any) {
     el.style.opacity = 0
     el.style.height = 0
   }
 
-  function onEnter(el: any, done: any) {
+  async function onEnter(el: any, done: any) {
+    const gsap = await loadGsap()
+    if (!gsap) {
+      // нет gsap → сразу финальные стили (иначе item остаётся opacity:0/height:0 от onBeforeEnter)
+      el.style.opacity = 1
+      el.style.height = "38px"
+      done()
+      return
+    }
     gsap.to(el, {
       opacity: 1,
       height: "38px",
@@ -635,7 +659,14 @@
     return 0
   })
 
-  function onLeave(el: any, done: any) {
+  async function onLeave(el: any, done: any) {
+    const gsap = await loadGsap()
+    if (!gsap) {
+      el.style.opacity = 0
+      el.style.height = 0
+      done()
+      return
+    }
     gsap.to(el, { opacity: 0, height: 0, delay: (Number(el.dataset.index) || 0) * delay.value, onComplete: done })
   }
 </script>
