@@ -12,6 +12,7 @@ export const singleStyles: Record<string, string> = {
   "w-screen": "width: 100vw;",
   "h-screen": "height: 100vh;",
   "max-h-screen": "max-height: 100vh;",
+  "min-h-screen": "min-height: 100vh;",
   italic: "font-style: italic;",
   "not-italic": "font-style: normal;",
   "bg-none": "background-image: none;",
@@ -155,6 +156,13 @@ export const positionsBackground = {
   "left-top": "left-top",
   "right-bottom": "right-bottom",
   "right-top": "right-top",
+  // v4.1-имена (uno-engine.md Issue 3): двухсловные позиции word-order top/bottom-first.
+  // Двухсловные ключи обязаны идти в map ДО одиночных (top|left|…) — alternation в reg
+  // собирается из Object.keys, первый матч выигрывает.
+  "top-left": "top-left",
+  "top-right": "top-right",
+  "bottom-left": "bottom-left",
+  "bottom-right": "bottom-right",
   bottom: "bottom",
   center: "center",
   left: "left",
@@ -209,6 +217,8 @@ export const wordBreak: Record<string, string> = {
 }
 export const borderSize: Record<string, string> = {
   none: "0px",
+  // v4-имена (uno-engine.md Issue 3): rounded-xs/rounded-4xl; v3-шкала sm…3xl не тронута.
+  xs: "0.125rem",
   sm: "0.125rem",
   undefined: "0.25rem",
   md: "0.375rem",
@@ -216,6 +226,7 @@ export const borderSize: Record<string, string> = {
   xl: "0.75rem",
   "2xl": "1rem",
   "3xl": "1.5rem",
+  "4xl": "2rem",
   full: "9999px"
 }
 export const boxShadow: Record<string, string> = {
@@ -249,6 +260,9 @@ export const blend: Record<string, string> = {
 }
 export const blur: Record<string, string | number> = {
   none: "",
+  // v4-имена (uno-engine.md Issue 3): blur-2xs/blur-xs; v3-шкала sm…3xl не тронута.
+  "2xs": 2,
+  xs: 4,
   sm: 4,
   md: 12,
   lg: 16,

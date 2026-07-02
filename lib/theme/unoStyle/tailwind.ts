@@ -38,6 +38,55 @@ const mediaDynamic = Object.keys(mediaDynamicList).join("|")
 const selectors = Object.keys(selectorsList).join("|")
 const selectorsDynamic = Object.keys(selectorsDynamicList).join("|")
 
+// Единый источник паттерна variant-токена: им же парсит getModifier (global-скан),
+// им же (с якорями ^…$) валидируется каждый префикс — parser и validator не расходятся.
+const modifierTokenSource = `(?<![\\w-])(((?<state>group|peer)-)?(((${
+  pseudoClassesStringReg
+})|(\\[(?<abstract>.*?)]))(\\/(?<stateName>\\w+))?|((?<has>has)-(\\[(?<hasValue>.*?)]))):|(?<media>${
+  media
+}):|(?<mediaDynamic>${mediaDynamic})-(\\[(?<mediaAbstract>.*?)]):|(?<selectors>${
+  selectors
+}):|(?<selectorsDynamic>${selectorsDynamic})-(\\[(?<selectorsAbstract>.*?)]):|(?<child>\\*):)`
+const modifierTokenReg = new RegExp(modifierTokenSource, "g")
+const variantValidationReg = new RegExp(`^(?:${modifierTokenSource})$`)
+
+// Issue 3 (uno-engine.md): семейства, чьи классы матчились ЧУЖИМИ правилами
+// (mask-t-from-* → gradient `from`, perspective-origin-* → `origin`) — fail-closed до реализации.
+const unsupportedFamilyReg = /^-?(mask|perspective)-/
+
+// Issue 1 (uno-engine.md): значение не должно попадать в CSS, если оно пустое, содержит литерал
+// "undefined" (в т.ч. вклеенный без границ слова: `ms-[undefinedpx]` → `margin-inline-start: undefinedpx`),
+// пустой вызов функции `()` или пустую декларацию СТАНДАРТНОГО свойства (`prop: ;`).
+// Пустой reset custom property (`--fv-blur: ;` у blur-none) — валидное значение-пробел, пропускается.
+const invalidValueReg = /undefined|\(\s*\)|(?:^|\n)\s*(?!--)[\w-]+:\s*;/
+
+const warnedClasses = new Set<string>()
+function warnUnsupported(classStyle: string, reason: string): void {
+  if (process.env.NODE_ENV === "production") return
+  if (warnedClasses.has(classStyle)) return
+  warnedClasses.add(classStyle)
+  console.warn(`[FishtVue tailwind] class "${classStyle}" was dropped: ${reason}`)
+}
+
+// Разбор класса на variant-токены по `:` на глубине 0 — двоеточия внутри `[...]`/`(...)`
+// (arbitrary values/variants: `[&:hover]:`, `supports-[display:grid]:`) не являются разделителями.
+function splitTopLevelSegments(classStyle: string): string[] {
+  const segments: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < classStyle.length; i++) {
+    const char = classStyle[i]
+    if (char === "[" || char === "(") depth++
+    else if (char === "]" || char === ")") depth--
+    else if (char === ":" && depth === 0) {
+      segments.push(classStyle.slice(start, i))
+      start = i + 1
+    }
+  }
+  segments.push(classStyle.slice(start))
+  return segments
+}
+
 type ModifierClass = {
   state: string
   pseudoClasses: string
@@ -59,7 +108,7 @@ export function tailwind(
     darkSelector: ""
   }
 ): string | undefined {
-  if (typeof (classStyle as any) !== "string") return
+  if (typeof (classStyle as any) !== "string" || classStyle === "") return
   const className: string | undefined = classStyle
   let value: string | undefined = undefined
   const modifier: ModifierClass = {
@@ -71,8 +120,24 @@ export function tailwind(
     specialSelector: "",
     abstract: ""
   }
+  let baseUtility = classStyle
   if (/:/.test(classStyle)) {
+    // Issue 1 (режим 3): нераспознанный вариант раньше давал правило БЕЗ условия
+    // (not-hover:opacity-75 применялся всегда) — теперь fail-closed.
+    const segments = splitTopLevelSegments(classStyle)
+    baseUtility = segments[segments.length - 1]
+    for (const variantToken of segments.slice(0, -1)) {
+      if (!variantValidationReg.test(`${variantToken}:`)) {
+        warnUnsupported(classStyle, `unsupported variant "${variantToken}:"`)
+        return
+      }
+    }
     const mod = getModifier(classStyle)
+    // Arbitrary at-rule variant ([@media(...)]:) движок не умеет — раньше давал мусорный селектор.
+    if (mod.abstract?.startsWith("@")) {
+      warnUnsupported(classStyle, `unsupported at-rule variant "[${mod.abstract}]:"`)
+      return
+    }
     modifier.pseudoClasses =
       (mod.userInteractionStates ? userInteractionStatesList[mod.userInteractionStates] : "") +
       (mod.formElementStates ? formElementStatesList[mod.formElementStates] : "") +
@@ -103,6 +168,11 @@ export function tailwind(
       modifier.pseudoClasses = ""
     }
   }
+  // Issue 3: «чужое» семейство не отдаётся соседним правилам — fail-closed до реализации.
+  if (unsupportedFamilyReg.test(baseUtility)) {
+    warnUnsupported(classStyle, `utility family "${baseUtility.replace(/^-?([a-z]+)-.*/, "$1-*")}" is not supported`)
+    return
+  }
   if (RegSingleStyles.test(classStyle)) {
     const styleName = classStyle.match(RegSingleStyles)?.groups?.style
     if (!(styleName && singleStylesNames.has(styleName))) return
@@ -114,8 +184,16 @@ export function tailwind(
     } {\n${modifier.content}  ${value}\n}${"\n}".repeat(modifier.media.filter((i) => i.endsWith("{\n")).length)}`
   } else {
     const groups = classStyle.match(RegStyles)?.groups
-    if (!(groups?.style && StylesNames.has(groups?.style))) return
+    if (!(groups?.style && StylesNames.has(groups?.style))) {
+      warnUnsupported(classStyle, "no matching rule")
+      return
+    }
     value = stylesRules[groups?.style].getValue(groups.className)
+    // Issue 1 (режим 2): пустое значение / литерал "undefined" не интерполируется в CSS.
+    if (!value || invalidValueReg.test(value)) {
+      warnUnsupported(classStyle, `rule "${groups.style}" produced no valid value`)
+      return
+    }
     modifier.specialSelector = specialSelectors[groups?.style] ?? ""
     return `${modifier.media.join("")}${options.selector}${
       modifier.state
@@ -138,17 +216,7 @@ function setCustomModifier(className: string, abstract: string) {
 }
 
 function getModifier(classStyle: string): Modifier {
-  const ref = new RegExp(
-    `(?<![\\w-])(((?<state>group|peer)-)?(((${
-      pseudoClassesStringReg
-    })|(\\[(?<abstract>.*?)]))(\\/(?<stateName>\\w+))?|((?<has>has)-(\\[(?<hasValue>.*?)]))):|(?<media>${
-      media
-    }):|(?<mediaDynamic>${mediaDynamic})-(\\[(?<mediaAbstract>.*?)]):|(?<selectors>${
-      selectors
-    }):|(?<selectorsDynamic>${selectorsDynamic})-(\\[(?<selectorsAbstract>.*?)]):|(?<child>\\*):)`,
-    "g"
-  )
-  return [...classStyle.matchAll(ref)].reduce((acc: Record<string, string | string[]>, currentMatch) => {
+  return [...classStyle.matchAll(modifierTokenReg)].reduce((acc: Record<string, string | string[]>, currentMatch) => {
     Object.entries(currentMatch.groups ?? {}).forEach(([key, value]) => {
       if (value !== undefined) {
         if (["media"].includes(key)) {
@@ -163,6 +231,5 @@ function getModifier(classStyle: string): Modifier {
   }, {}) as Modifier
 }
 
-// TODO Space Between
-// TODO Font Smoothing
-// TODO Animation
+// Пробелы покрытия (Space Between, Font Smoothing, mask-*, 3D transforms и др.) —
+// полный список в Documentation/issues/uno-engine.md (Issues 2, 4).
