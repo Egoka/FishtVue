@@ -3,10 +3,14 @@ import { PseudoClasses } from "fishtvue/theme/unoStyle/UnoTypes"
 export const baseFilter = `filter: var(--fv-blur) var(--fv-brightness) var(--fv-contrast) var(--fv-grayscale) var(--fv-hue-rotate) var(--fv-invert) var(--fv-saturate) var(--fv-sepia) var(--fv-drop-shadow);`
 export const baseBackdropFilter = `-webkit-backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);\n  backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);`
 export const baseTransition = `transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n  transition-duration: 150ms;`
-export const baseTransform = `transform: translate(var(--fv-translate-x), var(--fv-translate-y)) rotate(var(--fv-rotate)) skewX(var(--fv-skew-x)) skewY(var(--fv-skew-y)) scaleX(var(--fv-scale-x)) scaleY(var(--fv-scale-y));`
+// Issue 6 (uno-engine.md): transforms — modern CSS properties (v4-подход). translate:/rotate:/scale: —
+// независимые свойства; в transform:-цепочке остаётся только skew (у него нет modern property).
 export const baseTranslate = `translate: var(--fv-translate-x) var(--fv-translate-y);`
+export const baseScale = `scale: var(--fv-scale-x) var(--fv-scale-y);`
+export const baseSkew = `transform: skewX(var(--fv-skew-x)) skewY(var(--fv-skew-y));`
 export const specialSelectors: Record<string, string> = {
-  divide: " > :not([hidden]) ~ :not([hidden])"
+  divide: " > :not([hidden]) ~ :not([hidden])",
+  space: " > :not([hidden]) ~ :not([hidden])"
 }
 export const singleStyles: Record<string, string> = {
   "w-screen": "width: 100vw;",
@@ -15,6 +19,9 @@ export const singleStyles: Record<string, string> = {
   "min-h-screen": "min-height: 100vh;",
   italic: "font-style: italic;",
   "not-italic": "font-style: normal;",
+  // Issue 4 (uno-engine.md): Font Smoothing.
+  antialiased: "-webkit-font-smoothing: antialiased;\n  -moz-osx-font-smoothing: grayscale;",
+  "subpixel-antialiased": "-webkit-font-smoothing: auto;\n  -moz-osx-font-smoothing: auto;",
   "bg-none": "background-image: none;",
   "normal-nums": "font-variant-numeric: normal;",
   ordinal: "font-variant-numeric: ordinal;",
@@ -39,6 +46,9 @@ export const singleStyles: Record<string, string> = {
   rounded: "border-radius: 0.25rem;",
   border: "border-width: 1px;",
   "outline-none": "outline: 2px solid transparent;\n  outline-offset: 2px;",
+  // Issue 5 (uno-engine.md): v4-имя «невидимого outline» (в v4 outline-none = outline-style: none,
+  // здесь общее имя сохраняет v3-семантику — см. таблицу диалекта в architecture/theme.md).
+  "outline-hidden": "outline: 2px solid transparent;\n  outline-offset: 2px;",
   outline: "outline-style: solid;",
   "ring-inset": "--fv-ring-inset: inset;",
   ring: "box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);",
@@ -54,7 +64,7 @@ export const singleStyles: Record<string, string> = {
   "backdrop-sepia": `--fv-backdrop-sepia: sepia(100%);\n  ${baseBackdropFilter}`,
   "transition-none": `transition-property: none;`,
   "transition-shadow": `transition-property: box-shadow;\n  ${baseTransition}`,
-  transition: `transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;\n  ${baseTransition}`,
+  transition: `transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, backdrop-filter;\n  ${baseTransition}`,
   resize: "resize: both;",
   block: "display: block;",
   inline: "display: inline;",
@@ -230,6 +240,9 @@ export const borderSize: Record<string, string> = {
   full: "9999px"
 }
 export const boxShadow: Record<string, string> = {
+  // Issue 5 (uno-engine.md): v4-имена с v4-значениями; общие имена (sm, md, …) сохраняют v3-семантику.
+  "2xs": "box-shadow: 0 1px rgb(0 0 0 / 0.05);",
+  xs: "box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);",
   sm: "box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);",
   md: "box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);",
   lg: "box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);",
@@ -271,6 +284,8 @@ export const blur: Record<string, string | number> = {
   "3xl": 64
 }
 export const dropShadow: Record<string, string> = {
+  // Issue 5 (uno-engine.md): v4-имя; общие имена сохраняют v3-семантику.
+  xs: "--fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));",
   sm: "--fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));",
   md: "--fv-drop-shadow: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));",
   lg: "--fv-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));",
@@ -283,7 +298,8 @@ export const transitionProperty: Record<string, string> = {
   colors: `color, background-color, border-color, text-decoration-color, fill, stroke`,
   opacity: `opacity`,
   shadow: `box-shadow`,
-  transform: `transform`
+  // Issue 6: rotate/scale/translate — независимые modern properties, transition должен покрывать их явно (v4).
+  transform: `transform, translate, scale, rotate`
 }
 export const transitionFunction: Record<string, string> = {
   "in-out": "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -445,6 +461,13 @@ export const divideWidth: Record<string, (value: string) => string> = {
   y: (value) =>
     `--fv-divide-y-reverse: 0;\n  border-top-width: calc(${value}* calc(1 - var(--fv-divide-y-reverse)));\n  border-bottom-width: calc(${value}* var(--fv-divide-y-reverse));`
 }
+// Issue 4 (uno-engine.md): Space Between — зеркало divideWidth (селектор — specialSelectors.space).
+export const spaceBetween: Record<string, (value: string) => string> = {
+  x: (value) =>
+    `--fv-space-x-reverse: 0;\n  margin-right: calc(${value} * var(--fv-space-x-reverse));\n  margin-left: calc(${value} * calc(1 - var(--fv-space-x-reverse)));`,
+  y: (value) =>
+    `--fv-space-y-reverse: 0;\n  margin-top: calc(${value} * calc(1 - var(--fv-space-y-reverse)));\n  margin-bottom: calc(${value} * var(--fv-space-y-reverse));`
+}
 export const borderLogical: Record<string, (value: string) => string> = {
   undefined: (value) => `border-radius: ${value};`,
   ss: (value) => `border-start-start-radius: ${value};`,
@@ -490,9 +513,9 @@ export const borderSpacing: Record<string, (value: string) => string> = {
   y: (value) => `border-spacing: var(--fv-border-spacing-x) ${value};`
 }
 export const scale: Record<string, (value: string) => string> = {
-  undefined: (value) => `--fv-scale-x: ${value};\n  --fv-scale-y: ${value};\n  ${baseTransform}`,
-  x: (value) => `--fv-scale-x: ${value};\n  ${baseTransform}`,
-  y: (value) => `--fv-scale-y: ${value};\n  ${baseTransform}`
+  undefined: (value) => `--fv-scale-x: ${value};\n  --fv-scale-y: ${value};\n  ${baseScale}`,
+  x: (value) => `--fv-scale-x: ${value};\n  ${baseScale}`,
+  y: (value) => `--fv-scale-y: ${value};\n  ${baseScale}`
 }
 export const translate: Record<string, (value: string) => string> = {
   undefined: (value) => `--fv-translate-x: ${value};\n  --fv-translate-y: ${value};\n  ${baseTranslate}`,
@@ -500,8 +523,8 @@ export const translate: Record<string, (value: string) => string> = {
   y: (value) => `--fv-translate-y: ${value};\n  ${baseTranslate}`
 }
 export const skew: Record<string, (value: string) => string> = {
-  x: (value) => `--fv-skew-x: ${value};\n  ${baseTransform}`,
-  y: (value) => `--fv-skew-y: ${value};\n  ${baseTransform}`
+  x: (value) => `--fv-skew-x: ${value};\n  ${baseSkew}`,
+  y: (value) => `--fv-skew-y: ${value};\n  ${baseSkew}`
 }
 export const textSize: Record<string, (value?: string) => string> = {
   xs: (value?: string) => `font-size: 0.75rem;\n  line-height: ${value ?? "1rem"};`,
@@ -540,7 +563,11 @@ export const formElementStates = {
   "out-of-range": ":out-of-range",
   "placeholder-shown": ":placeholder-shown",
   autofill: ":autofill",
-  "read-only": ":read-only"
+  "read-only": ":read-only",
+  // Issue 2 (uno-engine.md): v4-варианты.
+  optional: ":optional",
+  "user-valid": ":user-valid",
+  "user-invalid": ":user-invalid"
 } satisfies PseudoClasses["formElementStates"]
 export const structuralPseudoClasses = {
   first: ":first-child",
@@ -564,10 +591,14 @@ export const pseudoElements = {
   selection: "::selection",
   file: "::file-selector-button",
   backdrop: "::backdrop",
-  placeholder: "::placeholder"
+  placeholder: "::placeholder",
+  // Issue 2 (uno-engine.md): v4.1.
+  "details-content": "::details-content"
 } satisfies PseudoClasses["pseudoElements"]
 export const specialStates = {
   open: "[open]",
+  // Issue 2 (uno-engine.md): v4-вариант [inert].
+  inert: "[inert]",
   rtl: `:where([dir="rtl"], [dir="rtl"] *)`,
   ltr: `:where([dir="ltr"], [dir="ltr"] *)`
 } satisfies PseudoClasses["specialStates"]
@@ -590,7 +621,16 @@ export const media: Record<string, string> = {
   "forced-colors": "@media (forced-colors: active)",
   portrait: "@media (orientation: portrait)",
   landscape: "@media (orientation: landscape)",
-  print: "@media print"
+  print: "@media print",
+  // Issue 2 (uno-engine.md): v4/v4.1 media-варианты.
+  "pointer-fine": "@media (pointer: fine)",
+  "pointer-coarse": "@media (pointer: coarse)",
+  "pointer-none": "@media (pointer: none)",
+  "any-pointer-fine": "@media (any-pointer: fine)",
+  "any-pointer-coarse": "@media (any-pointer: coarse)",
+  "any-pointer-none": "@media (any-pointer: none)",
+  "inverted-colors": "@media (inverted-colors: inverted)",
+  noscript: "@media (scripting: none)"
 }
 
 export const mediaDynamic: Record<string, (value: string) => string> = {

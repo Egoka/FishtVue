@@ -1,6 +1,6 @@
 ---
 title: Issues — Uno engine (tailwind())
-summary: Аудит покрытия Tailwind v4 собственным движком tailwind() (lib/theme/unoStyle). Эмпирический прогон ~360 классов (2026-07-02). Issues 1 (silent degradation → fail-closed + dev-warn) и 3 (false positives — mask-*, негативные transforms, шкалы) закрыты 2026-07-02; открыты пробелы в v4-вариантах (Issue 2, medium), недостающие utility-семейства, v4 renames drift, двойной translate.
+summary: Аудит покрытия Tailwind v4 собственным движком tailwind() (lib/theme/unoStyle). Эмпирический прогон ~360 классов (2026-07-02). Волна 1 — Issues 1, 3, 7 (fail-closed + dev-warn) ✅. Волна 2 (2026-07-02) — Issue 5 (диалект-контракт + v4-имена) и Issue 6 (modern transform properties) ✅; в Issues 2/4 закрыты дешёвые пункты (arbitrary properties, space-*, font smoothing, v4-варианты словарей). Открыты остаточные пробелы Issue 2 (функциональные варианты, container queries) и Issue 4 (P2/P3-семейства).
 updated: 2026-07-02
 audit-checklist: покрытие Tailwind v4 (utilities + variants) — целевой аудит вне 60-пунктового чек-листа
 source: lib/theme/unoStyle/
@@ -13,14 +13,14 @@ related-doc: ../architecture/theme.md
 
 ## Сводка
 
-| Severity | Count | Categories                                                                                            |
-| -------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| critical | 0     | —                                                                                                     |
-| high     | 0     | ~~silent degradation, false positives~~ — Issues 1, 3 ✅ resolved 2026-07-02                          |
-| medium   | 4     | v4 variants gap (Issue 2, ex-high), missing utility families, v4 renames drift, translate composition |
-| low      | 0     | ~~stale TODO~~ — Issue 7 ✅ resolved 2026-07-02                                                       |
+| Severity | Count | Categories                                                                                                              |
+| -------- | ----- | ------------------------------------------------------------------------------------------------------------------------ |
+| critical | 0     | —                                                                                                                       |
+| high     | 0     | ~~silent degradation, false positives~~ — Issues 1, 3 ✅ resolved 2026-07-02                                            |
+| medium   | 2     | Issue 2 (остаток: функциональные варианты, container queries), Issue 4 (остаток: P2/P3-семейства); Issues 5, 6 ✅ волна 2 |
+| low      | 0     | ~~stale TODO~~ — Issue 7 ✅ resolved 2026-07-02                                                                         |
 
-Что при этом **работает корректно** (проверено выводом): все базовые interaction/form/structural states (`hover:`…`autofill:`), pseudo-elements (`before:`/`after:` через `--fv-content`, `placeholder:`, `file:`, `marker:`, `selection:`, `backdrop:`…), `group`/`peer` включая именованные (`group-hover/edit:`) и arbitrary-формы (`group-[.is-published]:`, `peer-[.is-dirty]:`, `group-has-[a]:`), `has-[...]:`, `aria-*` (статические и `aria-[sort=ascending]:`), `data-[state=open]:`, `dark:` (media + selector-режим), breakpoints `sm:`…`2xl:` + `max-*:` + `min-[600px]:`, `motion-safe/reduce:`, `print:`, `rtl:/ltr:` (через ":where([dir])"), `*:`, stacked-варианты (`dark:md:hover:`), arbitrary variants — в т.ч. `[&>[data-active]+span]:text-blue-600`, `[&_p]:mt-4`, `[&::-webkit-inner-spin-button]:`, opacity-модификаторы (`bg-red-500/75`, `bg-black/[.06]`), v4 var-shorthand (`w-(--w)`, `p-(--sp)`, `top-(--my-top)`), `text-sm/6`, fractions/negatives для spacing/inset, `subgrid`, `dvh/svh/lvh` (в `w-`/`h-`), `content-['...']`, `animate-*` (keyframes — [baseStyle.ts:671-699](../../lib/config/baseStyle.ts#L671)), `divide-*` + `divide-x-reverse`, logical properties (`ps-`/`pe-`/`ms-`/`me-`/`start-`/`end-`/`rounded-ss-`/`border-s-`).
+Что при этом **работает корректно** (проверено выводом): все базовые interaction/form/structural states (`hover:`…`autofill:`), pseudo-elements (`before:`/`after:` через `--fv-content`, `placeholder:`, `file:`, `marker:`, `selection:`, `backdrop:`…), `group`/`peer` включая именованные (`group-hover/edit:`) и arbitrary-формы (`group-[.is-published]:`, `peer-[.is-dirty]:`, `group-has-[a]:`), `has-[...]:`, `aria-*` (статические и `aria-[sort=ascending]:`), `data-[state=open]:`, `dark:` (media + selector-режим), breakpoints `sm:`…`2xl:` + `max-*:` + `min-[600px]:`, `motion-safe/reduce:`, `print:`, `rtl:/ltr:` (через ":where([dir])"), `*:`, stacked-варианты (`dark:md:hover:`), arbitrary variants — в т.ч. `[&>[data-active]+span]:text-blue-600`, `[&_p]:mt-4`, `[&::-webkit-inner-spin-button]:`, opacity-модификаторы (`bg-red-500/75`, `bg-black/[.06]`), v4 var-shorthand (`w-(--w)`, `p-(--sp)`, `top-(--my-top)`), `text-sm/6`, fractions/negatives для spacing/inset, `subgrid`, `dvh/svh/lvh` (в `w-`/`h-`), `content-['...']`, `animate-*` (keyframes — [baseStyle.ts:671-699](../../lib/config/baseStyle.ts#L671)), `divide-*` + `divide-x-reverse`, logical properties (`ps-`/`pe-`/`ms-`/`me-`/`start-`/`end-`/`rounded-ss-`/`border-s-`). **С волны 2 (2026-07-02) также:** arbitrary properties `[prop:value]`/`[--var:value]`, `space-x/y-*` (+negative/reverse/arbitrary), `antialiased`/`subpixel-antialiased`, boolean `data-<name>:`, именованные `has-<state>:`/`group-has-<state>:`, `optional:`/`user-valid:`/`user-invalid:`/`inert:`/`details-content:`, media `pointer-*`/`any-pointer-*`/`inverted-colors:`/`noscript:`, v4-имена `shadow-2xs`/`shadow-xs`/`drop-shadow-xs`/`outline-hidden`; transforms — modern properties (`translate:`/`rotate:`/`scale:`, skew — в `transform:`).
 
 ## Issue 1: Silent degradation — три режима тихого отказа без диагностики ✅ resolved 2026-07-02
 
@@ -65,6 +65,8 @@ related-doc: ../architecture/theme.md
 - **Где:** [unoStatic.ts](../../lib/theme/unoStyle/unoStatic.ts) (словари модификаторов), [tailwind.ts `getModifier`](../../lib/theme/unoStyle/tailwind.ts#L218)
 
 > **Примечание (2026-07-02, после закрытия Issue 1):** все перечисленные ниже варианты теперь **дропаются с dev-warn**, а не генерируют правило без условия. `@sm:` больше не эмитит viewport-`@media` (ловушка закрыта fail-closed), `**:` не эмитит `> *`, `[@media(…)]:` не эмитит мусорный селектор. Открытым остаётся именно покрытие: реализовать варианты либо явно объявить их вне диалекта (Issue 5, док диалекта).
+>
+> **Волна 2 (2026-07-02):** дешёвые словарные пункты закрыты (зачёркнуто ниже): `optional:`/`user-valid:`/`user-invalid:` ([unoStatic.ts:568](../../lib/theme/unoStyle/unoStatic.ts#L568)), `inert:` ([unoStatic.ts:601](../../lib/theme/unoStyle/unoStatic.ts#L601)), `details-content:` ([unoStatic.ts:596](../../lib/theme/unoStyle/unoStatic.ts#L596)), `pointer-*`/`any-pointer-*`/`inverted-colors:`/`noscript:` ([unoStatic.ts:626](../../lib/theme/unoStyle/unoStatic.ts#L626)), boolean `data-<name>:` и именованные `has-<state>:`/`group-has-<state>:`/`peer-has-<state>:` — расширение `modifierTokenSource` ([tailwind.ts:47-53](../../lib/theme/unoStyle/tailwind.ts#L47-L53)); неизвестное имя `has-*` дропается fail-closed. Тесты — [v4Extensions.test.ts](../../lib/theme/unoStyle/v4Extensions.test.ts). Диалект-границы остального зафиксированы в [architecture/theme.md](../architecture/theme.md) (Issue 5).
 
 ### Что найдено
 
@@ -72,30 +74,30 @@ related-doc: ../architecture/theme.md
 
 **Pseudo-classes (не в словарях):**
 
-- `optional:` → нет `:optional`
-- `user-valid:` / `user-invalid:` (v4)
+- ~~`optional:` → нет `:optional`~~ ✅ волна 2
+- ~~`user-valid:` / `user-invalid:` (v4)~~ ✅ волна 2
 - `nth-3:`, `nth-last-2:`, `nth-of-type-2:`, `nth-[3n+1]:` (v4 functional nth)
-- `details-content:` (v4.1, `::details-content`)
-- `inert:` (v4, `[inert]`-селектор)
+- ~~`details-content:` (v4.1, `::details-content`)~~ ✅ волна 2
+- ~~`inert:` (v4, `[inert]`-селектор)~~ ✅ волна 2
 - `starting:` (v4, `@starting-style` — нужна поддержка вложенного at-rule)
 
 **Relational / negation (v4):**
 
 - вся семья `not-*:` — `not-hover:`, `not-first:`, `not-dark:`, `not-supports-[...]:` (CSS `:not()` / `@media not`)
 - `in-*:` (v4 implicit group: `in-focus:` = `:where(*:focus) &`)
-- именованные has-формы: `has-checked:`, `has-hover:` (bracket-форма `has-[...]:` работает)
-- `peer-has-*:`, `group-has-<name>:` (bracket-форма `group-has-[a]:` работает)
+- ~~именованные has-формы: `has-checked:`, `has-hover:` (bracket-форма `has-[...]:` работает)~~ ✅ волна 2 (резолв по pseudo-словарям, неизвестное имя — fail-closed)
+- ~~`peer-has-*:`, `group-has-<name>:` (bracket-форма `group-has-[a]:` работает)~~ ✅ волна 2 (has-ветка внутри optional state-префикса)
 - композиции `group-aria-*:` и `group-data-[...]:` — генерируются без group-условия
 
 **Attribute shorthand (v4):**
 
-- boolean `data-active:` → должен давать `[data-active]` (форма `data-[k=v]:` работает)
+- ~~boolean `data-active:` → должен давать `[data-active]` (форма `data-[k=v]:` работает)~~ ✅ волна 2
 
 **Media-варианты (не в `media`-словаре):**
 
-- `pointer-fine:` / `pointer-coarse:` / `pointer-none:`, `any-pointer-*:` (v4.1)
-- `inverted-colors:` (v4.1)
-- `noscript:` (v4.1)
+- ~~`pointer-fine:` / `pointer-coarse:` / `pointer-none:`, `any-pointer-*:` (v4.1)~~ ✅ волна 2
+- ~~`inverted-colors:` (v4.1)~~ ✅ волна 2
+- ~~`noscript:` (v4.1)~~ ✅ волна 2
 - именованный `supports-<feature>:` (напр. `supports-backdrop-filter:`; bracket-форма `supports-[display:grid]:` работает)
 
 **Container queries (v4 core):**
@@ -117,10 +119,10 @@ related-doc: ../architecture/theme.md
 
 ### Что нужно сделать
 
-1. Дешёвые словарные дополнения (в `unoStatic.ts`): `optional`, `user-valid`, `user-invalid`, `inert`, `details-content`, `pointer-*`/`any-pointer-*`, `inverted-colors`, `noscript` — по образцу существующих записей.
-2. Функциональные варианты: `nth-*` (динамический паттерн как `aria`/`data` в `selectorsDynamic`), boolean `data-<name>` / `aria-<name>` fallback → `[data-name]`.
+1. ~~Дешёвые словарные дополнения (в `unoStatic.ts`): `optional`, `user-valid`, `user-invalid`, `inert`, `details-content`, `pointer-*`/`any-pointer-*`, `inverted-colors`, `noscript` — по образцу существующих записей.~~ ✅ волна 2
+2. Функциональные варианты: `nth-*` (динамический паттерн как `aria`/`data` в `selectorsDynamic`); ~~boolean `data-<name>` fallback → `[data-name]`~~ ✅ волна 2 (aria-boolean не входит — в v4 его нет).
 3. `not-*:` — рекурсивная обёртка над существующими словарями (`:not(<resolved>)` / `@media not <resolved>`).
-4. Композиции `group-/peer- × aria-/data-/has-<name>` — расширить state-ветку `getModifier`.
+4. Композиции `group-/peer- × aria-/data-` — расширить state-ветку `getModifier`; ~~× has-<name>~~ ✅ волна 2.
 5. Container queries: `@container`-утилита + разбор `@<bp>:` в `@container`-media (+именованные контейнеры) — ~~либо осознанно объявить «не поддерживается» в доке диалекта и закрыть fail-closed (Issue 1.3)~~ fail-closed достигнут 2026-07-02; полноценная реализация — открыта.
 6. `**:` → ` *`; important-суффикс/префикс → `!important` в декларации; ~~`starting:`/`[@media(…)]:`-at-rule формы — fail-closed до реализации~~ ✅ fail-closed 2026-07-02.
 
@@ -175,24 +177,26 @@ related-doc: ../architecture/theme.md
 ## Issue 4: Недостающие utility-семейства (Tailwind v4.1)
 
 - **Категория:** coverage (utilities)
-- **Severity:** medium
+- **Severity:** medium (P1 закрыт волной 2, открыты P2/P3)
 - **Где:** [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts), [unoStatic.ts `singleStyles`](../../lib/theme/unoStyle/unoStatic.ts)
+
+> **Волна 2 (2026-07-02) — приоритет 1 закрыт:** arbitrary properties `[prop:value]`/`[--var:value]` — новая ветка в `tailwind()` ([arbitraryPropertyReg, tailwind.ts:70](../../lib/theme/unoStyle/tailwind.ts#L70), ветка — [tailwind.ts:203](../../lib/theme/unoStyle/tailwind.ts#L203); value с `{`/`}`/`;` дропается fail-closed — инъекция за пределы декларации невозможна; `_`→пробел как в arbitrary values); канон-баг `[appearance:textfield]` ([Input.vue:88](../../lib/input/Input.vue#L88), [Aria.vue:66](../../lib/aria/Aria.vue#L66)) закрыт — правило появилось в head. `space-x/y-*` (+negative, +reverse, +arbitrary) — правило `space` ([unoRules.ts:672](../../lib/theme/unoStyle/unoRules.ts#L672)) + [spaceBetween, unoStatic.ts:465](../../lib/theme/unoStyle/unoStatic.ts#L465), селектор — зеркало `divide`. `antialiased`/`subpixel-antialiased` — singleStyles ([unoStatic.ts:23](../../lib/theme/unoStyle/unoStatic.ts#L23)). Тесты — [v4Extensions.test.ts](../../lib/theme/unoStyle/v4Extensions.test.ts).
 
 ### Что найдено
 
 Не генерируются вовсе (режим 1 Issue 1), по категориям:
 
-- **Spacing:** `space-x-*` / `space-y-*` / `-space-*` / `space-*-reverse` (TODO «Space Between» в [tailwind.ts:166](../../lib/theme/unoStyle/tailwind.ts#L166); паттерн селектора уже есть у `divide`)
-- **Typography:** `antialiased` / `subpixel-antialiased` (TODO «Font Smoothing»), `wrap-anywhere` / `wrap-break-word` / `wrap-normal` (v4.1), `font-stretch-*` (v4.1)
+- ~~**Spacing:** `space-x-*` / `space-y-*` / `-space-*` / `space-*-reverse`~~ ✅ волна 2
+- **Typography:** ~~`antialiased` / `subpixel-antialiased` (TODO «Font Smoothing»)~~ ✅ волна 2; `wrap-anywhere` / `wrap-break-word` / `wrap-normal` (v4.1), `font-stretch-*` (v4.1)
 - **Backgrounds — v4 gradient API:** `bg-linear-to-*` / `bg-linear-<angle>` / interpolation-модификаторы (`bg-linear-to-r/oklch`), `bg-radial(-[...])`, `bg-conic(-<angle>)`; также `bg-size-[...]` (v3-форма `bg-gradient-to-*` работает)
-- **Effects:** вся семья `mask-*` (v4.1: `mask-image`/`mask-clip`/`mask-origin`/`mask-position`/`mask-repeat`/`mask-size`/`mask-type` + linear/radial/conic от-до), `text-shadow-*` (v4.1), `inset-shadow-*` / `inset-ring-*` (v4), `shadow-xs`/`shadow-2xs` (v4-шкала)
-- **Filters:** `filter-none` / `backdrop-filter-none`, цветной `drop-shadow-<color>` (v4.1), `drop-shadow-xs`
-- **Borders:** `outline-hidden` (v4)
+- **Effects:** вся семья `mask-*` (v4.1: `mask-image`/`mask-clip`/`mask-origin`/`mask-position`/`mask-repeat`/`mask-size`/`mask-type` + linear/radial/conic от-до), `text-shadow-*` (v4.1), `inset-shadow-*` / `inset-ring-*` (v4), ~~`shadow-xs`/`shadow-2xs` (v4-шкала)~~ ✅ волна 2 (Issue 5)
+- **Filters:** `filter-none` / `backdrop-filter-none`, цветной `drop-shadow-<color>` (v4.1), ~~`drop-shadow-xs`~~ ✅ волна 2 (Issue 5)
+- **Borders:** ~~`outline-hidden` (v4)~~ ✅ волна 2 (Issue 5)
 - **Transforms — v4 3D:** `rotate-x/y/z-*`, `translate-z-*`, `scale-z-*`, unified `skew-<n>`, `perspective-*`, `perspective-origin-*`, `transform-3d` / `transform-flat` / `transform-gpu` / `transform-none`, `backface-visible/hidden`
 - **Interactivity:** `scheme-*` (color-scheme, v4), `field-sizing-*` (v4)
 - **Accessibility:** `forced-color-adjust-auto/none`
 - **Transitions:** `transition-discrete` / `transition-normal` (v4; сейчас режим 2 — `transition-property: ;`)
-- **Special syntax:** arbitrary properties `[prop:value]` (в т.ч. `[appearance:textfield]` из канона Input — отдельная задача уже создана), установка custom property `[--var:value]`
+- ~~**Special syntax:** arbitrary properties `[prop:value]` (в т.ч. `[appearance:textfield]` из канона Input — отдельная задача уже создана), установка custom property `[--var:value]`~~ ✅ волна 2
 
 ### Почему это проблема
 
@@ -201,16 +205,23 @@ related-doc: ../architecture/theme.md
 
 ### Что нужно сделать
 
-1. Приоритет 1 (используется/близко к канону): arbitrary properties, `space-*`, `antialiased`, `transition-discrete`-заглушка (fail-closed).
-2. Приоритет 2 (v4-паритет по запросу потребителей): 3D transforms, v4 gradient API, `text-shadow`, `inset-shadow`/`inset-ring`, `field-sizing`, `scheme`.
-3. Приоритет 3 (осознанно объявить вне диалекта): `mask-*` — большая семья; до реализации закрыть fail-closed (см. Issue 3 — сейчас часть форм матчится чужими правилами).
+1. ~~Приоритет 1 (используется/близко к канону): arbitrary properties, `space-*`, `antialiased`, `transition-discrete`-заглушка (fail-closed).~~ ✅ волна 2
+2. Приоритет 2 (v4-паритет по запросу потребителей): 3D transforms, v4 gradient API, `text-shadow`, `inset-shadow`/`inset-ring`, `field-sizing`, `scheme`. Modern transform properties (Issue 6 ✅) — готовая база для 3D-форм.
+3. Приоритет 3 (осознанно объявить вне диалекта): `mask-*` — большая семья; fail-closed уже стоит (Issue 3 ✅), границы зафиксированы в доке диалекта (Issue 5 ✅).
 4. Каждый пункт — tests-first в [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts)-стиле.
 
-## Issue 5: Semantic drift — v4 renames и сдвиг шкал
+## Issue 5: Semantic drift — v4 renames и сдвиг шкал ✅ resolved 2026-07-02 (волна 2)
 
 - **Категория:** compat / documentation
-- **Severity:** medium
-- **Где:** [unoStatic.ts](../../lib/theme/unoStyle/unoStatic.ts) (шкалы), док диалекта — отсутствует
+- **Severity:** ~~medium~~ → resolved
+- **Где:** [unoStatic.ts](../../lib/theme/unoStyle/unoStatic.ts) (шкалы), док диалекта — [architecture/theme.md](../architecture/theme.md)
+
+**Резолюция (2026-07-02, решение владельца — «дозаполнить v4-имена, без миграции шкал»):**
+
+- Контракт диалекта зафиксирован разделом «Диалект Tailwind» в [architecture/theme.md](../architecture/theme.md): база — словарь v3.4, общие имена (`shadow-sm`, `blur-sm`, `rounded`, `ring`, `outline-none`, bare var-shorthand) сохраняют v3-семантику; поддержанные v4-расширения и границы «вне диалекта» перечислены таблицами.
+- Добавлены только отсутствующие v4-имена с v4-значениями: `shadow-2xs`/`shadow-xs` ([boxShadow, unoStatic.ts:244](../../lib/theme/unoStyle/unoStatic.ts#L244)), `drop-shadow-xs`, `outline-hidden` ([unoStatic.ts:51](../../lib/theme/unoStyle/unoStatic.ts#L51)) — ноль breaking changes для словарей 22 компонентов.
+- Семантика bare var-shorthand (`text-(--x)` → font-size) сознательно оставлена как есть и записана в таблицу расхождений диалекта.
+- Тесты — [v4Extensions.test.ts](../../lib/theme/unoStyle/v4Extensions.test.ts) (v4-имена + regression общих имён байт-в-байт).
 
 ### Что найдено
 
@@ -232,14 +243,21 @@ related-doc: ../architecture/theme.md
 
 ### Что нужно сделать
 
-1. Зафиксировать контракт в `Documentation/architecture/`: «движок реализует словарь Tailwind v3.4 + перечисленные v4-расширения; шкалы shadow/blur/rounded/ring — v3-семантика». Раздел с этой таблицей.
-2. Решить (после п.1) — мигрировать ли шкалы на v4 (breaking change для существующих словарей компонентов) или добавить только отсутствующие v4-имена (`shadow-xs`, `blur-xs`, `rounded-4xl`, `outline-hidden`) с v4-значениями, не трогая общие.
+1. ~~Зафиксировать контракт в `Documentation/architecture/`: «движок реализует словарь Tailwind v3.4 + перечисленные v4-расширения; шкалы shadow/blur/rounded/ring — v3-семантика». Раздел с этой таблицей.~~ ✅
+2. ~~Решить (после п.1) — мигрировать ли шкалы на v4 (breaking change для существующих словарей компонентов) или добавить только отсутствующие v4-имена (`shadow-xs`, `blur-xs`, `rounded-4xl`, `outline-hidden`) с v4-значениями, не трогая общие.~~ ✅ решение: только дозаполнение (blur-xs/rounded-4xl были закрыты Issue 3, shadow-xs/2xs, drop-shadow-xs, outline-hidden — волной 2).
 
-## Issue 6: Двойной translate при комбинации `translate-*` с `rotate-*`/`scale-*`/`skew-*`
+## Issue 6: Двойной translate при комбинации `translate-*` с `rotate-*`/`scale-*`/`skew-*` ✅ resolved 2026-07-02 (волна 2)
 
 - **Категория:** correctness (composition)
-- **Severity:** medium
-- **Где:** [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts) (`translate` vs `baseTransform`-цепочка), [baseStyle.ts:17-23](../../lib/config/baseStyle.ts#L17)
+- **Severity:** ~~medium~~ → resolved
+- **Где:** [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts) (`translate` vs legacy `transform`-цепочка), [baseStyle.ts:17-23](../../lib/config/baseStyle.ts#L17)
+
+**Резолюция (2026-07-02, решение владельца — modern properties, v4-подход):**
+
+- `rotate-*` эмитит независимое свойство `rotate:` напрямую ([unoRules.ts:1102](../../lib/theme/unoStyle/unoRules.ts#L1102)); `scale-*` — `--fv-scale-x/y` + `scale: var(…)` ([baseScale, unoStatic.ts:9](../../lib/theme/unoStyle/unoStatic.ts#L9)); `translate-*` — без изменений (уже был modern). В `transform:`-цепочке остался только `skew` ([baseSkew, unoStatic.ts:10](../../lib/theme/unoStyle/unoStatic.ts#L10)); константа `baseTransform` удалена. Порядок применения — спецификация CSS: translate → rotate → scale → transform, как в Tailwind v4.
+- `transition-transform` и bare `transition` расширены до `transform, translate, scale, rotate` ([transitionProperty, unoStatic.ts:302](../../lib/theme/unoStyle/unoStatic.ts#L302)) — анимации rotate/scale (иконки Accordion) продолжают работать после переезда на properties.
+- **Намеренное изменение байтов CSS** (визуальное поведение идентично, комбинаций transforms в каноне нет): sandbox-diff — Accordion −757 (rotate без цепочки), Pagination −148 (`rtl:-scale-x-100`), Select/Form/Icons +23 (transition-список). Поведенческая верификация в sandbox: computed `rotate: 90deg` при `transform: none`; `scale: -1 1` при `dir=rtl`.
+- Тесты — [v4Extensions.test.ts](../../lib/theme/unoStyle/v4Extensions.test.ts) (новые точные строки + тест независимости translate/rotate), re-baseline transform-ожиданий в Uno.test.ts / Uno.improved.test.ts / failClosed.test.ts.
 
 ### Что найдено
 
@@ -251,7 +269,7 @@ related-doc: ../architecture/theme.md
 
 ### Что нужно сделать
 
-Выбрать один механизм: либо `translate` тоже эмитит legacy `transform:`-цепочку (минимальный дифф), либо вся четвёрка переезжает на независимые modern properties `translate:`/`rotate:`/`scale:` (v4-подход, чище, но требует пересмотра `--fv-*`-дефолтов в baseStyle и regression-прогона словарей). Тест на комбинацию — обязателен.
+~~Выбрать один механизм: либо `translate` тоже эмитит legacy `transform:`-цепочку (минимальный дифф), либо вся четвёрка переезжает на независимые modern properties `translate:`/`rotate:`/`scale:` (v4-подход, чище, но требует пересмотра `--fv-*`-дефолтов в baseStyle и regression-прогона словарей). Тест на комбинацию — обязателен.~~ ✅ выбран v4-подход; `--fv-*`-дефолты в baseStyle не менялись (не требуется: `--fv-scale-x/y: 1` и `--fv-skew-x/y: 0` продолжают обслуживать `baseScale`/`baseSkew`; `--fv-rotate` больше не читается — осталась мёртвой переменной, вычищать её — значит менять байты BaseComponent-тега, отложено до ближайшей правки baseStyle).
 
 ## Issue 7: Stale TODO — «Animation» давно реализован ✅ resolved 2026-07-02
 

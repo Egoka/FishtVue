@@ -21,7 +21,8 @@ import { tailwind } from "fishtvue/theme"
  * Пустой reset custom property (`blur-none` → `--fv-blur: ;`) — легитимен и НЕ дропается.
  */
 
-const TRANSFORM = `transform: translate(var(--fv-translate-x), var(--fv-translate-y)) rotate(var(--fv-rotate)) skewX(var(--fv-skew-x)) skewY(var(--fv-skew-y)) scaleX(var(--fv-scale-x)) scaleY(var(--fv-scale-y));`
+// Волна 2 (Issue 6): transforms — modern properties; scale эмитит независимое scale:-свойство.
+const SCALE = `scale: var(--fv-scale-x) var(--fv-scale-y);`
 const FILTER = `filter: var(--fv-blur) var(--fv-brightness) var(--fv-contrast) var(--fv-grayscale) var(--fv-hue-rotate) var(--fv-invert) var(--fv-saturate) var(--fv-sepia) var(--fv-drop-shadow);`
 const BACKDROP = `-webkit-backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);\n  backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);`
 
@@ -62,7 +63,9 @@ describe("Issue 1 — fail-closed + dev-диагностика", () => {
   })
 
   describe("режим 2: пустое значение / литерал undefined не попадает в CSS", () => {
-    it.each(["transition-discrete", "shadow-xs", "content-none"])("%s → undefined + warn", (classValue) => {
+    // shadow-3xs (не существует ни в v3, ни в v4): матчится правилом shadow, но значение пустое.
+    // shadow-xs из исходного аудита реализован в волне 2 (Issue 5) — см. v4Extensions.test.ts.
+    it.each(["transition-discrete", "shadow-3xs", "content-none"])("%s → undefined + warn", (classValue) => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
       expect(tailwind(classValue)).toBeUndefined()
       expect(warn).toHaveBeenCalledTimes(1)
@@ -118,19 +121,19 @@ describe("Issue 3 — false positives", () => {
 
   describe("негативные значения rotate/scale/hue-rotate/order", () => {
     it("-rotate-45", () => {
-      expect(tailwind("-rotate-45")).toBe(`.-rotate-45 {\n  --fv-rotate: calc(45deg * -1);\n  ${TRANSFORM}\n}`)
+      expect(tailwind("-rotate-45")).toBe(`.-rotate-45 {\n  rotate: calc(45deg * -1);\n}`)
     })
     it("-scale-100", () => {
       expect(tailwind("-scale-100")).toBe(
-        `.-scale-100 {\n  --fv-scale-x: calc(1 * -1);\n  --fv-scale-y: calc(1 * -1);\n  ${TRANSFORM}\n}`
+        `.-scale-100 {\n  --fv-scale-x: calc(1 * -1);\n  --fv-scale-y: calc(1 * -1);\n  ${SCALE}\n}`
       )
     })
     it("-scale-x-100", () => {
-      expect(tailwind("-scale-x-100")).toBe(`.-scale-x-100 {\n  --fv-scale-x: calc(1 * -1);\n  ${TRANSFORM}\n}`)
+      expect(tailwind("-scale-x-100")).toBe(`.-scale-x-100 {\n  --fv-scale-x: calc(1 * -1);\n  ${SCALE}\n}`)
     })
     it("rtl:-scale-x-100 (Menu/Pagination RTL-зеркалирование иконок)", () => {
       expect(tailwind("rtl:-scale-x-100")).toBe(
-        `.rtl\\:-scale-x-100:where([dir="rtl"], [dir="rtl"] *) {\n  --fv-scale-x: calc(1 * -1);\n  ${TRANSFORM}\n}`
+        `.rtl\\:-scale-x-100:where([dir="rtl"], [dir="rtl"] *) {\n  --fv-scale-x: calc(1 * -1);\n  ${SCALE}\n}`
       )
     })
     it("-hue-rotate-15", () => {
@@ -247,12 +250,12 @@ describe("Regression — валидные классы байт-в-байт (bas
       expected: "@media not all and (min-width: 768px) {\n.max-md\\:flex {\n  display: flex;\n}\n}"
     },
     { classValue: "print:hidden", expected: "@media print {\n.print\\:hidden {\n  display: none;\n}\n}" },
-    { classValue: "rotate-45", expected: `.rotate-45 {\n  --fv-rotate: 45deg;\n  ${TRANSFORM}\n}` },
+    { classValue: "rotate-45", expected: `.rotate-45 {\n  rotate: 45deg;\n}` },
     {
       classValue: "scale-100",
-      expected: `.scale-100 {\n  --fv-scale-x: 1;\n  --fv-scale-y: 1;\n  ${TRANSFORM}\n}`
+      expected: `.scale-100 {\n  --fv-scale-x: 1;\n  --fv-scale-y: 1;\n  ${SCALE}\n}`
     },
-    { classValue: "scale-x-100", expected: `.scale-x-100 {\n  --fv-scale-x: 1;\n  ${TRANSFORM}\n}` },
+    { classValue: "scale-x-100", expected: `.scale-x-100 {\n  --fv-scale-x: 1;\n  ${SCALE}\n}` },
     {
       classValue: "hue-rotate-15",
       expected: `.hue-rotate-15 {\n  --fv-hue-rotate: hue-rotate(15deg);\n  ${FILTER}\n}`

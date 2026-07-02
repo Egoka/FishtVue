@@ -9,7 +9,6 @@ import {
   attachmentBackground,
   baseBackdropFilter,
   baseFilter,
-  baseTransform,
   baseTransition,
   bgClip,
   bgOrigin,
@@ -42,6 +41,7 @@ import {
   skew,
   snapAlign,
   snapType,
+  spaceBetween,
   specialColor,
   specialValues,
   textSize,
@@ -669,6 +669,19 @@ export default <Record<string, StyleType>>{
       }
     }
   },
+  space: {
+    // Issue 4 (uno-engine.md): Space Between — зеркало divide (child-combinator селектор
+    // приходит из specialSelectors.space). `whitespace-*` защищён lookbehind'ом в RegStyles.
+    reg: /(?<negative>-)?(?<style>space)-(?<axis>[xy])-((?<special>\d+(\.\d+)?|px|reverse)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups) return
+      if (groups.special === "reverse") return `--fv-space-${groups.axis}-reverse: 1;`
+      const value = custom(groups) ?? sizing(groups)
+      if (!value) return
+      return spaceBetween[groups.axis](value)
+    }
+  },
   divide: {
     reg: {
       width: new RegExp(
@@ -1087,11 +1100,13 @@ export default <Record<string, StyleType>>{
     }
   },
   rotate: {
+    // Issue 6 (uno-engine.md): modern CSS property rotate: (v4) — вне transform:-цепочки,
+    // комбинация с translate-*/scale-* больше не даёт двойного сдвига.
     reg: /(?<negative>-)?(?<style>rotate)-((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (!groups) return
-      return `--fv-rotate: ${custom(groups) ?? (groups.special ? (negative(groups, `${groups.special}deg`) ?? "") : "")};\n  ${baseTransform}`
+      return `rotate: ${custom(groups) ?? (groups.special ? (negative(groups, `${groups.special}deg`) ?? "") : "")};`
     }
   },
   translate: {

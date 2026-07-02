@@ -40,13 +40,17 @@ const selectorsDynamic = Object.keys(selectorsDynamicList).join("|")
 
 // Единый источник паттерна variant-токена: им же парсит getModifier (global-скан),
 // им же (с якорями ^…$) валидируется каждый префикс — parser и validator не расходятся.
+// has-ветка: bracket-форма (has-[a]) ИЛИ именованная (has-checked, v4) — имя резолвится
+// по pseudo-словарям в tailwind(), неизвестное имя дропается (fail-closed).
+// selectorsBoolean: boolean-shorthand `data-<name>:` → [data-<name>] (v4); негативный lookahead
+// не даёт украсть bracket-форму data-[k=v]: у selectorsDynamic.
 const modifierTokenSource = `(?<![\\w-])(((?<state>group|peer)-)?(((${
   pseudoClassesStringReg
-})|(\\[(?<abstract>.*?)]))(\\/(?<stateName>\\w+))?|((?<has>has)-(\\[(?<hasValue>.*?)]))):|(?<media>${
+})|(\\[(?<abstract>.*?)]))(\\/(?<stateName>\\w+))?|((?<has>has)-((\\[(?<hasValue>.*?)])|(?<hasNamed>[\\w-]+)))):|(?<media>${
   media
 }):|(?<mediaDynamic>${mediaDynamic})-(\\[(?<mediaAbstract>.*?)]):|(?<selectors>${
   selectors
-}):|(?<selectorsDynamic>${selectorsDynamic})-(\\[(?<selectorsAbstract>.*?)]):|(?<child>\\*):)`
+}):|(?<selectorsDynamic>${selectorsDynamic})-(\\[(?<selectorsAbstract>.*?)]):|(?<selectorsBoolean>data-(?!\\[)[\\w-]+):|(?<child>\\*):)`
 const modifierTokenReg = new RegExp(modifierTokenSource, "g")
 const variantValidationReg = new RegExp(`^(?:${modifierTokenSource})$`)
 
@@ -59,6 +63,11 @@ const unsupportedFamilyReg = /^-?(mask|perspective)-/
 // пустой вызов функции `()` или пустую декларацию СТАНДАРТНОГО свойства (`prop: ;`).
 // Пустой reset custom property (`--fv-blur: ;` у blur-none) — валидное значение-пробел, пропускается.
 const invalidValueReg = /undefined|\(\s*\)|(?:^|\n)\s*(?!--)[\w-]+:\s*;/
+
+// Issue 4 (uno-engine.md): arbitrary properties — [prop:value] / [--var:value].
+// Имя свойства — стандартное или custom property; value — всё до закрывающей скобки
+// (underscore → пробел, как в arbitrary values Tailwind).
+const arbitraryPropertyReg = /^\[((?:--)?[a-zA-Z][\w-]*):(.+)]$/
 
 const warnedClasses = new Set<string>()
 function warnUnsupported(classStyle: string, reason: string): void {
@@ -138,6 +147,22 @@ export function tailwind(
       warnUnsupported(classStyle, `unsupported at-rule variant "[${mod.abstract}]:"`)
       return
     }
+    // Именованная has-форма (has-checked:) резолвится по pseudo-словарям; неизвестное имя — fail-closed.
+    let hasSelector = ""
+    if (mod.has) {
+      if (mod.hasNamed) {
+        const resolved =
+          (userInteractionStatesList as Record<string, string>)[mod.hasNamed] ??
+          (formElementStatesList as Record<string, string>)[mod.hasNamed] ??
+          (structuralPseudoClassesList as Record<string, string>)[mod.hasNamed] ??
+          (specialStatesList as Record<string, string>)[mod.hasNamed]
+        if (!resolved) {
+          warnUnsupported(classStyle, `unsupported variant "has-${mod.hasNamed}:"`)
+          return
+        }
+        hasSelector = `:has(${resolved})`
+      } else hasSelector = `:has(${mod.hasValue})`
+    }
     modifier.pseudoClasses =
       (mod.userInteractionStates ? userInteractionStatesList[mod.userInteractionStates] : "") +
       (mod.formElementStates ? formElementStatesList[mod.formElementStates] : "") +
@@ -145,7 +170,7 @@ export function tailwind(
       (mod.pseudoContent ? pseudoContentList[mod.pseudoContent] : "") +
       (mod.pseudoElements ? pseudoElementsList[mod.pseudoElements] : "") +
       (mod.specialStates ? specialStatesList[mod.specialStates] : "") +
-      (mod.has ? `:has(${mod.hasValue})` : "") +
+      hasSelector +
       (mod.child ? ` > *` : "")
     if (mod.state)
       modifier.state = `.${mod.state}${mod.stateName ? `\\/${mod.stateName}` : ""}${modifier.pseudoClasses}`
@@ -155,6 +180,8 @@ export function tailwind(
     if (mod.selectors) modifier.selectors = selectorsList[mod.selectors]
     if (mod.selectorsDynamic && mod.selectorsAbstract)
       modifier.selectors = selectorsDynamicList[mod.selectorsDynamic](mod.selectorsAbstract)
+    // Boolean data-shorthand (v4): data-active: → [data-active].
+    if (mod.selectorsBoolean) modifier.selectors = `[${mod.selectorsBoolean}]`
     if (mod.media)
       modifier.media = mod.media.map((mediaItem) => {
         if (mediaItem === "dark" && options.darkSelector?.length) return `${options.darkSelector} {\n`
@@ -172,6 +199,26 @@ export function tailwind(
   if (unsupportedFamilyReg.test(baseUtility)) {
     warnUnsupported(classStyle, `utility family "${baseUtility.replace(/^-?([a-z]+)-.*/, "$1-*")}" is not supported`)
     return
+  }
+  // Issue 4: arbitrary property ([appearance:textfield], [--my-var:10px]).
+  const arbitraryProperty = baseUtility.match(arbitraryPropertyReg)
+  if (arbitraryProperty) {
+    const [, property, rawValue] = arbitraryProperty
+    // Инъекция за пределы декларации ({} ;) ломает правило — fail-closed.
+    if (/[{};]/.test(rawValue)) {
+      warnUnsupported(classStyle, "unsafe arbitrary property value")
+      return
+    }
+    value = `${property}: ${rawValue.replace(/_/g, " ")};`
+    if (invalidValueReg.test(value)) {
+      warnUnsupported(classStyle, "arbitrary property produced no valid value")
+      return
+    }
+    return `${modifier.media.join("")}${options.selector}${
+      modifier.state
+    }.${setCustomModifier(isolation(className), modifier.abstract)}${modifier.selectors}${
+      modifier.pseudoClasses
+    } {\n${modifier.content}  ${value}\n}${"\n}".repeat(modifier.media.filter((i) => i.endsWith("{\n")).length)}`
   }
   if (RegSingleStyles.test(classStyle)) {
     const styleName = classStyle.match(RegSingleStyles)?.groups?.style

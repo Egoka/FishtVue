@@ -1,6 +1,6 @@
 ---
 title: Theme
-summary: Token-инфраструктура, primitive/semantic, темы Aurora/Harmony/Sapphire, uno-engine. Runtime theme API (usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt) через CSS-variable indirection — Wave 3.3 (2026-07-02).
+summary: Token-инфраструктура, primitive/semantic, темы Aurora/Harmony/Sapphire, uno-engine. Runtime theme API (usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt) через CSS-variable indirection — Wave 3.3 (2026-07-02). Диалект-контракт uno-engine (§3.1) — v3.4 + v4-расширения (arbitrary properties, space-*, modern transform properties) — волна 2 (2026-07-02).
 updated: 2026-07-02
 stability: stable
 since: 0.2.11
@@ -92,6 +92,31 @@ Bundle: компилируется как часть `dist/theme/...`. Helpers �
 
 **Animation / transitions:** `ThemeDuration` ([Theme.d.ts:129](../../lib/theme/Theme.d.ts#L129)) задаёт duration-токены `0/75/100/150/200/300/500/700/1000`, используемые компонентами через `transition-duration` Tailwind-классы.
 
+### 3.1 Диалект Tailwind (контракт покрытия)
+
+`tailwind()` реализует **словарь Tailwind v3.4 + перечисленные v4-расширения**. Это контракт, а не побочный эффект: класс вне диалекта не эмитится вовсе (fail-closed) и в dev сопровождается `console.warn "[FishtVue tailwind] class … was dropped: <reason>"`. Полный аудит покрытия — [issues/uno-engine.md](../issues/uno-engine.md).
+
+**Поддержанные v4/v4.1-расширения (сверх v3.4):**
+
+- arbitrary properties `[prop:value]` / `[--var:value]` (value с `{`/`}`/`;` дропается — инъекция за пределы декларации невозможна);
+- `space-x/y-*` (+negative/reverse/arbitrary), `antialiased`/`subpixel-antialiased`;
+- варианты: boolean `data-<name>:`, именованные `has-<state>:`/`group-has-<state>:`/`peer-has-<state>:` (по pseudo-словарям), `optional:`, `user-valid:`/`user-invalid:`, `inert:`, `details-content:`, media `pointer-*`/`any-pointer-*`/`inverted-colors:`/`noscript:`;
+- v4-имена шкал: `shadow-2xs`/`shadow-xs`, `drop-shadow-xs`, `outline-hidden`, `blur-2xs`/`blur-xs`, `rounded-4xl`, двухсловные позиции (`bg-top-left`, `object-top-left`), `items-baseline-last`, viewport-юниты в `min-h`/`max-h`, container scale в `basis-`/`min-w-`;
+- **transforms — modern CSS properties** (v4-подход, с 2026-07-02): `translate-*`/`rotate-*`/`scale-*` эмитят независимые свойства `translate:`/`rotate:`/`scale:`; только `skew-*` живёт в `transform:`; `transition`/`transition-transform` покрывают `transform, translate, scale, rotate`. Комбинации вида `-translate-y-1/2 rotate-45` компонуются без двойного сдвига.
+
+**Общие имена — v3-семантика** (класс из v4-доки может дать другое значение):
+
+| Класс                           | Диалект FishtVue (v3)                 | Tailwind v4                                     |
+| ------------------------------- | ------------------------------------- | ------------------------------------------------ |
+| `shadow-sm` / `shadow`          | old sm / old base                     | сдвиг шкалы (v4 `shadow-sm` = old base)         |
+| `blur-sm` / `blur`              | 4px / 8px                             | v4 `blur-sm` = 8px                              |
+| `rounded-sm` / `rounded`        | 0.125rem / 0.25rem                    | v4 `rounded-sm` = 0.25rem                       |
+| `outline-none`                  | `outline: 2px solid transparent`      | v4: `outline-style: none` (наш аналог невидимого — `outline-hidden`) |
+| `ring`                          | 3px                                   | v4 default 1px                                  |
+| `text-(--x)` / `bg-(--x)`       | font-size / background-position       | v4: color                                       |
+
+**Вне диалекта** (fail-closed + dev-warn): `mask-*`, `perspective-*`, 3D transforms (`rotate-x-*`, `translate-z-*`), v4 gradient API (`bg-linear-*`), `text-shadow-*`, `inset-shadow/ring-*`, container queries (`@container`, `@sm:`), `not-*:`, `nth-*:`, `starting:`, important-модификатор, именованный `supports-<feature>:`, композиции `group-aria/data-*:`, `**:`. Актуальный список — [issues/uno-engine.md Issues 2, 4](../issues/uno-engine.md).
+
 ## 4. Quick Start
 
 ```ts
@@ -140,7 +165,7 @@ Plugin сам подгрузит preset.
 | Name                         | Type                                                                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `linksTheme<T>(theme)`       | `(theme?: Theme) => T \| undefined`                                 | Резолвит ссылки в `semantic` на ключи `primitive`. Вызывается plugin'ом.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `tailwind(class, options?)`  | `(class: string, options?: { selector?, darkSelector? }) => string` | Конвертирует один Tailwind-подобный класс в CSS-сниппет. **Fail-closed** (2026-07-02): нераспознанный variant-префикс, «чужое» семейство (`mask-*`/`perspective-*`) или пустое/`undefined`-значение → `undefined` + dev-only `console.warn` `[FishtVue tailwind] class "…" was dropped` (гейт `NODE_ENV !== "production"`, дедуп по классу). Невалидный CSS в `<style>`-теги не попадает; контракт — [unoStyle/failClosed.test.ts](../../lib/theme/unoStyle/failClosed.test.ts), [issues/uno-engine.md](../issues/uno-engine.md) Issue 1/3. |
+| `tailwind(class, options?)`  | `(class: string, options?: { selector?, darkSelector? }) => string` | Конвертирует один Tailwind-подобный класс в CSS-сниппет. **Fail-closed** (2026-07-02): нераспознанный variant-префикс, «чужое» семейство (`mask-*`/`perspective-*`) или пустое/`undefined`-значение → `undefined` + dev-only `console.warn` `[FishtVue tailwind] class "…" was dropped` (гейт `NODE_ENV !== "production"`, дедуп по классу). Невалидный CSS в `<style>`-теги не попадает; контракт — [unoStyle/failClosed.test.ts](../../lib/theme/unoStyle/failClosed.test.ts), [issues/uno-engine.md](../issues/uno-engine.md) Issue 1/3. Границы диалекта (v3.4 + v4-расширения, вкл. arbitrary properties и modern transforms) — §3.1. |
 | `palette(color)`             | `(color: HEX) => ThemeColor`                                        | Из одного HEX генерирует scale 50…950; `palette("{blue}")` — копия готовой primitive-шкалы (Wave 3.3).                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `toVarsCss<T>(obj, prefix?)` | `(obj, prefix?) => string`                                          | Сериализует объект в `--{prefix}-{key}: {value};` лист.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `useStyle(css, options?)`    | `(css: string, options?: StyleOptions) => Style`                    | Инжектит `<style>` в `document.head` (clientside). Возвращает `{ id, name, el, css, unload, load, isLoaded }`.                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -237,7 +262,7 @@ updatePrimaryPalette("#6366f1") // брендовая палитра из одн
 - **Имена цветов** ([Theme.d.ts:163–186](../../lib/theme/Theme.d.ts#L163-L186)): `theme | emerald | green | lime | red | orange | amber | yellow | teal | cyan | sky | blue | indigo | violet | purple | fuchsia | pink | rose | slate | gray | zinc | neutral | stone`. Шкала каждого цвета — 11 ступеней (50…950).
 - **`theme` colorslot** — динамический, через CSS-переменные `--theme` (hue) и `--theme-contrast` (saturation). Переопределяется через `semantic.customThemeColor` и `semantic.customThemeColorContrast`.
 - **Размеры** (`ThemeRounded`, `ThemeShadow`): `Size` (xs/sm/md/lg/xl) + `none/full` или `inner/none`.
-- **Dark mode** — через `optionsTheme.darkModeSelector` (например, `".dark"`, `"html.dark"` или `"[data-theme='dark']"`). Все uno-классы с `dark:` префиксом генерируются на этот селектор: `Component.setStyle` прокидывает его как `darkSelector` ([component/index.ts:150](../../lib/component/index.ts#L150)) → `tailwind()` подставляет вместо дефолтного `@media (prefers-color-scheme: dark)` ([unoStyle/tailwind.ts:95](../../lib/theme/unoStyle/tailwind.ts#L95)). Без config (`darkModeSelector` не задан) `dark:*` остаётся OS-pref media-query. Контракт зафиксирован тестами: [lib/theme/darkModeSelector.test.ts](../../lib/theme/darkModeSelector.test.ts) + [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts). **`lightModeSelector`** пока НЕ транслируется (light — дефолт, dark — override).
+- **Dark mode** — через `optionsTheme.darkModeSelector` (например, `".dark"`, `"html.dark"` или `"[data-theme='dark']"`). Все uno-классы с `dark:` префиксом генерируются на этот селектор: `Component.setStyle` прокидывает его как `darkSelector` ([component/index.ts:150](../../lib/component/index.ts#L150)) → `tailwind()` подставляет вместо дефолтного `@media (prefers-color-scheme: dark)` ([unoStyle/tailwind.ts:187](../../lib/theme/unoStyle/tailwind.ts#L187)). Без config (`darkModeSelector` не задан) `dark:*` остаётся OS-pref media-query. Контракт зафиксирован тестами: [lib/theme/darkModeSelector.test.ts](../../lib/theme/darkModeSelector.test.ts) + [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts). **`lightModeSelector`** пока НЕ транслируется (light — дефолт, dark — override).
 
 ### 10.4 CSS layer override
 
@@ -295,6 +320,8 @@ const { unload } = useStyle(":root { --foo: bar }")
 `unoStyle/Uno.test.ts` — 1587 кейсов (4 skipped) на uno-engine.
 `unoStyle/Uno.improved.test.ts` — 1584 кейсa.
 `unoStyle/failClosed.test.ts` — 92 кейса на fail-closed контракт (uno-engine.md Issues 1/3: три режима silent degradation, негативные transforms, дозаполненные шкалы + байт-в-байт regression по baseline движка до фикса).
+
+`unoStyle/v4Extensions.test.ts` — 65 кейсов на расширения диалекта волны 2 (uno-engine.md Issues 2/4/5/6): arbitrary properties, space-*, font smoothing, v4-варианты словарей, v4-имена шкал, modern transform properties (+regression общих имён).
 
 Запуск: `pnpm test` или прицельно `pnpm test -- theme`.
 

@@ -3,7 +3,8 @@ import { tailwind } from "fishtvue/theme"
 import {
   baseBackdropFilter,
   baseFilter,
-  baseTransform,
+  baseScale,
+  baseSkew,
   baseTransition,
   baseTranslate
 } from "fishtvue/theme/unoStyle/unoStatic"
@@ -2864,7 +2865,7 @@ describe("unoStyle", () => {
         },
         {
           classValue: "transition",
-          expected: `.transition {\n  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;\n  ${baseTransition}\n}`
+          expected: `.transition {\n  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, backdrop-filter;\n  ${baseTransition}\n}`
         },
         {
           classValue: "transition-[height]",
@@ -2945,17 +2946,17 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "scale-0",
-          expected: `.scale-0 {\n  --fv-scale-x: 0;\n  --fv-scale-y: 0;\n  ${baseTransform}\n}`
+          expected: `.scale-0 {\n  --fv-scale-x: 0;\n  --fv-scale-y: 0;\n  ${baseScale}\n}`
         },
-        { classValue: "scale-x-0", expected: `.scale-x-0 {\n  --fv-scale-x: 0;\n  ${baseTransform}\n}` },
-        { classValue: "scale-y-0", expected: `.scale-y-0 {\n  --fv-scale-y: 0;\n  ${baseTransform}\n}` },
+        { classValue: "scale-x-0", expected: `.scale-x-0 {\n  --fv-scale-x: 0;\n  ${baseScale}\n}` },
+        { classValue: "scale-y-0", expected: `.scale-y-0 {\n  --fv-scale-y: 0;\n  ${baseScale}\n}` },
         {
           classValue: "scale-50",
-          expected: `.scale-50 {\n  --fv-scale-x: 0.5;\n  --fv-scale-y: 0.5;\n  ${baseTransform}\n}`
+          expected: `.scale-50 {\n  --fv-scale-x: 0.5;\n  --fv-scale-y: 0.5;\n  ${baseScale}\n}`
         },
         {
           classValue: "scale-[1.7]",
-          expected: `.scale-\\[1\\.7\\] {\n  --fv-scale-x: 1.7;\n  --fv-scale-y: 1.7;\n  ${baseTransform}\n}`
+          expected: `.scale-\\[1\\.7\\] {\n  --fv-scale-x: 1.7;\n  --fv-scale-y: 1.7;\n  ${baseScale}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2964,11 +2965,11 @@ describe("unoStyle", () => {
 
     describe("Rotate", () => {
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "rotate-0", expected: `.rotate-0 {\n  --fv-rotate: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "rotate-180", expected: `.rotate-180 {\n  --fv-rotate: 180deg;\n  ${baseTransform}\n}` },
+        { classValue: "rotate-0", expected: `.rotate-0 {\n  rotate: 0deg;\n}` },
+        { classValue: "rotate-180", expected: `.rotate-180 {\n  rotate: 180deg;\n}` },
         {
           classValue: "rotate-[17deg]",
-          expected: `.rotate-\\[17deg\\] {\n  --fv-rotate: 17deg;\n  ${baseTransform}\n}`
+          expected: `.rotate-\\[17deg\\] {\n  rotate: 17deg;\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3000,9 +3001,9 @@ describe("unoStyle", () => {
 
     describe("Skew", () => {
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "skew-x-0", expected: `.skew-x-0 {\n  --fv-skew-x: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "skew-y-0", expected: `.skew-y-0 {\n  --fv-skew-y: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "skew-x-1", expected: `.skew-x-1 {\n  --fv-skew-x: 1deg;\n  ${baseTransform}\n}` }
+        { classValue: "skew-x-0", expected: `.skew-x-0 {\n  --fv-skew-x: 0deg;\n  ${baseSkew}\n}` },
+        { classValue: "skew-y-0", expected: `.skew-y-0 {\n  --fv-skew-y: 0deg;\n  ${baseSkew}\n}` },
+        { classValue: "skew-x-1", expected: `.skew-x-1 {\n  --fv-skew-x: 1deg;\n  ${baseSkew}\n}` }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
