@@ -82,7 +82,8 @@
     "relative flex w-px items-center justify-center bg-gray-200 dark:bg-gray-800 forced-colors:outline",
     "touch-none select-none",
     "after:absolute after:inset-y-0 after:left-1/2 after:w-2 after:-translate-x-1/2 after:z-10",
-    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1",
+    // ring-ring — несуществующий токен из shadcn-пресета; focus-идиома проекта — theme-токены (как Input/TextEditor)
+    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-theme-600 dark:focus-visible:ring-theme-700 focus-visible:ring-offset-1",
     "data-[direction=vertical]:h-px data-[direction=vertical]:w-full data-[direction=vertical]:after:left-0 data-[direction=vertical]:after:h-3 data-[direction=vertical]:after:w-full data-[direction=vertical]:after:-translate-y-1/2 data-[direction=vertical]:after:translate-x-0",
     styles.value?.separator ? (styles.value.separator as string) : ""
   ])

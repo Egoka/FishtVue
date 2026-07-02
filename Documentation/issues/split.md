@@ -1,7 +1,7 @@
 ---
 title: Issues — Split
-summary: Аудит Split. Закрыто 2026-06-06 — Issue 1 (body.classList → drag overlay), 2 (coverage 60→85% / 39→72% branch, 7→32 теста), 3 (dup initStyle снят Wave 2.3 + per-component sideEffects + unstyled regression), 4 (aria-orientation + aria-controls; role/valuenow уже были), 5 (keyboard resize), 6 (localStorage persistence реализована, isClient-guarded), 8 (touch уже через Pointer Events + motion-safe). Закрыто 2026-06-13 — A4-5 (inherited root exports map, Wave 2.1), F31 (RTL: dir-aware resize-математика + keyboard, без логических классов — Split не имеет физических left/right offset'ов), G34 (root-ref expose `resizableGroup` + `focus()`), B10 (resize-handle: forced-colors:outline + grip через preset-aware theme-* токен). Закрыто 2026-06-14 — follow-up к Issue 1: overlay (cursor-*-resize) залипал при release указателя вне компонента → drag завершается window-safety-net (`pointerup`/`pointercancel`) + идемпотентный `stopResizePanel`. Матрица 0/0/0/0. Файл остаётся active как трекер cross-cutting shadcn-semantic-token миграции (theme.md Issue 1 / Wave 9), как pagination/form/table.
-updated: 2026-06-14
+summary: Аудит Split. Закрыто 2026-06-06 — Issue 1 (body.classList → drag overlay), 2 (coverage 60→85% / 39→72% branch, 7→32 теста), 3 (dup initStyle снят Wave 2.3 + per-component sideEffects + unstyled regression), 4 (aria-orientation + aria-controls; role/valuenow уже были), 5 (keyboard resize), 6 (localStorage persistence реализована, isClient-guarded), 8 (touch уже через Pointer Events + motion-safe). Закрыто 2026-06-13 — A4-5 (inherited root exports map, Wave 2.1), F31 (RTL: dir-aware resize-математика + keyboard, без логических классов — Split не имеет физических left/right offset'ов), G34 (root-ref expose `resizableGroup` + `focus()`), B10 (resize-handle: forced-colors:outline + grip через preset-aware theme-* токен). Закрыто 2026-06-14 — follow-up к Issue 1: overlay (cursor-*-resize) залипал при release указателя вне компонента → drag завершается window-safety-net (`pointerup`/`pointercancel`) + идемпотентный `stopResizePanel`. Закрыто 2026-07-02 — Issue 11 (focus-ring разделителя: несуществующий shadcn-токен `ring-ring` → `ring-theme-600/700`). Матрица 0/0/0/0. Файл остаётся active как трекер cross-cutting shadcn-semantic-token миграции (theme.md Issue 1 / Wave 9), как pagination/form/table.
+updated: 2026-07-02
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/split/
 related-doc: ../components/split.md
@@ -176,6 +176,20 @@ Resize только через pointer drag. Keyboard-users не могли из
 - **Где:** [separatorClass — Split.vue:80](../../lib/split/Split.vue#L80), [grip-стили — Split.vue:128-136](../../lib/split/Split.vue#L128-L136), [icon — Split.vue:751](../../lib/split/Split.vue#L751)
 - **Resolution (canon-safe, без правок theme-движка):** (1) **forced-colors** — `forced-colors:outline` на базовом классе разделителя ([Split.vue:80](../../lib/split/Split.vue#L80)) сохраняет его видимым в Windows high-contrast (где `bg-*` сбрасывается); зеркало [table.md Issue 12](./table.md) / [pagination.md Issue 8](./pagination.md). (2) **preset-aware токен** — грип-акцент (`classSeparatorStripStyle` / `classSeparatorIcon` / `classSeparatorHexagonStyle` + custom-icon) переведён с hardcode `bg-neutral-300 dark:bg-neutral-600` / `text-gray-500` на динамический `bg-theme-300 dark:bg-theme-700` / `text-theme-500` (`theme` — единственный preset-управляемый цвет через `var(--theme)`, см. [architecture/theme.md §10.3](../architecture/theme.md)). Структурная 1px-линия разделителя остаётся нейтральной (`bg-gray-200`) — это divider, не акцент. Покрыто блоком тестов «B10 — resize-handle colors».
 - **Примечание:** полная shadcn-style semantic-token миграция (`bg-surface` / `border-border` — требует extension theme-движка + runtime `usePreset`; канон «не патчим движок») остаётся cross-cutting [theme.md Issue 1](./theme.md) / Wave 9, отдельно от Split.
+
+## ~~Issue 11: `focus-visible:ring-ring` — несуществующий токен в focus-стиле разделителя~~ ✅ resolved 2026-07-02
+
+- **Категория:** correctness (styling) / a11y
+- **Severity:** ~~medium~~ → resolved
+- **Где (was):** [separatorClass — Split.vue:85](../../lib/split/Split.vue#L85)
+
+### Что найдено
+
+`focus-visible:ring-ring` — copy-paste из shadcn-пресета (semantic-токен `ring`, которого в палитре FishtVue нет). Движок не генерировал для него валидного цвета: до fail-closed — мусорное правило `{ undefined }` в Split-теге, после (uno-engine.md Issue 1) — drop с dev-warn. Итог: keyboard-focus разделителя показывал ring **без цвета** (fallback `--fv-ring-color`), а не осмысленный акцент. Вскрыто sandbox-корпусным диффом волны 1 uno-движка.
+
+### Что сделано
+
+Замена на focus-идиому проекта ([Input.vue:171](../../lib/input/Input.vue#L171), [TextEditor.vue:175](../../lib/texteditor/TextEditor.vue#L175)): `focus-visible:ring-theme-600 dark:focus-visible:ring-theme-700` ([Split.vue:86](../../lib/split/Split.vue#L86)) — preset-aware `theme`-токен, согласован с B10-резолюцией (Issue 10). Regression-тест — [Split.test.ts](../../lib/split/Split.test.ts) («не использует несуществующий ring-ring»).
 
 ## Cross-cutting: Configuration support
 

@@ -889,4 +889,20 @@ describe("Split Component", () => {
       expect(wrapper.vm.styles).toEqual({ panel: "stylesPanel" })
     })
   })
+
+  describe("Separator focus-ring — валидный theme-токен (uno-engine fail-closed regression)", () => {
+    it("не использует несуществующий ring-ring (shadcn copy-paste)", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "panel1", size: 50 },
+            { name: "panel2", size: 50 }
+          ]
+        }
+      })
+      const cls = wrapper.find("[data-split-separator]").attributes("class") ?? ""
+      expect(cls).not.toContain("ring-ring")
+      expect(cls).toContain("focus-visible:ring-theme-600")
+    })
+  })
 })
