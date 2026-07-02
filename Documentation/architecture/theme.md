@@ -1,7 +1,7 @@
 ---
 title: Theme
 summary: Token-инфраструктура, primitive/semantic, темы Aurora/Harmony/Sapphire, uno-engine. useStyle HMR-дедуп через data-fishtvue-style-id (2026-06-14).
-updated: 2026-06-14
+updated: 2026-06-21
 stability: stable
 since: 0.2.11
 ---
@@ -205,7 +205,7 @@ unload()
 
 ### 10.4 CSS layer override
 
-Базовый layer `@layer fishtvue { ... }` инжектится при install. Дополнительные layers задаются через `optionsTheme.layers` — см. [Config §10.4](./config.md#104-css-layer-override) и [01-getting-started §10.4](../01-getting-started.md#104-css-layer-override).
+Базовый layer `@layer fishtvue { ... }` инжектится при install; **каждый component-стиль** (через `Component.__stylesBase`) тоже оборачивается в `@layer fishtvue` по умолчанию — Issue 4 ✅ 2026-06-21, поэтому unlayered consumer-CSS предсказуемо перебивает FishtVue. Дополнительные layers задаются через `optionsTheme.layers` — см. [Config §10.4](./config.md#104-css-layer-override) и [01-getting-started §10.4](../01-getting-started.md#104-css-layer-override).
 
 Для override токена цвета `theme`:
 

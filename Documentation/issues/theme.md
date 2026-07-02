@@ -1,7 +1,7 @@
 ---
 title: Issues — Theme system
 summary: Аудит theme — coverage themes/ и uno.ts 0%, нет публичного API usePreset/updatePreset/$dt/palette (заявлены в публичной доке но не экспортируются), no documented runtime theme switch path.
-updated: 2026-06-12
+updated: 2026-06-21
 audit-checklist: 60-point + Configuration support
 source: lib/theme/
 related-doc: ../architecture/theme.md
@@ -14,7 +14,7 @@ related-doc: ../architecture/theme.md
 | Severity | Count | Categories                                                                                |
 | -------- | ----- | ----------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                         |
-| high     | 5     | A2, A4-5, J46 (themes 0% coverage), L53 (no usePreset/updatePreset API), C17 (CSS layers) |
+| high     | 4     | A2, A4-5, J46 (themes 0% coverage), L53 (no usePreset/updatePreset API)                    |
 | medium   | 4     | D21, F31, B10, K46 (uno.ts 0%)                                                            |
 | low      | 2     | E29, N59                                                                                  |
 
@@ -109,11 +109,13 @@ uno.ts всего 3 строки — re-export. semantic.ts 19 строк — т
 
 Audit: что именно re-exported. Если просто public surface — coverage не критичен (test потребителя покрывает). Если содержит логику — добавить unit-test.
 
-## Issue 4: CSS Layers (`@layer fishtvue`) — реализация частична
+## ~~Issue 4: CSS Layers (`@layer fishtvue`) — реализация частична~~ ✅ resolved 2026-06-21
 
 - **Категория:** C17 (CSS layers / @layer)
-- **Severity:** high
-- **Где:** [config/index.ts:135-141](../../lib/config/index.ts#L135-L141), [docs/content/ru/3.Configuration/2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
+- **Severity:** ~~high~~
+- **Где:** [component/index.ts:159-169](../../lib/component/index.ts#L159-L169) (`__stylesBase`), [config/index.ts:160-167](../../lib/config/index.ts#L160-L167) (base-style)
+
+> **Status (2026-06-21): ✅ resolved (Wave 2).** Component-стили теперь оборачиваются в `@layer fishtvue` по умолчанию. Фикс — в `Component.__stylesBase` else-ветке ([component/index.ts:159-169](../../lib/component/index.ts#L159-L169)), **НЕ** в `useStyle.ts` (как предполагал исходный аудит ниже): `useStyle` — generic injection-helper, и обёртка там дала бы двойной wrap base-style и прямых вызовов (`Theme.test.ts`). `__stylesBase` — единственная точка, где (a) уже была conditional-обёртка для `optionsTheme.layers`, (b) base-style не задет (передаёт собственный `stylesComp`). Канон [dev-patterns.md §3](../dev-patterns.md). Контракт: [Component.test.ts](../../lib/component/Component.test.ts) `default __stylesBase wraps component CSS in @layer fishtvue`.
 
 ### Что найдено
 
@@ -128,14 +130,11 @@ BaseStylesComponent.initStyle(() =>
 
 Только base-style использует `@layer`. Component-уровневые стили (через `Component.setStyle` → `useStyle.ts`) — НЕ обёрнуты в layer. Documentation 2.Theming.md обещает «Управление приоритетом стилей через CSS @layer», но компоненты этим не пользуются.
 
-### Что нужно сделать
+### Что сделано (2026-06-21)
 
-1. В [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue`:
-   ```ts
-   const wrappedCss = `@layer fishtvue { ${css} }`
-   ```
-2. Если `optionsTheme.layers` указан — использовать настраиваемый layer name.
-3. Тест: пользовательский CSS вне layer перебивает FishtVue (предсказуемая cascade).
+1. [component/index.ts:159-169](../../lib/component/index.ts#L159-L169) — else-ветка `__stylesBase` (когда `optionsTheme.layers` не задан) теперь оборачивает css в `@layer fishtvue {${css}}`, зеркаля base-style ([config/index.ts:166](../../lib/config/index.ts#L166)). Раньше возвращала сырой css вне слоя → все 22 component-стиля были вне cascade-layer (base-style — внутри, рассинхрон).
+2. `optionsTheme.layers` (truthy-ветка) — без изменений: `@layer ${layers}; @layer fishtvue {${css}}` (order-декларация + слой).
+3. Тест: [Component.test.ts](../../lib/component/Component.test.ts) `default __stylesBase wraps component CSS in @layer fishtvue (Wave 2 — theme Issue 4)` — дефолтный component-стиль содержит `@layer fishtvue` + зарегистрированное правило внутри слоя. Консумерский CSS вне layer теперь предсказуемо перебивает FishtVue (cascade-4).
 
 ## ~~Issue 5: `darkModeSelector` — partially honored~~ ✅ resolved 2026-06-12
 
@@ -196,7 +195,7 @@ Theme-токены типа `border-left-radius` хардкоден. Должн�
 | `optionsTheme.prefix`            | ⚠️          | через UnoCSS preset — проверить                                             |
 | `optionsTheme.lightModeSelector` | ❌          | типизирован, но НЕ транслируется в движок (light — дефолт; не входит в B11) |
 | `optionsTheme.darkModeSelector`  | ✅          | Issue 5 — `setStyle:150` → `tailwind.ts:95`, test-locked                    |
-| `optionsTheme.layers`            | ⚠️          | только base-style (Issue 4)                                                 |
+| `optionsTheme.layers`            | ✅          | base + component styles (Issue 4 ✅ 2026-06-21)                                                 |
 | `optionsTheme.isNotMinifyCSS`    | ⚠️          | проверить применение                                                        |
 | `usePreset` runtime              | ❌          | Issue 1                                                                     |
 | `updatePreset` runtime           | ❌          | Issue 1                                                                     |

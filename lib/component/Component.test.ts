@@ -175,6 +175,22 @@ describe("Testing class Component", () => {
     expect(typeof cssComponents.get("FixWindow")).toBe("string")
   })
 
+  it("default __stylesBase wraps component CSS in @layer fishtvue (Wave 2 — theme Issue 4)", () => {
+    // Канон dev-patterns §3: стили компонента инжектятся в `@layer fishtvue`. В дефолте
+    // (`optionsTheme.layers` не задан) else-ветка `__stylesBase` (index.ts:159-167) обязана
+    // обернуть css в слой — зеркало base-style (config/index.ts:166). До фикса возвращала сырой css.
+    // Уникальный probe-name + delete: `cssComponents`/`listOfStyledComponents` — module-singleton
+    // под `isolate:false`, иначе дедуп класса/контента утечёт из соседнего теста.
+    const name = "WaveTwoLayerProbe"
+    cssComponents.delete(name as any)
+    const c = new Component<"FixWindow">(name as any)
+    c.setStyle("relative") // регистрирует непустой css → минуем minify пустого `@layer{}`
+    c.initStyle() // без аргумента → `__stylesBase`; layers undefined → else-ветка
+    const css = cssComponents.get(name as any) ?? ""
+    expect(css).toContain("@layer fishtvue")
+    expect(css).toContain("relative") // зарегистрированное правило живёт внутри слоя
+  })
+
   describe("__globalConfig fallback chain", () => {
     let savedWindowFishtVue: unknown
     beforeEach(() => {

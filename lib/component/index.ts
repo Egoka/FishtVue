@@ -164,7 +164,9 @@ export default class Component<T extends keyof ComponentsOptions> {
     ${css}
   }
 `
-      : css
+      : // theme Issue 4 (Wave 2): даже без `optionsTheme.layers` component-стиль идёт в `@layer fishtvue`
+        // (зеркало base-style в config/index.ts) — канон dev-patterns §3, предсказуемая cascade.
+        `@layer fishtvue {${css}}`
 
   private __setStyle(stylesComp: StylesComponent): void {
     const CSS = [...(listOfCssComponents.get(this.name) ?? [])].sort((a, b) => {

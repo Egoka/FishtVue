@@ -1,7 +1,7 @@
 ---
 title: Component class
 summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20 + опциональный params для interpolation/CLDR-pluralization (Wave 3.5) с 2026-06-19. Generic narrowing contract (D21) + HMR style-dedup задокументированы 2026-06-14.
-updated: 2026-06-19
+updated: 2026-06-21
 stability: stable
 since: 0.2.11
 ---
@@ -217,12 +217,12 @@ X.onBeforeUnmount(() => {
 
 ### 10.4 CSS layer override
 
-Переданный `layers` обрабатывается в `__stylesBase`:
+`__stylesBase` оборачивает CSS в `@layer fishtvue` **всегда** — даже без `optionsTheme.layers` (Issue 4 ✅ 2026-06-21, Wave 2): зеркало base-style, unlayered consumer-CSS предсказуемо перебивает FishtVue.
 
 ```ts
 layers && layers.length
-  ? `@layer ${layers}; @layer fishtvue { ${css} }`
-  : css
+  ? `@layer ${layers}; @layer fishtvue { ${css} }` // + order-декларация
+  : `@layer fishtvue { ${css} }` // дефолт: тоже в слой (раньше — сырой css)
 ```
 
 См. [Theme §10.4](./theme.md#104-css-layer-override).
