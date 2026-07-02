@@ -239,7 +239,7 @@ layers && layers.length
 
 ### Security
 
-- Инжекция через `useStyle` создаёт `<style>` element. Требует `style-src 'unsafe-inline'` или nonce в CSP. Опциональный `nonce` поддерживается через `StyleOptions.nonce` ([Theme.d.ts:182](../../lib/theme/Theme.d.ts#L182)) — но `Component.__setStyle()` его не пробрасывает (см. Known issues).
+- Инжекция через `useStyle` создаёт `<style>` element. Требует `style-src 'unsafe-inline'` или nonce в CSP. Опциональный `nonce` поддерживается через `StyleOptions.nonce` ([Theme.d.ts:227](../../lib/theme/Theme.d.ts#L227)) — но `Component.__setStyle()` его не пробрасывает (см. Known issues).
 - Нет `eval`, `new Function`, динамических импортов.
 - `cssComponents: Map<NamesComponents, string>` — глобальная мапа без TTL, может расти (за счёт уникальных tw-комбинаций).
 
@@ -342,7 +342,7 @@ describe("Component class", () => {
 
 ### Incomplete or stubbed behavior
 
-- `__setStyle` не пробрасывает `nonce` в `useStyle`, хотя `StyleOptions.nonce` поддерживается ([Theme.d.ts:182](../../lib/theme/Theme.d.ts#L182)). При жёстком CSP без `'unsafe-inline'` это блокер.
+- `__setStyle` не пробрасывает `nonce` в `useStyle`, хотя `StyleOptions.nonce` поддерживается ([Theme.d.ts:227](../../lib/theme/Theme.d.ts#L227)). При жёстком CSP без `'unsafe-inline'` это блокер.
 
 ### Skipped tests
 

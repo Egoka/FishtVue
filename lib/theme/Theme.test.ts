@@ -71,30 +71,16 @@ describe("Testing theme", () => {
       // Проверка наличия основных ключей
       expect(semantic).toHaveProperty("customThemeColor")
       expect(semantic).toHaveProperty("customThemeColorContrast")
-      expect(semantic).toHaveProperty("primary")
 
       // Проверка типов значений для базовых свойств
       expect(typeof semantic.customThemeColor).toBe("number")
       expect(typeof semantic.customThemeColorContrast).toBe("number")
 
-      // Проверка структуры и типов в объекте `primary`
-      const primary = semantic.primary
-      expect(primary).toHaveProperty("50")
-      expect(primary).toHaveProperty("100")
-      expect(primary).toHaveProperty("200")
-      expect(primary).toHaveProperty("300")
-      expect(primary).toHaveProperty("400")
-      expect(primary).toHaveProperty("500")
-      expect(primary).toHaveProperty("600")
-      expect(primary).toHaveProperty("700")
-      expect(primary).toHaveProperty("800")
-      expect(primary).toHaveProperty("900")
-      expect(primary).toHaveProperty("950")
-
-      // Проверка, что значения цветов в `primary` являются строками
-      Object.values(primary).forEach((value) => {
-        expect(typeof value).toBe("string")
-      })
+      // Wave 3.3: дефолтного `primary` больше нет — слот стал опциональным user-override'ом
+      // брендовой палитры (пишется updatePrimaryPalette → `--fv-theme-{tone}` в tokens-теге).
+      // Дефолтные формулы после linksTheme давали статические hsl(0 0 …)-строки и, будучи
+      // эмитированными, перебили бы живые var(--theme)-формулы слота theme.
+      expect(semantic).not.toHaveProperty("primary")
     })
   })
 

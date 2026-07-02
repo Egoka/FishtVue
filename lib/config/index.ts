@@ -1,7 +1,7 @@
 import type { ObjectPlugin, App, Component as VueComponent, InjectionKey } from "vue"
 import { hasInjectionContext, inject, reactive } from "vue"
 import type { Theme } from "fishtvue/theme"
-import { linksTheme, NamesTheme } from "fishtvue/theme"
+import { injectTokens, linksTheme, NamesTheme } from "fishtvue/theme"
 import { isClient } from "fishtvue/utils/domHandler"
 import { deepCopyObject, deepFreeze, deepMerge } from "fishtvue/utils/objectHandler"
 import Component from "fishtvue/component"
@@ -165,6 +165,11 @@ function install(app: App, rawOptions: FishtVueConfiguration): void {
   }`
       : `@layer fishtvue {${baseLayer}}`
   )
+
+  // Wave 3.3 (theme.md Issue 1): tokens-тег с палитрой live-темы (--fv-{color}-{tone} и т.д.).
+  // Инжектится ПОСЛЕ base-стиля → при равной специфичности :root выигрывает; runtime theme API
+  // (usePreset/updatePreset/…) переписывает этот же тег — компоненты перекрашиваются без regen.
+  injectTokens(FishtVue)
 }
 
 // Issue 4: расширенный default export — Vue ObjectPlugin + 3 method'а для extensibility.

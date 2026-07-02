@@ -1,4 +1,6 @@
 import type { HEX, RGB, ThemeColor } from "fishtvue/theme/Theme"
+import { colors } from "fishtvue/theme/primitive"
+import { deepCopy } from "fishtvue/utils/objectHandler"
 
 const SCALES: number[] = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
 const isShortHex = (color: HEX): boolean => /^#([A-Fa-f0-9]{3})$/gm.test(color)
@@ -50,8 +52,12 @@ const blendColors = (solubleColor: string, baseColor: string, weight = 50): stri
 const tint = (color: string, percent: number) => blendColors("#ffffff", color, percent)
 const shade = (color: string, percent: number) => blendColors("#000000", color, percent)
 
-export default (color: HEX): ThemeColor =>
-  SCALES.reduce((acc: any, scale, i) => {
+// Wave 3.3: '{blue}'-форма публичного контракта (docs 2.Theming.md#palette) —
+// возвращает копию готовой primitive-шкалы вместо генерации из HEX.
+export default (color: HEX): ThemeColor => {
+  const ref = typeof color === "string" ? color.match(/^\{(\w+)\}$/) : null
+  if (ref) return deepCopy(((colors as any)?.[ref[1]] ?? {}) as ThemeColor)
+  return SCALES.reduce((acc: any, scale, i) => {
     let resultColor
     if (i <= 5) {
       resultColor = tint(color, (5 - i) * 19)
@@ -63,3 +69,4 @@ export default (color: HEX): ThemeColor =>
     }
     return acc
   }, {})
+}

@@ -1,4 +1,4 @@
-import { addAlphaToHex, custom, negative, sizing } from "./helpers"
+import { addAlphaToHex, custom, negative, resolveColor, sizing } from "./helpers"
 import type { GroupsRegExp, StyleType } from "./UnoTypes"
 // prettier-ignore
 import {
@@ -175,10 +175,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -215,10 +212,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `text-decoration-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `text-decoration-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -470,10 +464,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `background-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `background-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -524,10 +515,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-gradient-from: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone] ?? "000000"}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
+        return `--fv-gradient-from: ${resolveColor(groups)} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${resolveColor(groups, 0) ?? ""} var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -566,10 +554,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone]}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--fv-gradient-via-position), var(--fv-gradient-to);`
+        return `--fv-gradient-to: ${resolveColor(groups, 0) ?? ""} var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${resolveColor(groups)} var(--fv-gradient-via-position), var(--fv-gradient-to);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -609,10 +594,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-gradient-to: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--fv-gradient-to-position);`
+        return `--fv-gradient-to: ${resolveColor(groups)} var(--fv-gradient-to-position);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -659,10 +641,7 @@ export default <Record<string, StyleType>>{
       if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `border-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `border-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -728,10 +707,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `border-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `border-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -769,10 +745,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `outline-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `outline-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -830,10 +803,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.colorOffset.test(classStyle)) {
         const groups = classStyle.match(reg.colorOffset)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-ring-offset-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
+        return `--fv-ring-offset-color: ${resolveColor(groups)};\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
       } else if (reg.specialColorOffset.test(classStyle)) {
         const groups = classStyle.match(reg.specialColorOffset)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -841,10 +811,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-ring-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `--fv-ring-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -902,10 +869,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-shadow-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `--fv-shadow-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -1173,10 +1137,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `accent-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `accent-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -1227,10 +1188,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `caret-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `caret-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -1356,10 +1314,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `fill: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `fill: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -1400,10 +1355,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `stroke: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `stroke: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return

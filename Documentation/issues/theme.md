@@ -1,7 +1,7 @@
 ---
 title: Issues — Theme system
-summary: Аудит theme — coverage themes/ и uno.ts 0%, нет публичного API usePreset/updatePreset/$dt/palette (заявлены в публичной доке но не экспортируются), no documented runtime theme switch path.
-updated: 2026-06-21
+summary: Аудит theme. Issue 1 (runtime theme API usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt/palette) ✅ resolved 2026-07-02 через CSS-variable indirection — close Wave 3.3. Остаются coverage themes/ (J46), tree-shaking primitive (K52), RTL tokens (F31).
+updated: 2026-07-02
 audit-checklist: 60-point + Configuration support
 source: lib/theme/
 related-doc: ../architecture/theme.md
@@ -14,15 +14,24 @@ related-doc: ../architecture/theme.md
 | Severity | Count | Categories                                                                                |
 | -------- | ----- | ----------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                         |
-| high     | 4     | A2, A4-5, J46 (themes 0% coverage), L53 (no usePreset/updatePreset API)                    |
+| high     | 3     | A2, A4-5, J46 (themes 0% coverage)                                                        |
 | medium   | 4     | D21, F31, B10, K46 (uno.ts 0%)                                                            |
 | low      | 2     | E29, N59                                                                                  |
 
-## Issue 1: Публичный API `usePreset`/`updatePreset`/`$dt`/`palette` НЕ существует — а заявлен в Documentation
+## ~~Issue 1: Публичный API `usePreset`/`updatePreset`/`$dt`/`palette` НЕ существует — а заявлен в Documentation~~ ✅ resolved 2026-07-02 (Wave 3.3)
 
 - **Категория:** L53 (Configuration support gap)
-- **Severity:** high
-- **Где:** [theme/index.ts](../../lib/theme/index.ts) (22 lines re-export), [docs/content/ru/3.Configuration/2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
+- **Severity:** ~~high~~
+- **Где:** [theme/index.ts](../../lib/theme/index.ts), [docs/content/ru/3.Configuration/2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
+
+> **Status (2026-07-02): ✅ resolved — close Wave 3.3.** Все 6 функций реализованы и экспортируются из `fishtvue/theme`. **Механизм — CSS-variable indirection, НЕ event-bus/watcher-reinject** (ратифицировано владельцем после анализа: движок — process-wide singleton, live-чтение config в правилах дало бы утечку тем между apps/tenants в SSR и потребовало invalidation-механики):
+>
+> - Движок эмитит именованные цвета через `rgb(var(--fv-{name}-{tone}, R G B) / α)` ([unoStyle/helpers.ts `resolveColor`](../../lib/theme/unoStyle/helpers.ts), 18 emission-sites в [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts)); слот `theme` — `var(--fv-theme-{tone}, hsla(…))` + `color-mix` для alpha (заодно починен silent-баг: alpha для theme-слота игнорировался, и битый градиентный хвост `hsla(…)00`). Fallback внутри `var()` — запечённое значение: без установленного plugin'а рендер прежний.
+> - Install инжектит `:root`-блок токенов live-темы тегом `FishtVueTokens` ([helpers/tokensCss.ts](../../lib/theme/helpers/tokensCss.ts), [config/index.ts:169-172](../../lib/config/index.ts#L169-L172)); runtime-функции переписывают этот ОДИН тег → все смонтированные компоненты перекрашиваются без regen. Пункт «style invalidation mechanism» из roadmap закрыт by design — invalidation не нужен.
+> - [usePreset.ts](../../lib/theme/usePreset.ts) (полная замена + `linksTheme`), [updatePreset.ts](../../lib/theme/updatePreset.ts) (`deepMerge` поверх копии), [updatePrimaryPalette.ts](../../lib/theme/updatePrimaryPalette.ts) (брендовый слот = цвет `theme`; пишет `semantic.primary` → `--fv-theme-*`; вход: палитра/`'{indigo.500}'`-refs/одиночный hex), [updateSurfacePalette.ts](../../lib/theme/updateSurfacePalette.ts) (`semantic.surface` → `--fv-surface-*`, light/dark scoping; потребление компонентами — Wave 9), [$dt.ts](../../lib/theme/$dt.ts) (metadata lookup), `palette("{blue}")` — копия primitive-шкалы.
+> - `semantic.primary` — теперь optional user-слот без дефолта (прежние формулы никем не потреблялись и после `linksTheme` лгали статикой `hsl(0 0 …)`).
+> - Тесты: [themeApi.test.ts](../../lib/theme/themeApi.test.ts) (16), [unoStyle/colorVars.test.ts](../../lib/theme/unoStyle/colorVars.test.ts) (18 — спецификация эмиссии), Uno-сюиты перекалиброваны на var-формат. Browser-verified в sandbox: `updatePrimaryPalette({600:"#b91c1c"})` перекрасил смонтированный элемент в rgb(185,28,28), `usePreset(hue 200/70%)` — в rgb(30,124,171).
+> - **Residual:** public docs [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) импортируют из `'@fishtvue/themes'` — реальный entry `fishtvue/theme`; `$dt`-пример показывает PrimeVue-формат путей (`'primary.color'`) — реальный формат dot-path от корня темы (`'primitive.emerald.500'`). Public docs (fisht.org) ведутся отдельно и в /tz-канон не входят.
 
 ### Что найдено
 
@@ -197,10 +206,12 @@ Theme-токены типа `border-left-radius` хардкоден. Должн�
 | `optionsTheme.darkModeSelector`  | ✅          | Issue 5 — `setStyle:150` → `tailwind.ts:95`, test-locked                    |
 | `optionsTheme.layers`            | ✅          | base + component styles (Issue 4 ✅ 2026-06-21)                                                 |
 | `optionsTheme.isNotMinifyCSS`    | ⚠️          | проверить применение                                                        |
-| `usePreset` runtime              | ❌          | Issue 1                                                                     |
-| `updatePreset` runtime           | ❌          | Issue 1                                                                     |
-| `$dt`                            | ❌          | Issue 1                                                                     |
-| `palette`                        | ⚠️          | helper существует, не exported (Issue 1)                                    |
+| `usePreset` runtime              | ✅          | Issue 1 ✅ 2026-07-02 — CSS-variable indirection, tokens-тег `FishtVueTokens` |
+| `updatePreset` runtime           | ✅          | Issue 1 ✅ 2026-07-02                                                        |
+| `updatePrimaryPalette` runtime   | ✅          | Issue 1 ✅ 2026-07-02 — брендовый слот = цвет `theme`                        |
+| `updateSurfacePalette` runtime   | ✅          | Issue 1 ✅ 2026-07-02 — vars+config; потребление компонентами — Wave 9       |
+| `$dt`                            | ✅          | Issue 1 ✅ 2026-07-02                                                        |
+| `palette`                        | ✅          | экспортирован + `'{blue}'`-форма (Issue 1 ✅ 2026-07-02)                     |
 
 ## Dual-API gap
 

@@ -366,7 +366,7 @@ Filter UI и cell-editor popovers — через FixWindow (in-house движо�
 
 При `dir="rtl"` resize handle на «правой» стороне header'а оказывался слева.
 
-> **Resolution (2026-06-11).** RTL без новых зависимостей — движок уже понимает `rtl:`/`ltr:` (`specialStates` в [unoStatic.ts](../../lib/theme/unoStyle/unoStatic.ts#L555)) и логические `start`/`end`/`pe`/`ps` (`inset-inline-*` / `padding-inline-*`, [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts#L1550)):
+> **Resolution (2026-06-11).** RTL без новых зависимостей — движок уже понимает `rtl:`/`ltr:` (`specialStates` в [unoStatic.ts](../../lib/theme/unoStyle/unoStatic.ts#L555)) и логические `start`/`end`/`pe`/`ps` (`inset-inline-*` / `padding-inline-*`, [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts#L1502)):
 >
 > - **Resize-handle (CSS):** `pr-2` → `pe-2` (padding-inline-end, авто-флип по dir); inset `-right-3`/`right-3` → физический default (работает без `dir`-атрибута — `direction` дефолтит в ltr) + `rtl:`-override (`rtl:right-auto rtl:-left-3` / `rtl:left-3`), т.к. negative-логический inset (`-end-3`) движок не поддерживает (`start`/`end` regex без `negative`-группы). [classResizedColumns](../../lib/table/Table.vue).
 > - **Resize-математика (JS):** [`resizeColumn`](../../lib/table/Table.vue) детектит направление `getComputedStyle(columnEl).direction === "rtl"`: в RTL ширина считается от правого края (`rect.right - pageX`), в LTR — от левого (`pageX - rect.left`). Без нового prop — уважает ambient `dir`.

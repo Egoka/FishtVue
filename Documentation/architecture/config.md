@@ -1,7 +1,7 @@
 ---
 title: Config (FishtVue plugin)
-summary: Vue plugin, FishtVueConfiguration, useFishtVue, getOptions, setActiveLocale, extensibility API (use/registerComponent/extendTheme).
-updated: 2026-05-20
+summary: Vue plugin, FishtVueConfiguration, useFishtVue, getOptions, setActiveLocale, extensibility API (use/registerComponent/extendTheme). Install инжектит tokens-тег FishtVueTokens для runtime theme API (Wave 3.3).
+updated: 2026-07-02
 stability: stable
 since: 0.2.11
 ---
@@ -61,6 +61,8 @@ lib/config/
 ```
 
 обёрнутый в `@layer fishtvue { ... }` и опционально с `@layer <user-layers>;` если задан `optionsTheme.layers`.
+
+10. **Tokens-тег (Wave 3.3):** `injectTokens(FishtVue)` ([config/index.ts:169-172](../../lib/config/index.ts#L169-L172)) инжектит `:root`-блок дизайн-токенов live-темы (`--fv-{color}-{tone}` rgb-триплеты, `--fv-theme-*`, `--fv-surface-*`) тегом `style[data-fishtvue-style-id="FishtVueTokens"]` + пишет строку в `cssComponents` (SSR). Runtime theme API (`usePreset`/`updatePreset`/…, см. [Theme §8](./theme.md#8-exposed-methods)) переписывает этот же тег.
 
 **SSR / hydration:**
 

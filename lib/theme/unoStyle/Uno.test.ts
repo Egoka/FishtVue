@@ -358,7 +358,7 @@ describe("unoStyle", () => {
           {
             classValue: "supports-[backdrop-filter]:bg-red-500/25",
             expected:
-              "@supports (backdrop-filter) {\n.supports-\\[backdrop-filter\\]\\:bg-red-500\\/25 {\n  background-color: #ef444440;\n}\n}"
+              "@supports (backdrop-filter) {\n.supports-\\[backdrop-filter\\]\\:bg-red-500\\/25 {\n  background-color: rgb(var(--fv-red-500, 239 68 68) / 0.25);\n}\n}"
           }
         ])("tailwind($classValue)", ({ classValue, expected }) => {
           expect(tailwind(classValue)).toBe(expected)
@@ -1632,26 +1632,59 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "text-slate-50", expected: ".text-slate-50 {\n  color: #f8fafc;\n}" },
-        { classValue: "text-emerald-100", expected: ".text-emerald-100 {\n  color: #d1fae5;\n}" },
-        { classValue: "text-green-200", expected: ".text-green-200 {\n  color: #bbf7d0;\n}" },
-        { classValue: "text-lime-300", expected: ".text-lime-300 {\n  color: #bef264;\n}" },
-        { classValue: "text-red-400", expected: ".text-red-400 {\n  color: #f87171;\n}" },
-        { classValue: "text-orange-500", expected: ".text-orange-500 {\n  color: #f97316;\n}" },
-        { classValue: "text-amber-600", expected: ".text-amber-600 {\n  color: #d97706;\n}" },
-        { classValue: "text-yellow-700", expected: ".text-yellow-700 {\n  color: #a16207;\n}" },
-        { classValue: "text-teal-800", expected: ".text-teal-800 {\n  color: #115e59;\n}" },
-        { classValue: "text-cyan-900", expected: ".text-cyan-900 {\n  color: #164e63;\n}" },
-        { classValue: "text-sky-950", expected: ".text-sky-950 {\n  color: #082f49;\n}" },
+        {
+          classValue: "text-slate-50",
+          expected: ".text-slate-50 {\n  color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "text-emerald-100",
+          expected: ".text-emerald-100 {\n  color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "text-green-200",
+          expected: ".text-green-200 {\n  color: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "text-lime-300",
+          expected: ".text-lime-300 {\n  color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        { classValue: "text-red-400", expected: ".text-red-400 {\n  color: rgb(var(--fv-red-400, 248 113 113));\n}" },
+        {
+          classValue: "text-orange-500",
+          expected: ".text-orange-500 {\n  color: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "text-amber-600",
+          expected: ".text-amber-600 {\n  color: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "text-yellow-700",
+          expected: ".text-yellow-700 {\n  color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        { classValue: "text-teal-800", expected: ".text-teal-800 {\n  color: rgb(var(--fv-teal-800, 17 94 89));\n}" },
+        { classValue: "text-cyan-900", expected: ".text-cyan-900 {\n  color: rgb(var(--fv-cyan-900, 22 78 99));\n}" },
+        { classValue: "text-sky-950", expected: ".text-sky-950 {\n  color: rgb(var(--fv-sky-950, 8 47 73));\n}" },
         { classValue: "text-[#50d71e]", expected: ".text-\\[\\#50d71e\\] {\n  color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "text-red-400/0", expected: ".text-red-400\\/0 {\n  color: #f8717100;\n}" },
-        { classValue: "text-red-400/50", expected: ".text-red-400\\/50 {\n  color: #f8717180;\n}" },
-        { classValue: "text-red-400/100", expected: ".text-red-400\\/100 {\n  color: #f87171;\n}" },
-        { classValue: "text-red-400/[.06]", expected: ".text-red-400\\/\\[\\.06\\] {\n  color: #f871710f;\n}" },
+        {
+          classValue: "text-red-400/0",
+          expected: ".text-red-400\\/0 {\n  color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "text-red-400/50",
+          expected: ".text-red-400\\/50 {\n  color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "text-red-400/100",
+          expected: ".text-red-400\\/100 {\n  color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "text-red-400/[.06]",
+          expected: ".text-red-400\\/\\[\\.06\\] {\n  color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
+        },
         { classValue: "text-[#50d71e]/25", expected: ".text-\\[\\#50d71e\\]\\/25 {\n  color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -1692,32 +1725,50 @@ describe("unoStyle", () => {
           classValue: "decoration-white/100",
           expected: ".decoration-white\\/100 {\n  text-decoration-color: #ffffff;\n}"
         },
-        { classValue: "decoration-slate-50", expected: ".decoration-slate-50 {\n  text-decoration-color: #f8fafc;\n}" },
+        {
+          classValue: "decoration-slate-50",
+          expected: ".decoration-slate-50 {\n  text-decoration-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
         {
           classValue: "decoration-emerald-100",
-          expected: ".decoration-emerald-100 {\n  text-decoration-color: #d1fae5;\n}"
+          expected: ".decoration-emerald-100 {\n  text-decoration-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
         },
         {
           classValue: "decoration-green-200",
-          expected: ".decoration-green-200 {\n  text-decoration-color: #bbf7d0;\n}"
+          expected: ".decoration-green-200 {\n  text-decoration-color: rgb(var(--fv-green-200, 187 247 208));\n}"
         },
-        { classValue: "decoration-lime-300", expected: ".decoration-lime-300 {\n  text-decoration-color: #bef264;\n}" },
-        { classValue: "decoration-red-400", expected: ".decoration-red-400 {\n  text-decoration-color: #f87171;\n}" },
+        {
+          classValue: "decoration-lime-300",
+          expected: ".decoration-lime-300 {\n  text-decoration-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "decoration-red-400",
+          expected: ".decoration-red-400 {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
         {
           classValue: "decoration-orange-500",
-          expected: ".decoration-orange-500 {\n  text-decoration-color: #f97316;\n}"
+          expected: ".decoration-orange-500 {\n  text-decoration-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
         },
         {
           classValue: "decoration-amber-600",
-          expected: ".decoration-amber-600 {\n  text-decoration-color: #d97706;\n}"
+          expected: ".decoration-amber-600 {\n  text-decoration-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
         },
         {
           classValue: "decoration-yellow-700",
-          expected: ".decoration-yellow-700 {\n  text-decoration-color: #a16207;\n}"
+          expected: ".decoration-yellow-700 {\n  text-decoration-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
         },
-        { classValue: "decoration-teal-800", expected: ".decoration-teal-800 {\n  text-decoration-color: #115e59;\n}" },
-        { classValue: "decoration-cyan-900", expected: ".decoration-cyan-900 {\n  text-decoration-color: #164e63;\n}" },
-        { classValue: "decoration-sky-950", expected: ".decoration-sky-950 {\n  text-decoration-color: #082f49;\n}" },
+        {
+          classValue: "decoration-teal-800",
+          expected: ".decoration-teal-800 {\n  text-decoration-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "decoration-cyan-900",
+          expected: ".decoration-cyan-900 {\n  text-decoration-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        {
+          classValue: "decoration-sky-950",
+          expected: ".decoration-sky-950 {\n  text-decoration-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
+        },
         {
           classValue: "decoration-[#50d71e]",
           expected: ".decoration-\\[\\#50d71e\\] {\n  text-decoration-color: #50d71e;\n}"
@@ -1728,19 +1779,20 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "decoration-red-400/0",
-          expected: ".decoration-red-400\\/0 {\n  text-decoration-color: #f8717100;\n}"
+          expected: ".decoration-red-400\\/0 {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
         },
         {
           classValue: "decoration-red-400/50",
-          expected: ".decoration-red-400\\/50 {\n  text-decoration-color: #f8717180;\n}"
+          expected: ".decoration-red-400\\/50 {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
         },
         {
           classValue: "decoration-red-400/100",
-          expected: ".decoration-red-400\\/100 {\n  text-decoration-color: #f87171;\n}"
+          expected: ".decoration-red-400\\/100 {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113));\n}"
         },
         {
           classValue: "decoration-red-400/[.06]",
-          expected: ".decoration-red-400\\/\\[\\.06\\] {\n  text-decoration-color: #f871710f;\n}"
+          expected:
+            ".decoration-red-400\\/\\[\\.06\\] {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
         },
         {
           classValue: "decoration-[#50d71e]/25",
@@ -1937,26 +1989,71 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "bg-slate-50", expected: ".bg-slate-50 {\n  background-color: #f8fafc;\n}" },
-        { classValue: "bg-emerald-100", expected: ".bg-emerald-100 {\n  background-color: #d1fae5;\n}" },
-        { classValue: "bg-green-200", expected: ".bg-green-200 {\n  background-color: #bbf7d0;\n}" },
-        { classValue: "bg-lime-300", expected: ".bg-lime-300 {\n  background-color: #bef264;\n}" },
-        { classValue: "bg-red-400", expected: ".bg-red-400 {\n  background-color: #f87171;\n}" },
-        { classValue: "bg-orange-500", expected: ".bg-orange-500 {\n  background-color: #f97316;\n}" },
-        { classValue: "bg-amber-600", expected: ".bg-amber-600 {\n  background-color: #d97706;\n}" },
-        { classValue: "bg-yellow-700", expected: ".bg-yellow-700 {\n  background-color: #a16207;\n}" },
-        { classValue: "bg-teal-800", expected: ".bg-teal-800 {\n  background-color: #115e59;\n}" },
-        { classValue: "bg-cyan-900", expected: ".bg-cyan-900 {\n  background-color: #164e63;\n}" },
-        { classValue: "bg-sky-950", expected: ".bg-sky-950 {\n  background-color: #082f49;\n}" },
+        {
+          classValue: "bg-slate-50",
+          expected: ".bg-slate-50 {\n  background-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "bg-emerald-100",
+          expected: ".bg-emerald-100 {\n  background-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "bg-green-200",
+          expected: ".bg-green-200 {\n  background-color: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "bg-lime-300",
+          expected: ".bg-lime-300 {\n  background-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "bg-red-400",
+          expected: ".bg-red-400 {\n  background-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "bg-orange-500",
+          expected: ".bg-orange-500 {\n  background-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "bg-amber-600",
+          expected: ".bg-amber-600 {\n  background-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "bg-yellow-700",
+          expected: ".bg-yellow-700 {\n  background-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        {
+          classValue: "bg-teal-800",
+          expected: ".bg-teal-800 {\n  background-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "bg-cyan-900",
+          expected: ".bg-cyan-900 {\n  background-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        {
+          classValue: "bg-sky-950",
+          expected: ".bg-sky-950 {\n  background-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
+        },
         { classValue: "bg-[#50d71e]", expected: ".bg-\\[\\#50d71e\\] {\n  background-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "bg-red-400/0", expected: ".bg-red-400\\/0 {\n  background-color: #f8717100;\n}" },
-        { classValue: "bg-red-400/50", expected: ".bg-red-400\\/50 {\n  background-color: #f8717180;\n}" },
-        { classValue: "bg-red-400/100", expected: ".bg-red-400\\/100 {\n  background-color: #f87171;\n}" },
-        { classValue: "bg-red-400/[.06]", expected: ".bg-red-400\\/\\[\\.06\\] {\n  background-color: #f871710f;\n}" },
+        {
+          classValue: "bg-red-400/0",
+          expected: ".bg-red-400\\/0 {\n  background-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "bg-red-400/50",
+          expected: ".bg-red-400\\/50 {\n  background-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "bg-red-400/100",
+          expected: ".bg-red-400\\/100 {\n  background-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "bg-red-400/[.06]",
+          expected: ".bg-red-400\\/\\[\\.06\\] {\n  background-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
+        },
         { classValue: "bg-[#50d71e]/25", expected: ".bg-\\[\\#50d71e\\]\\/25 {\n  background-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2112,57 +2209,57 @@ describe("unoStyle", () => {
         {
           classValue: "from-slate-50",
           expected:
-            ".from-slate-50 {\n  --fv-gradient-from: #f8fafc var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8fafc00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-slate-50 {\n  --fv-gradient-from: rgb(var(--fv-slate-50, 248 250 252)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-slate-50, 248 250 252) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-gray-100",
           expected:
-            ".from-gray-100 {\n  --fv-gradient-from: #f3f4f6 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f3f4f600 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-gray-100 {\n  --fv-gradient-from: rgb(var(--fv-gray-100, 243 244 246)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-gray-100, 243 244 246) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-zinc-200",
           expected:
-            ".from-zinc-200 {\n  --fv-gradient-from: #e4e4e7 var(--fv-gradient-from-position);\n  --fv-gradient-to: #e4e4e700 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-zinc-200 {\n  --fv-gradient-from: rgb(var(--fv-zinc-200, 228 228 231)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-zinc-200, 228 228 231) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-neutral-300",
           expected:
-            ".from-neutral-300 {\n  --fv-gradient-from: #d4d4d4 var(--fv-gradient-from-position);\n  --fv-gradient-to: #d4d4d400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-neutral-300 {\n  --fv-gradient-from: rgb(var(--fv-neutral-300, 212 212 212)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-neutral-300, 212 212 212) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-stone-400",
           expected:
-            ".from-stone-400 {\n  --fv-gradient-from: #a8a29e var(--fv-gradient-from-position);\n  --fv-gradient-to: #a8a29e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-stone-400 {\n  --fv-gradient-from: rgb(var(--fv-stone-400, 168 162 158)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-stone-400, 168 162 158) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-500",
           expected:
-            ".from-red-500 {\n  --fv-gradient-from: #ef4444 var(--fv-gradient-from-position);\n  --fv-gradient-to: #ef444400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-red-500 {\n  --fv-gradient-from: rgb(var(--fv-red-500, 239 68 68)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-red-500, 239 68 68) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-orange-600",
           expected:
-            ".from-orange-600 {\n  --fv-gradient-from: #ea580c var(--fv-gradient-from-position);\n  --fv-gradient-to: #ea580c00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-orange-600 {\n  --fv-gradient-from: rgb(var(--fv-orange-600, 234 88 12)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-orange-600, 234 88 12) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-amber-700",
           expected:
-            ".from-amber-700 {\n  --fv-gradient-from: #b45309 var(--fv-gradient-from-position);\n  --fv-gradient-to: #b4530900 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-amber-700 {\n  --fv-gradient-from: rgb(var(--fv-amber-700, 180 83 9)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-amber-700, 180 83 9) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-yellow-800",
           expected:
-            ".from-yellow-800 {\n  --fv-gradient-from: #854d0e var(--fv-gradient-from-position);\n  --fv-gradient-to: #854d0e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-yellow-800 {\n  --fv-gradient-from: rgb(var(--fv-yellow-800, 133 77 14)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-yellow-800, 133 77 14) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-lime-900",
           expected:
-            ".from-lime-900 {\n  --fv-gradient-from: #365314 var(--fv-gradient-from-position);\n  --fv-gradient-to: #36531400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-lime-900 {\n  --fv-gradient-from: rgb(var(--fv-lime-900, 54 83 20)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-lime-900, 54 83 20) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-green-950",
           expected:
-            ".from-green-950 {\n  --fv-gradient-from: #052e16 var(--fv-gradient-from-position);\n  --fv-gradient-to: #052e1600 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-green-950 {\n  --fv-gradient-from: rgb(var(--fv-green-950, 5 46 22)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-green-950, 5 46 22) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-[#50d71e]",
@@ -2182,22 +2279,22 @@ describe("unoStyle", () => {
         {
           classValue: "from-red-400/0",
           expected:
-            ".from-red-400\\/0 {\n  --fv-gradient-from: #f8717100 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-red-400\\/0 {\n  --fv-gradient-from: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-400/50",
           expected:
-            ".from-red-400\\/50 {\n  --fv-gradient-from: #f8717180 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-red-400\\/50 {\n  --fv-gradient-from: rgb(var(--fv-red-400, 248 113 113) / 0.5) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-400/100",
           expected:
-            ".from-red-400\\/100 {\n  --fv-gradient-from: #f87171 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-red-400\\/100 {\n  --fv-gradient-from: rgb(var(--fv-red-400, 248 113 113)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-400/[.06]",
           expected:
-            ".from-red-400\\/\\[\\.06\\] {\n  --fv-gradient-from: #f871710f var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-red-400\\/\\[\\.06\\] {\n  --fv-gradient-from: rgb(var(--fv-red-400, 248 113 113) / 0.06) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-[#50d71e]/25",
@@ -2257,57 +2354,57 @@ describe("unoStyle", () => {
         {
           classValue: "via-slate-50",
           expected:
-            ".via-slate-50 {\n  --fv-gradient-to: #f8fafc00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f8fafc var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-slate-50 {\n  --fv-gradient-to: rgb(var(--fv-slate-50, 248 250 252) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-slate-50, 248 250 252)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-gray-100",
           expected:
-            ".via-gray-100 {\n  --fv-gradient-to: #f3f4f600 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f3f4f6 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-gray-100 {\n  --fv-gradient-to: rgb(var(--fv-gray-100, 243 244 246) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-gray-100, 243 244 246)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-zinc-200",
           expected:
-            ".via-zinc-200 {\n  --fv-gradient-to: #e4e4e700 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #e4e4e7 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-zinc-200 {\n  --fv-gradient-to: rgb(var(--fv-zinc-200, 228 228 231) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-zinc-200, 228 228 231)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-neutral-300",
           expected:
-            ".via-neutral-300 {\n  --fv-gradient-to: #d4d4d400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #d4d4d4 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-neutral-300 {\n  --fv-gradient-to: rgb(var(--fv-neutral-300, 212 212 212) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-neutral-300, 212 212 212)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-stone-400",
           expected:
-            ".via-stone-400 {\n  --fv-gradient-to: #a8a29e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #a8a29e var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-stone-400 {\n  --fv-gradient-to: rgb(var(--fv-stone-400, 168 162 158) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-stone-400, 168 162 158)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-red-500",
           expected:
-            ".via-red-500 {\n  --fv-gradient-to: #ef444400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #ef4444 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-red-500 {\n  --fv-gradient-to: rgb(var(--fv-red-500, 239 68 68) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-red-500, 239 68 68)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-orange-600",
           expected:
-            ".via-orange-600 {\n  --fv-gradient-to: #ea580c00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #ea580c var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-orange-600 {\n  --fv-gradient-to: rgb(var(--fv-orange-600, 234 88 12) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-orange-600, 234 88 12)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-amber-700",
           expected:
-            ".via-amber-700 {\n  --fv-gradient-to: #b4530900 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #b45309 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-amber-700 {\n  --fv-gradient-to: rgb(var(--fv-amber-700, 180 83 9) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-amber-700, 180 83 9)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-yellow-800",
           expected:
-            ".via-yellow-800 {\n  --fv-gradient-to: #854d0e00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #854d0e var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-yellow-800 {\n  --fv-gradient-to: rgb(var(--fv-yellow-800, 133 77 14) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-yellow-800, 133 77 14)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-lime-900",
           expected:
-            ".via-lime-900 {\n  --fv-gradient-to: #36531400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #365314 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-lime-900 {\n  --fv-gradient-to: rgb(var(--fv-lime-900, 54 83 20) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-lime-900, 54 83 20)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-green-950",
           expected:
-            ".via-green-950 {\n  --fv-gradient-to: #052e1600 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #052e16 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-green-950 {\n  --fv-gradient-to: rgb(var(--fv-green-950, 5 46 22) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-green-950, 5 46 22)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-[#50d71e]",
@@ -2327,22 +2424,22 @@ describe("unoStyle", () => {
         {
           classValue: "via-red-400/0",
           expected:
-            ".via-red-400\\/0 {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f8717100 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-red-400\\/0 {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-red-400/50",
           expected:
-            ".via-red-400\\/50 {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f8717180 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-red-400\\/50 {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-red-400, 248 113 113) / 0.5) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-red-400/100",
           expected:
-            ".via-red-400\\/100 {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f87171 var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-red-400\\/100 {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-red-400, 248 113 113)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-red-400/[.06]",
           expected:
-            ".via-red-400\\/\\[\\.06\\] {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f871710f var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-red-400\\/\\[\\.06\\] {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-red-400, 248 113 113) / 0.06) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-[#50d71e]/25",
@@ -2393,47 +2490,58 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "to-slate-50",
-          expected: ".to-slate-50 {\n  --fv-gradient-to: #f8fafc var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-slate-50 {\n  --fv-gradient-to: rgb(var(--fv-slate-50, 248 250 252)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-gray-100",
-          expected: ".to-gray-100 {\n  --fv-gradient-to: #f3f4f6 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-gray-100 {\n  --fv-gradient-to: rgb(var(--fv-gray-100, 243 244 246)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-zinc-200",
-          expected: ".to-zinc-200 {\n  --fv-gradient-to: #e4e4e7 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-zinc-200 {\n  --fv-gradient-to: rgb(var(--fv-zinc-200, 228 228 231)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-neutral-300",
-          expected: ".to-neutral-300 {\n  --fv-gradient-to: #d4d4d4 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-neutral-300 {\n  --fv-gradient-to: rgb(var(--fv-neutral-300, 212 212 212)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-stone-400",
-          expected: ".to-stone-400 {\n  --fv-gradient-to: #a8a29e var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-stone-400 {\n  --fv-gradient-to: rgb(var(--fv-stone-400, 168 162 158)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-red-500",
-          expected: ".to-red-500 {\n  --fv-gradient-to: #ef4444 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-red-500 {\n  --fv-gradient-to: rgb(var(--fv-red-500, 239 68 68)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-orange-600",
-          expected: ".to-orange-600 {\n  --fv-gradient-to: #ea580c var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-orange-600 {\n  --fv-gradient-to: rgb(var(--fv-orange-600, 234 88 12)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-amber-700",
-          expected: ".to-amber-700 {\n  --fv-gradient-to: #b45309 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-amber-700 {\n  --fv-gradient-to: rgb(var(--fv-amber-700, 180 83 9)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-yellow-800",
-          expected: ".to-yellow-800 {\n  --fv-gradient-to: #854d0e var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-yellow-800 {\n  --fv-gradient-to: rgb(var(--fv-yellow-800, 133 77 14)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-lime-900",
-          expected: ".to-lime-900 {\n  --fv-gradient-to: #365314 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-lime-900 {\n  --fv-gradient-to: rgb(var(--fv-lime-900, 54 83 20)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-green-950",
-          expected: ".to-green-950 {\n  --fv-gradient-to: #052e16 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-green-950 {\n  --fv-gradient-to: rgb(var(--fv-green-950, 5 46 22)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-[#50d71e]",
@@ -2451,19 +2559,23 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "to-red-400/0",
-          expected: ".to-red-400\\/0 {\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-red-400\\/0 {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-red-400/50",
-          expected: ".to-red-400\\/50 {\n  --fv-gradient-to: #f8717180 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-red-400\\/50 {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0.5) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-red-400/100",
-          expected: ".to-red-400\\/100 {\n  --fv-gradient-to: #f87171 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-red-400\\/100 {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-red-400/[.06]",
-          expected: ".to-red-400\\/\\[\\.06\\] {\n  --fv-gradient-to: #f871710f var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-red-400\\/\\[\\.06\\] {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0.06) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-[#50d71e]/25",
@@ -2667,47 +2779,58 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "divide-slate-50",
-          expected: ".divide-slate-50 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f8fafc;\n}"
+          expected:
+            ".divide-slate-50 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
         },
         {
           classValue: "divide-emerald-100",
-          expected: ".divide-emerald-100 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #d1fae5;\n}"
+          expected:
+            ".divide-emerald-100 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
         },
         {
           classValue: "divide-green-200",
-          expected: ".divide-green-200 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #bbf7d0;\n}"
+          expected:
+            ".divide-green-200 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-green-200, 187 247 208));\n}"
         },
         {
           classValue: "divide-lime-300",
-          expected: ".divide-lime-300 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #bef264;\n}"
+          expected:
+            ".divide-lime-300 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
         },
         {
           classValue: "divide-red-400",
-          expected: ".divide-red-400 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f87171;\n}"
+          expected:
+            ".divide-red-400 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-red-400, 248 113 113));\n}"
         },
         {
           classValue: "divide-orange-500",
-          expected: ".divide-orange-500 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f97316;\n}"
+          expected:
+            ".divide-orange-500 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
         },
         {
           classValue: "divide-amber-600",
-          expected: ".divide-amber-600 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #d97706;\n}"
+          expected:
+            ".divide-amber-600 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
         },
         {
           classValue: "divide-yellow-700",
-          expected: ".divide-yellow-700 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #a16207;\n}"
+          expected:
+            ".divide-yellow-700 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
         },
         {
           classValue: "divide-teal-800",
-          expected: ".divide-teal-800 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #115e59;\n}"
+          expected:
+            ".divide-teal-800 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
         },
         {
           classValue: "divide-cyan-900",
-          expected: ".divide-cyan-900 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #164e63;\n}"
+          expected:
+            ".divide-cyan-900 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
         },
         {
           classValue: "divide-sky-950",
-          expected: ".divide-sky-950 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #082f49;\n}"
+          expected:
+            ".divide-sky-950 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
         },
         {
           classValue: "divide-[#50d71e]",
@@ -2719,19 +2842,23 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "divide-red-400/0",
-          expected: ".divide-red-400\\/0 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f8717100;\n}"
+          expected:
+            ".divide-red-400\\/0 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
         },
         {
           classValue: "divide-red-400/50",
-          expected: ".divide-red-400\\/50 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f8717180;\n}"
+          expected:
+            ".divide-red-400\\/50 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
         },
         {
           classValue: "divide-red-400/100",
-          expected: ".divide-red-400\\/100 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f87171;\n}"
+          expected:
+            ".divide-red-400\\/100 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-red-400, 248 113 113));\n}"
         },
         {
           classValue: "divide-red-400/[.06]",
-          expected: ".divide-red-400\\/\\[\\.06\\] > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f871710f;\n}"
+          expected:
+            ".divide-red-400\\/\\[\\.06\\] > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
         },
         {
           classValue: "divide-[#50d71e]/25",
@@ -2824,43 +2951,85 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "border-slate-50", expected: ".border-slate-50 {\n  border-color: #f8fafc;\n}" },
-        { classValue: "border-emerald-100", expected: ".border-emerald-100 {\n  border-color: #d1fae5;\n}" },
-        { classValue: "border-green-200", expected: ".border-green-200 {\n  border-color: #bbf7d0;\n}" },
-        { classValue: "border-lime-300", expected: ".border-lime-300 {\n  border-color: #bef264;\n}" },
-        { classValue: "border-red-400", expected: ".border-red-400 {\n  border-color: #f87171;\n}" },
-        { classValue: "border-orange-500", expected: ".border-orange-500 {\n  border-color: #f97316;\n}" },
-        { classValue: "border-amber-600", expected: ".border-amber-600 {\n  border-color: #d97706;\n}" },
-        { classValue: "border-yellow-700", expected: ".border-yellow-700 {\n  border-color: #a16207;\n}" },
-        { classValue: "border-teal-800", expected: ".border-teal-800 {\n  border-color: #115e59;\n}" },
-        { classValue: "border-cyan-900", expected: ".border-cyan-900 {\n  border-color: #164e63;\n}" },
-        { classValue: "border-sky-950", expected: ".border-sky-950 {\n  border-color: #082f49;\n}" },
+        {
+          classValue: "border-slate-50",
+          expected: ".border-slate-50 {\n  border-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "border-emerald-100",
+          expected: ".border-emerald-100 {\n  border-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "border-green-200",
+          expected: ".border-green-200 {\n  border-color: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "border-lime-300",
+          expected: ".border-lime-300 {\n  border-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "border-red-400",
+          expected: ".border-red-400 {\n  border-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "border-orange-500",
+          expected: ".border-orange-500 {\n  border-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "border-amber-600",
+          expected: ".border-amber-600 {\n  border-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "border-yellow-700",
+          expected: ".border-yellow-700 {\n  border-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        {
+          classValue: "border-teal-800",
+          expected: ".border-teal-800 {\n  border-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "border-cyan-900",
+          expected: ".border-cyan-900 {\n  border-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        {
+          classValue: "border-sky-950",
+          expected: ".border-sky-950 {\n  border-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
+        },
         { classValue: "border-[#50d71e]", expected: ".border-\\[\\#50d71e\\] {\n  border-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "border-red-400/0", expected: ".border-red-400\\/0 {\n  border-color: #f8717100;\n}" },
-        { classValue: "border-red-400/50", expected: ".border-red-400\\/50 {\n  border-color: #f8717180;\n}" },
-        { classValue: "border-red-400/100", expected: ".border-red-400\\/100 {\n  border-color: #f87171;\n}" },
+        {
+          classValue: "border-red-400/0",
+          expected: ".border-red-400\\/0 {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "border-red-400/50",
+          expected: ".border-red-400\\/50 {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "border-red-400/100",
+          expected: ".border-red-400\\/100 {\n  border-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
         {
           classValue: "border-red-400/[.06]",
-          expected: ".border-red-400\\/\\[\\.06\\] {\n  border-color: #f871710f;\n}"
+          expected: ".border-red-400\\/\\[\\.06\\] {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
         },
         { classValue: "border-[#50d71e]/25", expected: ".border-\\[\\#50d71e\\]\\/25 {\n  border-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       // it.each<{ classValue: string; expected: string }>([
-      //   { classValue: "border-x-red-400/0", expected: ".border-x-red-400\\/0 {\n  border-inline-color: #f8717100;\n}" },
+      //   { classValue: "border-x-red-400/0", expected: ".border-x-red-400\\/0 {\n  border-inline-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}" },
       //   {
       //     classValue: "border-y-red-400/50",
-      //     expected: ".border-y-red-400\\/50 {\n  border-block-color: #f8717180;\n}"
+      //     expected: ".border-y-red-400\\/50 {\n  border-block-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
       //   },
-      //   { classValue: "border-t-red-400/100", expected: ".border-t-red-400\\/100 {\n  border-top-color: #f87171;\n}" },
+      //   { classValue: "border-t-red-400/100", expected: ".border-t-red-400\\/100 {\n  border-top-color: rgb(var(--fv-red-400, 248 113 113));\n}" },
       //   {
       //     classValue: "border-r-red-400/[.06]",
-      //     expected: ".border-red-400\\/\\[\\.06\\] {\n  border-color: #f871710f;\n}"
+      //     expected: ".border-red-400\\/\\[\\.06\\] {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
       //   },
       //   { classValue: "border-[#50d71e]/25", expected: ".border-\\[\\#50d71e\\]\\/25 {\n  border-color: #50d71e40;\n}" }
       // ])(`tailwind($classValue)`, ({ classValue, expected }) => {
@@ -2905,28 +3074,70 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "outline-slate-50", expected: ".outline-slate-50 {\n  outline-color: #f8fafc;\n}" },
-        { classValue: "outline-emerald-100", expected: ".outline-emerald-100 {\n  outline-color: #d1fae5;\n}" },
-        { classValue: "outline-green-200", expected: ".outline-green-200 {\n  outline-color: #bbf7d0;\n}" },
-        { classValue: "outline-lime-300", expected: ".outline-lime-300 {\n  outline-color: #bef264;\n}" },
-        { classValue: "outline-red-400", expected: ".outline-red-400 {\n  outline-color: #f87171;\n}" },
-        { classValue: "outline-orange-500", expected: ".outline-orange-500 {\n  outline-color: #f97316;\n}" },
-        { classValue: "outline-amber-600", expected: ".outline-amber-600 {\n  outline-color: #d97706;\n}" },
-        { classValue: "outline-yellow-700", expected: ".outline-yellow-700 {\n  outline-color: #a16207;\n}" },
-        { classValue: "outline-teal-800", expected: ".outline-teal-800 {\n  outline-color: #115e59;\n}" },
-        { classValue: "outline-cyan-900", expected: ".outline-cyan-900 {\n  outline-color: #164e63;\n}" },
-        { classValue: "outline-sky-950", expected: ".outline-sky-950 {\n  outline-color: #082f49;\n}" },
+        {
+          classValue: "outline-slate-50",
+          expected: ".outline-slate-50 {\n  outline-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "outline-emerald-100",
+          expected: ".outline-emerald-100 {\n  outline-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "outline-green-200",
+          expected: ".outline-green-200 {\n  outline-color: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "outline-lime-300",
+          expected: ".outline-lime-300 {\n  outline-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "outline-red-400",
+          expected: ".outline-red-400 {\n  outline-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "outline-orange-500",
+          expected: ".outline-orange-500 {\n  outline-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "outline-amber-600",
+          expected: ".outline-amber-600 {\n  outline-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "outline-yellow-700",
+          expected: ".outline-yellow-700 {\n  outline-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        {
+          classValue: "outline-teal-800",
+          expected: ".outline-teal-800 {\n  outline-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "outline-cyan-900",
+          expected: ".outline-cyan-900 {\n  outline-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        {
+          classValue: "outline-sky-950",
+          expected: ".outline-sky-950 {\n  outline-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
+        },
         { classValue: "outline-[#50d71e]", expected: ".outline-\\[\\#50d71e\\] {\n  outline-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "outline-red-400/0", expected: ".outline-red-400\\/0 {\n  outline-color: #f8717100;\n}" },
-        { classValue: "outline-red-400/50", expected: ".outline-red-400\\/50 {\n  outline-color: #f8717180;\n}" },
-        { classValue: "outline-red-400/100", expected: ".outline-red-400\\/100 {\n  outline-color: #f87171;\n}" },
+        {
+          classValue: "outline-red-400/0",
+          expected: ".outline-red-400\\/0 {\n  outline-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "outline-red-400/50",
+          expected: ".outline-red-400\\/50 {\n  outline-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "outline-red-400/100",
+          expected: ".outline-red-400\\/100 {\n  outline-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
         {
           classValue: "outline-red-400/[.06]",
-          expected: ".outline-red-400\\/\\[\\.06\\] {\n  outline-color: #f871710f;\n}"
+          expected: ".outline-red-400\\/\\[\\.06\\] {\n  outline-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
         },
         {
           classValue: "outline-[#50d71e]/25",
@@ -3019,28 +3230,70 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "ring-slate-50", expected: ".ring-slate-50 {\n  --fv-ring-color: #f8fafc;\n}" },
-        { classValue: "ring-emerald-100", expected: ".ring-emerald-100 {\n  --fv-ring-color: #d1fae5;\n}" },
-        { classValue: "ring-green-200", expected: ".ring-green-200 {\n  --fv-ring-color: #bbf7d0;\n}" },
-        { classValue: "ring-lime-300", expected: ".ring-lime-300 {\n  --fv-ring-color: #bef264;\n}" },
-        { classValue: "ring-red-400", expected: ".ring-red-400 {\n  --fv-ring-color: #f87171;\n}" },
-        { classValue: "ring-orange-500", expected: ".ring-orange-500 {\n  --fv-ring-color: #f97316;\n}" },
-        { classValue: "ring-amber-600", expected: ".ring-amber-600 {\n  --fv-ring-color: #d97706;\n}" },
-        { classValue: "ring-yellow-700", expected: ".ring-yellow-700 {\n  --fv-ring-color: #a16207;\n}" },
-        { classValue: "ring-teal-800", expected: ".ring-teal-800 {\n  --fv-ring-color: #115e59;\n}" },
-        { classValue: "ring-cyan-900", expected: ".ring-cyan-900 {\n  --fv-ring-color: #164e63;\n}" },
-        { classValue: "ring-sky-950", expected: ".ring-sky-950 {\n  --fv-ring-color: #082f49;\n}" },
+        {
+          classValue: "ring-slate-50",
+          expected: ".ring-slate-50 {\n  --fv-ring-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "ring-emerald-100",
+          expected: ".ring-emerald-100 {\n  --fv-ring-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "ring-green-200",
+          expected: ".ring-green-200 {\n  --fv-ring-color: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "ring-lime-300",
+          expected: ".ring-lime-300 {\n  --fv-ring-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "ring-red-400",
+          expected: ".ring-red-400 {\n  --fv-ring-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "ring-orange-500",
+          expected: ".ring-orange-500 {\n  --fv-ring-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "ring-amber-600",
+          expected: ".ring-amber-600 {\n  --fv-ring-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "ring-yellow-700",
+          expected: ".ring-yellow-700 {\n  --fv-ring-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        {
+          classValue: "ring-teal-800",
+          expected: ".ring-teal-800 {\n  --fv-ring-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "ring-cyan-900",
+          expected: ".ring-cyan-900 {\n  --fv-ring-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        {
+          classValue: "ring-sky-950",
+          expected: ".ring-sky-950 {\n  --fv-ring-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
+        },
         { classValue: "ring-[#50d71e]", expected: ".ring-\\[\\#50d71e\\] {\n  --fv-ring-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "ring-red-400/0", expected: ".ring-red-400\\/0 {\n  --fv-ring-color: #f8717100;\n}" },
-        { classValue: "ring-red-400/50", expected: ".ring-red-400\\/50 {\n  --fv-ring-color: #f8717180;\n}" },
-        { classValue: "ring-red-400/100", expected: ".ring-red-400\\/100 {\n  --fv-ring-color: #f87171;\n}" },
+        {
+          classValue: "ring-red-400/0",
+          expected: ".ring-red-400\\/0 {\n  --fv-ring-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "ring-red-400/50",
+          expected: ".ring-red-400\\/50 {\n  --fv-ring-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "ring-red-400/100",
+          expected: ".ring-red-400\\/100 {\n  --fv-ring-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
         {
           classValue: "ring-red-400/[.06]",
-          expected: ".ring-red-400\\/\\[\\.06\\] {\n  --fv-ring-color: #f871710f;\n}"
+          expected: ".ring-red-400\\/\\[\\.06\\] {\n  --fv-ring-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
         },
         { classValue: "ring-[#50d71e]/25", expected: ".ring-\\[\\#50d71e\\]\\/25 {\n  --fv-ring-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
@@ -3114,57 +3367,57 @@ describe("unoStyle", () => {
         {
           classValue: "ring-offset-slate-50",
           expected:
-            ".ring-offset-slate-50 {\n  --fv-ring-offset-color: #f8fafc;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-slate-50 {\n  --fv-ring-offset-color: rgb(var(--fv-slate-50, 248 250 252));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-emerald-100",
           expected:
-            ".ring-offset-emerald-100 {\n  --fv-ring-offset-color: #d1fae5;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-emerald-100 {\n  --fv-ring-offset-color: rgb(var(--fv-emerald-100, 209 250 229));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-green-200",
           expected:
-            ".ring-offset-green-200 {\n  --fv-ring-offset-color: #bbf7d0;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-green-200 {\n  --fv-ring-offset-color: rgb(var(--fv-green-200, 187 247 208));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-lime-300",
           expected:
-            ".ring-offset-lime-300 {\n  --fv-ring-offset-color: #bef264;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-lime-300 {\n  --fv-ring-offset-color: rgb(var(--fv-lime-300, 190 242 100));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400",
           expected:
-            ".ring-offset-red-400 {\n  --fv-ring-offset-color: #f87171;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-red-400 {\n  --fv-ring-offset-color: rgb(var(--fv-red-400, 248 113 113));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-orange-500",
           expected:
-            ".ring-offset-orange-500 {\n  --fv-ring-offset-color: #f97316;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-orange-500 {\n  --fv-ring-offset-color: rgb(var(--fv-orange-500, 249 115 22));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-amber-600",
           expected:
-            ".ring-offset-amber-600 {\n  --fv-ring-offset-color: #d97706;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-amber-600 {\n  --fv-ring-offset-color: rgb(var(--fv-amber-600, 217 119 6));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-yellow-700",
           expected:
-            ".ring-offset-yellow-700 {\n  --fv-ring-offset-color: #a16207;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-yellow-700 {\n  --fv-ring-offset-color: rgb(var(--fv-yellow-700, 161 98 7));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-teal-800",
           expected:
-            ".ring-offset-teal-800 {\n  --fv-ring-offset-color: #115e59;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-teal-800 {\n  --fv-ring-offset-color: rgb(var(--fv-teal-800, 17 94 89));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-cyan-900",
           expected:
-            ".ring-offset-cyan-900 {\n  --fv-ring-offset-color: #164e63;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-cyan-900 {\n  --fv-ring-offset-color: rgb(var(--fv-cyan-900, 22 78 99));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-sky-950",
           expected:
-            ".ring-offset-sky-950 {\n  --fv-ring-offset-color: #082f49;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-sky-950 {\n  --fv-ring-offset-color: rgb(var(--fv-sky-950, 8 47 73));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-[#50d71e]",
@@ -3178,22 +3431,22 @@ describe("unoStyle", () => {
         {
           classValue: "ring-offset-red-400/0",
           expected:
-            ".ring-offset-red-400\\/0 {\n  --fv-ring-offset-color: #f8717100;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-red-400\\/0 {\n  --fv-ring-offset-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400/50",
           expected:
-            ".ring-offset-red-400\\/50 {\n  --fv-ring-offset-color: #f8717180;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-red-400\\/50 {\n  --fv-ring-offset-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400/100",
           expected:
-            ".ring-offset-red-400\\/100 {\n  --fv-ring-offset-color: #f87171;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-red-400\\/100 {\n  --fv-ring-offset-color: rgb(var(--fv-red-400, 248 113 113));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400/[.06]",
           expected:
-            ".ring-offset-red-400\\/\\[\\.06\\] {\n  --fv-ring-offset-color: #f871710f;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-red-400\\/\\[\\.06\\] {\n  --fv-ring-offset-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-[#50d71e]/25",
@@ -3255,28 +3508,71 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "shadow-slate-50", expected: ".shadow-slate-50 {\n  --fv-shadow-color: #f8fafc;\n}" },
-        { classValue: "shadow-emerald-100", expected: ".shadow-emerald-100 {\n  --fv-shadow-color: #d1fae5;\n}" },
-        { classValue: "shadow-green-200", expected: ".shadow-green-200 {\n  --fv-shadow-color: #bbf7d0;\n}" },
-        { classValue: "shadow-lime-300", expected: ".shadow-lime-300 {\n  --fv-shadow-color: #bef264;\n}" },
-        { classValue: "shadow-red-400", expected: ".shadow-red-400 {\n  --fv-shadow-color: #f87171;\n}" },
-        { classValue: "shadow-orange-500", expected: ".shadow-orange-500 {\n  --fv-shadow-color: #f97316;\n}" },
-        { classValue: "shadow-amber-600", expected: ".shadow-amber-600 {\n  --fv-shadow-color: #d97706;\n}" },
-        { classValue: "shadow-yellow-700", expected: ".shadow-yellow-700 {\n  --fv-shadow-color: #a16207;\n}" },
-        { classValue: "shadow-teal-800", expected: ".shadow-teal-800 {\n  --fv-shadow-color: #115e59;\n}" },
-        { classValue: "shadow-cyan-900", expected: ".shadow-cyan-900 {\n  --fv-shadow-color: #164e63;\n}" },
-        { classValue: "shadow-sky-950", expected: ".shadow-sky-950 {\n  --fv-shadow-color: #082f49;\n}" },
+        {
+          classValue: "shadow-slate-50",
+          expected: ".shadow-slate-50 {\n  --fv-shadow-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "shadow-emerald-100",
+          expected: ".shadow-emerald-100 {\n  --fv-shadow-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "shadow-green-200",
+          expected: ".shadow-green-200 {\n  --fv-shadow-color: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "shadow-lime-300",
+          expected: ".shadow-lime-300 {\n  --fv-shadow-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "shadow-red-400",
+          expected: ".shadow-red-400 {\n  --fv-shadow-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "shadow-orange-500",
+          expected: ".shadow-orange-500 {\n  --fv-shadow-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "shadow-amber-600",
+          expected: ".shadow-amber-600 {\n  --fv-shadow-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "shadow-yellow-700",
+          expected: ".shadow-yellow-700 {\n  --fv-shadow-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        {
+          classValue: "shadow-teal-800",
+          expected: ".shadow-teal-800 {\n  --fv-shadow-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "shadow-cyan-900",
+          expected: ".shadow-cyan-900 {\n  --fv-shadow-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        {
+          classValue: "shadow-sky-950",
+          expected: ".shadow-sky-950 {\n  --fv-shadow-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
+        },
         { classValue: "shadow-[#50d71e]", expected: ".shadow-\\[\\#50d71e\\] {\n  --fv-shadow-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "shadow-red-400/0", expected: ".shadow-red-400\\/0 {\n  --fv-shadow-color: #f8717100;\n}" },
-        { classValue: "shadow-red-400/50", expected: ".shadow-red-400\\/50 {\n  --fv-shadow-color: #f8717180;\n}" },
-        { classValue: "shadow-red-400/100", expected: ".shadow-red-400\\/100 {\n  --fv-shadow-color: #f87171;\n}" },
+        {
+          classValue: "shadow-red-400/0",
+          expected: ".shadow-red-400\\/0 {\n  --fv-shadow-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "shadow-red-400/50",
+          expected: ".shadow-red-400\\/50 {\n  --fv-shadow-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "shadow-red-400/100",
+          expected: ".shadow-red-400\\/100 {\n  --fv-shadow-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
         {
           classValue: "shadow-red-400/[.06]",
-          expected: ".shadow-red-400\\/\\[\\.06\\] {\n  --fv-shadow-color: #f871710f;\n}"
+          expected:
+            ".shadow-red-400\\/\\[\\.06\\] {\n  --fv-shadow-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
         },
         {
           classValue: "shadow-[#50d71e]/25",
@@ -4153,28 +4449,70 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "accent-slate-50", expected: ".accent-slate-50 {\n  accent-color: #f8fafc;\n}" },
-        { classValue: "accent-emerald-100", expected: ".accent-emerald-100 {\n  accent-color: #d1fae5;\n}" },
-        { classValue: "accent-green-200", expected: ".accent-green-200 {\n  accent-color: #bbf7d0;\n}" },
-        { classValue: "accent-lime-300", expected: ".accent-lime-300 {\n  accent-color: #bef264;\n}" },
-        { classValue: "accent-red-400", expected: ".accent-red-400 {\n  accent-color: #f87171;\n}" },
-        { classValue: "accent-orange-500", expected: ".accent-orange-500 {\n  accent-color: #f97316;\n}" },
-        { classValue: "accent-amber-600", expected: ".accent-amber-600 {\n  accent-color: #d97706;\n}" },
-        { classValue: "accent-yellow-700", expected: ".accent-yellow-700 {\n  accent-color: #a16207;\n}" },
-        { classValue: "accent-teal-800", expected: ".accent-teal-800 {\n  accent-color: #115e59;\n}" },
-        { classValue: "accent-cyan-900", expected: ".accent-cyan-900 {\n  accent-color: #164e63;\n}" },
-        { classValue: "accent-sky-950", expected: ".accent-sky-950 {\n  accent-color: #082f49;\n}" },
+        {
+          classValue: "accent-slate-50",
+          expected: ".accent-slate-50 {\n  accent-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "accent-emerald-100",
+          expected: ".accent-emerald-100 {\n  accent-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "accent-green-200",
+          expected: ".accent-green-200 {\n  accent-color: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "accent-lime-300",
+          expected: ".accent-lime-300 {\n  accent-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "accent-red-400",
+          expected: ".accent-red-400 {\n  accent-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "accent-orange-500",
+          expected: ".accent-orange-500 {\n  accent-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "accent-amber-600",
+          expected: ".accent-amber-600 {\n  accent-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "accent-yellow-700",
+          expected: ".accent-yellow-700 {\n  accent-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        {
+          classValue: "accent-teal-800",
+          expected: ".accent-teal-800 {\n  accent-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "accent-cyan-900",
+          expected: ".accent-cyan-900 {\n  accent-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        {
+          classValue: "accent-sky-950",
+          expected: ".accent-sky-950 {\n  accent-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
+        },
         { classValue: "accent-[#50d71e]", expected: ".accent-\\[\\#50d71e\\] {\n  accent-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "accent-red-400/0", expected: ".accent-red-400\\/0 {\n  accent-color: #f8717100;\n}" },
-        { classValue: "accent-red-400/50", expected: ".accent-red-400\\/50 {\n  accent-color: #f8717180;\n}" },
-        { classValue: "accent-red-400/100", expected: ".accent-red-400\\/100 {\n  accent-color: #f87171;\n}" },
+        {
+          classValue: "accent-red-400/0",
+          expected: ".accent-red-400\\/0 {\n  accent-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "accent-red-400/50",
+          expected: ".accent-red-400\\/50 {\n  accent-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "accent-red-400/100",
+          expected: ".accent-red-400\\/100 {\n  accent-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
         {
           classValue: "accent-red-400/[.06]",
-          expected: ".accent-red-400\\/\\[\\.06\\] {\n  accent-color: #f871710f;\n}"
+          expected: ".accent-red-400\\/\\[\\.06\\] {\n  accent-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
         },
         { classValue: "accent-[#50d71e]/25", expected: ".accent-\\[\\#50d71e\\]\\/25 {\n  accent-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
@@ -4220,26 +4558,71 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "caret-slate-50", expected: ".caret-slate-50 {\n  caret-color: #f8fafc;\n}" },
-        { classValue: "caret-emerald-100", expected: ".caret-emerald-100 {\n  caret-color: #d1fae5;\n}" },
-        { classValue: "caret-green-200", expected: ".caret-green-200 {\n  caret-color: #bbf7d0;\n}" },
-        { classValue: "caret-lime-300", expected: ".caret-lime-300 {\n  caret-color: #bef264;\n}" },
-        { classValue: "caret-red-400", expected: ".caret-red-400 {\n  caret-color: #f87171;\n}" },
-        { classValue: "caret-orange-500", expected: ".caret-orange-500 {\n  caret-color: #f97316;\n}" },
-        { classValue: "caret-amber-600", expected: ".caret-amber-600 {\n  caret-color: #d97706;\n}" },
-        { classValue: "caret-yellow-700", expected: ".caret-yellow-700 {\n  caret-color: #a16207;\n}" },
-        { classValue: "caret-teal-800", expected: ".caret-teal-800 {\n  caret-color: #115e59;\n}" },
-        { classValue: "caret-cyan-900", expected: ".caret-cyan-900 {\n  caret-color: #164e63;\n}" },
-        { classValue: "caret-sky-950", expected: ".caret-sky-950 {\n  caret-color: #082f49;\n}" },
+        {
+          classValue: "caret-slate-50",
+          expected: ".caret-slate-50 {\n  caret-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "caret-emerald-100",
+          expected: ".caret-emerald-100 {\n  caret-color: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "caret-green-200",
+          expected: ".caret-green-200 {\n  caret-color: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "caret-lime-300",
+          expected: ".caret-lime-300 {\n  caret-color: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "caret-red-400",
+          expected: ".caret-red-400 {\n  caret-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "caret-orange-500",
+          expected: ".caret-orange-500 {\n  caret-color: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "caret-amber-600",
+          expected: ".caret-amber-600 {\n  caret-color: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "caret-yellow-700",
+          expected: ".caret-yellow-700 {\n  caret-color: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        {
+          classValue: "caret-teal-800",
+          expected: ".caret-teal-800 {\n  caret-color: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "caret-cyan-900",
+          expected: ".caret-cyan-900 {\n  caret-color: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        {
+          classValue: "caret-sky-950",
+          expected: ".caret-sky-950 {\n  caret-color: rgb(var(--fv-sky-950, 8 47 73));\n}"
+        },
         { classValue: "caret-[#50d71e]", expected: ".caret-\\[\\#50d71e\\] {\n  caret-color: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "caret-red-400/0", expected: ".caret-red-400\\/0 {\n  caret-color: #f8717100;\n}" },
-        { classValue: "caret-red-400/50", expected: ".caret-red-400\\/50 {\n  caret-color: #f8717180;\n}" },
-        { classValue: "caret-red-400/100", expected: ".caret-red-400\\/100 {\n  caret-color: #f87171;\n}" },
-        { classValue: "caret-red-400/[.06]", expected: ".caret-red-400\\/\\[\\.06\\] {\n  caret-color: #f871710f;\n}" },
+        {
+          classValue: "caret-red-400/0",
+          expected: ".caret-red-400\\/0 {\n  caret-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "caret-red-400/50",
+          expected: ".caret-red-400\\/50 {\n  caret-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "caret-red-400/100",
+          expected: ".caret-red-400\\/100 {\n  caret-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "caret-red-400/[.06]",
+          expected: ".caret-red-400\\/\\[\\.06\\] {\n  caret-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
+        },
         { classValue: "caret-[#50d71e]/25", expected: ".caret-\\[\\#50d71e\\]\\/25 {\n  caret-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -4441,26 +4824,53 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "fill-slate-50", expected: ".fill-slate-50 {\n  fill: #f8fafc;\n}" },
-        { classValue: "fill-emerald-100", expected: ".fill-emerald-100 {\n  fill: #d1fae5;\n}" },
-        { classValue: "fill-green-200", expected: ".fill-green-200 {\n  fill: #bbf7d0;\n}" },
-        { classValue: "fill-lime-300", expected: ".fill-lime-300 {\n  fill: #bef264;\n}" },
-        { classValue: "fill-red-400", expected: ".fill-red-400 {\n  fill: #f87171;\n}" },
-        { classValue: "fill-orange-500", expected: ".fill-orange-500 {\n  fill: #f97316;\n}" },
-        { classValue: "fill-amber-600", expected: ".fill-amber-600 {\n  fill: #d97706;\n}" },
-        { classValue: "fill-yellow-700", expected: ".fill-yellow-700 {\n  fill: #a16207;\n}" },
-        { classValue: "fill-teal-800", expected: ".fill-teal-800 {\n  fill: #115e59;\n}" },
-        { classValue: "fill-cyan-900", expected: ".fill-cyan-900 {\n  fill: #164e63;\n}" },
-        { classValue: "fill-sky-950", expected: ".fill-sky-950 {\n  fill: #082f49;\n}" },
+        { classValue: "fill-slate-50", expected: ".fill-slate-50 {\n  fill: rgb(var(--fv-slate-50, 248 250 252));\n}" },
+        {
+          classValue: "fill-emerald-100",
+          expected: ".fill-emerald-100 {\n  fill: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "fill-green-200",
+          expected: ".fill-green-200 {\n  fill: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        { classValue: "fill-lime-300", expected: ".fill-lime-300 {\n  fill: rgb(var(--fv-lime-300, 190 242 100));\n}" },
+        { classValue: "fill-red-400", expected: ".fill-red-400 {\n  fill: rgb(var(--fv-red-400, 248 113 113));\n}" },
+        {
+          classValue: "fill-orange-500",
+          expected: ".fill-orange-500 {\n  fill: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "fill-amber-600",
+          expected: ".fill-amber-600 {\n  fill: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "fill-yellow-700",
+          expected: ".fill-yellow-700 {\n  fill: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        { classValue: "fill-teal-800", expected: ".fill-teal-800 {\n  fill: rgb(var(--fv-teal-800, 17 94 89));\n}" },
+        { classValue: "fill-cyan-900", expected: ".fill-cyan-900 {\n  fill: rgb(var(--fv-cyan-900, 22 78 99));\n}" },
+        { classValue: "fill-sky-950", expected: ".fill-sky-950 {\n  fill: rgb(var(--fv-sky-950, 8 47 73));\n}" },
         { classValue: "fill-[#50d71e]", expected: ".fill-\\[\\#50d71e\\] {\n  fill: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "fill-red-400/0", expected: ".fill-red-400\\/0 {\n  fill: #f8717100;\n}" },
-        { classValue: "fill-red-400/50", expected: ".fill-red-400\\/50 {\n  fill: #f8717180;\n}" },
-        { classValue: "fill-red-400/100", expected: ".fill-red-400\\/100 {\n  fill: #f87171;\n}" },
-        { classValue: "fill-red-400/[.06]", expected: ".fill-red-400\\/\\[\\.06\\] {\n  fill: #f871710f;\n}" },
+        {
+          classValue: "fill-red-400/0",
+          expected: ".fill-red-400\\/0 {\n  fill: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "fill-red-400/50",
+          expected: ".fill-red-400\\/50 {\n  fill: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "fill-red-400/100",
+          expected: ".fill-red-400\\/100 {\n  fill: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "fill-red-400/[.06]",
+          expected: ".fill-red-400\\/\\[\\.06\\] {\n  fill: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
+        },
         { classValue: "fill-[#50d71e]/25", expected: ".fill-\\[\\#50d71e\\]\\/25 {\n  fill: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -4481,26 +4891,68 @@ describe("unoStyle", () => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "stroke-slate-50", expected: ".stroke-slate-50 {\n  stroke: #f8fafc;\n}" },
-        { classValue: "stroke-emerald-100", expected: ".stroke-emerald-100 {\n  stroke: #d1fae5;\n}" },
-        { classValue: "stroke-green-200", expected: ".stroke-green-200 {\n  stroke: #bbf7d0;\n}" },
-        { classValue: "stroke-lime-300", expected: ".stroke-lime-300 {\n  stroke: #bef264;\n}" },
-        { classValue: "stroke-red-400", expected: ".stroke-red-400 {\n  stroke: #f87171;\n}" },
-        { classValue: "stroke-orange-500", expected: ".stroke-orange-500 {\n  stroke: #f97316;\n}" },
-        { classValue: "stroke-amber-600", expected: ".stroke-amber-600 {\n  stroke: #d97706;\n}" },
-        { classValue: "stroke-yellow-700", expected: ".stroke-yellow-700 {\n  stroke: #a16207;\n}" },
-        { classValue: "stroke-teal-800", expected: ".stroke-teal-800 {\n  stroke: #115e59;\n}" },
-        { classValue: "stroke-cyan-900", expected: ".stroke-cyan-900 {\n  stroke: #164e63;\n}" },
-        { classValue: "stroke-sky-950", expected: ".stroke-sky-950 {\n  stroke: #082f49;\n}" },
+        {
+          classValue: "stroke-slate-50",
+          expected: ".stroke-slate-50 {\n  stroke: rgb(var(--fv-slate-50, 248 250 252));\n}"
+        },
+        {
+          classValue: "stroke-emerald-100",
+          expected: ".stroke-emerald-100 {\n  stroke: rgb(var(--fv-emerald-100, 209 250 229));\n}"
+        },
+        {
+          classValue: "stroke-green-200",
+          expected: ".stroke-green-200 {\n  stroke: rgb(var(--fv-green-200, 187 247 208));\n}"
+        },
+        {
+          classValue: "stroke-lime-300",
+          expected: ".stroke-lime-300 {\n  stroke: rgb(var(--fv-lime-300, 190 242 100));\n}"
+        },
+        {
+          classValue: "stroke-red-400",
+          expected: ".stroke-red-400 {\n  stroke: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "stroke-orange-500",
+          expected: ".stroke-orange-500 {\n  stroke: rgb(var(--fv-orange-500, 249 115 22));\n}"
+        },
+        {
+          classValue: "stroke-amber-600",
+          expected: ".stroke-amber-600 {\n  stroke: rgb(var(--fv-amber-600, 217 119 6));\n}"
+        },
+        {
+          classValue: "stroke-yellow-700",
+          expected: ".stroke-yellow-700 {\n  stroke: rgb(var(--fv-yellow-700, 161 98 7));\n}"
+        },
+        {
+          classValue: "stroke-teal-800",
+          expected: ".stroke-teal-800 {\n  stroke: rgb(var(--fv-teal-800, 17 94 89));\n}"
+        },
+        {
+          classValue: "stroke-cyan-900",
+          expected: ".stroke-cyan-900 {\n  stroke: rgb(var(--fv-cyan-900, 22 78 99));\n}"
+        },
+        { classValue: "stroke-sky-950", expected: ".stroke-sky-950 {\n  stroke: rgb(var(--fv-sky-950, 8 47 73));\n}" },
         { classValue: "stroke-[#50d71e]", expected: ".stroke-\\[\\#50d71e\\] {\n  stroke: #50d71e;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "stroke-red-400/0", expected: ".stroke-red-400\\/0 {\n  stroke: #f8717100;\n}" },
-        { classValue: "stroke-red-400/50", expected: ".stroke-red-400\\/50 {\n  stroke: #f8717180;\n}" },
-        { classValue: "stroke-red-400/100", expected: ".stroke-red-400\\/100 {\n  stroke: #f87171;\n}" },
-        { classValue: "stroke-red-400/[.06]", expected: ".stroke-red-400\\/\\[\\.06\\] {\n  stroke: #f871710f;\n}" },
+        {
+          classValue: "stroke-red-400/0",
+          expected: ".stroke-red-400\\/0 {\n  stroke: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "stroke-red-400/50",
+          expected: ".stroke-red-400\\/50 {\n  stroke: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "stroke-red-400/100",
+          expected: ".stroke-red-400\\/100 {\n  stroke: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "stroke-red-400/[.06]",
+          expected: ".stroke-red-400\\/\\[\\.06\\] {\n  stroke: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
+        },
         { classValue: "stroke-[#50d71e]/25", expected: ".stroke-\\[\\#50d71e\\]\\/25 {\n  stroke: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
