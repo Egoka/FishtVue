@@ -1,7 +1,7 @@
 ---
 title: Issues — TextEditor
-summary: Аудит TextEditor — coverage 0% (skipped tests), хардкод HEX цветов в style, image upload не задокументирован. Issue 3 (Quill → optional peer + lazy CSS) закрыт 2026-06-19 (Wave 2.1). Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11 cross-cutting вместе с aria.md Issue 1.
-updated: 2026-06-19
+summary: Аудит TextEditor — coverage 0% (skipped tests), хардкод HEX цветов в style, image upload не задокументирован. Issue 7 (componentsStyle fallback + unstyled) закрыт 2026-07-02 (Wave 3.2). Issue 3 (Quill → optional peer + lazy CSS) закрыт 2026-06-19 (Wave 2.1). Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11.
+updated: 2026-07-02
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/texteditor/
 related-doc: ../components/text-editor.md
@@ -15,7 +15,7 @@ stability: experimental (на момент аудита 17 тестов skipped)
 | Severity | Count (open) | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 6 | A2, A4-5, B10 (HEX hardcode), C17, J46 (tests skipped), L53 |
+| high | 5 | A2, A4-5, B10 (HEX hardcode), C17, J46 (tests skipped) — L53 (Issue 7) closed 2026-07-02 |
 | medium | 4 | F30, F32, M55, security (image upload) — Issue 5 D26 closed 2026-05-11 |
 | low | 3 | E29.7, N59, G34 |
 
@@ -58,7 +58,7 @@ lib/texteditor: 0/0/0/0
 
 - **Категория:** B10 (hardcode цветов вместо tokens)
 - **Severity:** high
-- **Где:** [TextEditor.vue:368-383](../../lib/texteditor/TextEditor.vue#L368-L383)
+- **Где:** [TextEditor.vue:380-398](../../lib/texteditor/TextEditor.vue#L380-L398)
 
 ### Что найдено
 
@@ -142,7 +142,7 @@ Quill ≈ 200kb minified тянулся ВСЕМИ потребителями fi
 
 - **Категория:** Security + UX
 - **Severity:** medium
-- **Где:** [TextEditor.vue:97](../../lib/texteditor/TextEditor.vue#L97)
+- **Где:** [TextEditor.vue:98](../../lib/texteditor/TextEditor.vue#L98)
 
 ### Что найдено
 
@@ -182,12 +182,15 @@ Quill image-button по умолчанию вставляет base64-encoded ima
 - [ ] Image button либо убран по умолчанию, либо вызывает custom handler.
 - [ ] Documentation описывает upload-flow.
 
-## Issue 7: Нет componentsStyle global fallback / unstyled
+## ~~Issue 7: Нет componentsStyle global fallback / unstyled~~ ✅ resolved 2026-07-02 (Wave 3.2)
 
 - **Категория:** L53
-- **Severity:** high
+- **Severity:** ~~high~~
 
-См. [input.md Issue 2](./input.md), [button.md Issue 14](./button.md). Также `theme: "snow" | "bubble"` (Quill theme) не зависит от FishtVue componentsStyle.
+> **Status (2026-07-02): ✅ resolved — close Wave 3.2.**
+> - **componentsStyle fallback** — [TextEditor.vue](../../lib/texteditor/TextEditor.vue) `mode`-computed получил `?? TextEditor.componentsStyle()` между `options?.mode` и литеральным `"outlined"` (зеркало [Input.vue:62-64](../../lib/input/Input.vue#L62-L64)). Тест — source-scan в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) `componentsStyle global fallback (Wave 3.2)` (mount Quill крашит jsdom rAF — суита выше `todo`, дисциплина существующих source-scan блоков).
+> - **unstyled** — doc-sync: cross-cutting guard `Component.setStyle()` (`config.unstyled → ""`, [component/index.ts:138](../../lib/component/index.ts#L138), ✅ 2026-05-11) покрывает TextEditor вместе со всеми 22 компонентами; per-component правок не требуется.
+> - Каveat остаётся справочно: `theme: "snow" | "bubble"` (Quill-тема) — независимая ось от FishtVue `componentsStyle` (осознанно: это тема редактора, не form-control-обёртки).
 
 ## Issue 8: Locale для Quill — не использует FishtVue locale
 
@@ -200,11 +203,11 @@ Quill toolbar tooltips («Bold», «Italic», ...) — на английском
 
 - **Категория:** F30 (хардкод текста)
 - **Severity:** medium
-- **Где:** [TextEditor.vue:95-96](../../lib/texteditor/TextEditor.vue#L95-L96), Dialog "Save"/"Cancel" buttons
+- **Где:** [TextEditor.vue:96-97](../../lib/texteditor/TextEditor.vue#L96-L97), Dialog "Save"/"Cancel" buttons
 
 ### Что найдено
 
-Toolbar `[{ font: [] }]`, `[{ align: [] }]` — Quill default labels. Также Dialog для editor-resize ([TextEditor.vue:73-74](../../lib/texteditor/TextEditor.vue#L73-L74)) использует Buttons с английским текстом.
+Toolbar `[{ font: [] }]`, `[{ align: [] }]` — Quill default labels. Также Dialog для editor-resize ([TextEditor.vue:74-75](../../lib/texteditor/TextEditor.vue#L74-L75)) использует Buttons с английским текстом.
 
 ### Что нужно сделать
 
@@ -236,8 +239,8 @@ Quill editor рендерится через div'ы. Нет hidden `<input>` д�
 | Настройка | Поддержано? | Комментарий |
 |---|---|---|
 | `componentsOptions.TextEditor` | ✅ | mode, theme, paramsDialog, paramsTextEditor |
-| `componentsStyle` global | ❌ | Issue 7 |
-| `unstyled: true` | ❌ | Issue 7 |
+| `componentsStyle` global | ✅ | Issue 7 ✅ 2026-07-02 — `?? TextEditor.componentsStyle()` в mode-цепочке |
+| `unstyled: true` | ✅ | Issue 7 ✅ 2026-07-02 — cross-cutting guard `Component.setStyle()` (doc-sync) |
 | Theme tokens vs hardcode | ❌ | Issue 2 — HEX hardcode |
 | Runtime theme switch | ❌ | Issue 2 |
 | `t()` для текста | ❌ | Issue 8, 9 |

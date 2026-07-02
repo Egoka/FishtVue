@@ -49,7 +49,10 @@
   const isValue = computed<boolean>(() =>
     Boolean(modelValue.value ? String(modelValue.value).length : (modelValue.value ?? isActiveTextEditor.value))
   )
-  const mode = computed<NonNullable<TextEditorProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  // Wave 3.2 (texteditor.md Issue 7): глобальный componentsStyle в fallback-chain — зеркало Input.vue.
+  const mode = computed<NonNullable<TextEditorProps["mode"]>>(
+    () => props.mode ?? options?.mode ?? TextEditor.componentsStyle() ?? "outlined"
+  )
   const isDisabled = computed<NonNullable<TextEditorProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<TextEditorProps["isInvalid"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<TextEditorProps["isInvalid"]>>(() =>

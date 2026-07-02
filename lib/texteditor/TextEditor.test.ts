@@ -287,6 +287,24 @@ describe("TextEditor — accessibility label association (Wave 4)", () => {
   })
 })
 
+// componentsStyle global fallback (Wave 3.2 — texteditor.md Issue 7). Mount поднимает Quill,
+// чьи rAF-колбэки стреляют после teardown jsdom и роняют прогон (та же хрупкость, что держит
+// основную суиту в `todo`) — поэтому цепочка резолва проверяется на уровне source,
+// зеркало соседних source-scan блоков. Канон цепочки — Input.vue:
+// `props.mode ?? options?.mode ?? X.componentsStyle() ?? "outlined"`.
+describe("TextEditor — componentsStyle global fallback (Wave 3.2)", () => {
+  it("mode falls back to TextEditor.componentsStyle() between options and the literal default", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+    expect(src).toMatch(
+      /props\.mode\s*\?\?\s*options\?\.mode\s*\?\?\s*TextEditor\.componentsStyle\(\)\s*\?\?\s*"outlined"/
+    )
+  })
+})
+
 // @vueup/vue-quill + quill = optional peerDependencies (Wave 2.1). Компонент уже грузит сам
 // QuillEditor через `await import("@vueup/vue-quill")` в onMounted; Quill-CSS не должен висеть
 // top-level side-effect-импортом (иначе тянется в каждый bundle с `fishtvue/texteditor` и

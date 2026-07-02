@@ -1,7 +1,7 @@
 ---
 title: TextEditor
-summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar.
-updated: 2026-06-19
+summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar. mode-цепочка учитывает глобальный componentsStyle (Wave 3.2, 2026-07-02).
+updated: 2026-07-02
 stability: experimental
 since: 0.2.11
 ---
@@ -183,6 +183,8 @@ app.use(FishtVue, {
 ### 10.1 Global
 
 `TextEditorOption = Pick<TextEditorProps, "paramsDialog" | "paramsTextEditor" | "theme" | keyof InputLayoutOption>`.
+
+`mode` (стиль InputLayout-обёртки) резолвится по цепочке `props.mode ?? options?.mode ?? TextEditor.componentsStyle() ?? "outlined"` — глобальный `componentsStyle` учитывается (Wave 3.2, зеркало [Input](./input.md)). Quill-тема `theme: "snow" | "bubble"` — независимая ось (тема редактора, не обёртки).
 
 ### 10.2 Per-instance
 
