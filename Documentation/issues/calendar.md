@@ -1,7 +1,7 @@
 ---
 title: Issues — Calendar
-summary: 5/10 issues закрыты — memory leaks (MutationObserver disconnect + keydown cleanup), componentsStyle fallback, locale propagation, Wave 2.3 dup initStyle, + Wave 2.1 packaging (Issue 2 v-calendar → optional peer + lazy, Issue 3 vue → peer). Открытые — SSR-packaging cross-cutting (Issue 4), dual-API (5), unstyled (7, framework-level), floating-ui (9), RTL/print/motion (10).
-updated: 2026-06-19
+summary: 6/10 issues закрыты — memory leaks (MutationObserver disconnect + keydown cleanup), componentsStyle fallback, locale propagation, Wave 2.3 dup initStyle, + Wave 2.1 packaging (Issue 2 v-calendar → optional peer + lazy, Issue 3 vue → peer) + Wave 5 floating-ui (Issue 9, inherited от FixWindow). Открытые — SSR-packaging cross-cutting (Issue 4), dual-API (5), unstyled (7, framework-level), RTL/print/motion (10).
+updated: 2026-07-02
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/calendar/
 related-doc: ../components/calendar.md
@@ -15,7 +15,7 @@ related-doc: ../components/calendar.md
 |---|---|---|
 | critical | 0 | — |
 | high | 3 | A2, A4-5 (packaging — Issue 4), C17 (SSR), L53 (unstyled — framework-level), P (dual-API) |
-| medium | 3 | F31, G34, H39 |
+| medium | 2 | F31, G34 |
 | low | 3 | E29.7, B10, N59 |
 
 ## ~~Issue 1: CRITICAL — MutationObserver на documentElement не disconnect'ится при unmount~~ ✅ resolved 2026-05-11
@@ -249,23 +249,22 @@ Priority: `props.paramsDatePicker.locale > options.paramsDatePicker.locale > Fis
 
 > **NB:** `setActiveLocale("ru")` после mount — reactivity работает через `computed`, но v-calendar internally rebuilds month-data только при mount. Если runtime-switch нужен — pass `:key="locale"` to force remount (не делаем в этом фиксе — потребитель сам решает).
 
-## Issue 9: Floating positioning — не реагирует на window resize / scroll-parent
-
-> **Status:** deferred — cross-cutting (FixWindow, Menu, Select dropdown все требуют floating-ui). Отдельный ТЗ.
+## ~~Issue 9: Floating positioning — не реагирует на window resize / scroll-parent~~ ✅ resolved 2026-07-02 (inherited)
 
 - **Категория:** H39 (Floating UI / scroll/resize)
-- **Severity:** medium
+- **Severity:** ~~medium~~
 - **Где:** [Calendar.vue](../../lib/calendar/Calendar.vue) (через FixWindow)
 
-### Что найдено
+Picker открывается через `<FixWindow v-bind="paramsFixWindow">`. См. [done/fixwindow.md Issue 2](./done/fixwindow.md).
 
-Picker открывается через FixWindow. Если внутри scroll-container и пользователь скроллит body — picker не remount'ится / не перепозиционируется.
-
-### Что нужно сделать
-
-1. Использовать Floating UI (`@floating-ui/vue`) для positioning — auto-flip, auto-shift, scroll-aware.
-2. Cross-cutting: FixWindow, Menu, Select dropdown — все требуют floating-ui.
-3. См. также [fixwindow.md](./fix-window.md) когда будет.
+> ✅ **resolved 2026-07-02** — наследуется от FixWindow: тот же кластер, что [menu.md Issue 8](./menu.md) и
+> [table.md Issue 10](./table.md) (оба закрыты 2026-06-06/2026-06-11 с идентичной формулировкой; table.md
+> Issue 10 уже явно ссылался вперёд на «см. calendar.md Issue 9» — этот пункт был последним неподхваченным
+> straggler'ом кластера). FixWindow имеет собственный dependency-free движок позиционирования (`useFloating`
+> + `autoUpdate` + `flip`/`shift`; с 2026-06-14 без `@floating-ui/vue`). Scroll-parent repositioning не требует
+> отдельного кода в Calendar — [`getScrollParents()`](../../lib/fixwindow/useFloating.ts#L279) безусловно
+> обходит все scroll-родители и `reference`, и `floating` элементов, независимо от `scrollableEl` prop.
+> Отдельного кода в Calendar не требуется.
 
 ## Issue 10: prefers-reduced-motion, print, colors hardcode, RTL
 

@@ -1,7 +1,7 @@
 ---
 title: FixWindow
-summary: Плавающее окно (popover/tooltip), позиционирование через Floating UI с auto-flip/auto-shift, опциональный Teleport в body, focus trap, ARIA-семантика, motion-safe transitions, RTL-aware logical placement.
-updated: 2026-06-14
+summary: Плавающее окно (popover/tooltip), позиционирование через собственный dependency-free движок с auto-flip/auto-shift, опциональный Teleport в body, focus trap, ARIA-семантика, motion-safe transitions, RTL-aware logical placement.
+updated: 2026-07-02
 stability: stable
 since: 0.2.11
 ---
@@ -10,7 +10,7 @@ since: 0.2.11
 
 ## 1. Overview
 
-`FixWindow` — плавающее окно: popover, tooltip, attached menu. Позиционируется относительно `el` (DOM-узел или selector) или курсора (`byCursor: true`) через [`@floating-ui/vue`](https://floating-ui.com/) — auto-flip при достижении viewport edge, auto-shift при overflow, scroll/resize tracking. 13 значений `position`, `eventOpen`/`eventClose` (`hover/click/mousedown/mouseup/dblclick/contextmenu/none`), задержка открытия, отступ от viewport, опциональный Teleport в body для popover'ов внутри scroll-parent'ов с `overflow: hidden / auto`, опциональный focus trap для popover-form, динамический ARIA role.
+`FixWindow` — плавающее окно: popover, tooltip, attached menu. Позиционируется относительно `el` (DOM-узел или selector) или курсора (`byCursor: true`) через собственный dependency-free движок [`useFloating`](../../lib/fixwindow/useFloating.ts) — auto-flip при достижении viewport edge, auto-shift при overflow, scroll/resize tracking. 13 значений `position`, `eventOpen`/`eventClose` (`hover/click/mousedown/mouseup/dblclick/contextmenu/none`), задержка открытия, отступ от viewport, опциональный Teleport в body для popover'ов внутри scroll-parent'ов с `overflow: hidden / auto`, опциональный focus trap для popover-form, динамический ARIA role.
 
 Stability: `stable` — 82 кейса, coverage 88.4% statements / 83.8% branch (Wave 1 close-out 2026-05-16).
 
@@ -26,7 +26,7 @@ lib/fixwindow/
 └── package.json          # main, module, types, sideEffects: false
 ```
 
-Зависимости: [Button](./button.md) (close-кнопка), `@heroicons/vue/20/solid` (XMarkIcon), [domHandler.isClient](../utilities/domHandler.md), [`@floating-ui/vue`](https://floating-ui.com/docs/vue) (positioning), [`@vueuse/core`](https://vueuse.org/) (`onClickOutside` — Teleport-aware click-outside detection).
+Зависимости: [Button](./button.md) (close-кнопка), `@heroicons/vue/20/solid` (XMarkIcon), [domHandler.isClient](../utilities/domHandler.md). Позиционирование и click-outside — in-house, без внешних runtime-зависимостей: [`lib/fixwindow/useFloating.ts`](../../lib/fixwindow/useFloating.ts), [`lib/fixwindow/useClickOutside.ts`](../../lib/fixwindow/useClickOutside.ts) (замена `@floating-ui/vue` + `@vueuse/core`, 2026-06-14).
 
 ## 3. How it works
 
@@ -34,7 +34,6 @@ lib/fixwindow/
 - **Поток позиционирования:** собственный **dependency-free** движок [`useFloating(referenceRef, fixWindow, { placement, strategy, offset, padding, scrollableEl, open })`](../../lib/fixwindow/useFloating.ts) (замена `@floating-ui/vue`, 2026-06-14): чистое ядро `computePosition(rects)` (placement + offset + flip + shift) + реактивная обёртка (rects через `getBoundingClientRect`, autoUpdate = scroll/resize/`ResizeObserver`-listeners пока открыто). FishtVue `position` мапится в `Placement` через `positionToPlacement(...)`: `top-left → top-start`, `top-right → top-end`, …, `right-top → right-start` и т.д. — `-start`/`-end` логические, зеркалятся на documents с `dir="rtl"`. В `offset` идёт **только** `translatePx`; зазор `marginPx` создаётся прозрачным `border` (hover-bridge), иначе `marginPx` учитывался бы дважды — двойной зазор + dead-zone (см. [issues/done/fixwindow.md Issue 2](../issues/done/fixwindow.md)).
 - **byCursor:** virtual reference element создаётся в `virtualReferenceEl` computed на основе `positionMouse: { x, y }` из MouseEvent — движок работает с виртуальной точкой (0×0 rect) как с рефом.
 - **Click-outside:** собственный **dependency-free** [`useClickOutside(fixWindow, close, { ignore: [trigger], events: [eventClose] })`](../../lib/fixwindow/useClickOutside.ts) (замена `@vueuse/core onClickOutside`, 2026-06-14): listener на `document` (capture), «снаружи» определяется через `event.composedPath()` — Teleport/Shadow-DOM-aware; слушает именно `eventClose`-событие.
-- **Click-outside:** через `onClickOutside(fixWindow, callback, { ignore: [element] })` — Teleport-aware (правильно работает когда popover вынесен в body).
 - **Focus trap:** native реализация (mirror Dialog) — `FOCUSABLE_SELECTOR` + `getFocusable` + `onPopoverKeydown` циклит Tab/Shift+Tab между focusable элементами. Активируется через `focusTrap: true` prop.
 - **Focus return:** при `focusTrap: true` сохраняется `document.activeElement` в `triggerEl` ref при open; при close через `nextTick` возвращается focus на trigger (если `returnFocus !== false`).
 - **ARIA:** `role` динамически — `eventOpen: "hover"` → `"tooltip"`, иначе `"dialog"`; явное переопределение через `role` prop. `aria-label`/`aria-labelledby`/`aria-describedby` forwardятся на корневой узел; `labelledby` имеет приоритет над `label` (browser-канон).
@@ -73,7 +72,7 @@ lib/fixwindow/
 | `class` / `classBody` | `StyleClass`                                           | —                                             | Контейнер / тело.                                                                                                                                                                                                                                              |
 | `mode`                | `StyleMode` (`"filled" \| "outlined" \| "underlined"`) | —                                             | Стиль; fallback на `FixWindow.componentsStyle()`.                                                                                                                                                                                                              |
 | `eventOpen`           | `FixWindowEvent`                                       | `"hover"`                                     | `hover \| click \| mousedown \| mouseup \| dblclick \| contextmenu \| none`. Для `"hover"` дополнительно регистрируется `touchstart` (touch fallback).                                                                                                         |
-| `eventClose`          | `FixWindowEvent`                                       | auto (см. `defaultCloseEvent`)                | Аналогично. Click-based close через VueUse `onClickOutside` — Teleport-aware.                                                                                                                                                                                  |
+| `eventClose`          | `FixWindowEvent`                                       | auto (см. `defaultCloseEvent`)                | Аналогично. Click-based close через собственный `useClickOutside` — Teleport-aware (`composedPath()`).                                                                                                                                                        |
 | `delay`               | `number \| 100 \| 500 \| 1000 \| 1500 \| 2000`         | `0`                                           | Задержка открытия (ms).                                                                                                                                                                                                                                        |
 | `marginPx`            | `number \| 2 \| 5 \| 10`                               | `10`                                          | Видимый зазор между popover и trigger — задаётся прозрачным `border` (он же hover-bridge: курсор не покидает окно при переходе trigger → window). НЕ через Floating UI `offset` (иначе зазор удвоился бы + появился dead-zone). border-box-кромка окна остаётся вплотную к триггеру.                                                                                                                                                                                                         |
 | `translatePx`         | `number \| 2 \| 5 \| 10`                               | `0`                                           | Тонкая подстройка смещения по главной оси — единственное, что идёт в Floating UI `offset` (с `marginPx` **не** суммируется).                                                                                                                                                                                                      |
@@ -279,7 +278,7 @@ Root класс — `fv fishtvue-fix-window`.
 
 - Нет `v-html`.
 - Подписки на window/document-events очищаются в `onBeforeUnmount` (Escape listener + `onClickOutside` teardown). При rapid mount/unmount утечек не возникает.
-- Click-outside detection через VueUse `onClickOutside` — корректно работает через Teleport, не зависит от composedPath/contains внутреннего DOM tree.
+- Click-outside detection через собственный [`useClickOutside`](../../lib/fixwindow/useClickOutside.ts) — «снаружи» определяется через `event.composedPath()` (Teleport/Shadow-DOM-aware).
 - `border` computed как inline style — учитывай в CSP `style-src 'unsafe-inline'`.
 
 ## 13. TypeScript
@@ -307,7 +306,7 @@ fw.value?.focusFirst()
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Browser:** evergreen. Использует `@floating-ui/vue` `useFloating` + `autoUpdate`; нативные API `addEventListener`, `KeyboardEvent`.
+- **Browser:** evergreen. Использует собственный dependency-free `useFloating`/`autoUpdate`-эквивалент ([lib/fixwindow/useFloating.ts](../../lib/fixwindow/useFloating.ts)); нативные API `addEventListener`, `KeyboardEvent`, `ResizeObserver`.
 - **Stability flag:** `stable` — 82 кейса, coverage 88.4% statements / 83.8% branch (Wave 1 close-out 2026-05-16).
 - **Breaking changes:** не зафиксировано на уровне публичного API. Pre-Floating UI tests, проверявшие точные пиксельные координаты `x`/`y`, релаксированы — Floating UI считает иначе чем manual algorithm, но shape API (string CSS units, `isOpen`, `updatePosition()`) сохранён.
 - **Deprecations:** нет.
@@ -393,8 +392,8 @@ describe("FixWindow", () => {
 ### Resolved 2026-05-16 (Wave 1 audit close-out)
 
 - ~~Issue 1: Нет Teleport — popover/tooltip overflow обрезается scroll-parent~~ ✅ — добавлен `teleport` prop.
-- ~~Issue 2: Manual position calculation вместо Floating UI~~ ✅ — интегрирован `@floating-ui/vue` `useFloating` + `offset` + `flip` + `shift` + `autoUpdate`. Auto-flip/auto-shift при overflow viewport.
-- ~~Issue 3: Click-outside не работает при Teleport~~ ✅ — VueUse `onClickOutside` с правильным Teleport awareness.
+- ~~Issue 2: Manual position calculation вместо Floating UI~~ ✅ — интегрирован `@floating-ui/vue` `useFloating` + `offset` + `flip` + `shift` + `autoUpdate` (2026-05-16). Auto-flip/auto-shift при overflow viewport. **→ `@floating-ui/vue` заменён собственным dependency-free движком** [`lib/fixwindow/useFloating.ts`](../../lib/fixwindow/useFloating.ts) (2026-06-14) — та же семантика, ноль рантайм-зависимостей.
+- ~~Issue 3: Click-outside не работает при Teleport~~ ✅ — VueUse `onClickOutside` с правильным Teleport awareness (2026-05-16). **→ заменён собственным** [`lib/fixwindow/useClickOutside.ts`](../../lib/fixwindow/useClickOutside.ts) (2026-06-14) — тот же контракт, `composedPath()`-based, ноль рантайм-зависимостей.
 - ~~Issue 4: Focus trap отсутствует для popover-mode~~ ✅ — native реализация (mirror Dialog) через `focusTrap` prop.
 - ~~Issue 5: Focus return на trigger при close~~ ✅ — `triggerEl` capture + `returnFocus` prop.
 - ~~Issue 6: SSR styles + sideEffects/exports map / unstyled~~ ✅ partial — `sideEffects: false` per-component, удалён duplicate `FixWindow.initStyle()` из SFC (Wave 2.3), `unstyled` cross-cutting через `Component.setStyle` guard (Wave 3.1). Root exports map — defer Wave 2.1.
