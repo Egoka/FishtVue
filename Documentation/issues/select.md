@@ -1,7 +1,7 @@
 ---
 title: Issues — Select
-summary: 11/13 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports). Открытые — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending) и B10 (colors, deferred Wave 9). Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
-updated: 2026-06-20
+summary: 12/14 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports; 2026-07-02 — Issue 12 ms-[undefinedpx] guard). Открытые — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending) и B10 (colors, deferred Wave 9). Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
+updated: 2026-07-02
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
 related-doc: ../components/select.md
@@ -390,6 +390,20 @@ Custom rendering каждого option возможен только через 
 
 - GSAP-анимация раскрытия списка не учитывает `prefers-reduced-motion` — потребует JS-проверки media query или Motion-One интеграцию. Wave 10.1 follow-up.
 - **B10 — hardcoded `text-gray-500`, `bg-stone-100`, `bg-white dark:bg-black` и т. д.** → ⏸️ **deferred (Wave 9, lib-wide)**. Research 2026-06-13: в `lib/theme/primitive.ts` semantic-токенов (`bg-background`/`text-muted-foreground`/`border-border`) **не существует** — только примитивная палитра (22 цвета × 11 тонов) + динамический брендовый `theme-*`. **Ни один из 22 компонентов** semantic-токены не использует (Form/Split тоже хардкодят gray). «Полная миграция» требует сначала построить token-слой (`primitive.ts` + `semantic.ts` + `unoRules.ts`) — cross-cutting изменение критичного `lib/theme/`, ideally раскатывать lib-wide отдельным ТЗ, а не select-only. Решение пользователя (2026-06-13): отложить.
+
+## ~~Issue 12: `ms-[undefinedpx]` в class-body дропдауна до готовности layout~~ ✅ resolved 2026-07-02
+
+- **Категория:** correctness (styling)
+- **Severity:** ~~medium~~ → resolved
+- **Где (was):** [Select.vue:811](../../lib/select/Select.vue#L811)
+
+### Что найдено
+
+`:class-body="['z-50', \`ms-[${layout?.beforeWidth}px]\`]"` интерполировал `undefined` на первом рендере (template ref `layout` ещё не привязан) → класс `ms-[undefinedpx]`. До fail-closed движка (uno-engine.md Issue 1) это генерировало `margin-inline-start: undefinedpx` в FixWindow-теге; после — класс дропался с dev-warn, т. е. offset дропдауна молча не применялся на первом рендере. Вскрыто sandbox-корпусным диффом волны 1 uno-движка.
+
+### Что сделано
+
+Guard по образцу [InputLayout.vue:131](../../lib/inputlayout/InputLayout.vue#L131): `layout?.beforeWidth != null ? ... : ""` — `undefined`/`null` отсекаются, `0` сохраняет `ms-[0px]` (контракт RTL-теста Issue 9). Regression-тест — [Select.test.ts](../../lib/select/Select.test.ts) («не рендерит ms-[undefinedpx] до готовности layout.beforeWidth»).
 
 ## Cross-cutting: Configuration support
 

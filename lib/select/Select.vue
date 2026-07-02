@@ -808,7 +808,7 @@
         ref="selectListWindow"
         v-bind="paramsFixWindow"
         :model-value="isOpenList"
-        :class-body="['z-50', `ms-[${layout?.beforeWidth}px]`]"
+        :class-body="['z-50', layout?.beforeWidth != null ? `ms-[${layout.beforeWidth}px]` : '']"
         @close="closeSelect">
         <div
           data-select-list

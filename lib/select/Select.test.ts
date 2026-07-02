@@ -776,4 +776,19 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       wrapper.unmount()
     })
   })
+
+  describe("FixWindow class-body — guard ms-[…px] (uno-engine fail-closed regression)", () => {
+    it("не рендерит ms-[undefinedpx] до готовности layout.beforeWidth", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null }
+      })
+      // Первый рендер — template ref `layout` ещё не привязан (beforeWidth undefined);
+      // без guard'а класс интерполируется как ms-[undefinedpx] и дропается движком с warn.
+      expect(wrapper.html()).not.toContain("undefinedpx")
+      expect(document.body.innerHTML).not.toContain("undefinedpx")
+      await nextTick()
+      expect(wrapper.html()).not.toContain("undefinedpx")
+      wrapper.unmount()
+    })
+  })
 })
