@@ -1,7 +1,7 @@
 ---
 title: Theme
-summary: Token-инфраструктура, primitive/semantic, темы Aurora/Harmony/Sapphire, uno-engine. Runtime theme API (usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt) через CSS-variable indirection — Wave 3.3 (2026-07-02). Диалект-контракт uno-engine (§3.1) — v3.4 + v4-расширения (arbitrary properties, space-*, modern transform properties) — волна 2 (2026-07-02).
-updated: 2026-07-02
+summary: Token-инфраструктура, primitive/semantic, темы Aurora/Harmony/Sapphire, uno-engine. Runtime theme API (usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt) через CSS-variable indirection — Wave 3.3 (2026-07-02). Диалект-контракт uno-engine (§3.1) — v3.4 + v4-расширения (arbitrary properties, space-*, modern transform properties) — волна 2 (2026-07-02). Структурный слот `surface` — 23-й именованный цвет в `primitive.ts` (Wave 9, 2026-07-04); первый батч из 11 компонентов потребляет его, residual — issues/README.md.
+updated: 2026-07-04
 stability: stable
 since: 0.2.11
 ---
@@ -259,7 +259,7 @@ updatePrimaryPalette("#6366f1") // брендовая палитра из одн
 
 ### 10.3 Theming
 
-- **Имена цветов** ([Theme.d.ts:163–186](../../lib/theme/Theme.d.ts#L163-L186)): `theme | emerald | green | lime | red | orange | amber | yellow | teal | cyan | sky | blue | indigo | violet | purple | fuchsia | pink | rose | slate | gray | zinc | neutral | stone`. Шкала каждого цвета — 11 ступеней (50…950).
+- **Имена цветов** ([Theme.d.ts:163–187](../../lib/theme/Theme.d.ts#L163-L187)): `theme | emerald | green | lime | red | orange | amber | yellow | teal | cyan | sky | blue | indigo | violet | purple | fuchsia | pink | rose | slate | gray | zinc | neutral | stone | surface`. Шкала каждого цвета — 11 ступеней (50…950). `surface` — структурный semantic-слот (Wave 9, [primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317)): дефолт — копия `gray`, переопределяется через `updateSurfacePalette()` без правки primitive.ts.
 - **`theme` colorslot** — динамический, через CSS-переменные `--theme` (hue) и `--theme-contrast` (saturation). Переопределяется через `semantic.customThemeColor` и `semantic.customThemeColorContrast`.
 - **Размеры** (`ThemeRounded`, `ThemeShadow`): `Size` (xs/sm/md/lg/xl) + `none/full` или `inner/none`.
 - **Dark mode** — через `optionsTheme.darkModeSelector` (например, `".dark"`, `"html.dark"` или `"[data-theme='dark']"`). Все uno-классы с `dark:` префиксом генерируются на этот селектор: `Component.setStyle` прокидывает его как `darkSelector` ([component/index.ts:150](../../lib/component/index.ts#L150)) → `tailwind()` подставляет вместо дефолтного `@media (prefers-color-scheme: dark)` ([unoStyle/tailwind.ts:187](../../lib/theme/unoStyle/tailwind.ts#L187)). Без config (`darkModeSelector` не задан) `dark:*` остаётся OS-pref media-query. Контракт зафиксирован тестами: [lib/theme/darkModeSelector.test.ts](../../lib/theme/darkModeSelector.test.ts) + [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts). **`lightModeSelector`** пока НЕ транслируется (light — дефолт, dark — override).
@@ -373,7 +373,7 @@ describe("Theme helpers", () => {
 - `lib/theme/themes/{Aurora,Harmony,Sapphire}.ts` — coverage 0%, тестируется косвенно через config.
 - `optionsTheme.lightModeSelector` ([OptionsTheme](../../lib/config/FishtVue.d.ts#L179)) — типизирован, но НЕ транслируется в движок (в отличие от `darkModeSelector`). Light — дефолтное состояние, dark — override через `darkModeSelector`; отдельный `light:`-вариант не реализован.
 - Runtime-смена `darkModeSelector` НЕ регенерирует уже сгенерированные `dark:*` — дедуп `listOfStyledComponents` не инвалидируется. Палитры это больше не касается (Wave 3.3: цвета идут через `var(--fv-…)` и перекрашиваются перезаписью tokens-тега), ограничение осталось только для самого dark-СЕЛЕКТОРА — задавайте `darkModeSelector` на install.
-- `updateSurfacePalette` пишет `semantic.surface` и эмитит `--fv-surface-{tone}`, но компоненты пока НЕ потребляют surface-токены (структурные нейтрали `gray-*`/`neutral-*` захардкожены) — миграция на них: Wave 9.
+- `updateSurfacePalette` пишет `semantic.surface` и эмитит `--fv-surface-{tone}`; с 2026-07-04 `surface` — 23-й именованный цвет в `primitive.ts` (дефолт — копия `gray`), и первый батч из 11 компонентов (Menu, Accordion, Icons, Select, TextEditor, Separator, Calendar, Input, Form, Label, Aria) потребляет его вместо хардкода `gray-*`/`stone-*`/`neutral-*`/`slate-*`/`zinc-*`. Residual — 8 компонентов (Badge, Switch, Split, Pagination, Table, InputLayout, FixWindow, Dialog), закрывшие свой номерной B10 через `forced-colors`+theme-accent, но оставившие структурные нейтрали, и цвета-интенты Alert (success/warning/info/error, отдельный semantic-slot epic) — см. [issues/README.md](../issues/README.md).
 
 ### Skipped tests
 

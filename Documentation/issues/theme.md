@@ -1,7 +1,7 @@
 ---
 title: Issues — Theme system
-summary: Аудит theme. Issue 1 (runtime theme API usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt/palette) ✅ resolved 2026-07-02 через CSS-variable indirection — close Wave 3.3. Остаются coverage themes/ (J46), tree-shaking primitive (K52), RTL tokens (F31).
-updated: 2026-07-02
+summary: Аудит theme. Issue 1 (runtime theme API usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt/palette) ✅ resolved 2026-07-02 через CSS-variable indirection — close Wave 3.3. B10 (surface-токен как 23-й именованный цвет + первый батч из 11 компонентов) ✅ resolved 2026-07-04 — theme-часть Wave 9 закрыта, residual (8 компонентов + Alert-эпик) трекается в issues/README.md. Остаются coverage themes/ (J46), tree-shaking primitive (K52), RTL tokens (F31).
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support
 source: lib/theme/
 related-doc: ../architecture/theme.md
@@ -15,8 +15,10 @@ related-doc: ../architecture/theme.md
 | -------- | ----- | ----------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                         |
 | high     | 3     | A2, A4-5, J46 (themes 0% coverage)                                                        |
-| medium   | 4     | D21, F31, B10, K46 (uno.ts 0%)                                                            |
+| medium   | 3     | D21, F31, K46 (uno.ts 0%)                                                                 |
 | low      | 2     | E29, N59                                                                                  |
+
+~~B10~~ ✅ resolved 2026-07-04 — см. ниже, theme-часть Wave 9 закрыта (residual в issues/README.md).
 
 ## ~~Issue 1: Публичный API `usePreset`/`updatePreset`/`$dt`/`palette` НЕ существует — а заявлен в Documentation~~ ✅ resolved 2026-07-02 (Wave 3.3)
 
@@ -28,7 +30,7 @@ related-doc: ../architecture/theme.md
 >
 > - Движок эмитит именованные цвета через `rgb(var(--fv-{name}-{tone}, R G B) / α)` ([unoStyle/helpers.ts `resolveColor`](../../lib/theme/unoStyle/helpers.ts), 18 emission-sites в [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts)); слот `theme` — `var(--fv-theme-{tone}, hsla(…))` + `color-mix` для alpha (заодно починен silent-баг: alpha для theme-слота игнорировался, и битый градиентный хвост `hsla(…)00`). Fallback внутри `var()` — запечённое значение: без установленного plugin'а рендер прежний.
 > - Install инжектит `:root`-блок токенов live-темы тегом `FishtVueTokens` ([helpers/tokensCss.ts](../../lib/theme/helpers/tokensCss.ts), [config/index.ts:169-172](../../lib/config/index.ts#L169-L172)); runtime-функции переписывают этот ОДИН тег → все смонтированные компоненты перекрашиваются без regen. Пункт «style invalidation mechanism» из roadmap закрыт by design — invalidation не нужен.
-> - [usePreset.ts](../../lib/theme/usePreset.ts) (полная замена + `linksTheme`), [updatePreset.ts](../../lib/theme/updatePreset.ts) (`deepMerge` поверх копии), [updatePrimaryPalette.ts](../../lib/theme/updatePrimaryPalette.ts) (брендовый слот = цвет `theme`; пишет `semantic.primary` → `--fv-theme-*`; вход: палитра/`'{indigo.500}'`-refs/одиночный hex), [updateSurfacePalette.ts](../../lib/theme/updateSurfacePalette.ts) (`semantic.surface` → `--fv-surface-*`, light/dark scoping; потребление компонентами — Wave 9), [$dt.ts](../../lib/theme/$dt.ts) (metadata lookup), `palette("{blue}")` — копия primitive-шкалы.
+> - [usePreset.ts](../../lib/theme/usePreset.ts) (полная замена + `linksTheme`), [updatePreset.ts](../../lib/theme/updatePreset.ts) (`deepMerge` поверх копии), [updatePrimaryPalette.ts](../../lib/theme/updatePrimaryPalette.ts) (брендовый слот = цвет `theme`; пишет `semantic.primary` → `--fv-theme-*`; вход: палитра/`'{indigo.500}'`-refs/одиночный hex), [updateSurfacePalette.ts](../../lib/theme/updateSurfacePalette.ts) (`semantic.surface` → `--fv-surface-*`, light/dark scoping; потребление компонентами — 11/19 закрыто 2026-07-04, см. B10 ниже), [$dt.ts](../../lib/theme/$dt.ts) (metadata lookup), `palette("{blue}")` — копия primitive-шкалы.
 > - `semantic.primary` — теперь optional user-слот без дефолта (прежние формулы никем не потреблялись и после `linksTheme` лгали статикой `hsl(0 0 …)`).
 > - Тесты: [themeApi.test.ts](../../lib/theme/themeApi.test.ts) (16), [unoStyle/colorVars.test.ts](../../lib/theme/unoStyle/colorVars.test.ts) (18 — спецификация эмиссии), Uno-сюиты перекалиброваны на var-формат. Browser-verified в sandbox: `updatePrimaryPalette({600:"#b91c1c"})` перекрасил смонтированный элемент в rgb(185,28,28), `usePreset(hue 200/70%)` — в rgb(30,124,171).
 > - **Residual:** public docs [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) импортируют из `'@fishtvue/themes'` — реальный entry `fishtvue/theme`; `$dt`-пример показывает PrimeVue-формат путей (`'primary.color'`) — реальный формат dot-path от корня темы (`'primitive.emerald.500'`). Public docs (fisht.org) ведутся отдельно и в /tz-канон не входят.
@@ -196,6 +198,18 @@ Theme-токены типа `border-left-radius` хардкоден. Должн�
 
 См. cross-cutting.
 
+## ~~Issue 10: B10 — компоненты не потребляют surface-токен~~ ✅ resolved 2026-07-04
+
+- **Категория:** B10
+- **Severity:** ~~medium~~
+- **Где:** [primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317), [Theme.d.ts:163-187](../../lib/theme/Theme.d.ts#L163-L187)
+
+> **Status (2026-07-04): ✅ resolved (theme-часть Wave 9).** `updateSurfacePalette` (Issue 1, ✅ 2026-07-02) писал `semantic.surface`/`--fv-surface-{tone}`, но ни один компонент не ссылался на `bg-surface-*`/`text-surface-*`/etc. — `surface` не был именем в `primitive.ts.colors`, поэтому такие классы были бы fail-closed-дропнуты движком. Фикс — добавлен `surface` как 23-й именованный цвет (дефолт — точная копия `gray`), **без правок** `unoStyle/unoRules.ts` (цветовые regex собираются динамически через `Object.keys(colors).join("|")` — новое имя подхватывается автоматически). Тест: [unoStyle/colorVars.test.ts](../../lib/theme/unoStyle/colorVars.test.ts) `describe("surface slot — structural token, same mechanism as named colors (Wave 9)")`.
+>
+> Первый батч из 11 компонентов (Menu, Accordion, Icons, Select, TextEditor, Separator, Calendar, Input, Form, Label, Aria) мигрирован на `surface-*` вместо хардкода `gray-*`/`stone-*`/`neutral-*`/`slate-*`/`zinc-*` — см. соответствующие `Documentation/issues/<name>.md`.
+>
+> **Residual (не входит в этот резолв):** 8 компонентов, ранее закрывших свой номерной B10 через `forced-colors`+theme-accent, но осознанно оставивших структурные нейтрали (Badge, Switch, Split, Pagination, Table, InputLayout, FixWindow, Dialog) — отдельное подтверждение; цвета-интенты Alert (success/warning/info/error) — отдельный epic, нужны новые semantic-слоты + runtime API. Обе темы трекаются в [issues/README.md](./README.md), не здесь.
+
 ## Cross-cutting: Configuration support
 
 | Настройка                        | Поддержано? | Комментарий                                                                 |
@@ -209,7 +223,7 @@ Theme-токены типа `border-left-radius` хардкоден. Должн�
 | `usePreset` runtime              | ✅          | Issue 1 ✅ 2026-07-02 — CSS-variable indirection, tokens-тег `FishtVueTokens` |
 | `updatePreset` runtime           | ✅          | Issue 1 ✅ 2026-07-02                                                        |
 | `updatePrimaryPalette` runtime   | ✅          | Issue 1 ✅ 2026-07-02 — брендовый слот = цвет `theme`                        |
-| `updateSurfacePalette` runtime   | ✅          | Issue 1 ✅ 2026-07-02 — vars+config; потребление компонентами — Wave 9       |
+| `updateSurfacePalette` runtime   | ✅          | Issue 1 ✅ 2026-07-02 — vars+config; потребление компонентами — B10 ✅ 2026-07-04 (11/19), residual в issues/README.md |
 | `$dt`                            | ✅          | Issue 1 ✅ 2026-07-02                                                        |
 | `palette`                        | ✅          | экспортирован + `'{blue}'`-форма (Issue 1 ✅ 2026-07-02)                     |
 

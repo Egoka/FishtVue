@@ -108,6 +108,25 @@ describe("Color emission via CSS variables (Wave 3.3 — theme.md Issue 1)", () 
     })
   })
 
+  describe("surface slot — structural token, same mechanism as named colors (Wave 9)", () => {
+    it.each([
+      {
+        classValue: "bg-surface-500",
+        expected: ".bg-surface-500 {\n  background-color: rgb(var(--fv-surface-500, 107 114 128));\n}"
+      },
+      {
+        classValue: "text-surface-900",
+        expected: ".text-surface-900 {\n  color: rgb(var(--fv-surface-900, 17 24 39));\n}"
+      },
+      {
+        classValue: "border-surface-200",
+        expected: ".border-surface-200 {\n  border-color: rgb(var(--fv-surface-200, 229 231 235));\n}"
+      }
+    ])("$classValue", ({ classValue, expected }) => {
+      expect(tailwind(classValue)).toBe(expected)
+    })
+  })
+
   describe("guards — non-token colors keep raw emission", () => {
     it.each([
       { classValue: "text-white/50", expected: ".text-white\\/50 {\n  color: #ffffff80;\n}" },
