@@ -352,6 +352,29 @@ describe("Label Component Tests", () => {
     })
   })
 
+  // Semantic token migration — Issue 11 / B10 (label.md, cross-cutting Wave 9)
+  // Default text color hardcoded `gray-*` → renamed to library semantic
+  // `surface-*` (lib/theme/primitive.ts: surface — 23rd named color, default =
+  // точная копия gray-шкалы). Family rename only, same numeric tone (400/500) —
+  // zero visual change, но подключает floating-label текст к theme-token indirection.
+  // -----------------------------------------------------------------------
+  describe("Label Component - semantic token migration — content color uses surface-* (Issue 11 / B10)", () => {
+    it("classContent includes text-surface-400 dark:text-surface-500 (not gray)", () => {
+      const wrapper = mount(Label, { props: { title: "Surface tone" } })
+      const classContent = (wrapper.vm as any).classContent as string
+      expect(classContent).toContain("text-surface-400")
+      expect(classContent).toContain("dark:text-surface-500")
+      expect(classContent).not.toContain("gray")
+    })
+
+    it("rendered span class attribute carries surface-* tone classes", () => {
+      const wrapper = mount(Label, { props: { title: "Surface tone" } })
+      const spanClass = wrapper.find("span").attributes("class")
+      expect(spanClass).toContain("text-surface-400")
+      expect(spanClass).toContain("dark:text-surface-500")
+    })
+  })
+
   // Issue 10 (G37, audit 2026-05-10) — default slot for custom title content
   describe("Label Component - default slot", () => {
     it("renders title prop as fallback when no default slot is provided", () => {

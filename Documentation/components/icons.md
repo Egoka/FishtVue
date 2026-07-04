@@ -1,7 +1,7 @@
 ---
 title: Icons
 summary: Универсальный icon — Heroicons + Iconify, два variant (outline/solid), wrapper-based a11y, narrow IconType union. Heroicons на tree-shakeable const-реестр explicit named-импортов (2026-06-14, Issue 1): bundler оставляет только curated-набор (37 имён ≈ 11 KB) вместо всех 648 (~94 KB); sync lookup сохранён → prod-Vite/SSR-корректность не теряется; имена вне набора → Iconify-fallback.
-updated: 2026-06-14
+updated: 2026-07-04
 stability: stable
 since: 0.2.11
 ---
@@ -38,7 +38,7 @@ lib/icons/
 - **Lifecycle:** `Component.__hooks()` (конструктор) регистрирует `onServerPrefetch + vueOnMounted` → `initStyle()`. SFC **не** дублирует `onMounted(() => Icons.initStyle())` — дубль снят в Wave 2.3 (см. [dev-patterns §12](../dev-patterns.md#12-known-deviations-from-this-pattern)).
 - **Поток данных:** `type` → **синхронный lookup** heroicon в const-реестре (`HERO_OUTLINE`/`HERO_SOLID[PascalCase(type) + "Icon"]`, Issue 1, tree-shakeable named-импорты) → если имя не в curated-реестре → fallback на `<Icon icon="type">` через `@iconify/vue` (async). Heroicon резолвится синхронно (до первого `await` в immediate-watcher) → попадает в SSR-HTML и на первый paint (см. §12 Bundle).
 - **A11y wrapper pattern:** root — `<i data-icon>`. Heroicons render-функции хардкодят `aria-hidden="true"` и не пробрасывают `$attrs`, поэтому role/aria-label применяются к wrapper'у, а SVG внутри остаётся `aria-hidden`. Это валидный screen-reader-pattern: AT читает wrapper как labelled image, внутренний SVG скрыт.
-- **Стили:** через `Icons.setStyle()`. Default — `h-5 w-5 text-gray-900 dark:text-gray-100 select-none`.
+- **Стили:** через `Icons.setStyle()`. Default — `h-5 w-5 text-surface-900 dark:text-surface-100 select-none`.
 - **Конфиг:** `componentsOptions.Icons` — `class` и `variant`.
 - **Локализация:** не использует.
 - **SSR / prod-Vite / bundle (Issue 1 — resolved 2026-06-14, tree-shaking):** heroicons резолвятся из **const-реестра explicit named-импортов** (`HERO_OUTLINE`/`HERO_SOLID` в module-scope `<script>`) + **синхронным** lookup'ом → корректно рендерятся в prod-Vite, SSR (sync — иконка в SSR-HTML) и любом bundler; bundler tree-shake'ит набор до curated-37 (≈11 KB gzip) вместо всех 648 (~94 KB). Ранее (commit `7740c50`) точечный dynamic import с bare-спецификатором `@heroicons/vue/...` не глобился `dynamic-import-vars` → иконки ломались в production (`TypeError: Failed to resolve module specifier`); затем namespace `import *` (prod-корректно, но весь набор в bundle); теперь — const-реестр (prod-корректно + tree-shakeable). Iconify-fallback — lazy с CDN. См. §12 Bundle.
@@ -70,7 +70,7 @@ lib/icons/
 | `variant`   | `"outline" \| "solid"`                                     | `"outline"` | Стиль (только Heroicons). Iconify имеет собственный механизм через suffix в `type`.                                                                                                                                                                                                                |
 | `label`     | `string`                                                   | —           | Accessible label для семантической иконки. Задан → wrapper получает `role="img"` + `aria-label="<label>"`. Пуст/опущен → wrapper прозрачен, SVG остаётся `aria-hidden="true"` (декоративный режим).                                                                                                |
 | `stileIcon` | `"outline" \| "solid"`                                     | —           | **@deprecated**. Используй `variant`. Soft-deprecated в `0.2.x` (dev `console.warn` при использовании без `variant`), будет удалён в `1.0`. Codemod планируется в [Wave 12](../issues/README.md#-wave-12--migration--dx).                                                                          |
-| `class`     | `"h-5 w-5 text-gray-900 dark:text-gray-100" \| StyleClass` | preset      | CSS класс.                                                                                                                                                                                                                                                                                         |
+| `class`     | `"h-5 w-5 text-surface-900 dark:text-surface-100" \| StyleClass` | preset      | CSS класс.                                                                                                                                                                                                                                                                                         |
 | `style`     | `CSSProperties`                                            | —           | Inline style.                                                                                                                                                                                                                                                                                      |
 
 ### IconType union
@@ -351,7 +351,6 @@ describe("Icons", () => {
 - Coverage `Icons.vue` ~93%+ — две строки исторически не покрыты.
 - `:offline` prop / env-detection для Iconify CDN fallback — **declined** (2026-06-14): `addCollection` покрывает offline/CSP без новой API-поверхности (см. [issues/icons.md](../issues/icons.md) Issue 2).
 - **Heroicon вне curated-набора (37 имён) не резолвится как heroicon** → уходит в Iconify-fallback (Issue 1 tree-shaking trade-off): `<Icons type="camera" />` без `addCollection`/CDN не отрисуется. Расширить — добавить имя в `HeroIconName` + оба реестра `Icons.vue` (см. §12 Bundle). Closed issue [icons.md Issue 1](../issues/icons.md).
-- Hardcoded default class `text-gray-900 dark:text-gray-100` (вместо semantic token) — Wave 9 cross-cutting, см. [icons.md Issue 9](../issues/icons.md).
 
 ### Skipped tests
 

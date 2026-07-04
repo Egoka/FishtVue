@@ -60,8 +60,8 @@
   })
   const classInput = computed(() =>
     Aria.setStyle([
-      "w-full ring-0 border-0 bg-transparent p-0 mt-2 mb-1 min-h-[28px] max-h-[10rem] rounded text-gray-900 dark:text-gray-100",
-      "placeholder:select-none focus:placeholder:text-gray-400 focus:placeholder:dark:text-gray-500",
+      "w-full ring-0 border-0 bg-transparent p-0 mt-2 mb-1 min-h-[28px] max-h-[10rem] rounded text-surface-900 dark:text-surface-100",
+      "placeholder:select-none focus:placeholder:text-surface-400 focus:placeholder:dark:text-surface-500",
       props.label?.length ? "placeholder:text-transparent motion-safe:placeholder:transition-all" : "",
       "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
       "focus:outline-0 focus:ring-0 caret-theme-500",

@@ -100,15 +100,16 @@ describe("Calendar Component", () => {
         expect(layout.exists()).toBe(true)
 
         // Проверяем, что класс для текущего режима установлен
+        // ---B10 (2026-07-04) — структурные классы мигрированы gray-*/stone-* → surface-* (тот же tone).
         if (mode === "outlined") {
-          expect(layout.classes().join(" ")).toContain("border-gray-300")
-          expect(layout.classes().join(" ")).toContain("dark:border-gray-600")
+          expect(layout.classes().join(" ")).toContain("border-surface-300")
+          expect(layout.classes().join(" ")).toContain("dark:border-surface-600")
         } else if (mode === "filled") {
-          expect(layout.classes().join(" ")).toContain("bg-stone-100")
-          expect(layout.classes().join(" ")).toContain("dark:bg-stone-900")
+          expect(layout.classes().join(" ")).toContain("bg-surface-100")
+          expect(layout.classes().join(" ")).toContain("dark:bg-surface-900")
         } else if (mode === "underlined") {
           expect(layout.classes().join(" ")).toContain("border-b")
-          expect(layout.classes().join(" ")).toContain("dark:border-gray-700")
+          expect(layout.classes().join(" ")).toContain("dark:border-surface-700")
         }
       })
     })
@@ -383,6 +384,88 @@ describe("Calendar Component", () => {
       expect(trigger.exists()).toBe(true)
       expect(trigger.attributes("aria-labelledby")).toBe("date-label")
       expect(wrapper.find("label[data-label]").attributes("id")).toBe("date-label")
+    })
+  })
+
+  // ---B10 (2026-07-04) — миграция structural gray-*/stone-*/slate-* → semantic surface-* (тот же
+  // числовой tone, только family rename). `surface` — 23-й named color в lib/theme/primitive.ts,
+  // дефолт = точная копия gray. Source-scan (не mount) — часть классов вычисляется в computed/ref
+  // style-строках (classDateText, classPicker, classPlaceholder) и в inline :class-биндингах шаблона
+  // (separator-иконки), которые не всегда достижимы через один DOM-снимок за один mount.
+  // v-calendar's OWN internal theming (--vc-accent-*, vc-primary) — не в scope, не трогалось.
+  describe("B10 — semantic surface-* tokens (2026-07-04)", () => {
+    it("does not use hardcoded gray-*/stone-*/slate-*/zinc-*/neutral-* classes in Calendar.vue", async () => {
+      const fs = await import("node:fs/promises")
+      const path = await import("node:path")
+      const url = await import("node:url")
+      const here = path.dirname(url.fileURLToPath(import.meta.url))
+      const src = await fs.readFile(path.join(here, "Calendar.vue"), "utf8")
+      // Структурные Tailwind color-primitive классы FishtVue-обёртки не должны остаться.
+      expect(src).not.toMatch(
+        /\b(?:text|bg|border|placeholder|fill|ring|divide)-(?:gray|stone|slate|zinc|neutral)-\d{2,3}\b/
+      )
+    })
+
+    it("uses surface-* in place of the former gray-*/stone-*/slate-* classes (same numeric tone)", async () => {
+      const fs = await import("node:fs/promises")
+      const path = await import("node:path")
+      const url = await import("node:url")
+      const here = path.dirname(url.fileURLToPath(import.meta.url))
+      const src = await fs.readFile(path.join(here, "Calendar.vue"), "utf8")
+      // date text + placeholder (было text-gray-900/dark:text-gray-100 + placeholder:text-gray-400/dark:text-gray-600)
+      expect(src).toMatch(/text-surface-900/)
+      expect(src).toMatch(/dark:text-surface-100/)
+      expect(src).toMatch(/placeholder:text-surface-400/)
+      expect(src).toMatch(/placeholder:dark:text-surface-600/)
+      // outlined border (было border-gray-300/dark:border-gray-600)
+      expect(src).toMatch(/border-surface-300/)
+      expect(src).toMatch(/dark:border-surface-600/)
+      // underlined border (было border-gray-300/dark:border-gray-700)
+      expect(src).toMatch(/dark:border-surface-700/)
+      // filled background (было bg-stone-100/dark:bg-stone-900)
+      expect(src).toMatch(/bg-surface-100/)
+      expect(src).toMatch(/dark:bg-surface-900/)
+      // underlined background (было bg-stone-50/dark:bg-stone-950)
+      expect(src).toMatch(/bg-surface-50/)
+      expect(src).toMatch(/dark:bg-surface-950/)
+      // placeholder icon (было text-gray-400/dark:text-gray-600)
+      expect(src).toMatch(/text-surface-400 dark:text-surface-600/)
+      // disabled state (было text-slate-500 dark:text-slate-500) — появляется несколько раз
+      const disabledMatches = src.match(/text-surface-500 dark:text-surface-500/g) ?? []
+      expect(disabledMatches.length).toBeGreaterThanOrEqual(3)
+      // separator icon, conditional non-disabled branch (было text-gray-400 dark:text-gray-400 / text-gray-600 dark:text-gray-400)
+      expect(src).toMatch(/text-surface-400 dark:text-surface-400/)
+      expect(src).toMatch(/text-surface-600 dark:text-surface-400/)
+    })
+
+    it("renders surface-* border/background classes for each mode (DOM assertion)", () => {
+      const outlined = mount(Calendar, { props: { mode: "outlined" } })
+      const outlinedPicker = outlined.find("[data-calendar-picker]")
+      expect(outlinedPicker.classes().join(" ")).toContain("border-surface-300")
+      expect(outlinedPicker.classes().join(" ")).toContain("dark:border-surface-600")
+      expect(outlinedPicker.classes().join(" ")).not.toMatch(/\bborder-gray-300\b/)
+
+      const filled = mount(Calendar, { props: { mode: "filled" } })
+      const filledPicker = filled.find("[data-calendar-picker]")
+      expect(filledPicker.classes().join(" ")).toContain("bg-surface-100")
+      expect(filledPicker.classes().join(" ")).toContain("dark:bg-surface-900")
+      expect(filledPicker.classes().join(" ")).not.toMatch(/\bbg-stone-100\b/)
+
+      const underlined = mount(Calendar, { props: { mode: "underlined" } })
+      const underlinedPicker = underlined.find("[data-calendar-picker]")
+      expect(underlinedPicker.classes().join(" ")).toContain("dark:border-surface-700")
+      expect(underlinedPicker.classes().join(" ")).not.toMatch(/\bdark:border-gray-700\b/)
+    })
+
+    it("does not touch v-calendar's own internal theming (--vc-accent-*, vc-primary class)", async () => {
+      const fs = await import("node:fs/promises")
+      const path = await import("node:path")
+      const url = await import("node:url")
+      const here = path.dirname(url.fileURLToPath(import.meta.url))
+      const src = await fs.readFile(path.join(here, "Calendar.vue"), "utf8")
+      // v-calendar's own CSS-var accent tokens must remain untouched by this migration.
+      expect(src).toMatch(/--vc-accent-50/)
+      expect(src).toMatch(/vc-primary/)
     })
   })
 

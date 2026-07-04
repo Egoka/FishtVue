@@ -1,7 +1,7 @@
 ---
 title: Issues — Icons
-summary: Аудит Icons — heroicons переведены на tree-shakeable const-реестр explicit named-импортов (2026-06-14, Issue 1): bundler оставляет только curated-набор (37 имён ≈ 11 KB gzip) вместо всех 648 (~94 KB); sync lookup сохранён → prod-Vite/SSR-корректность не теряется; имена вне набора → Iconify-fallback. Iconify CSP — docs-only (offline-prop declined, addCollection-mitigation в §12). API-уровень (variant, label, narrow IconType) закрыт в 0.2.x. Остаётся только B10 (semantic-token hardcode → Wave 9).
-updated: 2026-06-14
+summary: Аудит Icons — heroicons переведены на tree-shakeable const-реестр explicit named-импортов (2026-06-14, Issue 1): bundler оставляет только curated-набор (37 имён ≈ 11 KB gzip) вместо всех 648 (~94 KB); sync lookup сохранён → prod-Vite/SSR-корректность не теряется; имена вне набора → Iconify-fallback. Iconify CSP — docs-only (offline-prop declined, addCollection-mitigation в §12). API-уровень (variant, label, narrow IconType) закрыт в 0.2.x. B10 (semantic-token hardcode) resolved 2026-07-04 — все issues закрыты.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/icons/
 related-doc: ../components/icons.md
@@ -11,17 +11,17 @@ related-doc: ../components/icons.md
 
 ## Сводка
 
-| Severity | Count | Categories                                              |
-| -------- | ----- | ------------------------------------------------------- |
-| critical | 0     | —                                                       |
-| high     | 0     | —                                                       |
-| medium   | 0     | —                                                       |
-| low      | 1     | B10 (hardcode class → semantic token — cross-cutting Wave 9) |
+| Severity | Count | Categories |
+| -------- | ----- | ---------- |
+| critical | 0     | —          |
+| high     | 0     | —          |
+| medium   | 0     | —          |
+| low      | 0     | —          |
 
 **Closed (2026-05-10):** Issue 3 (ARIA), Issue 4 (variant deprecation), Issue 5 (type narrowing), Issue 2 docs portion, Issue 8 docs portion.
 **Re-opened (2026-06-13):** Issue 1 (I45) — build-замер показал, что точечный dynamic import не работает в prod-Vite (bare specifier `@heroicons/vue/...` не глобится плагином `dynamic-import-vars` → no code-split, иконка не резолвится в браузере без import map).
 **Resolved-facet (2026-06-14):** prod-Vite/SSR-**регрессия** Issue 1 закрыта переходом на eager namespace import + sync lookup (промежуточно); иконки снова рендерились в prod/SSR.
-**Resolved (2026-06-14, tree-shaking):** Issue 1 закрыт полностью — namespace `import *` заменён на **tree-shakeable const-реестр explicit named-импортов** ([Icons.vue module-scope `<script>`](../../lib/icons/Icons.vue#L1)); bundler оставляет только curated-набор. Issue 2 — `:offline` prop declined (docs-only). Issue 6 — A2/A4-5/C17 inherited + L53 unstyled regression-тест. Issue 7 — N/A (static SVG). **Остаётся только B10** (semantic-token hardcode → Wave 9, cross-cutting) → Icons `0/0/0/1`, файл active как Wave 9-трекер.
+**Resolved (2026-06-14, tree-shaking):** Issue 1 закрыт полностью — namespace `import *` заменён на **tree-shakeable const-реестр explicit named-импортов** ([Icons.vue module-scope `<script>`](../../lib/icons/Icons.vue#L1)); bundler оставляет только curated-набор. Issue 2 — `:offline` prop declined (docs-only). Issue 6 — A2/A4-5/C17 inherited + L53 unstyled regression-тест. Issue 7 — N/A (static SVG). **Resolved (2026-07-04):** Issue 9 / B10 — hardcoded `gray-*` renamed to semantic-token `surface-*` (Wave 9). Icons `0/0/0/0` — все issues закрыты.
 
 ## ~~Issue 1: Heroicons — bundle-weight~~ ✅ resolved 2026-06-14 (tree-shakeable const-реестр)
 
@@ -218,12 +218,11 @@ Static SVG — компонент не рендерит transitions/animations, 
 
 Кода для фикса на icons-уровне **нет**: `Icons.vue` не имеет физических `left`/`right`-классов (зеркалить нужно конкретную direction-иконку, что решает потребитель через CSS-рецепт из §16). Поэтому на уровне Icons issue закрыт полностью (docs = резолюция); зеркаление — consumer-side concern, не cross-cutting код-долг библиотеки.
 
-## Issue 9: Hardcoded default class
+## ~~Issue 9: Hardcoded default class~~ ✅ resolved 2026-07-04
 
 - **Категория:** B10
-- **Severity:** low
-- **Статус:** open — **единственный оставшийся issue** (Icons `0/0/0/1`); cross-cutting Wave 9, файл active как трекер.
-- **Где:** [Icons.d.ts:127](../../lib/icons/Icons.d.ts#L127), [Icons.vue:204](../../lib/icons/Icons.vue#L204)
+- **Severity:** ~~low~~ → ✅ resolved
+- **Где:** [Icons.d.ts:125–127](../../lib/icons/Icons.d.ts#L125-L127), [Icons.vue:204](../../lib/icons/Icons.vue#L204)
 
 ### Что найдено
 
@@ -231,23 +230,33 @@ Static SVG — компонент не рендерит transitions/animations, 
 class: "h-5 w-5 text-gray-900 dark:text-gray-100" | StyleClass
 ```
 
-`text-gray-900` хардкоден как литерал. Должно быть semantic token (`text-foreground`).
+~~`text-gray-900` хардкоден как литерал. Должно быть semantic token.~~
 
-### Что нужно сделать
+### Resolution (2026-07-04)
 
-См. [switch.md Issue 12](../switch.md). **Cross-cutting [Wave 9](../README.md#-wave-9--theming-polish)** — требует расширения [theme/uno.ts](../../lib/theme/uno.ts) с semantic-token mappings; затрагивает большинство компонентов.
+Cross-cutting [Wave 9](../README.md#-wave-9--theming-polish) добавил semantic-token цвет `surface` в [theme/primitive.ts](../../lib/theme/primitive.ts#L305-L317) (23-й именованный цвет, default = точная копия шкалы `gray`) + расширил union `namesColors` в [theme/Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187). Движок не требовал изменений — `text-surface-{tone}` работает как любой другой именованный цвет (аналогично `text-gray-900`).
+
+Default-класс иконки переименован **family-only** (то же числовое tone, без изменения значения): `text-gray-900 dark:text-gray-100` → `text-surface-900 dark:text-surface-100` в [Icons.vue:204](../../lib/icons/Icons.vue#L204) и в JSDoc `@type` литерале [Icons.d.ts:125,127](../../lib/icons/Icons.d.ts#L125-L127). Так как `surface` шкала — byte-identical копия `gray` (900 = `#111827`, 100 = `#f3f4f6`), визуальный рендер не меняется; меняется только семантика (иконка теперь на theme-token indirection, а не на hardcoded primitive).
+
+### Acceptance criteria
+
+- [x] `Icons.vue` default `classIcon` использует `text-surface-900 dark:text-surface-100`, не `gray-*`.
+- [x] `Icons.d.ts` JSDoc `@type`-литерал синхронизирован с runtime-значением.
+- [x] Regression-тесты в [Icons.test.ts](../../lib/icons/Icons.test.ts) (`describe("Semantic token migration — default color uses surface-* (Issue 9 / B10)")`) — `classIcon` и рендеренный `<svg class>` содержат `surface-*`, не содержат `gray`.
+- [x] Существующий snapshot-тест (`"renders a HeroIcon when type matches"`) обновлён на новый литерал.
+- [x] `pnpm typecheck` — clean.
 
 ## Cross-cutting: Configuration support
 
-| Настройка                 | Поддержано? | Комментарий                                                             |
-| ------------------------- | ----------- | ----------------------------------------------------------------------- |
-| `componentsOptions.Icons` | ✅          | `class` + `variant` ([Icons.d.ts:172](../../lib/icons/Icons.d.ts#L172)) |
-| `componentsStyle` global  | N/A         | Icons не имеет mode-enum, использует `variant` локально                 |
-| `unstyled: true`          | ✅          | `Component.setStyle` guard → `classIcon === ""` (Issue 6 / L53, regression-тест)        |
-| Theme tokens vs hardcode  | ⚠️          | `text-gray-900 dark:text-gray-100` хардкоден (Issue 9) — Wave 9         |
-| Runtime theme switch      | ⚠️          | через class только                                                      |
-| `t()` для текста          | N/A         | label передаётся пользователем — он отвечает за локализацию             |
-| Runtime locale switch     | N/A         | —                                                                       |
+| Настройка                 | Поддержано? | Комментарий                                                                      |
+| ------------------------- | ----------- | --------------------------------------------------------------------------------- |
+| `componentsOptions.Icons` | ✅          | `class` + `variant` ([Icons.d.ts:172](../../lib/icons/Icons.d.ts#L172))          |
+| `componentsStyle` global  | N/A         | Icons не имеет mode-enum, использует `variant` локально                          |
+| `unstyled: true`          | ✅          | `Component.setStyle` guard → `classIcon === ""` (Issue 6 / L53, regression-тест) |
+| Theme tokens vs hardcode  | ✅          | `text-surface-900 dark:text-surface-100` — semantic token (Issue 9, resolved 2026-07-04) |
+| Runtime theme switch      | ⚠️          | через class только                                                                |
+| `t()` для текста          | N/A         | label передаётся пользователем — он отвечает за локализацию                      |
+| Runtime locale switch     | N/A         | —                                                                                  |
 
 ## Dual-API gap
 

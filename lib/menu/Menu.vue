@@ -113,28 +113,28 @@
         typeof s?.activeRows === "string"
           ? s?.activeRows
           : s?.activeRows || s?.activeRows === undefined
-            ? "bg-neutral-200/50 dark:bg-neutral-700/50"
+            ? "bg-surface-200/50 dark:bg-surface-700/50"
             : "",
       selectedRows:
         typeof s?.selectedRows === "string"
           ? s?.selectedRows
           : s?.selectedRows || s?.selectedRows === undefined
-            ? "bg-neutral-200 dark:bg-neutral-700"
+            ? "bg-surface-200 dark:bg-surface-700"
             : ""
     }
   })
   const modeStyle = computed<StyleClass>(() =>
     mode.value === "filled"
-      ? "bg-stone-100 dark:bg-stone-900 rounded-md"
+      ? "bg-surface-100 dark:bg-surface-900 rounded-md"
       : mode.value === "outlined"
-        ? "bg-white dark:bg-neutral-950 rounded-md"
+        ? "bg-white dark:bg-surface-950 rounded-md"
         : mode.value === "underlined"
-          ? "bg-stone-50 dark:bg-stone-950"
+          ? "bg-surface-50 dark:bg-surface-950"
           : ""
   )
   const classMenu = computed<StyleClass>(() =>
     MenuComponent.setStyle([
-      "p-1 w-min max-w-4xl shadow-md border text-black dark:text-zinc-300 border-neutral-200 dark:border-neutral-800",
+      "p-1 w-min max-w-4xl shadow-md border text-black dark:text-surface-300 border-surface-200 dark:border-surface-800",
       styles.value.animation ?? "",
       horizontal.value ? "flex flex-row items-center" : "",
       modeStyle.value,
@@ -148,7 +148,7 @@
     MenuComponent.setStyle(["my-1", styles.value?.class?.separator ?? ""])
   )
   const classSeparatorIcon = computed<StyleClass>(() =>
-    MenuComponent.setStyle(["h-4 w-4 text-neutral-200 dark:text-neutral-800", styles.value?.class?.separatorIcon ?? ""])
+    MenuComponent.setStyle(["h-4 w-4 text-surface-200 dark:text-surface-800", styles.value?.class?.separatorIcon ?? ""])
   )
   const classGroup = function (itemClass: GroupMenu["class"]) {
     return MenuComponent.setStyle([
@@ -160,7 +160,7 @@
   }
   const classGroupTitle = computed<StyleClass>(() =>
     MenuComponent.setStyle([
-      "mt-[10px] ms-4 me-2 leading-4 text-start text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-bold",
+      "mt-[10px] ms-4 me-2 leading-4 text-start text-surface-400 dark:text-surface-500 uppercase text-[10px] font-bold",
       styles.value?.class?.groupTitle ?? ""
     ])
   )

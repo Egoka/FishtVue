@@ -1,7 +1,7 @@
 ---
 title: Form
 summary: Динамическая форма из FormStructure ИЛИ compound `<Form><FormSection><FormField>`. Валидация в трёх режимах, поля Input/Select/Calendar/TextEditor/Switch/Custom + произвольные через `registerFieldType`. Native submit + FormData. Validation messages локализуются через активную локаль.
-updated: 2026-06-13
+updated: 2026-07-04
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Form` — оркестратор формы из декларативной `FormStructure`. Поддерживает поля типов `Input`, `Select`, `Calendar`, `TextEditor`, `Switch`, `Custom` (через slot). Валидация в режимах `onSubmit`/`onChange`/`onInput`. Использует [rulesHandler](../utilities/rulesHandler.md).
 
-Stability: `stable` — 58 кейсов, coverage `Form.vue` 91.41%.
+Stability: `stable` — 62 кейса, coverage `Form.vue` 91.41%.
 
 Source: [Source](../../lib/form/Form.vue), [Form.d.ts](../../lib/form/Form.d.ts), [Form.test.ts](../../lib/form/Form.test.ts).
 
@@ -389,7 +389,7 @@ describe("Form", () => {
 - Coverage `Form.vue` 95.73% statements / **80.6% branch** (было 78.91% — поднято 2026-06-03 в [issues/form.md Issue 8](../issues/form.md)). Непокрытые ветви — [Form.vue:159–164](../../lib/form/Form.vue#L159) (sync-watch при reassign внешнего `props.formFields`).
 - Validation messages локализуются глобально через `setDefaultRuleMessages` (global module state) — при нескольких Form с разными локалями последний mount выигрывает. Custom validator с `{ key, params }` interpolation не поддержан (нужен `t(key, params)` — Wave 3.5). См. [issues/form.md Issue 6](../issues/form.md).
 - В `FieldSelect`/`FieldCalendar`/`FieldTextEditor` rules-поле закомментировано в `.d.ts` (планируется).
-- **B10 (colors):** `gray-*`/`red-*` Tailwind-примитивы ещё не мигрированы на semantic tokens — библиотечная Wave 9 (cross-cutting, [issues/README.md](../issues/README.md)). `issues/form.md` остаётся active до Wave 9, хотя numbered-issue matrix `0/0/0/0`.
+- **B10 (colors), resolved 2026-07-04:** структурные `gray-*` классы (section-divider border, `insert.before/afterText` slot-цвет, `insert.before/afterIcon`) мигрированы на семантический design-token `surface` — тот же numeric tone, family rename без изменения визуала (см. [theme.md §3.1](../architecture/theme.md), [issues/form.md Issue 9](../issues/form.md)). Это Form-инстанс миграции в рамках первого batch из 11 компонентов; библиотечная **Wave 9** в целом не завершена (ещё 8 компонентов + отдельный Alert-эпик, cross-cutting трекинг — [issues/README.md](../issues/README.md)), поэтому `issues/form.md` остаётся active.
 - **FormData для non-Input полей:** `new FormData(formElement)` собирает только Input-поля (несут native `name`); Switch/Select/Calendar/TextEditor не рендерят hidden native input. Значения — через `v-model:form-fields`/`submit`-event. См. [issues/form.md Issue 4](../issues/form.md).
 
 ### Skipped tests

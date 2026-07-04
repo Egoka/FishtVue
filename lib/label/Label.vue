@@ -54,7 +54,7 @@
   )
   const classContent = computed(() =>
     Label.setStyle([
-      "relative -top-[10px] h-max block text-sm font-medium text-gray-400 dark:text-gray-500 truncate z-10",
+      "relative -top-[10px] h-max block text-sm font-medium text-surface-400 dark:text-surface-500 truncate z-10",
       options?.class ?? "",
       props?.class ?? ""
     ])

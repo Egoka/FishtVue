@@ -114,19 +114,21 @@ describe("Select Component Tests", () => {
         const selectElement = wrapper.find("[data-select-list]")
         const classList = selectElement.attributes("class")
 
+        // B10 (2026-07-04): border-gray-*/bg-stone-* → border-surface-*/bg-surface-* (та же тональность,
+        // family rename на semantic-токен `surface`, см. Documentation/issues/select.md).
         if (mode === "outlined") {
-          expect(classList).toContain("border border-gray-300 dark:border-gray-600 bg-white dark:bg-black")
+          expect(classList).toContain("border border-surface-300 dark:border-surface-600 bg-white dark:bg-black")
           expect(classList).not.toContain("rounded-none")
-          expect(classList).not.toContain("bg-stone-100")
+          expect(classList).not.toContain("bg-surface-100")
         } else if (mode === "underlined") {
           expect(classList).toContain(
-            "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
+            "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b bg-surface-50 dark:bg-surface-950"
           )
           expect(classList).toContain("rounded-none")
           expect(classList).toContain("border-b")
         } else if (mode === "filled") {
-          expect(classList).toContain("border-0 bg-stone-100 dark:bg-stone-900")
-          expect(classList).not.toContain("border-0 border-gray-300")
+          expect(classList).toContain("border-0 bg-surface-100 dark:bg-surface-900")
+          expect(classList).not.toContain("border-0 border-surface-300")
           expect(classList).not.toContain("rounded-none")
         }
       })
@@ -789,6 +791,158 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       await nextTick()
       expect(wrapper.html()).not.toContain("undefinedpx")
       wrapper.unmount()
+    })
+  })
+
+  // ---B10 — semantic surface tokens вместо hardcoded gray/stone-family classes -------------------
+  describe("Select Component - B10 semantic surface tokens", () => {
+    const legacyGrayFamily = /\b(?:bg|text|border|ring|from|via)-(?:neutral|stone|zinc|slate|gray)-\d+/
+
+    it.each([
+      { mode: "outlined", expected: "border-surface-300 dark:border-surface-600" },
+      { mode: "underlined", expected: "border-surface-300 dark:border-surface-700" }
+    ])("mode: $mode dropdown border uses surface-family (not gray)", async ({ mode, expected }) => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-list]").classes().join(" ")
+      expect(cls).toContain(expected)
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it.each([
+      { mode: "underlined", expected: "bg-surface-50 dark:bg-surface-950" },
+      { mode: "filled", expected: "bg-surface-100 dark:bg-surface-900" }
+    ])("mode: $mode dropdown background uses surface-family (not stone)", async ({ mode, expected }) => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-list]").classes().join(" ")
+      expect(cls).toContain(expected)
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("option item text uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-list-item]").classes().join(" ")
+      expect(cls).toContain("text-surface-900")
+      expect(cls).toContain("dark:text-surface-100")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("option sublabel (item value) uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const html = wrapper.find("[data-select-list-item]").html()
+      expect(html).toContain("text-surface-600")
+      expect(html).toContain("dark:text-surface-300")
+      expect(html).not.toMatch(legacyGrayFamily)
+    })
+
+    it("group header text uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, {
+        slots: {
+          default: () => [h(SelectGroup, { label: "Fruits" }, () => [h(SelectOption, { value: "a" }, () => "Apple")])]
+        }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-group]").classes().join(" ")
+      expect(cls).toContain("text-surface-500")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("no-data text uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, { props: { dataSelect: [], modelValue: null } })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      // classNoData рендерится внутри [data-select-list-items] (hasData: false ветка #empty slot),
+      // не прямым потомком [data-select-list] (сиблинг gradient-wrapper divs).
+      const cls = wrapper.find("[data-select-list-items] div").classes().join(" ")
+      expect(cls).toContain("text-surface-500")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("search icon uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const icon = wrapper.find("[data-select-search] svg")
+      expect(icon.exists()).toBe(true)
+      const cls = icon.classes().join(" ")
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-600")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it.each([
+      { mode: "outlined", expected: "ring-surface-200" },
+      { mode: "underlined", expected: "ring-surface-200 dark:ring-surface-950" },
+      { mode: "filled", expected: "ring-surface-100 dark:ring-surface-900" }
+    ])("mode: $mode search-input ring uses surface-family (not stone)", async ({ mode, expected }) => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      // Класс ring-surface-* Select'а мержится Vue class-fallthrough в тот же class-attribute,
+      // что и собственный bg-* класс InputLayout (та же DOM-нода data-select-search) —
+      // проверяем только присутствие нужного ring-* (InputLayout — отдельный компонент, вне скоупа).
+      const cls = wrapper.find("[data-select-search]").classes().join(" ")
+      expect(cls).toContain(expected)
+    })
+
+    it("outlined mode search-input ring keeps literal dark:ring-black untouched", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null, mode: "outlined" as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-search]").classes().join(" ")
+      expect(cls).toContain("dark:ring-black")
+    })
+
+    it("underlined/filled gradient overlay uses surface-family (not stone)", async () => {
+      const wrapper = mount(Select, {
+        props: { dataSelect: ["Option 1"], modelValue: null, mode: "underlined" as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      // Скоуп строго на два sticky gradient-wrapper внутри [data-select-list] (top-0 / top-[220px] —
+      // уникальные для classGradientSelectListTop/Button), а не на весь html() с вложенным InputLayout.
+      const top = wrapper.find("[data-select-list] > div.top-0 > div")
+      const bottom = wrapper.find('[data-select-list] > div[class*="top-\\[220px\\]"] > div')
+      expect(top.exists()).toBe(true)
+      expect(bottom.exists()).toBe(true)
+      const cls = [top.attributes("class") ?? "", bottom.attributes("class") ?? ""].join(" ")
+      expect(cls).toContain("from-surface-50")
+      expect(cls).toContain("dark:from-surface-950")
+      expect(cls).toContain("via-surface-50")
+      expect(cls).toContain("dark:via-surface-950")
+      expect(cls).not.toMatch(legacyGrayFamily)
     })
   })
 })

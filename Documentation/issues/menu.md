@@ -1,7 +1,7 @@
 ---
 title: Issues — Menu
-summary: Аудит Menu — закрыты XSS (#item-info slot), keyboard navigation, ARIA menu, compound API, focus trap, motion-safe, root exports map (A4-5), root-ref expose (G34), RTL (F31). Остаётся только B10 (hardcoded colors → Wave 9).
-updated: 2026-06-14
+summary: Аудит Menu — закрыты XSS (#item-info slot), keyboard navigation, ARIA menu, compound API, focus trap, motion-safe, root exports map (A4-5), root-ref expose (G34), RTL (F31), hardcoded colors → semantic surface tokens (B10). Открытых issues не осталось.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/menu/
 related-doc: ../components/menu.md
@@ -16,7 +16,12 @@ related-doc: ../components/menu.md
 | critical | 0     | —          |
 | high     | 0     | —          |
 | medium   | 0     | —          |
-| low      | 1     | B10        |
+| low      | 0     | ~~B10~~    |
+
+> **2026-07-04 — закрыт B10, открытых issues не осталось.** ✅ B10 (hardcoded
+> `bg-neutral-*`/`bg-stone-*`/`dark:text-zinc-*` → `surface`-family semantic tokens, Wave 9).
+> Severity matrix `0/0/0/1 → 0/0/0/0`. Тесты: `Menu.test.ts` (+8: B10 surface-family
+> assertions — mode backgrounds, border, separator icon, group title, active/selected rows).
 
 > **2026-06-14 — закрыты A4-5, G34, F31; остаётся только B10.** ✅ A4-5 (root `exports` map —
 > inherited `buildRootExports()`, Issue 5), ✅ G34 (root-ref `rootRef` expose), ✅ F31 (RTL —
@@ -213,11 +218,11 @@ Submenu позиционируется через FixWindow. См. [done/fixwind
 > с 2026-06-14 без `@floating-ui/vue`). Отдельного кода в Menu не требуется. Проверено: nested `<Menu>` в
 > submenu FixWindow рендерится корректно (`Menu.test.ts`).
 
-## Issue 9: prefers-reduced-motion / RTL / colors — ⚠️ partially resolved (F31 ✅ 2026-06-14; B10 → Wave 9)
+## ~~Issue 9: prefers-reduced-motion / RTL / colors~~ ✅ resolved 2026-07-04
 
 Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern, плюс [switch.md](./switch.md).
 
-> ⚠️ **partially resolved:**
+> ✅ **resolved:**
 > - ✅ E29.7 (`prefers-reduced-motion`) — default `styles.animation` = `"motion-safe:transition-all motion-safe:duration-500"`
 >   (применяется в `classMenu`/`classMenuItem`). Тест: `Menu.test.ts > reduced motion`.
 > - ✅ **F31 (RTL) — resolved 2026-06-14** (Wave 8.1). Логические классы: `classGroupTitle`
@@ -227,7 +232,17 @@ Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там го
 >   Menu флипает физическую сторону submenu/tooltip-позиции сам через `flipPosition()` +
 >   `getComputedStyle(rootRef).direction === "rtl"` (детект в `onMounted`; канон-идиом Table/Split).
 >   Тесты: `Menu.test.ts > RTL logical classes` + `RTL submenu placement flip`.
-> - ❌ B10 (hardcoded colors) — `bg-neutral-*`/`bg-stone-*` остаются; закрывается глобально в **Wave 9** (semantic tokens).
+> - ✅ **B10 (hardcoded colors) — resolved 2026-07-04** (Wave 9). Все `bg-neutral-*`/`bg-stone-*`/
+>   `dark:text-zinc-*`/`border-neutral-*` переименованы в `surface`-family с теми же числовыми
+>   tone (`bg-neutral-950 → bg-surface-950`, `dark:text-zinc-300 → dark:text-surface-300` и т.д.) —
+>   [Menu.vue:116](../../lib/menu/Menu.vue#L116) (active row), [Menu.vue:122](../../lib/menu/Menu.vue#L122)
+>   (selected row), [Menu.vue:128-132](../../lib/menu/Menu.vue#L128) (`modeStyle` — filled/outlined/underlined
+>   backgrounds), [Menu.vue:137](../../lib/menu/Menu.vue#L137) (root border + text), [Menu.vue:151](../../lib/menu/Menu.vue#L151)
+>   (separator icon), [Menu.vue:163](../../lib/menu/Menu.vue#L163) (group title). Семантика не изменилась —
+>   `surface` дефолт = точная копия `gray` ([primitive.ts:305-317](../../lib/theme/primitive.ts#L305)),
+>   репейнт происходит только через `updateSurfacePalette()` runtime API. Тесты: `Menu.test.ts > B10 semantic
+>   surface tokens` (+8: mode backgrounds, border/text, separator icon, group title, active/selected rows —
+>   каждый явно проверяет отсутствие legacy `neutral`/`stone`/`zinc`/`slate`/`gray` классов regex'ом).
 
 ## ~~G34: root element ref expose~~ ✅ resolved 2026-06-14
 
@@ -248,7 +263,7 @@ Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там го
 | `componentsOptions.Menu` | ✅          | mode, items, и др.                      |
 | `componentsStyle` global | ✅          | через `MenuComponent.componentsStyle()` |
 | `unstyled: true`         | ✅          | cross-cutting `Component.setStyle()` guard |
-| Theme tokens vs hardcode | ⚠️          | частично (B10/Wave 9)                    |
+| Theme tokens vs hardcode | ✅          | B10 resolved 2026-07-04 (surface-family)  |
 | `t()` для текста         | N/A         | item.title/info — пользовательский (см. Issue 7) |
 
 ## Dual-API gap

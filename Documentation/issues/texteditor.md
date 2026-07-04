@@ -1,7 +1,7 @@
 ---
 title: Issues — TextEditor
-summary: Аудит TextEditor — coverage 0% (skipped tests), хардкод HEX цветов в style, image upload не задокументирован. Issue 7 (componentsStyle fallback + unstyled) закрыт 2026-07-02 (Wave 3.2). Issue 3 (Quill → optional peer + lazy CSS) закрыт 2026-06-19 (Wave 2.1). Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11.
-updated: 2026-07-02
+summary: Аудит TextEditor — coverage 0% (skipped tests), image upload не задокументирован. Issue 2 (B10 — hardcode Tailwind-классов + HEX в style на surface-*) закрыт 2026-07-04 (Wave 9). Issue 7 (componentsStyle fallback + unstyled) закрыт 2026-07-02 (Wave 3.2). Issue 3 (Quill → optional peer + lazy CSS) закрыт 2026-06-19 (Wave 2.1). Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/texteditor/
 related-doc: ../components/text-editor.md
@@ -12,12 +12,12 @@ stability: experimental (на момент аудита 17 тестов skipped)
 
 ## Сводка
 
-| Severity | Count (open) | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 5 | A2, A4-5, B10 (HEX hardcode), C17, J46 (tests skipped) — L53 (Issue 7) closed 2026-07-02 |
-| medium | 4 | F30, F32, M55, security (image upload) — Issue 5 D26 closed 2026-05-11 |
-| low | 3 | E29.7, N59, G34 |
+| Severity | Count (open) | Categories                                                                                            |
+| -------- | ------------ | ----------------------------------------------------------------------------------------------------- |
+| critical | 0            | —                                                                                                     |
+| high     | 4            | A2, A4-5, C17, J46 (tests skipped) — L53 (Issue 7) closed 2026-07-02, B10 (Issue 2) closed 2026-07-04 |
+| medium   | 4            | F30, F32, M55, security (image upload) — Issue 5 D26 closed 2026-05-11                                |
+| low      | 3            | E29.7, N59, G34                                                                                       |
 
 ## Issue 1: 17 тестов skipped, coverage 0% — компонент не верифицирован
 
@@ -54,49 +54,80 @@ lib/texteditor: 0/0/0/0
 - [ ] 0 skipped tests.
 - [ ] Stability flag поднят до `beta`.
 
-## Issue 2: HEX цвета хардкодом в `<style>` блоке
+## ~~Issue 2: HEX цвета хардкодом в `<style>` блоке~~ ✅ resolved 2026-07-04 (Wave 9)
 
 - **Категория:** B10 (hardcode цветов вместо tokens)
-- **Severity:** high
-- **Где:** [TextEditor.vue:380-398](../../lib/texteditor/TextEditor.vue#L380-L398)
+- **Severity:** ~~high~~
 
-### Что найдено
+> **Status (2026-07-04): ✅ resolved.** Оба под-фикса B10 для TextEditor — Tailwind-классы (`border-neutral-*`/`bg-stone-*`/`text-gray-*`) и raw HEX в `<style>` блоке — закрыты одним патчем как часть первого батча из 11 компонентов, потребляющих `surface` (23-й именованный цвет, [primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317); дефолт — точная копия `gray`, переопределяется через `updateSurfacePalette()`). Cross-cutting theme-инфраструктура для B10 закрыта отдельно в [theme.md Issue 10](./theme.md) 2026-07-04 — этот Issue закрывает конкретно TextEditor-часть.
+
+### Что было найдено (before)
+
+Tailwind-классы ([TextEditor.vue](../../lib/texteditor/TextEditor.vue), было):
+
+```
+border-neutral-200 dark:border-neutral-800 dark:text-gray-400   // рамка редактора + текст рядом
+bg-stone-50 dark:bg-stone-950                                    // фон underlined-режима
+bg-stone-100 dark:bg-stone-900                                   // фон filled-режима
+text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400  // hover иконок (×2 — resize-кнопки bubble/snow)
+```
+
+HEX в `<style>` блоке (было):
 
 ```css
-:root {
-  --placeholder-quill-editor: #00000099;
-  --background-quill-editor: #f6f3f4;
-  --background-picker-options-quill-editor: #f5f5f5;
-  ...
+@media (prefers-color-scheme: light) {
+  .editor {
+    --placeholder-quill-editor: #00000099;
+    --background-quill-editor: #f6f3f4;
+    --background-picker-options-quill-editor: #f5f5f5;
+  }
 }
-[data-theme="dark"] {
-  --placeholder-quill-editor: #ffffff99;
-  --background-quill-editor: #212121;
+@media (prefers-color-scheme: dark) {
+  .editor {
+    --placeholder-quill-editor: #ffffff99;
+    --background-quill-editor: #212121;
+    --background-picker-options-quill-editor: #131313;
+  }
 }
 ```
 
-HEX-значения хардкодом в `<style>` блоке. Не привязаны к [theme/themes/Aurora.ts](../../lib/theme/themes/Aurora.ts) primitive/semantic tokens.
+Ни Tailwind-примитивы (`neutral`/`stone`/`gray`), ни raw HEX не привязаны к theme-токенам — при `usePreset(MyTheme)` редактор оставался на захардкоженных значениях.
 
-### Почему это проблема
+### Что сделано (after)
 
-- При смене темы через `usePreset(MyTheme)` editor останется на `#212121` background — рассогласование.
-- Documentation [docs/content/ru/3.Configuration/2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает theme-driven dark mode.
+**(a) Tailwind-классы** ([TextEditor.vue:67,69-70,245,263](../../lib/texteditor/TextEditor.vue#L67)) — мигрированы на `surface-*` с сохранением того же numeric tone:
 
-### Что нужно сделать
+| Было                                                                            | Стало                                                                                       | Где                                                                                                                                                           |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `border-neutral-200 dark:border-neutral-800 dark:text-gray-400`                 | `border-surface-200 dark:border-surface-800 dark:text-surface-400`                          | [TextEditor.vue:67](../../lib/texteditor/TextEditor.vue#L67) — рамка `editor` computed                                                                        |
+| `bg-stone-50 dark:bg-stone-950`                                                 | `bg-surface-50 dark:bg-surface-950`                                                         | [TextEditor.vue:69](../../lib/texteditor/TextEditor.vue#L69) — underlined-фон                                                                                 |
+| `bg-stone-100 dark:bg-stone-900`                                                | `bg-surface-100 dark:bg-surface-900`                                                        | [TextEditor.vue:70](../../lib/texteditor/TextEditor.vue#L70) — filled-фон                                                                                     |
+| `text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400` | `text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400` | [TextEditor.vue:245](../../lib/texteditor/TextEditor.vue#L245), [:263](../../lib/texteditor/TextEditor.vue#L263) — hover иконок resize-кнопок (bubble + snow) |
 
-1. Заменить HEX на CSS-переменные из FishtVue theme:
-   ```css
-   :root {
-     --placeholder-quill-editor: var(--fv-foreground-muted);
-     --background-quill-editor: var(--fv-surface);
-   }
-   ```
-2. Удалить дублирующий `[data-theme="dark"]` блок — CSS-переменные `--fv-*` уже учитывают режим.
-3. Cross-check имена переменных в [theme/semantic.ts](../../lib/theme/semantic.ts).
+Engine не требовал правок — `surface` уже зарегистрирован как именованный цвет ([Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)), regex собирается динамически из `Object.keys(colors)`.
+
+**(b) Raw HEX в `<style>` блоке** ([TextEditor.vue:384-398](../../lib/texteditor/TextEditor.vue#L384-L398)) — два не-alpha хардкод-пары (`--background-quill-editor`, `--background-picker-options-quill-editor`) в обоих media-блоках заменены на `rgb(var(--fv-surface-{tone}, <rgb-триплет>))` — формат зеркалит движок ([unoStyle/helpers.ts `resolveColor`](../../lib/theme/unoStyle/helpers.ts), эмитит `rgb(var(--fv-surface-500, 107 114 128))` для остальных color-правил). Значения `--fv-surface-*` — RGB-триплеты (не hex), пишет их [tokensCss.ts:73](../../lib/theme/helpers/tokensCss.ts#L73); TextEditor — первый компонент, напрямую потребляющий `--fv-surface-*` в собственном `<style>` (не через `setStyle()`), поэтому fallback-триплет обязателен для параллели с остальным движком.
+
+Tone-matching (ближайший тон по Euclidean-дистанции в RGB-пространстве, не exact match — тени/фон декоративные, не brand-critical):
+
+| Свойство                                         | Было (HEX) | Стало                                     | Дистанция до кандидатов                                                                                                                                                  |
+| ------------------------------------------------ | ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| light `--background-quill-editor`                | `#f6f3f4`  | `rgb(var(--fv-surface-100, 243 244 246))` | surface-100 (3.7) < surface-50 (10.3)                                                                                                                                    |
+| light `--background-picker-options-quill-editor` | `#f5f5f5`  | `rgb(var(--fv-surface-100, 243 244 246))` | surface-100 (2.4) < surface-50 (8.8)                                                                                                                                     |
+| dark `--background-quill-editor`                 | `#212121`  | `rgb(var(--fv-surface-900, 17 24 39))`    | surface-900 (19.3) < surface-800 (23.5)                                                                                                                                  |
+| dark `--background-picker-options-quill-editor`  | `#131313`  | `rgb(var(--fv-surface-900, 17 24 39))`    | surface-900 (20.7) ≈ surface-950 (20.0) — оставлен на 900, чтобы обе dark-переменные (фон + picker-popup) шли одним тоном, а не расходились на шаг шкалы ради разницы <1 |
+
+Alpha-suffixed `--placeholder-quill-editor` (`#00000099`/`#ffffff99`) — **вне scope**: это полупрозрачные black/white overlay, не часть gray/surface семьи, оставлены литералами.
+
+`[data-theme="dark"]`-дублирующий блок из старого acceptance criteria (п.2 плана) в реальности не существовал — фактический дубль в коде был через `@media (prefers-color-scheme: dark)`, не через атрибут-селектор; оставлен как есть (переключение по `prefers-color-scheme`, не по `darkModeSelector` — известное поведение всего компонента, не regression этого фикса).
+
+### Регрессия
+
+Source-scan тесты (mount крашит jsdom через Quill rAF — та же хрупкость, что держит основную суиту в `todo`) в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) `describe("TextEditor — surface-* token migration (Wave 9 — texteditor.md Issue 2 / B10)")`: старые классы/hex отсутствуют, новые `surface-*`/`var(--fv-surface-*)` присутствуют, alpha-плейсхолдеры не тронуты.
 
 ### Acceptance criteria
 
-- [ ] `usePreset(SapphireTheme)` — TextEditor background меняется автоматически.
+- [x] `usePreset(SapphireTheme)` — TextEditor background меняется автоматически (через `rgb(var(--fv-surface-{tone}, fallback))` — `updateSurfacePalette()` переписывает `--fv-surface-*` в tokens-теге, TextEditor подхватывает без собственного re-render).
 
 ## ~~Issue 3: Quill в `dependencies` — должен быть optional peer~~ ✅ resolved 2026-06-19 (Wave 2.1)
 
@@ -148,13 +179,13 @@ Quill ≈ 200kb minified тянулся ВСЕМИ потребителями fi
 
 ```ts
 toolbar: [
-  ...
-  ["link", "image"],  // image button
+  ...["link", "image"], // image button
   ["clean"]
 ]
 ```
 
 Quill image-button по умолчанию вставляет base64-encoded image как `<img src="data:image/...">` напрямую в content. Это:
+
 - Раздувает modelValue (multi-megabyte HTML).
 - Не загружает на сервер — пользователь думает «сохранится», но в БД попадает огромный data-URL.
 - Нет валидации size/type.
@@ -166,7 +197,7 @@ Quill image-button по умолчанию вставляет base64-encoded ima
    ```ts
    const toolbarOptions = {
      handlers: {
-       image: function() {
+       image: function () {
          // Открыть file-picker, upload через API, вставить URL
          emit("image-upload-request")
        }
@@ -188,6 +219,7 @@ Quill image-button по умолчанию вставляет base64-encoded ima
 - **Severity:** ~~high~~
 
 > **Status (2026-07-02): ✅ resolved — close Wave 3.2.**
+>
 > - **componentsStyle fallback** — [TextEditor.vue](../../lib/texteditor/TextEditor.vue) `mode`-computed получил `?? TextEditor.componentsStyle()` между `options?.mode` и литеральным `"outlined"` (зеркало [Input.vue:62-64](../../lib/input/Input.vue#L62-L64)). Тест — source-scan в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) `componentsStyle global fallback (Wave 3.2)` (mount Quill крашит jsdom rAF — суита выше `todo`, дисциплина существующих source-scan блоков).
 > - **unstyled** — doc-sync: cross-cutting guard `Component.setStyle()` (`config.unstyled → ""`, [component/index.ts:138](../../lib/component/index.ts#L138), ✅ 2026-05-11) покрывает TextEditor вместе со всеми 22 компонентами; per-component правок не требуется.
 > - Каveat остаётся справочно: `theme: "snow" | "bubble"` (Quill-тема) — независимая ось от FishtVue `componentsStyle` (осознанно: это тема редактора, не form-control-обёртки).
@@ -236,15 +268,15 @@ Quill editor рендерится через div'ы. Нет hidden `<input>` д�
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.TextEditor` | ✅ | mode, theme, paramsDialog, paramsTextEditor |
-| `componentsStyle` global | ✅ | Issue 7 ✅ 2026-07-02 — `?? TextEditor.componentsStyle()` в mode-цепочке |
-| `unstyled: true` | ✅ | Issue 7 ✅ 2026-07-02 — cross-cutting guard `Component.setStyle()` (doc-sync) |
-| Theme tokens vs hardcode | ❌ | Issue 2 — HEX hardcode |
-| Runtime theme switch | ❌ | Issue 2 |
-| `t()` для текста | ❌ | Issue 8, 9 |
-| Runtime locale switch | ❌ | Issue 8 |
+| Настройка                      | Поддержано? | Комментарий                                                                                                                                   |
+| ------------------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `componentsOptions.TextEditor` | ✅          | mode, theme, paramsDialog, paramsTextEditor                                                                                                   |
+| `componentsStyle` global       | ✅          | Issue 7 ✅ 2026-07-02 — `?? TextEditor.componentsStyle()` в mode-цепочке                                                                      |
+| `unstyled: true`               | ✅          | Issue 7 ✅ 2026-07-02 — cross-cutting guard `Component.setStyle()` (doc-sync)                                                                 |
+| Theme tokens vs hardcode       | ✅          | Issue 2 ✅ 2026-07-04 — Tailwind-классы + HEX в `<style>` мигрированы на `surface-*`/`var(--fv-surface-*)`                                    |
+| Runtime theme switch           | ✅          | Issue 2 ✅ 2026-07-04 — `rgb(var(--fv-surface-{tone}, fallback))` подхватывает `usePreset`/`updateSurfacePalette()` без ре-рендера компонента |
+| `t()` для текста               | ❌          | Issue 8, 9                                                                                                                                    |
+| Runtime locale switch          | ❌          | Issue 8                                                                                                                                       |
 
 ## Dual-API gap
 

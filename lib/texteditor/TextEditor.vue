@@ -64,10 +64,10 @@
   )
   const editor = computed<StyleClass>(() =>
     TextEditor.setStyle([
-      "border rounded-md border-neutral-200 dark:border-neutral-800 dark:text-gray-400",
+      "border rounded-md border-surface-200 dark:border-surface-800 dark:text-surface-400",
       mode.value === "outlined" ? "bg-white dark:bg-black" : "",
-      mode.value === "underlined" ? "bg-stone-50 dark:bg-stone-950" : "",
-      mode.value === "filled" ? "bg-stone-100 dark:bg-stone-900" : "",
+      mode.value === "underlined" ? "bg-surface-50 dark:bg-surface-950" : "",
+      mode.value === "filled" ? "bg-surface-100 dark:bg-surface-900" : "",
       "st-text-editor caret-theme-500"
     ])
   )
@@ -242,7 +242,7 @@
               size="xs"
               mode="ghost"
               icon="ArrowsPointingIn"
-              class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400">
+              class-icon="text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400">
             </Button>
           </div>
         </div>
@@ -260,7 +260,7 @@
           mode="ghost"
           icon="ArrowsPointingOut"
           data-switch-size
-          class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400">
+          class-icon="text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400">
           {{ TextEditor.t("increase") ?? "Increase" }}
         </Button>
       </div>
@@ -382,8 +382,9 @@
       --background-quill-toolbar: var(--ql-theme-100);
       --border-quill-editor: var(--ql-theme-200);
       --placeholder-quill-editor: #00000099;
-      --background-quill-editor: #f6f3f4;
-      --background-picker-options-quill-editor: #f5f5f5;
+      /* surface-100 (Wave 9 — texteditor.md Issue 2 / B10): ближайший тон к прежнему хардкоду #f6f3f4/#f5f5f5. */
+      --background-quill-editor: rgb(var(--fv-surface-100, 243 244 246));
+      --background-picker-options-quill-editor: rgb(var(--fv-surface-100, 243 244 246));
     }
   }
 
@@ -392,8 +393,9 @@
       --background-quill-toolbar: var(--ql-theme-900);
       --border-quill-editor: var(--ql-theme-800);
       --placeholder-quill-editor: #ffffff99;
-      --background-quill-editor: #212121;
-      --background-picker-options-quill-editor: #131313;
+      /* surface-900 (Wave 9 — texteditor.md Issue 2 / B10): ближайший тон к прежнему хардкоду #212121/#131313. */
+      --background-quill-editor: rgb(var(--fv-surface-900, 17 24 39));
+      --background-picker-options-quill-editor: rgb(var(--fv-surface-900, 17 24 39));
     }
   }
 

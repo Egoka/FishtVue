@@ -1,7 +1,7 @@
 ---
 title: Issues — Label
-summary: Аудит Label — 7 из 10 issues ✅ resolved 2026-05-11 (for-id, dup initStyle, translateX/maxWidth typing, type-via-options, unstyled cross-cutting, motion-safe, default slot). Остаются Issues 3 (packaging), 5 (CSS vars), 9 (RTL) — все cross-cutting волны.
-updated: 2026-05-11
+summary: Аудит Label — 8 из 11 issues ✅ resolved (for-id, dup initStyle, translateX/maxWidth typing, type-via-options, unstyled cross-cutting, motion-safe, default slot, B10 semantic-token). Остаются Issues 3 (packaging), 5 (CSS vars), 9 (RTL) — все cross-cutting волны.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/label/
 related-doc: ../components/label.md
@@ -16,9 +16,11 @@ related-doc: ../components/label.md
 | critical | 0     | —          |
 | high     | 1     | A2, A4-5   |
 | medium   | 2     | B11, F31   |
-| low      | 0     | —          |
+| low      | 0     | ~~B10~~ ✅ resolved 2026-07-04 |
 
 **Закрыто 2026-05-11 (7 of 10):** Issues 1 (E29.1 — `<label for>`), 2 (C17 — dup initStyle), 4 (D25 — translateX/maxWidth typing), 6 (L53 — type via componentsOptions, de facto уже было), 7 (L53 — unstyled cross-cutting через `Component.setStyle` guard), 8 (E29.7 — motion-safe), 10 (G37 — default slot). Нумерация исходная — cross-references из соседних issue-доков сохраняются.
+
+**Закрыто 2026-07-04 (Issue 11, cross-cutting Wave 9):** B10 hardcode (`text-gray-400 dark:text-gray-500` → `text-surface-400 dark:text-surface-500`) — единственная новая находка с последнего аудита; закрыт в день обнаружения.
 
 ## ~~Issue 1: Нет атрибута `for` — Label не связан с input через DOM~~ ✅ resolved 2026-05-11
 
@@ -158,6 +160,37 @@ type.value === 'offsetDynamic' ? `peer-focus:-translate-y-[48px] peer-focus:tran
 - [x] `<Label title="Email"><strong>Email</strong> *</Label>` рендерит strong-стилизованный текст.
 - [x] `<Label title="Email">` без слота — рендерит "Email" из prop (backward-compat).
 
+## ~~Issue 11: Hardcoded `gray-*` в classContent~~ ✅ resolved 2026-07-04
+
+- **Категория:** B10 (hardcoded Tailwind color-primitive вместо semantic design-token)
+- **Severity:** ~~low~~ → ✅ resolved
+- **Где:** [Label.vue:57](../../lib/label/Label.vue#L57) (`classContent` — текст floating-label)
+
+### Что найдено
+
+`classContent` (текст внутри `<span>`, вложенного в корневой `<label>`) хардкодил цвет через primitive-класс:
+
+```
+text-gray-400 dark:text-gray-500
+```
+
+Это базовый цвет текста метки — применяется независимо от `type` (`dynamic`/`static`/`offsetDynamic`/`offsetStatic`/`vanishing`/`none`), т.к. `classContent` не ветвится по `type` (в отличие от `classBase`, где transform-классы зависят от `type.value`). `gray-400`/`gray-500` — primitive-палитра ([lib/theme/primitive.ts](../../lib/theme/primitive.ts)), а не library semantic-token — при кастомизации темы потребителем цвет не подхватывал бы переопределение семантического слоя.
+
+### Резолюция
+
+Cross-cutting инфраструктура (Wave 9) добавила 23-й именованный цвет `surface` в [lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317) — структурный semantic-слот, default = точная копия `gray`-шкалы, и включила `"surface"` в union `namesColors` ([lib/theme/Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)). `text-surface-{tone}` работает идентично любому другому named-цвету — движок не требовал изменений.
+
+Механическая миграция: `text-gray-400 dark:text-gray-500` → `text-surface-400 dark:text-surface-500` ([Label.vue:57](../../lib/label/Label.vue#L57)) — тот же numeric tone (400/500), только family rename. Поскольку `surface` по умолчанию идентичен `gray`, визуальных изменений нет — но цвет метки теперь подключён к theme-token indirection и подхватит будущую кастомизацию `surface`-палитры через `updateSurfacePalette()` без правок в `Label.vue`.
+
+Зеркало аналогичной миграции: [icons.md Issue 9](./icons.md#issue-9-hardcoded-default-class) (`text-gray-900 dark:text-gray-100` → `text-surface-900 dark:text-surface-100`), а также уже мигрированные `Input.vue`, `Accordion.vue`, `Separator.vue`, `Menu.vue`, `Select.vue`.
+
+### Acceptance criteria
+
+- [x] `classContent` содержит `text-surface-400 dark:text-surface-500`, не содержит `gray` — regression-тест ([Label.test.ts](../../lib/label/Label.test.ts), describe `"Label Component - semantic token migration — content color uses surface-* (Issue 11 / B10)"`).
+- [x] Рендер `<span>` несёт `surface-*` tone-классы (не только computed-свойство).
+- [x] `pnpm typecheck` clean.
+- [x] Визуальный regression отсутствует (`surface` default идентичен `gray`).
+
 ## Cross-cutting: Configuration support
 
 | Настройка                 | Поддержано? | Комментарий                                                                    |
@@ -165,7 +198,7 @@ type.value === 'offsetDynamic' ? `peer-focus:-translate-y-[48px] peer-focus:tran
 | `componentsOptions.Label` | ✅          | через `Label.getOptions()` (mode/type/translateX/maxWidth/class/classBody)     |
 | `componentsStyle` global  | ✅          | через `Label.componentsStyle()` fallback на mode                               |
 | `unstyled: true`          | ✅          | через cross-cutting fix в `Component.setStyle` (Issue 7 ✅)                    |
-| Theme tokens vs hardcode  | ⚠️          | px-смещения хардкодны (Issue 5 — Wave 3.3); `text-red-500` для required-маркера хардкоден |
+| Theme tokens vs hardcode  | ⚠️          | Issue 11 ✅ resolved 2026-07-04 (`classContent` → `surface-*`); px-смещения всё ещё хардкодны (Issue 5 — Wave 3.3); `text-red-500` для required-маркера хардкоден |
 | Runtime theme switch      | ⚠️          | через Tailwind, OK для color-токенов                                           |
 | `t()` для текста          | N/A         | title — пользовательский текст                                                 |
 | Runtime locale switch     | N/A         | —                                                                              |

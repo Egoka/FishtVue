@@ -1,7 +1,7 @@
 ---
 title: Issues — Form
-summary: Аудит Form. Все numbered issues закрыты — XSS (1), validation i18n (6), branch coverage (8) 2026-06-03; compound `<Form><FormField>`/`<FormSection>` API (2), open typeField + registerFieldType (3), native submit + FormData (4), SSR/sideEffects/exports/unstyled (5), date locale via Calendar (7), motion/RTL/print + G34 expose (9) 2026-06-13. Severity matrix 0/0/0/0; файл остаётся active до Wave 9 (B10 theme-token hardcode).
-updated: 2026-06-13
+summary: Аудит Form. Все numbered issues закрыты — XSS (1), validation i18n (6), branch coverage (8) 2026-06-03; compound `<Form><FormField>`/`<FormSection>` API (2), open typeField + registerFieldType (3), native submit + FormData (4), SSR/sideEffects/exports/unstyled (5), date locale via Calendar (7), motion/RTL/print + G34 expose (9) 2026-06-13; B10 color-часть (structural `gray-*` → `surface-*`) 2026-07-04. Severity matrix 0/0/0/0; файл остаётся active — историческая B10-заметка ниже уточнена (Form-инстанс мигрирован, библиотечная Wave 9 в целом — нет).
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/form/
 related-doc: ../components/form.md
@@ -16,9 +16,9 @@ related-doc: ../components/form.md
 | critical | 0 | ~~C13 (v-html в select-marker)~~ ✅ resolved 2026-06-03 |
 | high | 0 | ~~A2~~, ~~A4-5~~, ~~C17~~, ~~L53~~ ✅ (Issue 5), ~~P (dual-API)~~ ✅ (Issue 2), ~~M55 (FormData)~~ ✅ (Issue 4) |
 | medium | 0 | ~~D21 (typeField generic)~~ ✅ (Issue 3), ~~F30~~ ✅ 2026-06-03, ~~F32~~ ✅ (Issue 7), ~~G34~~ ✅ (formElement expose, Issue 9) |
-| low | 0 | ~~E29.7~~ + ~~N59~~ ✅ (Issue 9), ~~B10~~ (Wave 9 deferral — см. scope note), ~~K46~~ ✅ 2026-06-03 |
+| low | 0 | ~~E29.7~~ + ~~N59~~ ✅ (Issue 9), ~~B10~~ (structural `gray-*` → `surface-*`) ✅ resolved 2026-07-04, ~~K46~~ ✅ 2026-06-03 |
 
-> **Файл остаётся в `active/`** (не перемещён в `./done/`): numbered-issue matrix `0/0/0/0`, но B10 (миграция `gray-*`/`red-*` Tailwind-примитивов на semantic tokens) — библиотечная **Wave 9**, ещё не сделана ни для одного компонента. Зеркало `pagination.md`/`table.md`. См. [scope note](#scope-notes) ниже.
+> **Файл остаётся в `active/`** (не перемещён в `./done/`): numbered-issue matrix `0/0/0/0`. B10 для **Form-инстанса** закрыт 2026-07-04 (см. [scope note](#scope-notes) ниже) — это не значит, что библиотечная **Wave 9** завершена целиком: миграция — первый batch из 11 компонентов, ещё 8 компонентов + отдельный Alert-эпик (severity-цвета) остаются, трекинг — централизованно в [issues/README.md](./README.md).
 
 ## ~~Issue 1: CRITICAL — XSS через select-marker (наследуется через Form-rendered Select)~~ ✅ resolved 2026-06-03
 
@@ -168,7 +168,7 @@ Validation rules возвращали хардкоден английские de
 
 Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%, functions 94.44%) добавлением тестов async-valid / `compare` / `FieldCustom` slot / multi-section / Select-branch. (Текущий suite расширен ещё на 22 кейса при закрытии Issues 2–9.)
 
-## ~~Issue 9: prefers-reduced-motion / RTL / colors / print~~ ✅ resolved 2026-06-13 (B10 deferred — Wave 9)
+## ~~Issue 9: prefers-reduced-motion / RTL / colors / print~~ ✅ resolved 2026-06-13 (motion/RTL/print/G34), ✅ 2026-07-04 (B10 colors — structural part)
 
 - **Категория:** E29.7 (motion) / F31 (RTL) / N59 (print) / B10 (colors) + G34 (root ref expose)
 - **Где:** [Form.vue:199](../../lib/form/Form.vue#L199), [Form.vue:203](../../lib/form/Form.vue#L203), [Form.vue:215](../../lib/form/Form.vue#L215), [Form.vue:218](../../lib/form/Form.vue#L218), [Form.vue:223](../../lib/form/Form.vue#L223)
@@ -182,9 +182,18 @@ Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%,
 3. **N59 (print):** `print:border-black` на section-divider ([Form.vue:203](../../lib/form/Form.vue#L203)); submit-Button печатается через собственные print-стили Button.
 4. **G34 (root ref expose):** NEW `formElement: ref<HTMLFormElement>` на корневом `<form>`, наружу через `defineExpose` ([Form.vue:223](../../lib/form/Form.vue#L223)) — для native `requestSubmit()`/scroll/focus. Тест "exposes the root form element (G34)".
 
-### B10 (colors) — deferred to Wave 9 (см. scope note)
+### ~~B10 (colors)~~ ✅ resolved 2026-07-04 (structural part)
 
-Полная миграция `gray-*`/`red-*` Tailwind-примитивов на semantic tokens — библиотечная **Wave 9** ([README.md](./README.md)), ещё не сделана ни для одного компонента (нет `theme/uno.ts` semantic mappings). Form следует precedent (Pagination/Table): matrix-счёт закрыт, файл остаётся active. `forced-colors:` для собственного DOM Form — N/A (нет own active/selected-state; child-контролы Input/Select/Button уважают forced-colors сами).
+Все hardcoded `gray-*` structural-классы Form мигрированы на именованный semantic-цвет `surface` (23-й named color в [primitive.ts](../../lib/theme/primitive.ts), по умолчанию — точная копия `gray`-шкалы; включён в `namesColors` union, [Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)) с сохранением тех же числовых tone и opacity-суффиксов — family rename, не value change:
+
+- Section-divider border: `border-gray-900/10 dark:border-gray-100/10` → `border-surface-900/10 dark:border-surface-100/10` ([Form.vue:203](../../lib/form/Form.vue#L203)).
+- `insert.beforeText` slot prefix: `text-gray-500` → `text-surface-500` (`classBeforeSlot`, [Form.vue:216](../../lib/form/Form.vue#L216)).
+- `insert.afterText` slot suffix: `text-gray-400 dark:text-gray-600` → `text-surface-400 dark:text-surface-600` (`classAfterSlot`, [Form.vue:218](../../lib/form/Form.vue#L218)).
+- `insert.beforeIcon`/`insert.afterIcon`: `text-gray-400 dark:text-gray-600` → `text-surface-400 dark:text-surface-600` (два идентичных inline-места, [Form.vue:521](../../lib/form/Form.vue#L521), [Form.vue:533](../../lib/form/Form.vue#L533)).
+
+Regression-тесты — [Form.test.ts](../../lib/form/Form.test.ts) describe "Form Component - B10 semantic surface tokens" (4 кейса): section divider, before/after-text slot, before/after-icon — проверяют наличие `surface-*` и отсутствие `gray-*`/`stone-*`/`neutral-*`/`slate-*`/`zinc-*` в рендере.
+
+**Не входит в этот заход:** это Form-инстанс миграции; библиотечная **Wave 9** в целом не завершена — см. [scope note](#scope-notes). `forced-colors:` для собственного DOM Form — N/A (нет own active/selected-state; child-контролы Input/Select/Button уважают forced-colors сами).
 
 ### Acceptance criteria
 
@@ -192,7 +201,7 @@ Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%,
 - [x] Inserted slot content использует логические `me-*` (тест). ✅
 - [x] Section-divider печатается читаемо (`print:border-black`). ✅
 - [x] `formElement` exposed (G34). ✅
-- [ ] B10 semantic tokens — Wave 9 (cross-cutting, вне scope этого захода).
+- [x] B10 — structural `gray-*` → `surface-*` для Form-инстанса, тот же numeric tone (тест). ✅ 2026-07-04
 
 ## Cross-cutting: Configuration support
 
@@ -201,7 +210,7 @@ Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%,
 | `componentsOptions.Form` | ✅ | через Form.getOptions() |
 | `componentsStyle` global | ⚠️ | пробрасывается в child fields через their own logic |
 | `unstyled: true` | ✅ | Issue 5 ✅ — `Component.setStyle` guard; корневой `<form>` без class |
-| Theme tokens vs hardcode | ⚠️ | B10 — Wave 9 (semantic tokens) |
+| Theme tokens vs hardcode | ✅ | структурные `gray-*` → semantic-токен `surface-*` (B10, resolved 2026-07-04 для Form-инстанса) |
 | `t()` для текста | ✅ | Issue 6 ✅ — validation messages локализованы |
 | Runtime locale switch | ✅ | Issue 6 ✅ — `watch(getActiveLocale)` |
 | Native submit / FormData | ✅ | Issue 4 ✅ — `action`/`method`/`nativeSubmit` + FormData (Input-поля) |
@@ -210,7 +219,7 @@ Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%,
 
 ## Scope notes
 
-1. **B10 (colors) — Wave 9.** Semantic-token миграция — библиотечная cross-cutting волна, ещё не выполненная ни для одного компонента. Form закрыл numbered-issue matrix `0/0/0/0`, но **файл остаётся в `active/`** до Wave 9 (зеркало `pagination.md`/`table.md`).
+1. **B10 (colors) — Form-инстанс ✅ resolved 2026-07-04, библиотечная Wave 9 — не завершена.** Ранее здесь утверждалось, что «B10 (миграция `gray-*`/`red-*` Tailwind-примитивов на semantic tokens) — библиотечная Wave 9, ещё не сделана ни для одного компонента» — эта посылка устарела. Actual state: структурные `gray-*` классы Form (section-divider border, `insert.beforeText`/`afterText` slot-цвет, `insert.beforeIcon`/`afterIcon`) мигрированы на именованный semantic-цвет `surface` тем же numeric tone — детали см. в блоке «B10 (colors) ✅ resolved 2026-07-04» внутри Issue 9 выше. Это часть **первого batch** из 11 компонентов, мигрируемых в рамках Wave 9 (не Form-specific ad-hoc фикс). Библиотечная Wave 9 **в целом не завершена**: остаются ещё 8 компонентов из этого batch + отдельный **Alert-эпик** (severity-цвета `bg-green-50`/`text-red-400` и т.п. — другая природа, не structural-neutral) — см. централизованный трекинг в [issues/README.md](./README.md). Файл остаётся в `active/` — numbered-issue matrix `0/0/0/0`, но исторически удерживался как cross-cutting-трекер (зеркало `pagination.md`/`table.md`/`select.md`/`menu.md`/`accordion.md`/`separator.md` — все прошли ту же миграцию 2026-07-04 и также остались active).
 2. **FormData для non-Input полей.** Только Input несёт native `name`-инпут. Switch/Select/Calendar/TextEditor — отдельные issues (их hidden-input работа вне scope Form). Значения этих полей доступны через `v-model:form-fields`/`submit`-event.
 
 ## Dual-API gap

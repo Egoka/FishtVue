@@ -533,4 +533,40 @@ describe("Input Component Tests", () => {
       expect(wrapper.find("label[data-label]").attributes("for")).toBe("my-input")
     })
   })
+
+  // ---------------------------------------
+  // Audit issue — Documentation/issues/input.md Issue 15 (2026-07-04)
+  // ---------------------------------------
+  describe("Issue 15 — B10 hardcode: gray-* → surface-* (design-token migration)", () => {
+    it("classBaseInput uses surface-* for input text color, not hardcoded gray-*", () => {
+      const wrapper = mount(Input)
+      const cls = String((wrapper.vm as any).classBaseInput ?? "")
+      expect(cls).toContain("text-surface-900")
+      expect(cls).toContain("dark:text-surface-100")
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-900(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:text-gray-100(?:\s|$)/)
+    })
+
+    it("classBaseInput uses surface-* for focus placeholder color, not hardcoded gray-*", () => {
+      const wrapper = mount(Input)
+      const cls = String((wrapper.vm as any).classBaseInput ?? "")
+      expect(cls).toContain("focus:placeholder:text-surface-400")
+      expect(cls).toContain("focus:placeholder:dark:text-surface-500")
+      expect(cls).not.toMatch(/(?:^|\s)focus:placeholder:text-gray-400(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)focus:placeholder:dark:text-gray-500(?:\s|$)/)
+    })
+
+    it("classPasswordToggle uses surface-* for the base icon color, keeps theme-token hover untouched", () => {
+      const wrapper = mount(Input, { props: { type: "password" } })
+      const cls = String((wrapper.vm as any).classPasswordToggle ?? "")
+      // Мигрированная база
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-600")
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-400(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:text-gray-600(?:\s|$)/)
+      // Preset-aware hover — уже theme-token, НЕ трогаем (Issue 5, 2026-05-11)
+      expect(cls).toContain("hover:text-theme-500")
+      expect(cls).toContain("hover:dark:text-theme-700")
+    })
+  })
 })

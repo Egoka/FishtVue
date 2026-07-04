@@ -1,7 +1,7 @@
 ---
 title: Separator
 summary: Разделитель горизонтальный/вертикальный, gradient, depth, контент по логической позиции (start/end/center/full, RTL-aware).
-updated: 2026-06-14
+updated: 2026-07-04
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Separator` — визуальный разделитель секций. Поддерживает горизонтальную/вертикальную ориентацию, gradient (плавная прозрачность к краям), depth (глубина теневого эффекта), контент по логической позиции (`start`/`end`/`center`/`full`, RTL-aware). Без emit'ов и v-model.
 
-Stability: `stable` — 43 кейсов, coverage 88.7%.
+Stability: `stable` — 45 кейсов, coverage 88.7%.
 
 Source: [Source](../../lib/separator/Separator.vue), [Separator.d.ts](../../lib/separator/Separator.d.ts), [Separator.test.ts](../../lib/separator/Separator.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/separator/Separator.vue), [Separator.d.ts](../../lib/
 lib/separator/
 ├── Separator.vue
 ├── Separator.d.ts        # 205 строк
-├── Separator.test.ts     # 43 кейсов
+├── Separator.test.ts     # 45 кейсов
 └── package.json
 ```
 
@@ -147,7 +147,7 @@ app.use(FishtVue, {
 
 ### 10.3 Theming
 
-Цвет line — `border-neutral-*` / `dark:border-neutral-*`.
+Цвет line — semantic-токен `surface-*` (`via-surface-*`/`to-surface-*`/`bg-surface-*`, `dark:`-варианты); дефолт совпадает с прежней `gray`-шкалой, переопределяется глобально через `updateSurfacePalette()` без правки самого компонента (см. [Theme](../architecture/theme.md)).
 
 ### 10.4 CSS layer override
 
@@ -185,7 +185,7 @@ import Separator from "fishtvue/separator"
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 43 кейсов, coverage 88.7%.
+- **Stability flag:** `stable` — 45 кейсов, coverage 88.7%.
 - **Breaking changes:** не зафиксировано (миграция `contentPosition` — additive, `left`/`right` продолжают работать).
 - **Deprecations:** `contentPosition: "left" | "right"` — deprecated с 2026-06-14, использовать logical `"start" | "end"` (`left → start`, `right → end`); алиасы сохранены для backward compat, dev-warn в консоль.
 
@@ -205,7 +205,7 @@ describe("Separator", () => {
 })
 ```
 
-Реальные тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) (43 кейсов).
+Реальные тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) (45 кейсов).
 
 ## 16. Troubleshooting / FAQ
 

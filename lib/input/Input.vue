@@ -82,8 +82,8 @@
   const messageInvalid = computed<NonNullable<InputProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
   const classBaseInput = computed(() =>
     Input.setStyle([
-      "relative z-10 ring-0 border-0 w-full bg-transparent p-1 h-[28px] my-1 rounded-md text-gray-900 dark:text-gray-100",
-      "placeholder:select-none focus:placeholder:text-gray-400 focus:placeholder:dark:text-gray-500",
+      "relative z-10 ring-0 border-0 w-full bg-transparent p-1 h-[28px] my-1 rounded-md text-surface-900 dark:text-surface-100",
+      "placeholder:select-none focus:placeholder:text-surface-400 focus:placeholder:dark:text-surface-500",
       props.label?.length ? "placeholder:text-transparent motion-safe:placeholder:transition-all" : "",
       "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
       "focus:outline-0 focus:ring-0 motion-safe:transition-colors caret-theme-500",
@@ -95,7 +95,7 @@
   )
   const classPasswordToggle = computed(() =>
     Input.setStyle([
-      "text-gray-400 dark:text-gray-600 hover:text-theme-500 hover:dark:text-theme-700 motion-safe:transition cursor-pointer",
+      "text-surface-400 dark:text-surface-600 hover:text-theme-500 hover:dark:text-theme-700 motion-safe:transition cursor-pointer",
       options?.passwordToggleClass ?? "",
       props?.passwordToggleClass ?? ""
     ])

@@ -325,3 +325,64 @@ describe("TextEditor — lazy Quill assets (Wave 2.1 — optional peer)", () => 
     expect(src).toMatch(/import\(["']@vueup\/vue-quill\/dist\/vue-quill\.bubble\.css["']\)/)
   })
 })
+
+// surface-* token migration (Wave 9 — texteditor.md Issue 2 / B10). Mount поднимает Quill,
+// чьи rAF-колбэки крашат jsdom после teardown (та же хрупкость, что держит основную суиту
+// в `todo`) — поэтому проверяем на уровне source, зеркало соседних source-scan блоков.
+// primitive.ts:305-317 — surface = 23-й именованный цвет (дефолт — точная копия gray).
+describe("TextEditor — surface-* token migration (Wave 9 — texteditor.md Issue 2 / B10)", () => {
+  it("border/background/icon Tailwind classes use surface-* instead of neutral-*/stone-*/gray-* primitives", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+
+    // Старые хардкод-примитивы больше не встречаются нигде в файле.
+    expect(src).not.toMatch(/border-neutral-200/)
+    expect(src).not.toMatch(/dark:border-neutral-800/)
+    expect(src).not.toMatch(/dark:text-gray-400/)
+    expect(src).not.toMatch(/bg-stone-50/)
+    expect(src).not.toMatch(/dark:bg-stone-950/)
+    expect(src).not.toMatch(/bg-stone-100/)
+    expect(src).not.toMatch(/dark:bg-stone-900/)
+    expect(src).not.toMatch(/text-gray-400 dark:text-gray-600/)
+
+    // border + текст рядом с рамкой редактора (editor computed).
+    expect(src).toMatch(/border-surface-200/)
+    expect(src).toMatch(/dark:border-surface-800/)
+    expect(src).toMatch(/dark:text-surface-400/)
+    // underlined/filled фон редактора.
+    expect(src).toMatch(/bg-surface-50 dark:bg-surface-950/)
+    expect(src).toMatch(/bg-surface-100 dark:bg-surface-900/)
+    // hover-состояние иконок resize-кнопок (встречается дважды — bubble + snow resize).
+    const iconHoverMatches = src.match(
+      /text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400/g
+    )
+    expect(iconHoverMatches?.length).toBe(2)
+  })
+
+  it("raw hex in the <style> block is routed through var(--fv-surface-{tone}) except the alpha-suffixed placeholder overlays", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+
+    // Не-alpha hex-пары (background + picker-options) для light/dark больше не хардкод.
+    expect(src).not.toMatch(/--background-quill-editor:\s*#f6f3f4/)
+    expect(src).not.toMatch(/--background-picker-options-quill-editor:\s*#f5f5f5/)
+    expect(src).not.toMatch(/--background-quill-editor:\s*#212121/)
+    expect(src).not.toMatch(/--background-picker-options-quill-editor:\s*#131313/)
+
+    // Заменены на var(--fv-surface-{tone}, <rgb-triplet>) — формат зеркалит unoStyle/helpers.resolveColor.
+    expect(src).toMatch(/--background-quill-editor:\s*rgb\(var\(--fv-surface-100,\s*243 244 246\)\)/)
+    expect(src).toMatch(/--background-picker-options-quill-editor:\s*rgb\(var\(--fv-surface-100,\s*243 244 246\)\)/)
+    expect(src).toMatch(/--background-quill-editor:\s*rgb\(var\(--fv-surface-900,\s*17 24 39\)\)/)
+    expect(src).toMatch(/--background-picker-options-quill-editor:\s*rgb\(var\(--fv-surface-900,\s*17 24 39\)\)/)
+
+    // Alpha-suffixed placeholder overlays (translucent black/white) — вне scope, остаются литералами.
+    expect(src).toMatch(/--placeholder-quill-editor:\s*#00000099/)
+    expect(src).toMatch(/--placeholder-quill-editor:\s*#ffffff99/)
+  })
+})

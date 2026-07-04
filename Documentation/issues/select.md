@@ -1,7 +1,7 @@
 ---
 title: Issues — Select
-summary: 12/14 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports; 2026-07-02 — Issue 12 ms-[undefinedpx] guard). Открытые — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending) и B10 (colors, deferred Wave 9). Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
-updated: 2026-07-02
+summary: 13/14 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports; 2026-07-02 — Issue 12 ms-[undefinedpx] guard; 2026-07-04 — B10 миграция на semantic-токен `surface`). Открытый — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending). Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
 related-doc: ../components/select.md
@@ -16,9 +16,9 @@ related-doc: ../components/select.md
 | critical | 0            | —                                                     |
 | high     | 1            | H43 (virtualization, unblocked — integration pending) |
 | medium   | 0            | —                                                     |
-| low      | 1            | B10 (colors → semantic tokens, deferred)              |
+| low      | 0            | ~~B10 (colors → semantic tokens, deferred)~~ ✅ resolved 2026-07-04 |
 
-> Оба открытых пункта — **не баги**: Issue 7 **разблокирован** (2026-06-13) — добавлен dependency-free [VirtualScroller](../components/virtualscroller.md) + `useVirtualScroll`; осталась интеграция в Select (отдельным ТЗ). B10 требует lib-wide token-слоя (Wave 9). Все остальные 11 пунктов закрыты.
+> Открытый пункт — **не баг**: Issue 7 **разблокирован** (2026-06-13) — добавлен dependency-free [VirtualScroller](../components/virtualscroller.md) + `useVirtualScroll`; осталась интеграция в Select (отдельным ТЗ). B10 закрыт 2026-07-04 — все остальные 12 пунктов закрыты.
 
 > **Wave 4.3 keyboard (✅ 2026-06-20):** в [keydownSelect](../../lib/select/Select.vue#L586) добавлены **Home/End** (`focusItemAt`) и **first-char typeahead** для `noQuery`-listbox (`typeaheadFocus`, APG-циклирование). Это roadmap-only пункт ([issues/README.md Wave 4.3](./README.md)) без numbered issue — **матрица severity не меняется**. См. [components/select.md §12](../components/select.md).
 
@@ -372,11 +372,11 @@ Custom rendering каждого option возможен только через 
 
 Фильтрация теперь использует `Intl.Collator(getActiveLocale() ?? "en", { sensitivity: "base", usage: "search" })` — diacritic-insensitive (немецкое `ü` matches `u`, французское `é` matches `e`) и case-insensitive. Helper `matchesQuery(itemValue, q)` — sliding-window substring match через `collator.compare`. Подсветка совпадений (`splitByQuery` → `markerParts`) использует тот же collator для согласованности с фильтром. Тест: `Select.test.ts` > `filters dataList through Intl.Collator (diacritic-insensitive)`.
 
-## ~~Issue 11: prefers-reduced-motion + print + colors hardcode~~ ✅ resolved 2026-05-11 (motion + print parts)
+## ~~Issue 11: prefers-reduced-motion + print + colors hardcode~~ ✅ resolved 2026-05-11 (motion + print), ✅ 2026-07-04 (B10 colors)
 
 - **Категория:** E29.7, N59, B10
-- **Severity:** ~~low~~ (частично — `motion-safe:` + `print:` закрыты; B10 colors через theme tokens — Wave 9)
-- **Status:** ✅ resolved 2026-05-11 (motion-safe + print). B10 / colors hardcode остаётся открытым (Wave 9).
+- **Severity:** ~~low~~
+- **Status:** ✅ resolved 2026-05-11 (motion-safe + print). ✅ resolved 2026-07-04 (B10 — миграция на semantic-токен `surface`).
 
 **Что сделано:**
 
@@ -389,7 +389,30 @@ Custom rendering каждого option возможен только через 
 **Что осталось открытым:**
 
 - GSAP-анимация раскрытия списка не учитывает `prefers-reduced-motion` — потребует JS-проверки media query или Motion-One интеграцию. Wave 10.1 follow-up.
-- **B10 — hardcoded `text-gray-500`, `bg-stone-100`, `bg-white dark:bg-black` и т. д.** → ⏸️ **deferred (Wave 9, lib-wide)**. Research 2026-06-13: в `lib/theme/primitive.ts` semantic-токенов (`bg-background`/`text-muted-foreground`/`border-border`) **не существует** — только примитивная палитра (22 цвета × 11 тонов) + динамический брендовый `theme-*`. **Ни один из 22 компонентов** semantic-токены не использует (Form/Split тоже хардкодят gray). «Полная миграция» требует сначала построить token-слой (`primitive.ts` + `semantic.ts` + `unoRules.ts`) — cross-cutting изменение критичного `lib/theme/`, ideally раскатывать lib-wide отдельным ТЗ, а не select-only. Решение пользователя (2026-06-13): отложить.
+
+### B10 — hardcoded `gray-*`/`stone-*` → semantic-токен `surface` ✅ resolved 2026-07-04
+
+**Историческая запись (что было, до 2026-07-04):** research 2026-06-13 фиксировала, что в `lib/theme/primitive.ts` semantic-токенов (`bg-background`/`text-muted-foreground`/`border-border`) не существовало — только примитивная палитра (22 цвета × 11 тонов) + динамический брендовый `theme-*`; «полная миграция» требовала сначала построить token-слой, cross-cutting изменение `lib/theme/`. Решение пользователя (2026-06-13) — отложить (Wave 9).
+
+**Что изменилось:** эта предпосылка больше не верна. 2026-07-04 в `lib/theme/primitive.ts` добавлен 23-й именованный цвет **`surface`** (структурный semantic-слот, [primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317)) — дефолт является точной копией шкалы `gray`, переопределяемой через `updateSurfacePalette()` без правки самого файла. Цвет зарегистрирован в union `namesColors` ([Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)), поэтому `bg-surface-*`/`text-surface-*`/`border-surface-*`/`ring-surface-*`/`from-surface-*`/`via-surface-*` работают как любой другой именованный цвет движка — изменений в `unoRules.ts` не потребовалось.
+
+**Что сделано в Select (2026-07-04):** все структурные `gray-*`/`stone-*` классы в [Select.vue](../../lib/select/Select.vue) переименованы в family `surface-*` с **той же числовой тональностью** (не value change, а family rename):
+
+- Border дропдауна: `border-gray-300 dark:border-gray-600` (outlined) / `border-gray-300 dark:border-gray-700` (underlined) → `border-surface-300 dark:border-surface-600` / `border-surface-300 dark:border-surface-700` — [Select.vue:329, 331](../../lib/select/Select.vue#L329).
+- Background дропдауна: `bg-stone-50 dark:bg-stone-950` (underlined) / `bg-stone-100 dark:bg-stone-900` (filled) → `bg-surface-50 dark:bg-surface-950` / `bg-surface-100 dark:bg-surface-900` — [Select.vue:331, 333](../../lib/select/Select.vue#L331).
+- No-data текст (`classDataListNoData`/`classNoData`): `text-gray-500` → `text-surface-500` — [Select.vue:344-345](../../lib/select/Select.vue#L344-L345).
+- Gradient-overlay (`classGradientSelectList`): `from-stone-50 dark:from-stone-950 via-stone-50 dark:via-stone-950` / `from-stone-100 dark:from-stone-900 via-stone-100 dark:via-stone-900` → `from-surface-*`/`via-surface-*` эквиваленты — [Select.vue:350-351](../../lib/select/Select.vue#L350-L351).
+- Текст опции (`classLiItem`): `text-gray-900 dark:text-gray-100` → `text-surface-900 dark:text-surface-100` — [Select.vue:369](../../lib/select/Select.vue#L369).
+- Sublabel опции (`classItemSelectValue`): `text-gray-600 dark:text-gray-300` → `text-surface-600 dark:text-surface-300` — [Select.vue:380](../../lib/select/Select.vue#L380).
+- Group-header (`classGroupHeader`, Issue 3): `text-gray-500` → `text-surface-500` — [Select.vue:385](../../lib/select/Select.vue#L385).
+- Search-input ring (`class-body` на вложенный `Input`): `ring-stone-200` (outlined/underlined) / `ring-stone-100` (filled) → `ring-surface-200`/`ring-surface-100` — [Select.vue:835-837](../../lib/select/Select.vue#L835-L837). **Не тронуто:** `dark:ring-black` (outlined) — литеральный специальный цвет `black`, не тон `stone`, вне скоупа этой миграции.
+- Search-иконка: `text-gray-400 dark:text-gray-600` → `text-surface-400 dark:text-surface-600` — [Select.vue:842](../../lib/select/Select.vue#L842).
+
+**Не тронуто намеренно (литеральные специальные цвета, не часть B10):** `bg-white dark:bg-black` (outlined mode background), `from-white dark:from-black via-white dark:via-black` (outlined gradient), `ring-black/5` (dropdown shadow-ring), `dark:ring-black` (search-ring в outlined mode).
+
+**Vue-компонент `InputLayout.vue`** (вложенный через `Input`/`InputLayout` fallthrough) несёт собственные независимые `gray-*`/`stone-*`/`neutral-*`/`slate-*` классы на том же DOM-узле, что и Select-контролируемый `ring-surface-*` (class-fallthrough merge) — вне скоупа этой задачи (Select-only), потребует отдельного B10-прохода по `lib/inputlayout/`.
+
+**Тест:** `Select.test.ts` > `describe("Select Component - B10 semantic surface tokens")` — 13 кейсов (border/background по режимам, no-data text, group-header, sublabel, search-icon, search-ring по режимам + regression на нетронутый `dark:ring-black`, gradient overlay). Плюс обновлены 3 pre-existing теста `applies correct styles for mode '...'` (assertions на новые `surface-*` строки).
 
 ## ~~Issue 12: `ms-[undefinedpx]` в class-body дропдауна до готовности layout~~ ✅ resolved 2026-07-02
 
@@ -412,7 +435,7 @@ Guard по образцу [InputLayout.vue:131](../../lib/inputlayout/InputLayou
 | `componentsOptions.Select` | ✅          | mode, autoFocus, valueSelect, keySelect, и др.               |
 | `componentsStyle` global   | ✅          | Issue 5 (resolved) — fallback chain в `mode`                 |
 | `unstyled: true`           | ✅          | Issue 6 (resolved) — `Component.setStyle` guard              |
-| Theme tokens vs hardcode   | ⚠️          | theme-\* для акцентов; нейтральные gray/stone хардкод — B10 (deferred) |
+| Theme tokens vs hardcode   | ✅          | theme-\* для акцентов; структурные нейтральные — semantic-токен `surface-*` (B10, resolved 2026-07-04) |
 | Runtime theme switch       | ⚠️          | через CSS-vars OK                                            |
 | `t()` для текста           | ⚠️          | `noData` имеет fallback `Select.t("noData")` (Select.vue)    |
 | Runtime locale switch      | ✅          | Issue 10 (resolved) — `Intl.Collator(getActiveLocale())`     |

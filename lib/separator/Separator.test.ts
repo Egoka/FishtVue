@@ -198,6 +198,33 @@ describe("Separator Component", () => {
     })
   })
 
+  describe("Semantic color tokens (Issue 4 / B10)", () => {
+    it("uses surface-* family (not neutral-*) for line gradient/fallback classes", () => {
+      const wrapper = mount(Separator)
+      const leftLine = wrapper.find("[data-separator-left] div")
+      const rightLine = wrapper.find("[data-separator-right] div")
+
+      for (const line of [leftLine, rightLine]) {
+        const classes = line.classes()
+        expect(classes).toContain("via-surface-200")
+        expect(classes).toContain("dark:via-surface-800")
+        expect(classes).toContain("to-surface-200")
+        expect(classes).toContain("dark:to-surface-800")
+        expect(classes).toContain("bg-surface-200")
+        expect(classes).toContain("dark:bg-surface-800")
+        expect(classes.some((c) => c.includes("neutral-"))).toBe(false)
+      }
+    })
+
+    it("uses text-surface-* (not text-gray-*) for content text", () => {
+      const wrapper = mount(Separator, { slots: { default: "OR" } })
+      const content = wrapper.find("[data-separator-content]")
+      const classes = content.classes()
+      expect(classes).toContain("text-surface-500")
+      expect(classes.some((c) => c.includes("text-gray-"))).toBe(false)
+    })
+  })
+
   describe("Unstyled mode", () => {
     // window.FishtVue — глобальный singleton, выставляемый plugin'ом; чистим, чтобы
     // unstyled-конфиг не утёк в последующие тесты/файлы.

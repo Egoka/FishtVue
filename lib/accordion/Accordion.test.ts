@@ -443,6 +443,67 @@ describe("Accordion Component Tests", () => {
     })
   })
 
+  describe("Theming — semantic surface tokens, not hardcoded slate-* (B10)", () => {
+    it("uses surface-* divider classes on the root, not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const root = wrapper.find("[data-accordion]")
+      expect(root.classes()).toContain("divide-surface-200")
+      expect(root.classes()).toContain("dark:divide-surface-800")
+      expect(root.classes()).not.toContain("divide-slate-200")
+      expect(root.classes()).not.toContain("dark:divide-slate-800")
+    })
+
+    it("uses surface-* text classes on the title, not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const title = wrapper.find("[data-accordion-button] span")
+      expect(title.classes()).toContain("text-surface-800")
+      expect(title.classes()).toContain("dark:text-surface-300")
+      expect(title.classes()).not.toContain("text-slate-800")
+      expect(title.classes()).not.toContain("dark:text-slate-300")
+    })
+
+    it("uses surface-* text classes on the subtitle panel, not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const panel = wrapper.find('[role="region"]')
+      expect(panel.classes()).toContain("text-surface-600")
+      expect(panel.classes()).toContain("dark:text-surface-400")
+      expect(panel.classes()).not.toContain("text-slate-600")
+      expect(panel.classes()).not.toContain("dark:text-slate-400")
+    })
+
+    it("uses surface-* classes on the trigger icon (incl. group-hover), not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }], icon: "ChevronDown" }
+      })
+      const icon = wrapper.find("svg.ChevronDownIcon")
+      expect(icon.classes()).toContain("text-surface-400")
+      expect(icon.classes()).toContain("dark:text-surface-500")
+      expect(icon.classes()).toContain("group-hover/item:text-surface-500")
+      expect(icon.classes()).toContain("group-hover/item:dark:text-surface-400")
+      expect(icon.classes()).not.toContain("text-slate-400")
+      expect(icon.classes()).not.toContain("dark:text-slate-500")
+      expect(icon.classes()).not.toContain("group-hover/item:text-slate-500")
+      expect(icon.classes()).not.toContain("group-hover/item:dark:text-slate-400")
+    })
+
+    it("uses surface-* fill classes on the Plus icon, not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }], icon: "Plus" }
+      })
+      const icon = wrapper.find("svg.PlusIcon")
+      expect(icon.classes()).toContain("fill-surface-600")
+      expect(icon.classes()).toContain("dark:fill-surface-500")
+      expect(icon.classes()).not.toContain("fill-slate-600")
+      expect(icon.classes()).not.toContain("dark:fill-slate-500")
+    })
+  })
+
   describe("Expose — root element ref (G34)", () => {
     it("exposes rootRef pointing at the [data-accordion] root", () => {
       const wrapper = mount(Accordion, {

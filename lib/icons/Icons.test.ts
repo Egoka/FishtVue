@@ -67,7 +67,7 @@ describe("Icons Component Tests", () => {
       })
       await flushHero()
       expect(wrapper.html())
-        .toBe(`<i data-icon=""><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-icons h-5 w-5 text-gray-900 dark:text-gray-100 select-none">
+        .toBe(`<i data-icon=""><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-icons h-5 w-5 text-surface-900 dark:text-surface-100 select-none">
     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"></path>
   </svg></i>`)
     })
@@ -308,6 +308,30 @@ describe("Icons Component Tests", () => {
     it("non-curated heroicon name 'beaker' is not bundled → no sync heroicon SVG", () => {
       const wrapper = mount(Icons, { props: { type: "beaker" } })
       expect(wrapper.find("svg").exists()).toBe(false)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // Semantic token migration — Issue 9 / B10 (icons.md, cross-cutting Wave 9)
+  // Default color hardcoded `gray-*` → renamed to library semantic `surface-*`
+  // (lib/theme/primitive.ts: surface — 23rd named color, default = точная копия
+  // gray-шкалы). Family rename only, same numeric tone (900/100) — zero visual
+  // change, но подключает default-цвет иконки к theme-token indirection.
+  // -----------------------------------------------------------------------
+  describe("Semantic token migration — default color uses surface-* (Issue 9 / B10)", () => {
+    it("classIcon default includes text-surface-900 dark:text-surface-100 (not gray)", () => {
+      const wrapper = mount(Icons, { props: { type: "Check" } })
+      const classIcon = (wrapper.vm as any).classIcon as string
+      expect(classIcon).toContain("text-surface-900")
+      expect(classIcon).toContain("dark:text-surface-100")
+      expect(classIcon).not.toContain("gray")
+    })
+
+    it("rendered SVG class attribute carries surface-* tone classes", () => {
+      const wrapper = mount(Icons, { props: { type: "Check" } })
+      const svgClass = wrapper.find("svg").attributes("class")
+      expect(svgClass).toContain("text-surface-900")
+      expect(svgClass).toContain("dark:text-surface-100")
     })
   })
 

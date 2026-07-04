@@ -122,9 +122,9 @@ export declare type IconsProps = {
 
   /**
    * Custom CSS class for the icon.
-   * @type {"h-5 w-5 text-gray-900 dark:text-gray-100" | StyleClass | undefined}
+   * @type {"h-5 w-5 text-surface-900 dark:text-surface-100" | StyleClass | undefined}
    */
-  class?: "h-5 w-5 text-gray-900 dark:text-gray-100" | StyleClass
+  class?: "h-5 w-5 text-surface-900 dark:text-surface-100" | StyleClass
 
   /**
    * Custom inline styles for the icon.

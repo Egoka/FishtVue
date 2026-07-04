@@ -1459,4 +1459,96 @@ describe("Form Component Tests", () => {
       expect(wrapper.find('input[id="compoundField"]').exists()).toBe(false)
     })
   })
+
+  // ---B10 — semantic surface tokens вместо hardcoded gray-family classes -------------------------
+  describe("Form Component - B10 semantic surface tokens", () => {
+    const legacyGrayFamily = /\b(?:bg|text|border|ring|divide)-(?:neutral|stone|zinc|slate|gray)-\d+/
+
+    it("section divider uses surface-family border (not gray), keeping the /10 opacity suffix", () => {
+      const wrapper = mount(Form, { props: { structure: structure() } })
+      const cls = wrapper.find("[data-form-item]").classes().join(" ")
+      expect(cls).toContain("border-surface-900/10")
+      expect(cls).toContain("dark:border-surface-100/10")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("insert.beforeText slot prefix uses surface-family text (not gray)", () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            {
+              fields: [
+                {
+                  name: "amount",
+                  typeComponent: "Input",
+                  label: "Amount",
+                  modelValue: "",
+                  insert: { beforeText: "USD" }
+                }
+              ]
+            }
+          ]
+        }
+      })
+      const beforeText = wrapper.findAll("span").find((span) => span.text().includes("USD"))
+      expect(beforeText).toBeTruthy()
+      const cls = beforeText!.classes().join(" ")
+      expect(cls).toContain("text-surface-500")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("insert.afterText slot suffix uses surface-family text (not gray)", () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            {
+              fields: [
+                {
+                  name: "amount",
+                  typeComponent: "Input",
+                  label: "Amount",
+                  modelValue: "",
+                  insert: { afterText: "USD" }
+                }
+              ]
+            }
+          ]
+        }
+      })
+      const afterText = wrapper.findAll("p").find((p) => p.text().includes("USD"))
+      expect(afterText).toBeTruthy()
+      const cls = afterText!.classes().join(" ")
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-600")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("insert.beforeIcon/afterIcon use surface-family text (not gray)", () => {
+      const wrapper = mount(Form, {
+        props: {
+          structure: [
+            {
+              fields: [
+                {
+                  name: "amount",
+                  typeComponent: "Input",
+                  label: "Amount",
+                  modelValue: "",
+                  insert: { beforeIcon: "trash", afterIcon: "check" }
+                }
+              ]
+            }
+          ]
+        }
+      })
+      const icons = wrapper.findAll("[data-icon] svg")
+      expect(icons.length).toBeGreaterThanOrEqual(2)
+      icons.forEach((icon) => {
+        const cls = icon.classes().join(" ")
+        expect(cls).toContain("text-surface-400")
+        expect(cls).toContain("dark:text-surface-600")
+        expect(cls).not.toMatch(legacyGrayFamily)
+      })
+    })
+  })
 })

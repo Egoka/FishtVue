@@ -169,10 +169,10 @@
           "flex flex-wrap items-center z-10 max-h-max cursor-pointer leading-3"
         ])
       : Calendar.setStyle([
-          "border-0 w-full text-left bg-transparent py-1.5 pl-1 cursor-pointer text-gray-900 dark:text-gray-100 placeholder:text-gray-400 placeholder:dark:text-gray-600 focus:ring-0 sm:text-sm sm:leading-6",
+          "border-0 w-full text-left bg-transparent py-1.5 pl-1 cursor-pointer text-surface-900 dark:text-surface-100 placeholder:text-surface-400 placeholder:dark:text-surface-600 focus:ring-0 sm:text-sm sm:leading-6",
           options?.classDateText ?? "",
           props?.classDateText ?? "",
-          isDisabled.value ? "text-slate-500 dark:text-slate-500" : "",
+          isDisabled.value ? "text-surface-500 dark:text-surface-500" : "",
           "block flex-1"
         ])
   )
@@ -180,11 +180,11 @@
     Calendar.setStyle([
       "mt-0 w-min min-w-min max-w-lg max-h-max text-base sm:text-sm rounded-md ring-1 ring-black/5 shadow-xl",
       mode.value === "filled"
-        ? "border-0 bg-stone-100 dark:bg-stone-900"
+        ? "border-0 bg-surface-100 dark:bg-surface-900"
         : mode.value === "outlined"
-          ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-black"
+          ? "border border-surface-300 dark:border-surface-600 bg-white dark:bg-black"
           : mode.value === "underlined"
-            ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
+            ? "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b bg-surface-50 dark:bg-surface-950"
             : "",
       options?.classPicker ?? "",
       props?.classPicker ?? "",
@@ -192,7 +192,7 @@
     ])
   )
   const classSeparatorNone = ref(Calendar.setStyle("h-5 w-1"))
-  const classPlaceholder = ref(Calendar.setStyle("text-gray-400 dark:text-gray-600"))
+  const classPlaceholder = ref(Calendar.setStyle("text-surface-400 dark:text-surface-600"))
   const inputLayout = computed<Omit<InputLayoutProps, "value">>(() => ({
     id: props.id,
     isValue: isValue.value,
@@ -389,11 +389,16 @@
           <Icons
             v-if="separator === 'arrow' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
             type="ArrowLongRight"
-            :class="[isDisabled ? 'text-slate-500 dark:text-slate-500' : 'text-gray-400 dark:text-gray-400', 'mx-1']" />
+            :class="[
+              isDisabled ? 'text-surface-500 dark:text-surface-500' : 'text-surface-400 dark:text-surface-400',
+              'mx-1'
+            ]" />
           <Icons
             v-if="separator === 'points' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
             type="EllipsisVertical"
-            :class="[isDisabled ? 'text-slate-500 dark:text-slate-500' : 'text-gray-600 dark:text-gray-400']" />
+            :class="[
+              isDisabled ? 'text-surface-500 dark:text-surface-500' : 'text-surface-600 dark:text-surface-400'
+            ]" />
           <div
             v-if="separator === 'none' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
             :class="classSeparatorNone" />

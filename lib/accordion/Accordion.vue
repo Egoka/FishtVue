@@ -113,17 +113,21 @@
   Accordion.setStyle("grid-rows-[1fr] opacity-100")
   Accordion.setStyle("grid-rows-[0fr] opacity-0")
   const classBody = computed(() =>
-    Accordion.setStyle(["divide-y divide-slate-200 dark:divide-slate-800", options?.class ?? "", props?.class ?? ""])
+    Accordion.setStyle([
+      "divide-y divide-surface-200 dark:divide-surface-800",
+      options?.class ?? "",
+      props?.class ?? ""
+    ])
   )
   const classItem = computed(() =>
     Accordion.setStyle(["py-2", options?.classItem ?? "", props.classItem ?? "", "group/item"])
   )
   const classTitle = computed(() =>
-    Accordion.setStyle(["text-slate-800 dark:text-slate-300", options?.classTitle ?? "", props.classTitle ?? ""])
+    Accordion.setStyle(["text-surface-800 dark:text-surface-300", options?.classTitle ?? "", props.classTitle ?? ""])
   )
   const classSubtitle = computed(() =>
     Accordion.setStyle([
-      "text-sm text-slate-600 dark:text-slate-400 motion-safe:transition-all ease-in-out",
+      "text-sm text-surface-600 dark:text-surface-400 motion-safe:transition-all ease-in-out",
       options?.classSubtitle ?? "",
       props.classSubtitle ?? "",
       "grid overflow-hidden"
@@ -131,9 +135,9 @@
   )
   const classButton = Accordion.setStyle("flex items-center justify-between w-full text-start font-semibold py-2")
   const styleIcon = Accordion.setStyle(
-    "h-5 w-5 shrink-0 ms-8 text-slate-400 dark:text-slate-500 group-hover/item:text-slate-500 group-hover/item:dark:text-slate-400 motion-safe:transition-all duration-200 ease-out"
+    "h-5 w-5 shrink-0 ms-8 text-surface-400 dark:text-surface-500 group-hover/item:text-surface-500 group-hover/item:dark:text-surface-400 motion-safe:transition-all duration-200 ease-out"
   )
-  const classPlus = Accordion.setStyle("fill-slate-600 dark:fill-slate-500 shrink-0 ms-8")
+  const classPlus = Accordion.setStyle("fill-surface-600 dark:fill-surface-500 shrink-0 ms-8")
   const classRect = Accordion.setStyle("transform origin-center motion-safe:transition duration-200 ease-out")
   const classTemplate = Accordion.setStyle("overflow-hidden")
   const classNotTemplate = Accordion.setStyle("pb-3")

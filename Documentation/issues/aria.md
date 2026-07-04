@@ -1,7 +1,7 @@
 ---
 title: Issues — Aria
-summary: Аудит Aria. 8/11 issues закрыто 2026-05-11 (type bug change:modelValue → string + cross-cutting TextEditor, dup initStyle removal, componentsStyle fallback, unstyled regression test, modelValue type narrow, typed before/after slot props, motion-safe placeholder, print styles). Остались Issue 3 (cross-cutting Wave 2.1 packaging), Issue 6 (rename → Textarea, breaking — deferred), Issue 10 (docs-only, уже задокументирован).
-updated: 2026-05-11
+summary: Аудит Aria. 8/11 issues закрыто 2026-05-11 (type bug change:modelValue → string + cross-cutting TextEditor, dup initStyle removal, componentsStyle fallback, unstyled regression test, modelValue type narrow, typed before/after slot props, motion-safe placeholder, print styles). Issue 11 B10-часть (hardcode gray-* → surface-*) закрыта 2026-07-04. Остались Issue 3 (cross-cutting Wave 2.1 packaging), Issue 6 (rename → Textarea, breaking — deferred), Issue 10 (docs-only, уже задокументирован), Issue 11 RTL-часть (cross-cutting, open).
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/aria/
 related-doc: ../components/aria.md
@@ -19,6 +19,8 @@ related-doc: ../components/aria.md
 | low      | 1            | M55 (Issue 10 — docs-only) |
 
 **Закрыто 2026-05-11:** Issues 1 (type bug change:modelValue → string + cross-cutting fix в TextEditor.d.ts), 2 (drop duplicate initStyle, Wave 2.3), 4 (componentsStyle fallback chain), 5 (unstyled regression test — cross-cutting Wave 3.1), 7 (modelValue type narrow), 8 (typed slot props before/after), 9 (motion-safe placeholder), 11 print part (print:* классы в classInput) — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references сохраняются.
+
+**Закрыто 2026-07-04:** Issue 11 B10-часть (hardcode `text-gray-900 dark:text-gray-100` / `focus:placeholder:text-gray-400 focus:placeholder:dark:text-gray-500` → `surface-*` family rename, same tone). RTL-часть и N59 (print/motion, уже resolved 2026-05-11) того же Issue 11 не пересматривались.
 
 ## ~~Issue 1: Type bug — `change:modelValue(payload: boolean)` должно быть `string`~~ ✅ resolved 2026-05-11
 
@@ -184,9 +186,11 @@ Runtime передаёт `string` (содержимое textarea), но тип �
 
 Не aria-specific: классы в `classInput` (`text-gray-900`, `caret-theme-500`) уже design-token и RTL-safe. Layout управляется через [InputLayout](./inputlayout.md). Полноценный RTL audit на уровне 22 компонентов трекается в [switch.md Issue 8](./switch.md) (logical CSS properties) и [input.md Issue 12](./input.md) ✅.
 
-### Hardcode цветов — open (cross-cutting)
+### ~~Hardcode цветов~~ ✅ resolved 2026-07-04 (B10)
 
-Замена `text-gray-900 dark:text-gray-100` / `placeholder:text-gray-400` на semantic tokens — wave-level refactor (см. [switch.md Issue 12](./switch.md)). Отложено в отдельный PR — требует обновления `lib/theme/uno.ts` для всех 22 компонентов одновременно.
+- **Где:** [Aria.vue:63-64](../../lib/aria/Aria.vue#L63-L64).
+- **Resolution:** `text-gray-900 dark:text-gray-100` (основной текст textarea) и `focus:placeholder:text-gray-400 focus:placeholder:dark:text-gray-500` (focus-placeholder) заменены на `text-surface-900 dark:text-surface-100` / `focus:placeholder:text-surface-400 focus:placeholder:dark:text-surface-500` — family rename без изменения числового тона. Инфраструктура готова заранее: `surface` — 23-й именованный цвет в [primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317) (default = точная копия `gray`), `namesColors` union в [Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187) уже включает `"surface"` — `text-surface-{tone}` работает как любой другой named color без engine-изменений. `placeholder:select-none` — не hardcode цвета, не тронут. Зеркалит [input.md Issue 15](./input.md) ✅ pattern (идентичная family rename в `Input.vue`). Покрыто 2 regression-тестами в [Aria.test.ts](../../lib/aria/Aria.test.ts) блок «Issue 11 — B10 hardcode: gray-* → surface-* (design-token migration)» (текст textarea + focus-placeholder, оба с negative-assertion на отсутствие `gray-*`).
+- **Out of scope (не в этом фиксе):** `caret-theme-500` в той же строке `classInput` — уже theme-токен, не hardcode, не тронут. RTL-часть этого issue (см. выше) и N59-часть (print/motion) остаются в прежнем статусе — не пересматривались в рамках B10.
 
 ## Cross-cutting: Configuration support
 

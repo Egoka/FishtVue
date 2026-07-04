@@ -326,11 +326,11 @@
     Select.setStyle([
       "min-w-[10rem] mt-1 max-h-60 motion-safe:transition-all",
       "text-base rounded-md ring-1 ring-black/5 shadow-xl focus:outline-none sm:text-sm",
-      mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-black" : "",
+      mode.value === "outlined" ? "border border-surface-300 dark:border-surface-600 bg-white dark:bg-black" : "",
       mode.value === "underlined"
-        ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
+        ? "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b bg-surface-50 dark:bg-surface-950"
         : "",
-      mode.value === "filled" ? "border-0 bg-stone-100 dark:bg-stone-900" : "",
+      mode.value === "filled" ? "border-0 bg-surface-100 dark:bg-surface-900" : "",
       options?.classSelectList ?? "",
       props?.classSelectList ?? "",
       "classSelectList overflow-auto"
@@ -341,14 +341,14 @@
   )
   const classSelectContent = ref(Select.setStyle("flex items-center flex-wrap"))
   const classSelectItem = ref(Select.setStyle("z-1"))
-  const classDataListNoData = ref(Select.setStyle("h-9 px-4 text-sm text-gray-500"))
-  const classNoData = ref(Select.setStyle("p-4 text-sm text-gray-500"))
+  const classDataListNoData = ref(Select.setStyle("h-9 px-4 text-sm text-surface-500"))
+  const classNoData = ref(Select.setStyle("p-4 text-sm text-surface-500"))
   const classGradientSelectList = computed(() =>
     Select.setStyle([
       "w-full h-5 bg-gradient-to-t to-transparent pointer-events-none",
       mode.value === "outlined" ? "from-white dark:from-black via-white dark:via-black" : "",
-      mode.value === "underlined" ? "from-stone-50 dark:from-stone-950 via-stone-50 dark:via-stone-950" : "",
-      mode.value === "filled" ? "from-stone-100 dark:from-stone-900 via-stone-100 dark:via-stone-900" : "",
+      mode.value === "underlined" ? "from-surface-50 dark:from-surface-950 via-surface-50 dark:via-surface-950" : "",
+      mode.value === "filled" ? "from-surface-100 dark:from-surface-900 via-surface-100 dark:via-surface-900" : "",
       "sticky z-20" // todo need to switch to absolute
     ])
   )
@@ -366,7 +366,7 @@
   const classLiItem = computed(() =>
     Select.setStyle([
       // ---ISSUE 9 (RTL): логические ps-8 / pe-4 вместо физических pl-8 / pr-4 (авто-флип при dir="rtl")
-      "text-gray-900 dark:text-gray-100 items-center h-9 mt-2 mx-2 ps-8 pe-4 last:mb-5",
+      "text-surface-900 dark:text-surface-100 items-center h-9 mt-2 mx-2 ps-8 pe-4 last:mb-5",
       "hover:bg-theme-200 hover:dark:bg-theme-900 hover:text-theme-700 dark:hover:text-theme-100",
       "focus-visible:bg-theme-200 focus-visible:dark:bg-theme-900 focus-visible:text-theme-700 dark:focus-visible:text-theme-100 focus-visible:ring-1 focus-visible:ring-theme-100 focus-visible:dark:ring-theme-800 focus-visible:outline-none",
       mode.value === "outlined" ? "rounded-md" : "",
@@ -377,12 +377,12 @@
   const classItemSelectValue = computed(() =>
     Select.setStyle(
       // ---ISSUE 9 (RTL): rtl:text-right override (движок сохраняет text-left как LTR-default)
-      "text-left rtl:text-right text-gray-600 dark:text-gray-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200"
+      "text-left rtl:text-right text-surface-600 dark:text-surface-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200"
     )
   )
   // ---ISSUE 3 — non-selectable group-header + disabled-опция ---
   const classGroupHeader = computed(() =>
-    Select.setStyle("px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 select-none")
+    Select.setStyle("px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-surface-500 select-none")
   )
   const classOptionDisabled = computed(() => Select.setStyle("opacity-50 cursor-not-allowed"))
   // ---ISSUE 8 — aria-live announcement for filtered results count ---
@@ -832,14 +832,14 @@
             clear
             :class-body="[
               `m-2 mb-5 rounded-md`,
-              mode === 'outlined' ? 'ring-stone-200 dark:ring-black' : '',
-              mode === 'underlined' ? 'ring-stone-200 dark:ring-stone-950' : '',
-              mode === 'filled' ? 'ring-stone-100 dark:ring-stone-900' : '',
+              mode === 'outlined' ? 'ring-surface-200 dark:ring-black' : '',
+              mode === 'underlined' ? 'ring-surface-200 dark:ring-surface-950' : '',
+              mode === 'filled' ? 'ring-surface-100 dark:ring-surface-900' : '',
               'sticky top-2 z-20'
             ]"
             @focus="activeItem = -1">
             <template #before>
-              <Icons type="MagnifyingGlass" class="h-5 w-5 text-gray-400 dark:text-gray-600" />
+              <Icons type="MagnifyingGlass" class="h-5 w-5 text-surface-400 dark:text-surface-600" />
             </template>
           </Input>
           <TransitionGroup

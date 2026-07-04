@@ -233,9 +233,9 @@ describe("Menu Component", () => {
     })
 
     it.each([
-      { mode: "filled", expected: "bg-stone-100 dark:bg-stone-900 rounded-md" },
-      { mode: "outlined", expected: "bg-white dark:bg-neutral-950 rounded-md" },
-      { mode: "underlined", expected: "bg-stone-50 dark:bg-stone-950" }
+      { mode: "filled", expected: "bg-surface-100 dark:bg-surface-900 rounded-md" },
+      { mode: "outlined", expected: "bg-white dark:bg-surface-950 rounded-md" },
+      { mode: "underlined", expected: "bg-surface-50 dark:bg-surface-950" }
     ])(`should apply correct styles for mode: $mode`, async ({ mode, expected }) => {
       // Монтируем компонент с текущим значением mode
       const wrapper = mount(Menu, {
@@ -259,7 +259,7 @@ describe("Menu Component", () => {
       })
       await nextTick()
       expect((wrapper as any).vm.mode).toBe("outlined")
-      expect(wrapper.find("[data-menu]").classes().join(" ")).toContain("bg-white dark:bg-neutral-950 rounded-md")
+      expect(wrapper.find("[data-menu]").classes().join(" ")).toContain("bg-white dark:bg-surface-950 rounded-md")
     })
 
     it("should throw a warning for invalid mode value", () => {
@@ -939,6 +939,90 @@ describe("Menu Component", () => {
       await nextTick()
       const fw = wrapper.findComponent(FixWindow)
       expect(fw.props("position")).toBe("left")
+    })
+  })
+
+  // ---B10 — semantic surface tokens вместо hardcoded gray-family classes -------------------------
+  describe("Menu Component - B10 semantic surface tokens", () => {
+    const legacyGrayFamily = /\b(?:bg|text|border|ring|divide)-(?:neutral|stone|zinc|slate|gray)-\d+/
+
+    it.each([
+      { mode: "filled", expected: "bg-surface-100 dark:bg-surface-900 rounded-md" },
+      { mode: "outlined", expected: "bg-white dark:bg-surface-950 rounded-md" },
+      { mode: "underlined", expected: "bg-surface-50 dark:bg-surface-950" }
+    ])("mode: $mode uses surface-family background (not neutral/stone)", async ({ mode, expected }) => {
+      const wrapper = mount(Menu, {
+        props: { mode: mode as StyleMode, groups: [{}] }
+      })
+      await nextTick()
+      const cls = wrapper.find("[data-menu]").classes().join(" ")
+      expect(cls).toContain(expected)
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("root border + text use surface-family (not neutral/zinc)", async () => {
+      const wrapper = mount(Menu, { props: { groups: [{ items: [{ title: "A" }] }] } })
+      await nextTick()
+      const cls = wrapper.find("[data-menu]").classes()
+      expect(cls).toContain("border-surface-200")
+      expect(cls).toContain("dark:border-surface-800")
+      expect(cls).toContain("dark:text-surface-300")
+      expect(cls.join(" ")).not.toMatch(legacyGrayFamily)
+    })
+
+    it("separator icon uses surface-family text (not neutral)", async () => {
+      const wrapper = mount(Menu, {
+        props: {
+          groups: [
+            { title: "G1", items: [{ title: "A" }] },
+            { title: "G2", separator: { icon: "chevron-right" }, items: [{ title: "B" }] }
+          ]
+        }
+      })
+      await nextTick()
+      await flushHero()
+      const icon = wrapper.find("[data-separator] svg")
+      expect(icon.exists()).toBe(true)
+      expect(icon.classes()).toContain("text-surface-200")
+      expect(icon.classes()).toContain("dark:text-surface-800")
+      expect(icon.classes().join(" ")).not.toMatch(legacyGrayFamily)
+    })
+
+    it("group title uses surface-family text (not neutral)", async () => {
+      const wrapper = mount(Menu, {
+        props: { groups: [{ title: "Group 1", items: [{ title: "A" }] }] }
+      })
+      await nextTick()
+      const cls = wrapper.find("[data-menu-group-title]").classes()
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-500")
+      expect(cls.join(" ")).not.toMatch(legacyGrayFamily)
+    })
+
+    it("active row state uses surface-family background (not neutral)", async () => {
+      const wrapper = mount(Menu, {
+        props: { groups: [{ items: [{ title: "A" }] }] }
+      })
+      await nextTick()
+      const menuItem = wrapper.find("[data-menu-item]")
+      await menuItem.trigger("pointerenter")
+      const cls = menuItem.classes()
+      expect(cls).toContain("bg-surface-200/50")
+      expect(cls).toContain("dark:bg-surface-700/50")
+      expect(cls.join(" ")).not.toMatch(legacyGrayFamily)
+    })
+
+    it("selected row state uses surface-family background (not neutral)", async () => {
+      const wrapper = mount(Menu, {
+        props: { selected: true, groups: [{ items: [{ title: "A" }] }] }
+      })
+      await nextTick()
+      const menuItem = wrapper.find("[data-menu-item]")
+      await menuItem.trigger("click")
+      const cls = menuItem.classes()
+      expect(cls).toContain("bg-surface-200")
+      expect(cls).toContain("dark:bg-surface-700")
+      expect(cls.join(" ")).not.toMatch(legacyGrayFamily)
     })
   })
 })

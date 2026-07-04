@@ -200,7 +200,7 @@
   const classBase = computed(() => Form.setStyle([options?.class ?? "", props.class ?? ""]))
   const classStructure = computed(() =>
     Form.setStyle([
-      "border-b border-gray-900/10 dark:border-gray-100/10 pb-6 print:border-black",
+      "border-b border-surface-900/10 dark:border-surface-100/10 pb-6 print:border-black",
       options?.structureClass ?? "",
       props?.structureClass ?? ""
     ])
@@ -213,9 +213,9 @@
     ])
   )
   const classItemGrid = ref(Form.setStyle("grid motion-safe:transition"))
-  const classBeforeSlot = ref(Form.setStyle("flex select-none items-center text-gray-500 sm:text-sm"))
+  const classBeforeSlot = ref(Form.setStyle("flex select-none items-center text-surface-500 sm:text-sm"))
   // RTL: логические margins (ms/me) вместо физических ml/mr — авто-флип при dir="rtl" (Issue 9 / F31)
-  const classAfterSlot = ref(Form.setStyle("ms-1 me-3 text-gray-400 dark:text-gray-600 select-none"))
+  const classAfterSlot = ref(Form.setStyle("ms-1 me-3 text-surface-400 dark:text-surface-600 select-none"))
   const classFooter = ref(Form.setStyle("mt-3 flex items-center justify-end gap-x-6"))
   // ---EXPOSE------------------------------
   defineExpose({
@@ -518,7 +518,7 @@
                         <Icons
                           v-if="(field as FieldUseInputLayout)?.insert?.beforeIcon"
                           :type="(field as FieldUseInputLayout)?.insert?.beforeIcon ?? ''"
-                          class="me-2 h-5 w-5 text-gray-400 dark:text-gray-600" />
+                          class="me-2 h-5 w-5 text-surface-400 dark:text-surface-600" />
                         <span v-if="(field as FieldUseInputLayout)?.insert?.beforeText" :class="classBeforeSlot">
                           {{ (field as FieldUseInputLayout)?.insert?.beforeText }}
                         </span>
@@ -530,7 +530,7 @@
                         <Icons
                           v-if="(field as FieldUseInputLayout)?.insert?.afterIcon"
                           :type="(field as FieldUseInputLayout)?.insert?.afterIcon ?? ''"
-                          class="me-2 h-5 w-5 text-gray-400 dark:text-gray-600" />
+                          class="me-2 h-5 w-5 text-surface-400 dark:text-surface-600" />
                       </template>
                       <template #footerPicker>
                         <slot

@@ -1,7 +1,7 @@
 ---
 title: Issues — Accordion
-summary: Аудит Accordion — XSS / ARIA / keyboard / animation закрыты 2026-05-11; dual-API / SSR+sideEffects+unstyled / RTL / motion-safe / root-ref-expose закрыты 2026-06-14. Остаётся только B10 (semantic tokens / high-contrast) — deferred на Wave 9.
-updated: 2026-06-14
+summary: Аудит Accordion — XSS / ARIA / keyboard / animation закрыты 2026-05-11; dual-API / SSR+sideEffects+unstyled / RTL / motion-safe / root-ref-expose закрыты 2026-06-14; B10 semantic-tokens (color) закрыт 2026-07-04. Остаётся только high-contrast/forced-colors часть B10 — отдельный открытый a11y-gap.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/accordion/
 related-doc: ../components/accordion.md
@@ -16,11 +16,13 @@ related-doc: ../components/accordion.md
 | critical | 0 | ~~C13~~ ✅ |
 | high | 0 | ~~P (dual-API)~~ ✅, ~~C17~~ ✅, ~~E29.1/29.2~~ ✅ |
 | medium | 0 | ~~F31~~ ✅, ~~G34~~ ✅ |
-| low | 1 | B10 (deferred Wave 9); ~~E29.7~~ ✅, ~~F30~~ N/A |
+| low | 1 | B10 — high-contrast/forced-colors часть остаётся открытой (color-часть закрыта 2026-07-04); ~~E29.7~~ ✅, ~~F30~~ N/A |
 
 **Закрыто 2026-05-11** в `fix(accordion): close XSS in subtitle, add WAI-ARIA disclosure + keyboard nav, transition unmount`: Issues 1 (critical), 3 (high), 4 (high), 6 (medium). Подробности — в зачёркнутых блоках ниже.
 
-**Закрыто 2026-06-14** в `feat(accordion): compound <AccordionItem> API + RTL/motion-safe a11y + root-ref expose`: Issue 2 (P, dual-API), Issue 5 (C17/A2/L53), Issue 7 частично (E29.7 motion-safe, F31 RTL, F30 i18n → N/A), G34 (root-ref expose). Остаётся **только B10** (semantic tokens / high-contrast) — отложен на Wave 9 (требует расширения theme-engine, решается скоординированно по всем компонентам).
+**Закрыто 2026-06-14** в `feat(accordion): compound <AccordionItem> API + RTL/motion-safe a11y + root-ref expose`: Issue 2 (P, dual-API), Issue 5 (C17/A2/L53), Issue 7 частично (E29.7 motion-safe, F31 RTL, F30 i18n → N/A), G34 (root-ref expose).
+
+**Закрыто 2026-07-04:** B10 color-часть — hardcoded `slate-*` заменены на семантический токен `surface-*` (см. ниже). Остаётся **только** high-contrast/forced-colors часть B10 — отдельный, не закрытый этим изменением a11y-gap (см. подробности в блоке B10 ниже).
 
 ## ~~Issue 1: CRITICAL — XSS через `item.subtitle` v-html~~ ✅ resolved 2026-05-11
 
@@ -108,7 +110,7 @@ Root обёрнут в `<Transition :css="false">` с JS `@leave` hook `onRootLe
 
 ## Issue 7: prefers-reduced-motion / RTL / colors / labels-i18n
 
-Раздроблено по под-категориям; accordion-локальная часть закрыта 2026-06-14, остаётся только B10.
+Раздроблено по под-категориям; accordion-локальная часть закрыта 2026-06-14. B10 color-часть закрыта 2026-07-04, high-contrast/forced-colors часть B10 остаётся открытой.
 
 ### ~~E29.7 — prefers-reduced-motion~~ ✅ resolved 2026-06-14
 
@@ -122,11 +124,23 @@ Root обёрнут в `<Transition :css="false">` с JS `@leave` hook `onRootLe
 
 У Accordion нет собственных статичных текстовых лейблов (весь текст приходит через `dataSource`/`<AccordionItem>` props или slots) — локализовать нечего.
 
-### B10 — semantic tokens / high-contrast — **остаётся открытым**
+### ~~B10 (color/semantic-token part)~~ ✅ resolved 2026-07-04
 
-- **Severity:** low
-- **Статус:** deferred → **Wave 9** (semantic tokens + dark mode).
-- Hardcoded `slate-*` (`text-slate-800`, `divide-slate-200`, `fill-slate-600` и т.д.) и отсутствие `forced-colors`/high-contrast outline. Решается скоординированно по всем 22 компонентам через расширение theme-engine (`bg-surface`/`border-border`/`text-foreground`), **не** accordion-локально. См. [issues/README.md](../README.md) Wave 9.
+- **Категория:** semantic tokens
+- **Severity:** ~~low~~
+- **Где:** [Accordion.vue:115](../../lib/accordion/Accordion.vue#L115) (divider), [:126](../../lib/accordion/Accordion.vue#L126) (title), [:130](../../lib/accordion/Accordion.vue#L130) (subtitle/panel), [:138](../../lib/accordion/Accordion.vue#L138) (trigger icon + group-hover), [:140](../../lib/accordion/Accordion.vue#L140) (Plus-icon fill).
+
+#### Что было найдено
+
+Hardcoded `slate-*` color-primitive классы вместо семантического design-токена: `divide-slate-200`/`dark:divide-slate-800` (divider), `text-slate-800`/`dark:text-slate-300` (title), `text-slate-600`/`dark:text-slate-400` (subtitle), `text-slate-400`/`dark:text-slate-500` + `group-hover/item:text-slate-500`/`dark:group-hover/item:text-slate-400` (trigger icon), `fill-slate-600`/`dark:fill-slate-500` (Plus-иконка).
+
+#### Что было сделано
+
+Все `slate-*` классы переведены на новый именованный цвет `surface` (23-й named color в [primitive.ts](../../lib/theme/primitive.ts), по умолчанию — точная копия `gray`-шкалы; включён в `namesColors` union в [Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)) с сохранением тех же числовых tone: `divide-surface-200`/`dark:divide-surface-800`, `text-surface-800`/`dark:text-surface-300`, `text-surface-600`/`dark:text-surface-400`, `text-surface-400`/`dark:text-surface-500` + `group-hover/item:text-surface-500`/`dark:group-hover/item:text-surface-400`, `fill-surface-600`/`dark:fill-surface-500`. Rename без изменения визуального значения (не value change). Тест-блок «Theming — semantic surface tokens, not hardcoded slate-* (B10)» (5 кейсов) в [Accordion.test.ts](../../lib/accordion/Accordion.test.ts) — green.
+
+#### Остаётся открытым: high-contrast / `forced-colors`
+
+Проверено эмпирически (`grep forced-colors lib/accordion/Accordion.vue` — 0 совпадений): `forced-colors:outline`/high-contrast media query в Accordion.vue **отсутствует**. Это отдельный, не связанный с color-token rename a11y-gap (Windows High Contrast Mode / `forced-colors: active` не получает явный outline на фокусируемых элементах). Не входит в скоуп этого изменения — остаётся как открытый пункт для отдельной задачи. Severity **low**.
 
 ## ~~Issue 8: G34 — root element ref не экспонируется~~ ✅ resolved 2026-06-14
 
@@ -144,7 +158,7 @@ Root обёрнут в `<Transition :css="false">` с JS `@leave` hook `onRootLe
 | `componentsOptions.Accordion` | ✅ | items, multiple, и др. |
 | `componentsStyle` global | ✅ | fallback `options?.class*` в каждом `setStyle`-computed |
 | `unstyled: true` | ✅ | guard в `Component.setStyle()` (Wave 3.1) — наследуется |
-| Theme tokens vs hardcode | ⚠️ | B10 — deferred Wave 9 (см. Issue 7) |
+| Theme tokens vs hardcode | ✅ | B10 color-часть resolved 2026-07-04 (`slate-*` → `surface-*`); forced-colors/high-contrast — отдельный открытый a11y-gap, см. Issue 7 |
 | `t()` для текста | N/A | через items / `<AccordionItem>` props |
 
 ## Dual-API gap

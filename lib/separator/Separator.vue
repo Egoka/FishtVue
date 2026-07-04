@@ -74,8 +74,8 @@
   const classLineLeft = computed<StyleClass>(() =>
     Separator.setStyle([
       gradient.value ? (vertical.value ? "bg-gradient-to-b" : "bg-gradient-to-r rtl:bg-gradient-to-l") : "",
-      "from-transparent via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800",
-      "bg-neutral-200 dark:bg-neutral-800",
+      "from-transparent via-surface-200 dark:via-surface-800 to-surface-200 dark:to-surface-800",
+      "bg-surface-200 dark:bg-surface-800",
       "rounded-l-[2px]",
       options?.classLine ?? "",
       props?.classLine ?? "",
@@ -85,7 +85,7 @@
   )
   const classContent = computed<StyleClass>(() =>
     Separator.setStyle([
-      "min-w-max text-sm text-gray-500",
+      "min-w-max text-sm text-surface-500",
       slots?.default ? "mx-1" : "",
       options?.classContent ?? "",
       props?.classContent ?? "",
@@ -106,8 +106,8 @@
   const classLineRight = computed<StyleClass>(() =>
     Separator.setStyle([
       gradient.value ? (vertical.value ? "bg-gradient-to-t" : "bg-gradient-to-l rtl:bg-gradient-to-r") : "",
-      "from-transparent via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800",
-      "bg-neutral-200 dark:bg-neutral-800",
+      "from-transparent via-surface-200 dark:via-surface-800 to-surface-200 dark:to-surface-800",
+      "bg-surface-200 dark:bg-surface-800",
       "rounded-r-[2px]",
       options?.classLine ?? "",
       props?.classLine ?? "",

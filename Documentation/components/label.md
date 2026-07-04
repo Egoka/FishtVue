@@ -182,8 +182,8 @@ const store = useFormStore()
 
 ### 10.3 Theming
 
-- Цвет текста по умолчанию — `text-gray-400 dark:text-gray-500` ([Label.vue:52](../../lib/label/Label.vue#L52)). Required-маркер — `text-red-500 dark:text-red-800` ([Label.vue:44](../../lib/label/Label.vue#L44)).
-- Hard-coded — не подхватывает `theme.semantic.primary`. CSS custom properties для px-смещений — Wave 3.3 (Theme runtime API, см. [issues/label.md Issue 5](../issues/label.md)).
+- Цвет текста по умолчанию — `text-surface-400 dark:text-surface-500` ([Label.vue:57](../../lib/label/Label.vue#L57)) — semantic-token (Issue 11 / B10, resolved 2026-07-04; ранее хардкоднутый `gray-*`). Required-маркер — `text-red-500 dark:text-red-800` ([Label.vue:44](../../lib/label/Label.vue#L44)).
+- `surface` — семантический design-token (см. [theme.md §3.1](../architecture/theme.md)), default = точная копия `gray`-шкалы — переход не меняет визуал, но подключает цвет к theme-token indirection. CSS custom properties для px-смещений — Wave 3.3 (Theme runtime API, см. [issues/label.md Issue 5](../issues/label.md)).
 
 ### 10.4 CSS layer override
 

@@ -1,7 +1,7 @@
 ---
 title: Select
 summary: Single/multiple select с фильтрацией (Intl.Collator), schema + compound API (<SelectOption>/<SelectGroup>), RTL (logical props), keyboard nav (Arrow/Home/End/typeahead), slot'ами values/item/marker/empty.
-updated: 2026-06-20
+updated: 2026-07-04
 stability: stable
 since: 0.2.11
 ---
@@ -161,7 +161,7 @@ const countries = [
   <template #item="{ item, isQuery }">
     <div class="flex gap-2">
       <span>{{ item.email }}</span>
-      <span class="text-gray-500">({{ item.role }})</span>
+      <span class="text-surface-500 dark:text-surface-400">({{ item.role }})</span>
     </div>
   </template>
 </Select>

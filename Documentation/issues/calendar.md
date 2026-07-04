@@ -1,7 +1,7 @@
 ---
 title: Issues — Calendar
-summary: 6/10 issues закрыты — memory leaks (MutationObserver disconnect + keydown cleanup), componentsStyle fallback, locale propagation, Wave 2.3 dup initStyle, + Wave 2.1 packaging (Issue 2 v-calendar → optional peer + lazy, Issue 3 vue → peer) + Wave 5 floating-ui (Issue 9, inherited от FixWindow). Открытые — SSR-packaging cross-cutting (Issue 4), dual-API (5), unstyled (7, framework-level), RTL/print/motion (10).
-updated: 2026-07-02
+summary: 6/10 issues закрыты — memory leaks (MutationObserver disconnect + keydown cleanup), componentsStyle fallback, locale propagation, Wave 2.3 dup initStyle, + Wave 2.1 packaging (Issue 2 v-calendar → optional peer + lazy, Issue 3 vue → peer) + Wave 5 floating-ui (Issue 9, inherited от FixWindow) + B10 color-часть Issue 10 (hardcoded gray-*/stone-*/slate-* → semantic surface-* tokens). Открытые — SSR-packaging cross-cutting (Issue 4), dual-API (5), unstyled (7, framework-level), Issue 10 остаток (E29.7/N59/F31 — print/RTL/motion, cross-cutting).
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/calendar/
 related-doc: ../components/calendar.md
@@ -16,7 +16,7 @@ related-doc: ../components/calendar.md
 | critical | 0 | — |
 | high | 3 | A2, A4-5 (packaging — Issue 4), C17 (SSR), L53 (unstyled — framework-level), P (dual-API) |
 | medium | 2 | F31, G34 |
-| low | 3 | E29.7, B10, N59 |
+| low | 2 | E29.7, N59 |
 
 ## ~~Issue 1: CRITICAL — MutationObserver на documentElement не disconnect'ится при unmount~~ ✅ resolved 2026-05-11
 
@@ -268,10 +268,22 @@ Picker открывается через `<FixWindow v-bind="paramsFixWindow">`.
 
 ## Issue 10: prefers-reduced-motion, print, colors hardcode, RTL
 
-> **Status:** deferred — cross-cutting (затрагивает все 22 компонента). См. [button.md](./button.md), [switch.md](./switch.md).
+> **Status:** частично deferred — cross-cutting (затрагивает все 22 компонента). См. [button.md](./button.md), [switch.md](./switch.md). **B10 — resolved 2026-07-04** (см. подраздел ниже), остаётся **только** E29.7/N59/F31.
 
-- **Категория:** E29.7, N59, B10, F31
+- **Категория:** E29.7, N59, F31
 - **Severity:** low
+
+### ~~B10 — hardcoded gray-*/stone-*/slate-* → semantic surface-* tokens~~ ✅ resolved 2026-07-04
+
+- **Где (was):** [Calendar.vue:172, 175, 183, 185, 187, 195, 392, 396](../../lib/calendar/Calendar.vue#L172) — структурные классы `classDateText`, `classPicker`, `classPlaceholder` + inline separator-иконки в шаблоне.
+- **Что сделано:** все hardcoded `gray-*`/`stone-*`/`slate-*` классы FishtVue-обёртки заменены на `surface-*` того же числового tone (family rename, не value change) — новый именованный цвет `surface` в [lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317) (дефолт = точная копия `gray`), тип в [lib/theme/Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187). Мигрировано: `text-gray-900`/`dark:text-gray-100` + `placeholder:text-gray-400`/`placeholder:dark:text-gray-600` (date text/placeholder), `border-gray-300`/`dark:border-gray-600` (outlined border), `border-gray-300`/`dark:border-gray-700` (underlined border), `bg-stone-100`/`dark:bg-stone-900` (filled background), `bg-stone-50`/`dark:bg-stone-950` (underlined background), `text-gray-400`/`dark:text-gray-600` (placeholder icon), `text-slate-500`/`dark:text-slate-500` (disabled state — несколько мест), `text-gray-400`/`dark:text-gray-400` и `text-gray-600`/`dark:text-gray-400` (separator icons, conditional). v-calendar's own internal theming (`--vc-accent-*`, `vc-primary` — [Calendar.vue:475-486](../../lib/calendar/Calendar.vue#L475-L486)) **не тронуто** — это отдельная, несвязанная с FishtVue theme палитра v-calendar.
+- **Тесты:** [Calendar.test.ts](../../lib/calendar/Calendar.test.ts) — обновлён блок «Calendar Component - Mode Variants» (ожидает `surface-*` вместо `gray-*`/`stone-*`) + новый блок «B10 — semantic surface-* tokens (2026-07-04)» (4 кейса: source-scan на отсутствие `gray-*`/`stone-*`/`slate-*`/`zinc-*`/`neutral-*`, source-scan на присутствие всех мигрированных `surface-*`, DOM-assertion по режимам, control-check что `--vc-accent-*`/`vc-primary` не тронуты).
+
+### Acceptance criteria (B10)
+
+- [x] Нет `gray-*`/`stone-*`/`slate-*`/`zinc-*`/`neutral-*` классов FishtVue-обёртки в [Calendar.vue](../../lib/calendar/Calendar.vue).
+- [x] `surface-*` классы того же числового tone рендерятся для каждого `mode` (`outlined`/`filled`/`underlined`) и для disabled/separator состояний.
+- [x] v-calendar's own `--vc-accent-*`/`vc-primary` theming не изменено.
 
 ## Cross-cutting: Configuration support
 

@@ -1,7 +1,7 @@
 ---
 title: Issues — Input
-summary: Аудит Input. Все 14/14 issues закрыты. 11 закрыты 2026-05-11 (initStyle dedup, componentsStyle fallback, password-toggle override, extended types, phoneFormats prop/option, autocomplete defaults, motion-safe, argless focus, print styles, RTL test, emit semantics docs). 2 cross-cutting закрыты 2026-06-13 (doc-sync к Wave 2.1/3.1 — packaging `sideEffects`+`exports` map и `unstyled` guard уже в каноне; добавлен Input-scoped unstyled regression-тест). Issue 14 закрыт 2026-06-13 (вспышка один кадр при mount/фокусе — широкий `motion-safe:transition-all` на инпуте → узкий `motion-safe:transition-colors`; пересмотрен acceptance Issue 9, E29.7 сохранён).
-updated: 2026-06-13
+summary: Аудит Input. Все 15/15 issues закрыты. 11 закрыты 2026-05-11 (initStyle dedup, componentsStyle fallback, password-toggle override, extended types, phoneFormats prop/option, autocomplete defaults, motion-safe, argless focus, print styles, RTL test, emit semantics docs). 2 cross-cutting закрыты 2026-06-13 (doc-sync к Wave 2.1/3.1 — packaging `sideEffects`+`exports` map и `unstyled` guard уже в каноне; добавлен Input-scoped unstyled regression-тест). Issue 14 закрыт 2026-06-13 (вспышка один кадр при mount/фокусе — широкий `motion-safe:transition-all` на инпуте → узкий `motion-safe:transition-colors`; пересмотрен acceptance Issue 9, E29.7 сохранён). Issue 15 закрыт 2026-07-04 (B10 hardcode — `text-gray-900`/`dark:text-gray-100`, `focus:placeholder:text-gray-400`/`focus:placeholder:dark:text-gray-500` и база `text-gray-400`/`dark:text-gray-600` password-toggle иконки мигрированы на новый semantic-токен `surface`, та же числовая шкала).
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/input/
 related-doc: ../components/input.md
@@ -18,7 +18,7 @@ related-doc: ../components/input.md
 | medium   | 0            | — (все закрыты)     |
 | low      | 0            | — (все закрыты)     |
 
-Закрытые 2026-05-11: Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (4 high + 5 medium + 3 low). Закрытые 2026-06-13: Issues 3, 4 (2 cross-cutting high — doc-sync к Wave 2.1 / 3.1, фиксы уже в каноне) + Issue 14 (1 low — outline-flash при фокусе).
+Закрытые 2026-05-11: Issues 1, 2, 5, 6, 7, 8, 9, 10, 11, 12, 13 (4 high + 5 medium + 3 low). Закрытые 2026-06-13: Issues 3, 4 (2 cross-cutting high — doc-sync к Wave 2.1 / 3.1, фиксы уже в каноне) + Issue 14 (1 low — outline-flash при фокусе). Закрытые 2026-07-04: Issue 15 (1 medium — B10 hardcode gray-\* → surface-\*, doc-gap: не был занумерован при первом аудите).
 
 > **Файл остаётся active** (не перенесён в `./done/`) — зеркало Pagination/Form/Split: все numbered issues закрыты (0/0/0/0), но сохраняются deferred cross-cutting вне матрицы: runtime theme switch (Wave 3.3) и locale auto-binding `phoneFormats` (см. Issue 7 deferred + Configuration support ниже).
 
@@ -207,6 +207,27 @@ related-doc: ../components/input.md
 - **Связь с Issue 9:** acceptance Issue 9 (motion-safe transitions) пересмотрен — тест `Issue 9 — motion-safe transitions` теперь требует `motion-safe:transition-colors` (узкий) и **запрещает** `transition-all`. Requirement E29.7 (reduced-motion) выполняется по-прежнему.
 - **Verified:** browser-preview — `getComputedStyle(input).transitionProperty` = color-список (не `all`), outline вне transition-набора; `pnpm typecheck` + Input suite (43) зелёные.
 
+## ~~Issue 15: Хардкоженные `gray-*` classes вместо semantic-токена~~ ✅ resolved 2026-07-04
+
+- **Категория:** B10 (hardcode)
+- **Severity:** ~~medium~~
+- **Где:** [Input.vue:85-86](../../lib/input/Input.vue#L85-L86) (`classBaseInput`), [Input.vue:98](../../lib/input/Input.vue#L98) (`classPasswordToggle`)
+- **Симптом:** `classBaseInput` использовал захардкоженные Tailwind color-primitive классы `text-gray-900`/`dark:text-gray-100` (цвет текста инпута) и `focus:placeholder:text-gray-400`/`focus:placeholder:dark:text-gray-500` (placeholder в фокусе) вместо design-token'а библиотеки. `classPasswordToggle` имел базовый цвет иконки `text-gray-400 dark:text-gray-600` (hover-часть `hover:text-theme-500 hover:dark:text-theme-700` уже была theme-token'ом, см. Issue 5). Проблема ранее не была занумерована как отдельный issue при аудите 2026-05-11 — doc-gap, только `Eye/EyeSlash`-хардкод (cyan) был описан в Issue 5.
+- **Resolution:**
+  1. Добавлен semantic-цвет `surface` (23-й именованный цвет, дефолт — точная копия шкалы `gray`) в [lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317) и в union `namesColors` в [lib/theme/Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187) — инфраструктура engine'а (вне scope этого issue, сделана отдельно).
+  2. `text-gray-900 dark:text-gray-100` → `text-surface-900 dark:text-surface-100` в `classBaseInput` ([Input.vue:85](../../lib/input/Input.vue#L85)).
+  3. `focus:placeholder:text-gray-400 focus:placeholder:dark:text-gray-500` → `focus:placeholder:text-surface-400 focus:placeholder:dark:text-surface-500` ([Input.vue:86](../../lib/input/Input.vue#L86)).
+  4. `text-gray-400 dark:text-gray-600` → `text-surface-400 dark:text-surface-600` в `classPasswordToggle` ([Input.vue:98](../../lib/input/Input.vue#L98)); `hover:text-theme-500 hover:dark:text-theme-700` оставлен нетронутым (уже theme-token из Issue 5).
+  5. Family rename, **не** value change — числовая тональность (900/100/400/500/600) идентична, поскольку `surface` дефолтится в точную копию `gray`-шкалы. Визуальной регрессии из коробки нет; библиотека получает точку расширения через `updateSurfacePalette()`.
+  6. Покрыто 3 regression-тестами в [Input.test.ts](../../lib/input/Input.test.ts) (describe `Issue 15 — B10 hardcode: gray-* → surface-* (design-token migration)`): `classBaseInput` содержит `text-surface-900`/`dark:text-surface-100` и не содержит `text-gray-900`/`dark:text-gray-100`; `classBaseInput` содержит `focus:placeholder:text-surface-400`/`focus:placeholder:dark:text-surface-500` и не содержит gray-варианты; `classPasswordToggle` содержит `text-surface-400`/`dark:text-surface-600` + сохранённый `hover:text-theme-500`/`hover:dark:text-theme-700`, не содержит `text-gray-400`/`dark:text-gray-600`.
+- **Note:** не путать с Issue 5 — там резолвился хардкоженный **cyan** цвет иконки (заменён на theme-token `hover:text-theme-500`), закрыт 2026-05-11. Этот issue — про структурный **gray**-хардкод (текст инпута + placeholder + база иконки), закрыт отдельно 2026-07-04 после появления `surface` в engine'е.
+
+### Acceptance criteria
+
+- [x] `classBaseInput` не содержит `text-gray-900`/`dark:text-gray-100`/`focus:placeholder:text-gray-400`/`focus:placeholder:dark:text-gray-500` — заменены на `surface-*` с той же тональностью.
+- [x] `classPasswordToggle` не содержит базовый `text-gray-400`/`dark:text-gray-600` — заменён на `surface-*`; `hover:text-theme-500`/`hover:dark:text-theme-700` сохранён без изменений.
+- [x] `pnpm typecheck` — без ошибок.
+
 ## Cross-cutting: Configuration support
 
 | Настройка                 | Поддержано? | Комментарий                                                                                                       |
@@ -214,7 +235,7 @@ related-doc: ../components/input.md
 | `componentsOptions.Input` | ✅          | mode/clear/class/classInput/**passwordToggleClass**/**phoneFormats**/**autocomplete** (расширено 2026-05-11)      |
 | `componentsStyle` global  | ✅          | Issue 2 closed — fallback chain `props ?? options ?? Input.componentsStyle() ?? "outlined"`                       |
 | `unstyled: true`          | ✅          | Issue 4 closed 2026-06-13 — guard `Component.setStyle()` ([index.ts:138](../../lib/component/index.ts#L138)) возвращает `""`; Input наследует cross-cutting Wave 3.1 |
-| Theme tokens vs hardcode  | ✅          | caret-theme-500, hover:text-theme-500/700 — все design-tokens (cyan-_ удалён)                                     |
+| Theme tokens vs hardcode  | ✅          | caret-theme-500, hover:text-theme-500/700 — все design-tokens (cyan-\* удалён Issue 5); text/placeholder gray-\* → surface-\* (Issue 15, 2026-07-04) |
 | Runtime theme switch      | ⚠️          | theme-tokens OK, остальное — Tailwind (Wave 3.3)                                                                  |
 | `t()` для текста          | N/A         | placeholder/label — пользовательские                                                                              |
 | Runtime locale switch     | ⚠️          | `phoneFormats` per-instance/option работает; auto-binding к locale — deferred (см. Issue 7 deferred-section)      |

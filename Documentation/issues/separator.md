@@ -1,7 +1,7 @@
 ---
 title: Issues — Separator
-summary: Аудит Separator — остался только B10 (semantic tokens, Wave 9). A4-5/C17/E29.1/F31/L53/A2 закрыты.
-updated: 2026-06-14
+summary: Аудит Separator — все пункты закрыты, включая B10 (semantic tokens). A4-5/C17/E29.1/F31/L53/A2/B10 закрыты.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/separator/
 related-doc: ../components/separator.md
@@ -16,9 +16,10 @@ related-doc: ../components/separator.md
 | critical | 0     | —          |
 | high     | 0     | —          |
 | medium   | 0     | —          |
-| low      | 1     | B10        |
+| low      | 0     | —          |
 
-**Закрыто 2026-06-14:** A4-5 (exports map — наследуется от root `buildRootExports()`, ✅ 2026-06-11), C17 (SSR styles — `Component.__hooks()` → `onServerPrefetch`, regression-probe именно на Separator в [ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts)), F31 (logical `contentPosition` start/end + deprecated left/right + dev-warn + RTL gradient — зеркало [button.md Issue 3](./button.md)). Остаётся только **B10** (semantic tokens → Wave 9) — файл остаётся active как трекер.
+**Закрыто 2026-07-04:** B10 (semantic tokens) — `via-neutral-*`/`to-neutral-*`/`bg-neutral-*` (line gradient/fallback) и `text-gray-500` (content) мигрированы на `surface-*` family (тот же numeric tone, family rename без изменения значения) через новый semantic-слот `surface` в [lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317). Файл остаётся как исторический трекер (без открытых пунктов).
+**Закрыто 2026-06-14:** A4-5 (exports map — наследуется от root `buildRootExports()`, ✅ 2026-06-11), C17 (SSR styles — `Component.__hooks()` → `onServerPrefetch`, regression-probe именно на Separator в [ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts)), F31 (logical `contentPosition` start/end + deprecated left/right + dev-warn + RTL gradient — зеркало [button.md Issue 3](./button.md)).
 **Закрыто 2026-06-06:** A2 (per-component `sideEffects`), E29.1 (`role="separator"` + `aria-orientation`), L53 (`unstyled` — regression-тест к cross-cutting guard). E29.7 (motion) — N/A (нет анимаций). Зачёркнуто ниже с `✅ resolved`-маркерами.
 
 ## Issue 1: SSR styles + sideEffects/exports map / unstyled
@@ -76,19 +77,33 @@ related-doc: ../components/separator.md
 ## Issue 4: prefers-reduced-motion / colors
 
 - **prefers-reduced-motion (E29.7):** N/A — Separator не использует `transition-*` / анимаций ([Separator.vue](../../lib/separator/Separator.vue)), guard'ить нечего.
-- **colors (B10):** ⏳ deferred → Wave 9 — `via-neutral-200 dark:via-neutral-800` / `bg-neutral-200 dark:bg-neutral-800` заменяются на semantic tokens cross-cutting.
+- **colors (B10):** ~~⏳ deferred → Wave 9~~ ✅ resolved 2026-07-04
+
+### ~~Что было~~
+
+`via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800` + `bg-neutral-200 dark:bg-neutral-800` (line gradient/fallback, [Separator.vue:77-78,109-110](../../lib/separator/Separator.vue#L77-L78)) и `text-gray-500` (content text, [Separator.vue:88](../../lib/separator/Separator.vue#L88)) — хардкоженные Tailwind color-primitive классы вместо semantic design-token.
+
+### Что было сделано
+
+Family rename (тот же numeric tone, значение не менялось) на новый `surface` semantic-слот ([lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317), дефолт — точная копия `gray`-шкалы; `namesColors` union в [Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)):
+
+- `via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800` → `via-surface-200 dark:via-surface-800 to-surface-200 dark:to-surface-800` ([Separator.vue:77,109](../../lib/separator/Separator.vue#L77))
+- `bg-neutral-200 dark:bg-neutral-800` → `bg-surface-200 dark:bg-surface-800` ([Separator.vue:78,110](../../lib/separator/Separator.vue#L78))
+- `text-gray-500` → `text-surface-500` ([Separator.vue:88](../../lib/separator/Separator.vue#L88))
+
+Regression-тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) describe "Semantic color tokens (Issue 4 / B10)": проверяют наличие `surface-*` классов на line-сегментах и content, и отсутствие `neutral-*`/`text-gray-*` в рендере.
 
 Cross-cutting motion-safe pattern (если анимации появятся) — [done/button.md Issue 10](./done/button.md).
 
 ## Cross-cutting: Configuration support
 
-| Настройка                     | Поддержано? | Комментарий                                   |
-| ----------------------------- | ----------- | --------------------------------------------- |
-| `componentsOptions.Separator` | ✅          | gradient, depth, contentPosition              |
-| `componentsStyle` global      | ❌          | Separator не имеет mode-enum, не пересекается |
-| `unstyled: true`              | ✅          | через `Component.setStyle()` guard (Issue 1)  |
-| Theme tokens vs hardcode      | ⚠️          | gradient/border colors частично хардкоден     |
-| `t()` для текста              | N/A         | content через slot                            |
+| Настройка                     | Поддержано? | Комментарий                                      |
+| ----------------------------- | ----------- | ------------------------------------------------- |
+| `componentsOptions.Separator` | ✅          | gradient, depth, contentPosition                 |
+| `componentsStyle` global      | ❌          | Separator не имеет mode-enum, не пересекается    |
+| `unstyled: true`              | ✅          | через `Component.setStyle()` guard (Issue 1)     |
+| Theme tokens vs hardcode      | ✅          | `surface-*` semantic tokens (B10, ✅ 2026-07-04)  |
+| `t()` для текста              | N/A         | content через slot                               |
 
 ## Dual-API gap
 

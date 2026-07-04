@@ -318,6 +318,29 @@ describe("Aria Component Tests", () => {
       const cls = wrapper.find("textarea").attributes("class") ?? ""
       expect(cls).toMatch(/print:/)
     })
+
+    // ---ISSUE 11 — B10 hardcode: gray-* → surface-* (design-token migration) -----------
+    describe("Issue 11 — B10 hardcode: gray-* → surface-* (design-token migration)", () => {
+      it("classInput uses surface-* for textarea text color, not hardcoded gray-*", () => {
+        resetGlobalFishtVue()
+        const wrapper = mount(Aria)
+        const cls = wrapper.find("textarea").attributes("class") ?? ""
+        expect(cls).toContain("text-surface-900")
+        expect(cls).toContain("dark:text-surface-100")
+        expect(cls).not.toMatch(/(?:^|\s)text-gray-900(?:\s|$)/)
+        expect(cls).not.toMatch(/(?:^|\s)dark:text-gray-100(?:\s|$)/)
+      })
+
+      it("classInput uses surface-* for focus placeholder color, not hardcoded gray-*", () => {
+        resetGlobalFishtVue()
+        const wrapper = mount(Aria)
+        const cls = wrapper.find("textarea").attributes("class") ?? ""
+        expect(cls).toContain("focus:placeholder:text-surface-400")
+        expect(cls).toContain("focus:placeholder:dark:text-surface-500")
+        expect(cls).not.toMatch(/(?:^|\s)focus:placeholder:text-gray-400(?:\s|$)/)
+        expect(cls).not.toMatch(/(?:^|\s)focus:placeholder:dark:text-gray-500(?:\s|$)/)
+      })
+    })
   })
 
   // ---ISSUE 2 — no duplicate initStyle (Wave 2.3) ------------------

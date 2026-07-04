@@ -1,8 +1,8 @@
 ---
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
-updated: 2026-07-02
-last-changes: 2026-07-02 (волна 2) — uno-engine: **закрыты Issues 5, 6; в Issues 2/4 закрыты дешёвые пункты** + фиксы Select/Split, вскрытые fail-closed'ом. **Issue 4 P1**: arbitrary properties `[prop:value]`/`[--var:value]` (новая ветка [tailwind.ts:70,203](../../lib/theme/unoStyle/tailwind.ts#L70); инъекция `{};` в value → drop) — канон-баг `[appearance:textfield]` ([Input.vue:88](../../lib/input/Input.vue#L88)/[Aria.vue:66](../../lib/aria/Aria.vue#L66)) закрыт, правило появилось в head; `space-x/y-*` ([unoRules.ts:672](../../lib/theme/unoStyle/unoRules.ts#L672), зеркало divide, +negative/reverse/arbitrary); `antialiased`/`subpixel-antialiased`. **Issue 2**: словарные v4-варианты (`optional:`, `user-valid/invalid:`, `inert:`, `details-content:`, `pointer-*`/`any-pointer-*`/`inverted-colors:`/`noscript:`), boolean `data-<name>:`, именованные `has-<state>:`/`group-has-<state>:` (fail-closed на неизвестное имя); остаток (not-*/nth-*/container queries/important/`**:`) — medium. **Issue 5 ✅** (решение владельца: дозаполнить v4-имена, шкалы НЕ мигрировать): `shadow-2xs/xs`, `drop-shadow-xs`, `outline-hidden` с v4-значениями; контракт диалекта («v3.4 + v4-расширения», таблица расхождений) — новый §3.1 в [architecture/theme.md](../architecture/theme.md). **Issue 6 ✅** (решение владельца: modern properties, v4-подход): `rotate:`/`scale:` — независимые CSS-свойства ([unoRules.ts:1102](../../lib/theme/unoStyle/unoRules.ts#L1102), [unoStatic.ts:9-10](../../lib/theme/unoStyle/unoStatic.ts#L9)), skew — единственный житель `transform:`, `transition`/`transition-transform` покрывают `transform, translate, scale, rotate`; двойной сдвиг `translate-*`+`rotate/scale` устранён; константа `baseTransform` удалена. **Намеренный CSS-diff sandbox** (8/24 тегов, визуальное поведение идентично — верифицировано computed styles: `rotate: 90deg` при `transform: none`, `scale: -1 1` при dir=rtl): Accordion −757 / Pagination −148 (цепочка → properties), Select/Form/Icons +23 (transition-список), Input +87 / Aria +63 (appearance-правило появилось), Split +343 ([Split.vue:86](../../lib/split/Split.vue#L86) — `ring-ring` (shadcn copy-paste, токена нет) → `ring-theme-600/700`, [split.md](./split.md) Issue 11 ✅ born-resolved); Select — guard `ms-[undefinedpx]` ([Select.vue:811](../../lib/select/Select.vue#L811), [select.md](./select.md) Issue 12 ✅ born-resolved). NEW [v4Extensions.test.ts](../../lib/theme/unoStyle/v4Extensions.test.ts) (65 кейсов) + намеренный re-baseline transform-ожиданий (Uno.test/Uno.improved/failClosed). Полный suite 5491 passed (55 файлов), typecheck 0 errors. Матрица uno-engine 0/0/4/0 → 0/0/2/0; TOTAL medium 34 → 32.
+updated: 2026-07-04
+last-changes: 2026-07-04 — Wave 9 (B10), первый батч: движок — `surface` добавлен как 23-й именованный цвет в [primitive.ts](../../lib/theme/primitive.ts) (дефолт — копия `gray`) + `namesColors` в [Theme.d.ts](../../lib/theme/Theme.d.ts), без правок `unoRules.ts` (regex строятся динамически из `Object.keys(colors)`) — [theme.md Issue 10](./theme.md). 11 компонентов мигрированы с хардкода `gray-*`/`stone-*`/`neutral-*`/`slate-*`/`zinc-*` на `surface-*`: Menu, Accordion, Icons, Select, TextEditor (+ HEX-in-style-block → CSS-var), Separator, Calendar, Input, Form, Label (новый `issues/label.md`), Aria. Menu/Icons/Separator дошли до matrix `0/0/0/0` → переехали в «Завершённые». TOTAL low 22 → 17, medium 32 → 31, high 24 → 23 (см. таблицу ниже). **Residual (не входит в этот заход):** 8 компонентов с частичным B10-закрытием (forced-colors + theme-accent, структурные нейтрали остаются) — Split/Pagination/Table/Switch/Badge/InputLayout/FixWindow/Dialog; Alert (`green`/`yellow`/`blue`/`red` severity-цвета) — отдельный будущий эпик (semantic-intent, не структурный chrome, нужны новые semantic-слоты). Предыдущая запись (2026-07-02, волна 2 — uno-engine dialect extensions) — см. историю коммитов.
 ---
 
 # Issues — Index
@@ -20,22 +20,21 @@ last-changes: 2026-07-02 (волна 2) — uno-engine: **закрыты Issues 
 | Button      | [button.md](./button.md)           | 0        | 0      | 1      | 3      |
 | Label       | [label.md](./label.md)             | 0        | 1      | 2      | 0      |
 | Aria        | [aria.md](./aria.md)               | 0        | 1      | 1      | 1      |
-| Select      | [select.md](./select.md)           | 0        | 1      | 0      | 1      |
-| Calendar    | [calendar.md](./calendar.md)       | 0        | 3      | 2      | 3      |
-| TextEditor  | [texteditor.md](./texteditor.md)   | 0        | 5      | 4      | 3      |
+| Select      | [select.md](./select.md)           | 0        | 1      | 0      | 0      |
+| Calendar    | [calendar.md](./calendar.md)       | 0        | 3      | 2      | 2      |
+| TextEditor  | [texteditor.md](./texteditor.md)   | 0        | 4      | 4      | 3      |
 | Table       | [table.md](./table.md)             | 0        | 0      | 1      | 1      |
-| Separator   | [separator.md](./separator.md)     | 0        | 0      | 0      | 1      |
 | Accordion   | [accordion.md](./accordion.md)     | 0        | 0      | 0      | 1      |
-| Menu        | [menu.md](./menu.md)               | 0        | 0      | 0      | 1      |
 | Alert       | [alert.md](./alert.md)             | 0        | 0      | 0      | 1      |
 | Loading     | [loading.md](./loading.md)         | 0        | 0      | 0      | 1      |
-| Icons       | [icons.md](./icons.md)             | 0        | 0      | 0      | 1      |
-| Theme       | [theme.md](./theme.md)             | 0        | 3      | 4      | 2      |
+| Theme       | [theme.md](./theme.md)             | 0        | 3      | 3      | 2      |
 | Uno engine  | [uno-engine.md](./uno-engine.md)   | 0        | 0      | 2      | 0      |
 | Locale      | [locale.md](./locale.md)           | 0        | 3      | 4      | 2      |
 | Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0        | 5      | 4      | 2      |
 | Utilities   | [\_utilities.md](./_utilities.md)  | 0        | 1      | 0      | 1      |
-| **TOTAL**   | **28 active + 3 done**             | **0**    | **24** | **32** | **22** |
+| **TOTAL**   | **25 active + 6 done**             | **0**    | **23** | **31** | **17** |
+
+> **2026-07-04 — Wave 9 (B10), первый батч:** Menu, Icons, Separator закрыли последний открытый пункт (B10 — semantic surface token) и переехали в таблицу «Завершённые» ниже. Select/Calendar/TextEditor/Theme закрыли свою B10-часть, но остаются active — другие открытые issues не связаны с этим заходом. Accordion закрыл color-часть B10, но остаётся active — отдельный, не связанный с этим изменением gap (`forced-colors:outline` отсутствует). См. [theme.md Issue 10](./theme.md) и раздел «Wave 9 — Theming polish» ниже.
 
 ### Завершённые — matrix `0/0/0/0`
 
@@ -49,6 +48,9 @@ last-changes: 2026-07-02 (волна 2) — uno-engine: **закрыты Issues 
 | Badge           | [badge.md](./badge.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
 | InputLayout     | [inputlayout.md](./inputlayout.md)         | 0        | 0    | 0      | 0   | active/ ¹ |
 | Component class | [component-class.md](./component-class.md) | 0        | 0    | 0      | 0   | active/ ¹ |
+| Menu            | [menu.md](./menu.md)                       | 0        | 0    | 0      | 0   | active/ ¹ |
+| Icons           | [icons.md](./icons.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Separator       | [separator.md](./separator.md)             | 0        | 0    | 0      | 0   | active/ ¹ |
 | FixWindow       | [done/fixwindow.md](./done/fixwindow.md)   | 0        | 0    | 0      | 0   | done/     |
 | Dialog          | [done/dialog.md](./done/dialog.md)         | 0        | 0    | 0      | 0   | done/     |
 | Config          | [done/config.md](./done/config.md)         | 0        | 0    | 0      | 0   | done/     |
@@ -206,7 +208,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [x] [lib/theme/usePreset.ts](../../lib/theme/usePreset.ts) — полная замена пресета (`linksTheme`) + перезапись tokens-тега · ✅ 2026-07-02
 - [x] [lib/theme/updatePreset.ts](../../lib/theme/updatePreset.ts) — deepMerge поверх копии текущей темы + перезапись · ✅ 2026-07-02
 - [x] [lib/theme/updatePrimaryPalette.ts](../../lib/theme/updatePrimaryPalette.ts) — брендовый слот = цвет `theme` (`semantic.primary` → `--fv-theme-*` override; hex-палитра / `'{indigo.500}'`-refs / одиночный hex → `palette()`) · ✅ 2026-07-02
-- [x] [lib/theme/updateSurfacePalette.ts](../../lib/theme/updateSurfacePalette.ts) — `semantic.surface` → `--fv-surface-*` с `light`/`dark` scoping (dark → `darkModeSelector`/`prefers-color-scheme`); потребление компонентами — Wave 9 · ✅ 2026-07-02
+- [x] [lib/theme/updateSurfacePalette.ts](../../lib/theme/updateSurfacePalette.ts) — `semantic.surface` → `--fv-surface-*` с `light`/`dark` scoping (dark → `darkModeSelector`/`prefers-color-scheme`); потребление компонентами — первый батч 11/19 ✅ 2026-07-04, residual + Alert epic — см. Wave 9 ниже · ✅ 2026-07-02
 - [x] [lib/theme/$dt.ts](../../lib/theme/$dt.ts) — token metadata lookup (`{ name?, variable?, value }` по dot-path) · ✅ 2026-07-02
 - [x] `palette` — уже экспортировался из [lib/theme/index.ts](../../lib/theme/index.ts) (stale-пункт); добавлена `'{blue}'`-форма из публичного контракта · ✅ 2026-07-02
 - [x] [lib/theme/index.ts](../../lib/theme/index.ts) — re-export всех функций (+ типовые декларации в [Theme.d.ts](../../lib/theme/Theme.d.ts)) · ✅ 2026-07-02
@@ -393,10 +395,10 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **Estimated:** 1-2 sprint'а.
 **Зависимости:** Wave 3.3 (theme runtime API), Wave 3.4 (darkModeSelector).
 
-- [ ] Замена `gray-*` / `stone-*` / `neutral-*` / `red-*` / `green-*` Tailwind primitives на semantic tokens (`bg-surface`, `text-muted-foreground`, `border-border`) во всех компонентах · cross-cutting [switch.md Issue 12](./switch.md). **Прогресс:** canon-safe partial (forced-colors + preset-aware `theme-*` accents, нейтрали остаются) применён к Split/Pagination/Table/Form/**Switch**/**Badge** (✅ 2026-06-13; Badge — `forced-colors:outline`, `neutral-*` outline-contrast Issue 4 остаётся, [badge.md Issue 6](./badge.md)); полная `bg-surface`/`border-border` миграция ждёт theme-движок + runtime `usePreset`.
-- [ ] [theme/uno.ts](../../lib/theme/uno.ts) — определить semantic mappings · [theme.md](./theme.md)
-- [ ] [theme/primitive.ts](../../lib/theme/primitive.ts) (761 lines) — разбить на per-color файлы для tree-shake · [theme.md Issue 7](./theme.md)
-- [ ] [TextEditor.vue:380-398](../../lib/texteditor/TextEditor.vue#L380) — HEX hardcode → CSS-переменные · [texteditor.md Issue 2](./texteditor.md)
+- [x] Замена `gray-*` / `stone-*` / `neutral-*` / `slate-*` / `zinc-*` Tailwind primitives на semantic `surface` token во всех компонентах · cross-cutting [theme.md Issue 10](./theme.md). **2026-07-04 — движок:** `surface` добавлен как 23-й именованный цвет в [primitive.ts](../../lib/theme/primitive.ts) (дефолт — копия `gray`) + `namesColors` union в [Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187); `bg-surface-*`/`text-surface-*`/etc. работают через тот же `resolveColor()`, что и любой другой именованный цвет — правок `unoRules.ts` не потребовалось (regex строятся динамически из `Object.keys(colors)`). **Первый батч (11/19) мигрирован:** Menu, Accordion, Icons, Select, TextEditor (+ HEX-in-style-block → `var(--fv-surface-*)`), Separator, Calendar, Input, Form, Label, Aria — см. соответствующие `issues/<name>.md`. **Residual (не входит в этот заход):** 8 компонентов, ранее закрывших свой номерной B10 через `forced-colors`+preset-aware `theme-*` accent, но осознанно оставивших структурные нейтрали (Split, Pagination, Table, Switch, Badge, InputLayout, FixWindow, Dialog) — отдельное подтверждение. **Alert (`green`/`yellow`/`blue`/`red` severity-цвета) — отдельный будущий эпик**, вне scope этой волны: это semantic-intent цвета (success/warning/info/error), не структурный chrome — нужны собственные новые semantic-слоты + runtime update-функции, а не rename на `surface`.
+- [ ] [theme/uno.ts](../../lib/theme/uno.ts) — определить semantic mappings · [theme.md](./theme.md) (не проверялось в рамках 2026-07-04 захода — не путать с `surface`-токеном выше, объём неясен)
+- [ ] [theme/primitive.ts](../../lib/theme/primitive.ts) (776 lines) — разбить на per-color файлы для tree-shake · [theme.md Issue 7](./theme.md)
+- [x] [TextEditor.vue:384-398](../../lib/texteditor/TextEditor.vue#L384) — HEX hardcode → `var(--fv-surface-*)` · [texteditor.md Issue 2](./texteditor.md) ✅ 2026-07-04
 - [ ] [Label.vue](../../lib/label/Label.vue) — translate-y px hardcode → CSS custom properties · [label.md Issue 5](./label.md)
 
 **Acceptance:** `usePreset(SapphireTheme)` визуально меняет ВСЕ компоненты в любом sandbox-page (visual regression test).
@@ -548,7 +550,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **RTL не поддерживается:** буквальные `left/right` во всех компонентах — Wave 8.1.
 **`prefers-reduced-motion` не учитывается:** Wave 10.1.
 ~~**Locale fallback chain отсутствует:**~~ ✅ resolved (fallback chain 2026-05-20 + interpolation/pluralization 2026-06-19 — Wave 3.5 закрыта; `Component.t(key, params?)`).
-**Hardcoded colors через Tailwind primitives:** Wave 9.
+**Hardcoded colors через Tailwind primitives:** Wave 9 — движок + первый батч (11/19 компонентов) ✅ 2026-07-04, residual (8 компонентов) + Alert semantic-intent epic остаются.
 **Dual-API gap для Table/Form/Select/~~Menu~~/~~Accordion~~:** Wave 6 (Menu ✅ 2026-06-06 — `<MenuItem>`/`<MenuGroup>`; Accordion ✅ 2026-06-14 — `<AccordionItem>`).
 
 ## 60-point audit checklist
