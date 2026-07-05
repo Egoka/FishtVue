@@ -1,7 +1,7 @@
 ---
 title: Issues — Badge
-summary: Аудит Badge — все issues закрыты (matrix 0/0/0/0). Packaging (A2/A4-5) + unstyled (L53) наследуют cross-cutting Wave 2.1/3.1; F31 (RTL logical padding) + B10 (forced-colors) сделаны в SFC 2026-06-13; E29.7 — N/A. Файл остаётся active как Wave 9 трекер (semantic-token neutral-*).
-updated: 2026-06-13
+summary: Аудит Badge — все issues закрыты (matrix 0/0/0/0). Packaging (A2/A4-5) + unstyled (L53) наследуют cross-cutting Wave 2.1/3.1; F31 (RTL logical padding) + B10 (forced-colors) сделаны в SFC 2026-06-13; B10 structural neutral-*→surface-* migration — 2026-07-05 (Wave 9 residual batch). Файл остаётся active как Wave 9 трекер.
+updated: 2026-07-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/badge/
 related-doc: ../components/badge.md
@@ -18,6 +18,8 @@ related-doc: ../components/badge.md
 | medium   | 0     | —          |
 | low      | 0     | —          |
 
+> 2026-07-05: **B10 residual — структурные `neutral-*` в outline-ветке мигрированы на `surface-*`.** [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `text-neutral-600 dark:text-neutral-200 ring-neutral-300 dark:ring-neutral-700` → `text-surface-600 dark:text-surface-200 ring-surface-300 dark:ring-surface-700`, тот же numeric tone. Часть Wave 9 residual-батча (Badge был в списке 8 компонентов с частичным B10-закрытием, см. [issues/README.md](../README.md)). WCAG-contrast свойство из Issue 4 не затронуто: `surface` — точная копия `gray` по умолчанию ([primitive.ts](../../lib/theme/primitive.ts)), рендерящийся hex byte-identical, меняется только token-словарь. +4 теста (`Badge.test.ts` 28 → 30, старые Issue-4-тесты также переведены на `surface-*`-assertions).
+>
 > 2026-06-13: **all Badge issues closed → matrix `0/0/0/0`.** Packaging A2/A4-5 (Issue 1) + unstyled L53 (Issue 3) наследуют cross-cutting Wave 2.1/3.1 (landed в каноне), per-component правок не потребовали — закрыты doc-sync + Badge-scoped unstyled regression-тестом. F31 (RTL `pl-1`/`pr-1` → `ps-1`/`pe-1`) + B10 (`forced-colors:outline`) сделаны в [Badge.vue](../../lib/badge/Badge.vue) (Issue 6); E29.7 — N/A (нет собственных transitions). +7 тестов (`Badge.test.ts` 21 → 28). Файл остаётся в `active/` как трекер [Wave 9](../README.md) (полная semantic-token миграция `neutral-*`), зеркало Switch/Input/Split.
 
 > 2026-05-10: **all Badge-SFC-specific work done.** Issues 2, 4, 5 resolved полностью; Issue 1 — C17 (per-SFC `onMounted` dup) удалён, packaging A2/A4-5 = cross-cutting в [lib/package.json](../../lib/package.json) под [Wave 2.1](../README.md#21-packaging-one-time-fix-в-libpackagejson); Issues 3 (unstyled) и 6 (reduced-motion/RTL/colors) — cross-cutting.
@@ -123,20 +125,20 @@ function deleteBadge() {
 ### Что найдено и сделано
 
 - **F31 (RTL).** ~~Аудит считал, что «Badge left-right-классов не имеет» — неверно:~~ `classBase` использовал физические `pl-1` (point-only) / `pr-1` (close-only). Заменены на логические `ps-1` / `pe-1` (`padding-inline-start/end`) — авто-флип в RTL без `dir`-атрибута (движок понимает `ps`/`pe`, [dev-patterns §2](../dev-patterns.md)). Симметричный `px-1` (point + close) не трогался. Зеркало [table.md Issue 11](./table.md) / [pagination.md Issue 6](./pagination.md).
-- **B10 (colors / forced-colors).** Добавлен `forced-colors:outline` на базовый класс — badge остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается (зеркало [switch.md Issue 12](../switch.md) / [split.md B10](./split.md)). Accents `bg-theme-*`/`text-theme-*`/`ring-theme-*` уже preset-aware (`var(--theme)`). Структурные `neutral-*` в outline-ветке — намеренный WCAG-contrast (Issue 4), не трогались; полная semantic-token миграция (`surface`/`border`) → [Wave 9](../README.md) (extension движка) — файл остаётся active.
+- **B10 (colors / forced-colors).** Добавлен `forced-colors:outline` на базовый класс — badge остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается (зеркало [switch.md Issue 12](../switch.md) / [split.md B10](./split.md)). Accents `bg-theme-*`/`text-theme-*`/`ring-theme-*` уже preset-aware (`var(--theme)`). ~~Структурные `neutral-*` в outline-ветке — намеренный WCAG-contrast (Issue 4), не трогались; полная semantic-token миграция (`surface`/`border`) → Wave 9 (extension движка) — файл остаётся active.~~ ✅ resolved 2026-07-05 (Wave 9 residual batch): [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `text-neutral-600 dark:text-neutral-200 ring-neutral-300 dark:ring-neutral-700` → `text-surface-600 dark:text-surface-200 ring-surface-300 dark:ring-surface-700`. WCAG-contrast свойство Issue 4 сохранено без изменений: `surface` по умолчанию — точная копия `gray` (hex-значения byte-identical), меняется только token-словарь, не рендерящийся цвет.
 - **E29.7 (reduced-motion).** N/A — Badge сам transition/animate-классов не имеет; close-кнопка рендерится через `<Button mode="ghost">`, чьи transitions уже `motion-safe:` (button-side). Зеркало [pagination.md Issue 8](./pagination.md) (motion N/A).
 
 ## Cross-cutting: Configuration support
 
-| Настройка                 | Поддержано? | Комментарий                                                                                                                                           |
-| ------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `componentsOptions.Badge` | ✅          | mode, point, closeButton, class, classContent                                                                                                         |
-| `componentsStyle` global  | ✅          | через mapping `filled→primary`, `outlined→outline`, `underlined→neutral` ([Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23)) — resolved 2026-05-10 |
-| `unstyled: true`          | ✅          | Issue 3 ✅ resolved 2026-06-13 — canonical `Component.setStyle` guard + Badge regression-тест                                                         |
-| Theme tokens vs hardcode  | ⚠️          | `theme-*` preset-aware; `forced-colors:outline` для high-contrast (Issue 6); структурные `neutral-*` (outline contrast) → Wave 9                      |
-| Runtime theme switch      | ✅          | через CSS-переменные theme-\*                                                                                                                         |
-| `t()` для текста          | N/A         | контент через slot                                                                                                                                    |
-| Runtime locale switch     | N/A         | —                                                                                                                                                     |
+| Настройка                 | Поддержано? | Комментарий                                                                                                                                                          |
+| ------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `componentsOptions.Badge` | ✅          | mode, point, closeButton, class, classContent                                                                                                                        |
+| `componentsStyle` global  | ✅          | через mapping `filled→primary`, `outlined→outline`, `underlined→neutral` ([Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23)) — resolved 2026-05-10                |
+| `unstyled: true`          | ✅          | Issue 3 ✅ resolved 2026-06-13 — canonical `Component.setStyle` guard + Badge regression-тест                                                                        |
+| Theme tokens vs hardcode  | ✅          | `theme-*` preset-aware; `forced-colors:outline` для high-contrast (Issue 6); структурные `neutral-*` (outline contrast) → `surface-*` — resolved 2026-07-05 (Wave 9) |
+| Runtime theme switch      | ✅          | через CSS-переменные theme-\*                                                                                                                                        |
+| `t()` для текста          | N/A         | контент через slot                                                                                                                                                   |
+| Runtime locale switch     | N/A         | —                                                                                                                                                                    |
 
 ## Dual-API gap
 

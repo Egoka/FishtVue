@@ -79,7 +79,8 @@
 
   const separatorClass = ref<StyleClass>([
     // B10: forced-colors:outline сохраняет разделитель видимым в Windows high-contrast (bg-* там сбрасывается)
-    "relative flex w-px items-center justify-center bg-gray-200 dark:bg-gray-800 forced-colors:outline",
+    // Wave 9 residual: структурная divider-линия — hardcode gray-* → semantic-токен surface-* (тот же numeric tone)
+    "relative flex w-px items-center justify-center bg-surface-200 dark:bg-surface-800 forced-colors:outline",
     "touch-none select-none",
     "after:absolute after:inset-y-0 after:left-1/2 after:w-2 after:-translate-x-1/2 after:z-10",
     // ring-ring — несуществующий токен из shadcn-пресета; focus-идиома проекта — theme-токены (как Input/TextEditor)

@@ -662,4 +662,45 @@ describe("Dialog Component Tests", () => {
       document.body.removeChild(trigger)
     })
   })
+
+  // ---B10 — semantic surface tokens вместо hardcoded neutral-family classes (Wave 9) -------------
+  describe("K. Theming — semantic surface tokens, not hardcoded neutral-* (B10)", () => {
+    const legacyNeutralFamily = /\b(?:bg|fill|text|border|ring|divide)-(?:neutral|stone|zinc|slate|gray)-\d+/
+
+    it("overlay background uses surface-family (not neutral-500/900)", () => {
+      mount(Dialog, {
+        props: { modelValue: true, toTeleport: "#modal" }
+      })
+      const bg = document.querySelector("#modal [data-dialog-background] > div") as HTMLElement | null
+      expect(bg).not.toBeNull()
+      const cls = bg!.className
+      expect(cls).toContain("bg-surface-500/10")
+      expect(cls).toContain("dark:bg-surface-900/10")
+      expect(cls).not.toMatch(legacyNeutralFamily)
+    })
+
+    it("dialog panel keeps bg-white and uses surface-950 in dark mode (not neutral-950)", () => {
+      mount(Dialog, {
+        props: { modelValue: true, toTeleport: "#modal" }
+      })
+      const panel = document.querySelector("#modal [data-dialog-content]") as HTMLElement | null
+      expect(panel).not.toBeNull()
+      const cls = panel!.className
+      expect(cls).toContain("bg-white")
+      expect(cls).toContain("dark:bg-surface-950")
+      expect(cls).not.toMatch(legacyNeutralFamily)
+    })
+
+    it("close icon uses surface-family fill (not neutral-500)", () => {
+      mount(Dialog, {
+        props: { modelValue: true, closeButton: true, toTeleport: "#modal" }
+      })
+      const icon = document.querySelector("#modal [data-dialog-close] svg") as SVGElement | null
+      expect(icon).not.toBeNull()
+      const cls = icon!.getAttribute("class") ?? ""
+      expect(cls).toContain("fill-surface-500")
+      expect(cls).toContain("dark:fill-surface-500")
+      expect(cls).not.toMatch(legacyNeutralFamily)
+    })
+  })
 })

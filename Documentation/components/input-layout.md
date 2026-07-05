@@ -1,7 +1,7 @@
 ---
 title: InputLayout
 summary: Контейнер-обёртка для form-controls — label, error, help, clear/copy кнопки.
-updated: 2026-06-19
+updated: 2026-07-05
 stability: stable
 since: 0.2.11
 ---
@@ -44,16 +44,11 @@ lib/inputlayout/
 
 ```vue
 <script setup lang="ts">
-import InputLayout from "fishtvue/inputlayout"
+  import InputLayout from "fishtvue/inputlayout"
 </script>
 
 <template>
-  <InputLayout
-    :value="text"
-    label="Custom field"
-    :is-value="!!text"
-    :clear="true"
-    @clear="text = ''">
+  <InputLayout :value="text" label="Custom field" :is-value="!!text" :clear="true" @clear="text = ''">
     <input v-model="text" />
   </InputLayout>
 </template>
@@ -65,58 +60,58 @@ import InputLayout from "fishtvue/inputlayout"
 
 `InputLayoutProps`:
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `any` | — | Текущее значение (для отображения dynamic-label). **Обязателен**. |
-| `id` | `string` | (auto `useId()`) | Id slotted-контрола. Если не передан — генерируется стабильный SSR-safe id. Прокидывается в default-слот (`scope.id`) и связывает `<label for>` / `aria-labelledby` (см. §12 A11y). |
-| `isValue` | `boolean` | — | Есть ли значение (для label-стейта). |
-| `mode` | `StyleMode` (`"filled" \| "outlined" \| "underlined"`) | — | Визуальный режим. |
-| `label` | `string` | — | Текст label. |
-| `labelMode` | `LabelMode` | — | Режим label (`dynamic`/`static`/...). |
-| `isInvalid` | `boolean` | — | Состояние ошибки. |
-| `messageInvalid` | `string` | — | Сообщение ошибки. |
-| `required` | `boolean` | — | Required-маркер. |
-| `loading` | `boolean` | — | Loading-индикатор. |
-| `disabled` | `boolean` | — | Disabled. |
-| `help` | `string` | — | Help-text. |
-| `clear` | `boolean` | — | Показать clear-кнопку. |
-| `width` / `height` | `TWidth` / `THeight` | — | Размеры. |
-| `animation` | `string` | `"transition-all duration-500"` | CSS animation. |
-| `classBody` | `StyleClass` | (preset) | Класс тела. |
-| `class` | `StyleClass` | — | Класс контейнера. |
-| `offsetTop` | `number \| string \| (() => number)` | `0` | Вертикальный offset для `scroll-margin-top` invalid-региона (sticky-header awareness). Заменил hardcoded `document.querySelector("header")` — потребитель явно передаёт значение / геттер. |
+| Prop               | Type                                                   | Default                         | Description                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `value`            | `any`                                                  | —                               | Текущее значение (для отображения dynamic-label). **Обязателен**.                                                                                                                          |
+| `id`               | `string`                                               | (auto `useId()`)                | Id slotted-контрола. Если не передан — генерируется стабильный SSR-safe id. Прокидывается в default-слот (`scope.id`) и связывает `<label for>` / `aria-labelledby` (см. §12 A11y).        |
+| `isValue`          | `boolean`                                              | —                               | Есть ли значение (для label-стейта).                                                                                                                                                       |
+| `mode`             | `StyleMode` (`"filled" \| "outlined" \| "underlined"`) | —                               | Визуальный режим.                                                                                                                                                                          |
+| `label`            | `string`                                               | —                               | Текст label.                                                                                                                                                                               |
+| `labelMode`        | `LabelMode`                                            | —                               | Режим label (`dynamic`/`static`/...).                                                                                                                                                      |
+| `isInvalid`        | `boolean`                                              | —                               | Состояние ошибки.                                                                                                                                                                          |
+| `messageInvalid`   | `string`                                               | —                               | Сообщение ошибки.                                                                                                                                                                          |
+| `required`         | `boolean`                                              | —                               | Required-маркер.                                                                                                                                                                           |
+| `loading`          | `boolean`                                              | —                               | Loading-индикатор.                                                                                                                                                                         |
+| `disabled`         | `boolean`                                              | —                               | Disabled.                                                                                                                                                                                  |
+| `help`             | `string`                                               | —                               | Help-text.                                                                                                                                                                                 |
+| `clear`            | `boolean`                                              | —                               | Показать clear-кнопку.                                                                                                                                                                     |
+| `width` / `height` | `TWidth` / `THeight`                                   | —                               | Размеры.                                                                                                                                                                                   |
+| `animation`        | `string`                                               | `"transition-all duration-500"` | CSS animation.                                                                                                                                                                             |
+| `classBody`        | `StyleClass`                                           | (preset)                        | Класс тела.                                                                                                                                                                                |
+| `class`            | `StyleClass`                                           | —                               | Класс контейнера.                                                                                                                                                                          |
+| `offsetTop`        | `number \| string \| (() => number)`                   | `0`                             | Вертикальный offset для `scroll-margin-top` invalid-региона (sticky-header awareness). Заменил hardcoded `document.querySelector("header")` — потребитель явно передаёт значение / геттер. |
 
 ## 6. Events / Emits + v-model contract
 
-| Event | Payload | When fired |
-|---|---|---|
-| `clear` | — | На клик clear-кнопки. |
+| Event   | Payload | When fired            |
+| ------- | ------- | --------------------- |
+| `clear` | —       | На клик clear-кнопки. |
 
 v-model: не применимо — InputLayout не имеет собственного value, только отображает.
 
 ## 7. Slots
 
-| Slot | Slot props | Description |
-|---|---|---|
-| `default` | `{ id: string; labelledby?: string }` | Сам input/select/calendar — основной element. `id` — стабильный id контрола (бинди на `id` → `<label for>` срабатывает); `labelledby` — id `<Label>` (или `undefined` без `label`), для non-labelable триггеров бинди на `aria-labelledby`. |
-| `before` | — | Контент перед input. |
-| `after` | — | Контент после input. |
-| `body` | — | Полный override body (вместо default). |
-| `help` | — | Override для содержимого help-tooltip'а. Если не передан — рендерится `help` prop как text-node (XSS-safe). См. §12 Security. |
-| `messageInvalid` | — | Override для содержимого error-tooltip'а (FixWindow). Если не передан — рендерится `messageInvalid` prop как text-node. Корневой `<p data-input-layout-message-invalid>` под input'ом всегда показывает `messageInvalid` текстом + имеет `aria-live="assertive"`. |
+| Slot             | Slot props                            | Description                                                                                                                                                                                                                                                       |
+| ---------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default`        | `{ id: string; labelledby?: string }` | Сам input/select/calendar — основной element. `id` — стабильный id контрола (бинди на `id` → `<label for>` срабатывает); `labelledby` — id `<Label>` (или `undefined` без `label`), для non-labelable триггеров бинди на `aria-labelledby`.                       |
+| `before`         | —                                     | Контент перед input.                                                                                                                                                                                                                                              |
+| `after`          | —                                     | Контент после input.                                                                                                                                                                                                                                              |
+| `body`           | —                                     | Полный override body (вместо default).                                                                                                                                                                                                                            |
+| `help`           | —                                     | Override для содержимого help-tooltip'а. Если не передан — рендерится `help` prop как text-node (XSS-safe). См. §12 Security.                                                                                                                                     |
+| `messageInvalid` | —                                     | Override для содержимого error-tooltip'а (FixWindow). Если не передан — рендерится `messageInvalid` prop как text-node. Корневой `<p data-input-layout-message-invalid>` под input'ом всегда показывает `messageInvalid` текстом + имеет `aria-live="assertive"`. |
 
 ## 8. Exposed methods
 
 `InputLayoutExpose`:
 
-| Name | Type | Description |
-|---|---|---|
-| `input`, `inputBody`, `beforeInput`, `afterInput` | `HTMLElement \| undefined` | DOM-refs. |
-| `headerHeight` | `number` | Высота `<header>` (для расчёта float-label). |
-| `isCopy` | `boolean` | Состояние copy-confirmation. |
-| `beforeWidth`, `afterWidth` | `number \| null` | Ширины before/after слотов. |
-| `value`, `isValue`, `mode`, `label`, `labelMode`, `labelType`, `isRequired`, `isLoading`, `isDisabled`, `isInvalid`, `messageInvalid`, `help`, `width`, `height`, `animation`, `class`, `classBody` | derived | Computed. |
-| `copy()` | `() => void` | Копирует значение в clipboard. |
+| Name                                                                                                                                                                                                | Type                       | Description                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | -------------------------------------------- |
+| `input`, `inputBody`, `beforeInput`, `afterInput`                                                                                                                                                   | `HTMLElement \| undefined` | DOM-refs.                                    |
+| `headerHeight`                                                                                                                                                                                      | `number`                   | Высота `<header>` (для расчёта float-label). |
+| `isCopy`                                                                                                                                                                                            | `boolean`                  | Состояние copy-confirmation.                 |
+| `beforeWidth`, `afterWidth`                                                                                                                                                                         | `number \| null`           | Ширины before/after слотов.                  |
+| `value`, `isValue`, `mode`, `label`, `labelMode`, `labelType`, `isRequired`, `isLoading`, `isDisabled`, `isInvalid`, `messageInvalid`, `help`, `width`, `height`, `animation`, `class`, `classBody` | derived                    | Computed.                                    |
+| `copy()`                                                                                                                                                                                            | `() => void`               | Копирует значение в clipboard.               |
 
 ## 9. Examples
 
@@ -128,20 +123,14 @@ v-model: не применимо — InputLayout не имеет собстве�
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import InputLayout from "fishtvue/inputlayout"
+  import { ref } from "vue"
+  import InputLayout from "fishtvue/inputlayout"
 
-const value = ref("")
+  const value = ref("")
 </script>
 
 <template>
-  <InputLayout
-    :value="value"
-    :is-value="!!value"
-    label="Custom"
-    mode="outlined"
-    :clear="true"
-    @clear="value = ''">
+  <InputLayout :value="value" :is-value="!!value" label="Custom" mode="outlined" :clear="true" @clear="value = ''">
     <!-- scoped default slot отдаёт id (для <label for>) и labelledby (для aria-labelledby) -->
     <template #default="{ id }">
       <textarea :id="id" v-model="value" rows="3" />
@@ -249,14 +238,14 @@ describe("InputLayout", () => {
 
 ## 16. Troubleshooting / FAQ
 
-| Проблема | Причина | Решение |
-|---|---|---|
-| Floating label не двигается | `value` не обновляется или `isValue: false`. | Передавай `:is-value="!!value"`. |
-| `headerHeight` всегда 0 | Не передан `offsetTop` prop / опция. | Передай `:offset-top="80"` (или функцию `() => stickyHeader.offsetHeight`) — компонент больше не делает hardcoded поиск `<header>`. |
-| Copy кнопка не копирует | Нет `navigator.clipboard` (HTTP без HTTPS) и `document.execCommand("copy")` тоже недоступен. | На HTTPS / localhost — работает clipboard API; на HTTP — fallback через `execCommand`; в SSR — no-op без падения. Если нужен custom-copy, override через `defineExpose`-метод компонента-обёртки. |
-| HTML внутри help / messageInvalid не рендерится | По умолчанию props рендерятся как text (XSS-safe). | Передай через slot: `<template #help><strong>...</strong></template>` (потребитель отвечает за санитизацию). |
-| Stop showing tooltip | FixWindow обёртка в copy/clear иногда виснет на безопасных движениях. | Проверь [FixWindow](./fix-window.md) issues. |
-| Custom form-controls не используют style — только разметка | Body-slot не передан или default-slot пустой. | Передай `<input>`/`<textarea>` в default. |
+| Проблема                                                   | Причина                                                                                      | Решение                                                                                                                                                                                           |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Floating label не двигается                                | `value` не обновляется или `isValue: false`.                                                 | Передавай `:is-value="!!value"`.                                                                                                                                                                  |
+| `headerHeight` всегда 0                                    | Не передан `offsetTop` prop / опция.                                                         | Передай `:offset-top="80"` (или функцию `() => stickyHeader.offsetHeight`) — компонент больше не делает hardcoded поиск `<header>`.                                                               |
+| Copy кнопка не копирует                                    | Нет `navigator.clipboard` (HTTP без HTTPS) и `document.execCommand("copy")` тоже недоступен. | На HTTPS / localhost — работает clipboard API; на HTTP — fallback через `execCommand`; в SSR — no-op без падения. Если нужен custom-copy, override через `defineExpose`-метод компонента-обёртки. |
+| HTML внутри help / messageInvalid не рендерится            | По умолчанию props рендерятся как text (XSS-safe).                                           | Передай через slot: `<template #help><strong>...</strong></template>` (потребитель отвечает за санитизацию).                                                                                      |
+| Stop showing tooltip                                       | FixWindow обёртка в copy/clear иногда виснет на безопасных движениях.                        | Проверь [FixWindow](./fix-window.md) issues.                                                                                                                                                      |
+| Custom form-controls не используют style — только разметка | Body-slot не передан или default-slot пустой.                                                | Передай `<input>`/`<textarea>` в default.                                                                                                                                                         |
 
 ## 17. Related
 
@@ -271,7 +260,7 @@ describe("InputLayout", () => {
 
 ### Incomplete or stubbed behavior
 
-- Все numbered issues закрыты ([issues/inputlayout.md](../issues/inputlayout.md): Issues 1–8 ✅). Остаётся cross-cutting residual: полная shadcn-style миграция структурных нейтралей (`gray-*`/`neutral-*`/`stone-*`) на semantic-токены (`bg-surface`/`border-border`) — трекается [theme.md](../issues/theme.md) / Wave 9. `forced-colors:outline` (high-contrast видимость) уже добавлен.
+- Все numbered issues закрыты ([issues/inputlayout.md](../issues/inputlayout.md): Issues 1–8 ✅, включая Wave 9 residual — 2026-07-05). Структурные нейтрали (`gray-*`/`neutral-*`/`stone-*`/`slate-*`) мигрированы на semantic-токен `surface-*` (family rename, та же числовая тональность); `forced-colors:outline` (high-contrast видимость) добавлен ранее (2026-06-13). Semantic-intent цвета (help-icon `hover:text-yellow-500`, clear-icon `hover:text-red-600`/`hover:dark:text-red-500`, invalid-состояние `red-*`, copy-confirm `emerald-*`) не входили в scope миграции — не structural chrome.
 
 ### Skipped tests
 

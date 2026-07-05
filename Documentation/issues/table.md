@@ -1,7 +1,7 @@
 ---
 title: Issues — Table
-summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Issue 3 (compound `<Column>`/`<ColumnGroup>` + Pagination/Loading overrides) закрыт 2026-06-07. 2026-06-11 закрыты Issue 10 (filter popovers via FixWindow scrollableEl), 11 (RTL — dir-aware resize + logical props), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map + Menu publish-gap fix, verified npm pack/install). Все аудит-issue 1–14 закрыты; остаются только cross-cutting категории G34 (medium) / D26 (low) без отдельной Table-секции.
-updated: 2026-06-11
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Issue 3 (compound `<Column>`/`<ColumnGroup>` + Pagination/Loading overrides) закрыт 2026-06-07. 2026-06-11 закрыты Issue 10 (filter popovers via FixWindow scrollableEl), 11 (RTL — dir-aware resize + logical props), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map + Menu publish-gap fix, verified npm pack/install). Все аудит-issue 1–14 закрыты; остаются только cross-cutting категории G34 (medium) / D26 (low) без отдельной Table-секции. 2026-07-05 — Issue 12/B10 дополнен: структурные нейтрали (gray-*/stone-*/neutral-*, ~24 occurrences) мигрированы на semantic `surface` token (family rename, та же тональность); Table снята из «residual» Wave 9.
+updated: 2026-07-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
 related-doc: ../components/table.md
@@ -387,6 +387,22 @@ Cross-cutting. См. [button.md](./button.md).
 > - **N59 (print) ✅** — `print:hidden` на loading-overlay (`classIsLoading`) и resize-handle (`classResizedColumns`): печатается читаемая таблица без интерактивного chrome.
 > - **B10 (forced-colors) ✅** — `forced-colors:outline` на active-row (`classTr`): выделение строки остаётся видимым в Windows high-contrast (где background-цвета подменяются OS).
 > - Тесты: `Table.test.ts` describe «Issue 12 — reduced-motion / print / forced-colors» (5 кейсов: 3 unit на `tailwind()`-генерацию media + 2 DOM/CSS). Остаётся low **D26** (отдельный пункт, вне motion/print/colors).
+>
+> **Дополнение (2026-07-05) — B10 структурные нейтрали закрыты.** Резолюция 2026-06-11 закрыла только forced-colors-механизм B10. Table оставалась в «residual»-списке Wave 9 ([theme.md Issue 10](./theme.md), [issues/README.md](./README.md) Wave 9) — структурные нейтрали (`gray-*`/`stone-*`/`neutral-*`) оставались хардкодом до появления семантического токена `surface` (23-й именованный цвет движка, дефолт — копия `gray`, [primitive.ts](../../lib/theme/primitive.ts)). Теперь мигрированы ~24 occurrences в [Table.vue](../../lib/table/Table.vue) — **family rename той же тональности**, без изменения числовых tone/opacity-суффиксов:
+>
+> - `styles.activeRow`/`hoverRows` default ([Table.vue:743](../../lib/table/Table.vue#L743)) — `bg-neutral-100/90 dark:bg-neutral-900/50` → `bg-surface-100/90 dark:bg-surface-900/50` (+ `hover:`-вариант).
+> - `defaultBorder` ([Table.vue:761-762](../../lib/table/Table.vue#L761-L762)) — `border-neutral-200 dark:border-neutral-800` → `border-surface-200 dark:border-surface-800`.
+> - `modeStyle` 3-way ternary ([Table.vue:773](../../lib/table/Table.vue#L773)) — `bg-stone-100 dark:bg-stone-900` / `bg-white dark:bg-neutral-950` / `bg-stone-50 dark:bg-stone-950` → `bg-surface-100 dark:bg-surface-900` / `bg-white dark:bg-surface-950` / `bg-surface-50 dark:bg-surface-950` (`bg-white` литерал не трогается — нет числового tone).
+> - `classIcon`/`classSortIcon` ([Table.vue:808](../../lib/table/Table.vue#L808)) — `text-gray-400 dark:text-gray-600` → `text-surface-400 dark:text-surface-600`.
+> - `classIconClearFilter` — тот же family rename для gray-часть; `group-hover:text-red-400 group-hover:dark:text-red-600` **осознанно не тронут** (semantic "danger" intent, отдельный vocabulary, вне scope B10).
+> - `classNotFilter`, `classThSummaryText`, `classBodySlotHeader`, `classSlotFooterBody`, `classIsLoading`, `classNoData` — `text-gray-400/500` → `text-surface-400/500` (несколько occurrences, идентичный паттерн).
+> - `classResize` ([Table.vue:905](../../lib/table/Table.vue#L905)) — `bg-neutral-300 dark:bg-neutral-600` → `bg-surface-300 dark:bg-surface-600`.
+> - `classGroup`/`classColumnTd` ([Table.vue:914](../../lib/table/Table.vue#L914)) — `text-gray-800 dark:text-gray-300` → `text-surface-800 dark:text-surface-300`.
+> - `classTr` zebra-striping 3-way ternary ([Table.vue:940](../../lib/table/Table.vue#L940)) — `odd:bg-stone-100 even:bg-stone-50 dark:odd:bg-stone-900 dark:even:bg-stone-950` / `odd:bg-white even:bg-neutral-50 dark:odd:bg-neutral-950 dark:even:bg-neutral-900` / `odd:bg-stone-50 even:bg-stone-100 dark:odd:bg-stone-950 dark:even:bg-neutral-900` → surface-эквиваленты (`odd:`/`even:` структура сохранена один-в-один).
+> - `classIsLoadingBody` (loading overlay, [Table.vue:1008](../../lib/table/Table.vue#L1008)) — `bg-neutral-100/70 dark:bg-neutral-800/50` → `bg-surface-100/70 dark:bg-surface-800/50` (opacity-суффиксы сохранены).
+> - Clear-filter button chrome ([Table.vue:1942](../../lib/table/Table.vue#L1942)) — отдельный occurrence `bg-stone-100 dark:bg-stone-900` → `bg-surface-100 dark:bg-surface-900`.
+>
+> Тесты: `Table.test.ts` describe «Table Component - B10 semantic surface tokens» (18 кейсов — по одному на каждый затронутый class-site + zebra-striping/modeStyle 3-way `it.each`), плюс regression-фикс в существующем «applies striped background for rows» (default zebra теперь `even:bg-surface-50`). Whole-file coverage: 141/141 green. Table теперь снята из «residual» Wave 9 (см. [issues/README.md](./README.md)).
 
 ## ~~Issue 13: Источник sourcemaps при опубликованном пакете~~ ✅ resolved 2026-06-07
 
@@ -437,7 +453,7 @@ Sourcemaps генерируются ✅. Но `addPackageJson()` ([rollup.config
 | `componentsOptions.Table` | ✅          | mode, asyncData, modePagination, и многое другое                                          |
 | `componentsStyle` global  | ✅          | через `Table.componentsStyle()` (Table.vue:110)                                           |
 | `unstyled: true`          | ❌          | Issue 6                                                                                   |
-| Theme tokens vs hardcode  | ⚠️          | через theme-_ tokens частично, gray-_ / red-\* hardcode                                   |
+| Theme tokens vs hardcode  | ⚠️          | структурные нейтрали — semantic `surface` token (2026-07-05, B10); `red-*` hardcode остаётся (delete-icon danger-intent, осознанно вне scope) |
 | Runtime theme switch      | ⚠️          | dark mode через colorSchemeQueryList (auto-detect) — игнорирует FishtVue darkModeSelector |
 | `t()` для текста          | ⚠️          | частично — используется `Table.t()` для some strings                                      |
 | Runtime locale switch     | ⚠️          | те strings что через `t()` — реагируют                                                    |

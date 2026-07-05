@@ -81,11 +81,11 @@
   )
   const background = computed(() =>
     mode.value === "outlined"
-      ? "bg-white dark:bg-neutral-950"
+      ? "bg-white dark:bg-surface-950"
       : mode.value === "underlined"
-        ? "bg-stone-50 dark:bg-stone-950"
+        ? "bg-surface-50 dark:bg-surface-950"
         : mode.value === "filled"
-          ? "bg-stone-100 dark:bg-stone-900"
+          ? "bg-surface-100 dark:bg-surface-900"
           : ""
   )
   const classBody = computed(() =>
@@ -102,15 +102,15 @@
   )
   const classBase = computed(() =>
     InputLayout.setStyle([
-      "classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
+      "classLayout rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
       heightLayout.value.length ? "" : "max-h-20",
       isDisabled.value
-        ? "bg-neutral-50 dark:bg-neutral-950 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-800 border-dashed shadow-none"
+        ? "bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-500 border-surface-200 dark:border-surface-800 border-dashed shadow-none"
         : "",
-      mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600" : "",
-      mode.value === "underlined" ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b" : "",
+      mode.value === "outlined" ? "border border-surface-300 dark:border-surface-600" : "",
+      mode.value === "underlined" ? "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b" : "",
       mode.value === "filled"
-        ? `${isDisabled.value ? "border-dotted border-2 border-slate-200" : "border-0 border-transparent"} `
+        ? `${isDisabled.value ? "border-dotted border-2 border-surface-200" : "border-0 border-transparent"} `
         : "",
       animation.value ?? "",
       options?.class ?? "",
@@ -149,8 +149,8 @@
   const classIconContent = computed(() =>
     InputLayout.setStyle(
       "p-3 rounded-md shadow-lg " +
-        "bg-white dark:bg-stone-900 " +
-        "font-light italic text-xs text-gray-500 dark:text-gray-400 " +
+        "bg-white dark:bg-surface-900 " +
+        "font-light italic text-xs text-surface-500 dark:text-surface-400 " +
         "ring-1 ring-black/20 focus:outline-none"
     )
   )
@@ -368,7 +368,7 @@
         <Icons
           type="QuestionMarkCircle"
           stile-icon="solid"
-          class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 motion-safe:transition cursor-help" />
+          class="text-surface-400 dark:text-surface-600 hover:text-yellow-500 motion-safe:transition cursor-help" />
         <FixWindow
           :mode="mode"
           event-open="click"
@@ -420,7 +420,7 @@
             <Icons
               type="XCircle"
               stile-icon="solid"
-              class="text-gray-400 dark:text-gray-600 hover:text-red-600 hover:dark:text-red-500 motion-safe:transition-all motion-safe:duration-300 cursor-pointer"
+              class="text-surface-400 dark:text-surface-600 hover:text-red-600 hover:dark:text-red-500 motion-safe:transition-all motion-safe:duration-300 cursor-pointer"
               @click.stop="emit('clear')" />
             <FixWindow v-if="slots.default" mode="filled" :delay="1000" :padding-window="40">
               {{ InputLayout.t("clear") ?? "Clear" }}
@@ -433,7 +433,7 @@
           <Icons
             type="square-2-stack"
             stile-icon="solid"
-            class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 motion-safe:transition"
+            class="mr-2 text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400 motion-safe:transition"
             @click.stop="copy" />
           <FixWindow :mode="mode" :delay="1000" :padding-window="40">
             {{ InputLayout.t("copy") ?? "Copy" }}

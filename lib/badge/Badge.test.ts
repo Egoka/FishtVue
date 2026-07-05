@@ -278,26 +278,61 @@ describe("Badge Component Tests", () => {
     })
 
     describe("outline+neutral contrast fix (Issue 4)", () => {
-      it("renders ring-neutral-300 with dark variant when outline+point and not closeButton", () => {
+      it("renders ring-surface-300 with dark variant when outline+point and not closeButton", () => {
         const wrapper = mount(Badge, {
           props: { mode: "outline", point: true, closeButton: false }
         })
         const badge = wrapper.find("[data-badge]")
         const classAttr = badge.attributes("class") ?? ""
-        expect(classAttr).toContain("ring-neutral-300")
-        expect(classAttr).toContain("dark:ring-neutral-700")
+        expect(classAttr).toContain("ring-surface-300")
+        expect(classAttr).toContain("dark:ring-surface-700")
         expect(classAttr).not.toContain("ring-neutral-500/30")
       })
 
-      it("renders ring-neutral-300 with dark variant when outline+closeButton", () => {
+      it("renders ring-surface-300 with dark variant when outline+closeButton", () => {
         const wrapper = mount(Badge, {
           props: { mode: "outline", point: false, closeButton: true }
         })
         const badge = wrapper.find("[data-badge]")
         const classAttr = badge.attributes("class") ?? ""
-        expect(classAttr).toContain("ring-neutral-300")
-        expect(classAttr).toContain("dark:ring-neutral-700")
+        expect(classAttr).toContain("ring-surface-300")
+        expect(classAttr).toContain("dark:ring-surface-700")
         expect(classAttr).not.toContain("ring-neutral-500/30")
+      })
+    })
+
+    // ---------------------------------------------------------------------------
+    // B10 (Wave 9) — structural neutral-* → surface-* semantic token migration
+    // ---------------------------------------------------------------------------
+    describe("B10 (Wave 9) — outline-mode structural neutral-* migrated to surface-*", () => {
+      it("uses text-surface-*/ring-surface-* (not neutral-*) when outline+point and not closeButton", () => {
+        const wrapper = mount(Badge, {
+          props: { mode: "outline", point: true, closeButton: false }
+        })
+        const classAttr = wrapper.find("[data-badge]").attributes("class") ?? ""
+        expect(classAttr).toContain("text-surface-600")
+        expect(classAttr).toContain("dark:text-surface-200")
+        expect(classAttr).toContain("ring-surface-300")
+        expect(classAttr).toContain("dark:ring-surface-700")
+        expect(classAttr).not.toContain("text-neutral-600")
+        expect(classAttr).not.toContain("dark:text-neutral-200")
+        expect(classAttr).not.toContain("ring-neutral-300")
+        expect(classAttr).not.toContain("dark:ring-neutral-700")
+      })
+
+      it("uses text-surface-*/ring-surface-* (not neutral-*) when outline+closeButton", () => {
+        const wrapper = mount(Badge, {
+          props: { mode: "outline", point: false, closeButton: true }
+        })
+        const classAttr = wrapper.find("[data-badge]").attributes("class") ?? ""
+        expect(classAttr).toContain("text-surface-600")
+        expect(classAttr).toContain("dark:text-surface-200")
+        expect(classAttr).toContain("ring-surface-300")
+        expect(classAttr).toContain("dark:ring-surface-700")
+        expect(classAttr).not.toContain("text-neutral-600")
+        expect(classAttr).not.toContain("dark:text-neutral-200")
+        expect(classAttr).not.toContain("ring-neutral-300")
+        expect(classAttr).not.toContain("dark:ring-neutral-700")
       })
     })
   })

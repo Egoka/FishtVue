@@ -974,7 +974,9 @@ describe("Table Component", () => {
         const rows = wrapper.findAll("[data-table-tbody-tr]")
         rows.forEach((row) => {
           expect(row.classes()).toContain("odd:bg-white")
-          expect(row.classes()).toContain("even:bg-neutral-50")
+          // B10 (Wave 9, 2026-07-05): even:bg-neutral-50 → even:bg-surface-50 (family rename,
+          // та же тональность) — см. Documentation/issues/table.md.
+          expect(row.classes()).toContain("even:bg-surface-50")
         })
       })
 
@@ -2831,3 +2833,261 @@ describe("Table — remaining audit (Issues 10/11/12)", () => {
     })
   }) // /Issue 10 describe
 }) // /Table — remaining audit (Issues 10/11/12)
+
+// =====================================================================================================================
+// B10 (Wave 9, 2026-07-05) — structural neutrals → semantic `surface` token (family rename only, та же тональность).
+// Table закрыла forced-colors-часть B10 2026-06-11 (Issue 12), но осознанно оставила hardcoded gray/stone/neutral —
+// этот describe закрывает residual-часть (см. Documentation/issues/table.md, Documentation/issues/README.md Wave 9).
+// =====================================================================================================================
+describe("Table Component - B10 semantic surface tokens", () => {
+  beforeAll(() => {
+    // @ts-ignore — этот describe — sibling основного, нужен свой IO-mock
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] } as Response)
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  const legacyGrayFamily = /\b(?:bg|text|border|ring|divide)-(?:neutral|stone|zinc|slate|gray)-\d+/
+  const fruits = [
+    { name: "orange", color: "orange" },
+    { name: "banana", color: "yellow" }
+  ]
+
+  it("classBaseTable (root) несёт activeRow/hoverRows на surface-family (не neutral)", async () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }],
+        styles: { activeRow: true, hoverRows: true }
+      } as TableProps
+    })
+    const row = wrapper.findAll("[data-table-tbody-tr]")[0]
+    await row.trigger("click")
+    await nextTick()
+    const cls = row.attributes("class") ?? ""
+    expect(cls).toContain("bg-surface-100/90 dark:bg-surface-900/50")
+    expect(cls).toContain("hover:bg-surface-100/90 dark:hover:bg-surface-900/50")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it.each([
+    { mode: "filled", expected: "border-surface-200 dark:border-surface-800" },
+    { mode: "outlined", expected: "border-surface-200 dark:border-surface-800" },
+    { mode: "underlined", expected: "border-surface-200 dark:border-surface-800" }
+  ])("defaultBorder in mode '$mode' uses surface-family (not neutral)", ({ mode, expected }) => {
+    const wrapper = mount(Table, {
+      props: { dataSource: fruits, columns: [{ dataField: "name" }], mode: mode as TableProps["mode"] } as TableProps
+    })
+    const body = wrapper.find("[data-table-body]")
+    expect(body.attributes("class") ?? "").toContain(expected)
+  })
+
+  it.each(["filled", "outlined", "underlined"] as const)("modeStyle ternary — mode '%s'", (mode) => {
+    // modeStyle сам по себе покрывается через classBodySlotHeader/classIsPagination/classTFoot/classSlotFooterBody —
+    // здесь проверяем через classBodySlotHeader (header slot), единственное место без доп. условий рендера.
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }],
+        mode: mode as TableProps["mode"]
+      } as TableProps,
+      slots: { header: "<div>header</div>" }
+    })
+    const header = wrapper.find("[data-table-header]")
+    expect(header.exists()).toBe(true)
+    const cls = header.attributes("class") ?? ""
+    if (mode === "filled") {
+      expect(cls).toContain("bg-surface-100 dark:bg-surface-900")
+    } else if (mode === "outlined") {
+      expect(cls).toContain("bg-white dark:bg-surface-950")
+    } else if (mode === "underlined") {
+      expect(cls).toContain("bg-surface-50 dark:bg-surface-950")
+    }
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classIcon (search/no-data icons) uses surface-family text (not gray)", () => {
+    const wrapper = mount(Table, {
+      props: { dataSource: fruits, columns: [{ dataField: "name" }], search: true } as TableProps
+    })
+    const icon = wrapper.find("[data-table-search] svg")
+    expect(icon.exists()).toBe(true)
+    const cls = icon.attributes("class") ?? ""
+    expect(cls).toContain("text-surface-400")
+    expect(cls).toContain("dark:text-surface-600")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classSortIcon uses surface-family text (not gray)", async () => {
+    const wrapper = mount(Table, {
+      props: { dataSource: fruits, columns: [{ dataField: "name", isSort: true }] } as TableProps
+    })
+    const sortEl = wrapper.find("[data-table-thead-col-sort]")
+    expect(sortEl.exists()).toBe(true)
+    // sortColumns[dataField] стартует как undefined — иконка направления не рендерится,
+    // пока не произойдёт клик (populates sortColumns через sorting()).
+    await sortEl.trigger("click")
+    const icon = sortEl.find("svg")
+    expect(icon.exists()).toBe(true)
+    const cls = icon.attributes("class") ?? ""
+    expect(cls).toContain("text-surface-400")
+    expect(cls).toContain("dark:text-surface-600")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classIconClearFilter migrates gray→surface but leaves red hover danger-intent UNTOUCHED", async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: true,
+        toolbar: true,
+        filter: { isClearAllFilter: true, visible: true }
+      } as TableProps
+    })
+    await wrapper.find("[data-table-thead-col-filter] input[data-input]").setValue("orange")
+    vi.advanceTimersByTime(850)
+    await nextTick()
+    const btn = wrapper.find("[data-table-clear-filter]")
+    expect(btn.exists()).toBe(true)
+    const icon = btn.find("svg")
+    const cls = icon.attributes("class") ?? ""
+    // Мигрировано: gray → surface (та же тональность 400/600)
+    expect(cls).toContain("text-surface-400")
+    expect(cls).toContain("dark:text-surface-600")
+    // НЕ мигрировано намеренно — semantic "danger" intent, вне scope B10
+    expect(cls).toContain("group-hover:text-red-400")
+    expect(cls).toContain("group-hover:dark:text-red-600")
+    expect(cls).not.toMatch(legacyGrayFamily)
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  it("clear-filter button chrome (line ~1940) uses surface-family background (not stone)", async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: true,
+        toolbar: true,
+        filter: { isClearAllFilter: true, visible: true }
+      } as TableProps
+    })
+    await wrapper.find("[data-table-thead-col-filter] input[data-input]").setValue("orange")
+    vi.advanceTimersByTime(850)
+    await nextTick()
+    const btn = wrapper.find("[data-table-clear-filter]")
+    expect(btn.exists()).toBe(true)
+    const cls = btn.attributes("class") ?? ""
+    // Замена конкретно Table-owned "bg-stone-100 dark:bg-stone-900" на surface-family.
+    // Не проверяем через legacyGrayFamily "чистоту" всего class-списка: <Button> (внешний
+    // компонент, не входит в scope этой миграции) добавляет свои собственные text-neutral-*/
+    // ring-neutral-* классы — они вне scope B10 для Table (Button ведёт свою собственную миграцию).
+    expect(cls).toContain("bg-surface-100")
+    expect(cls).toContain("dark:bg-surface-900")
+    expect(cls).not.toContain("bg-stone-100")
+    expect(cls).not.toContain("dark:bg-stone-900")
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  it("classNotFilter (header text, no-filter column) uses surface-family text (not gray)", () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }]
+      } as TableProps
+    })
+    const notFilter = wrapper.find("[data-table-thead-col-no-filter]")
+    expect(notFilter.exists()).toBe(true)
+    const cls = notFilter.attributes("class") ?? ""
+    expect(cls).toContain("text-surface-400")
+    expect(cls).toContain("dark:text-surface-500")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classResize (resize handle bar) uses surface-family background (not neutral)", () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }, { dataField: "color" }],
+        resizedColumns: true
+      } as TableProps
+    })
+    const bar = wrapper.find("[data-table-thead-col-resized] div")
+    expect(bar.exists()).toBe(true)
+    const cls = bar.attributes("class") ?? ""
+    expect(cls).toContain("bg-surface-300")
+    expect(cls).toContain("dark:bg-surface-600")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classGroup (group header row) uses surface-family text (not gray)", () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: [
+          { name: "a", g: "x" },
+          { name: "b", g: "x" }
+        ],
+        columns: [{ dataField: "name" }],
+        grouping: "g"
+      } as unknown as TableProps
+    })
+    const group = wrapper.find("[data-table-tbody-colgroup]")
+    expect(group.exists()).toBe(true)
+    const cls = group.attributes("class") ?? ""
+    expect(cls).toContain("text-surface-800")
+    expect(cls).toContain("dark:text-surface-300")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it.each([
+    {
+      mode: "filled",
+      expected: "odd:bg-surface-100 even:bg-surface-50 dark:odd:bg-surface-900 dark:even:bg-surface-950"
+    },
+    {
+      mode: "outlined",
+      expected: "odd:bg-white even:bg-surface-50 dark:odd:bg-surface-950 dark:even:bg-surface-900"
+    },
+    {
+      mode: "underlined",
+      expected: "odd:bg-surface-50 even:bg-surface-100 dark:odd:bg-surface-950 dark:even:bg-surface-900"
+    }
+  ])("classTr zebra-striping in mode '$mode' uses surface-family (not stone/neutral)", ({ mode, expected }) => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }],
+        mode: mode as TableProps["mode"],
+        styles: { isStripedRows: true }
+      } as TableProps
+    })
+    const row = wrapper.findAll("[data-table-tbody-tr]")[0]
+    const cls = row.attributes("class") ?? ""
+    expect(cls).toContain(expected)
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classIsLoadingBody (loading overlay) uses surface-family background (not neutral), opacity suffixes kept", async () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }]
+      } as TableProps
+    })
+    ;(wrapper.vm as any).startLoading()
+    await nextTick()
+    const overlay = wrapper.find("[data-table-loading] > div")
+    expect(overlay.exists()).toBe(true)
+    const cls = overlay.attributes("class") ?? ""
+    expect(cls).toContain("bg-surface-100/70")
+    expect(cls).toContain("dark:bg-surface-800/50")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+})

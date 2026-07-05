@@ -56,6 +56,7 @@ const globals = {
   HTMLCanvasElement: "readonly",
   HTMLAnchorElement: "readonly",
   HTMLHeadElement: "readonly",
+  SVGElement: "readonly",
   DOMRect: "readonly",
   ScrollToOptions: "readonly",
   ScrollBehavior: "readonly",

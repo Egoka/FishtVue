@@ -68,10 +68,10 @@ describe("Pagination Component Tests", () => {
       it.each([
         [
           "outlined",
-          "bg-white dark:bg-neutral-950 ring-1 ring-inset rounded-lg",
-          "border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-950"
+          "bg-white dark:bg-surface-950 ring-1 ring-inset rounded-lg",
+          "border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-950"
         ], // Expected class for "outlined"
-        ["filled", "bg-stone-100 dark:bg-stone-900 rounded-lg", "bg-stone-100 dark:bg-stone-900"], // Expected class for "filled"
+        ["filled", "bg-surface-100 dark:bg-surface-900 rounded-lg", "bg-surface-100 dark:bg-surface-900"], // Expected class for "filled"
         ["underlined", "border-t-2 border-transparent", ""], // Expected class for "underlined"
         ["custom", "", ""] // Default or fallback class for custom modes
       ] as [PaginationProps["mode"], string, string][])(
@@ -94,7 +94,7 @@ describe("Pagination Component Tests", () => {
 
         const paginationButtons = wrapper.findAll("[data-pagination-nav-pages] button")
         paginationButtons.forEach((button) => {
-          expect(button.classes().join(" ")).toContain("bg-white dark:bg-neutral-950 ring-1 ring-inset rounded-lg") // Default "outlined" mode
+          expect(button.classes().join(" ")).toContain("bg-white dark:bg-surface-950 ring-1 ring-inset rounded-lg") // Default "outlined" mode
         })
       })
     })
@@ -496,6 +496,210 @@ describe("Pagination Component Tests", () => {
       const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
       const active = wrapper.findAll("button[data-pagination-nav-page]").find((b) => b.text() === "1")
       expect(active?.classes().join(" ")).toMatch(/forced-colors:/)
+    })
+  })
+
+  // ---B10 (Wave 9, 2026-07-05) — semantic surface tokens вместо hardcoded gray/stone/neutral-family classes ---
+  // Family rename только: та же тональность (50-950), только смена имени палитры. theme-* (active-состояние,
+  // preset-aware) остаётся нетронутым — см. Documentation/issues/pagination.md.
+  describe("Pagination Component - B10 semantic surface tokens", () => {
+    const legacyGrayFamily = /\b(?:bg|text|border|ring|from|via)-(?:neutral|stone|zinc|slate|gray)-\d+/
+
+    it("outlined mode: modeStyleSelect + page-size selector wrapper use surface-family (not gray)", () => {
+      const wrapper = mount(Pagination, { props: { mode: "outlined", total: 50, sizePage: 10 } })
+      const cls = wrapper.vm.modeStyleSelect as string
+      expect(cls).toBe("border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-950")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("filled mode: modeStyleSelect + button surface uses surface-family (not stone)", () => {
+      const wrapper = mount(Pagination, { props: { mode: "filled", total: 50, sizePage: 10 } })
+      const cls = wrapper.vm.modeStyleSelect as string
+      expect(cls).toBe("bg-surface-100 dark:bg-surface-900")
+      expect(cls).not.toMatch(legacyGrayFamily)
+
+      // modeStyle (prev/next nav Button'ы) — Pagination-вклад в class Button'а, не merged DOM-класс целиком:
+      // сам <Button> несёт собственные hardcoded neutral-* internals (disabled/active/focus-visible state),
+      // это отдельная зона ответственности Button.vue, не входит в область этой миграции.
+      const prevButton = wrapper.find("[data-pagination-nav-previous] button")
+      expect(prevButton.classes().join(" ")).toContain("bg-surface-100 dark:bg-surface-900")
+
+      // inactive page-кнопки (не текущая modelValue) — исключаем активную страницу: она идёт по theme-* ветке.
+      const inactivePages = wrapper
+        .findAll("button[data-pagination-nav-page]")
+        .filter((b) => b.attributes("aria-current") !== "page")
+      expect(inactivePages.length).toBeGreaterThan(0)
+      inactivePages.forEach((button) => {
+        expect(button.classes().join(" ")).toContain("bg-surface-100 dark:bg-surface-900")
+      })
+    })
+
+    it("underlined mode: hover border/text on nav buttons use surface-family (not gray)", () => {
+      const wrapper = mount(Pagination, { props: { mode: "underlined", total: 50, sizePage: 10 } })
+      const prevButton = wrapper.find("[data-pagination-nav-previous] button")
+      const cls = prevButton.classes().join(" ")
+      expect(cls).toContain("hover:border-surface-300")
+      expect(cls).toContain("hover:text-surface-700")
+      expect(cls).toContain("dark:hover:border-surface-700")
+      expect(cls).toContain("dark:hover:text-surface-300")
+    })
+
+    it("page-size selector text + select classSelect use surface-family (not gray)", () => {
+      const wrapper = mount(Pagination, {
+        props: { isPageSizeSelector: true, sizesSelector: [5, 10, 20], total: 50, sizePage: 10 }
+      })
+      const selectorText = wrapper.find("[data-pagination-selector] p")
+      expect(selectorText.classes().join(" ")).toContain("text-surface-400 dark:text-surface-500")
+
+      const paramsSelect = (wrapper.vm as any).paramsSelect
+      expect(paramsSelect.classSelect).toBe("font-bold text-surface-600 dark:text-surface-500")
+      expect(paramsSelect.classSelect).not.toMatch(legacyGrayFamily)
+    })
+
+    it("root border + short-content + info-text use surface-family (not gray/neutral)", () => {
+      const wrapper = mount(Pagination, {
+        props: { total: 100, sizePage: 10, modelValue: 1, isInfoText: true }
+      })
+      const root = wrapper.find("[data-pagination]")
+      expect(root.classes().join(" ")).toContain("border-surface-200 dark:border-surface-800")
+      expect(root.classes().join(" ")).not.toMatch(legacyGrayFamily)
+
+      const infoTextContent = wrapper.find("[data-pagination-content-info] p")
+      expect(infoTextContent.classes().join(" ")).toContain("text-surface-600 dark:text-surface-500")
+      const infoTextPage = wrapper.findAll("[data-pagination-content-info] span").find((s) => s.text() === "100")
+      expect(infoTextPage?.classes().join(" ")).toContain("dark:text-surface-400")
+    })
+
+    it("short-version content (mobile) counters use surface-family (not neutral)", () => {
+      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
+      // classShortContent рендерится дважды: mobile short-version (первым — несёт data-pagination-content)
+      // и desktop short-content (bare <div> внутри data-pagination-nav, без своего data-атрибута).
+      const mobileShortContent = wrapper.find("[data-pagination-short-version] [data-pagination-content]")
+      expect(mobileShortContent.classes().join(" ")).toContain("text-surface-500")
+
+      const desktopShortContent = wrapper.find("[data-pagination-nav] > div:nth-child(3)")
+      expect(desktopShortContent.classes().join(" ")).toContain("text-surface-500")
+    })
+
+    it("nav prev/next icon (content variant) uses surface-family (not gray)", () => {
+      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 5 } })
+      const nextIcon = wrapper.find("[data-pagination-nav-next] svg")
+      expect(nextIcon.classes().join(" ")).toContain("text-surface-400")
+      expect(nextIcon.classes().join(" ")).not.toMatch(legacyGrayFamily)
+    })
+
+    it("ellipsis (not-page) icon uses surface-family (not gray)", () => {
+      const wrapper = mount(Pagination, {
+        props: { total: 1000, sizePage: 10, modelValue: 50, visibleNumberPages: 5 }
+      })
+      const ellipsisIcon = wrapper.find("[data-pagination-nav-pages] svg")
+      expect(ellipsisIcon.exists()).toBe(true)
+      expect(ellipsisIcon.classes().join(" ")).toContain("text-surface-400")
+      expect(ellipsisIcon.classes().join(" ")).not.toMatch(legacyGrayFamily)
+    })
+
+    it.each(["filled", "outlined"] as PaginationProps["mode"][])(
+      "mode: %s — inactive page button background/ring uses surface-family (not stone/neutral)",
+      (mode) => {
+        const wrapper = mount(Pagination, { props: { mode, total: 100, sizePage: 10, modelValue: 1 } })
+        const inactivePage = wrapper
+          .findAll("button[data-pagination-nav-page]")
+          .find((b) => b.text() === "2" && b.attributes("aria-current") !== "page")
+        expect(inactivePage).toBeTruthy()
+        const cls = inactivePage!.classes().join(" ")
+        if (mode === "filled") {
+          expect(cls).toContain("bg-surface-100 dark:bg-surface-900")
+          expect(cls).toContain("hover:bg-surface-200 dark:hover:bg-surface-800")
+        } else {
+          expect(cls).toContain("bg-white dark:bg-surface-950")
+          expect(cls).toContain("ring-surface-300 dark:ring-surface-700")
+          expect(cls).toContain("hover:bg-surface-100 dark:hover:bg-surface-900")
+        }
+      }
+    )
+
+    it("outlined mode: active page button keeps theme-* untouched but structural bg/ring use surface-family", () => {
+      const wrapper = mount(Pagination, { props: { mode: "outlined", total: 100, sizePage: 10, modelValue: 1 } })
+      const activePageButton = wrapper
+        .findAll("button[data-pagination-nav-page]")
+        .find((b) => b.attributes("aria-current") === "page")
+      expect(activePageButton).toBeTruthy()
+      const cls = activePageButton!.classes().join(" ")
+      // theme-* preset-aware ring/hover — не трогаем
+      expect(cls).toContain("ring-theme-300")
+      expect(cls).toContain("dark:ring-theme-700")
+      expect(cls).toContain("hover:bg-theme-100")
+      expect(cls).toContain("dark:hover:bg-theme-950")
+      // structural bg — мигрирован на surface
+      expect(cls).toContain("bg-white dark:bg-surface-950")
+    })
+
+    it("default (gray) page-button label fallback uses surface-family while active theme-* branch is untouched", () => {
+      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
+      const inactivePage = wrapper
+        .findAll("button[data-pagination-nav-page]")
+        .find((b) => b.attributes("aria-current") !== "page" && b.text() === "2")
+      const activePage = wrapper
+        .findAll("button[data-pagination-nav-page]")
+        .find((b) => b.attributes("aria-current") === "page")
+      expect(inactivePage!.classes().join(" ")).toContain("text-surface-600 dark:text-surface-400")
+      // active page — theme-* branch, не surface
+      expect(activePage!.classes().join(" ")).toContain("text-theme-600 dark:text-theme-400")
+    })
+
+    it("short/compact nav buttons (mobile + desktop prev/next label) use surface-family (not gray)", () => {
+      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
+      const labelButtons = [
+        wrapper.find("[data-pagination-short-previous]"),
+        wrapper.find("[data-pagination-short-next]"),
+        wrapper.find("[data-pagination-nav-previous] button"),
+        wrapper.find("[data-pagination-nav-next] button")
+      ]
+      labelButtons.forEach((button) => {
+        expect(button.exists()).toBe(true)
+        const cls = button.classes().join(" ")
+        expect(cls).toContain("text-surface-600 dark:text-surface-400")
+      })
+    })
+
+    // Полнодеревные HTML-guard'ы намеренно ограничены non-Button узлами (root <nav>, plain <div>/<span>/<svg>/<p>):
+    // сам <Button> несёт собственные hardcoded neutral-* internals (disabled/active/focus-visible state,
+    // см. lib/button/Button.vue) — отдельная зона ответственности, не входит в область этой миграции (Pagination
+    // мигрирует только свой собственный `:class`-вклад, передаваемый в Button через modeStyle/classNavPageActiveState).
+    it("no residual gray/stone/neutral-family classes on non-Button structural nodes (outlined mode)", () => {
+      const wrapper = mount(Pagination, {
+        props: { total: 100, sizePage: 10, modelValue: 1, isInfoText: true, isPageSizeSelector: true }
+      })
+      const root = wrapper.find("[data-pagination]")
+      expect(root.classes().join(" ")).not.toMatch(legacyGrayFamily)
+      wrapper.findAll("div, span, svg, p").forEach((node) => {
+        expect(node.classes().join(" ")).not.toMatch(legacyGrayFamily)
+      })
+    })
+
+    it("no residual gray/stone/neutral-family classes on non-Button structural nodes (filled mode)", () => {
+      const wrapper = mount(Pagination, {
+        props: { mode: "filled", total: 100, sizePage: 10, modelValue: 1, isInfoText: true, isPageSizeSelector: true }
+      })
+      wrapper.findAll("div, span, svg, p").forEach((node) => {
+        expect(node.classes().join(" ")).not.toMatch(legacyGrayFamily)
+      })
+    })
+
+    it("no residual gray/stone/neutral-family classes on non-Button structural nodes (underlined mode)", () => {
+      const wrapper = mount(Pagination, {
+        props: {
+          mode: "underlined",
+          total: 100,
+          sizePage: 10,
+          modelValue: 1,
+          isInfoText: true,
+          isPageSizeSelector: true
+        }
+      })
+      wrapper.findAll("div, span, svg, p").forEach((node) => {
+        expect(node.classes().join(" ")).not.toMatch(legacyGrayFamily)
+      })
     })
   })
 })

@@ -1,7 +1,7 @@
 ---
 title: Split
 summary: Resizable панели с persistence через localStorage, horizontal/vertical, Pointer Events (mouse+touch+pen), keyboard resize и ARIA separator.
-updated: 2026-06-14
+updated: 2026-07-05
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Split` — resizable панели с разделителями (separator). Поддерживает horizontal/vertical направление, persistence размеров через `autoSaveName` (localStorage), `min`/`max`/`disabled`/`hidden` per-panel, единицы `percentages` или `pixels`. Resize — через Pointer Events (mouse + touch + pen) либо с клавиатуры на focused separator. Динамические slots по `panel.name`.
 
-Stability: `stable` — 38 кейсов, coverage `Split.vue` 85.12% statements / 72.39% branch.
+Stability: `stable` — 44 кейса, coverage `Split.vue` 85.1% statements / 72.3% branch.
 
 Source: [Source](../../lib/split/Split.vue), [Split.d.ts](../../lib/split/Split.d.ts), [Split.test.ts](../../lib/split/Split.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/split/Split.vue), [Split.d.ts](../../lib/split/Split.
 lib/split/
 ├── Split.vue
 ├── Split.d.ts          # 302 строки
-├── Split.test.ts       # 38 кейсов
+├── Split.test.ts       # 44 кейса
 └── package.json        # "sideEffects": false
 ```
 
@@ -197,9 +197,9 @@ Root класс — `fv fishtvue-split`.
 - Resize handle — `<div role="separator" tabindex="0">` с `aria-orientation` (= `direction`), `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (по размеру и `min`/`max` панели) и `aria-controls`, ссылающимся на `id` управляемой панели ([Split.vue:708-730](../../lib/split/Split.vue#L708-L730)). Disabled-разделитель помечается `aria-disabled="true"`.
 - Keyboard для resize на focused separator ([onSeparatorKeydown — Split.vue:479](../../lib/split/Split.vue#L479)): `ArrowRight`/`ArrowLeft` (horizontal) либо `ArrowDown`/`ArrowUp` (vertical) — шаг 10 (с `Shift` — 50); `Home`/`End` — к минимуму/максимуму. В RTL (`dir="rtl"`) стрелки horizontal инвертируются (`ArrowLeft` растит ведущую панель). Размер переносится между смежными панелями с учётом `min`/`max`.
 - Resize доступен с touch/pen — через Pointer Events (`touch-none` на разделителе предотвращает scroll-конфликт).
-- `prefers-reduced-motion`: transition корня обёрнут в `motion-safe:` ([Split.vue:98](../../lib/split/Split.vue#L98)) — при `reduce` анимации отключаются (WCAG 2.3.3).
+- `prefers-reduced-motion`: transition корня обёрнут в `motion-safe:` ([Split.vue:100](../../lib/split/Split.vue#L100)) — при `reduce` анимации отключаются (WCAG 2.3.3).
 - **RTL:** для horizontal direction resize работает в обе стороны — `isRtlHorizontal()` ([Split.vue:412](../../lib/split/Split.vue#L412)) детектит `getComputedStyle(...).direction === "rtl"` и зеркалит pointer-математику и стрелки. Физических `left/right` CSS-offset'ов у Split нет, поэтому логические-классы не требуются.
-- **forced-colors (high-contrast):** разделитель несёт `forced-colors:outline` ([Split.vue:80](../../lib/split/Split.vue#L80)) — остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается.
+- **forced-colors (high-contrast):** разделитель несёт `forced-colors:outline` ([Split.vue:83](../../lib/split/Split.vue#L83)) — остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается. Структурная divider-линия использует semantic-токен `bg-surface-200 dark:bg-surface-800` (не hardcode `gray-*`, см. [issues/split.md Issue 10](../issues/split.md)).
 
 ### Security
 
@@ -243,7 +243,7 @@ describe("Split", () => {
 })
 ```
 
-Реальные тесты — [Split.test.ts](../../lib/split/Split.test.ts) (38 кейсов).
+Реальные тесты — [Split.test.ts](../../lib/split/Split.test.ts) (44 кейса).
 
 ## 16. Troubleshooting / FAQ
 
@@ -269,7 +269,7 @@ describe("Split", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 85.19% statements / 71.77% branch (2026-06-07). Часть ветвей геометрии resize (`resizePanel` math) проверяется через mock'и `getBoundingClientRect`/`ResizeObserver` — реальный pixel-perfect resize валидируется только в браузере.
+- Coverage 85.1% statements / 72.3% branch (2026-07-05, 44 кейса). Часть ветвей геометрии resize (`resizePanel` math) проверяется через mock'и `getBoundingClientRect`/`ResizeObserver` — реальный pixel-perfect resize валидируется только в браузере.
 
 ### Skipped tests
 
@@ -292,7 +292,7 @@ describe("Split", () => {
 
 ### Deferred (cross-cutting)
 
-Аудит-issues Split закрыты (matrix `0/0/0/0`, см. [issues/split.md](../issues/split.md)): A4-5 exports map (inherited, Wave 2.1 ✅), F31 RTL (dir-aware resize-математика ✅), G34 root-ref expose (`focus()` ✅), B10 resize-handle (`forced-colors:outline` + preset-aware `theme-*` ✅). Остаётся cross-cutting, общее для всех компонентов: полная shadcn-style semantic-token миграция (extension theme-движка + runtime `usePreset`) — [theme.md Issue 1](../issues/theme.md) / Wave 9.
+Аудит-issues Split закрыты (matrix `0/0/0/0`, см. [issues/split.md](../issues/split.md)): A4-5 exports map (inherited, Wave 2.1 ✅), F31 RTL (dir-aware resize-математика ✅), G34 root-ref expose (`focus()` ✅), B10 resize-handle (`forced-colors:outline` + preset-aware `theme-*` accent ✅ 2026-06-13, структурная divider-линия `surface-*` ✅ 2026-07-05 — B10 для Split закрыт полностью). Split был одним из 8 «residual»-компонентов Wave 9 (accent мигрирован раньше, структурные нейтрали оставались до этого захода) — остальные residual-компоненты и отдельный Alert severity-color эпик остаются cross-cutting, централизованный трекинг — [theme.md Issue 1](../issues/theme.md) / [issues/README.md](../issues/README.md) / Wave 9.
 
 ### Bug report format
 

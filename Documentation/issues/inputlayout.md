@@ -1,7 +1,7 @@
 ---
 title: Issues — InputLayout
-summary: Аудит InputLayout — все issues ✅ resolved (1/2/3/5/6/7 — 2026-05-11; 4/8 — 2026-06-13: motion-safe, print, forced-colors, unstyled + packaging inherited; 9 — 2026-06-14: floating-label mount-slide gate; 10 — 2026-06-19: label↔control association через useId + for/aria-labelledby, Wave 4). Остаётся active как Wave 9 tracker (semantic-token migration, B10 residual).
-updated: 2026-06-19
+summary: Аудит InputLayout — все issues ✅ resolved (1/2/3/5/6/7 — 2026-05-11; 4/8 — 2026-06-13: motion-safe, print, forced-colors, unstyled + packaging inherited; 9 — 2026-06-14: floating-label mount-slide gate; 10 — 2026-06-19: label↔control association через useId + for/aria-labelledby, Wave 4). Wave 9 residual (структурные нейтрали gray-*/neutral-*/stone-*/slate-* → surface-*) закрыт 2026-07-05. Остаётся active как cross-cutting tracker (зеркало Input/Pagination/Form/Split — 0/0/0/0, но не перенесён в done/).
+updated: 2026-07-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/inputlayout/
 related-doc: ../components/input-layout.md
@@ -11,14 +11,14 @@ related-doc: ../components/input-layout.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | (2 closed: ~~C13 v-html × 2~~, ~~H41 ResizeObservers leak~~) |
-| high | 0 | (4 closed: ~~A2, A4-5, C17~~ inherited cross-cutting, ~~L53 unstyled~~; + ~~E29 label↔control association~~ Issue 10 найден+закрыт 2026-06-19, open-counts не затрагивает) |
-| medium | 0 | (4 closed: ~~C14 clipboard SSR~~, ~~E29.5 aria-live~~, ~~F30 i18n copied~~, ~~G34 querySelector coupling~~) |
-| low | 0 | (4 closed: ~~E29.7 motion-safe~~, ~~B10 forced-colors~~, ~~N59 print~~, ~~C18 label mount-slide~~) |
+| Severity | Count | Categories                                                                                                                                                                              |
+| -------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| critical | 0     | (2 closed: ~~C13 v-html × 2~~, ~~H41 ResizeObservers leak~~)                                                                                                                            |
+| high     | 0     | (4 closed: ~~A2, A4-5, C17~~ inherited cross-cutting, ~~L53 unstyled~~; + ~~E29 label↔control association~~ Issue 10 найден+закрыт 2026-06-19, open-counts не затрагивает)              |
+| medium   | 0     | (4 closed: ~~C14 clipboard SSR~~, ~~E29.5 aria-live~~, ~~F30 i18n copied~~, ~~G34 querySelector coupling~~)                                                                             |
+| low      | 0     | (4 closed: ~~E29.7 motion-safe~~, ~~B10 forced-colors + surface-token migration~~ (forced-colors 2026-06-13, structural neutrals 2026-07-05), ~~N59 print~~, ~~C18 label mount-slide~~) |
 
-> **Wave 9 residual:** B10 — структурные нейтрали (`gray-*`/`neutral-*`/`stone-*`) на semantic-токены (`bg-surface`/`border-border`) ещё не мигрированы; трекается cross-cutting [theme.md](./theme.md) / Wave 9. Сам `forced-colors:outline` (high-contrast видимость) добавлен.
+> **Wave 9 residual ✅ closed 2026-07-05:** B10 — структурные нейтрали (`gray-*`/`neutral-*`/`stone-*`/`slate-*`) мигрированы на semantic-токен `surface-*` (family rename, та же числовая тональность) — см. Issue 8 ниже. `forced-colors:outline` (high-contrast видимость) уже был добавлен ранее (2026-06-13).
 
 ## Issue 1: ~~CRITICAL — XSS через `help` и `messageInvalid` (v-html)~~ ✅ resolved 2026-05-11
 
@@ -141,6 +141,7 @@ async function copy() {
 ```
 
 `navigator.clipboard.writeText`:
+
 - Throws TypeError в HTTP context (требует HTTPS).
 - Throws в iframe sandbox без `clipboard-write` permission.
 - `navigator` undefined на SSR.
@@ -261,10 +262,18 @@ Confirm-feedback после успешного copy теперь рендери�
 
 Style-for-print (не `display:none`) — корневой `classBody` получил `print:border print:border-black print:bg-white print:text-black print:shadow-none` ([InputLayout.vue:92](../../lib/inputlayout/InputLayout.vue#L92)). Тест: блок `Print styles (N59)` (`print:*` присутствует, `print:hidden` отсутствует).
 
-### B10 — forced-colors + theme tokens ⚠️ (forced-colors ✅, semantic-токены → Wave 9)
+### B10 — forced-colors + theme tokens ✅ (forced-colors ✅ 2026-06-13, структурные нейтрали ✅ 2026-07-05)
 
-- **NEW `forced-colors:outline`** на поле `classBase` ([InputLayout.vue:115](../../lib/inputlayout/InputLayout.vue#L115)) — в Windows high-contrast `border-*` сбрасывается, outline сохраняет границу поля. Тест: блок `Forced-colors / high-contrast (B10)`.
-- **Структурные нейтрали** (`gray-*`/`neutral-*`/`stone-*`) и semantic-красный (`red-*`) **оставлены** — полная shadcn-style `bg-surface`/`border-border` миграция остаётся cross-cutting [theme.md Issue 1](./theme.md) / **Wave 9**. InputLayout не имеет собственного accent-цвета (нет `theme-*`-токенов вне дочерних Label/Icons).
+- **`forced-colors:outline`** на поле `classBase` ([InputLayout.vue:123](../../lib/inputlayout/InputLayout.vue#L123)) — в Windows high-contrast `border-*` сбрасывается, outline сохраняет границу поля. Тест: блок `Forced-colors / high-contrast (B10)`.
+- **Структурные нейтрали → `surface-*` (Wave 9 residual, closed 2026-07-05).** Хардкоженные Tailwind color-primitive классы `gray-*`/`neutral-*`/`stone-*`/`slate-*` заменены на semantic-токен `surface` (family rename, та же числовая тональность — `surface` дефолтится в точную копию `gray`-шкалы, см. [theme.md Issue 10](./theme.md)). Затронуто:
+  - `background` computed ([InputLayout.vue:82-89](../../lib/inputlayout/InputLayout.vue#L82-L89)) — outlined/underlined/filled fon: `bg-white dark:bg-neutral-950` → `bg-white dark:bg-surface-950`; `bg-stone-50 dark:bg-stone-950` → `bg-surface-50 dark:bg-surface-950`; `bg-stone-100 dark:bg-stone-900` → `bg-surface-100 dark:bg-surface-900`.
+  - `classBase` computed ([InputLayout.vue:103-125](../../lib/inputlayout/InputLayout.vue#L103-L125)) — основной цвет текста поля `text-gray-900 dark:text-gray-100` → `text-surface-900 dark:text-surface-100` ([:105](../../lib/inputlayout/InputLayout.vue#L105)); disabled-ternary `bg-neutral-50 dark:bg-neutral-950 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-800` → `bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-500 border-surface-200 dark:border-surface-800` ([:108](../../lib/inputlayout/InputLayout.vue#L108)); outlined border `border-gray-300 dark:border-gray-600` → `border-surface-300 dark:border-surface-600` ([:110](../../lib/inputlayout/InputLayout.vue#L110)); underlined border `border-gray-300 dark:border-gray-700` → `border-surface-300 dark:border-surface-700` ([:111](../../lib/inputlayout/InputLayout.vue#L111)); filled + disabled dotted border `border-slate-200` → `border-surface-200` ([:113](../../lib/inputlayout/InputLayout.vue#L113)).
+  - `classIconContent` computed ([InputLayout.vue:149-156](../../lib/inputlayout/InputLayout.vue#L149-L156)) — help/error tooltip fon+текст: `bg-white dark:bg-stone-900` → `bg-white dark:bg-surface-900`, `text-gray-500 dark:text-gray-400` → `text-surface-500 dark:text-surface-400` ([:152-153](../../lib/inputlayout/InputLayout.vue#L152-L153)).
+  - Иконки в template: help-icon база `text-gray-400 dark:text-gray-600` → `text-surface-400 dark:text-surface-600` ([:371](../../lib/inputlayout/InputLayout.vue#L371)); clear-icon база — то же ([:423](../../lib/inputlayout/InputLayout.vue#L423)); copy-icon база **и** hover `text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400` → `text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400` ([:436](../../lib/inputlayout/InputLayout.vue#L436)) — hover здесь структурный (просто более тёмный оттенок той же нейтрали), не semantic-intent.
+  - **Semantic-intent цвета НЕ трогались** (сохранены как есть): help-icon `hover:text-yellow-500` ([:371](../../lib/inputlayout/InputLayout.vue#L371)); clear-icon `hover:text-red-600 hover:dark:text-red-500` ([:423](../../lib/inputlayout/InputLayout.vue#L423)); invalid-иконка/сообщение `text-red-500`/`text-red-600`/`border-red-500`/`ring-red-500` (не в scope B10 — это error-state, а не structural chrome); copy-confirm иконка `text-emerald-400 dark:text-emerald-600` (success-state).
+  - Family rename, **не** value change — визуальной регрессии из коробки нет (та же числовая тональность), библиотека получает точку расширения через `updateSurfacePalette()`.
+- **Покрыто 12 regression-тестами** в [InputLayout.test.ts](../../lib/inputlayout/InputLayout.test.ts) (describe `Issue 8 residual — B10 hardcode: gray-*/neutral-*/stone-*/slate-* → surface-* (Wave 9 follow-up)`): background per mode (3× `it.each`), main field text, disabled-state bg/text, outlined border, underlined border, filled+disabled dotted border, tooltip content bg/text, help-icon (+ yellow hover preserved), clear-icon (+ red hover preserved), copy-icon base+hover (both migrated). Плюс синхронизированы 3 pre-existing fixture-строки в блоке `applies mode: %s` (были захардкожены на `gray-*`).
+- **Known limitation (pre-existing, вне scope этого fix):** disabled-state ternary в `classBase` несёт свой собственный `border-surface-200`/`dark:border-surface-800`, но при **одновременном** `disabled: true` + `mode: "outlined"` (дефолтный mode) он вытесняется `twMerge` (через `cn()` в [Component.setStyle()](../../lib/component/index.ts#L140)) классом `border-surface-300`/`600` из mode-ветки, так как та идёт позже в массиве `setStyle([...])`. Идентичное поведение существовало и до миграции (`border-slate-200` тоже вытеснялся). Не является B10-регрессией — чисто family rename не меняет порядок массива.
 
 ## Issue 9: ~~floating-label «переезжает» из исходной точки в финальную на mount~~ ✅ resolved 2026-06-14
 
@@ -289,15 +298,15 @@ Style-for-print (не `display:none`) — корневой `classBody` полу�
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.InputLayout` | ✅ | mode, animation, `offsetTop` и др. |
-| `componentsStyle` global | ✅ | `InputLayout.componentsStyle()` ([InputLayout.vue:43](../../lib/inputlayout/InputLayout.vue#L43)) |
-| `unstyled: true` | ✅ | Issue 4 ✅ — cross-cutting guard `Component.setStyle()` |
-| Theme tokens vs hardcode | ⚠️ | `forced-colors:outline` добавлен (Issue 8); semantic-токены `neutral-*` → Wave 9 |
-| Runtime theme switch | ✅ | через CSS-variables |
-| `t()` для текста | ✅ | clear, copy, `inputLayout.copied` confirm — все локализованы (Issue 7 ✅) |
-| Runtime locale switch | ✅ | если использует t() — реагирует |
+| Настройка                       | Поддержано? | Комментарий                                                                                                                                                        |
+| ------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `componentsOptions.InputLayout` | ✅          | mode, animation, `offsetTop` и др.                                                                                                                                 |
+| `componentsStyle` global        | ✅          | `InputLayout.componentsStyle()` ([InputLayout.vue:43](../../lib/inputlayout/InputLayout.vue#L43))                                                                  |
+| `unstyled: true`                | ✅          | Issue 4 ✅ — cross-cutting guard `Component.setStyle()`                                                                                                            |
+| Theme tokens vs hardcode        | ✅          | `forced-colors:outline` (Issue 8, 2026-06-13) + структурные нейтрали `gray-*`/`neutral-*`/`stone-*`/`slate-*` → `surface-*` (Issue 8, Wave 9 residual, 2026-07-05) |
+| Runtime theme switch            | ✅          | через CSS-variables                                                                                                                                                |
+| `t()` для текста                | ✅          | clear, copy, `inputLayout.copied` confirm — все локализованы (Issue 7 ✅)                                                                                          |
+| Runtime locale switch           | ✅          | если использует t() — реагирует                                                                                                                                    |
 
 ## Dual-API gap
 

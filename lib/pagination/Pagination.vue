@@ -105,26 +105,26 @@
   const isStyleMode = computed<boolean>(() => mode.value === "outlined" || mode.value === "filled")
   const modeStyleSelect = computed<string>(() =>
     mode.value === "filled"
-      ? "bg-stone-100 dark:bg-stone-900"
+      ? "bg-surface-100 dark:bg-surface-900"
       : mode.value === "outlined"
-        ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-neutral-950"
+        ? "border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-950"
         : mode.value === "underlined"
           ? ""
           : ""
   )
   const modeStyle = computed<string>(() =>
     mode.value === "filled"
-      ? "bg-stone-100 dark:bg-stone-900 rounded-lg mx-1 mt-0 px-2 py-2 hover:bg-stone-200 dark:hover:bg-stone-800"
+      ? "bg-surface-100 dark:bg-surface-900 rounded-lg mx-1 mt-0 px-2 py-2 hover:bg-surface-200 dark:hover:bg-surface-800"
       : mode.value === "outlined"
-        ? "bg-white dark:bg-neutral-950 ring-1 ring-inset ring-neutral-300 dark:ring-neutral-700 rounded-lg mx-1 mt-0 px-2 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+        ? "bg-white dark:bg-surface-950 ring-1 ring-inset ring-surface-300 dark:ring-surface-700 rounded-lg mx-1 mt-0 px-2 py-2 hover:bg-surface-100 dark:hover:bg-surface-900"
         : mode.value === "underlined"
           ? "bg-transparent hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent disabled:hover:bg-transparent disabled:dark:hover:bg-transparent active:bg-transparent active:dark:bg-transparent focus-visible:bg-transparent focus-visible:dark:bg-transparent " +
-            "rounded-none border-t-2 border-transparent pt-4 px-2 hover:border-gray-300 hover:text-gray-700 dark:hover:border-gray-700 dark:hover:text-gray-300"
+            "rounded-none border-t-2 border-transparent pt-4 px-2 hover:border-surface-300 hover:text-surface-700 dark:hover:border-surface-700 dark:hover:text-surface-300"
           : ""
   )
   const paramsSelect = computed<Partial<BaseSelectProps>>(() => ({
     noQuery: true,
-    classSelect: "font-bold text-gray-600 dark:text-gray-500",
+    classSelect: "font-bold text-surface-600 dark:text-surface-500",
     classSelectList: "min-w-[8rem]",
     dataSelect: arraySizesSelector.value,
     paramsFixWindow: {
@@ -133,7 +133,7 @@
   }))
   const classBase = ref(
     Pagination.setStyle([
-      "flex items-center justify-between w-full overflow-auto border-t border-gray-200 dark:border-gray-800 pb-3 -mt-px print:border-black",
+      "flex items-center justify-between w-full overflow-auto border-t border-surface-200 dark:border-surface-800 pb-3 -mt-px print:border-black",
       options?.class ?? "",
       props?.class ?? ""
     ])
@@ -143,13 +143,13 @@
   )
   const classShortContent = computed(() =>
     Pagination.setStyle([
-      "flex sm:-mt-px sm:hidden px-3 text-neutral-500 font-bold",
+      "flex sm:-mt-px sm:hidden px-3 text-surface-500 font-bold",
       isStyleMode.value ? "pt-2" : "pt-4"
     ])
   )
   const classShortContentActivePage = ref(Pagination.setStyle("text-theme-700 dark:text-theme-400 print:text-black"))
   const classShortContentSeparator = ref(Pagination.setStyle("mx-0.5"))
-  const classShortContentCountPages = ref(Pagination.setStyle("text-neutral-700 dark:text-neutral-400"))
+  const classShortContentCountPages = ref(Pagination.setStyle("text-surface-700 dark:text-surface-400"))
   const classContent = computed(() =>
     Pagination.setStyle([
       "hidden sm:flex sm:flex-1 sm:items-center sm:justify-between",
@@ -157,8 +157,8 @@
     ])
   )
   const classInfoText = ref(Pagination.setStyle("w-28 md:w-40 text-center -mb-4"))
-  const classInfoTextContent = ref(Pagination.setStyle("text-sm text-gray-600 dark:text-gray-500"))
-  const classInfoTextPage = ref(Pagination.setStyle("font-bold dark:text-gray-400"))
+  const classInfoTextContent = ref(Pagination.setStyle("text-sm text-surface-600 dark:text-surface-500"))
+  const classInfoTextPage = ref(Pagination.setStyle("font-bold dark:text-surface-400"))
   const classNav = computed(() => Pagination.setStyle(["w-full isolate inline-flex rounded-md"]))
   const classPrevious = computed(() =>
     Pagination.setStyle([
@@ -180,8 +180,8 @@
   // физический `ml-3` заменён на logical `ms-3` (auto-флип). Порядок prev/next зеркалит сам
   // `inline-flex` контейнера (main-axis следует document direction).
   const classIcon = ref(Pagination.setStyle("h-5 w-5 rtl:-scale-x-100"))
-  const classIconContent = ref(Pagination.setStyle("ms-3 h-5 w-5 text-gray-400 rtl:-scale-x-100"))
-  const classIconNotPage = ref(Pagination.setStyle("h-5 w-5 text-gray-400"))
+  const classIconContent = ref(Pagination.setStyle("ms-3 h-5 w-5 text-surface-400 rtl:-scale-x-100"))
+  const classIconNotPage = ref(Pagination.setStyle("h-5 w-5 text-surface-400"))
   const classBodyPages = computed(() =>
     Pagination.setStyle(["hidden sm:-mt-px sm:flex", isStyleMode.value ? "pt-3" : ""])
   )
@@ -193,7 +193,7 @@
       modeStyleSelect.value
     ])
   )
-  const classPageSizeSelectorText = ref(Pagination.setStyle("text-sm text-gray-400 dark:text-gray-500"))
+  const classPageSizeSelectorText = ref(Pagination.setStyle("text-sm text-surface-400 dark:text-surface-500"))
   // Issue 8 (N59/B10): active-страница остаётся различимой в forced-colors (high-contrast)
   // и монохромно читаемой при печати (style-for-print, канон Button/Input/Table).
   const classNavPageActiveState = ref(
@@ -308,7 +308,7 @@
     <div data-pagination-short-version :class="classShortVersion">
       <Button
         data-pagination-short-previous
-        :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
+        :class="['m-0 font-medium text-surface-600 dark:text-surface-400', modeStyle]"
         :disabled="[0, activePage].includes(pages[pages.length - 1])"
         @click="switchPage(pages.slice().reverse())">
         {{ Pagination.t("previous") ?? "Previous" }}
@@ -322,7 +322,7 @@
       <!-- -------------------------------- -->
       <Button
         data-pagination-short-next
-        :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
+        :class="['m-0 font-medium text-surface-600 dark:text-surface-400', modeStyle]"
         :disabled="[0, activePage].includes(pages[pages.length - 1])"
         @click="switchPage(pages)">
         {{ Pagination.t("next") ?? "Next" }}
@@ -350,7 +350,7 @@
         <div ref="navPreviousLink" data-pagination-nav-previous :class="classPrevious">
           <Button
             v-if="isNavigationButtons"
-            :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
+            :class="['m-0 font-medium text-surface-600 dark:text-surface-400', modeStyle]"
             :disabled="[0, activePage].includes(pages[0])"
             @click="switchPage(pages.slice().reverse())">
             <template v-if="isInfoText || isPageSizeSelector || isShortPrevious">
@@ -372,22 +372,22 @@
               :aria-label="`${Pagination.t('pagination.page')} ${page}`"
               :class="[
                 'font-medium select-none m-0',
-                page === activePage ? 'text-theme-600 dark:text-theme-400' : 'text-gray-600 dark:text-gray-400',
+                page === activePage ? 'text-theme-600 dark:text-theme-400' : 'text-surface-600 dark:text-surface-400',
                 mode === 'filled'
                   ? 'max-w-9 w-9 flex justify-center rounded-lg mx-0.5 mt-0 py-2 ' +
                     (page === activePage
                       ? 'bg-theme-100 dark:bg-theme-950 hover:bg-theme-200 dark:hover:bg-theme-900'
-                      : 'bg-stone-100 dark:bg-stone-900 hover:bg-neutral-200 dark:hover:bg-neutral-800')
+                      : 'bg-surface-100 dark:bg-surface-900 hover:bg-surface-200 dark:hover:bg-surface-800')
                   : mode === 'outlined'
                     ? 'max-w-9 w-9 flex justify-center ring-1 ring-inset rounded-lg mx-0.5 mt-0 py-2 ' +
                       (page === activePage
-                        ? 'ring-theme-300 dark:ring-theme-700 bg-white dark:bg-neutral-950 hover:bg-theme-100 dark:hover:bg-theme-950'
-                        : 'bg-white dark:bg-neutral-950 ring-neutral-300 dark:ring-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-900')
+                        ? 'ring-theme-300 dark:ring-theme-700 bg-white dark:bg-surface-950 hover:bg-theme-100 dark:hover:bg-theme-950'
+                        : 'bg-white dark:bg-surface-950 ring-surface-300 dark:ring-surface-700 hover:bg-surface-100 dark:hover:bg-surface-900')
                     : mode === 'underlined'
                       ? 'mt-0 border-t-2 px-4 pt-4 bg-transparent hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent disabled:hover:bg-transparent disabled:dark:hover:bg-transparent active:bg-transparent active:dark:bg-transparent focus-visible:bg-transparent focus-visible:dark:bg-transparent rounded-none ' +
                         (page === activePage
                           ? 'border-theme-400 dark:border-theme-700'
-                          : 'border-transparent hover:border-gray-300 hover:text-gray-700 dark:hover:border-gray-700 dark:hover:text-gray-300')
+                          : 'border-transparent hover:border-surface-300 hover:text-surface-700 dark:hover:border-surface-700 dark:hover:text-surface-300')
                       : '',
                 page === activePage ? classNavPageActiveState : ''
               ]"
@@ -407,7 +407,7 @@
         <div ref="navNextLink" data-pagination-nav-next :class="classNext">
           <Button
             v-if="isNavigationButtons"
-            :class="['m-0 font-medium text-gray-600 dark:text-gray-400', modeStyle]"
+            :class="['m-0 font-medium text-surface-600 dark:text-surface-400', modeStyle]"
             :disabled="[0, activePage].includes(pages[pages.length - 1])"
             @click="switchPage(pages)">
             <template v-if="isInfoText || isPageSizeSelector || isShortNext">

@@ -1,7 +1,7 @@
 ---
 title: Issues — Dialog (done)
-summary: Аудит Dialog закрыт 2026-05-12 — все 9 issues resolved одним fix(dialog) коммитом. Добавлены focus trap (native), reference-counted scroll lock (новый lib/utils/scrollLockHandler.ts), role="dialog"/aria-modal/labelledby/describedby, focus return, motion-safe transitions, RTL close button, aria-live region, sideEffects: false, sr-only live region. Cross-cutting SSR styles + exports map (Issue 6 подпункты) defer to Wave 2.1.
-updated: 2026-05-12
+summary: Аудит Dialog закрыт 2026-05-12 — все 9 issues resolved одним fix(dialog) коммитом. Добавлены focus trap (native), reference-counted scroll lock (новый lib/utils/scrollLockHandler.ts), role="dialog"/aria-modal/labelledby/describedby, focus return, motion-safe transitions, RTL close button, aria-live region, sideEffects: false, sr-only live region. Cross-cutting SSR styles + exports map (Issue 6 подпункты) defer to Wave 2.1. Остаточный B10 (structural neutral hardcode) мигрирован на surface token 2026-07-05 (Wave 9 follow-up), матрица не меняется.
+updated: 2026-07-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/dialog/
 related-doc: ../../components/dialog.md
@@ -123,14 +123,31 @@ related-doc: ../../components/dialog.md
 
 - [x] All transitions wrapped in `motion-safe:` (test E: "transitions wrapped in motion-safe: prefix" + static-source check).
 
-## Cross-cutting: Configuration support (обновлено 2026-05-12)
+## ~~B10 — structural neutral hardcode~~ ✅ resolved 2026-07-05
+
+- **Категория:** B10 (semantic tokens вместо hardcoded gray-family classes), Wave 9 follow-up
+- **Severity:** ~~low~~
+- **Где:** [Dialog.vue](../../../lib/dialog/Dialog.vue)
+- **Что было:** `bg-neutral-500/10 dark:bg-neutral-900/10` (overlay background), `dark:bg-neutral-950` (dialog panel, `bg-white` не менялся) и `fill-neutral-500 dark:fill-neutral-500` (close-icon) — хардкоженные Tailwind color-primitive классы вместо semantic design-token. На момент аудита 2026-05-12 (Issue 9 таблица выше) это оставили как **не Dialog-specific issue**, ожидая cross-cutting `surface` token из Wave 9.
+- **Resolution:** family rename (тот же numeric tone, значение не менялось) на `surface` semantic-слот, добавленный в [lib/theme/primitive.ts:305-317](../../../lib/theme/primitive.ts#L305-L317) (дефолт — точная копия `gray`-шкалы; `namesColors` union в [Theme.d.ts](../../../lib/theme/Theme.d.ts)):
+  - `bg-neutral-500/10 dark:bg-neutral-900/10` → `bg-surface-500/10 dark:bg-surface-900/10` ([Dialog.vue:129](../../../lib/dialog/Dialog.vue#L129))
+  - `dark:bg-neutral-950` → `dark:bg-surface-950` ([Dialog.vue:134](../../../lib/dialog/Dialog.vue#L134), `bg-white` не тронут)
+  - `fill-neutral-500 dark:fill-neutral-500` → `fill-surface-500 dark:fill-surface-500` ([Dialog.vue:308](../../../lib/dialog/Dialog.vue#L308))
+
+### Acceptance criteria
+
+- [x] Overlay background uses `surface-*` family, not `neutral-*` (test K: "overlay background uses surface-family (not neutral-500/900)").
+- [x] Dialog panel keeps `bg-white`, uses `dark:bg-surface-950` (test K: "dialog panel keeps bg-white and uses surface-950 in dark mode (not neutral-950)").
+- [x] Close icon uses `fill-surface-*`, not `fill-neutral-*` (test K: "close icon uses surface-family fill (not neutral-500)").
+
+## Cross-cutting: Configuration support (обновлено 2026-07-05)
 
 | Настройка                  | Поддержано? | Комментарий                                                                       |
 | -------------------------- | ----------- | --------------------------------------------------------------------------------- |
 | `componentsOptions.Dialog` | ✅          | toTeleport, position, sizes, **+ ariaLabel/ariaLabelledby/ariaDescribedby/initialFocus/returnFocus** |
 | `componentsStyle` global   | ❌          | Dialog не имеет mode-prop (filled/outlined/underlined неприменимо к modal)        |
 | `unstyled: true`           | ✅          | Wave 3.1 закрыт cross-cutting'ом через `Component.setStyle` guard (2026-05-12)    |
-| Theme tokens vs hardcode   | ⚠️          | через theme-\* частично; hardcode `bg-neutral-500/10` / `dark:bg-neutral-900/10` остался — не Dialog-specific issue |
+| Theme tokens vs hardcode   | ✅          | `surface-*` semantic tokens (B10, ✅ 2026-07-05); `bg-white` (light panel) намеренно не тронут |
 | `t()` для текста           | ✅          | `Dialog.t("dialog.close")` для close button aria-label                            |
 
 ## Dual-API gap

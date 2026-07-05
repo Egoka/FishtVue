@@ -48,13 +48,13 @@
       ? Switch.setStyle([
           "min-w-20 my-4 py-[6px] px-2 rounded-md",
           mode.value === "outlined"
-            ? `border border-gray-300 dark:border-gray-600 bg-white dark:bg-black ${isDisabled.value ? "bg-slate-50 dark:bg-stone-950 border-dashed" : ""}`
+            ? `border border-surface-300 dark:border-surface-600 bg-white dark:bg-black ${isDisabled.value ? "bg-surface-50 dark:bg-surface-950 border-dashed" : ""}`
             : "",
           mode.value === "underlined"
-            ? `rounded-none border-0 border-gray-300 dark:border-gray-700 border-b shadow-none bg-stone-50 dark:bg-stone-950 ${isDisabled.value ? "border-dashed" : ""}`
+            ? `rounded-none border-0 border-surface-300 dark:border-surface-700 border-b shadow-none bg-surface-50 dark:bg-surface-950 ${isDisabled.value ? "border-dashed" : ""}`
             : "",
           mode.value === "filled"
-            ? `bg-stone-100 dark:bg-stone-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`
+            ? `bg-surface-100 dark:bg-surface-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`
             : "",
           options?.class ?? "",
           props?.class ?? "",
@@ -69,13 +69,13 @@
         ? Switch.setStyle([
             "min-w-20 gap-x-3 my-4 py-[6px] px-2 rounded-md",
             mode.value === "outlined"
-              ? `border border-gray-300 dark:border-gray-600 bg-white dark:bg-black ${isDisabled.value ? "bg-slate-50 dark:bg-stone-950 border-dashed" : ""}`
+              ? `border border-surface-300 dark:border-surface-600 bg-white dark:bg-black ${isDisabled.value ? "bg-surface-50 dark:bg-surface-950 border-dashed" : ""}`
               : "",
             mode.value === "underlined"
-              ? `rounded-none border-0 border-gray-300 dark:border-gray-700 border-b shadow-none bg-stone-50 dark:bg-stone-950 ${isDisabled.value ? "border-dashed" : ""}`
+              ? `rounded-none border-0 border-surface-300 dark:border-surface-700 border-b shadow-none bg-surface-50 dark:bg-surface-950 ${isDisabled.value ? "border-dashed" : ""}`
               : "",
             mode.value === "filled"
-              ? ` bg-stone-100 dark:bg-stone-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`
+              ? ` bg-surface-100 dark:bg-surface-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`
               : "",
             options?.class ?? "",
             props.class ?? "",
@@ -90,35 +90,35 @@
     switchingType.value === "switch"
       ? Switch.setStyle([
           isDisabled.value
-            ? `pointer-events-none border-dotted border-2 border-transparent w-9 ${modelValue.value ? "bg-gray-600 dark:bg-gray-400" : "bg-gray-200 dark:bg-gray-800"}`
+            ? `pointer-events-none border-dotted border-2 border-transparent w-9 ${modelValue.value ? "bg-surface-600 dark:bg-surface-400" : "bg-surface-200 dark:bg-surface-800"}`
             : "",
-          modelValue.value ? "bg-theme-600 dark:bg-theme-400" : "bg-gray-200 dark:bg-gray-800",
+          modelValue.value ? "bg-theme-600 dark:bg-theme-400" : "bg-surface-200 dark:bg-surface-800",
           // Issue 7: motion-safe transitions. Issue 12 (B10): forced-colors:outline сохраняет
           // трек видимым в Windows high-contrast (bg-* там сбрасывается) — on/off различимы по позиции thumb.
-          "flex w-8 flex-none cursor-pointer p-px ring-2 ring-inset ring-gray-900/5 dark:ring-gray-900/5 motion-safe:transition-colors motion-safe:duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-theme-600 forced-colors:outline"
+          "flex w-8 flex-none cursor-pointer p-px ring-2 ring-inset ring-surface-900/5 dark:ring-surface-900/5 motion-safe:transition-colors motion-safe:duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-theme-600 forced-colors:outline"
         ])
       : switchingType.value === "checkbox"
         ? Switch.setStyle([
-            "h-4 w-4 bg-stone-50 dark:bg-stone-950",
-            "border border-gray-300 dark:border-gray-700",
+            "h-4 w-4 bg-surface-50 dark:bg-surface-950",
+            "border border-surface-300 dark:border-surface-700",
             "text-theme-500 dark:text-theme-700 checked:bg-theme-600 checked:dark:bg-theme-400",
             "focus:ring-offset-0 focus:ring-theme-200 focus:dark:ring-theme-700",
             "motion-safe:transition cursor-pointer",
-            "disabled:bg-slate-500 disabled:text-slate-500 disabled:accent-slate-500"
+            "disabled:bg-surface-500 disabled:text-surface-500 disabled:accent-surface-500"
           ])
         : ""
   )
   const classLabel = computed(() =>
     switchingType.value === "switch"
       ? Switch.setStyle([
-          "font-medium text-sm leading-6 text-gray-900 dark:text-gray-100 cursor-pointer",
-          isDisabled.value ? "pointer-events-none text-slate-800 dark:text-slate-200" : "",
+          "font-medium text-sm leading-6 text-surface-900 dark:text-surface-100 cursor-pointer",
+          isDisabled.value ? "pointer-events-none text-surface-800 dark:text-surface-200" : "",
           isRequired.value ? `after:content-['*'] after:text-red-500 after:ml-1` : ""
         ])
       : switchingType.value === "checkbox"
         ? Switch.setStyle([
-            "font-medium text-sm leading-6 text-gray-600 dark:text-gray-400 cursor-pointer",
-            isDisabled.value ? "text-slate-800 dark:text-slate-200" : "",
+            "font-medium text-sm leading-6 text-surface-600 dark:text-surface-400 cursor-pointer",
+            isDisabled.value ? "text-surface-800 dark:text-surface-200" : "",
             isRequired.value ? `after:content-['*'] after:text-red-500 after:dark:text-red-800 after:ml-1` : ""
           ])
         : ""
@@ -128,8 +128,8 @@
   const classIconContent = ref(
     Switch.setStyle(
       "p-3 rounded-md shadow-lg " +
-        "bg-white dark:bg-stone-900 " +
-        "font-light italic text-xs text-gray-500 dark:text-gray-400 " +
+        "bg-white dark:bg-surface-900 " +
+        "font-light italic text-xs text-surface-500 dark:text-surface-400 " +
         "ring-1 ring-black/20 focus:outline-none"
     )
   )
@@ -137,9 +137,9 @@
     Switch.setStyle([
       modelValue.value
         ? "translate-x-3.5 bg-theme-100 dark:bg-theme-900"
-        : "translate-x-0 bg-gray-100 dark:bg-gray-950",
+        : "translate-x-0 bg-surface-100 dark:bg-surface-950",
       // Issue 7: motion-safe transitions.
-      "h-4 w-4 shadow-sm ring-1 ring-gray-900/5 motion-safe:transition-all motion-safe:duration-300 ease-in-out"
+      "h-4 w-4 shadow-sm ring-1 ring-surface-900/5 motion-safe:transition-all motion-safe:duration-300 ease-in-out"
     ])
   )
   // Иконка-thumb (ветка iconActive/iconInactive) — зеркало classSwitchIcon + transform/цвет иконки.
@@ -149,8 +149,8 @@
     Switch.setStyle([
       modelValue.value
         ? "translate-x-3.5 bg-theme-100 dark:bg-theme-900"
-        : "translate-x-0 bg-gray-100 dark:bg-gray-950",
-      "h-4 w-4 transform shadow-sm ring-1 ring-gray-900/5 motion-safe:transition-all motion-safe:duration-300 ease-in-out text-gray-400 dark:text-gray-600"
+        : "translate-x-0 bg-surface-100 dark:bg-surface-950",
+      "h-4 w-4 transform shadow-sm ring-1 ring-surface-900/5 motion-safe:transition-all motion-safe:duration-300 ease-in-out text-surface-400 dark:text-surface-600"
     ])
   )
   // ---TEMPLATE-REF------------------------
@@ -275,7 +275,7 @@
       <div data-switch-help v-if="help?.length || $slots.help" :class="classIconBody">
         <Icons
           type="QuestionMarkCircle"
-          class="text-gray-500 dark:text-gray-400 hover:text-yellow-500 transition cursor-help" />
+          class="text-surface-500 dark:text-surface-400 hover:text-yellow-500 transition cursor-help" />
         <FixWindow
           :mode="mode as StyleMode"
           event-open="click"

@@ -852,6 +852,41 @@ describe("Split Component", () => {
     })
   })
 
+  // ---B10 (Wave 9 residual) — divider structural color: gray-* → surface-*----
+  describe("Theming — semantic surface tokens on the divider line, not hardcoded gray-* (B10)", () => {
+    it("uses surface-* background classes on the separator divider, not gray-*", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      const cls = wrapper.find("[data-split-separator]").attributes("class") ?? ""
+      expect(cls).toContain("bg-surface-200")
+      expect(cls).toContain("dark:bg-surface-800")
+      expect(cls).not.toContain("bg-gray-200")
+      expect(cls).not.toContain("dark:bg-gray-800")
+    })
+
+    it("uses surface-* on the disabled separator divider too, not gray-*", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, disabled: true },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      const cls = wrapper.find("[data-split-separator-disabled]").attributes("class") ?? ""
+      expect(cls).toContain("bg-surface-200")
+      expect(cls).toContain("dark:bg-surface-800")
+      expect(cls).not.toContain("bg-gray-200")
+      expect(cls).not.toContain("dark:bg-gray-800")
+    })
+  })
+
   describe("With Library Initialization", () => {
     const createAppWithFishtVue = (options: SplitOption = {}) => ({
       install(app: any) {

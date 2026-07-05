@@ -207,7 +207,7 @@ app.use(FishtVue, {
 - Dark mode через `optionsTheme.darkModeSelector`.
 - **High-contrast (forced-colors):** switch-track несёт `forced-colors:outline` ([Switch.vue:98](../../lib/switch/Switch.vue#L98)) — остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается; on/off различимы по позиции thumb.
 - **Print:** style-for-print (`print:border print:bg-white print:text-black print:shadow-none`) — печатается монохромным и читаемым, не скрывается.
-- Структурные нейтрали (`gray-*`/`stone-*`) — пока Tailwind primitives; полная shadcn-style semantic-token миграция — Wave 9 ([issues/switch.md Issue 12](../issues/switch.md)).
+- Структурные нейтрали (границы, off-state track/thumb, label-текст, help-tooltip) используют semantic-токен `surface` ([Switch.vue:51](../../lib/switch/Switch.vue#L51), например) — family rename той же тональности, что и прежний `gray`/`stone`/`slate`, с точкой расширения через `updateSurfacePalette()` (Wave 9, 2026-07-05, [issues/switch.md Issue 12](../issues/switch.md)). Required-asterisk `text-red-*` и help-icon `hover:text-yellow-500` — независимые semantic-intent цвета, не затронуты.
 
 ### 10.4 `switchingType` и global `componentsStyle`
 
@@ -244,7 +244,7 @@ const rules = [{ type: "required", message: "Must be enabled" }]
 - `prefers-reduced-motion` учтён: все transitions через `motion-safe:`-варианты ([Switch.vue:64, 98, 106, 136](../../lib/switch/Switch.vue#L64)) — при `reduce` анимации не проигрываются.
 - High-contrast (forced-colors): switch-track несёт `forced-colors:outline` ([Switch.vue:98](../../lib/switch/Switch.vue#L98)) — состояние видимо, когда ОС сбрасывает `bg-*`.
 - Print: style-for-print на корне ([Switch.vue:66, 84](../../lib/switch/Switch.vue#L66)) — Switch печатается, а не скрывается.
-- Help icon trigger (`QuestionMarkCircle`) контраст в light mode ≥4.5:1 (`text-gray-500 dark:text-gray-400`, [Switch.vue:277](../../lib/switch/Switch.vue#L277)) — WCAG AA passes для UI текста.
+- Help icon trigger (`QuestionMarkCircle`) контраст в light mode ≥4.5:1 (`text-surface-500 dark:text-surface-400`, [Switch.vue:278](../../lib/switch/Switch.vue#L278)) — WCAG AA passes для UI текста; та же тональность, что и `text-gray-500 dark:text-gray-400` до Wave 9 family rename (2026-07-05).
 - RTL: `classAfterInput`/`classIconBody` используют logical properties (`end-0`, `me-2`, [Switch.vue:126–127](../../lib/switch/Switch.vue#L126-L127)) — корректно зеркалятся при `dir="rtl"`.
 
 ### Security

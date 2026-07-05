@@ -126,12 +126,12 @@
   const classBackgroundBase = ref<StyleClass>(Dialog.setStyle("fixed inset-0 z-[199]"))
   const classBackgroundBaseColor = ref<StyleClass>(
     Dialog.setStyle(
-      "fixed inset-0 bg-neutral-500/10 dark:bg-neutral-900/10 backdrop-blur-[3px] motion-safe:transition-all motion-safe:duration-200"
+      "fixed inset-0 bg-surface-500/10 dark:bg-surface-900/10 backdrop-blur-[3px] motion-safe:transition-all motion-safe:duration-200"
     )
   )
   const classDialog = computed<StyleClass>(() =>
     Dialog.setStyle([
-      "p-6 w-full max-w-xs max-h-full rounded-md bg-white dark:bg-neutral-950",
+      "p-6 w-full max-w-xs max-h-full rounded-md bg-white dark:bg-surface-950",
       size.value ?? "",
       classPosition.value ?? "",
       classBodyDialog.value ?? "",
@@ -305,7 +305,7 @@
             class="absolute top-2 end-2 px-[5px] m-1 h-9 w-9"
             :aria-label="Dialog.t('dialog.close') ?? 'Close dialog'"
             @click="closeDialog">
-            <Icons type="XMark" class="fill-neutral-500 dark:fill-neutral-500" />
+            <Icons type="XMark" class="fill-surface-500 dark:fill-surface-500" />
           </Button>
         </div>
         <div data-dialog-live class="sr-only" aria-live="polite" aria-atomic="true"></div>

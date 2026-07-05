@@ -47,17 +47,17 @@ describe("InputLayout Component", () => {
       {
         mode: "outlined",
         expected:
-          "fv fishtvue-input-layout classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border border-gray-300 dark:border-gray-600 flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout classLayout rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border border-surface-300 dark:border-surface-600 flex items-center peer overflow-auto"
       },
       {
         mode: "underlined",
         expected:
-          "fv fishtvue-input-layout classLayout w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 rounded-none border-0 border-gray-300 dark:border-gray-700 border-b flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout classLayout w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 rounded-none border-0 border-surface-300 dark:border-surface-700 border-b flex items-center peer overflow-auto"
       },
       {
         mode: "filled",
         expected:
-          "fv fishtvue-input-layout classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border-0 border-transparent flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout classLayout rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border-0 border-transparent flex items-center peer overflow-auto"
       }
     ] as { mode: InputProps["mode"]; expected: string }[])("applies mode: %s", ({ mode, expected }) => {
       const wrapper = mount(InputLayout, {
@@ -648,6 +648,137 @@ describe("InputLayout Component", () => {
       const wrapper = mount(InputLayout, { props: { value: "" } })
       const cls = wrapper.find("[data-input-layout-base]").attributes("class") ?? ""
       expect(cls).toContain("forced-colors:outline")
+    })
+  })
+
+  // Issue 8 — B10 residual (Wave 9 follow-up, 2026-07-05): структурные нейтрали gray-*/neutral-*/stone-*/slate-*
+  // мигрированы на semantic-токен surface-* (family rename, та же числовая тональность). Semantic-intent
+  // цвета (yellow hover / red hover) НЕ трогаются — отдельные кейсы ниже подтверждают их сохранность.
+  describe("Issue 8 residual — B10 hardcode: gray-*/neutral-*/stone-*/slate-* → surface-* (Wave 9 follow-up)", () => {
+    it.each([
+      { mode: "outlined", expectClass: "bg-white dark:bg-surface-950", forbidden: /dark:bg-neutral-950/ },
+      {
+        mode: "underlined",
+        expectClass: "bg-surface-50 dark:bg-surface-950",
+        forbidden: /(?:^|\s)bg-stone-50(?:\s|$)|dark:bg-stone-950/
+      },
+      {
+        mode: "filled",
+        expectClass: "bg-surface-100 dark:bg-surface-900",
+        forbidden: /(?:^|\s)bg-stone-100(?:\s|$)|dark:bg-stone-900/
+      }
+    ] as { mode: InputProps["mode"]; expectClass: string; forbidden: RegExp }[])(
+      "classBody background for mode: %s uses surface-*, not hardcoded gray-family",
+      ({ mode, expectClass, forbidden }) => {
+        const wrapper = mount(InputLayout, { props: { value: "", mode } })
+        const cls = wrapper.find("[data-input-layout]").attributes("class") ?? ""
+        expect(cls).toContain(expectClass)
+        expect(cls).not.toMatch(forbidden)
+      }
+    )
+
+    it("classBase main field text uses surface-*, not hardcoded gray-*", () => {
+      const wrapper = mount(InputLayout, { props: { value: "" } })
+      const cls = wrapper.find("[data-input-layout-base]").attributes("class") ?? ""
+      expect(cls).toContain("text-surface-900")
+      expect(cls).toContain("dark:text-surface-100")
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-900(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:text-gray-100(?:\s|$)/)
+    })
+
+    it("disabled-state ternary uses surface-* for bg/text, not hardcoded neutral-*/slate-*", () => {
+      // Note: border-surface-200/dark:border-surface-800 из этой же ternary в тесте не проверяются —
+      // twMerge (cn()) детерминированно вытесняет их border-* классом mode-ветки (outlined/underlined),
+      // поскольку та идёт позже в массиве setStyle([...]). Это pre-existing поведение (то же самое было
+      // с border-slate-200 до миграции), не относится к family-rename и не входит в scope этого ТЗ.
+      const wrapper = mount(InputLayout, { props: { value: "test", disabled: true } })
+      const cls = wrapper.find("[data-input-layout-base]").attributes("class") ?? ""
+      expect(cls).toContain("bg-surface-50")
+      expect(cls).toContain("dark:bg-surface-950")
+      expect(cls).toContain("text-surface-500")
+      expect(cls).toContain("dark:text-surface-500")
+      expect(cls).not.toMatch(/(?:^|\s)bg-neutral-50(?:\s|$)/)
+      expect(cls).not.toMatch(/dark:bg-neutral-950/)
+      expect(cls).not.toMatch(/(?:^|\s)text-slate-500(?:\s|$)/)
+      expect(cls).not.toMatch(/dark:text-slate-500/)
+    })
+
+    it("outlined border uses surface-*, not hardcoded gray-*", () => {
+      const wrapper = mount(InputLayout, { props: { value: "", mode: "outlined" } })
+      const cls = wrapper.find("[data-input-layout-base]").attributes("class") ?? ""
+      expect(cls).toContain("border-surface-300")
+      expect(cls).toContain("dark:border-surface-600")
+      expect(cls).not.toMatch(/(?:^|\s)border-gray-300(?:\s|$)/)
+      expect(cls).not.toMatch(/dark:border-gray-600/)
+    })
+
+    it("underlined border uses surface-*, not hardcoded gray-*", () => {
+      const wrapper = mount(InputLayout, { props: { value: "", mode: "underlined" } })
+      const cls = wrapper.find("[data-input-layout-base]").attributes("class") ?? ""
+      expect(cls).toContain("border-surface-300")
+      expect(cls).toContain("dark:border-surface-700")
+      expect(cls).not.toMatch(/(?:^|\s)border-gray-300(?:\s|$)/)
+      expect(cls).not.toMatch(/dark:border-gray-700/)
+    })
+
+    it("filled + disabled dotted border uses surface-*, not hardcoded slate-*", () => {
+      const wrapper = mount(InputLayout, { props: { value: "test", mode: "filled", disabled: true } })
+      const cls = wrapper.find("[data-input-layout-base]").attributes("class") ?? ""
+      expect(cls).toContain("border-dotted")
+      expect(cls).toContain("border-surface-200")
+      expect(cls).not.toMatch(/(?:^|\s)border-slate-200(?:\s|$)/)
+    })
+
+    it("help/error tooltip content (classIconContent) uses surface-* background+text, not hardcoded stone-*/gray-*", async () => {
+      const wrapper = mount(InputLayout, { props: { value: "", help: "Some help text" } })
+      await flushHero()
+      const tooltipContent = wrapper.find("[data-input-layout-help-text]").element.parentElement
+      const cls = tooltipContent?.className ?? ""
+      expect(cls).toContain("dark:bg-surface-900")
+      expect(cls).toContain("text-surface-500")
+      expect(cls).toContain("dark:text-surface-400")
+      expect(cls).not.toMatch(/dark:bg-stone-900/)
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-500(?:\s|$)/)
+      expect(cls).not.toMatch(/dark:text-gray-400/)
+    })
+
+    it("help icon uses surface-* base color, keeps semantic yellow hover untouched", async () => {
+      const wrapper = mount(InputLayout, { props: { value: "", help: "Some help text" } })
+      await flushHero()
+      const cls = wrapper.find("[data-input-layout-help] svg")?.attributes("class") ?? ""
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-600")
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-400(?:\s|$)/)
+      expect(cls).not.toMatch(/dark:text-gray-600/)
+      // Semantic-intent — не трогаем
+      expect(cls).toContain("hover:text-yellow-500")
+    })
+
+    it("clear icon uses surface-* base color, keeps semantic red hover untouched", async () => {
+      const wrapper = mount(InputLayout, { props: { value: "test", clear: true } })
+      await flushHero()
+      const cls = wrapper.find("[data-input-layout-clear] svg")?.attributes("class") ?? ""
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-600")
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-400(?:\s|$)/)
+      expect(cls).not.toMatch(/dark:text-gray-600/)
+      // Semantic-intent — не трогаем
+      expect(cls).toContain("hover:text-red-600")
+      expect(cls).toContain("hover:dark:text-red-500")
+    })
+
+    it("copy icon uses surface-* for both base and hover (structural, not semantic) — not hardcoded gray-*", async () => {
+      const wrapper = mount(InputLayout, { props: { value: "test", disabled: true } })
+      await flushHero()
+      const cls = wrapper.find("[data-input-layout-copy] svg")?.attributes("class") ?? ""
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-600")
+      expect(cls).toContain("hover:text-surface-600")
+      expect(cls).toContain("hover:dark:text-surface-400")
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-400(?:\s|$)/)
+      expect(cls).not.toMatch(/dark:text-gray-600/)
+      expect(cls).not.toMatch(/hover:text-gray-600/)
+      expect(cls).not.toMatch(/hover:dark:text-gray-400/)
     })
   })
 

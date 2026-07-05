@@ -113,15 +113,15 @@
   })
   const mode = computed<string>(() => {
     const baseStyle =
-      "flex items-center px-1 border border-neutral-200 dark:border-neutral-900 text-black text-zinc-600 dark:text-zinc-400"
+      "flex items-center px-1 border border-surface-200 dark:border-surface-900 text-black text-zinc-600 dark:text-zinc-400"
     const mode = props.mode ?? options?.mode ?? FixWindow.componentsStyle()
     switch (mode) {
       case "filled":
-        return `${baseStyle} bg-stone-100 dark:bg-stone-900 rounded-md`
+        return `${baseStyle} bg-surface-100 dark:bg-surface-900 rounded-md`
       case "outlined":
-        return `${baseStyle} bg-white dark:bg-neutral-950 rounded-md`
+        return `${baseStyle} bg-white dark:bg-surface-950 rounded-md`
       case "underlined":
-        return `${baseStyle} bg-stone-50 dark:bg-stone-950`
+        return `${baseStyle} bg-surface-50 dark:bg-surface-950`
       default:
         return ""
     }
@@ -130,7 +130,7 @@
     `motion-safe:transition-opacity motion-safe:ease-in-out motion-safe:duration-300 opacity-100 opacity-0`
   )
   const classBase = computed(() => {
-    const classes = `text-neutral-800 dark:text-neutral-300 text-sm z-5`
+    const classes = `text-surface-800 dark:text-surface-300 text-sm z-5`
     return FixWindow.setStyle([classes, options?.classBody ?? "", props?.classBody ?? "", typePosition.value])
   })
   const classContent = computed(() => FixWindow.setStyle([mode.value ?? "", options?.class ?? "", props?.class ?? ""]))
@@ -688,7 +688,7 @@
           class="absolute top-2 end-2 px-[5px] m-0.5 h-9 w-9"
           :aria-label="FixWindow.t('fixwindow.close') ?? 'Close'"
           @click="onCloseButton">
-          <XMarkIcon aria-hidden="true" class="h-5 w-5 fill-neutral-500 dark:fill-neutral-500" />
+          <XMarkIcon aria-hidden="true" class="h-5 w-5 fill-surface-500 dark:fill-surface-500" />
         </Button>
       </div>
     </transition>

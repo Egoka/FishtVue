@@ -1,7 +1,7 @@
 ---
 title: Issues — Pagination
-summary: Аудит Pagination. Все numbered issues (2–8) закрыты 2026-06-13 — SSR dup-initStyle снят (Wave 2.3), unstyled regression, ARIA nav landmark + per-page aria-label + aria-current + aria-live, RTL (rtl:-scale-x-100 + logical ms), expose paginationRef + focus(), print + forced-colors. Остаётся cross-cutting theme-token hardcode (Wave 9) — файл active.
-updated: 2026-06-13
+summary: Аудит Pagination. Все numbered issues (2–8) закрыты 2026-06-13 — SSR dup-initStyle снят (Wave 2.3), unstyled regression, ARIA nav landmark + per-page aria-label + aria-current + aria-live, RTL (rtl:-scale-x-100 + logical ms), expose paginationRef + focus(), print + forced-colors. Cross-cutting theme-token hardcode (Wave 9, B10) закрыт 2026-07-05 — файл готов к переносу в ./done/.
+updated: 2026-07-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/pagination/
 related-doc: ../components/pagination.md
@@ -20,7 +20,7 @@ related-doc: ../components/pagination.md
 
 **Закрыто 2026-06-13:** Issues 2 (C17/A2/A4-5 — наследует cross-cutting SSR + packaging; снят дубль `initStyle`, Wave 2.3 → 14/22), 3 (L53 — unstyled regression к `Component.setStyle` guard), 4 (E29.1 — `<nav>` landmark + localized aria-label + per-page aria-label + aria-current), 5 (E29.5 — sr-only `aria-live="polite"` region), 6 (F31 — RTL `rtl:-scale-x-100` + logical `ms-3`), 7 (G34 — expose `paginationRef` + `focus()`), 8 (N59 print + B10 forced-colors; E29.7 motion N/A — собственных transitions нет). +12 тестов (`Pagination.test.ts`). Зачёркнуты ниже с `✅ resolved`-маркерами.
 
-> **Файл остаётся active:** открыт cross-cutting «Theme tokens vs hardcode» (gray-_ в Button-инстансах, [Wave 9](./README.md)) — не numbered issue, но по конвенции README блокирует перенос в `./done/`.
+> **Закрыто 2026-07-05 (B10, [Wave 9](./README.md)):** cross-cutting «Theme tokens vs hardcode» — все structural `gray-*`/`stone-*`/`neutral-*` классы в [Pagination.vue](../../lib/pagination/Pagination.vue) мигрированы на semantic-токен `surface` (family rename, та же тональность 50–950; `theme-*` active-состояние не тронуто). Не numbered issue — не был отдельным пунктом аудита Pagination, только cross-cutting заметка; теперь снят, файл готов к переносу в `./done/`.
 
 ## ~~Issue 1: CRITICAL — Анонимный ResizeObserver без cleanup~~ ✅ resolved (2026-06-06)
 
@@ -163,9 +163,19 @@ function setShortNavigation(link: HTMLElement, limit: number, refButton: Ref) {
 > - **print (N59):** style-for-print (не `display:none`) — `print:border-black` на `classBase` ([Pagination.vue:136](../../lib/pagination/Pagination.vue#L136)), `print:text-black` на active-индикаторе ([Pagination.vue:150](../../lib/pagination/Pagination.vue#L150)) и `print:font-bold print:text-black` на active page ([Pagination.vue:199–201](../../lib/pagination/Pagination.vue#L199-L201)); дочерние `<Button>` уже печатаются монохромно (button.md Issue 15).
 > - **forced-colors / high-contrast (B10):** `forced-colors:outline forced-colors:outline-offset-2` на active page-кнопке ([Pagination.vue:199–201](../../lib/pagination/Pagination.vue#L199-L201)) — текущая страница остаётся различимой, когда системные цвета перекрывают `bg-theme-*`.
 >
-> Покрыто тестами (`Pagination.test.ts` describe «Print & forced-colors»). Hardcoded `gray-_`/`stone-_` токены — отдельный cross-cutting [Wave 9](./README.md), не входит в этот issue.
+> Покрыто тестами (`Pagination.test.ts` describe «Print & forced-colors»). Hardcoded `gray-*`/`stone-*`/`neutral-*` токены — отдельный cross-cutting [Wave 9](./README.md), не входил в этот issue; закрыт отдельно ниже.
 
 См. [button.md Issue 10](./button.md) (motion-safe pattern), [button.md Issue 15](./button.md) (print), [table.md Issue 12](./table.md) (motion/print/forced-colors).
+
+### B10 — hardcoded `gray-*`/`stone-*`/`neutral-*` → semantic-токен `surface` ✅ resolved 2026-07-05
+
+**Историческая запись (что было, до 2026-07-05):** Pagination закрыл собственный numbered B10-пункт (forced-colors outline + theme-accent на active-странице, см. Issue 8 выше) ещё 2026-06-13, но структурные нейтральные классы (mode-фон, borders, ring, вторичный текст, иконки) намеренно остались на литеральной `gray-*`/`stone-*`/`neutral-*` палитре — миграция на semantic-токен была отложена до появления самого токена в `lib/theme/` (Wave 9, см. [README.md](./README.md)).
+
+**Резолюция (2026-07-05):** после того как `surface` (23-й именованный цвет, default = точная копия `gray`-шкалы) появился в `lib/theme/primitive.ts` и `namesColors` (`lib/theme/Theme.d.ts`), все структурные `gray-*`/`stone-*`/`neutral-*` классы в [Pagination.vue](../../lib/pagination/Pagination.vue) переименованы в `surface-*` с сохранением той же тональности (family rename, без изменения numeric tone) — `modeStyleSelect`/`modeStyle` (mode-фон/border/ring по всем трём режимам), `classBase` (root border), `classShortContent`/`classShortContentCountPages` (short-version счётчики), `classInfoTextContent`/`classInfoTextPage` (info-text), `classIconContent`/`classIconNotPage` (иконки), `classPageSizeSelectorText` + `paramsSelect.classSelect` (page-size selector), page-button label fallback и mode-специфичный bg/ring для inactive-страниц. Визуально идентично (`surface` default = точная копия `gray`), но теперь theme-aware через CSS-переменные `--fv-surface-*`.
+
+**Не тронуто намеренно:** все `theme-*` классы (active-страница — `bg-theme-*`/`ring-theme-*`/`text-theme-*`/`border-theme-*`, preset-aware) — они уже были правильными до этой миграции и не относятся к structural-neutral категории. Также не тронуты собственные hardcoded `neutral-*` internals дочернего `<Button>` ([button.md](./button.md)) — отдельная зона ответственности, не входит в Pagination-скоуп.
+
+**Тест:** `Pagination.test.ts` > `describe("Pagination Component - B10 semantic surface tokens")` — 16 кейсов (modeStyleSelect/modeStyle по всем трём режимам, page-size selector текст, root border + short-content + info-text, ellipsis/nav-иконки, inactive/active page-button bg/ring, page-button label fallback, no-residual HTML-guard по всем трём режимам). Плюс обновлены pre-existing `describe("Pagination Component - Mode Prop")`-тесты (`it.each` для outlined/filled + `applies default mode when mode is not provided`) — assertions на новые `surface-*` строки.
 
 ## Cross-cutting: Configuration support
 
@@ -174,7 +184,7 @@ function setShortNavigation(link: HTMLElement, limit: number, refButton: Ref) {
 | `componentsOptions.Pagination` | ✅          | mode, sizePage, и др.                                                                                                    |
 | `componentsStyle` global       | ✅          | через `Pagination.componentsStyle()`                                                                                     |
 | `unstyled: true`               | ✅          | Issue 3 ✅ — cross-cutting `Component.setStyle()` guard                                                                  |
-| Theme tokens vs hardcode       | ⚠️          | gray-_ hardcode в Button-инстансах; theme-_ — OK ([Wave 9](./README.md))                                                |
+| Theme tokens vs hardcode       | ✅          | structural neutrals — semantic-токен `surface-*` (B10, resolved 2026-07-05); `theme-*` accent — OK ([Wave 9](./README.md)) |
 | Runtime theme switch           | ✅          | через CSS-переменные                                                                                                     |
 | `t()` для текста               | ✅          | `Pagination.t("previous")`, `Pagination.t("next")`, `Pagination.t("pagination.label")` ([Pagination.vue:314, 328](../../lib/pagination/Pagination.vue#L314)) |
 | Runtime locale switch          | ✅          | реагирует, т. к. использует `t()`                                                                                        |

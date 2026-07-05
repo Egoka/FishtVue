@@ -740,13 +740,13 @@
         typeof s?.activeRow === "string"
           ? (s?.activeRow as string)
           : typeof s?.activeRow === "boolean" && s?.activeRow
-            ? "bg-neutral-100/90 dark:bg-neutral-900/50"
+            ? "bg-surface-100/90 dark:bg-surface-900/50"
             : "",
       hoverRows:
         typeof s?.hoverRows === "string"
           ? (s?.hoverRows as string)
           : typeof s?.hoverRows === "boolean" && s?.hoverRows
-            ? "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50"
+            ? "hover:bg-surface-100/90 dark:hover:bg-surface-900/50"
             : "",
       width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
       height: s?.height ? (typeof s?.height === "number" ? `${s?.height}px` : s?.height) : "",
@@ -758,8 +758,8 @@
   })
   const defaultBorder = computed(() =>
     typeof styles.value?.border === "object"
-      ? (styles.value?.border.default ?? "border-neutral-200 dark:border-neutral-800")
-      : (styles.value?.border ?? "border-neutral-200 dark:border-neutral-800")
+      ? (styles.value?.border.default ?? "border-surface-200 dark:border-surface-800")
+      : (styles.value?.border ?? "border-surface-200 dark:border-surface-800")
   )
   const tableBodyStyle = computed<string>(() => {
     const borderTop = !slots.header
@@ -772,11 +772,11 @@
   })
   const modeStyle = computed<string>(() =>
     mode.value === "filled"
-      ? "bg-stone-100 dark:bg-stone-900"
+      ? "bg-surface-100 dark:bg-surface-900"
       : mode.value === "outlined"
-        ? "bg-white dark:bg-neutral-950"
+        ? "bg-white dark:bg-surface-950"
         : mode.value === "underlined"
-          ? "bg-stone-50 dark:bg-stone-950"
+          ? "bg-surface-50 dark:bg-surface-950"
           : ""
   )
   // Issue 12: reduced-motion канон FishtVue — анимируем только при motion-safe (как Button/Menu/Select).
@@ -805,16 +805,18 @@
     ])
   )
   const classSearch = ref(Table.setStyle("ml-1"))
-  const classIcon = ref(Table.setStyle("h-5 w-5 text-gray-400 dark:text-gray-600"))
+  const classIcon = ref(Table.setStyle("h-5 w-5 text-surface-400 dark:text-surface-600"))
   const classIconClearFilter = ref(
-    Table.setStyle("h-4 w-4 text-gray-400 dark:text-gray-600 group-hover:text-red-400 group-hover:dark:text-red-600")
+    Table.setStyle(
+      "h-4 w-4 text-surface-400 dark:text-surface-600 group-hover:text-red-400 group-hover:dark:text-red-600"
+    )
   )
   const classTableBody = computed(() =>
     Table.setStyle(["flex flex-col border", defaultBorder.value, styles.value.border?.table])
   )
   const classBodySlotHeader = computed(() =>
     Table.setStyle([
-      "min-h-[1.5rem] text-gray-500",
+      "min-h-[1.5rem] text-surface-500",
       isSummary.value || isPagination.value ? "relative" : "",
       modeStyle.value
     ])
@@ -883,7 +885,7 @@
   const classNotFilter = (column: IColumnPrivate) =>
     Table.setStyle([
       "block text-sm font-medium truncate",
-      "text-left text-gray-400 dark:text-gray-500",
+      "text-left text-surface-400 dark:text-surface-500",
       column.class?.colText
     ])
   const classIsSort = (column: IColumnPrivate) =>
@@ -891,7 +893,7 @@
       "flex items-center motion-safe:transition-opacity motion-safe:duration-500 pr-1 cursor-pointer",
       !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100" : "opacity-100"
     ])
-  const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-gray-400 dark:text-gray-600"))
+  const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-surface-400 dark:text-surface-600"))
   const classResizedColumns = (column: IColumnPrivate, key: number) =>
     Table.setStyle([
       // Issue 11 (RTL): pe-2 (padding-inline-end) авто-флипается по dir; inset — физический default
@@ -902,7 +904,7 @@
     ])
   const classResize = computed(() =>
     Table.setStyle([
-      "h-8 w-1.5 bg-neutral-300 dark:bg-neutral-600",
+      "h-8 w-1.5 bg-surface-300 dark:bg-surface-600",
       mode.value === "filled" ? "rounded-full" : "",
       mode.value === "outlined" ? "rounded-full" : "",
       mode.value === "underlined" ? "rounded-none" : ""
@@ -914,7 +916,7 @@
       "classGroup sticky",
       "border-t-2 border-b",
       "font-medium text-base whitespace-nowrap",
-      "text-left text-gray-800 dark:text-gray-300 px-6 py-2 pe-3 ps-10 sm:ps-12",
+      "text-left text-surface-800 dark:text-surface-300 px-6 py-2 pe-3 ps-10 sm:ps-12",
       styles.value.class?.group ?? modeStyle.value,
       defaultBorder.value,
       styles.value.border?.cell
@@ -944,11 +946,11 @@
       styles.value.hoverRows ? `${styles.value.hoverRows} motion-safe:transition-colors motion-safe:duration-200` : "",
       styles.value.isStripedRows
         ? mode.value === "filled"
-          ? "odd:bg-stone-100 even:bg-stone-50 dark:odd:bg-stone-900 dark:even:bg-stone-950"
+          ? "odd:bg-surface-100 even:bg-surface-50 dark:odd:bg-surface-900 dark:even:bg-surface-950"
           : mode.value === "outlined"
-            ? "odd:bg-white even:bg-neutral-50 dark:odd:bg-neutral-950 dark:even:bg-neutral-900"
+            ? "odd:bg-white even:bg-surface-50 dark:odd:bg-surface-950 dark:even:bg-surface-900"
             : mode.value === "underlined"
-              ? "odd:bg-stone-50 even:bg-stone-100 dark:odd:bg-stone-950 dark:even:bg-neutral-900"
+              ? "odd:bg-surface-50 even:bg-surface-100 dark:odd:bg-surface-950 dark:even:bg-surface-900"
               : ""
         : ""
     ])
@@ -958,7 +960,7 @@
       `td--${indexRow}--${column?.name ?? indexCol}`,
       "first:border-l-0 group-first/tr:border-t-0 last:border-r-0 group-last/tr:border-b-0",
       "text-sm font-medium",
-      "px-4 py-1 text-gray-800 dark:text-gray-300",
+      "px-4 py-1 text-surface-800 dark:text-surface-300",
       column.class?.td,
       styles.value.class?.cellText,
       defaultBorder.value,
@@ -989,7 +991,7 @@
     Table.setStyle(["px-3 py-3", column.class?.tf, "border-t", defaultBorder.value, styles.value.border?.summary])
   const classThSummaryText = (column: IColumnPrivate) =>
     Table.setStyle([
-      "block font-normal text-sm text-left text-gray-400 dark:text-gray-500 truncate",
+      "block font-normal text-sm text-left text-surface-400 dark:text-surface-500 truncate",
       column.class?.sumText
     ])
   const classIsPagination = computed(() => Table.setStyle([isSummary.value ? "relative sm:px-5" : "", modeStyle.value]))
@@ -1000,20 +1002,20 @@
   )
   const classIsLoading = ref(
     Table.setStyle(
-      "absolute z-30 top-0 bottom-0 left-0 w-full select-none text-center text-sm text-gray-500 print:hidden"
+      "absolute z-30 top-0 bottom-0 left-0 w-full select-none text-center text-sm text-surface-500 print:hidden"
     )
   )
   const classIsLoadingBody = ref(
-    Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-neutral-100/70 dark:bg-neutral-800/50")
+    Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-surface-100/70 dark:bg-surface-800/50")
   )
   const classNoData = ref(
     Table.setStyle(
-      "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500"
+      "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-surface-500"
     )
   )
   const classSlotFooterBody = computed(() =>
     Table.setStyle([
-      "min-h-[1.5rem] -mt-[1px] text-gray-500",
+      "min-h-[1.5rem] -mt-[1px] text-surface-500",
       isSummary.value || isPagination.value ? "relative sm:px-5" : "",
       modeStyle.value
     ])
@@ -1937,7 +1939,7 @@
         <Button
           v-if="isFilterClear"
           data-table-clear-filter
-          class="group rounded-md ml-2 h-[38px] min-w-[38px] px-2 bg-stone-100 dark:bg-stone-900"
+          class="group rounded-md ml-2 h-[38px] min-w-[38px] px-2 bg-surface-100 dark:bg-surface-900"
           @click="clearFilter">
           <FunnelIcon aria-hidden="true" :class="classIconClearFilter" />
           <FixWindow :mode="mode">{{ Table.t("clearAllFilters") ?? "Clear all filters" }}</FixWindow>

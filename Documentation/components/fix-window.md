@@ -1,7 +1,7 @@
 ---
 title: FixWindow
 summary: Плавающее окно (popover/tooltip), позиционирование через собственный dependency-free движок с auto-flip/auto-shift, опциональный Teleport в body, focus trap, ARIA-семантика, motion-safe transitions, RTL-aware logical placement.
-updated: 2026-07-02
+updated: 2026-07-05
 stability: stable
 since: 0.2.11
 ---
@@ -251,7 +251,7 @@ app.use(FishtVue, {
 
 ### 10.3 Theming
 
-Mode-зависимые стили; цвет background — `theme.semantic.primary` или neutral. Все transitions через `motion-safe:` префикс.
+Mode-зависимые стили; структурные нейтральные (`border`/`bg`/`text`/`fill`) — семантический `surface` token (Wave 9, 2026-07-05; см. [issues/done/fixwindow.md](../issues/done/fixwindow.md#issue-10-prefers-reduced-motion--colors--mobile-touch--resolved-2026-05-16)), не hardcoded `neutral`/`stone`. Все transitions через `motion-safe:` префикс.
 
 ### 10.4 CSS layer override
 

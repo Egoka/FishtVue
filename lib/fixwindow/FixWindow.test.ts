@@ -112,12 +112,12 @@ describe("FixWindow Component Tests", () => {
           "items-center",
           "px-1",
           "border",
-          "border-neutral-200",
-          "dark:border-neutral-900",
+          "border-surface-200",
+          "dark:border-surface-900",
           "text-zinc-600",
           "dark:text-zinc-400",
-          "bg-stone-100",
-          "dark:bg-stone-900",
+          "bg-surface-100",
+          "dark:bg-surface-900",
           "rounded-md"
         ]
       },
@@ -130,12 +130,12 @@ describe("FixWindow Component Tests", () => {
           "items-center",
           "px-1",
           "border",
-          "border-neutral-200",
-          "dark:border-neutral-900",
+          "border-surface-200",
+          "dark:border-surface-900",
           "text-zinc-600",
           "dark:text-zinc-400",
           "bg-white",
-          "dark:bg-neutral-950",
+          "dark:bg-surface-950",
           "rounded-md"
         ]
       },
@@ -148,16 +148,16 @@ describe("FixWindow Component Tests", () => {
           "items-center",
           "px-1",
           "border",
-          "border-neutral-200",
-          "dark:border-neutral-900",
+          "border-surface-200",
+          "dark:border-surface-900",
           "text-zinc-600",
           "dark:text-zinc-400",
-          "bg-stone-50",
-          "dark:bg-stone-950"
+          "bg-surface-50",
+          "dark:bg-surface-950"
         ]
       }
     ] as { mode: FixWindowProps["mode"]; expectedClass: string[] }[])(
-      "applies correct class for mode: $mode",
+      "applies correct class for mode: $mode (Wave 9 — surface token, not hardcoded neutral/stone)",
       ({ mode, expectedClass }) => {
         const wrapper = mount(FixWindow, {
           props: {
@@ -168,6 +168,24 @@ describe("FixWindow Component Tests", () => {
         expect(content.classes()).toEqual(expectedClass)
       }
     )
+
+    it("classBase root text classes use surface token, not hardcoded neutral (Wave 9)", () => {
+      const wrapper = mount(FixWindow)
+      // classBase — только text-neutral-800/dark:text-neutral-300 → surface.
+      // text-black живёт в отдельном computed `mode` (baseStyle) — не часть этой миграции.
+      expect(wrapper.vm.classBase).toContain("text-surface-800")
+      expect(wrapper.vm.classBase).toContain("dark:text-surface-300")
+      expect(wrapper.vm.classBase).not.toContain("text-neutral-800")
+      expect(wrapper.vm.classBase).not.toContain("dark:text-neutral-300")
+    })
+
+    it("close-icon fill uses surface token, not hardcoded neutral (Wave 9)", () => {
+      const wrapper = mount(FixWindow, { props: { closeButton: true } })
+      const icon = wrapper.find("svg")
+      expect(icon.exists()).toBe(true)
+      expect(icon.classes()).toContain("fill-surface-500")
+      expect(icon.classes()).not.toContain("fill-neutral-500")
+    })
 
     it.each([
       { el: "#element-id", description: "as string selector" },

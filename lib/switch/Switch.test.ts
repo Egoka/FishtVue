@@ -515,4 +515,251 @@ describe("Switch Component Tests", () => {
       expect(cls).toContain("relative")
     })
   })
+
+  // ---------------------------------------------------------------------------
+  // Audit issue — Documentation/issues/switch.md Issue 12 residual (2026-07-05, Wave 9)
+  // Структурные нейтрали gray-*/stone-*/slate-* → surface-* (family rename, same tone).
+  // theme-*/forced-colors/motion-safe/print: accents и text-red-* asterisk НЕ трогаются.
+  // ---------------------------------------------------------------------------
+  describe("Issue 12 residual — B10 hardcode: gray-*/stone-*/slate-* → surface-* (Wave 9)", () => {
+    it("classBaseSwitch (outlined, switch mode) uses surface-* border/bg, not gray-*/slate-*/stone-*", () => {
+      const wrapper = mount(Switch, {
+        props: { switchingType: "switch", mode: "outlined", disabled: true }
+      })
+      const cls = String((wrapper.vm as any).classBaseSwitch ?? "")
+      expect(cls).toContain("border-surface-300")
+      expect(cls).toContain("dark:border-surface-600")
+      // twMerge коллапсирует конфликтующий bg-* utility-slot — при disabled:true survivor'ом
+      // остаётся bg-surface-50/dark:bg-surface-950 (последний в массиве), bg-white/dark:bg-black
+      // (недизейбленный base) уходит. Это pre-existing поведение merge-движка, не связано с миграцией.
+      expect(cls).toContain("bg-surface-50")
+      expect(cls).toContain("dark:bg-surface-950")
+      expect(cls).not.toMatch(/(?:^|\s)border-gray-300(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:border-gray-600(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)bg-slate-50(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:bg-stone-950(?:\s|$)/)
+    })
+
+    it("classBaseSwitch (outlined, switch mode, enabled) keeps bg-white/dark:bg-black base untouched (no disabled-override collision)", () => {
+      const wrapper = mount(Switch, {
+        props: { switchingType: "switch", mode: "outlined", disabled: false }
+      })
+      const cls = String((wrapper.vm as any).classBaseSwitch ?? "")
+      expect(cls).toContain("bg-white")
+      expect(cls).toContain("dark:bg-black")
+    })
+
+    it("classBaseSwitch (outlined, checkbox mode) uses surface-* border/bg, not gray-*/slate-*/stone-*", () => {
+      const wrapper = mount(Switch, {
+        props: { switchingType: "checkbox", mode: "outlined", disabled: true }
+      })
+      const cls = String((wrapper.vm as any).classBaseSwitch ?? "")
+      expect(cls).toContain("border-surface-300")
+      expect(cls).toContain("dark:border-surface-600")
+      expect(cls).toContain("bg-surface-50")
+      expect(cls).toContain("dark:bg-surface-950")
+      expect(cls).not.toMatch(/(?:^|\s)border-gray-300(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)bg-slate-50(?:\s|$)/)
+    })
+
+    it("classBaseSwitch (underlined, both modes) uses surface-* border/bg, not gray-*/stone-*", () => {
+      for (const switchingType of ["switch", "checkbox"] as const) {
+        const wrapper = mount(Switch, { props: { switchingType, mode: "underlined" } })
+        const cls = String((wrapper.vm as any).classBaseSwitch ?? "")
+        expect(cls).toContain("border-surface-300")
+        expect(cls).toContain("dark:border-surface-700")
+        expect(cls).toContain("bg-surface-50")
+        expect(cls).toContain("dark:bg-surface-950")
+        expect(cls).not.toMatch(/(?:^|\s)border-gray-300(?:\s|$)/)
+        expect(cls).not.toMatch(/(?:^|\s)dark:border-gray-700(?:\s|$)/)
+        expect(cls).not.toMatch(/(?:^|\s)bg-stone-50(?:\s|$)/)
+        expect(cls).not.toMatch(/(?:^|\s)dark:bg-stone-950(?:\s|$)/)
+      }
+    })
+
+    it("classBaseSwitch (filled, both modes) uses surface-* bg, not stone-*", () => {
+      for (const switchingType of ["switch", "checkbox"] as const) {
+        const wrapper = mount(Switch, { props: { switchingType, mode: "filled" } })
+        const cls = String((wrapper.vm as any).classBaseSwitch ?? "")
+        expect(cls).toContain("bg-surface-100")
+        expect(cls).toContain("dark:bg-surface-900")
+        expect(cls).not.toMatch(/(?:^|\s)bg-stone-100(?:\s|$)/)
+        expect(cls).not.toMatch(/(?:^|\s)dark:bg-stone-900(?:\s|$)/)
+      }
+    })
+
+    it("classSwitch (switch-track, disabled off-state) uses surface-* bg, not gray-*", () => {
+      const wrapper = mount(Switch, {
+        props: { switchingType: "switch", disabled: true, modelValue: false }
+      })
+      const cls = String((wrapper.vm as any).classSwitch ?? "")
+      expect(cls).toContain("bg-surface-200")
+      expect(cls).toContain("dark:bg-surface-800")
+      expect(cls).not.toMatch(/(?:^|\s)bg-gray-200(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:bg-gray-800(?:\s|$)/)
+    })
+
+    it("classSwitch (switch-track, disabled on-state) has no leftover gray-* — surviving bg is the later theme-* accent (twMerge collapses the bg-* conflict slot)", () => {
+      const wrapper = mount(Switch, {
+        props: { switchingType: "switch", disabled: true, modelValue: true }
+      })
+      const cls = String((wrapper.vm as any).classSwitch ?? "")
+      // twMerge коллапсирует конфликтующий bg-*: disabled-branch пишет bg-surface-600/dark:bg-surface-400
+      // ПЕРЕД безусловной on-state строкой bg-theme-600/dark:bg-theme-400 → выживает последняя (theme-*).
+      // Pre-existing поведение merge-движка (было идентично с bg-gray-600 до миграции) — важно, что
+      // никакого bg-gray-600/dark:bg-gray-400 не осталось нигде в строке.
+      expect(cls).toContain("bg-theme-600")
+      expect(cls).toContain("dark:bg-theme-400")
+      expect(cls).not.toMatch(/(?:^|\s)bg-gray-600(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:bg-gray-400(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)bg-surface-600(?:\s|$)/) // тоже коллапсировано — не должно "случайно" выжить
+    })
+
+    it("classSwitch (switch-track, enabled off-state) uses surface-* bg, keeps theme-* on-state untouched", () => {
+      const off = mount(Switch, { props: { switchingType: "switch", modelValue: false } })
+      const offCls = String((off.vm as any).classSwitch ?? "")
+      expect(offCls).toContain("bg-surface-200")
+      expect(offCls).toContain("dark:bg-surface-800")
+      expect(offCls).not.toMatch(/(?:^|\s)bg-gray-200(?:\s|$)/)
+      expect(offCls).not.toMatch(/(?:^|\s)dark:bg-gray-800(?:\s|$)/)
+
+      const on = mount(Switch, { props: { switchingType: "switch", modelValue: true } })
+      const onCls = String((on.vm as any).classSwitch ?? "")
+      // preset-aware theme accent — уже semantic, НЕ мигрируется (см. Issue 12 note)
+      expect(onCls).toContain("bg-theme-600")
+      expect(onCls).toContain("dark:bg-theme-400")
+    })
+
+    it("classSwitch (switch-track ring) uses surface-* ring, keeps /5 opacity suffix", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "switch" } })
+      const cls = String((wrapper.vm as any).classSwitch ?? "")
+      expect(cls).toContain("ring-surface-900/5")
+      expect(cls).toContain("dark:ring-surface-900/5")
+      expect(cls).not.toMatch(/(?:^|\s)ring-gray-900\/5(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:ring-gray-900\/5(?:\s|$)/)
+    })
+
+    it("classSwitch (checkbox-track thumb bg/border) uses surface-*, not stone-*/gray-*", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "checkbox" } })
+      const cls = String((wrapper.vm as any).classSwitch ?? "")
+      expect(cls).toContain("bg-surface-50")
+      expect(cls).toContain("dark:bg-surface-950")
+      expect(cls).toContain("border-surface-300")
+      expect(cls).toContain("dark:border-surface-700")
+      expect(cls).not.toMatch(/(?:^|\s)bg-stone-50(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:bg-stone-950(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)border-gray-300(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:border-gray-700(?:\s|$)/)
+    })
+
+    it("classSwitch (checkbox-track disabled) uses surface-* for disabled:bg/text/accent, not slate-*", () => {
+      const wrapper = mount(Switch, { props: { switchingType: "checkbox", disabled: true } })
+      const cls = String((wrapper.vm as any).classSwitch ?? "")
+      expect(cls).toContain("disabled:bg-surface-500")
+      expect(cls).toContain("disabled:text-surface-500")
+      expect(cls).toContain("disabled:accent-surface-500")
+      expect(cls).not.toMatch(/(?:^|\s)disabled:bg-slate-500(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)disabled:text-slate-500(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)disabled:accent-slate-500(?:\s|$)/)
+    })
+
+    it("classLabel (switch mode) uses surface-* text color, not gray-*/slate-*; keeps text-red-* asterisk untouched", () => {
+      const enabled = mount(Switch, { props: { switchingType: "switch", label: "L", required: true } })
+      const enabledCls = String((enabled.vm as any).classLabel ?? "")
+      expect(enabledCls).toContain("text-surface-900")
+      expect(enabledCls).toContain("dark:text-surface-100")
+      expect(enabledCls).toContain("after:text-red-500")
+      expect(enabledCls).not.toMatch(/(?:^|\s)text-gray-900(?:\s|$)/)
+      expect(enabledCls).not.toMatch(/(?:^|\s)dark:text-gray-100(?:\s|$)/)
+
+      const disabled = mount(Switch, { props: { switchingType: "switch", label: "L", disabled: true } })
+      const disabledCls = String((disabled.vm as any).classLabel ?? "")
+      expect(disabledCls).toContain("text-surface-800")
+      expect(disabledCls).toContain("dark:text-surface-200")
+      expect(disabledCls).not.toMatch(/(?:^|\s)text-slate-800(?:\s|$)/)
+      expect(disabledCls).not.toMatch(/(?:^|\s)dark:text-slate-200(?:\s|$)/)
+    })
+
+    it("classLabel (checkbox mode) uses surface-* text color, not gray-*/slate-*; keeps text-red-* asterisk untouched", () => {
+      const enabled = mount(Switch, {
+        props: { switchingType: "checkbox", label: "L", required: true }
+      })
+      const enabledCls = String((enabled.vm as any).classLabel ?? "")
+      expect(enabledCls).toContain("text-surface-600")
+      expect(enabledCls).toContain("dark:text-surface-400")
+      expect(enabledCls).toContain("after:text-red-500")
+      expect(enabledCls).toContain("after:dark:text-red-800")
+      expect(enabledCls).not.toMatch(/(?:^|\s)text-gray-600(?:\s|$)/)
+      expect(enabledCls).not.toMatch(/(?:^|\s)dark:text-gray-400(?:\s|$)/)
+
+      const disabled = mount(Switch, { props: { switchingType: "checkbox", label: "L", disabled: true } })
+      const disabledCls = String((disabled.vm as any).classLabel ?? "")
+      expect(disabledCls).toContain("text-surface-800")
+      expect(disabledCls).toContain("dark:text-surface-200")
+      expect(disabledCls).not.toMatch(/(?:^|\s)text-slate-800(?:\s|$)/)
+      expect(disabledCls).not.toMatch(/(?:^|\s)dark:text-slate-200(?:\s|$)/)
+    })
+
+    it("classIconContent (help tooltip) uses surface-* bg/text, not stone-*/gray-*", () => {
+      const wrapper = mount(Switch, { props: { help: "h" } })
+      const cls = String((wrapper.vm as any).classIconContent ?? "")
+      expect(cls).toContain("bg-white")
+      expect(cls).toContain("dark:bg-surface-900")
+      expect(cls).toContain("text-surface-500")
+      expect(cls).toContain("dark:text-surface-400")
+      expect(cls).not.toMatch(/(?:^|\s)dark:bg-stone-900(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-500(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:text-gray-400(?:\s|$)/)
+    })
+
+    it("classSwitchIcon (thumb off-state bg + ring) uses surface-*, keeps theme-* on-state untouched", () => {
+      const off = mount(Switch, { props: { switchingType: "switch", modelValue: false } })
+      const offIcon = off.find("[data-input-switch] span")
+      const offCls = offIcon.attributes("class") ?? ""
+      expect(offCls).toContain("bg-surface-100")
+      expect(offCls).toContain("dark:bg-surface-950")
+      expect(offCls).toContain("ring-surface-900/5")
+      expect(offCls).not.toMatch(/(?:^|\s)bg-gray-100(?:\s|$)/)
+      expect(offCls).not.toMatch(/(?:^|\s)dark:bg-gray-950(?:\s|$)/)
+      expect(offCls).not.toMatch(/(?:^|\s)ring-gray-900\/5(?:\s|$)/)
+
+      const on = mount(Switch, { props: { switchingType: "switch", modelValue: true } })
+      const onIcon = on.find("[data-input-switch] span")
+      const onCls = onIcon.attributes("class") ?? ""
+      // preset-aware theme accent — уже semantic, НЕ мигрируется
+      expect(onCls).toContain("bg-theme-100")
+      expect(onCls).toContain("dark:bg-theme-900")
+    })
+
+    it("classSwitchIconImg (icon-thumb branch) uses surface-* off-state bg + icon color, not gray-*", () => {
+      const wrapper = mount(Switch, {
+        props: { switchingType: "switch", modelValue: false, iconActive: "Check", iconInactive: "X" }
+      })
+      const cls = String(wrapper.findComponent({ name: "Icons" }).props("class") ?? "")
+      expect(cls).toContain("bg-surface-100")
+      expect(cls).toContain("dark:bg-surface-950")
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-600")
+      expect(cls).not.toMatch(/(?:^|\s)bg-gray-100(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:bg-gray-950(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)text-gray-400(?:\s|$)/)
+      expect(cls).not.toMatch(/(?:^|\s)dark:text-gray-600(?:\s|$)/)
+    })
+
+    it("keeps the required-asterisk text-red-* and help-icon hover:text-yellow-500 fully untouched (out of scope)", () => {
+      const wrapper = mount(Switch, {
+        props: { switchingType: "switch", required: true, help: "h" },
+        slots: { help: "x" }
+      })
+      const labelCls = String((wrapper.vm as any).classLabel ?? "")
+      expect(labelCls).toContain("after:text-red-500")
+
+      const helpIcon = wrapper.find(
+        "[data-switch-help] svg, [data-switch-help] .fv-icon, [data-switch-help] [class*='Icon']"
+      )
+      // Icons может не резолвиться синхронно в jsdom — ищем по классу на любом дочернем узле help-блока.
+      const helpBlockHtml = wrapper.find("[data-switch-help]").html()
+      expect(helpBlockHtml).toContain("hover:text-yellow-500")
+    })
+  })
 })
