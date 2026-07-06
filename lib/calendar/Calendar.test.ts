@@ -7,6 +7,22 @@ import { DatePicker } from "v-calendar"
 import "v-calendar/style.css"
 import { nextTick } from "vue"
 
+// Wave 2.1: DatePicker (v-calendar, optional peer) резолвится через async dynamic import
+// в onMounted — сколько реального времени нужно до полного рендера, не детерминировано
+// (свой рендер-цикл внутри v-calendar + скорость самого dynamic import) и на медленном/
+// холодном CI runner может занять заметно больше, чем локально (был источником CI-only
+// флаки на этом файле). Poll реального условия вместо фиксированного числа тиков — оба
+// flushPromises()/nextTick() реально проворачивают event loop (flushPromises идёт через
+// setImmediate/setTimeout), так что дожидаемся именно события, с запасом по time-budget
+// с большим запасом от дефолтного testTimeout (5000ms), а не гадаем сколько раз его прокрутить.
+const waitFor = async (condition: () => boolean, timeoutMs = 3000) => {
+  const start = Date.now()
+  while (!condition() && Date.now() - start < timeoutMs) {
+    await flushPromises()
+    await nextTick()
+  }
+}
+
 describe("Calendar Component", () => {
   describe("Basic functionality", () => {
     it("renders correctly with default props", () => {
@@ -71,11 +87,8 @@ describe("Calendar Component", () => {
           modelValue: value
         }
       })
-      await flushPromises() // DatePicker — defineAsyncComponent (Wave 2.1): дожидаемся mount
-      await nextTick()
-      // Открываем календарь
       const inputElement = wrapper.find("[data-calendar]")
-      await nextTick()
+      await waitFor(() => inputElement.text().length > 0)
       expect(inputElement.exists()).toBe(true)
 
       // Проверяем, что placeholder не отображается
@@ -203,10 +216,8 @@ describe("Calendar Component", () => {
           }
         }
       })
-      await flushPromises() // DatePicker — defineAsyncComponent (Wave 2.1): дожидаемся mount
-      await nextTick()
       const dateDisplay = wrapper.find("[data-calendar]")
-      await nextTick()
+      await waitFor(() => dateDisplay.text().length > 0)
       expect(dateDisplay.text()).toContain("2024-11-23")
       expect(dateDisplay.text()).toContain("2024-11-25")
     })
@@ -214,7 +225,6 @@ describe("Calendar Component", () => {
 
   describe("Masks and placeholders", () => {
     it("applies mask correctly", async () => {
-      vi.useFakeTimers()
       const wrapper = mount(Calendar, {
         props: {
           modelValue: "2024-11-23",
@@ -223,13 +233,9 @@ describe("Calendar Component", () => {
           }
         }
       })
-      await flushPromises() // DatePicker — defineAsyncComponent (Wave 2.1): дожидаемся mount
-      await nextTick()
       const dateDisplay = wrapper.find("[data-calendar]")
-      await nextTick()
+      await waitFor(() => dateDisplay.text().length > 0)
       expect(dateDisplay.text()).toBe("23.11.2024")
-      vi.clearAllTimers()
-      vi.useRealTimers()
     })
 
     it("renders placeholder if no value is provided", () => {
@@ -350,7 +356,7 @@ describe("Calendar Component", () => {
         global: { plugins: [app as any] }
       })
       // DatePicker — defineAsyncComponent (v-calendar = optional peer, Wave 2.1): резолвится async.
-      await flushPromises()
+      await waitFor(() => wrapper.findComponent(DatePicker as any).exists())
       const datePicker = wrapper.findComponent(DatePicker as any)
       expect(datePicker.exists()).toBe(true)
       expect(datePicker.props("locale")).toBe("ru")
@@ -370,7 +376,7 @@ describe("Calendar Component", () => {
           paramsDatePicker: { locale: "en" }
         }
       })
-      await flushPromises()
+      await waitFor(() => wrapper.findComponent(DatePicker as any).exists())
       const datePicker = wrapper.findComponent(DatePicker as any)
       expect(datePicker.exists()).toBe(true)
       expect(datePicker.props("locale")).toBe("en")
