@@ -26,10 +26,19 @@ export declare type SeparatorProps = {
   vertical?: boolean
 
   /**
-   * Alignment of the content within the separator.
-   * @type {"right" | "left" | "center" | "full" | undefined}
+   * Alignment of the content within the separator (logical, RTL-aware).
+   *
+   * `"start"` — у логического начала строки (слева в LTR, справа в RTL), `"end"` — у конца,
+   * `"center"` — по центру (оба line-сегмента), `"full"` — контент во всю ширину (без сегментов).
+   * Порядок сегментов зеркалится автоматически через flex main-axis при `dir="rtl"`.
+   *
+   * `"left"`/`"right"` — **deprecated** физические алиасы (`left → start`, `right → end`),
+   * сохранены для backward compat; в dev-режиме предупреждают в консоль. Используй logical
+   * `"start"`/`"end"` для RTL-safe поведения.
+   *
+   * @type {"start" | "end" | "center" | "full" | "left" | "right" | undefined}
    */
-  contentPosition?: "right" | "left" | "center" | "full"
+  contentPosition?: "start" | "end" | "center" | "full" | "left" | "right"
 
   /**
    * Gradient applied to the separator lines.
@@ -110,10 +119,11 @@ export declare type SeparatorExpose = {
   vertical: SeparatorProps["vertical"]
 
   /**
-   * Alignment of the content within the separator.
-   * @type {SeparatorProps["content"]}
+   * Normalized (logical) alignment of the content within the separator.
+   * Deprecated `"left"`/`"right"` props приведены к `"start"`/`"end"`.
+   * @type {"start" | "end" | "center" | "full"}
    */
-  content: SeparatorProps["contentPosition"]
+  content: "start" | "end" | "center" | "full"
 
   /**
    * The applied gradient value for the separator.

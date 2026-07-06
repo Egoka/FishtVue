@@ -1,4 +1,4 @@
-import { MaybeRef, VNode } from "vue"
+import { MaybeRef, Ref, VNode } from "vue"
 import { _key, ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode, THeight, TWidth } from "../types"
 import { FixWindowProps } from "fishtvue/fixwindow"
 import { SeparatorProps } from "fishtvue/separator"
@@ -270,10 +270,11 @@ export type MenuStyles = {
   height?: THeight
 
   /**
-   * The animation style for menu transitions.
-   * @type {StyleClass | "transition-all duration-500" | "transition-none" | undefined}
+   * The animation style for menu transitions. По умолчанию `motion-safe:`-вариант
+   * (уважает `prefers-reduced-motion`).
+   * @type {StyleClass | "motion-safe:transition-all motion-safe:duration-500" | "transition-none" | undefined}
    */
-  animation?: StyleClass | "transition-all duration-500" | "transition-none"
+  animation?: StyleClass | "motion-safe:transition-all motion-safe:duration-500" | "transition-none"
 
   /**
    * Styles or behavior for active menu rows.
@@ -357,6 +358,15 @@ export declare type MenuSlots = {
       isActive: boolean
       isSelected: boolean
     }
+  }): VNode[]
+  /**
+   * Кастомный рендеринг `item.info`. По умолчанию `info` рендерится как text (без `v-html`).
+   * Используйте этот scoped slot, если нужен собственный (в т.ч. HTML) рендеринг — ответственность
+   * за безопасность контента на потребителе.
+   */
+  "item-info"(args: {
+    item: Omit<ItemMenu, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive">
+    info: string | undefined
   }): VNode[]
   footer(): VNode[]
 }
@@ -552,6 +562,15 @@ export declare type MenuExpose = {
    * @type {StyleClass}
    */
   classItemRightIcon: StyleClass
+
+  // ---ELEMENTS----------------------
+  /**
+   * Ref на корневой DOM-элемент меню (`[data-menu]`). `null`, пока групп нет
+   * (root скрыт через `v-if="listGroups.length"`). Полезно для скролла, измерений
+   * и интеграций со стороны потребителя.
+   * @type {Ref<HTMLElement | null>}
+   */
+  rootRef: Ref<HTMLElement | null>
 
   // ---METHODS-----------------------
   /**

@@ -1,7 +1,7 @@
 ---
 title: Badge
 summary: Компактная метка с modes (primary/secondary/outline/neutral), point-индикатором и close-кнопкой.
-updated: 2026-05-09
+updated: 2026-06-13
 stability: stable
 since: 0.2.11
 ---
@@ -10,9 +10,9 @@ since: 0.2.11
 
 ## 1. Overview
 
-`Badge` — небольшая метка/тэг для статусов или категорий. Поддерживает 4 mode (`primary`/`secondary`/`outline`/`neutral`), опциональный point (точка-индикатор), close-кнопку с emit'ом `delete`.
+`Badge` — небольшая метка/тэг для статусов или категорий. Поддерживает 4 mode (`primary`/`secondary`/`outline`/`neutral`), опциональный point (точка-индикатор), close-кнопку с emit'ами `close` (canonical) + `delete` (deprecated alias).
 
-Stability: `stable` — 11 кейсов, coverage `Badge.vue` 100%.
+Stability: `stable` — 21 кейс, coverage `Badge.vue` 100%.
 
 Source: [Source](../../lib/badge/Badge.vue), [Badge.d.ts](../../lib/badge/Badge.d.ts), [Badge.test.ts](../../lib/badge/Badge.test.ts).
 
@@ -21,8 +21,8 @@ Source: [Source](../../lib/badge/Badge.vue), [Badge.d.ts](../../lib/badge/Badge.
 ```
 lib/badge/
 ├── Badge.vue
-├── Badge.d.ts        # 98 строк
-├── Badge.test.ts     # 11 кейсов
+├── Badge.d.ts        # 105 строк
+├── Badge.test.ts     # 21 кейс
 └── package.json
 ```
 
@@ -41,7 +41,7 @@ lib/badge/
 
 ```vue
 <script setup lang="ts">
-import Badge from "fishtvue/badge"
+  import Badge from "fishtvue/badge"
 </script>
 
 <template>
@@ -53,40 +53,43 @@ import Badge from "fishtvue/badge"
 
 `BadgeProps` ([Badge.d.ts:16–46](../../lib/badge/Badge.d.ts#L16-L46)):
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `mode` | `"primary" \| "secondary" \| "outline" \| "neutral"` | (из global config или fallback) | Стилевой режим. |
-| `class` | `StyleClass` | — | Класс контейнера. |
-| `classContent` | `StyleClass` | — | Класс контента. |
-| `point` | `boolean` | — | Показывает точку-индикатор. |
-| `closeButton` | `boolean` | — | Показывает `×`-кнопку. |
+| Prop           | Type                                                 | Default                                                                       | Description                                                   |
+| -------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `mode`         | `"primary" \| "secondary" \| "outline" \| "neutral"` | `props ?? componentsOptions.Badge.mode ?? maps(componentsStyle) ?? "primary"` | Стилевой режим. Маппинг global `componentsStyle` — см. §10.1. |
+| `class`        | `StyleClass`                                         | —                                                                             | Класс контейнера.                                             |
+| `classContent` | `StyleClass`                                         | —                                                                             | Класс контента.                                               |
+| `point`        | `boolean`                                            | —                                                                             | Показывает точку-индикатор.                                   |
+| `closeButton`  | `boolean`                                            | —                                                                             | Показывает `×`-кнопку.                                        |
 
 ## 6. Events / Emits + v-model contract
 
-`BadgeEmits` ([Badge.d.ts:53–58](../../lib/badge/Badge.d.ts#L53-L58)):
+`BadgeEmits` ([Badge.d.ts:53–64](../../lib/badge/Badge.d.ts#L53-L64)):
 
-| Event | Payload | When fired |
-|---|---|---|
-| `delete` | — | На клик `×`-кнопки (если `closeButton: true`). |
+| Event                  | Payload | When fired                                                               |
+| ---------------------- | ------- | ------------------------------------------------------------------------ |
+| `close`                | —       | На клик `×`-кнопки (если `closeButton: true`) или вызов `deleteBadge()`. |
+| `delete` ⚠️ deprecated | —       | Алиас `close`. Будет удалён в `1.0` — используй `close`.                 |
 
 v-model contract — не применимо.
 
+> **Deprecation note.** Event `delete` сохраняется ради обратной совместимости и эмитится одновременно с `close`. Новый код пиши на `@close`. Codemod для миграции — Wave 12 fix-roadmap.
+
 ## 7. Slots
 
-| Slot | Slot props | Description |
-|---|---|---|
-| `default` | — | Текст или произвольная разметка badge. |
+| Slot      | Slot props | Description                            |
+| --------- | ---------- | -------------------------------------- |
+| `default` | —          | Текст или произвольная разметка badge. |
 
 ## 8. Exposed methods
 
-`BadgeExpose` ([Badge.d.ts:62–87](../../lib/badge/Badge.d.ts#L62-L87)):
+`BadgeExpose` ([Badge.d.ts:68–93](../../lib/badge/Badge.d.ts#L68-L93)):
 
-| Name | Type | Description |
-|---|---|---|
-| `mode` | `BadgeProps["mode"]` | Текущий mode. |
-| `isPoint` | `BadgeProps["point"]` | Computed. |
-| `isCloseButton` | `BadgeProps["closeButton"]` | Computed. |
-| `deleteBadge()` | `() => void` | Программное удаление — эмитит `delete`. |
+| Name            | Type                        | Description                                                    |
+| --------------- | --------------------------- | -------------------------------------------------------------- |
+| `mode`          | `BadgeProps["mode"]`        | Текущий mode.                                                  |
+| `isPoint`       | `BadgeProps["point"]`       | Computed.                                                      |
+| `isCloseButton` | `BadgeProps["closeButton"]` | Computed.                                                      |
+| `deleteBadge()` | `() => void`                | Программное удаление — эмитит `close` (+ `delete` для legacy). |
 
 ## 9. Examples
 
@@ -107,7 +110,7 @@ v-model contract — не применимо.
 ### 9.3 С close-кнопкой
 
 ```vue
-<Badge :close-button="true" mode="neutral" @delete="onRemove">
+<Badge :close-button="true" mode="neutral" @close="onRemove">
   Removable tag
 </Badge>
 ```
@@ -122,11 +125,30 @@ app.use(FishtVue, {
 })
 ```
 
+### 9.5 Глобальный `componentsStyle`
+
+```ts
+app.use(FishtVue, {
+  componentsStyle: "outlined" // → Badge.mode === "outline"
+})
+```
+
+Per-component `componentsOptions.Badge.mode` и явный `props.mode` перебивают global `componentsStyle`.
+
 ## 10. Configuration & Customization
 
 ### 10.1 Global
 
 `BadgeOption = Pick<BadgeProps, "mode" | "class" | "classContent" | "point" | "closeButton">`.
+
+`mode` резолвится по fallback chain:
+
+1. `props.mode` (явный prop).
+2. `componentsOptions.Badge.mode` (per-component option).
+3. Маппинг global `componentsStyle` — `"filled" → "primary"`, `"outlined" → "outline"`, `"underlined" → "neutral"`.
+4. Default `"primary"`.
+
+См. [Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23).
 
 ### 10.2 Per-instance
 
@@ -150,7 +172,9 @@ Root класс — `fv fishtvue-badge`.
 
 - Корневой элемент — `<span>` или `<div>`. Семантически — обычный текст.
 - Close-кнопка — `<button>` с нативной семантикой; нет `aria-label="Remove"` по умолчанию (см. Known issues).
-- `prefers-reduced-motion` не учтён.
+- `prefers-reduced-motion` — N/A: Badge собственных transition/animate-классов не имеет; close-кнопка (`Button`) уже `motion-safe:` на своей стороне.
+- **RTL:** отступы point/close-кнопки — логические `ps-1`/`pe-1` (`padding-inline-*`), авто-флип без `dir`-атрибута.
+- **Forced-colors:** `forced-colors:outline` на корне держит badge видимым в Windows high-contrast (там `bg-*` сбрасывается).
 
 ### Security
 
@@ -170,9 +194,9 @@ b.value?.deleteBadge()
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 11 кейсов, coverage 100%.
-- **Breaking changes:** на 2026-05-09 не зафиксировано.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 21 кейс, coverage 100%.
+- **Breaking changes:** на 2026-05-10 не зафиксировано.
+- **Deprecations:** event `delete` помечен `@deprecated` с 2026-05-10 — используй `close`. Полное удаление — `1.0` через codemod (Wave 12).
 
 ## 15. Testing recipes
 
@@ -183,27 +207,28 @@ import FishtVue from "fishtvue/config"
 import Badge from "fishtvue/badge/Badge.vue"
 
 describe("Badge", () => {
-  it("emits delete on close-button click", async () => {
+  it("emits close on close-button click", async () => {
     const wrapper = mount(Badge, {
       props: { closeButton: true },
       global: { plugins: [[FishtVue, {}]] }
     })
-    // ... click + emit assert
-    expect(wrapper.exists()).toBe(true)
+    await wrapper.find("button").trigger("click")
+    expect(wrapper.emitted("close")).toBeTruthy()
+    expect(wrapper.emitted("delete")).toBeTruthy() // legacy alias
   })
 })
 ```
 
-Реальные тесты — [Badge.test.ts](../../lib/badge/Badge.test.ts) (11 кейсов).
+Реальные тесты — [Badge.test.ts](../../lib/badge/Badge.test.ts) (21 кейс).
 
 ## 16. Troubleshooting / FAQ
 
-| Проблема | Причина | Решение |
-|---|---|---|
-| Close-кнопка не отображается | `closeButton: false` или `undefined`. | Установи `:close-button="true"`. |
-| `delete` event не срабатывает | `closeButton: false` — кнопка не рендерится. | Включи. |
-| Цвет не соответствует ожидаемому | `theme.semantic` не настроен. | См. [Theme](../architecture/theme.md). |
-| Point-индикатор перекрывает текст | Padding слева недостаточен. | Override через `props.class`. |
+| Проблема                              | Причина                                      | Решение                                |
+| ------------------------------------- | -------------------------------------------- | -------------------------------------- |
+| Close-кнопка не отображается          | `closeButton: false` или `undefined`.        | Установи `:close-button="true"`.       |
+| `close`/`delete` event не срабатывает | `closeButton: false` — кнопка не рендерится. | Включи.                                |
+| Цвет не соответствует ожидаемому      | `theme.semantic` не настроен.                | См. [Theme](../architecture/theme.md). |
+| Point-индикатор перекрывает текст     | Padding слева недостаточен.                  | Override через `props.class`.          |
 
 ## 17. Related
 
@@ -215,7 +240,7 @@ describe("Badge", () => {
 
 ### TODO / FIXME / HACK / XXX
 
-На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [Badge.vue](../../lib/badge/Badge.vue) и [Badge.d.ts](../../lib/badge/Badge.d.ts) не зафиксировано.
+На момент ревизии (2026-05-10) комментариев `TODO/FIXME/HACK/XXX` в [Badge.vue](../../lib/badge/Badge.vue) и [Badge.d.ts](../../lib/badge/Badge.d.ts) не зафиксировано.
 
 ### Incomplete or stubbed behavior
 
@@ -229,6 +254,10 @@ describe("Badge", () => {
 
 - `BadgeProps.point` и `closeButton` — `boolean | undefined`. Default из withDefaults — `undefined` (не `false`). Это может привести к truthy-проверкам, не отличающим «не задано» от «false».
 - `BadgeExpose` мапит `point` → `isPoint`, `closeButton` → `isCloseButton` — inconsistent naming с props.
+
+### Deprecations
+
+- Event `delete` помечен `@deprecated` ([Badge.d.ts:53–64](../../lib/badge/Badge.d.ts#L53-L64)) с 2026-05-10. Эмитится одновременно с `close` ради backward-compat. Удаление — в `1.0` через codemod (Wave 12 [fix-roadmap](../issues/README.md#-wave-12--migration--dx)).
 
 ### Behavioral caveats
 

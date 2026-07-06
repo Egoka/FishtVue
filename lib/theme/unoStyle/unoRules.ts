@@ -1,4 +1,4 @@
-import { addAlphaToHex, custom, negative, sizing } from "./helpers"
+import { addAlphaToHex, custom, negative, resolveColor, sizing } from "./helpers"
 import type { GroupsRegExp, StyleType } from "./UnoTypes"
 // prettier-ignore
 import {
@@ -9,7 +9,6 @@ import {
   attachmentBackground,
   baseBackdropFilter,
   baseFilter,
-  baseTransform,
   baseTransition,
   bgClip,
   bgOrigin,
@@ -42,6 +41,7 @@ import {
   skew,
   snapAlign,
   snapType,
+  spaceBetween,
   specialColor,
   specialValues,
   textSize,
@@ -84,7 +84,8 @@ export default <Record<string, StyleType>>{
   },
   "min-w": {
     styleName: "min-width",
-    reg: /(?<style>min-w)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    // Issue 3 (uno-engine.md): container scale (3xs…7xl) — зеркало правила `w`.
+    reg: /(?<style>min-w)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|xs|sm|md|lg|xl|px|full|min|max|fit)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return `min-width: ${custom(groups) ?? sizing(groups) ?? ""};`
@@ -105,14 +106,15 @@ export default <Record<string, StyleType>>{
     }
   },
   "min-h": {
-    reg: /(?<style>min-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    // Issue 3 (uno-engine.md): viewport-юниты — зеркало правила `h` (min-h-screen — в singleStyles).
+    reg: /(?<style>min-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|full|min|max|fit|dvw|dvh|lvw|lvh|svw|svh)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return `min-height: ${custom(groups) ?? sizing(groups) ?? ""};`
     }
   },
   "max-h": {
-    reg: /(?<style>max-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    reg: /(?<style>max-h)-((?<special>\d+(\.\d+)?(\/\d+)?|px|none|xs|sm|md|lg|xl|full|min|max|fit|prose|screen-sm|screen-md|screen-lg|screen-xl|screen-2xl|screen|dvw|dvh|lvw|lvh|svw|svh)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return `max-height: ${custom(groups) ?? sizing(groups) ?? ""};`
@@ -175,10 +177,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -215,10 +214,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `text-decoration-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `text-decoration-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -470,10 +466,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `background-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `background-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -524,10 +517,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-gradient-from: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone] ?? "000000"}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
+        return `--fv-gradient-from: ${resolveColor(groups)} var(--fv-gradient-from-position);\n  --fv-gradient-to: ${resolveColor(groups, 0) ?? ""} var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -566,10 +556,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-gradient-to: ${(colors as any)?.[groups.special]?.[groups.tone]}00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--fv-gradient-via-position), var(--fv-gradient-to);`
+        return `--fv-gradient-to: ${resolveColor(groups, 0) ?? ""} var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), ${resolveColor(groups)} var(--fv-gradient-via-position), var(--fv-gradient-to);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -609,10 +596,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-gradient-to: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )} var(--fv-gradient-to-position);`
+        return `--fv-gradient-to: ${resolveColor(groups)} var(--fv-gradient-to-position);`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -659,10 +643,7 @@ export default <Record<string, StyleType>>{
       if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `border-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `border-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -686,6 +667,19 @@ export default <Record<string, StyleType>>{
           };`
         return borderSides[groups.axis](custom(groups) ?? (groups?.special ?? 1) + "px")
       }
+    }
+  },
+  space: {
+    // Issue 4 (uno-engine.md): Space Between — зеркало divide (child-combinator селектор
+    // приходит из specialSelectors.space). `whitespace-*` защищён lookbehind'ом в RegStyles.
+    reg: /(?<negative>-)?(?<style>space)-(?<axis>[xy])-((?<special>\d+(\.\d+)?|px|reverse)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups) return
+      if (groups.special === "reverse") return `--fv-space-${groups.axis}-reverse: 1;`
+      const value = custom(groups) ?? sizing(groups)
+      if (!value) return
+      return spaceBetween[groups.axis](value)
     }
   },
   divide: {
@@ -728,10 +722,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `border-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `border-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -769,10 +760,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `outline-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `outline-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -830,10 +818,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.colorOffset.test(classStyle)) {
         const groups = classStyle.match(reg.colorOffset)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-ring-offset-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
+        return `--fv-ring-offset-color: ${resolveColor(groups)};\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);`
       } else if (reg.specialColorOffset.test(classStyle)) {
         const groups = classStyle.match(reg.specialColorOffset)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -841,10 +826,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-ring-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `--fv-ring-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -902,10 +884,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `--fv-shadow-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `--fv-shadow-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -976,10 +955,12 @@ export default <Record<string, StyleType>>{
     }
   },
   "hue-rotate": {
-    reg: new RegExp(`(?<style>hue-rotate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`),
+    reg: new RegExp(
+      `(?<negative>-)?(?<style>hue-rotate)-((?<special>\\d+)\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-hue-rotate: hue-rotate(${custom(groups) ?? (groups?.special ? `${groups.special}deg` : "")});\n  ${baseFilter}`
+      return `--fv-hue-rotate: hue-rotate(${custom(groups) ?? (groups?.special ? (negative(groups, `${groups.special}deg`) ?? "") : "")});\n  ${baseFilter}`
     }
   },
   invert: {
@@ -1107,23 +1088,32 @@ export default <Record<string, StyleType>>{
     }
   },
   scale: {
-    reg: /(?<style>scale)-(?<axis>[xy])?-?((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    // Issue 3 (uno-engine.md): negative-группа (минус терялся: -scale-100 → 1) + \b после \d+
+    // (scale-3d матчился как 0.03). Обработка минуса — negative(), зеркало sizing().
+    reg: /(?<negative>-)?(?<style>scale)-(?<axis>[xy])?-?((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return scale[groups.axis](custom(groups) ?? (groups.special ? `${+groups.special / 100}` : ""))
+      if (!groups) return
+      return scale[groups.axis](
+        custom(groups) ?? (groups.special ? (negative(groups, `${+groups.special / 100}`) ?? "") : "")
+      )
     }
   },
   rotate: {
-    reg: /(?<style>rotate)-((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    // Issue 6 (uno-engine.md): modern CSS property rotate: (v4) — вне transform:-цепочки,
+    // комбинация с translate-*/scale-* больше не даёт двойного сдвига.
+    reg: /(?<negative>-)?(?<style>rotate)-((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `--fv-rotate: ${custom(groups) ?? (groups.special ? `${groups.special}deg` : "")};\n  ${baseTransform}`
+      if (!groups) return
+      return `rotate: ${custom(groups) ?? (groups.special ? (negative(groups, `${groups.special}deg`) ?? "") : "")};`
     }
   },
   translate: {
     reg: /(?<negative>-)?(?<style>translate)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups) return
       return translate[groups.axis](`${custom(groups) ?? sizing(groups) ?? ""}`)
     }
   },
@@ -1131,6 +1121,7 @@ export default <Record<string, StyleType>>{
     reg: /(?<negative>-)?(?<style>skew)-(?<axis>[xy])?-?((?<special>\d+)|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups) return
       return skew[groups.axis](`${custom(groups) ?? negative(groups, groups.special + "deg")}`)
     }
   },
@@ -1173,10 +1164,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `accent-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `accent-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -1227,10 +1215,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `caret-color: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `caret-color: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -1356,10 +1341,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `fill: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `fill: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -1400,10 +1382,7 @@ export default <Record<string, StyleType>>{
       } else if (reg.color.test(classStyle)) {
         const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
         if (!groups?.special) return
-        return `stroke: ${addAlphaToHex(
-          (colors as any)?.[groups.special]?.[groups.tone],
-          groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined
-        )};`
+        return `stroke: ${resolveColor(groups)};`
       } else if (reg.specialColor.test(classStyle)) {
         const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
         if (!groups?.special) return
@@ -1488,18 +1467,19 @@ export default <Record<string, StyleType>>{
     }
   },
   clear: {
-    reg: new RegExp(`(?<style>clear)-(?<special>${Object.keys(floatAndClear).join("|")})\\b`),
+    // `both` — clear-специфичное значение (в shared floatAndClear его нет: float: both невалиден).
+    reg: new RegExp(`(?<style>clear)-(?<special>${Object.keys(floatAndClear).join("|")}|both)\\b`),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (!groups?.special) return
-      return `clear: ${floatAndClear[groups.special]};`
+      return `clear: ${floatAndClear[groups.special] ?? groups.special};`
     }
   },
   object: {
     reg: {
       fit: /(?<style>object)-(?<special>contain|cover|fill|none|scale-down)\b/,
       position:
-        /(?<style>object)-((?<special>left-bottom|left-top|right-bottom|right-top|top|bottom|left|right|center)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/
+        /(?<style>object)-((?<special>left-bottom|left-top|right-bottom|right-top|top-left|top-right|bottom-left|bottom-right|top|bottom|left|right|center)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/
     },
     getValue(classStyle) {
       const reg = this.reg as Record<"fit" | "position", RegExp>
@@ -1597,7 +1577,8 @@ export default <Record<string, StyleType>>{
     }
   },
   basis: {
-    reg: /(?<style>basis)-((?<special>\d+(\.\d+)?(\/\d+)?|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    // Issue 3 (uno-engine.md): container scale (3xs…7xl) — зеркало правила `w`.
+    reg: /(?<style>basis)-((?<special>\d+(\.\d+)?(\/\d+)?(xs|xl)?|xs|sm|md|lg|xl|px|auto|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return `flex-basis: ${custom(groups) ?? sizing(groups) ?? ""};`
@@ -1641,11 +1622,12 @@ export default <Record<string, StyleType>>{
   },
   order: {
     reg: new RegExp(
-      `(?<style>order)-((?<special>\\d+|${Object.keys(order).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+      `(?<negative>-)?(?<style>order)-((?<special>\\d+|${Object.keys(order).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
     ),
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `order: ${custom(groups) ?? (isNaN(+groups.special) ? (order[groups?.special] ?? "") : (groups?.special ?? ""))};`
+      if (!groups) return
+      return `order: ${custom(groups) ?? (isNaN(+groups.special) ? (order[groups?.special] ?? "") : (negative(groups, groups?.special ?? "") ?? ""))};`
     }
   },
   "grid-cols": {
@@ -1769,10 +1751,10 @@ export default <Record<string, StyleType>>{
     }
   },
   items: {
-    reg: /(?<style>items)-(?<special>start|end|center|baseline|stretch)\b/,
+    reg: /(?<style>items)-(?<special>start|end|center|baseline-last|baseline|stretch)\b/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
-      return `align-items: ${groups?.special ?? ""};`
+      return `align-items: ${groups?.special === "baseline-last" ? "last baseline" : (groups?.special ?? "")};`
     }
   },
   self: {

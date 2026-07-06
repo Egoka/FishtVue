@@ -82,7 +82,12 @@ declare class Component<T extends keyof ComponentsOptions> {
   initStyle(stylesComp?: StylesComponent): void
 
   setStyle<T extends StyleClass | boolean | undefined>(stylesComp: T | T[], options?: setStyleOptions): string
-  t(key: keyof DefaultMessages | string): string | undefined
+  /**
+   * `t(key, params?)`: локализованная строка по fallback chain `active → default → key`.
+   * Опциональный `params` включает interpolation (`{name}` → `params[name]`) и pluralization
+   * (если значение содержит `|`-формы и `params.count` — число, форма выбирается по CLDR-правилам активной локали).
+   */
+  t(key: keyof DefaultMessages | string, params?: Record<string, string | number>): string
   componentsStyle(): StyleMode | undefined
 }
 

@@ -256,6 +256,84 @@ export function convertToSnakeCase(text: string): string {
 
  **Note**: The `stringify` function is a custom implementation similar to `JSON.stringify`, but with additional support for indentation and handling of different types of values.
  */
+/**
+ #### `interpolate` Function Documentation
+
+ Подставляет именованные плейсхолдеры `{name}` в шаблон значениями из `params`.
+ Неизвестный плейсхолдер (нет ключа в `params` или значение `null`/`undefined`)
+ остаётся в строке как литерал — это dev-сигнал о незаполненном параметре.
+ Без `params` шаблон возвращается без изменений (backward-compatible путь для `Component.t(key)`).
+
+ ##### Syntax
+ ```typescript
+ export function interpolate(template: string, params?: Record<string, string | number>): string
+ ```
+
+ ##### Example Usage
+ ```typescript
+ interpolate("Hello, {name}!", { name: "Egor" }) // "Hello, Egor!"
+ interpolate("Page {page} of {total}", { page: 2, total: 10 }) // "Page 2 of 10"
+ interpolate("Hi {name}", {}) // "Hi {name}" — неизвестный плейсхолдер остаётся литералом
+ ```
+ */
+export function interpolate(template: string, params?: Record<string, string | number>): string {
+  if (!template || !params) return template
+  return template.replace(/\{(\w+)\}/g, (match, name) =>
+    name in params && params[name] != null ? String(params[name]) : match
+  )
+}
+
+/**
+ #### `selectPlural` Function Documentation
+
+ Выбирает нужную форму из pipe-разделённого шаблона по числу `count` и локали.
+ Каждая форма — `<selector> <text>`, где `selector` это либо точное `=N`, либо CLDR-категория
+ (`zero|one|two|few|many|other`). Категория определяется через `Intl.PluralRules(locale)` — это даёт
+ корректные правила per-locale (например, русское `21` → форма `one`, чего эвристика `n === 1` не умеет).
+
+ Порядок выбора: точное `=count` → CLDR-категория → явная `other` → первая объявленная форма.
+ `interpolate()` плейсхолдеров (`{count}` и т.п.) в выбранной форме здесь НЕ выполняется — это отдельный шаг
+ (см. `Component.t(key, params)`). При невалидном locale-теге `Intl.PluralRules` не бросает наружу — fallback на `other`.
+
+ ##### Syntax
+ ```typescript
+ export function selectPlural(template: string, count: number, locale?: string): string
+ ```
+
+ ##### Example Usage
+ ```typescript
+ const ru = "=0 нет|one {count} файл|few {count} файла|many {count} файлов"
+ selectPlural(ru, 0, "ru")  // "нет"
+ selectPlural(ru, 1, "ru")  // "{count} файл"
+ selectPlural(ru, 5, "ru")  // "{count} файлов"
+ selectPlural(ru, 21, "ru") // "{count} файл" — CLDR "one"
+ ```
+ */
+export function selectPlural(template: string, count: number, locale?: string): string {
+  const forms = template.split("|").map((form) => form.trim())
+  const bySelector: Record<string, string> = {}
+  for (const form of forms) {
+    const sp = form.indexOf(" ")
+    const selector = sp === -1 ? form : form.slice(0, sp)
+    if (!(selector in bySelector)) bySelector[selector] = sp === -1 ? "" : form.slice(sp + 1)
+  }
+  // 1) Точное совпадение `=N` важнее категории.
+  const exact = `=${count}`
+  if (exact in bySelector) return bySelector[exact]
+  // 2) CLDR-категория через Intl.PluralRules (graceful fallback на невалидном locale-теге).
+  let category = "other"
+  try {
+    category = new Intl.PluralRules(locale || "en").select(count)
+  } catch {
+    category = "other"
+  }
+  if (category in bySelector) return bySelector[category]
+  // 3) Fallback: явная `other`, затем первая объявленная форма.
+  if ("other" in bySelector) return bySelector.other
+  const first = Object.values(bySelector)[0]
+  return first ?? template
+}
+
 export function stringify(value: any, indent = 2, currentIndent = 0): string {
   const currentIndentStr = " ".repeat(currentIndent)
   const nextIndentStr = " ".repeat(currentIndent + indent)

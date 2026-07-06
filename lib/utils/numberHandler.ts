@@ -96,7 +96,7 @@ export function onkeydown(e: KeyboardEvent): void {
   oldValue = target.value
 }
 
-export function toPhone(e: InputEvent): void {
+export function toPhone(e: InputEvent, options?: ConvertToPhoneOptions): void {
   const target = e.target as HTMLInputElement
   if (!target) return
 
@@ -112,7 +112,7 @@ export function toPhone(e: InputEvent): void {
       pos -= 1
     }
   }
-  const newValue = convertToPhone(value)
+  const newValue = convertToPhone(value, options)
   target.value = newValue
   if (keyup !== "Backspace") pos += newValue.length - lengthValue
   setTimeout(() => {

@@ -61,15 +61,40 @@ export interface AriaProps extends Omit<InputLayoutProps, "value" | "isValue">, 
 
   /**
    * The value of the input field.
-   * @type {string | number | null | undefined}
+   *
+   * Narrowed in 2026-05-11: `number` removed — multi-line text doesn't accept numeric model.
+   *
+   * @type {string | null | undefined}
    */
-  modelValue?: string | number | null | undefined
+  modelValue?: string | null | undefined
+}
+
+/**
+ * Context provided to the `before` slot.
+ */
+export declare type AriaBeforeSlotProps = {
+  /** Whether the textarea is currently in an invalid state. */
+  isInvalid: boolean
+  /** Whether the textarea currently has focus. */
+  isFocused: boolean
+}
+
+/**
+ * Context provided to the `after` slot.
+ */
+export declare type AriaAfterSlotProps = {
+  /** Whether the textarea is currently in an invalid state. */
+  isInvalid: boolean
+  /** Whether the textarea currently has focus. */
+  isFocused: boolean
+  /** Clears the textarea value and resets the invalid state. */
+  clear: () => void
 }
 
 export declare type AriaSlots = {
   default(): VNode[]
-  before(): VNode[]
-  after(): VNode[]
+  before(props: AriaBeforeSlotProps): VNode[]
+  after(props: AriaAfterSlotProps): VNode[]
 }
 /**
  * Events emitted by the Aria component.
@@ -90,11 +115,14 @@ export declare type AriaEmits = {
   (event: "update:isInvalid", payload: boolean): void
 
   /**
-   * Emitted when the input value changes.
+   * Emitted when the input value changes (native `change` event or `clear()`).
+   *
+   * Fixed in 2026-05-11: payload type was `boolean` by mistake — runtime always emits a string.
+   *
    * @param event
-   * @param {boolean} payload - Indicates the change in the input value.
+   * @param {string} payload - The new textarea value (empty string on clear).
    */
-  (event: "change:modelValue", payload: boolean): void
+  (event: "change:modelValue", payload: string): void
 
   /**
    * Emitted when the input field gains focus.

@@ -31,13 +31,58 @@ export declare function palette(color: HEX): ThemeColor
 
 export declare function tailwind(color: string, options?: Partial<{ selector: string; darkSelector: string }>): string
 
+// ---------------------- Wave 3.3 — runtime theme API (theme.md Issue 1)
+export declare function usePreset(preset: Theme): Theme | undefined
+
+export declare function updatePreset(partialPreset: Theme): Theme | undefined
+
+export declare function updatePrimaryPalette(paletteInput: PrimaryPaletteInput): Theme | undefined
+
+export declare function updateSurfacePalette(paletteInput: SurfacePaletteInput): Theme | undefined
+
+export declare function $dt(path: string): DesignToken | undefined
+
+/** Строит `:root`-блок дизайн-токенов из live-темы (см. helpers/tokensCss.ts). */
+export declare function buildTokensCss(
+  theme: Theme | undefined,
+  optionsTheme?: import("fishtvue/config").OptionsTheme
+): string
+
+/** Инжектит tokens-блок: cssComponents (SSR) + `<style data-fishtvue-style-id="FishtVueTokens">` на клиенте. */
+export declare function injectTokens(fv: import("fishtvue/config").FishtVue | undefined): void
+
+/** Имя style-тега токенов + ключ в cssComponents. */
+export declare const TOKENS_STYLE_NAME: string
+
+export declare type PrimaryPaletteInput = string | Partial<ThemeColor>
+export declare type SurfacePaletteInput =
+  | Partial<ThemeColor>
+  | { light?: Partial<ThemeColor>; dark?: Partial<ThemeColor> }
+export declare type DesignToken = {
+  /** CSS custom property (есть только у токенизированных путей). */
+  name?: string
+  /** Готовая ссылка `var(--…)` (есть только у токенизированных путей). */
+  variable?: string
+  /** Значение из merged live-темы. */
+  value: unknown
+}
+
 // ----------------------
 export type HEX = string | "#ffffff"
 export type RGB = Record<"r" | "g" | "b", number>
 // ----------------------
 type ThemePrimitive = Margin & Padding & Colors & ColorsConst & Border & Rounded & Shadow & Opacity & Duration
 type ThemeSemantic = {
-  primary: ThemeColor
+  /**
+   * Опциональный user-override брендовой палитры (слот `theme`): пишется updatePrimaryPalette,
+   * эмитится `--fv-theme-{tone}` поверх hsl-формул. Дефолта нет (Wave 3.3).
+   */
+  primary?: Partial<ThemeColor>
+  /**
+   * Палитра поверхностей: пишется updateSurfacePalette, эмитится `--fv-surface-{tone}`
+   * (плоско — оба режима; `{light, dark}` — режимные подмножества). Потребление компонентами — Wave 9.
+   */
+  surface?: Partial<ThemeColor> | { light?: Partial<ThemeColor>; dark?: Partial<ThemeColor> }
   customThemeColor: number | string
   customThemeColorContrast: number | string
 }
@@ -139,6 +184,7 @@ export declare type namesColors =
   | "zinc"
   | "neutral"
   | "stone"
+  | "surface"
 type keysColor = 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900 | 950
 type keysOpacity = 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50 | 55 | 60 | 65 | 70 | 75 | 80 | 85 | 90 | 95 | 100
 type keysDuration = 0 | 75 | 100 | 150 | 200 | 300 | 500 | 700 | 1000

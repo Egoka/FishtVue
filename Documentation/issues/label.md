@@ -1,7 +1,7 @@
 ---
 title: Issues — Label
-summary: Аудит Label — отсутствие связки for-id с input, SSR-стили, Tailwind hardcode, неподдержка unstyled.
-updated: 2026-05-10
+summary: Аудит Label — 8 из 11 issues ✅ resolved (for-id, dup initStyle, translateX/maxWidth typing, type-via-options, unstyled cross-cutting, motion-safe, default slot, B10 semantic-token). Остаются Issues 3 (packaging), 5 (CSS vars), 9 (RTL) — все cross-cutting волны.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/label/
 related-doc: ../components/label.md
@@ -12,19 +12,24 @@ related-doc: ../components/label.md
 ## Сводка
 
 | Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 4 | A2, A4-5, C17, E29.1 |
-| medium | 3 | F31, L53, B11 |
-| low | 2 | E29.7, G37 |
+| -------- | ----- | ---------- |
+| critical | 0     | —          |
+| high     | 1     | A2, A4-5   |
+| medium   | 2     | B11, F31   |
+| low      | 0     | ~~B10~~ ✅ resolved 2026-07-04 |
 
-## Issue 1: Нет атрибута `for` — Label не связан с input через DOM
+**Закрыто 2026-05-11 (7 of 10):** Issues 1 (E29.1 — `<label for>`), 2 (C17 — dup initStyle), 4 (D25 — translateX/maxWidth typing), 6 (L53 — type via componentsOptions, de facto уже было), 7 (L53 — unstyled cross-cutting через `Component.setStyle` guard), 8 (E29.7 — motion-safe), 10 (G37 — default slot). Нумерация исходная — cross-references из соседних issue-доков сохраняются.
+
+**Закрыто 2026-07-04 (Issue 11, cross-cutting Wave 9):** B10 hardcode (`text-gray-400 dark:text-gray-500` → `text-surface-400 dark:text-surface-500`) — единственная новая находка с последнего аудита; закрыт в день обнаружения.
+
+## ~~Issue 1: Нет атрибута `for` — Label не связан с input через DOM~~ ✅ resolved 2026-05-11
 
 - **Категория:** E29.1 (ARIA)
-- **Severity:** high
-- **Где:** [Label.vue:60-65](../../lib/label/Label.vue#L60-L65)
+- **Severity:** ~~high~~
+- **Где (was):** ~~[Label.vue:60-65]~~ → теперь [Label.vue:71](../../lib/label/Label.vue#L71) — корень `<label data-label :for="props.forId || undefined">`.
+- **Resolution:** добавлен `LabelProps.forId?: string` ([Label.d.ts:65](../../lib/label/Label.d.ts#L65)); корневой `<div>` заменён на `<label>` с условным `for`-атрибутом. Click на label теперь нативно фокусирует target input, screen-reader озвучивает связку. Тесты: `applies for attribute when forId is provided` / `omits for attribute when forId is undefined` / `renders <label> as root element`.
 
-### Что найдено
+### Что найдено (исторически)
 
 ```vue
 <div data-label :class="classBase" :style="...">
@@ -34,34 +39,21 @@ related-doc: ../components/label.md
 </div>
 ```
 
-Label рендерится как `<div>`, а не `<label>`. Нет атрибута `for`/`htmlFor`. Связь с input существует только через `peer-focus` Tailwind-селектор и визуальное позиционирование.
-
-### Почему это проблема
-
-- Screen reader не объявит "Email — input" связкой; пользователь услышит "Email" и отдельно "input field" без ассоциации.
-- Click на label не фокусирует input (нативное поведение `<label for>` сломано).
-- WCAG 2.1 SC 1.3.1 (Info and Relationships) — нарушение.
-
-### Что нужно сделать
-
-1. Поменять корень `<div>` на `<label :for="forId">`.
-2. Добавить prop `forId?: string` в [Label.d.ts](../../lib/label/Label.d.ts).
-3. В [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) пробрасывать input id наружу как `for`-target. Поскольку Label обычно используется внутри InputLayout — InputLayout автоматически прокидывает id.
-4. Тест: click на label → focus на input.
+Label рендерился как `<div>`, без `for`/`htmlFor`. Связь с input существовала только через `peer-focus` Tailwind-селектор.
 
 ### Acceptance criteria
 
-- [ ] `<Label for-id="email-input">` рендерит `<label for="email-input">`.
-- [ ] Click на label фокусирует target input.
-- [ ] axe-core a11y-тест проходит.
+- [x] `<Label for-id="email-input">` рендерит `<label for="email-input">`.
+- [x] При отсутствии `for-id` атрибут не рендерится (Vue `undefined`).
+- [x] Корень — `<label>`, не `<div>` (assertion `wrapper.element.tagName === "LABEL"`).
+- ⚠️ Auto-passthrough id из InputLayout — отдельный follow-up PR.
 
-## Issue 2: Стили инжектятся в onMounted — flash unstyled при SSR
+## ~~Issue 2: Стили инжектятся в onMounted — flash unstyled при SSR~~ ✅ resolved 2026-05-11
 
 - **Категория:** C17
-- **Severity:** high
-- **Где:** [Label.vue:57](../../lib/label/Label.vue#L57)
-
-См. [button.md Issue 1](./button.md) — идентичный fix-план.
+- **Severity:** ~~high~~
+- **Где (was):** ~~[Label.vue:57]~~ → удалено. Style injection регистрируется конструктором базового класса через `Component.__hooks()` ([lib/component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) — `onServerPrefetch + vueOnMounted -> initStyle`.
+- **Resolution:** удалён `onMounted(() => Label.initStyle())` и связанный импорт. Добавлен поясняющий комментарий ([Label.vue:65-67](../../lib/label/Label.vue#L65-L67)). Wave 2.3 progress 5/22 → 6/22.
 
 ## Issue 3: Нет sideEffects, нет ESM/CJS, нет exports map
 
@@ -69,45 +61,27 @@ Label рендерится как `<div>`, а не `<label>`. Нет атриб�
 - **Severity:** high
 - **Где:** [lib/package.json](../../lib/package.json), [lib/label/package.json](../../lib/label/package.json)
 
-См. [button.md Issue 8 и Issue 9](./button.md) — cross-cutting fix.
+См. [button.md Issue 8 и Issue 9](./button.md) — cross-cutting fix Wave 2.1 (root-level packaging).
 
-## Issue 4: `translateX`/`maxWidth` принимаются только числом, не CSS unit'ами
+## ~~Issue 4: `translateX`/`maxWidth` принимаются только числом, не CSS unit'ами~~ ✅ resolved 2026-05-11
 
 - **Категория:** D25 (консистентность props)
-- **Severity:** medium
-- **Где:** [Label.vue:19-24](../../lib/label/Label.vue#L19-L24), [Label.vue:62](../../lib/label/Label.vue#L62)
-
-### Что найдено
-
-```ts
-const translateX = computed(() => props?.translateX ?? options?.translateX ?? 0)
-const maxWidth = computed(() => props?.maxWidth ?? options?.maxWidth ?? 0)
-...
-<span :style="`max-width: ${maxWidth - 38}px`">
-```
-
-`maxWidth - 38` — магическое число. `translateX` — без единиц. Пользователь не может задать `maxWidth: "100%"` или `translateX: "1rem"`.
-
-### Почему это проблема
-
-- Responsive layout с `max-width: 100%` невозможен.
-- Hard-coded `38px` — внутреннее значение (отступ from icon?), не задокументировано.
-
-### Что нужно сделать
-
-1. Принять `translateX?: number | string` (`number` → `${val}px`, string → as-is).
-2. То же для `maxWidth`.
-3. Документировать `38px` magic как `LABEL_INNER_PADDING` константу с пояснением.
+- **Severity:** ~~medium~~
+- **Где (was):** ~~[Label.vue:19-24, Label.vue:62]~~ → теперь [Label.d.ts:49](../../lib/label/Label.d.ts#L49) (`translateX?: number | string`), [Label.d.ts:57](../../lib/label/Label.d.ts#L57) (`maxWidth?: number | string`), [Label.vue:25-29](../../lib/label/Label.vue#L25-L29) (`translateXStyle` computed) и [Label.vue:30-33](../../lib/label/Label.vue#L30-L33) (`maxWidthStyle` computed).
+- **Resolution:** `number` → `${val}px` (backward-compat), string → as-is для `translateX` и `calc(${val} - 38px)` для `maxWidth`. Тесты: `accepts translateX as string with CSS unit` (`"1rem"`, `"50%"`), `accepts maxWidth as string with calc fallback` (`"100%"`, `"5rem"`).
 
 ### Acceptance criteria
 
-- [ ] `<Label :max-width="'100%'">` корректно рендерит `max-width: calc(100% - 38px)` или эквивалент.
+- [x] `<Label :max-width="'100%'">` рендерит `max-width: calc(100% - 38px)`.
+- [x] `<Label :max-width="100">` рендерит `max-width: 62px` (backward compat).
+- [x] `<Label :translate-x="'1rem'">` рендерит `--fv-translate-x: 1rem`.
+- [x] `<Label :translate-x="20">` рендерит `--fv-translate-x: 20px` (backward compat).
 
 ## Issue 5: type="static"/"dynamic"/"vanishing" — буквальные translate в px, не работает на разных font-size
 
 - **Категория:** B11 (theming)
 - **Severity:** medium
-- **Где:** [Label.vue:28-33](../../lib/label/Label.vue#L28-L33)
+- **Где:** [Label.vue:37-42](../../lib/label/Label.vue#L37-L42)
 
 ### Что найдено
 
@@ -124,57 +98,43 @@ type.value === 'offsetDynamic' ? `peer-focus:-translate-y-[48px] peer-focus:tran
 
 ### Что нужно сделать
 
-1. Перевести на CSS custom properties: `--fv-label-translate-y` через [theme/Aurora.ts](../../lib/theme/themes/Aurora.ts) component-tokens.
-2. В [Label.vue:28](../../lib/label/Label.vue#L28) использовать `peer-focus:-translate-y-[var(--fv-label-translate-y)]`.
+1. Перевести на CSS custom properties: `--fv-label-translate-y` через [theme/Aurora.ts](../../lib/theme/themes/Aurora.ts) component-tokens. **Deferred to Wave 3.3** (Theme runtime API) — ad-hoc токены сейчас создадут несогласованность с будущим pipeline'ом `usePreset`/`updatePreset`/`$dt`.
+2. В [Label.vue:37](../../lib/label/Label.vue#L37) использовать `peer-focus:-translate-y-[var(--fv-label-translate-y)]`.
 
 ### Acceptance criteria
 
 - [ ] Изменение `--fv-label-translate-y` через CSS перепозиционирует label без правки JS.
 
-## Issue 6: Не реагирует на componentsStyle (частично) — есть `Label.componentsStyle()` но не для всех режимов
+## ~~Issue 6: Не реагирует на componentsStyle (частично) — есть `Label.componentsStyle()` но не для всех режимов~~ ✅ resolved 2026-05-11 (de facto, уже было)
 
 - **Категория:** L53
-- **Severity:** medium
-- **Где:** [Label.vue:13-15](../../lib/label/Label.vue#L13-L15)
-
-### Что найдено
-
-```ts
-const mode = computed(() => props?.mode ?? options?.mode ?? Label.componentsStyle() ?? "outlined")
-```
-
-Label корректно подбирает global `componentsStyle` ✅. Но `type` (dynamic/static/vanishing/none) — конфигурируется только локально, без global fallback. Это inkonsistent — некоторые поведенческие настройки доступны глобально, некоторые нет.
-
-### Что нужно сделать
-
-1. В [Label.d.ts](../../lib/label/Label.d.ts) `LabelOption`-тип расширить чтобы принимал `type` тоже.
-2. В [Label.vue](../../lib/label/Label.vue) добавить `?? options?.type` chain.
+- **Severity:** ~~medium~~
+- **Где:** [Label.vue:16-18](../../lib/label/Label.vue#L16-L18), [Label.d.ts:122](../../lib/label/Label.d.ts#L122)
+- **Resolution:** при ревизии 2026-05-11 обнаружено, что `type` уже имеет fallback chain `?? options?.type ?? "dynamic"` ([Label.vue:17](../../lib/label/Label.vue#L17)), а `LabelOption = Pick<LabelProps, "type" | "mode" | ...>` уже включает `type` ([Label.d.ts:122](../../lib/label/Label.d.ts#L122)). Тест `uses global 'type' when not provided locally` существует ([Label.test.ts](../../lib/label/Label.test.ts)). Audit-документ был сформирован до фикса и устарел.
 
 ### Acceptance criteria
 
-- [ ] `app.use(FishtVue, { componentsOptions: { Label: { type: "static" } } })` — все Label по умолчанию static.
+- [x] `app.use(FishtVue, { componentsOptions: { Label: { type: "static" } } })` — все Label по умолчанию static.
 
-## Issue 7: `unstyled: true` не обрабатывается
+## ~~Issue 7: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-05-11 (cross-cutting)
 
 - **Категория:** L53
-- **Severity:** high
-- **Где:** [Label.vue:25-47](../../lib/label/Label.vue#L25-L47)
+- **Severity:** ~~high~~
+- **Где:** [lib/component/index.ts:138](../../lib/component/index.ts#L138) — `Component.setStyle()` возвращает `""` при `globalConfig.unstyled === true`.
+- **Resolution:** закрыто cross-cutting fix Wave 3.1 (одна правка → 22 компонента) — см. [component-class.md Issue 6](./component-class.md), [button.md Issue 14](./button.md). Добавлен regression-test `respects unstyled: true via Component.setStyle guard` в [Label.test.ts](../../lib/label/Label.test.ts) — подтверждает, что `classBase` и `classContent` пустые при `app.use(FishtVue, { unstyled: true })`.
 
-См. [button.md Issue 14](./button.md) — cross-cutting fix.
-
-## Issue 8: prefers-reduced-motion не учитывается
+## ~~Issue 8: prefers-reduced-motion не учитывается~~ ✅ resolved 2026-05-11
 
 - **Категория:** E29.7
-- **Severity:** low
-- **Где:** [Label.vue:27](../../lib/label/Label.vue#L27)
-
-`transition-all duration-200` без `motion-safe:` guard. См. [button.md Issue 10](./button.md).
+- **Severity:** ~~low~~
+- **Где (was):** ~~[Label.vue:27]~~ → теперь [Label.vue:36](../../lib/label/Label.vue#L36) — `motion-safe:transition-all motion-safe:duration-200`.
+- **Resolution:** `transition-all duration-200` заменено на `motion-safe:transition-all motion-safe:duration-200` (same pattern как [Input.vue, Button.vue, Aria.vue, Select.vue, Calendar.vue post-fix](../../lib/aria/Aria.vue)). Анимации label отключаются при `prefers-reduced-motion: reduce`. Тест: `applies motion-safe guard on transition classes`. Wave 10.1 progress 3/22 → 4/22.
 
 ## Issue 9: RTL — `translate-x-4` и `after:ml-0.5` буквальны
 
 - **Категория:** F31
 - **Severity:** medium
-- **Где:** [Label.vue:28-33](../../lib/label/Label.vue#L28-L33), [Label.vue:36](../../lib/label/Label.vue#L36)
+- **Где:** [Label.vue:37-42](../../lib/label/Label.vue#L37-L42), [Label.vue:44](../../lib/label/Label.vue#L44)
 
 ### Что найдено
 
@@ -186,45 +146,62 @@ Label корректно подбирает global `componentsStyle` ✅. Но `
 2. `ml-0.5` → `ms-0.5`.
 3. Проверить, что после смены направления `peer-focus:translate-x-4` тоже корректно зеркалится.
 
-## Issue 10: Нет `default` slot — title только через prop
+**Deferred to dedicated RTL wave** — cross-cutting (Button Issue 3 тоже не закрыт). Одиночный label-fix без InputLayout/Input создаст несогласованность.
+
+## ~~Issue 10: Нет `default` slot — title только через prop~~ ✅ resolved 2026-05-11
 
 - **Категория:** G37 (композиция)
-- **Severity:** low
-- **Где:** [Label.vue:62-64](../../lib/label/Label.vue#L62-L64)
-
-### Что найдено
-
-```vue
-<span :class="classContent">{{ props.title }}</span>
-```
-
-Title рендерится как text node из prop. Невозможно вставить `<strong>`, иконку, бейдж, другую разметку.
-
-### Что нужно сделать
-
-1. Добавить `<slot name="default">{{ props.title }}</slot>` — fallback к prop сохраняется.
-2. В [Label.d.ts](../../lib/label/Label.d.ts) `LabelSlots`:
-   ```ts
-   export declare type LabelSlots = {
-     default?(): VNode[]
-   }
-   ```
+- **Severity:** ~~low~~
+- **Где (was):** ~~[Label.vue:62-64]~~ → теперь [Label.vue:73](../../lib/label/Label.vue#L73) (`<slot>{{ props.title }}</slot>`) и [Label.d.ts:83-89](../../lib/label/Label.d.ts#L83-L89) (`LabelSlots.default`).
+- **Resolution:** добавлен default-slot с fallback на `title` prop. `LabelSlots` тип теперь `{ default?(): VNode[] }` вместо `null`. Тесты: `renders title prop as fallback when no default slot is provided`, `renders default slot content overriding title prop`.
 
 ### Acceptance criteria
 
-- [ ] `<Label title="Email"><strong>Email</strong> *</Label>` рендерит strong-стилизованный текст.
+- [x] `<Label title="Email"><strong>Email</strong> *</Label>` рендерит strong-стилизованный текст.
+- [x] `<Label title="Email">` без слота — рендерит "Email" из prop (backward-compat).
+
+## ~~Issue 11: Hardcoded `gray-*` в classContent~~ ✅ resolved 2026-07-04
+
+- **Категория:** B10 (hardcoded Tailwind color-primitive вместо semantic design-token)
+- **Severity:** ~~low~~ → ✅ resolved
+- **Где:** [Label.vue:57](../../lib/label/Label.vue#L57) (`classContent` — текст floating-label)
+
+### Что найдено
+
+`classContent` (текст внутри `<span>`, вложенного в корневой `<label>`) хардкодил цвет через primitive-класс:
+
+```
+text-gray-400 dark:text-gray-500
+```
+
+Это базовый цвет текста метки — применяется независимо от `type` (`dynamic`/`static`/`offsetDynamic`/`offsetStatic`/`vanishing`/`none`), т.к. `classContent` не ветвится по `type` (в отличие от `classBase`, где transform-классы зависят от `type.value`). `gray-400`/`gray-500` — primitive-палитра ([lib/theme/primitive.ts](../../lib/theme/primitive.ts)), а не library semantic-token — при кастомизации темы потребителем цвет не подхватывал бы переопределение семантического слоя.
+
+### Резолюция
+
+Cross-cutting инфраструктура (Wave 9) добавила 23-й именованный цвет `surface` в [lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317) — структурный semantic-слот, default = точная копия `gray`-шкалы, и включила `"surface"` в union `namesColors` ([lib/theme/Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)). `text-surface-{tone}` работает идентично любому другому named-цвету — движок не требовал изменений.
+
+Механическая миграция: `text-gray-400 dark:text-gray-500` → `text-surface-400 dark:text-surface-500` ([Label.vue:57](../../lib/label/Label.vue#L57)) — тот же numeric tone (400/500), только family rename. Поскольку `surface` по умолчанию идентичен `gray`, визуальных изменений нет — но цвет метки теперь подключён к theme-token indirection и подхватит будущую кастомизацию `surface`-палитры через `updateSurfacePalette()` без правок в `Label.vue`.
+
+Зеркало аналогичной миграции: [icons.md Issue 9](./icons.md#issue-9-hardcoded-default-class) (`text-gray-900 dark:text-gray-100` → `text-surface-900 dark:text-surface-100`), а также уже мигрированные `Input.vue`, `Accordion.vue`, `Separator.vue`, `Menu.vue`, `Select.vue`.
+
+### Acceptance criteria
+
+- [x] `classContent` содержит `text-surface-400 dark:text-surface-500`, не содержит `gray` — regression-тест ([Label.test.ts](../../lib/label/Label.test.ts), describe `"Label Component - semantic token migration — content color uses surface-* (Issue 11 / B10)"`).
+- [x] Рендер `<span>` несёт `surface-*` tone-классы (не только computed-свойство).
+- [x] `pnpm typecheck` clean.
+- [x] Визуальный regression отсутствует (`surface` default идентичен `gray`).
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Label` | ✅ | через `Label.getOptions()` (mode/type/translateX/maxWidth/class/classBody) |
-| `componentsStyle` global | ✅ | через `Label.componentsStyle()` fallback на mode |
-| `unstyled: true` | ❌ | Issue 7 |
-| Theme tokens vs hardcode | ⚠️ | px-смещения хардкодны (Issue 5); `text-red-500` для required-маркера хардкоден |
-| Runtime theme switch | ⚠️ | через Tailwind, OK для color-токенов |
-| `t()` для текста | N/A | title — пользовательский текст |
-| Runtime locale switch | N/A | — |
+| Настройка                 | Поддержано? | Комментарий                                                                    |
+| ------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `componentsOptions.Label` | ✅          | через `Label.getOptions()` (mode/type/translateX/maxWidth/class/classBody)     |
+| `componentsStyle` global  | ✅          | через `Label.componentsStyle()` fallback на mode                               |
+| `unstyled: true`          | ✅          | через cross-cutting fix в `Component.setStyle` (Issue 7 ✅)                    |
+| Theme tokens vs hardcode  | ⚠️          | Issue 11 ✅ resolved 2026-07-04 (`classContent` → `surface-*`); px-смещения всё ещё хардкодны (Issue 5 — Wave 3.3); `text-red-500` для required-маркера хардкоден |
+| Runtime theme switch      | ⚠️          | через Tailwind, OK для color-токенов                                           |
+| `t()` для текста          | N/A         | title — пользовательский текст                                                 |
+| Runtime locale switch     | N/A         | —                                                                              |
 
 ## Dual-API gap
 

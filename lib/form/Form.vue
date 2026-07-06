@@ -1,8 +1,22 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, reactive, ref, unref, watch } from "vue"
+  import {
+    Comment,
+    Fragment,
+    Text,
+    computed,
+    defineComponent,
+    nextTick,
+    onMounted,
+    reactive,
+    ref,
+    unref,
+    useSlots,
+    watch
+  } from "vue"
   import {
     FieldComponentType,
     FieldCustom,
+    FieldInput,
     FieldType,
     FieldUseInputLayout,
     FormEmits,
@@ -20,10 +34,12 @@
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
   import type { RulesObject } from "fishtvue/utils/rulesHandler"
-  import { getAsyncValidate, getValidate, isExistRule } from "fishtvue/utils/rulesHandler"
+  import { getAsyncValidate, getValidate, isExistRule, setDefaultRuleMessages } from "fishtvue/utils/rulesHandler"
   import { deepCopy, fieldsOmit } from "fishtvue/utils/objectHandler"
   import { generateUUID } from "fishtvue/utils/functionHandler"
   import { isClient } from "fishtvue/utils/domHandler"
+  import { getActiveLocale, useFishtVue } from "fishtvue/config"
+  import { getFieldType } from "./fieldRegistry"
   // ---BASE-COMPONENT----------------------
   const Form = new Component<"Form">()
   const options = Form.getOptions()
@@ -34,6 +50,8 @@
   const emit = defineEmits<FormEmits>()
   // ---REF-LINK----------------------------
   const formRef = ref<HTMLElement>()
+  // ---G34 — ref на корневой <form> element (наружу через defineExpose).
+  const formElement = ref<HTMLFormElement>()
   // ---STATE-------------------------------
   const calculatedFieldsInput = <Array<keyof FieldType>>[
     "typeComponent",
@@ -57,7 +75,95 @@
     Switch
   }
   type BaseInputKey = "Input" | "Aria" | "Select" | "Calendar" | "TextEditor" | "Switch"
+  // ---ISSUE 3 — резолв компонента поля: встроенный тип > зарегистрированный custom-тип.
+  // Если ни то, ни другое — рендерится Custom-slot (v-else в шаблоне).
+  function resolveFieldComponent(typeComponent: string) {
+    return baseInputs[typeComponent as BaseInputKey] ?? getFieldType(typeComponent)
+  }
   const formStructure = ref<FormStructure[]>()
+  // ---COMPOUND-API (VNode-walk <FormSection>/<FormField>) — Issue 2 -------------------
+  // Считываем декларативные дети из default slot и синтезируем FormStructure[]. Schema-driven
+  // `:structure` при наличии выигрывает (backward compat). Сопоставление по ИМЕНИ компонента —
+  // FormField.vue/FormSection.vue НЕ импортируем в этот SFC (импорт SFC в SFC ломает type-resolver
+  // @vue/compiler-sfc на re-export `declare class ... extends ClassComponent`; урок Menu/Table).
+  const slots = useSlots()
+  function compoundNormalize(raw: unknown): Array<any> {
+    if (raw === null || raw === undefined) return []
+    return Array.isArray(raw) ? (raw as Array<any>) : [raw]
+  }
+  function isVNodeNamed(vn: any, nameComponent: string): boolean {
+    const t = vn?.type
+    return !!t && (t?.name === nameComponent || t?.__name === nameComponent)
+  }
+  function compoundFlatten(nodes: Array<any>): Array<any> {
+    const out: Array<any> = []
+    for (const n of nodes) {
+      if (n === null || n === undefined || typeof n !== "object") continue
+      if (n.type === Comment || n.type === Text) continue
+      if (n.type === Fragment) out.push(...compoundFlatten(compoundNormalize(n.children)))
+      else out.push(n)
+    }
+    return out
+  }
+  function compoundChildren(vn: any): Array<any> {
+    const def = vn?.children?.default
+    return typeof def === "function" ? compoundNormalize(def()) : []
+  }
+  // Извлекаем поле из <FormField>-vnode: props (+ `type`→`typeComponent`) + захваченный default-slot
+  // (custom-контрол). Slot-функции хранятся отдельно (slotsAcc по имени поля) — не в данных поля,
+  // чтобы пережить deepCopy в getStructure().
+  function extractField(vn: any, slotsAcc: Record<string, any>): FieldType {
+    const p = (vn?.props ?? {}) as Record<string, any>
+    const childSlots = (vn?.children && typeof vn.children === "object" ? vn.children : {}) as Record<string, any>
+    const defaultSlot = typeof childSlots.default === "function" ? childSlots.default : undefined
+    const { type, typeComponent, ...rest } = p
+    const nameField = (rest.name ?? "") as string
+    if (defaultSlot) {
+      slotsAcc[nameField] = defaultSlot
+      return { ...rest, typeComponent: "Custom", nameTemplate: rest.nameTemplate ?? nameField } as unknown as FieldType
+    }
+    return { ...rest, typeComponent: (typeComponent ?? type ?? "Input") as FieldComponentType } as unknown as FieldType
+  }
+  const compoundParsed = computed<{ structure: Array<FormStructure>; slots: Record<string, any> }>(() => {
+    const raw = typeof slots.default === "function" ? slots.default() : undefined
+    const top = compoundFlatten(compoundNormalize(raw))
+    const sections: Array<FormStructure> = []
+    const slotsAcc: Record<string, any> = {}
+    let implicit: FormStructure | null = null
+    for (const vn of top) {
+      if (isVNodeNamed(vn, "FormField")) {
+        if (!implicit) {
+          implicit = { fields: [] }
+          sections.push(implicit)
+        }
+        implicit.fields.push(extractField(vn, slotsAcc))
+      } else if (isVNodeNamed(vn, "FormSection")) {
+        implicit = null
+        const sp = (vn?.props ?? {}) as Record<string, any>
+        const section: FormStructure = {
+          fields: [],
+          isHidden: sp.isHidden,
+          class: sp.class,
+          classGrid: sp.classGrid,
+          title: sp.title,
+          description: sp.description
+        }
+        for (const child of compoundFlatten(compoundChildren(vn)))
+          if (isVNodeNamed(child, "FormField")) section.fields.push(extractField(child, slotsAcc))
+        sections.push(section)
+      }
+    }
+    return { structure: sections, slots: slotsAcc }
+  })
+  const compoundStructure = computed<Array<FormStructure>>(() => compoundParsed.value.structure)
+  const compoundFieldSlots = computed<Record<string, any>>(() => compoundParsed.value.slots)
+  // Стабильный рендерер захваченного со <FormField> default-slot (зеркало Table.RenderColumnSlot):
+  // props (render/args) объявлены — slot-props (data/updateModelValue/changeModelValue) доходят корректно.
+  const RenderFieldSlot = defineComponent({
+    name: "RenderFieldSlot",
+    props: { render: { type: Function, default: undefined }, args: { type: Object, default: undefined } },
+    setup: (p) => () => (p.render ? (p.render as (a: any) => any)(p.args) : null)
+  })
   // ---PROPS-------------------------------
   const name = computed<FormProps["name"]>(() => props.name ?? "")
   const modeStyle = computed<FormProps["modeStyle"]>(() => props.modeStyle ?? options?.modeStyle)
@@ -71,19 +177,30 @@
   const modeValidate = computed<NonNullable<FormProps["modeValidate"]>>(
     () => props.modeValidate ?? options?.modeValidate ?? "onChange"
   )
+  // ---ISSUE 4 — native submit / FormData props (проброс на корневой <form>)
+  const action = computed<FormProps["action"]>(() => props.action)
+  const method = computed<FormProps["method"]>(() => props.method)
+  const enctype = computed<FormProps["enctype"]>(() => props.enctype)
+  const nativeSubmit = computed<NonNullable<FormProps["nativeSubmit"]>>(() => props.nativeSubmit ?? false)
   // ---------------------------------------
   const formFields = reactive<FormValues>({})
   const formInvalidFields = reactive<{ [key: string]: boolean }>({})
-  const structure = computed<Array<FormStructure>>(() => unref(props.structure))
+  // Schema `:structure` (если задан, в т.ч. пустой массив) выигрывает; иначе — compound `<FormField>`/
+  // `<FormSection>`-дети (Issue 2).
+  const structure = computed<Array<FormStructure>>(() => {
+    const schema = unref(props.structure)
+    if (schema !== undefined && schema !== null) return schema
+    return compoundStructure.value
+  })
   const submitButton = computed<FormProps["submitButton"]>(
     () => props.submitButton ?? options?.submitButton ?? Form.t("save") ?? "Save"
   )
   // ---------------------------------------
-  Form.setStyle("transition ease-in-out duration-500 opacity-100 opacity-0")
+  Form.setStyle("motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500 opacity-100 opacity-0")
   const classBase = computed(() => Form.setStyle([options?.class ?? "", props.class ?? ""]))
   const classStructure = computed(() =>
     Form.setStyle([
-      "border-b border-gray-900/10 dark:border-gray-100/10 pb-6",
+      "border-b border-surface-900/10 dark:border-surface-100/10 pb-6 print:border-black",
       options?.structureClass ?? "",
       props?.structureClass ?? ""
     ])
@@ -95,17 +212,15 @@
       props?.structureClassGrid ?? ""
     ])
   )
-  const classItemGrid = ref(Form.setStyle("grid transition"))
-  const classBeforeSlot = ref(Form.setStyle("flex select-none items-center text-gray-500 sm:text-sm"))
-  const classAfterSlot = ref(Form.setStyle("ml-1 mr-3 text-gray-400 dark:text-gray-600 select-none"))
-  const classSelectItemIsQuery = ref(
-    Form.setStyle("text-gray-600 dark:text-gray-300 group-hover:text-theme-700 dark:group-hover:text-theme-400")
-  )
-  const classSelectItemNotQuery = ref(Form.setStyle("text-gray-500 dark:text-gray-300"))
+  const classItemGrid = ref(Form.setStyle("grid motion-safe:transition"))
+  const classBeforeSlot = ref(Form.setStyle("flex select-none items-center text-surface-500 sm:text-sm"))
+  // RTL: логические margins (ms/me) вместо физических ml/mr — авто-флип при dir="rtl" (Issue 9 / F31)
+  const classAfterSlot = ref(Form.setStyle("ms-1 me-3 text-surface-400 dark:text-surface-600 select-none"))
   const classFooter = ref(Form.setStyle("mt-3 flex items-center justify-end gap-x-6"))
   // ---EXPOSE------------------------------
   defineExpose({
     // ---PROPS-------------------------------
+    formElement,
     formFields,
     formInvalidFields,
     formStructure,
@@ -118,8 +233,8 @@
     validateFields
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // ---CANON — без ручного Form.initStyle(): Component.__hooks() регистрирует vueOnMounted/onServerPrefetch.
   onMounted(() => {
-    Form.initStyle()
     structure.value?.forEach((item) =>
       item.fields?.forEach((field) => {
         const formFieldsValue = unref(props.formFields)
@@ -128,6 +243,26 @@
     )
   })
   // ---WATCHERS----------------------------
+  // ---ISSUE 6 — локализация default validation-messages через rulesHandler, когда активен plugin.
+  // setDefaultRuleMessages — global module state; guarded через useFishtVue(), чтобы standalone-Form
+  // (без plugin) сохранял встроенные английские defaults. Переприменяется при смене активной локали.
+  function applyLocaleToRules(): void {
+    if (!useFishtVue()) return
+    setDefaultRuleMessages({
+      required: Form.t("requiredField") ?? "Required field",
+      email: Form.t("invalidEmail") ?? "Invalid email",
+      phone: Form.t("invalidPhone") ?? "Invalid phone",
+      numeric: Form.t("invalidNumeric") ?? "Invalid numeric",
+      regular: Form.t("regexMismatch") ?? "The value does not satisfy the rule",
+      range: Form.t("valueOutOfRange") ?? "The value is not within the set range",
+      length: Form.t("invalidLength") ?? "Invalid length value",
+      async: Form.t("invalidField") ?? "Invalid field",
+      custom: Form.t("invalidField") ?? "Invalid field",
+      compare: Form.t("compareMismatch") ?? "The field does not fall off"
+    })
+  }
+  watch(() => getActiveLocale(), applyLocaleToRules, { immediate: true })
+
   watch(
     formFields,
     (value: FormValues) => {
@@ -257,7 +392,7 @@
                 resultField.typeComponent !== "Calendar" &&
                 resultField.typeComponent !== "Select"
               ) {
-                resultField.autocomplete ??= autocomplete.value
+                ;(resultField as FieldInput).autocomplete ??= autocomplete.value
               }
             }
             if (resultField.typeComponent === "Select")
@@ -275,7 +410,9 @@
 
   // ---------------------------------------
   async function validateField(field: FieldType) {
-    if (arrayFieldsValidate.includes(field.typeComponent)) {
+    // Встроенные InputLayout-типы валидируются всегда; зарегистрированные custom-типы (Issue 3)
+    // и Custom-поля — если несут `rules`.
+    if (arrayFieldsValidate.includes(field.typeComponent) || (field as FieldUseInputLayout)?.rules) {
       field = field as FieldUseInputLayout
       if (field?.rules) {
         let { isInvalid, message } = getValidate(formFields[field.name], field.rules, formFields)
@@ -322,20 +459,39 @@
     if (modeValidate.value === "onChange") validateField(field)
   }
 
-  function submit() {
-    if (validateFields()) emit("submit", formFields)
+  // ---ISSUE 4 — native submit + FormData. Невалидная форма всегда блокирует submit
+  // (preventDefault). Валидная — эмитит `submit`; реальную browser-отправку (перезагрузка / POST
+  // на `action`) разрешаем только при явном opt-in `nativeSubmit` или заданном `action`, иначе
+  // SPA-режим (preventDefault). Native-инпуты несут `name` (Form биндит id=field.name → :name=id),
+  // поэтому `new FormData(formEl)` собирает значения Input-полей.
+  function onSubmit(event: Event) {
+    if (!validateFields()) {
+      event.preventDefault()
+      return
+    }
+    emit("submit", formFields)
+    if (!nativeSubmit.value && !action.value) event.preventDefault()
   }
 </script>
 
 <template>
-  <form data-form :name="name" :autocomplete="autocomplete" :class="classBase" @submit.prevent="submit">
+  <form
+    ref="formElement"
+    data-form
+    :name="name"
+    :action="action"
+    :method="method"
+    :enctype="enctype"
+    :autocomplete="autocomplete"
+    :class="classBase"
+    @submit="onSubmit">
     <div ref="formRef">
       <template v-for="(structure, key) in formStructure as FormStructure[]" :key="key">
         <transition
-          leave-active-class="transition ease-in-out duration-500"
+          leave-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in-out duration-500"
+          enter-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-show="!structure.isHidden" data-form-item :class="structure.class">
@@ -343,16 +499,16 @@
             <div data-form-group :class="[structure.classGrid, classItemGrid]">
               <div v-for="(field, itemKey) in structure.fields" :key="itemKey" :class="field.classCol">
                 <transition
-                  leave-active-class="transition ease-in-out duration-500"
+                  leave-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500"
                   leave-from-class="opacity-100"
                   leave-to-class="opacity-0"
-                  enter-active-class="transition ease-in-out duration-500"
+                  enter-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500"
                   enter-from-class="opacity-0"
                   enter-to-class="opacity-100">
                   <div v-show="!field.isHidden" data-form-group-item>
                     <component
-                      v-if="Object.keys(baseInputs).includes(field.typeComponent)"
-                      :is="baseInputs[field.typeComponent as BaseInputKey]"
+                      v-if="resolveFieldComponent(field.typeComponent)"
+                      :is="resolveFieldComponent(field.typeComponent)"
                       v-model:model-value="formFields[field.name]"
                       v-model:is-invalid="formInvalidFields[field.name]"
                       v-bind="{ ...fieldsOmit(field, calculatedFieldsInput), id: field.name }"
@@ -362,7 +518,7 @@
                         <Icons
                           v-if="(field as FieldUseInputLayout)?.insert?.beforeIcon"
                           :type="(field as FieldUseInputLayout)?.insert?.beforeIcon ?? ''"
-                          class="mr-2 h-5 w-5 text-gray-400 dark:text-gray-600" />
+                          class="me-2 h-5 w-5 text-surface-400 dark:text-surface-600" />
                         <span v-if="(field as FieldUseInputLayout)?.insert?.beforeText" :class="classBeforeSlot">
                           {{ (field as FieldUseInputLayout)?.insert?.beforeText }}
                         </span>
@@ -374,11 +530,7 @@
                         <Icons
                           v-if="(field as FieldUseInputLayout)?.insert?.afterIcon"
                           :type="(field as FieldUseInputLayout)?.insert?.afterIcon ?? ''"
-                          class="mr-2 h-5 w-5 text-gray-400 dark:text-gray-600" />
-                      </template>
-                      <template #item="{ item, key, isQuery }">
-                        <div v-if="!isQuery" v-html="item?.marker ?? item[key]" :class="classSelectItemIsQuery" />
-                        <div v-else :class="classSelectItemNotQuery">{{ item[key] }}</div>
+                          class="me-2 h-5 w-5 text-surface-400 dark:text-surface-600" />
                       </template>
                       <template #footerPicker>
                         <slot
@@ -389,6 +541,25 @@
                           }"></slot>
                       </template>
                     </component>
+                    <RenderFieldSlot
+                      v-else-if="compoundFieldSlots[field.name]"
+                      :render="compoundFieldSlots[field.name]"
+                      :args="{
+                        data: {
+                          ...field,
+                          id: field.name,
+                          modelValue: formFields[field.name],
+                          isInvalid: formInvalidFields[field.name]
+                        },
+                        updateModelValue: (value: unknown) => {
+                          formFields[field.name] = value
+                          inputField(field)
+                        },
+                        changeModelValue: (value: unknown) => {
+                          formFields[field.name] = value
+                          changeField(field)
+                        }
+                      }" />
                     <slot
                       v-else
                       :name="(field as FieldCustom)?.nameTemplate"

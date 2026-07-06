@@ -58,6 +58,7 @@
 - [components/separator.md](./components/separator.md) — Separator с gradient/depth/contentPosition.
 - [components/split.md](./components/split.md) — Split resizable panels с persistence. **beta**.
 - [components/fix-window.md](./components/fix-window.md) — FixWindow popover/tooltip с 12 позициями.
+- [components/virtualscroller.md](./components/virtualscroller.md) — VirtualScroller: windowing-примитив (variable-height, lazy, grid) + composable `useVirtualScroll` + macOS-скроллбар.
 
 ### Disclosure
 

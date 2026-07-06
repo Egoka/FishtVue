@@ -1,10 +1,23 @@
-import { describe, expect, it } from "vitest"
+import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
 import FishtVue from "fishtvue/config"
 import Split from "fishtvue/split/Split.vue"
 import { SplitOption } from "fishtvue/split/Split"
 
 describe("Split Component", () => {
+  beforeEach(() => {
+    // isolation: cursor-классы больше не должны попадать на body, persistence — на localStorage,
+    // а unstyled-leak через window.FishtVue не должен утекать между тестами (см. test-isolation memory)
+    document.body.className = ""
+    localStorage.clear()
+    delete (window as any).FishtVue
+  })
+
+  // защищаем соседние test-файлы от unstyled-leak, выставленного тестом unstyled:true
+  afterAll(() => {
+    delete (window as any).FishtVue
+  })
+
   describe("Without Library Initialization", () => {
     it("renders panels based on the `panels` prop", () => {
       const wrapper = mount(Split, {
@@ -123,6 +136,757 @@ describe("Split Component", () => {
       expect(separator.exists()).toBe(true)
     })
   })
+
+  // ---ISSUE 1 — drag overlay вместо document.body.classList--------------
+  describe("Issue 1 — drag overlay (no document.body mutation)", () => {
+    const mountAttached = () => {
+      const container = document.createElement("div")
+      container.style.width = "200px"
+      container.style.height = "200px"
+      document.body.appendChild(container)
+      return mount(Split, {
+        props: {
+          panels: [
+            { name: "panel1", size: 50 },
+            { name: "panel2", size: 50 }
+          ]
+        },
+        attachTo: container
+      })
+    }
+
+    it("renders a full-screen drag overlay only while resizing", async () => {
+      const wrapper = mountAttached()
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(false)
+
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("pointerdown")
+      const overlay = wrapper.find("[data-split-drag-overlay]")
+      expect(overlay.exists()).toBe(true)
+      expect(overlay.attributes("class")).toContain("cursor-col-resize")
+
+      await separator.trigger("pointerup")
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(false)
+    })
+
+    it("never mutates document.body.classList with cursor classes", async () => {
+      const wrapper = mountAttached()
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("pointerdown")
+      await separator.trigger("pointermove", { clientX: 80 })
+      const hasCursorClassDuringDrag = Array.from(document.body.classList).some((c) => c.startsWith("cursor-"))
+      await separator.trigger("pointerup")
+      const hasCursorClassAfterDrag = Array.from(document.body.classList).some((c) => c.startsWith("cursor-"))
+
+      expect(hasCursorClassDuringDrag).toBe(false)
+      expect(hasCursorClassAfterDrag).toBe(false)
+    })
+  })
+
+  // ---REGRESSION — drag teardown при release вне компонента----------------
+  // Overlay (cursor-*-resize, fixed inset-0) гасится только когда isStartResize → false,
+  // а это делает stopResizePanel. Раньше он висел исключительно на separator @pointerup:
+  // если курсор уходил за пределы компонента и кнопку отпускали там, separator-событие
+  // не приходило, overlay залипал и курсор-resize блокировал весь сайт.
+  describe("drag teardown on pointerup outside the component", () => {
+    const mountAttached = () => {
+      const container = document.createElement("div")
+      container.style.width = "200px"
+      container.style.height = "200px"
+      document.body.appendChild(container)
+      return mount(Split, {
+        props: {
+          panels: [
+            { name: "panel1", size: 50 },
+            { name: "panel2", size: 50 }
+          ]
+        },
+        attachTo: container
+      })
+    }
+
+    it("removes the drag overlay when the pointer is released outside the separator (window pointerup)", async () => {
+      const wrapper = mountAttached()
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("pointerdown")
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(true)
+
+      // курсор ушёл за пределы компонента — separator @pointerup не сработает,
+      // приходит только window-level pointerup (safety-net должен завершить drag).
+      window.dispatchEvent(new Event("pointerup"))
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(false)
+      expect(wrapper.emitted("stop-resize-panel")).toHaveLength(1)
+    })
+
+    it("ends drag on a window pointercancel fired outside the separator", async () => {
+      const wrapper = mountAttached()
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("pointerdown")
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(true)
+
+      window.dispatchEvent(new Event("pointercancel"))
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find("[data-split-drag-overlay]").exists()).toBe(false)
+    })
+
+    it("does not emit a second stop-resize-panel on a stray window pointerup after drag ended", async () => {
+      const wrapper = mountAttached()
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("pointerdown")
+      await separator.trigger("pointerup")
+      expect(wrapper.emitted("stop-resize-panel")).toHaveLength(1)
+
+      // safety-net снят на stop — посторонний window pointerup не должен доэмитить stop
+      window.dispatchEvent(new Event("pointerup"))
+      await wrapper.vm.$nextTick()
+      expect(wrapper.emitted("stop-resize-panel")).toHaveLength(1)
+    })
+  })
+
+  // ---ISSUE 4 — ARIA separator-------------------------------------------
+  describe("Issue 4 — ARIA on resize handle", () => {
+    it("exposes aria-orientation matching direction", () => {
+      const horizontal = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "horizontal"
+        }
+      })
+      expect(horizontal.find("[data-split-separator]").attributes("aria-orientation")).toBe("horizontal")
+
+      const vertical = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "vertical"
+        }
+      })
+      expect(vertical.find("[data-split-separator]").attributes("aria-orientation")).toBe("vertical")
+    })
+
+    it("links the handle to the panel it controls via aria-controls / id", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      const separator = wrapper.find("[data-split-separator]")
+      const controls = separator.attributes("aria-controls")
+      expect(controls).toBeTruthy()
+      const panelBody = wrapper.find('[data-name="a"]')
+      expect(panelBody.attributes("id")).toBe(controls)
+    })
+
+    it("keeps aria-valuenow/min/max on the handle", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, minSize: 10, maxSize: 90 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      const separator = wrapper.find("[data-split-separator]")
+      expect(separator.attributes("aria-valuenow")).toBe("50")
+      expect(separator.attributes("aria-valuemin")).toBe("10")
+      expect(separator.attributes("aria-valuemax")).toBe("90")
+    })
+
+    it("marks a disabled separator with aria-disabled", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, disabled: true },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      const disabled = wrapper.find("[data-split-separator-disabled]")
+      expect(disabled.exists()).toBe(true)
+      expect(disabled.attributes("aria-disabled")).toBe("true")
+      expect(disabled.attributes("role")).toBe("separator")
+    })
+  })
+
+  // ---ISSUE 5 — keyboard resize-----------------------------------------
+  describe("Issue 5 — keyboard resize", () => {
+    it("grows the panel on ArrowRight and shrinks on ArrowLeft (horizontal)", async () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "horizontal"
+        }
+      })
+      const separator = wrapper.find("[data-split-separator]")
+
+      await separator.trigger("keydown", { key: "ArrowRight" })
+      expect((wrapper.vm as any).sizePanels.a).toBe(60)
+      expect((wrapper.vm as any).sizePanels.b).toBe(40)
+      expect(wrapper.emitted("updated-size-panel")?.at(-1)).toEqual([60, "a"])
+
+      await separator.trigger("keydown", { key: "ArrowLeft" })
+      expect((wrapper.vm as any).sizePanels.a).toBe(50)
+      expect((wrapper.vm as any).sizePanels.b).toBe(50)
+    })
+
+    it("uses a larger step with Shift", async () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      await wrapper.find("[data-split-separator]").trigger("keydown", { key: "ArrowRight", shiftKey: true })
+      expect((wrapper.vm as any).sizePanels.a).toBe(100)
+      expect((wrapper.vm as any).sizePanels.b).toBe(0)
+    })
+
+    it("respects min/max constraints", async () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, maxSize: 55 },
+            { name: "b", size: 50, minSize: 30 }
+          ]
+        }
+      })
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("keydown", { key: "ArrowRight", shiftKey: true })
+      // a clamped to maxSize 55, b clamped to minSize 30 → выигрывает наименьший допустимый сдвиг (5)
+      expect((wrapper.vm as any).sizePanels.a).toBe(55)
+      expect((wrapper.vm as any).sizePanels.b).toBe(45)
+    })
+
+    it("maps ArrowUp/ArrowDown for vertical direction", async () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "vertical"
+        }
+      })
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("keydown", { key: "ArrowDown" })
+      expect((wrapper.vm as any).sizePanels.a).toBe(60)
+      await separator.trigger("keydown", { key: "ArrowUp" })
+      expect((wrapper.vm as any).sizePanels.a).toBe(50)
+    })
+
+    it("Home/End move to the extremes", async () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, minSize: 20, maxSize: 80 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      const separator = wrapper.find("[data-split-separator]")
+      await separator.trigger("keydown", { key: "End" })
+      expect((wrapper.vm as any).sizePanels.a).toBe(80)
+      await separator.trigger("keydown", { key: "Home" })
+      expect((wrapper.vm as any).sizePanels.a).toBe(20)
+    })
+
+    it("ignores keyboard resize when neighbour is disabled", async () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50, disabled: true }
+          ]
+        }
+      })
+      // separator между a и b отрисован как disabled — интерактивного нет
+      expect(wrapper.find("[data-split-separator]").exists()).toBe(false)
+    })
+  })
+
+  // ---ISSUE 6 — persistence через localStorage--------------------------
+  describe("Issue 6 — localStorage persistence", () => {
+    it("saves sizes under fv-split-<autoSaveName> after a keyboard resize", async () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          autoSaveName: "layout"
+        }
+      })
+      await wrapper.find("[data-split-separator]").trigger("keydown", { key: "ArrowRight" })
+
+      const raw = localStorage.getItem("fv-split-layout")
+      expect(raw).toBeTruthy()
+      expect(JSON.parse(raw as string)).toMatchObject({ a: 60, b: 40 })
+    })
+
+    it("restores sizes from localStorage on mount (overrides panel.size)", () => {
+      localStorage.setItem("fv-split-layout", JSON.stringify({ a: 70, b: 30 }))
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          autoSaveName: "layout"
+        }
+      })
+      expect((wrapper.vm as any).sizePanels.a).toBe(70)
+      expect((wrapper.vm as any).sizePanels.b).toBe(30)
+    })
+
+    it("clamps restored sizes to min/max", () => {
+      localStorage.setItem("fv-split-layout", JSON.stringify({ a: 999, b: 1 }))
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, maxSize: 80 },
+            { name: "b", size: 50, minSize: 20 }
+          ],
+          autoSaveName: "layout"
+        }
+      })
+      expect((wrapper.vm as any).sizePanels.a).toBe(80)
+      expect((wrapper.vm as any).sizePanels.b).toBe(20)
+    })
+
+    it("does nothing without autoSaveName", async () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      await wrapper.find("[data-split-separator]").trigger("keydown", { key: "ArrowRight" })
+      expect(localStorage.length).toBe(0)
+    })
+
+    it("ignores malformed stored data", () => {
+      localStorage.setItem("fv-split-layout", "{ not json")
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          autoSaveName: "layout"
+        }
+      })
+      expect((wrapper.vm as any).sizePanels.a).toBe(50)
+    })
+  })
+
+  // ---ISSUE 3 / 8 — unstyled + motion-safe------------------------------
+  describe("Issue 3 / 8 — unstyled & reduced-motion", () => {
+    it("respects unstyled: true via Component.setStyle guard", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { unstyled: true })
+        }
+      }
+      const wrapper = mount(Split, {
+        global: { plugins: [app as any] },
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      expect((wrapper.vm as any).classBase).toBe("")
+    })
+
+    it("wraps root transition in motion-safe:", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      expect((wrapper.vm as any).classBase).toContain("motion-safe:transition-all")
+      expect((wrapper.vm as any).classBase).not.toContain(" transition-all")
+    })
+  })
+
+  // ---boundary----------------------------------------------------------
+  describe("Boundary cases", () => {
+    it("renders with pixels units + vertical direction", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 200, minSize: 100 },
+            { name: "b", size: 300 }
+          ],
+          units: "pixels",
+          direction: "vertical"
+        }
+      })
+      expect(wrapper.attributes("data-units")).toBe("pixels")
+      expect(wrapper.attributes("data-direction")).toBe("vertical")
+    })
+
+    it("excludes hidden panels from the rendered output", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, hidden: true },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      expect(wrapper.findAll("[data-split-item]")).toHaveLength(1)
+      expect(wrapper.find('[data-name="b"]').exists()).toBe(true)
+    })
+
+    // регрессия: pixels-панель без явного size должна получать положительный default
+    // из offsetWidth контейнера (в onMounted, не в setup где resizableGroup ещё undefined)
+    it("computes a positive pixel default size for panels without explicit size", () => {
+      const proto = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth")
+      Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, get: () => 800 })
+      try {
+        const wrapper = mount(Split, {
+          props: {
+            panels: [{ name: "menu", size: 75, minSize: 75, maxSize: 200 }, { name: "main" }],
+            units: "pixels",
+            direction: "horizontal"
+          }
+        })
+        const vm = wrapper.vm as any
+        expect(vm.sizePanels.menu).toBe(75)
+        expect(vm.sizePanels.main).toBeGreaterThan(0) // (800 - 75) / 1 = 725, не отрицательное
+      } finally {
+        if (proto) Object.defineProperty(HTMLElement.prototype, "offsetWidth", proto)
+        else delete (HTMLElement.prototype as any).offsetWidth
+      }
+    })
+  })
+
+  // ---ISSUE 2 — coverage geometry-dependent branches (mocked layout)----
+  describe("Resize math & pixel recalc (mocked geometry)", () => {
+    const setRect = (el: Element, rect: Partial<DOMRect>) => {
+      ;(el as any).getBoundingClientRect = () => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        toJSON() {},
+        ...rect
+      })
+    }
+    const setOffset = (el: Element, prop: "offsetWidth" | "offsetHeight", value: number) => {
+      Object.defineProperty(el, prop, { configurable: true, get: () => value })
+    }
+
+    it("redistributes sizes on a horizontal pointer drag with min/max", async () => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 40, minSize: 10, maxSize: 60 },
+            { name: "b", size: 30 },
+            { name: "c", size: 30, minSize: 10 }
+          ],
+          direction: "horizontal"
+        },
+        attachTo: container
+      })
+      setRect(wrapper.element, { x: 0, width: 1000 })
+      setRect(wrapper.find('[data-name="a"]').element, { x: 0, width: 400 })
+
+      const sep = wrapper.findAll("[data-split-separator]")[0]
+      await sep.trigger("pointerdown")
+      await sep.trigger("pointermove", { clientX: 500 }) // тянем вправо
+      await sep.trigger("pointermove", { clientX: 200 }) // и влево
+      await sep.trigger("pointerup")
+
+      const vm = wrapper.vm as any
+      expect(vm.sizePanels.a).toBeGreaterThanOrEqual(10)
+      expect(vm.sizePanels.a).toBeLessThanOrEqual(60)
+      expect(wrapper.emitted("updated-panels")).toBeTruthy()
+    })
+
+    it("drives the vertical drag branch (clientY / row cursor)", async () => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "vertical"
+        },
+        attachTo: container
+      })
+      setRect(wrapper.element, { y: 0, height: 1000 })
+      setRect(wrapper.find('[data-name="a"]').element, { y: 0, height: 500 })
+
+      const sep = wrapper.find("[data-split-separator]")
+      await sep.trigger("pointerdown")
+      await sep.trigger("pointermove", { clientY: 600 })
+      await sep.trigger("pointerup")
+
+      expect(wrapper.emitted("updated-panels")).toBeTruthy()
+    })
+
+    it("recalculates pixel sizes proportionally when the container grows then shrinks", () => {
+      const original = globalThis.ResizeObserver
+      let cb: () => void = () => {}
+      ;(globalThis as any).ResizeObserver = class {
+        constructor(c: any) {
+          cb = c
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+      try {
+        const container = document.createElement("div")
+        document.body.appendChild(container)
+        const wrapper = mount(Split, {
+          props: {
+            panels: [
+              { name: "a", size: 100, maxSize: 150 },
+              { name: "b", size: 100, minSize: 50 }
+            ],
+            units: "pixels",
+            direction: "horizontal"
+          },
+          attachTo: container
+        })
+        const vm = wrapper.vm as any
+
+        setOffset(wrapper.element, "offsetWidth", 200)
+        cb() // фиксируем previousContainerSize = 200
+        setOffset(wrapper.element, "offsetWidth", 400)
+        cb() // рост контейнера → пропорциональный пересчёт + clamp maxSize
+        expect(vm.sizePanels.a).toBeLessThanOrEqual(150)
+        expect(vm.sizePanels.a + vm.sizePanels.b).toBeGreaterThan(200)
+
+        setOffset(wrapper.element, "offsetWidth", 250)
+        cb() // сжатие контейнера → decrease-ветка + clamp minSize
+        expect(vm.sizePanels.b).toBeGreaterThanOrEqual(50)
+      } finally {
+        ;(globalThis as any).ResizeObserver = original
+      }
+    })
+  })
+
+  // ---G34 — root element expose-----------------------------------------
+  describe("G34 — root element expose", () => {
+    it("exposes the root group element and a focus() method that focuses the first handle", () => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        },
+        attachTo: container
+      })
+      const vm = wrapper.vm as any
+      // корневой DOM-узел доступен наружу
+      expect(vm.resizableGroup).toBe(wrapper.element)
+      expect(typeof vm.focus).toBe("function")
+      // focus() переводит фокус на первый resize handle (separator tabindex=0)
+      vm.focus()
+      expect(document.activeElement).toBe(wrapper.find("[data-split-separator]").element)
+    })
+  })
+
+  // ---F31 — RTL---------------------------------------------------------
+  describe("F31 — RTL (logical direction)", () => {
+    const mockRtl = (el: Element) => {
+      const orig = window.getComputedStyle
+      ;(window as any).getComputedStyle = (target: Element, pseudo?: string) =>
+        target === el ? ({ direction: "rtl" } as any) : orig(target, pseudo as any)
+      return () => {
+        ;(window as any).getComputedStyle = orig
+      }
+    }
+    const setRect = (el: Element, rect: Partial<DOMRect>) => {
+      ;(el as any).getBoundingClientRect = () => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+        toJSON() {},
+        ...rect
+      })
+    }
+
+    it("inverts keyboard arrows under dir=rtl (horizontal)", async () => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "horizontal"
+        },
+        attachTo: container
+      })
+      const restore = mockRtl(wrapper.element)
+      try {
+        const separator = wrapper.find("[data-split-separator]")
+        // RTL: ведущая панель "a" находится справа → ArrowLeft её увеличивает
+        await separator.trigger("keydown", { key: "ArrowLeft" })
+        expect((wrapper.vm as any).sizePanels.a).toBe(60)
+        expect((wrapper.vm as any).sizePanels.b).toBe(40)
+        // ArrowRight возвращает обратно
+        await separator.trigger("keydown", { key: "ArrowRight" })
+        expect((wrapper.vm as any).sizePanels.a).toBe(50)
+      } finally {
+        restore()
+      }
+    })
+
+    it("uses the left edge for horizontal pointer math under dir=rtl", async () => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          direction: "horizontal"
+        },
+        attachTo: container
+      })
+      setRect(wrapper.element, { x: 0, width: 1000 })
+      // в RTL панель "a" визуально справа: x=600, ширина 400
+      setRect(wrapper.find('[data-name="a"]').element, { x: 600, width: 400 })
+      const restore = mockRtl(wrapper.element)
+      try {
+        const sep = wrapper.find("[data-split-separator]")
+        await sep.trigger("pointerdown")
+        // указатель левее левого края панели "a" (600) → в RTL панель растёт
+        await sep.trigger("pointermove", { clientX: 500 })
+        await sep.trigger("pointerup")
+        const vm = wrapper.vm as any
+        expect(vm.sizePanels.a).toBeGreaterThan(50)
+        expect(wrapper.emitted("updated-panels")).toBeTruthy()
+      } finally {
+        restore()
+      }
+    })
+  })
+
+  // ---B10 — resize-handle colors (forced-colors + theme token)----------
+  describe("B10 — resize-handle colors", () => {
+    it("keeps the separator visible in forced-colors (high-contrast) mode", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      expect(wrapper.find("[data-split-separator]").attributes("class")).toContain("forced-colors:outline")
+    })
+
+    it("routes the strip grip through the preset-aware theme-* token", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          separatorType: "strip"
+        }
+      })
+      const grip = wrapper.find("[data-split-separator-strip] div")
+      expect(grip.attributes("class")).toContain("bg-theme-")
+      expect(grip.attributes("class")).not.toContain("bg-neutral-")
+    })
+
+    it("routes the hexagon grip through the theme-* token", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ],
+          separatorType: "hexagon"
+        }
+      })
+      expect(wrapper.find("[data-split-separator-icon] svg").attributes("class")).toContain("bg-theme-")
+    })
+  })
+
+  // ---B10 (Wave 9 residual) — divider structural color: gray-* → surface-*----
+  describe("Theming — semantic surface tokens on the divider line, not hardcoded gray-* (B10)", () => {
+    it("uses surface-* background classes on the separator divider, not gray-*", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50 },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      const cls = wrapper.find("[data-split-separator]").attributes("class") ?? ""
+      expect(cls).toContain("bg-surface-200")
+      expect(cls).toContain("dark:bg-surface-800")
+      expect(cls).not.toContain("bg-gray-200")
+      expect(cls).not.toContain("dark:bg-gray-800")
+    })
+
+    it("uses surface-* on the disabled separator divider too, not gray-*", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, disabled: true },
+            { name: "b", size: 50 }
+          ]
+        }
+      })
+      const cls = wrapper.find("[data-split-separator-disabled]").attributes("class") ?? ""
+      expect(cls).toContain("bg-surface-200")
+      expect(cls).toContain("dark:bg-surface-800")
+      expect(cls).not.toContain("bg-gray-200")
+      expect(cls).not.toContain("dark:bg-gray-800")
+    })
+  })
+
   describe("With Library Initialization", () => {
     const createAppWithFishtVue = (options: SplitOption = {}) => ({
       install(app: any) {
@@ -158,6 +922,22 @@ describe("Split Component", () => {
       expect(wrapper.vm.separatorNotHoverOpacity)
       expect(wrapper.vm.classBase).toContain("classSplitOption")
       expect(wrapper.vm.styles).toEqual({ panel: "stylesPanel" })
+    })
+  })
+
+  describe("Separator focus-ring — валидный theme-токен (uno-engine fail-closed regression)", () => {
+    it("не использует несуществующий ring-ring (shadcn copy-paste)", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "panel1", size: 50 },
+            { name: "panel2", size: 50 }
+          ]
+        }
+      })
+      const cls = wrapper.find("[data-split-separator]").attributes("class") ?? ""
+      expect(cls).not.toContain("ring-ring")
+      expect(cls).toContain("focus-visible:ring-theme-600")
     })
   })
 })

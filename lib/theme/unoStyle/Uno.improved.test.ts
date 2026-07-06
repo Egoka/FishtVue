@@ -3,7 +3,8 @@ import { tailwind } from "fishtvue/theme"
 import {
   baseBackdropFilter,
   baseFilter,
-  baseTransform,
+  baseScale,
+  baseSkew,
   baseTransition,
   baseTranslate
 } from "fishtvue/theme/unoStyle/unoStatic"
@@ -287,7 +288,7 @@ describe("unoStyle", () => {
           {
             classValue: "supports-[backdrop-filter]:bg-red-500/25",
             expected:
-              "@supports (backdrop-filter) {\n.supports-\\[backdrop-filter\\]\\:bg-red-500\\/25 {\n  background-color: #ef444440;\n}\n}"
+              "@supports (backdrop-filter) {\n.supports-\\[backdrop-filter\\]\\:bg-red-500\\/25 {\n  background-color: rgb(var(--fv-red-500, 239 68 68) / 0.25);\n}\n}"
           }
         ])("tailwind($classValue)", ({ classValue, expected }) => {
           expect(tailwind(classValue)).toBe(expected)
@@ -393,10 +394,22 @@ describe("unoStyle", () => {
       })
 
       it.each([
-        { classValue: "text-red-400/0", expected: ".text-red-400\\/0 {\n  color: #f8717100;\n}" },
-        { classValue: "text-red-400/50", expected: ".text-red-400\\/50 {\n  color: #f8717180;\n}" },
-        { classValue: "text-red-400/100", expected: ".text-red-400\\/100 {\n  color: #f87171;\n}" },
-        { classValue: "text-red-400/[.06]", expected: ".text-red-400\\/\\[\\.06\\] {\n  color: #f871710f;\n}" }
+        {
+          classValue: "text-red-400/0",
+          expected: ".text-red-400\\/0 {\n  color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "text-red-400/50",
+          expected: ".text-red-400\\/50 {\n  color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "text-red-400/100",
+          expected: ".text-red-400\\/100 {\n  color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "text-red-400/[.06]",
+          expected: ".text-red-400\\/\\[\\.06\\] {\n  color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
+        }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -1540,10 +1553,22 @@ describe("unoStyle", () => {
       )
 
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "bg-red-400/0", expected: ".bg-red-400\\/0 {\n  background-color: #f8717100;\n}" },
-        { classValue: "bg-red-400/50", expected: ".bg-red-400\\/50 {\n  background-color: #f8717180;\n}" },
-        { classValue: "bg-red-400/100", expected: ".bg-red-400\\/100 {\n  background-color: #f87171;\n}" },
-        { classValue: "bg-red-400/[.06]", expected: ".bg-red-400\\/\\[\\.06\\] {\n  background-color: #f871710f;\n}" },
+        {
+          classValue: "bg-red-400/0",
+          expected: ".bg-red-400\\/0 {\n  background-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "bg-red-400/50",
+          expected: ".bg-red-400\\/50 {\n  background-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
+        {
+          classValue: "bg-red-400/100",
+          expected: ".bg-red-400\\/100 {\n  background-color: rgb(var(--fv-red-400, 248 113 113));\n}"
+        },
+        {
+          classValue: "bg-red-400/[.06]",
+          expected: ".bg-red-400\\/\\[\\.06\\] {\n  background-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
+        },
         { classValue: "bg-[#50d71e]/25", expected: ".bg-\\[\\#50d71e\\]\\/25 {\n  background-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -1707,12 +1732,12 @@ describe("unoStyle", () => {
         {
           classValue: "from-slate-50",
           expected:
-            ".from-slate-50 {\n  --fv-gradient-from: #f8fafc var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8fafc00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-slate-50 {\n  --fv-gradient-from: rgb(var(--fv-slate-50, 248 250 252)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-slate-50, 248 250 252) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-red-500",
           expected:
-            ".from-red-500 {\n  --fv-gradient-from: #ef4444 var(--fv-gradient-from-position);\n  --fv-gradient-to: #ef444400 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-red-500 {\n  --fv-gradient-from: rgb(var(--fv-red-500, 239 68 68)) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-red-500, 239 68 68) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-[#50d71e]",
@@ -1734,7 +1759,7 @@ describe("unoStyle", () => {
         {
           classValue: "from-red-400/50",
           expected:
-            ".from-red-400\\/50 {\n  --fv-gradient-from: #f8717180 var(--fv-gradient-from-position);\n  --fv-gradient-to: #f8717100 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
+            ".from-red-400\\/50 {\n  --fv-gradient-from: rgb(var(--fv-red-400, 248 113 113) / 0.5) var(--fv-gradient-from-position);\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "from-[#50d71e]/25",
@@ -1756,7 +1781,7 @@ describe("unoStyle", () => {
         {
           classValue: "via-slate-50",
           expected:
-            ".via-slate-50 {\n  --fv-gradient-to: #f8fafc00 var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), #f8fafc var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
+            ".via-slate-50 {\n  --fv-gradient-to: rgb(var(--fv-slate-50, 248 250 252) / 0) var(--fv-gradient-to-position);\n  --fv-gradient-stops: var(--fv-gradient-from), rgb(var(--fv-slate-50, 248 250 252)) var(--fv-gradient-via-position), var(--fv-gradient-to);\n}"
         },
         {
           classValue: "via-[#50d71e]",
@@ -1776,7 +1801,8 @@ describe("unoStyle", () => {
         },
         {
           classValue: "to-slate-50",
-          expected: ".to-slate-50 {\n  --fv-gradient-to: #f8fafc var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-slate-50 {\n  --fv-gradient-to: rgb(var(--fv-slate-50, 248 250 252)) var(--fv-gradient-to-position);\n}"
         },
         {
           classValue: "to-[#50d71e]",
@@ -1786,7 +1812,8 @@ describe("unoStyle", () => {
         { classValue: "to-100%", expected: ".to-100\\% {\n  --fv-gradient-to-position: 100%;\n}" },
         {
           classValue: "to-red-400/50",
-          expected: ".to-red-400\\/50 {\n  --fv-gradient-to: #f8717180 var(--fv-gradient-to-position);\n}"
+          expected:
+            ".to-red-400\\/50 {\n  --fv-gradient-to: rgb(var(--fv-red-400, 248 113 113) / 0.5) var(--fv-gradient-to-position);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -1970,19 +1997,20 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "decoration-red-400/0",
-          expected: ".decoration-red-400\\/0 {\n  text-decoration-color: #f8717100;\n}"
+          expected: ".decoration-red-400\\/0 {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
         },
         {
           classValue: "decoration-red-400/50",
-          expected: ".decoration-red-400\\/50 {\n  text-decoration-color: #f8717180;\n}"
+          expected: ".decoration-red-400\\/50 {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
         },
         {
           classValue: "decoration-red-400/100",
-          expected: ".decoration-red-400\\/100 {\n  text-decoration-color: #f87171;\n}"
+          expected: ".decoration-red-400\\/100 {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113));\n}"
         },
         {
           classValue: "decoration-red-400/[.06]",
-          expected: ".decoration-red-400\\/\\[\\.06\\] {\n  text-decoration-color: #f871710f;\n}"
+          expected:
+            ".decoration-red-400\\/\\[\\.06\\] {\n  text-decoration-color: rgb(var(--fv-red-400, 248 113 113) / 0.06);\n}"
         },
         {
           classValue: "decoration-[#50d71e]/25",
@@ -2197,11 +2225,13 @@ describe("unoStyle", () => {
         },
         {
           classValue: "divide-slate-50",
-          expected: ".divide-slate-50 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f8fafc;\n}"
+          expected:
+            ".divide-slate-50 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-slate-50, 248 250 252));\n}"
         },
         {
           classValue: "divide-red-400/50",
-          expected: ".divide-red-400\\/50 > :not([hidden]) ~ :not([hidden]) {\n  border-color: #f8717180;\n}"
+          expected:
+            ".divide-red-400\\/50 > :not([hidden]) ~ :not([hidden]) {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2252,8 +2282,14 @@ describe("unoStyle", () => {
       )
 
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "border-red-400/0", expected: ".border-red-400\\/0 {\n  border-color: #f8717100;\n}" },
-        { classValue: "border-red-400/50", expected: ".border-red-400\\/50 {\n  border-color: #f8717180;\n}" },
+        {
+          classValue: "border-red-400/0",
+          expected: ".border-red-400\\/0 {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0);\n}"
+        },
+        {
+          classValue: "border-red-400/50",
+          expected: ".border-red-400\\/50 {\n  border-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
         {
           classValue: "border-[#50d71e]/25",
           expected: ".border-\\[\\#50d71e\\]\\/25 {\n  border-color: #50d71e40;\n}"
@@ -2296,7 +2332,10 @@ describe("unoStyle", () => {
       )
 
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "outline-red-400/50", expected: ".outline-red-400\\/50 {\n  outline-color: #f8717180;\n}" },
+        {
+          classValue: "outline-red-400/50",
+          expected: ".outline-red-400\\/50 {\n  outline-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
         {
           classValue: "outline-[#50d71e]/25",
           expected: ".outline-\\[\\#50d71e\\]\\/25 {\n  outline-color: #50d71e40;\n}"
@@ -2366,7 +2405,10 @@ describe("unoStyle", () => {
       )
 
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "ring-red-400/50", expected: ".ring-red-400\\/50 {\n  --fv-ring-color: #f8717180;\n}" },
+        {
+          classValue: "ring-red-400/50",
+          expected: ".ring-red-400\\/50 {\n  --fv-ring-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
         { classValue: "ring-[#50d71e]/25", expected: ".ring-\\[\\#50d71e\\]\\/25 {\n  --fv-ring-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2391,12 +2433,12 @@ describe("unoStyle", () => {
         {
           classValue: "ring-offset-slate-50",
           expected:
-            ".ring-offset-slate-50 {\n  --fv-ring-offset-color: #f8fafc;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-slate-50 {\n  --fv-ring-offset-color: rgb(var(--fv-slate-50, 248 250 252));\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         },
         {
           classValue: "ring-offset-red-400/50",
           expected:
-            ".ring-offset-red-400\\/50 {\n  --fv-ring-offset-color: #f8717180;\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
+            ".ring-offset-red-400\\/50 {\n  --fv-ring-offset-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n  box-shadow: 0 0 0 var(--fv-ring-offset-width) var(--fv-ring-offset-color), var(--fv-ring-shadow);\n}"
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2440,7 +2482,10 @@ describe("unoStyle", () => {
       )
 
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "shadow-red-400/50", expected: ".shadow-red-400\\/50 {\n  --fv-shadow-color: #f8717180;\n}" },
+        {
+          classValue: "shadow-red-400/50",
+          expected: ".shadow-red-400\\/50 {\n  --fv-shadow-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
         {
           classValue: "shadow-[#50d71e]/25",
           expected: ".shadow-\\[\\#50d71e\\]\\/25 {\n  --fv-shadow-color: #50d71e40;\n}"
@@ -2820,7 +2865,7 @@ describe("unoStyle", () => {
         },
         {
           classValue: "transition",
-          expected: `.transition {\n  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;\n  ${baseTransition}\n}`
+          expected: `.transition {\n  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, backdrop-filter;\n  ${baseTransition}\n}`
         },
         {
           classValue: "transition-[height]",
@@ -2901,17 +2946,17 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "scale-0",
-          expected: `.scale-0 {\n  --fv-scale-x: 0;\n  --fv-scale-y: 0;\n  ${baseTransform}\n}`
+          expected: `.scale-0 {\n  --fv-scale-x: 0;\n  --fv-scale-y: 0;\n  ${baseScale}\n}`
         },
-        { classValue: "scale-x-0", expected: `.scale-x-0 {\n  --fv-scale-x: 0;\n  ${baseTransform}\n}` },
-        { classValue: "scale-y-0", expected: `.scale-y-0 {\n  --fv-scale-y: 0;\n  ${baseTransform}\n}` },
+        { classValue: "scale-x-0", expected: `.scale-x-0 {\n  --fv-scale-x: 0;\n  ${baseScale}\n}` },
+        { classValue: "scale-y-0", expected: `.scale-y-0 {\n  --fv-scale-y: 0;\n  ${baseScale}\n}` },
         {
           classValue: "scale-50",
-          expected: `.scale-50 {\n  --fv-scale-x: 0.5;\n  --fv-scale-y: 0.5;\n  ${baseTransform}\n}`
+          expected: `.scale-50 {\n  --fv-scale-x: 0.5;\n  --fv-scale-y: 0.5;\n  ${baseScale}\n}`
         },
         {
           classValue: "scale-[1.7]",
-          expected: `.scale-\\[1\\.7\\] {\n  --fv-scale-x: 1.7;\n  --fv-scale-y: 1.7;\n  ${baseTransform}\n}`
+          expected: `.scale-\\[1\\.7\\] {\n  --fv-scale-x: 1.7;\n  --fv-scale-y: 1.7;\n  ${baseScale}\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2920,11 +2965,11 @@ describe("unoStyle", () => {
 
     describe("Rotate", () => {
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "rotate-0", expected: `.rotate-0 {\n  --fv-rotate: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "rotate-180", expected: `.rotate-180 {\n  --fv-rotate: 180deg;\n  ${baseTransform}\n}` },
+        { classValue: "rotate-0", expected: `.rotate-0 {\n  rotate: 0deg;\n}` },
+        { classValue: "rotate-180", expected: `.rotate-180 {\n  rotate: 180deg;\n}` },
         {
           classValue: "rotate-[17deg]",
-          expected: `.rotate-\\[17deg\\] {\n  --fv-rotate: 17deg;\n  ${baseTransform}\n}`
+          expected: `.rotate-\\[17deg\\] {\n  rotate: 17deg;\n}`
         }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -2956,9 +3001,9 @@ describe("unoStyle", () => {
 
     describe("Skew", () => {
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "skew-x-0", expected: `.skew-x-0 {\n  --fv-skew-x: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "skew-y-0", expected: `.skew-y-0 {\n  --fv-skew-y: 0deg;\n  ${baseTransform}\n}` },
-        { classValue: "skew-x-1", expected: `.skew-x-1 {\n  --fv-skew-x: 1deg;\n  ${baseTransform}\n}` }
+        { classValue: "skew-x-0", expected: `.skew-x-0 {\n  --fv-skew-x: 0deg;\n  ${baseSkew}\n}` },
+        { classValue: "skew-y-0", expected: `.skew-y-0 {\n  --fv-skew-y: 0deg;\n  ${baseSkew}\n}` },
+        { classValue: "skew-x-1", expected: `.skew-x-1 {\n  --fv-skew-x: 1deg;\n  ${baseSkew}\n}` }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
       })
@@ -2986,7 +3031,10 @@ describe("unoStyle", () => {
       )
 
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "accent-red-400/50", expected: ".accent-red-400\\/50 {\n  accent-color: #f8717180;\n}" },
+        {
+          classValue: "accent-red-400/50",
+          expected: ".accent-red-400\\/50 {\n  accent-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
         { classValue: "accent-[#50d71e]/25", expected: ".accent-\\[\\#50d71e\\]\\/25 {\n  accent-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3029,7 +3077,10 @@ describe("unoStyle", () => {
       )
 
       it.each<{ classValue: string; expected: string }>([
-        { classValue: "caret-red-400/50", expected: ".caret-red-400\\/50 {\n  caret-color: #f8717180;\n}" },
+        {
+          classValue: "caret-red-400/50",
+          expected: ".caret-red-400\\/50 {\n  caret-color: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
         { classValue: "caret-[#50d71e]/25", expected: ".caret-\\[\\#50d71e\\]\\/25 {\n  caret-color: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3189,7 +3240,10 @@ describe("unoStyle", () => {
 
       it.each<{ classValue: string; expected: string }>([
         { classValue: "fill-none", expected: ".fill-none {\n  fill: none;\n}" },
-        { classValue: "fill-red-400/50", expected: ".fill-red-400\\/50 {\n  fill: #f8717180;\n}" },
+        {
+          classValue: "fill-red-400/50",
+          expected: ".fill-red-400\\/50 {\n  fill: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
         { classValue: "fill-[#50d71e]/25", expected: ".fill-\\[\\#50d71e\\]\\/25 {\n  fill: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)
@@ -3203,7 +3257,10 @@ describe("unoStyle", () => {
 
       it.each<{ classValue: string; expected: string }>([
         { classValue: "stroke-none", expected: ".stroke-none {\n  stroke: none;\n}" },
-        { classValue: "stroke-red-400/50", expected: ".stroke-red-400\\/50 {\n  stroke: #f8717180;\n}" },
+        {
+          classValue: "stroke-red-400/50",
+          expected: ".stroke-red-400\\/50 {\n  stroke: rgb(var(--fv-red-400, 248 113 113) / 0.5);\n}"
+        },
         { classValue: "stroke-[#50d71e]/25", expected: ".stroke-\\[\\#50d71e\\]\\/25 {\n  stroke: #50d71e40;\n}" }
       ])(`tailwind($classValue)`, ({ classValue, expected }) => {
         expect(tailwind(classValue)).toBe(expected)

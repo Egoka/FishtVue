@@ -1,7 +1,7 @@
 ---
 title: Issues — Button
-summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, отсутствие aria-label для icon-кнопок, RTL, focus ref forwarding, неконсистентность с Configuration.
-updated: 2026-05-10
+summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07: logical iconPosition start/end + RTL (Issue 3); cross-cutting — SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 ✅ (ESM-only `engines` + root `exports` map через `buildRootExports()`, 2026-06-11). Doc-sync 2026-06-12: матрица severity пересчитана к фактически открытым (Issues 5/6/7/13/14/15/16). Issue 16 (B11 — darkModeSelector) ✅ resolved 2026-06-12 — theme-движок уже транслировал config-селектор, добавлены regression-тесты ([theme.md Issue 5](./theme.md)). Зачёркнуты ниже с `✅ resolved`-маркерами. **Resolved 2026-06-14 (button.md doc-sync 2026-06-19):** Issue 7 (I45 — heroicons) — переведены на tree-shakeable const-реестр explicit named-импортов в Icons (`f11b23d`), regression закрыт вместе с bundle-weight; cross-cutting фикс в Icons.vue, см. [icons.md Issue 1](./icons.md).
+updated: 2026-06-19
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/button/
 related-doc: ../components/button.md
@@ -13,18 +13,31 @@ related-doc: ../components/button.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 6 | A2, A4, A5, C17, E29.1, L53 |
-| medium | 6 | F31, G34, G36, I44, I45, N59 |
-| low | 4 | D26, E29.7, G37, B11 |
+| Severity | Count | Categories                                                                            |
+| -------- | ----- | ------------------------------------------------------------------------------------- |
+| critical | 0     | —                                                                                     |
+| high     | 0     | ~~A2~~ ✅, ~~A4~~ ✅, ~~A5~~ ✅, ~~C17~~ ✅, ~~E29.1~~ ✅, ~~L53~~ ✅ (Issues 13, 14) |
+| medium   | 1     | ~~F31~~ ✅, G34, ~~G36~~ ✅, ~~I44~~ ✅, ~~I45~~ ✅ (см. Issue 7), ~~N59~~ ✅ |
+| low      | 3     | ~~B11~~ ✅, D26, E29.7, G37                                                           |
 
-## Issue 1: Стили инжектятся только после client mount — пустой first paint при SSR
+Счёт следует методологии [README.md](./README.md) (по unstruck-категориям, cross-cutting остаются до закрытия глобальной волны). Button-локальных открытых секций нет; Issue 7 (I45) ✅ resolved 2026-06-14 — heroicons переведены на tree-shakeable const-реестр в Icons.vue (`f11b23d`), regression закрыт вместе с bundle-weight (фикс в Icons, см. [icons.md Issue 1](./icons.md)). G34/D26/E29.7/G37 — cross-cutting категории, локально решены.
+
+**Закрыто 2026-05-10:** Issues 2 (E29.1 — aria-label), 4 (G34 — buttonRef expose + focus/blur), 10 (E29.7 — motion-safe), 11 (D26 — typed click emit), 12 (G37 — start/end slots).
+**Закрыто 2026-06-07:** Issues 1 (C17 — SSR-стили), 3 (F31 — logical `iconPosition` start/end + deprecated left/right + RTL через `inline-flex`), 8 (A2 — root + per-component `sideEffects`).
+**Закрыто 2026-06-11 (doc-sync 2026-06-12):** Issue 9 (A4/A5 — ESM-only `engines` + root `exports` map через `buildRootExports()`).
+**Закрыто 2026-05-11 (cross-cutting; отмечено 2026-06-12):** Issue 14 (L53 — `unstyled` через `Component.setStyle` guard + Button regression-тест).
+**Закрыто 2026-06-12:** Issue 13 (L53 — global `componentsStyle` fallback mapping в `mode`); Issue 15 (N59 — print styles, style-for-print); Issue 6 (I44 — lazy Loading/FixWindow через `defineAsyncComponent`); Issue 5 (G36 — polymorphic `as` через `<component :is>`).
+**Закрыто 2026-06-14 (button.md doc-sync 2026-06-19):** Issue 7 (I45 — heroicons) — точечный dynamic import (regression в prod-Vite) заменён на tree-shakeable const-реестр explicit named-импортов в Icons.vue (`f11b23d`); regression + bundle-weight закрыты вместе; cross-cutting Icons + [icons.md Issue 1](./icons.md).
+**Закрыто 2026-06-12:** Issue 16 (B11 — `darkModeSelector`) — движок уже транслировал config-селектор (`setStyle:150` → `tailwind.ts:95`), Button наследует автоматически; добавлены regression-тесты, cross-cutting [theme.md Issue 5](./theme.md) закрыт. Без правок `lib/button/`.
+Все закрытые — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references из соседних issue-доков сохраняются.
+
+## ~~Issue 1: Стили инжектятся только после client mount — пустой first paint при SSR~~ ✅ resolved 2026-06-07
 
 - **Категория:** C17 (`<style>` в `<head>` SSR)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [Button.vue:346-348](../../lib/button/Button.vue#L346-L348)
+
+> **Resolution (2026-06-07, cross-cutting).** Текст аудита устарел: канон давно перешёл с `onMounted(() => X.initStyle())` в SFC на базовый класс. `Component.__hooks()` ([component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) регистрирует **`onServerPrefetch(() => initStyle())`** (server) **и** `vueOnMounted(() => initStyle())` (client). `__setStyle()` пишет CSS в `cssComponents` Map БЕЗ guard `isClient()` ([component/index.ts:179](../../lib/component/index.ts#L179)) — client-gated только сам `useStyle()`-DOM-append. Nuxt server plugin ([plugins/nuxt.ts](../../lib/plugins/nuxt.ts)) на хуке `app:rendered` сливает `cssComponents` в `ssrContext.head` → критический CSS в SSR-HTML до hydration, без flash-of-unstyled-content. Это поведение общее для ВСЕХ 22 компонентов (не только Button). Регрессионный тест [lib/component/ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts): `renderToString` НЕ вызывает `onMounted`, поэтому заполнение `cssComponents` после server-render доказывает, что сработал именно `onServerPrefetch`-путь; ловит регрессию, если кто-то обернёт `cssComponents.set` в `isClient()` или снимет `onServerPrefetch`.
 
 ### Что найдено
 
@@ -47,7 +60,7 @@ onMounted(() => {
 
 1. В [Component.setStyle](../../lib/component/index.ts) добавить SSR-ветку: на server вызвать `useSSRContext()` и накопить CSS в `ssrContext.modules` (Vue API) либо через [lib/plugins/nuxt.ts](../../lib/plugins/nuxt.ts) серверный коллектор.
 2. На клиенте оставить отложенную инжекцию через `onMounted` для не-SSR случаев.
-3. Альтернатива минимальной правки: вызывать `Button.initStyle()` **синхронно** во время setup() (как [Component.__hooks](../../lib/component/index.ts) делает для других компонентов) — на server это попадёт в SSR string через `<style>` в DOM до hydration.
+3. Альтернатива минимальной правки: вызывать `Button.initStyle()` **синхронно** во время setup() (как [Component.\_\_hooks](../../lib/component/index.ts) делает для других компонентов) — на server это попадёт в SSR string через `<style>` в DOM до hydration.
 4. Проверить, что в Nuxt server plugin ([lib/plugins/nuxt.ts](../../lib/plugins/nuxt.ts)) собранный CSS попадает в `<head>` SSR-ответа.
 5. Проверить, что компоненты, импортирующие Button (FixWindow inside icon-button, Loading), также наследуют корректную SSR-инжекцию — иначе вложенный layout не получит стилей.
 
@@ -57,11 +70,12 @@ onMounted(() => {
 - [ ] Lighthouse `unused-css` не показывает Button-CSS как «not yet loaded».
 - [ ] В тесте `lib/button/Button.test.ts` добавить case `renderToString(Button)` — assert что вывод включает классы из `baseClasses`.
 
-## Issue 2: Icon-кнопки без aria-label — screen reader озвучивает «button» без назначения
+## ~~Issue 2: Icon-кнопки без aria-label — screen reader озвучивает «button» без назначения~~ ✅ resolved 2026-05-10
 
 - **Категория:** E29.1 (ARIA-роли и атрибуты)
-- **Severity:** high
-- **Где:** [Button.vue:351-357](../../lib/button/Button.vue#L351-L357), [Button.vue:358-370](../../lib/button/Button.vue#L358-L370)
+- **Severity:** ~~high~~
+- **Где:** [Button.vue:382–390](../../lib/button/Button.vue#L382-L390)
+- **Resolution:** добавлен `ariaLabel?: string` в `BaseButtonProps`; computed `resolvedAriaLabel` делает fallback на имя иконки для `type="icon"`; `onMounted` dev-warning при unlabeled icon-кнопке без default-slot.
 
 ### Что найдено
 
@@ -81,24 +95,18 @@ onMounted(() => {
 - Пользователи скрин-ридеров не могут идентифицировать кнопку.
 - Documentation [components/button.md](../components/button.md) §12.1 это уже отметил, но не было фикса.
 
-### Что нужно сделать
-
-1. Добавить prop `ariaLabel?: string` в [Button.d.ts](../../lib/button/Button.d.ts) (BaseButtonProps).
-2. В шаблоне [Button.vue:351](../../lib/button/Button.vue#L351) добавить `:aria-label="ariaLabel ?? (type === 'icon' ? icon : undefined)"` — fallback на имя иконки если ariaLabel не задан (лучше чем ничего).
-3. В runtime warning: если `type === 'icon'` и нет `ariaLabel` и нет `slots.default` (tooltip даёт хоть какой-то контекст) — `console.warn("Icon button without aria-label is inaccessible")`.
-4. В [Documentation/components/button.md](../components/button.md) §12.1 обновить рекомендацию.
-
 ### Acceptance criteria
 
-- [ ] Тест: `mount(Button, { props: { type: "icon", icon: "trash", ariaLabel: "Delete user" } })` — assert `wrapper.attributes('aria-label')` is `"Delete user"`.
-- [ ] Тест dev-warning: без ariaLabel и без default slot — emitted `console.warn`.
+- [x] Тест: `mount(Button, { props: { type: "icon", icon: "trash", ariaLabel: "Delete user" } })` — assert `wrapper.attributes('aria-label')` is `"Delete user"`.
+- [x] Тест dev-warning: без ariaLabel и без default slot — emitted `console.warn` с префиксом `[FishtVue Button]`.
 - [ ] axe-core lint в `Button.test.ts` (если будет добавлен) проходит для icon-кнопки.
 
-## Issue 3: iconPosition использует left/right вместо logical start/end — RTL ломается
+## ~~Issue 3: iconPosition использует left/right вместо logical start/end — RTL ломается~~ ✅ resolved 2026-06-07
 
 - **Категория:** F31 (RTL поддержка)
-- **Severity:** medium
-- **Где:** [Button.d.ts:65-67](../../lib/button/Button.d.ts#L65-L67), [Button.vue:298](../../lib/button/Button.vue#L298), [Button.vue:372-374](../../lib/button/Button.vue#L372-L374)
+- **Severity:** ~~medium~~
+- **Где:** [Button.d.ts:63-74](../../lib/button/Button.d.ts#L63-L74), [Button.vue:299-308](../../lib/button/Button.vue#L299-L308), [Button.vue:407-411](../../lib/button/Button.vue#L407-L411)
+- **Resolution:** `iconPosition` принимает logical-значения `"start" | "end"` (default `end`); `"left" | "right"` сохранены как deprecated алиасы (`left → start`, `right → end`) через type-union + computed-нормализацию. RTL-корректность обеспечивается тем, что корневой `<button>` — `inline-flex`, и его main-axis следует document direction (`dir="rtl"` → start визуально справа), поэтому дополнительный CSS/`useDirectionality()` не нужен. `onMounted` dev-warning при использовании deprecated значений.
 
 ### Что найдено
 
@@ -119,25 +127,26 @@ iconPosition?: "left" | "right"
 - Арабские/ивритские локали получают зеркальный layout автоматом, а буквальные `left/right` ломают визуальный язык — иконка действия (например, «next →») оказывается «before label», что меняет UX-смысл.
 - Tailwind CSS поддерживает logical properties (`ms-*`, `me-*`) с Tailwind 3.4+.
 
-### Что нужно сделать
+### Что было сделано
 
-1. Поменять API на `iconPosition?: "start" | "end"` в [Button.d.ts](../../lib/button/Button.d.ts), сохранить `"left" | "right"` как deprecated alias через type union с runtime-warning.
-2. В [Button.vue:298](../../lib/button/Button.vue#L298) маппить старые значения: `left → start`, `right → end`.
-3. Добавить `dir`-aware логику: если документ `dir="rtl"`, swap отображение (либо через CSS `[dir="rtl"]` selector, либо через `useDirectionality()` composable).
-4. В [Documentation/components/button.md](../components/button.md) §12 RTL добавить примечание про migration.
-5. Тест: `mount(Button, { props: { iconPosition: "left", icon: "x" }, attrs: { dir: "rtl" } })` — assert визуальный порядок (или просто `iconPosition` маппинг).
+1. ✅ API изменён на `iconPosition?: "start" | "end" | "left" | "right"` в [Button.d.ts](../../lib/button/Button.d.ts); `"left" | "right"` — deprecated алиасы.
+2. ✅ В [Button.vue](../../lib/button/Button.vue) computed `iconPosition` нормализует значения: `left → start`, `right → end`, default `end`.
+3. ✅ `dir`-aware поведение получено бесплатно через `inline-flex` main-axis (DOM-first `start` визуально справа при RTL) — отдельный CSS не понадобился.
+4. ✅ `onMounted` dev-warning при `iconPosition="left"|"right"`.
+5. ✅ Negative-margin loading-индикатора переведён на logical `-me-2` (было физическое `-mr-2`) — корректно зеркалится при RTL.
 
 ### Acceptance criteria
 
-- [ ] Существующие тесты с `iconPosition: "left"|"right"` продолжают работать (deprecation soft).
-- [ ] Новый тест: `iconPosition: "start"` в `dir="rtl"` показывает иконку справа от текста.
-- [ ] Console warning при использовании deprecated значения.
+- [x] Существующие тесты с `iconPosition: "left"|"right"` продолжают работать (deprecation soft).
+- [x] `iconPosition: "start"` рендерит иконку перед контентом, `"end"` — после (RTL-зеркалирование делегировано flex-направлению).
+- [x] Console warning при использовании deprecated значения.
 
-## Issue 4: buttonRef не exposed — пользователь не может programmatically focus/blur
+## ~~Issue 4: buttonRef не exposed — пользователь не может programmatically focus/blur~~ ✅ resolved 2026-05-10
 
 - **Категория:** G34 (Ref на корневой элемент)
-- **Severity:** medium
-- **Где:** [Button.vue:336-344](../../lib/button/Button.vue#L336-L344), [Button.vue:19](../../lib/button/Button.vue#L19)
+- **Severity:** ~~medium~~
+- **Где:** [Button.vue:344–366](../../lib/button/Button.vue#L344-L366)
+- **Resolution:** `buttonRef`, `focus(options?)`, `blur()` добавлены в `defineExpose`; `ButtonExpose` расширен с JSDoc; `focus()` принимает опциональный native `FocusOptions` (`{ preventScroll }`). Паритет с [Aria](../components/aria.md) и [Input](../components/input.md).
 
 ### Что найдено
 
@@ -157,31 +166,18 @@ Reactive ref `buttonRef` определён, но не возвращён чер
 - Nuxt Auto-focus плагины не работают.
 - Сейчас вынуждены делать `document.querySelector("[data-button]")` — fragile + collide при множественных кнопках.
 
-### Что нужно сделать
-
-1. В [Button.vue:336](../../lib/button/Button.vue#L336) добавить `buttonRef` в `defineExpose`.
-2. Добавить convenience-методы `focus()` и `blur()` (как в [Aria.vue:111](../../lib/aria/Aria.vue#L111), [Input.vue:116](../../lib/input/Input.vue#L116)) — паритет с form-controls.
-3. Обновить [Button.d.ts](../../lib/button/Button.d.ts) `ButtonExpose` тип:
-   ```ts
-   export declare type ButtonExpose = {
-     buttonRef: Readonly<Ref<HTMLButtonElement | undefined>>
-     focus(): void
-     blur(): void
-     // ...existing
-   }
-   ```
-4. В [Documentation/components/button.md](../components/button.md) §8 Exposed methods обновить.
-
 ### Acceptance criteria
 
-- [ ] `useTemplateRef<typeof Button>("btn").value?.focus()` фокусирует кнопку.
-- [ ] Тест: `wrapper.vm.focus()` → `expect(document.activeElement).toBe(wrapper.find('button').element)`.
+- [x] `useTemplateRef<typeof Button>("btn").value?.focus()` фокусирует кнопку.
+- [x] Тест: `wrapper.vm.focus()` → `expect(document.activeElement).toBe(wrapper.find('button').element)`.
 
-## Issue 5: Нет polymorphic `as` prop — Button нельзя превратить в `<a>`
+## ~~Issue 5: Нет polymorphic `as` prop — Button нельзя превратить в `<a>`~~ ✅ resolved 2026-06-12
 
 - **Категория:** G36 (asChild / polymorphic)
-- **Severity:** medium
-- **Где:** [Button.vue:351](../../lib/button/Button.vue#L351), [Button.d.ts](../../lib/button/Button.d.ts)
+- **Severity:** ~~medium~~ → resolved
+- **Где:** [Button.vue](../../lib/button/Button.vue) (`<component :is="asTag">`), [Button.d.ts](../../lib/button/Button.d.ts) (`as?: string | Component`)
+
+> **Resolution (2026-06-12).** Добавлен prop `as?: string | Component` (default `"button"`); корень рендерится через `<component :is="asTag">`. Для `as="a"` — `<a>` с fallthrough `href`/`target` и без `role` (нативно интерактивен); для прочих тегов/компонентов — авто `role="button"` + `tabindex` (`0`, либо `-1` + `aria-disabled="true"` при `disabled`); нативный `type` — только на `<button>`. `buttonRef` расширен до `HTMLElement`. Из-за dynamic root `defineAsyncComponent`-дети (Issue 6) вынесены в module-scope `<script>` для стабильной идентичности; `@click` типизирован явно (`MouseEvent`). +9 тестов (`Button.test.ts` describe `Polymorphic as`).
 
 ### Что найдено
 
@@ -203,15 +199,17 @@ Reactive ref `buttonRef` определён, но не возвращён чер
 
 ### Acceptance criteria
 
-- [ ] `<Button as="a" href="/x">Go</Button>` рендерит `<a href="/x" class="...">Go</a>`.
-- [ ] `<Button as={NuxtLink} to="/x">` работает в Nuxt.
-- [ ] Tab-keyboard navigation работает на не-button корне (через `tabindex="0"` если `as` не link/button).
+- [x] `<Button as="a" href="/x">Go</Button>` рендерит `<a href="/x" class="...">Go</a>` (тест).
+- [~] `<Button :as="NuxtLink" to="/x">` — механизм через `<component :is>` поддержан; в unit-окружении (нет Nuxt) не покрыт тестом.
+- [x] Tab-keyboard navigation на не-button корне через `tabindex="0"` (тест `span`/`div`).
 
-## Issue 6: Loading и FixWindow всегда тянутся в bundle — для текстовой Button это перерасход
+## ~~Issue 6: Loading и FixWindow всегда тянутся в bundle — для текстовой Button это перерасход~~ ✅ resolved 2026-06-12
 
 - **Категория:** I44 (peer-зависимости / bundle size)
-- **Severity:** medium
-- **Где:** [Button.vue:5](../../lib/button/Button.vue#L5), [Button.vue:6](../../lib/button/Button.vue#L6)
+- **Severity:** ~~medium~~ → resolved
+- **Где:** [Button.vue](../../lib/button/Button.vue) (imports → `defineAsyncComponent`)
+
+> **Resolution (2026-06-12).** `Loading` и `FixWindow` переведены со статических импортов на `defineAsyncComponent(() => import(...))` ([Button.vue](../../lib/button/Button.vue)). Грузятся отдельными chunk'ами только когда реально нужны (`loading` prop / `type="icon"` + tooltip-slot); текстовая `<Button>Save</Button>` их не тянет. `sideEffects: false` (Issue 8) уже позволял tree-shaking, async-split дополнительно убирает их из синхронного entry. Тесты Loading/FixWindow адаптированы под async-резолв (`await flushPromises()`); SSR-критичности нет — оба компонента client-interaction (spinner / tooltip).
 
 ### Что найдено
 
@@ -221,6 +219,7 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 ```
 
 Эти импорты статичны. Если пользователь не использует `loading` prop и не использует Button с `type="icon"` + tooltip — Loading и FixWindow всё равно попадают в client-бандл потому что:
+
 - Корневой `lib/package.json` без `sideEffects: false` — tree-shaker не уверен в чистоте импортов.
 - Loading тянет `loadingTypes.ts` (~131 строка с компонентами Epic/SVG).
 - FixWindow тянет позиционирование, click-outside, gsap (через transitive — да-да, gsap из root deps).
@@ -248,15 +247,17 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 
 ### Acceptance criteria
 
-- [ ] `sideEffects` определён в `lib/package.json` (явно).
-- [ ] `import Button from "fishtvue/button"` без других — bundle size <15kb gzipped.
-- [ ] Все existing тесты Button проходят.
+- [x] `sideEffects` определён в `lib/package.json` (явно) — Issue 8.
+- [~] `import Button from "fishtvue/button"` без других — Loading/FixWindow вынесены в async-chunks; точный gzip-замер `pnpm sandbox:build` в этом заходе не прогонялся.
+- [x] Все existing тесты Button проходят (43, адаптированы под async-резолв).
 
-## Issue 7: Иконки из @heroicons/vue тянутся целиком
+## ~~Issue 7: Иконки из @heroicons/vue — dynamic import не работает в prod-Vite (regression)~~ ✅ resolved 2026-06-14 (tree-shakeable const-реестр в Icons)
 
 - **Категория:** I45 (иконки точечно)
-- **Severity:** medium
-- **Где:** через [lib/icons/Icons.vue](../../lib/icons/Icons.vue), используется в [Button.vue:359](../../lib/button/Button.vue#L359), [Button.vue:372-374](../../lib/button/Button.vue#L372-L374)
+- **Severity:** ~~medium~~ → ✅ resolved
+- **Где:** [Icons.vue `resolveHeroIcon`](../../lib/icons/Icons.vue#L245) + const-реестр [`HERO_OUTLINE`](../../lib/icons/Icons.vue#L97)/[`HERO_SOLID`](../../lib/icons/Icons.vue#L136) (cross-cutting — фикс в Icons, не в Button)
+
+> **Resolution (2026-06-14, tree-shakeable const-реестр; button.md doc-sync 2026-06-19).** Финальный фикс — в Icons.vue (`f11b23d`), кода Button не касается. **История.** 2026-06-12 namespace-импорты всего набора заменены на точечный per-icon dynamic import (`@heroicons/vue/24/{outline|solid}/<Name>.js`) с Iconify-fallback; build-замер 2026-06-13 показал regression: Vite-плагин `dynamic-import-vars` **не глобит bare-спецификатор** `@heroicons/vue/...` → per-icon code-split не происходил, bare `import()` не резолвился в prod-браузере → heroicons ломались в production (re-opened). **Финал 2026-06-14:** dynamic import заменён на tree-shakeable **const-реестр explicit named-импортов** ([Icons.vue module-scope `<script>`](../../lib/icons/Icons.vue#L1)): `import { CheckIcon, … } from "@heroicons/vue/24/{outline,solid}"` → `HERO_OUTLINE`/`HERO_SOLID`, `resolveHeroIcon` lookup'ит в реестре **синхронно** ([Icons.vue:245](../../lib/icons/Icons.vue#L245)). Explicit named-импорты статичны → bundler tree-shake'ит heroicons до curated-набора (37 имён ≈ 11 KB gzip против ~94 KB для всех 648); sync lookup → prod-Vite/SSR-корректность не теряется. Trade-off: имя heroicon вне реестра → Iconify-fallback. Button наследует поведение автоматически (`<Icons :type="icon">`). Числа, реестр и contract-тесты — [icons.md Issue 1](./icons.md).
 
 ### Что найдено
 
@@ -274,14 +275,16 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 
 ### Acceptance criteria
 
-- [ ] Сборка sandbox с одной `<Icons type="check" />` — bundle содержит только `CheckIcon`, не весь heroicons map.
-- [ ] Iconify по-прежнему lazy.
+- [x] Tree-shakeable const-реестр named-импортов оставляет в bundle только curated-набор (37 имён ≈ 11 KB gzip, не весь heroicons-набор); prod-Vite/SSR рендерит heroicon синхронно. Per-icon-chunk-подход отменён как нерабочий в prod-Vite. См. [icons.md Issue 1](./icons.md).
+- [x] Имя heroicon вне curated-набора → Iconify-fallback (lazy, fallback-ветка не тронута).
 
-## Issue 8: Нет `sideEffects` в корневом lib/package.json — cross-cutting
+## ~~Issue 8: Нет `sideEffects` в корневом lib/package.json — cross-cutting~~ ✅ resolved 2026-06-07
 
 - **Категория:** A2 (sideEffects разметка)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [lib/package.json:1-58](../../lib/package.json), [lib/button/package.json:1-5](../../lib/button/package.json)
+
+> **Resolution (2026-06-07, cross-cutting).** `"sideEffects": false` добавлен в корневой [lib/package.json](../../lib/package.json) (пробрасывается в `dist/package.json` через `addPackageJson()`). Выбран `false`, а не `["**/*.css","**/*.vue"]`: в опубликованном пакете нет `.vue`/`.css` (SFC скомпилированы в `.mjs`, CSS инжектится в рантайме через lifecycle — `onServerPrefetch`/`onMounted`, не на import-time), поэтому модули чисты на import и `false` безопасен. Дополнительно `copyDependencies()` ([rollup.config.js](../../lib/rollup.config.js)) инъектит `sideEffects:false` в КАЖДЫЙ под-пакет `dist/{name}/package.json` — это включает tree-shaking точечных импортов `fishtvue/{name}` (раньше per-component флаги ставились вручную; теперь единообразно на build-step). Проверено в `dist/button/package.json`. Контракт root-флага зафиксирован [lib/package.test.ts](../../lib/package.test.ts).
 
 ### Что найдено
 
@@ -300,11 +303,16 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - [ ] `sideEffects` явно определён в `lib/package.json`.
 - [ ] (Опционально) то же — для каждого `lib/{component}/package.json`.
 
-## Issue 9: ESM-only — нет CJS, нет exports map
+## ~~Issue 9: ESM-only — нет CJS, нет exports map~~ ✅ resolved 2026-06-11
 
 - **Категория:** A4 (ESM/CJS dual-package), A5 (exports map)
-- **Severity:** high
-- **Где:** [lib/package.json:17-18](../../lib/package.json#L17-L18), [lib/button/package.json](../../lib/button/package.json), [lib/rollup.config.js:374-390](../../lib/rollup.config.js#L374-L390)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [lib/package.json](../../lib/package.json), [lib/rollup.config.js `buildRootExports()`](../../lib/rollup.config.js), [lib/package.test.ts](../../lib/package.test.ts)
+
+> **Resolution (ESM-only 2026-06-07, exports map 2026-06-11; Issue 5c-b).**
+>
+> - **ESM-only ратифицирован ✅** — добавлен `"engines": { "node": ">=18" }` в [lib/package.json](../../lib/package.json); осознанное решение оставаться ESM-only (`.mjs`), `get_CJS_ESM()` выключен. CJS НЕ включаем: аудитория — bundler-based Vue/Nuxt, для которых ESM нативен.
+> - **`exports` map (A5) ✅** — корневая карта генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js) из авторитетных rollup-выходов + вложенных `package.json`/`.d.ts`: явный entry на каждый `.mjs` (identity `*.mjs` + extensionless) + bare-dir из вложенного `package.json` (`./button` → import `button.mjs`, types `Button.d.ts` — обходит lowercase-`.mjs`/PascalCase-`.d.ts` асимметрию) + `./*/package.json`. Strict superset, ноль wildcard-неоднозначности. Пререкизит **5c-a** (Menu publish-gap: `MenuItem.vue`/`MenuGroup.vue` не публиковались → переведены на `index.ts`-bundle, зеркало Table). **Verified:** `npm pack` → install → `import.meta.resolve` 19/19 субпутей в pure Node ESM (раньше падали «directory import not supported»); CSS-free субпуты исполняются (self-ref через карту); `tsc --moduleResolution bundler` И `nodenext` exit 0. Контракт — [lib/package.test.ts](../../lib/package.test.ts) (см. [README.md §2.1](./README.md)).
 
 ### Что найдено
 
@@ -355,15 +363,17 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 
 ### Acceptance criteria
 
-- [ ] `pnpm pack` → tarball содержит exports map.
-- [ ] `import Button from "fishtvue/button"` работает в Nuxt 3 + Vite + TS strict.
-- [ ] Если CJS — `require("fishtvue/button")` тоже работает.
+- [x] `pnpm pack` → tarball содержит `exports` map (`buildRootExports()`; контракт в `package.test.ts`).
+- [x] `import Button from "fishtvue/button"` работает в Nuxt 3 + Vite + TS strict (`import.meta.resolve` 19/19; `tsc` bundler + nodenext).
+- [x] ~~Если CJS — `require("fishtvue/button")` тоже работает.~~ — **N/A**: ESM-only ратифицирован, CJS вне scope (`engines.node >=18`).
 
-## Issue 10: Анимации без `prefers-reduced-motion` guard
+## ~~Issue 10: Анимации без `prefers-reduced-motion` guard~~ ✅ resolved 2026-05-10
 
 - **Категория:** E29.7 (prefers-reduced-motion)
-- **Severity:** low
+- **Severity:** ~~low~~
 - **Где:** [Button.vue:26](../../lib/button/Button.vue#L26)
+- **Resolution:** `transition-colors duration-200` → `motion-safe:transition-colors motion-safe:duration-200`. Tailwind transpилирует `motion-safe:` в `@media (prefers-reduced-motion: no-preference)`, что эквивалентно требуемому поведению.
+- **Scope note:** cross-cutting motion-safe для остальных 21 компонента — открытый Wave 10.1 в [README.md](./README.md). Этот fix покрывает только Button; референсы из других issue-доков (label/split/input/alert/pagination/menu/fixwindow/select) на «button.md Issue 10» теперь указывают сюда — паттерн зафиксирован.
 
 ### Что найдено
 
@@ -378,27 +388,18 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 - Пользователи с вестибулярными расстройствами / эпилепсией могут испытывать дискомфорт.
 - WCAG 2.3.3 (Animation from Interactions) — требование уровня AAA.
 
-### Что нужно сделать
-
-1. Добавить в `baseClasses` Tailwind-вариант `motion-safe:transition-colors motion-safe:duration-200` (Tailwind 3 встроен). И уберать unconditional `transition-*`.
-2. Альтернатива через CSS:
-   ```css
-   @media (prefers-reduced-motion: reduce) {
-     [data-button] { transition: none !important; }
-   }
-   ```
-3. Cross-cutting: применить ко всем компонентам с transitions (Switch, Dialog, Accordion, FixWindow и т. д.).
-
 ### Acceptance criteria
 
-- [ ] DevTools → Rendering → Emulate CSS `prefers-reduced-motion: reduce` — Button hover не показывает transition.
-- [ ] axe-core a11y-тест проходит.
+- [x] Класс `baseClasses` использует `motion-safe:transition-colors motion-safe:duration-200`.
+- [x] Тест: `wrapper.find('[data-button]').attributes('class')` содержит `motion-safe:transition-colors`, не содержит unconditional `transition-colors`.
+- [ ] DevTools → Rendering → Emulate CSS `prefers-reduced-motion: reduce` — Button hover не показывает transition (manual).
 
-## Issue 11: ButtonEmits = null — нет нативного click эмита
+## ~~Issue 11: ButtonEmits = null — нет нативного click эмита~~ ✅ resolved 2026-05-10
 
 - **Категория:** D26 (консистентность событий)
-- **Severity:** low
-- **Где:** [Button.d.ts:109](../../lib/button/Button.d.ts#L109)
+- **Severity:** ~~low~~
+- **Где:** [Button.d.ts:137–144](../../lib/button/Button.d.ts#L137-L144), [Button.vue:390](../../lib/button/Button.vue#L390)
+- **Resolution:** `ButtonEmits = { (event: "click", payload: MouseEvent): void }`; `defineEmits<ButtonEmits>()` в SFC; `<button @click="(e) => emit('click', e)">` явно пробрасывает native event через emit-channel — Volar получает корректный type-hint для `@click="handler"`. Additive change: предыдущие подписчики продолжают работать.
 
 ### Что найдено
 
@@ -406,72 +407,45 @@ import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
 export declare type ButtonEmits = null
 ```
 
-Нативный click event пробрасывается через `$attrs` (default Vue behavior), но это не задокументировано в типах. Пользователь не получает type-hint про `@click`.
+Нативный click event пробрасывался через `$attrs` (default Vue behavior), но это не задокументировано в типах. Пользователь не получал type-hint про `@click`.
 
 ### Почему это проблема
 
 - Volar/vue-tsc предупреждает «could not declare event 'click'» в редких сценариях.
-- Документация [components/button.md](../components/button.md) §6 Events явно указывает «нет emits» — но `@click` всё-таки доступен (через native `<button>`).
-
-### Что нужно сделать
-
-1. В [Button.d.ts:109](../../lib/button/Button.d.ts#L109) явно объявить:
-   ```ts
-   export declare type ButtonEmits = {
-     (event: "click", payload: MouseEvent): void
-   }
-   ```
-2. В [Button.vue:13](../../lib/button/Button.vue#L13) добавить `defineEmits<ButtonEmits>()` (даже без явного `emit("click", ...)` — Vue пробросит native).
-3. Альтернатива — оставить null, но добавить `inheritAttrs: true` пометку и в [Documentation/components/button.md](../components/button.md) §6 объяснить.
+- Документация [components/button.md](../components/button.md) §6 Events ранее указывала «нет emits» — но `@click` всё-таки доступен.
 
 ### Acceptance criteria
 
-- [ ] `<Button @click="handler" />` — `handler` получает корректно типизированный `MouseEvent` в Volar.
+- [x] `<Button @click="handler" />` — `handler` получает корректно типизированный `MouseEvent` в Volar.
+- [x] Тест: `wrapper.emitted('click')?.[0]?.[0]` это `MouseEvent`.
 
-## Issue 12: Нет именованных слотов `before`/`after`/`start`/`end`
+## ~~Issue 12: Нет именованных слотов `before`/`after`/`start`/`end`~~ ✅ resolved 2026-05-10
 
 - **Категория:** G37 (композиция через slots)
-- **Severity:** low
-- **Где:** [Button.vue:368](../../lib/button/Button.vue#L368), [Button.vue:373](../../lib/button/Button.vue#L373)
+- **Severity:** ~~low~~
+- **Где:** [Button.vue:400–407](../../lib/button/Button.vue#L400-L407), [Button.d.ts:118–136](../../lib/button/Button.d.ts#L118-L136)
+- **Resolution:** добавлены slots `start` и `end` в не-icon ветке template; `ButtonSlots` расширен с JSDoc; имена `start`/`end` выбраны вместо `before`/`after` для logical-writing-order совместимости с будущим RTL fix (см. Issue 3 выше).
 
 ### Что найдено
 
-Шаблон поддерживает только `<slot name="default" />`. Все индикаторы (icon, loading) встроены через props, нет возможности кастомизировать левый/правый блок (например, badge counter, status dot).
+Шаблон поддерживал только `<slot name="default" />`. Все индикаторы (icon, loading) встроены через props, нет возможности кастомизировать левый/правый блок (например, badge counter, status dot).
 
 ### Почему это проблема
 
 - Use-case: «Save (12 unsaved)» — кнопка с badge — невозможно без обёртки.
 - Element Plus, Naive UI, PrimeVue — поддерживают `prepend`/`append` слоты.
 
-### Что нужно сделать
-
-1. Добавить slots `prepend` и `append` (или `start`/`end` для RTL-совместимости — см. Issue 3).
-2. В [Button.vue](../../lib/button/Button.vue) внутри template:
-   ```vue
-   <slot name="start" />
-   <Icons v-if="icon && iconPosition === 'start'" ... />
-   <slot name="default" />
-   <Icons v-if="icon && iconPosition === 'end'" ... />
-   <slot name="end" />
-   ```
-3. В [Button.d.ts](../../lib/button/Button.d.ts) `ButtonSlots`:
-   ```ts
-   export declare type ButtonSlots = {
-     default(): VNode[]
-     start?(): VNode[]
-     end?(): VNode[]
-   }
-   ```
-
 ### Acceptance criteria
 
-- [ ] `<Button><template #end><Badge>12</Badge></template>Save</Button>` рендерит корректно.
+- [x] `<Button><template #start><Icons type="Check" /></template>D<template #end>E</template></Button>` рендерит content в порядке S → D → E (text-ordering tests в `Button.test.ts`).
 
-## Issue 13: Не реагирует на componentsStyle ("filled"|"outlined"|"underlined") из global config
+## ~~Issue 13: Не реагирует на componentsStyle ("filled"|"outlined"|"underlined") из global config~~ ✅ resolved 2026-06-12
 
 - **Категория:** L53 (Configuration support)
-- **Severity:** high
-- **Где:** [Button.vue:301-309](../../lib/button/Button.vue#L301-L309)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [Button.vue](../../lib/button/Button.vue) (computed `componentsStyleMode` + `mode`)
+
+> **Resolution (2026-06-12).** Добавлен computed `componentsStyleMode` ([Button.vue](../../lib/button/Button.vue)): `Button.componentsStyle()` маппится `filled → primary`, `outlined → outline`, `underlined → ghost`. Вставлен в fallback chain `mode`: `props.mode ?? options.mode ?? componentsStyleMode ?? "primary"` — ниже props/componentsOptions, выше литерального default (зеркало Badge/Input/Select/Calendar, см. [README.md §3.2](./README.md)). +6 тестов в `Button.test.ts` (describe `Configuration support`): filled/outlined/underlined mapping, props-override, componentsOptions-override, default.
 
 ### Что найдено
 
@@ -491,26 +465,29 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 1. Решить: либо unify `mode` Button с `componentsStyle` (mapping `"primary"→"filled"`, `"outline"→"outlined"`, `"ghost"→"underlined"`), либо добавить `Button.componentsStyle()` fallback (как Label делает).
 2. Минимальный фикс — fallback chain:
    ```ts
-   const mode = computed(() => (
-     props?.mode as ButtonProps["mode"]
-     ?? options?.mode
-     ?? mapComponentsStyleToButtonMode(Button.componentsStyle())
-     ?? "primary"
-   ))
+   const mode = computed(
+     () =>
+       (props?.mode as ButtonProps["mode"]) ??
+       options?.mode ??
+       mapComponentsStyleToButtonMode(Button.componentsStyle()) ??
+       "primary"
+   )
    ```
    с явным mapping helper.
 3. Документировать в [Documentation/components/button.md](../components/button.md) §10 связь Button.mode ↔ componentsStyle.
 
 ### Acceptance criteria
 
-- [ ] `app.use(FishtVue, { componentsStyle: "outlined" })` — `<Button>X</Button>` рендерится с `mode="outline"`.
-- [ ] Per-instance `<Button mode="primary">` перебивает глобальное.
+- [x] `app.use(FishtVue, { componentsStyle: "outlined" })` — `<Button>X</Button>` рендерится с `mode="outline"`.
+- [x] Per-instance `<Button mode="primary">` перебивает глобальное.
 
-## Issue 14: `unstyled: true` не обрабатывается
+## ~~Issue 14: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-05-11 (cross-cutting)
 
 - **Категория:** L53 (Configuration support)
-- **Severity:** high
-- **Где:** [Button.vue:313-323](../../lib/button/Button.vue#L313-L323)
+- **Severity:** ~~high~~ → resolved
+- **Где:** [component/index.ts:138](../../lib/component/index.ts#L138) (`Component.setStyle()` guard)
+
+> **Resolution (cross-cutting 2026-05-11; Button regression-test 2026-06-12).** Guard `if (this.__globalConfig?.config?.unstyled) return ""` в `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138)) — одна правка закрывает `unstyled` во ВСЕХ 22 компонентах (см. [component-class.md Issue 6](./component-class.md)). Button наследует автоматически: `classBase` = `Button.setStyle([...])` ([Button.vue:330-341](../../lib/button/Button.vue#L330-L341)) → `""` при `unstyled: true`, корневой `<button>` рендерится без `class`. Добавлен Button-scoped regression-тест ([Button.test.ts](../../lib/button/Button.test.ts) → describe `Configuration support`): `app.use(FishtVue, { unstyled: true })` → root `class` пуст; контраст с `unstyled: false` → `inline-flex` присутствует; `afterEach` чистит `window.FishtVue` (singleton-leak guard).
 
 ### Что найдено
 
@@ -535,14 +512,16 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 
 ### Acceptance criteria
 
-- [ ] `unstyled: true` приводит к `class=""` (или отсутствию атрибута) на корне.
-- [ ] Реактивно: переключение в runtime → стили исчезают.
+- [x] `unstyled: true` приводит к пустому `class` на корне (regression-тест `Button.test.ts`).
+- [ ] ~~Реактивно: переключение в runtime~~ — out of scope: `config.unstyled` задаётся на install; reactive runtime-toggle относится к theme runtime API ([theme.md Issue 1](./theme.md)).
 
-## Issue 15: Нет print styles
+## ~~Issue 15: Нет print styles~~ ✅ resolved 2026-06-12
 
 - **Категория:** N59 (print styles)
-- **Severity:** low
-- **Где:** [Button.vue](../../lib/button/Button.vue)
+- **Severity:** ~~low~~ → resolved
+- **Где:** [Button.vue](../../lib/button/Button.vue) (`baseClasses`)
+
+> **Resolution (2026-06-12, style-for-print).** В `baseClasses` ([Button.vue](../../lib/button/Button.vue)) добавлены `print:border print:border-black print:bg-white print:text-black print:shadow-none` — канон FishtVue: кнопка печатается монохромно и читаемо, а не `display:none`. Выбран style-not-hide (зеркало Input/Loading/Table); `printable`-prop не вводился. +1 тест в `Button.test.ts` (describe `Print styles`): assert `print:*` present, `print:hidden` absent.
 
 ### Что найдено
 
@@ -557,54 +536,59 @@ Button имеет собственный enum `mode: "primary" | "outline" | "gh
 1. В `Component.initStyle` или global stylesheet добавить:
    ```css
    @media print {
-     [data-button] { display: none; }
+     [data-button] {
+       display: none;
+     }
      /* или: */
-     [data-button] { background: white !important; color: black !important; box-shadow: none !important; }
+     [data-button] {
+       background: white !important;
+       color: black !important;
+       box-shadow: none !important;
+     }
    }
    ```
 2. Добавить prop `printable?: boolean` (default false) — если true, не скрывать.
 
 ### Acceptance criteria
 
-- [ ] DevTools → Rendering → Emulate CSS print — Button скрыт по умолчанию.
+- [x] ~~Button скрыт по умолчанию~~ → пересмотрено: style-for-print (кнопка печатается монохромно, не скрывается). DevTools → Rendering → Emulate CSS print — кнопка читаема ч/б.
 
-## Issue 16: Dark mode зависит от `.dark` класса родителя без учёта `darkModeSelector`
+## ~~Issue 16: Dark mode зависит от `.dark` класса родителя без учёта `darkModeSelector`~~ ✅ resolved 2026-06-12
 
 - **Категория:** B11 (dark mode + runtime theme switch)
 - **Severity:** low
-- **Где:** [Button.vue:31-49](../../lib/button/Button.vue) (все `dark:*` классы)
+- **Где:** [Button.vue:31-49](../../lib/button/Button.vue) (все `dark:*` классы), [theme.md Issue 5](./theme.md)
+
+> **Status (2026-06-12): ✅ resolved.** Фикс был не Button-локальным и оказался **уже реализован** на уровне theme-движка: `Component.setStyle` прокидывает `darkSelector` из config ([component/index.ts:150](../../lib/component/index.ts#L150)), `tailwind()` генерирует `dark:*` на этот селектор ([tailwind.ts:95](../../lib/theme/unoStyle/tailwind.ts#L95)). Button наследует поведение автоматически — **правок в `lib/button/` не потребовалось**. Закрыто добавлением regression-тестов (cross-cutting [theme.md Issue 5](./theme.md)).
 
 ### Что найдено
 
-Tailwind dark variant — `darkMode: "class"` — реагирует на `.dark` класс на любом ancestor. Но публичная Configuration [docs/content/ru/3.Configuration/2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает `darkModeSelector` опцию (например, `"html.dark"` или `"[data-theme=dark]"`). Button игнорирует.
+Tailwind dark variant обычно реагирует на `.dark` класс на ancestor. Публичная Configuration [docs/content/ru/3.Configuration/2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает `darkModeSelector` опцию (например, `"html.dark"` или `"[data-theme=dark]"`). Аудит предполагал, что Button её игнорирует.
 
-### Почему это проблема
+**По факту** движок её уже учитывает (см. Status выше) — «coupling неявный» из исходного аудита оказался корректным coupling'ом, просто непокрытым тестом.
 
-- Если пользователь конфигурирует `darkModeSelector: "[data-theme='dark']"`, Button.dark классы продолжают слушать `.dark`.
-- Может работать через UnoCSS engine, но coupling неявный.
+### Что сделано
 
-### Что нужно сделать
-
-1. Проверить через [lib/theme/uno.ts](../../lib/theme/uno.ts), что `darkModeSelector` транслируется в правильный CSS-селектор для `dark:*` вариантов.
-2. Если не транслируется — добавить runtime hook в Component.initStyle для замены `.dark` на конфигурируемый селектор.
-3. Документировать связь в [Documentation/architecture/theme.md](../architecture/theme.md).
+1. ~~Проверить, что `darkModeSelector` транслируется в правильный CSS-селектор для `dark:*` вариантов.~~ ✅ транслируется (`setStyle:150` → `tailwind.ts:95`); дефолт без config — `@media (prefers-color-scheme: dark)`.
+2. ~~Если не транслируется — добавить runtime hook.~~ ✅ не требуется — транслируется.
+3. ~~Документировать связь в [architecture/theme.md](../architecture/theme.md).~~ ✅ уже задокументировано (theme.md §«Dark mode»), сверено.
 
 ### Acceptance criteria
 
-- [ ] `optionsTheme: { darkModeSelector: "[data-theme='dark']" }` — `<Button>` реагирует на `<html data-theme='dark'>`.
+- [x] `optionsTheme: { darkModeSelector: "[data-theme='dark']" }` — `dark:*` варианты Button генерируются на `[data-theme='dark']` (а не на дефолтный media-query). Покрыто [lib/theme/darkModeSelector.test.ts](../../lib/theme/darkModeSelector.test.ts) + [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts).
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Button` | ✅ | через `Button.getOptions()` (mode/size/rounded/color/class/classIcon) |
-| `componentsStyle` global | ❌ | см. Issue 13 — нет fallback к global enum |
-| `unstyled: true` | ❌ | см. Issue 14 — игнорируется |
-| Theme tokens vs hardcode | ⚠️ | через Tailwind `theme-*`/`neutral-*`/`green-*`/`red-*` классы; design tokens из [theme/themes/Aurora.ts](../../lib/theme/themes/Aurora.ts) НЕ применяются напрямую — только через UnoCSS preset |
-| Runtime theme switch | ⚠️ | работает через CSS-переменные `theme-*`, но смена палитры через `updatePrimaryPalette()` требует регенерации CSS — проверить корректность invalidation |
-| `t()` для текста | N/A | у Button нет UI-текста (slot-based) |
-| Runtime locale switch | N/A | — |
-| Fallback на defaultLocale | N/A | — |
+| Настройка                  | Поддержано? | Комментарий                                                                                                                                                                                     |
+| -------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `componentsOptions.Button` | ✅          | через `Button.getOptions()` (mode/size/rounded/color/class/classIcon — `ariaLabel`/`icon`/`type` не входят)                                                                                     |
+| `componentsStyle` global   | ✅          | Issue 13 — computed `componentsStyleMode` mapping (`filled→primary` / `outlined→outline` / `underlined→ghost`) в fallback chain `mode`                                                          |
+| `unstyled: true`           | ❌          | см. Issue 14 — игнорируется                                                                                                                                                                     |
+| Theme tokens vs hardcode   | ⚠️          | через Tailwind `theme-*`/`neutral-*`/`green-*`/`red-*` классы; design tokens из [theme/themes/Aurora.ts](../../lib/theme/themes/Aurora.ts) НЕ применяются напрямую — только через UnoCSS preset |
+| Runtime theme switch       | ⚠️          | работает через CSS-переменные `theme-*`, но смена палитры через `updatePrimaryPalette()` требует регенерации CSS — проверить корректность invalidation                                          |
+| `t()` для текста           | N/A         | у Button нет UI-текста (slot-based)                                                                                                                                                             |
+| Runtime locale switch      | N/A         | —                                                                                                                                                                                               |
+| Fallback на defaultLocale  | N/A         | —                                                                                                                                                                                               |
 
 ## Dual-API gap
 

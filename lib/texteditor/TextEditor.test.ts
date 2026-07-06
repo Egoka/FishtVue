@@ -269,3 +269,120 @@ describe.todo("TextEditor Component", () => {
     })
   })
 })
+
+// Standalone (non-todo) block. Mounting TextEditor boots Quill, whose
+// requestAnimationFrame callbacks fire after jsdom teardown and crash the run
+// (the very fragility that keeps the suite above `todo`). So the label↔control
+// association is verified at the source level — mirrors Aria.test's source scan.
+describe("TextEditor — accessibility label association (Wave 4)", () => {
+  it("binds the editor container to the InputLayout label via aria-labelledby", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+    // Editor container consumes the scoped default slot and links the label.
+    expect(src).toMatch(/#default="\{[^}]*\bid:\s*fieldId/)
+    expect(src).toMatch(/:aria-labelledby="labelledby"/)
+  })
+})
+
+// componentsStyle global fallback (Wave 3.2 — texteditor.md Issue 7). Mount поднимает Quill,
+// чьи rAF-колбэки стреляют после teardown jsdom и роняют прогон (та же хрупкость, что держит
+// основную суиту в `todo`) — поэтому цепочка резолва проверяется на уровне source,
+// зеркало соседних source-scan блоков. Канон цепочки — Input.vue:
+// `props.mode ?? options?.mode ?? X.componentsStyle() ?? "outlined"`.
+describe("TextEditor — componentsStyle global fallback (Wave 3.2)", () => {
+  it("mode falls back to TextEditor.componentsStyle() between options and the literal default", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+    expect(src).toMatch(
+      /props\.mode\s*\?\?\s*options\?\.mode\s*\?\?\s*TextEditor\.componentsStyle\(\)\s*\?\?\s*"outlined"/
+    )
+  })
+})
+
+// @vueup/vue-quill + quill = optional peerDependencies (Wave 2.1). Компонент уже грузит сам
+// QuillEditor через `await import("@vueup/vue-quill")` в onMounted; Quill-CSS не должен висеть
+// top-level side-effect-импортом (иначе тянется в каждый bundle с `fishtvue/texteditor` и
+// исполняется на import-time даже без mount). Mount грузит Quill → rAF крашит jsdom после
+// teardown (та же хрупкость, что держит суиту выше `todo`), поэтому проверяем на уровне source.
+describe("TextEditor — lazy Quill assets (Wave 2.1 — optional peer)", () => {
+  it("loads Quill component + CSS lazily, not as top-level imports", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+    // нет top-level side-effect css-импортов
+    expect(src).not.toMatch(/^\s*import\s+["']@vueup\/vue-quill\/dist\/[^"']+\.css["']/m)
+    // компонент и css грузятся динамически
+    expect(src).toMatch(/import\(["']@vueup\/vue-quill["']\)/)
+    expect(src).toMatch(/import\(["']@vueup\/vue-quill\/dist\/vue-quill\.snow\.css["']\)/)
+    expect(src).toMatch(/import\(["']@vueup\/vue-quill\/dist\/vue-quill\.bubble\.css["']\)/)
+  })
+})
+
+// surface-* token migration (Wave 9 — texteditor.md Issue 2 / B10). Mount поднимает Quill,
+// чьи rAF-колбэки крашат jsdom после teardown (та же хрупкость, что держит основную суиту
+// в `todo`) — поэтому проверяем на уровне source, зеркало соседних source-scan блоков.
+// primitive.ts:305-317 — surface = 23-й именованный цвет (дефолт — точная копия gray).
+describe("TextEditor — surface-* token migration (Wave 9 — texteditor.md Issue 2 / B10)", () => {
+  it("border/background/icon Tailwind classes use surface-* instead of neutral-*/stone-*/gray-* primitives", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+
+    // Старые хардкод-примитивы больше не встречаются нигде в файле.
+    expect(src).not.toMatch(/border-neutral-200/)
+    expect(src).not.toMatch(/dark:border-neutral-800/)
+    expect(src).not.toMatch(/dark:text-gray-400/)
+    expect(src).not.toMatch(/bg-stone-50/)
+    expect(src).not.toMatch(/dark:bg-stone-950/)
+    expect(src).not.toMatch(/bg-stone-100/)
+    expect(src).not.toMatch(/dark:bg-stone-900/)
+    expect(src).not.toMatch(/text-gray-400 dark:text-gray-600/)
+
+    // border + текст рядом с рамкой редактора (editor computed).
+    expect(src).toMatch(/border-surface-200/)
+    expect(src).toMatch(/dark:border-surface-800/)
+    expect(src).toMatch(/dark:text-surface-400/)
+    // underlined/filled фон редактора.
+    expect(src).toMatch(/bg-surface-50 dark:bg-surface-950/)
+    expect(src).toMatch(/bg-surface-100 dark:bg-surface-900/)
+    // hover-состояние иконок resize-кнопок (встречается дважды — bubble + snow resize).
+    const iconHoverMatches = src.match(
+      /text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400/g
+    )
+    expect(iconHoverMatches?.length).toBe(2)
+  })
+
+  it("raw hex in the <style> block is routed through var(--fv-surface-{tone}) except the alpha-suffixed placeholder overlays", async () => {
+    const fs = await import("node:fs/promises")
+    const path = await import("node:path")
+    const url = await import("node:url")
+    const here = path.dirname(url.fileURLToPath(import.meta.url))
+    const src = await fs.readFile(path.join(here, "TextEditor.vue"), "utf8")
+
+    // Не-alpha hex-пары (background + picker-options) для light/dark больше не хардкод.
+    expect(src).not.toMatch(/--background-quill-editor:\s*#f6f3f4/)
+    expect(src).not.toMatch(/--background-picker-options-quill-editor:\s*#f5f5f5/)
+    expect(src).not.toMatch(/--background-quill-editor:\s*#212121/)
+    expect(src).not.toMatch(/--background-picker-options-quill-editor:\s*#131313/)
+
+    // Заменены на var(--fv-surface-{tone}, <rgb-triplet>) — формат зеркалит unoStyle/helpers.resolveColor.
+    expect(src).toMatch(/--background-quill-editor:\s*rgb\(var\(--fv-surface-100,\s*243 244 246\)\)/)
+    expect(src).toMatch(/--background-picker-options-quill-editor:\s*rgb\(var\(--fv-surface-100,\s*243 244 246\)\)/)
+    expect(src).toMatch(/--background-quill-editor:\s*rgb\(var\(--fv-surface-900,\s*17 24 39\)\)/)
+    expect(src).toMatch(/--background-picker-options-quill-editor:\s*rgb\(var\(--fv-surface-900,\s*17 24 39\)\)/)
+
+    // Alpha-suffixed placeholder overlays (translucent black/white) — вне scope, остаются литералами.
+    expect(src).toMatch(/--placeholder-quill-editor:\s*#00000099/)
+    expect(src).toMatch(/--placeholder-quill-editor:\s*#ffffff99/)
+  })
+})

@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Separator from "fishtvue/separator/Separator.vue"
 import { SeparatorProps } from "fishtvue/separator/Separator"
@@ -110,6 +110,140 @@ describe("Separator Component", () => {
       })
       expect(wrapper.exists()).toBe(true)
       expect(wrapper.find("[data-separator]").classes()).toContain("relative")
+    })
+  })
+
+  describe("Accessibility", () => {
+    it('sets role="separator" on the root', () => {
+      const wrapper = mount(Separator)
+      expect(wrapper.find("[data-separator]").attributes("role")).toBe("separator")
+    })
+
+    it('sets aria-orientation="horizontal" by default', () => {
+      const wrapper = mount(Separator)
+      expect(wrapper.find("[data-separator]").attributes("aria-orientation")).toBe("horizontal")
+    })
+
+    it('sets aria-orientation="vertical" when vertical', () => {
+      const wrapper = mount(Separator, { props: { vertical: true } })
+      expect(wrapper.find("[data-separator]").attributes("aria-orientation")).toBe("vertical")
+    })
+
+    it("keeps decorative line segments aria-hidden", () => {
+      const wrapper = mount(Separator)
+      expect(wrapper.find("[data-separator-left]").attributes("aria-hidden")).toBe("true")
+      expect(wrapper.find("[data-separator-right]").attributes("aria-hidden")).toBe("true")
+    })
+
+    it("exposes slot content as the accessible name (not aria-hidden)", () => {
+      const wrapper = mount(Separator, { slots: { default: "OR" } })
+      const content = wrapper.find("[data-separator-content]")
+      expect(content.exists()).toBe(true)
+      expect(content.attributes("aria-hidden")).toBeUndefined()
+      expect(content.text()).toBe("OR")
+    })
+  })
+
+  describe("RTL & logical contentPosition (Issue 3 / F31)", () => {
+    it.each([
+      { position: "start", hidden: "left", visible: "right" },
+      { position: "end", hidden: "right", visible: "left" }
+    ] as const)("logical $position hides $hidden segment, keeps $visible", ({ position, hidden, visible }) => {
+      const wrapper = mount(Separator, { props: { contentPosition: position } })
+      expect(wrapper.find(`[data-separator-${hidden}]`).exists()).toBe(false)
+      expect(wrapper.find(`[data-separator-${visible}]`).exists()).toBe(true)
+      expect((wrapper.vm as any).content).toBe(position)
+    })
+
+    it.each([
+      { deprecated: "left", logical: "start" },
+      { deprecated: "right", logical: "end" }
+    ] as const)("normalizes deprecated $deprecated → $logical (backward compat)", ({ deprecated, logical }) => {
+      const wrapper = mount(Separator, { props: { contentPosition: deprecated as any } })
+      // exposed value нормализован в logical
+      expect((wrapper.vm as any).content).toBe(logical)
+      // рендеринг идентичен logical-эквиваленту
+      const hidden = logical === "start" ? "left" : "right"
+      expect(wrapper.find(`[data-separator-${hidden}]`).exists()).toBe(false)
+    })
+
+    it.each(["left", "right"] as const)("dev-warns on deprecated contentPosition=%s", (position) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mount(Separator, { props: { contentPosition: position as any } })
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0][0]).toContain("[FishtVue Separator]")
+      warn.mockRestore()
+    })
+
+    it.each(["start", "end", "center", "full"] as const)("does not warn for logical contentPosition=%s", (position) => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mount(Separator, { props: { contentPosition: position } })
+      expect(warn).not.toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    it("mirrors horizontal gradient direction under RTL via rtl: variants", () => {
+      const wrapper = mount(Separator, { props: { gradient: true, contentPosition: "center" } })
+      const leftLine = wrapper.find("[data-separator-left] div")
+      const rightLine = wrapper.find("[data-separator-right] div")
+      expect(leftLine.classes()).toContain("rtl:bg-gradient-to-l")
+      expect(rightLine.classes()).toContain("rtl:bg-gradient-to-r")
+    })
+
+    it("defaults to center when contentPosition is omitted", () => {
+      const wrapper = mount(Separator)
+      expect((wrapper.vm as any).content).toBe("center")
+      expect(wrapper.find("[data-separator-left]").exists()).toBe(true)
+      expect(wrapper.find("[data-separator-right]").exists()).toBe(true)
+    })
+  })
+
+  describe("Semantic color tokens (Issue 4 / B10)", () => {
+    it("uses surface-* family (not neutral-*) for line gradient/fallback classes", () => {
+      const wrapper = mount(Separator)
+      const leftLine = wrapper.find("[data-separator-left] div")
+      const rightLine = wrapper.find("[data-separator-right] div")
+
+      for (const line of [leftLine, rightLine]) {
+        const classes = line.classes()
+        expect(classes).toContain("via-surface-200")
+        expect(classes).toContain("dark:via-surface-800")
+        expect(classes).toContain("to-surface-200")
+        expect(classes).toContain("dark:to-surface-800")
+        expect(classes).toContain("bg-surface-200")
+        expect(classes).toContain("dark:bg-surface-800")
+        expect(classes.some((c) => c.includes("neutral-"))).toBe(false)
+      }
+    })
+
+    it("uses text-surface-* (not text-gray-*) for content text", () => {
+      const wrapper = mount(Separator, { slots: { default: "OR" } })
+      const content = wrapper.find("[data-separator-content]")
+      const classes = content.classes()
+      expect(classes).toContain("text-surface-500")
+      expect(classes.some((c) => c.includes("text-gray-"))).toBe(false)
+    })
+  })
+
+  describe("Unstyled mode", () => {
+    // window.FishtVue — глобальный singleton, выставляемый plugin'ом; чистим, чтобы
+    // unstyled-конфиг не утёк в последующие тесты/файлы.
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    const createUnstyledApp = () => ({
+      install(app: any) {
+        app.use(FishtVue, { unstyled: true })
+      }
+    })
+
+    it("respects unstyled: true via Component.setStyle guard", () => {
+      const app = createUnstyledApp()
+      const wrapper = mount(Separator, {
+        global: { plugins: [app] }
+      })
+      expect(wrapper.find("[data-separator]").classes()).toEqual([])
     })
   })
 })

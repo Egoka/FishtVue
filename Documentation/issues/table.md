@@ -1,7 +1,7 @@
 ---
 title: Issues — Table
-summary: Аудит Table — CRITICAL XSS через 5 v-html сайтов (setMarker/summary/noData/noColumn/noFilter), IntersectionObserver и window-listeners без полного cleanup, отсутствие compound API, нет виртуализации.
-updated: 2026-05-10
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Issue 3 (compound `<Column>`/`<ColumnGroup>` + Pagination/Loading overrides) закрыт 2026-06-07. 2026-06-11 закрыты Issue 10 (filter popovers via FixWindow scrollableEl), 11 (RTL — dir-aware resize + logical props), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map + Menu publish-gap fix, verified npm pack/install). Все аудит-issue 1–14 закрыты; остаются только cross-cutting категории G34 (medium) / D26 (low) без отдельной Table-секции. 2026-07-05 — Issue 12/B10 дополнен: структурные нейтрали (gray-*/stone-*/neutral-*, ~24 occurrences) мигрированы на semantic `surface` token (family rename, та же тональность); Table снята из «residual» Wave 9.
+updated: 2026-07-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
 related-doc: ../components/table.md
@@ -11,18 +11,28 @@ related-doc: ../components/table.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 2 | C13/security (5× v-html), H41 (partial cleanup) |
-| high | 8 | A2, A4-5, C17, H43 (виртуализация), L53, P (dual-API), J47, K51 |
-| medium | 5 | E29.1, E29.5, F31, G34, H39 |
-| low | 4 | E29.7, B10, N59, D26 |
+| Severity | Count | Categories                                                                                                              |
+| -------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
+| critical | 0     | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅                                                           |
+| high     | 0     | ~~A2~~ ✅, ~~A4-5~~ ✅, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, ~~P (dual-API)~~ ✅, ~~J47~~ ✅, ~~K51~~ ✅ |
+| medium   | 1     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, ~~F31~~ ✅, G34, ~~H39~~ ✅, ~~K52~~ ✅                                                     |
+| low      | 1     | ~~E29.7~~ ✅, ~~B10~~ ✅, ~~N59~~ ✅, D26                                                                               |
 
-## Issue 1: CRITICAL — XSS через 5 сайтов `v-html`
+> **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization), **Issue 7** (branch coverage 67.74% → 80.01%) **и packaging/SSR bundle (5 partial / 13 / 14)**: SSR-стили (C17) подтверждены работающими через `onServerPrefetch` + регрессионный тест; `sideEffects:false` (A2) на root + per-component; `files`-whitelist шлёт sourcemaps (K51) и отсекает junk (K52); ESM-only ратифицирован (`engines.node >=18`). **2026-06-11 — закрыты Issue 3 (compound API), 10 (filter popovers via FixWindow), 11 (RTL), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map — build-generated, verified npm pack + Node ESM/bundler/nodenext-резолв; + Menu publish-gap fix 5c-a).** Все аудит-issue 1–14 закрыты — остаются лишь cross-cutting G34 (medium) / D26 (low).
+
+## ~~Issue 1: CRITICAL — XSS через 5 сайтов `v-html`~~ ✅ resolved 2026-06-07
 
 - **Категория:** C13 + security
-- **Severity:** **critical**
+- **Severity:** ~~**critical**~~ → resolved
 - **Где:** [Table.vue:1842](../../lib/table/Table.vue#L1842), [Table.vue:1939](../../lib/table/Table.vue#L1939), [Table.vue:1999](../../lib/table/Table.vue#L1999), [Table.vue:2011](../../lib/table/Table.vue#L2011), [Table.vue:2026](../../lib/table/Table.vue#L2026)
+
+> **Resolution (2026-06-07).** Все 5 `v-html` устранены:
+>
+> - **Cell content** → безопасный render через `markerParts()` ([Table.vue:1448](../../lib/table/Table.vue#L1448)): текст разбивается на части, совпадения с query/filter оборачиваются в `<mark :class="classMaskQuery">` через `<template v-for>` (без `v-html`). `setMarker()` сохранён только для `valueWithMarker` payload (`click-cell`) и slot-prop. Кастомный HTML на ячейку — через существующий per-column slot.
+> - **Summary** → text-render `{{ summaryColumns[column.dataField] }}`.
+> - **noData / noColumn / noFilter** → `<slot name="empty|empty-columns|empty-filter">{{ ... }}</slot>` (text по умолчанию, HTML только через explicit slot).
+> - Regex query экранируется (`escapeRegExp`) — нет regex-injection.
+> - Тесты: `Table.test.ts` describe «Issue 1 — XSS via v-html» (7 кейсов + slot-overrides + highlight).
 
 ### Что найдено
 
@@ -38,6 +48,7 @@ related-doc: ../components/table.md
 ```
 
 Все 5 v-html инжектят строки в DOM без санитизации:
+
 - **Cell content** — приходит из `dataSource` (server data, user-controlled через CRUD).
 - **Summary** — может включать formatted numbers/HTML.
 - **noData/noColumn/noFilter** — пользовательские props/options ([Table.d.ts:108](../../lib/table/Table.d.ts#L108), [Table.d.ts:785](../../lib/table/Table.d.ts#L785), [Table.d.ts:791](../../lib/table/Table.d.ts#L791)).
@@ -55,7 +66,12 @@ related-doc: ../components/table.md
 1. `setMarker()` строит `<mark>...</mark>` для search highlight. Это надо сохранить, но без HTML-инжекции пользовательских данных.
 2. Заменить cell render на slot:
    ```vue
-   <slot :name="`cell-${column.dataField}`" :row="data" :value="data[column.dataField]" :column="column" :search="queryTable">
+   <slot
+     :name="`cell-${column.dataField}`"
+     :row="data"
+     :value="data[column.dataField]"
+     :column="column"
+     :search="queryTable">
      <CellWithMarker :value="data[column.dataField]" :search="queryTable" />
    </slot>
    ```
@@ -63,13 +79,15 @@ related-doc: ../components/table.md
 4. Если у column есть `template?: (value, row) => VNode | string` функция — это уже dynamic render, безопаснее v-html.
 
 **Summary**:
+
 1. Заменить `v-html` на text-render. Если требуется HTML formatting — добавить `summaryRender?: (value) => VNode` функцию.
 
 **noData/noColumn/noFilter** (low risk но fix всё равно):
+
 1. Текст-нода: `<div>{{ noData }}</div>`.
 2. Если HTML критичен — использовать slot `<slot name="empty">{{ noData }}</slot>`.
 
-5. Cross-cutting тест suite: для каждого v-html-сайта payload `<img src=x onerror=alert(1)>` не должен сработать.
+3. Cross-cutting тест suite: для каждого v-html-сайта payload `<img src=x onerror=alert(1)>` не должен сработать.
 
 ### Acceptance criteria
 
@@ -77,11 +95,13 @@ related-doc: ../components/table.md
 - [ ] Search highlight (`<mark>`) продолжает работать через VNode-render.
 - [ ] noData с HTML — отрисовывается как escaped text по умолчанию; HTML только через явный slot.
 
-## Issue 2: CRITICAL — partial cleanup observers/listeners
+## ~~Issue 2: CRITICAL — partial cleanup observers/listeners~~ ✅ resolved 2026-06-07
 
 - **Категория:** H41 (memory leaks)
-- **Severity:** **critical** (если unmount во время drag)
+- **Severity:** ~~**critical** (если unmount во время drag)~~ → resolved
 - **Где:** [Table.vue:1519-1527](../../lib/table/Table.vue#L1519-L1527), [Table.vue:1553-1554](../../lib/table/Table.vue#L1553-L1554), [Table.vue:972-974](../../lib/table/Table.vue#L972-L974)
+
+> **Resolution (2026-06-07).** `onUnmounted` ([Table.vue:1053](../../lib/table/Table.vue#L1053)) расширен: помимо `tableObserver.disconnect()` теперь `lastRowVisibleObserver?.disconnect()` + `window.removeEventListener("mousemove"/"mouseup", ...)` (внутри `isClient()` guard) — закрывает leak IntersectionObserver и drag-listeners при unmount-during-resize. Тест: `Table.test.ts` describe «Issue 2 — observer / listener cleanup on unmount».
 
 ### Что найдено
 
@@ -103,6 +123,7 @@ onUnmounted(() => {
 ```
 
 `onUnmounted` cleans only `tableObserver` ResizeObserver. **НЕ disconnect**:
+
 - `lastRowVisibleObserver` (IntersectionObserver) — продолжает наблюдать за DOM-узлом, который может уже не существовать.
 - `window.mousemove` / `window.mouseup` — если пользователь начал drag-resize колонки и компонент unmount'ился во время drag → listeners остаются на window навсегда.
 
@@ -132,23 +153,37 @@ onUnmounted(() => {
 - [ ] DevTools Memory snapshot до/после mount/unmount × 100 — observers count в `Detached HTMLElement` = 0.
 - [ ] Unit-тест mock'ает window listener, подтверждает remove после unmount.
 
-## Issue 3: Dual-API gap — нет compound `<Table><Column>` API
+## ~~Issue 3: Dual-API gap — нет compound `<Table><Column>` API~~ ✅ resolved 2026-06-07
 
 - **Категория:** P (Dual-API)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [Table.d.ts](../../lib/table/Table.d.ts), [Table.vue](../../lib/table/Table.vue)
+
+> **Resolution (2026-06-07).** Добавлен параллельный compound API **без breaking change** schema-режима — механизм **VNode-walk `slots.default()`** (канон FishtVue, зеркало Menu, НЕ provide/inject):
+>
+> - **`<Column>`** ([lib/table/Column.vue](../../lib/table/Column.vue)) — renderless descriptor (props = `IColumn`, scoped-slots `#cell`/`#header`/`#filter`). `<Table>` читает props/slots ребёнка через VNode-walk (по имени компонента) и синтезирует descriptor (с `_cellSlot`/`_headerSlot`/`_filterSlot`/`_groupKey`), который кормит существующую нормализацию `columns → dataColumns` ([Table.vue](../../lib/table/Table.vue)). Per-column slot рендерится через стабильный `RenderColumnSlot` (declared-prop functional component — корректная передача slot-props).
+> - **`<ColumnGroup>`** ([lib/table/ColumnGroup.vue](../../lib/table/ColumnGroup.vue)) — multi-level headers: верхний ряд шапки `<th data-table-thead-group-col scope="colgroup" :colspan>` над колонками группы (`headerGroups` computed группирует видимые колонки по `_groupKey`).
+> - **`<Pagination>`/`<Loading>`-дети** — override встроенных конфигов (`compoundPaginationConfig` → `pagination` computed; `compoundLoadingProps` → `v-bind` на внутренний `<Loading>`). Явный `:pagination` prop выигрывает над `<Pagination>`-child.
+> - **Precedence:** schema `:columns` (массив или `false`) выигрывает; `<Column>`-дети — fallback, когда `:columns` не передан (backward compat).
+> - **Регистрация:** `import { Column, ColumnGroup } from "fishtvue/table"` (named-экспорты в `table.mjs` — собираются из нового [lib/table/index.ts](../../lib/table/index.ts), rollup-entry изменён с `Table.vue` на `index.ts`) + root barrel (`export *`) + Nuxt auto-import (`FISHT_VUE_SUBCOMPONENTS` в [module/nuxt.ts](../../lib/module/nuxt.ts) с `export`-формой) → глобальны в Nuxt, import в Vite — **точно как Table**.
+> - Типы: `ColumnProps`/`ColumnSlots`/`ColumnGroupProps`/`ColumnGroupSlots` + `class Column`/`ColumnGroup` + `GlobalComponents` в [Table.d.ts](../../lib/table/Table.d.ts).
+> - Тесты: [Column.test.ts](../../lib/table/Column.test.ts) — 14 кейсов (backward-compat, compound, precedence, per-column slots, ColumnGroup colspan, Pagination/Loading override, reactivity, vnode-hygiene, a11y, boundary). Whole suite 4856 → 4870 green; backward-compat (110 Table-кейсов) без регрессий. Build-verified: `dist/table/table.mjs` отдаёт named `Column`/`ColumnGroup`/`default`, raw `.vue` не публикуются.
 
 ### Что найдено
 
 API только schema-driven:
+
 ```vue
-<Table :data-source="rows" :data-columns="[
-  { dataField: 'name', columnCaption: 'Name', sort: true },
-  { dataField: 'age', columnCaption: 'Age', dataType: 'number', filter: true },
-]" />
+<Table
+  :data-source="rows"
+  :data-columns="[
+    { dataField: 'name', columnCaption: 'Name', sort: true },
+    { dataField: 'age', columnCaption: 'Age', dataType: 'number', filter: true }
+  ]" />
 ```
 
 Нет:
+
 ```vue
 <Table :data-source="rows">
   <Column data-field="name" column-caption="Name" sort>
@@ -173,12 +208,12 @@ API только schema-driven:
 1. Создать `lib/table/Column.vue`:
    ```vue
    <script setup lang="ts">
-   import { inject, useSlots, getCurrentInstance } from "vue"
-   import type { TableColumn } from "./Table"
-   const props = defineProps<TableColumn>()
-   const ctx = inject(TABLE_CONTEXT)
-   const slots = useSlots()
-   ctx?.registerColumn({ ...props, cellSlot: slots.cell, headerSlot: slots.header, filterSlot: slots.filter })
+     import { inject, useSlots, getCurrentInstance } from "vue"
+     import type { TableColumn } from "./Table"
+     const props = defineProps<TableColumn>()
+     const ctx = inject(TABLE_CONTEXT)
+     const slots = useSlots()
+     ctx?.registerColumn({ ...props, cellSlot: slots.cell, headerSlot: slots.header, filterSlot: slots.filter })
    </script>
    <template><!-- never rendered directly --></template>
    ```
@@ -208,11 +243,15 @@ API только schema-driven:
 - [ ] `<template #cell="{ row }">` в `<Column>` пробрасывается в render.
 - [ ] Volar предлагает props `<Column>`-компонента.
 
-## Issue 4: Нет виртуализации — таблицы с >1000 строк лагают
+## ~~Issue 4: Нет виртуализации — таблицы с >1000 строк лагают~~ ✅ resolved 2026-06-07
 
 - **Категория:** H43 (виртуализация)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [Table.vue](../../lib/table/Table.vue) (rendering tbody)
+
+> **Resolution (2026-06-07).** Dependency-free row virtualization (без новых deps — по решению пользователя, соответствует bundle-философии Wave 2.1). `isVirtual` computed + `virtualWindow` (fixed `rowHeight`, `overscan`) рендерят только видимое окно `<tbody>` + spacer-`<tr>` (`[data-table-virtual-spacer-top/bottom]`) для сохранения scroll-height. Scroll отслеживается passive-листенером на `[data-table-scroll]` (= `tableBody`, reuse существующего viewport), cleanup в `onUnmounted`. **Auto** по умолчанию (client-mode, без `grouping`/активной `pagination`/`asyncData:true|function`, при `lengthData > threshold`, default 100) с **opt-out** `:virtual="false"`; `:virtual="true"`/object — force + config (`rowHeight`/`overscan`/`threshold`). Absolute index (`absIndex`) для `clickRow`/`clickCell`/`editableCell`/`activeRow`. ARIA: `[data-table] aria-rowcount` + строки `aria-rowindex`. Новый prop `virtual` ([Table.d.ts](../../lib/table/Table.d.ts)) + `TableOption`. Тесты: `Table.test.ts` describe «Virtualization (Issue 4)» (7 кейсов).
+>
+> **Limitations (v1, отдельным заходом):** virtual + `grouping`, dynamic row-height (сейчас fixed — multi-line ячейки клипаются до `rowHeight`), virtual + edit-mode проверен, но не оптимизирован. SSR рендерит первое окно от index 0.
 
 ### Что найдено
 
@@ -232,23 +271,34 @@ API только schema-driven:
 - [ ] 10000 rows initial render <100ms.
 - [ ] Scroll 60fps in Chrome DevTools.
 
-## Issue 5: SSR styles + cross-cutting
+## ~~Issue 5: SSR styles + cross-cutting~~ ✅ resolved 2026-06-11 (5c-b закрыл последний пункт)
 
 - **Категория:** C17, A2, A4, A5
 
 См. [button.md Issue 1, 8, 9](./button.md).
 
-## Issue 6: `unstyled: true` не обрабатывается
+> **Resolution (2026-06-07 / 2026-06-11).**
+>
+> - **C17 (SSR-стили) ✅** — оказалось уже реализовано на уровне базового класса: `Component.__hooks()` ([component/index.ts:81](../../lib/component/index.ts#L81)) регистрирует `onServerPrefetch(() => initStyle())`, а `__setStyle()` пишет в `cssComponents` Map БЕЗ guard `isClient()` ([component/index.ts:179](../../lib/component/index.ts#L179)) — client-gated только `useStyle()`. Nuxt server plugin ([plugins/nuxt.ts](../../lib/plugins/nuxt.ts)) сливает `cssComponents` в `ssrContext.head` на `app:rendered`. Значит, критический CSS попадает в SSR-HTML до hydration (нет flash-of-unstyled-content). Текст аудита (ссылавшийся на `onMounted` в SFC) устарел — канон давно перешёл на `onServerPrefetch`. Добавлен регрессионный тест [ssrStyles.test.ts](../../lib/component/ssrStyles.test.ts) (`renderToString` не вызывает `onMounted` → заполнение `cssComponents` доказывает работу `onServerPrefetch`-пути).
+> - **A2 (sideEffects) ✅** — `"sideEffects": false` в [lib/package.json](../../lib/package.json) (root, проброс в `dist/package.json` через `addPackageJson()`) + инъекция `sideEffects:false` в каждый под-пакет через `copyDependencies()` ([rollup.config.js](../../lib/rollup.config.js)) для tree-shaking точечных импортов `fishtvue/{name}`.
+> - **A4 (ESM-only) ✅ ратифицирован** — добавлен `"engines": { "node": ">=18" }`; пакет остаётся ESM-only (`.mjs`), CJS-сборка не включается.
+> - **A4-5 (root `exports` map) ✅ resolved 2026-06-11 (Issue 5c-b).** Карта генерируется build-step'ом ([`buildRootExports()` в rollup.config.js](../../lib/rollup.config.js)) из авторитетного списка rollup-выходов + вложенных `package.json`/`.d.ts` (стратегия — **явные** entry на каждый emitted `.mjs`: identity `*.mjs` + extensionless + bare-dir из вложенного package.json; ноль wildcard-неоднозначности, strict superset). Обходит ключевую обструкцию — lowercase `.mjs` vs PascalCase `.d.ts` (`./table` → `import: ./table/table.mjs`, `types: ./table/Table.d.ts`). **Пререкизит — Issue 5c-a** (Menu publish-gap): `dist/index.mjs` ре-экспортил `MenuItem.vue`/`MenuGroup.vue`, которых нет в tarball; карта это форсила починить (Menu переведён на `index.ts`-bundle, зеркало Table). **Verified:** `npm pack` → install → `import.meta.resolve` 19/19 публичных субпутей резолвятся в pure Node ESM (раньше `fishtvue/menu`/`fishtvue/config`/`fishtvue/utils/domHandler` падали с «directory import not supported»); CSS-free субпуты исполняются (self-ref через карту работает); `tsc --moduleResolution bundler` И `nodenext` резолвят типы. Контракт — [lib/package.test.ts](../../lib/package.test.ts) (guarded по наличию `dist/`). См. [button.md Issue 9](./button.md).
+
+## ~~Issue 6: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-06-07
 
 - **Категория:** L53
 
 См. [button.md Issue 14](./button.md).
 
-## Issue 7: Тесты есть (66), но низкие coverage в edit-cells / async-data ветках
+> **Resolution (2026-06-07).** Cross-cutting guard в `Component.setStyle()` ([component/index.ts:138](../../lib/component/index.ts#L138), resolved 2026-05-11) уже отключает Tailwind-классы при `config.unstyled === true`. Корневой класс Table идёт через `Table.setStyle` ([classBaseTable]) — guard применяется. Добавлен regression-тест `Table.test.ts` > «Issue 6 — unstyled» > `respects unstyled: true via Component.setStyle guard`.
+
+## ~~Issue 7: Тесты есть, но низкие coverage в edit-cells / async-data ветках~~ ✅ resolved 2026-06-07
 
 - **Категория:** J47 (Documentation / playground)
-- **Severity:** high
-- **Где:** [Table.test.ts](../../lib/table/Table.test.ts), coverage 85.93%/67.74%
+- **Severity:** ~~high~~ → resolved
+- **Где:** [Table.test.ts](../../lib/table/Table.test.ts), coverage было 85.93%/67.74%
+
+> **Resolution (2026-06-07).** `Table.test.ts` 91 → **110 кейсов** (+19). Branch coverage `Table.vue` **67.74% → 80.01%** (statements 92.57%), цель >80% достигнута. Покрыты непокрытые ветви: edit-cell editors (Input/Select/Calendar open → `@change`/`@update:model-value` → `updateCell` → `before`/`after-edit-cell`; `@is-active(false)` → `clearEditableCell`), `setCell` masks (phone/number/price) + `setCellValue`, `isEqualsValue` select(array+string)/number/date(Date+range), `setSummary` min/max/avg(string)/count(select)/sum(number)/max·min(date), loading-timeout ветви (`lengthData > countDataOnLoading` в sorting/filtering/searching), `clearFilter`, `column.onClick`, object-form configs (toolbar/sort/filter/grouping/pagination), styles-варианты (boolean+string activeRow/hoverRows/border, dimensions), per-mode striping, active-row. Tests-only — багов не выявлено.
 
 ### Что найдено
 
@@ -260,15 +310,18 @@ Coverage statements 85.93% — OK, но branch 67.74% — много untested у
 2. asyncData ветки: 4 режима (см. [components/table.md](../components/table.md)) — каждый требует test case.
 3. Целевой branch coverage > 80%.
 
-## Issue 8: ARIA — таблица без `<caption>`, headers без `scope`
+## ~~Issue 8: ARIA — таблица без `<caption>`, headers без `scope`~~ ✅ resolved 2026-06-07
 
 - **Категория:** E29.1 (ARIA-роли)
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 - **Где:** [Table.vue](../../lib/table/Table.vue) (table render)
+
+> **Resolution (2026-06-07).** `scope` уже присутствовал (аудит-текст устарел): `<th scope="col">` ([Table.vue:1832](../../lib/table/Table.vue#L1832)), group `<th scope="colgroup">` ([Table.vue:1932](../../lib/table/Table.vue#L1932)), tfoot `<th scope="col">` ([Table.vue:2089](../../lib/table/Table.vue#L2089)). Добавлен `<caption>`: новый prop `caption?: string` + slot `#caption`, рендерится как `sr-only` `<caption data-table-caption>` первым child `<table>` ([Table.vue](../../lib/table/Table.vue)). Тесты: `Table.test.ts` describe «Issue 8 — caption + scope» (4 кейса, включая scope-regression).
 
 ### Что найдено
 
 В шаблоне `<table>` рендерится через `<table>` теги, но нет:
+
 - `<caption>` для table-level описания (screen reader не объявляет назначение таблицы).
 - `<th scope="col">` атрибуты — без них screen reader может не связать заголовок со столбцом.
 - `aria-rowcount`, `aria-colcount` для виртуализации (когда добавим).
@@ -284,39 +337,80 @@ Coverage statements 85.93% — OK, но branch 67.74% — много untested у
 2. На каждом `<th>` добавить `scope="col"`.
 3. Для row headers (если есть) — `<th scope="row">`.
 
-## Issue 9: aria-live для filter/search/sort changes отсутствует
+## ~~Issue 9: aria-live для filter/search/sort changes отсутствует~~ ✅ resolved 2026-06-07
 
 - **Категория:** E29.5
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 
 См. [select.md Issue 8](./select.md). Аналогичный fix-план — `<div aria-live="polite">{{ resultsAnnouncement }}</div>` для «X rows shown after filter».
 
-## Issue 10: Floating UI для filter/edit popovers
+> **Resolution (2026-06-07).** Добавлен sr-only polite-регион `<div data-table-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>` первым child корня. `ariaResultsLabel` ([Table.vue](../../lib/table/Table.vue)) считает `lengthData` (отфильтрованный count) → новые locale-ключи `table.resultsCount` / `table.resultsCountOne` / `table.resultsCountNone` (en + ru + `TypesLocale.DefaultMessages`), с литеральным fallback (т.к. `Component.t()` возвращает сам ключ при отсутствии перевода). Тесты: `Table.test.ts` describe «Issue 9 — aria-live results announcement».
+
+## ~~Issue 10: Floating UI для filter/edit popovers~~ ✅ resolved 2026-06-11
 
 - **Категория:** H39
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 
-Filter UI и cell-editor popovers — потенциально через FixWindow. См. [calendar.md Issue 9](./calendar.md) — единый fix через `@floating-ui/vue`.
+Filter UI и cell-editor popovers — через FixWindow (in-house движок позиционирования — flip/shift/teleport/RTL placement; с 2026-06-14 собственный, без `@floating-ui/vue`). См. [calendar.md Issue 9](./calendar.md).
 
-## Issue 11: RTL — column resize, scroll direction
+> **Resolution (2026-06-11).** Без новых зависимостей — FixWindow уже давал scroll-aware позиционирование ([FixWindow.vue](../../lib/fixwindow/FixWindow.vue)), и cell-**редакторы** Select/Calendar уже плавали через него с `paramsFixWindow.scrollableEl: tableBody` ([Table.vue](../../lib/table/Table.vue)). Реальный gap был у **filter**-Select/Calendar: они спредили `column.paramsFilter` БЕЗ `scrollableEl`, поэтому их dropdown не трекал скролл-контейнер таблицы.
+>
+> - **Fix:** filter-`<Select>`/`<Calendar>` теперь мёржат `paramsFixWindow: { scrollableEl: tableBody, ...(column.paramsFilter?.paramsFixWindow) }` — зеркало редакторского паттерна. FixWindow позиционирует popover относительно `tableBody` (autoUpdate движка пересчитывает позицию на scroll). Per-column override (`paramsFilter.paramsFixWindow`, напр. `position`/`teleport`) **выигрывает** над дефолтом.
+> - **Editors** уже имели `scrollableEl` — паритет достигнут; teleport остаётся opt-in per-column (как у редакторов) — `<Table>` не навязывает его, чтобы не двигать popover из DOM-дерева по умолчанию.
+> - Тесты: `Table.test.ts` describe «Issue 10 — filter popovers via FixWindow» (3 кейса: filter Select/Calendar получают `scrollableEl`; per-column override побеждает).
+
+## ~~Issue 11: RTL — column resize, scroll direction~~ ✅ resolved 2026-06-11
 
 - **Категория:** F31
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 
-При `dir="rtl"` resize handle на «правой» стороне header'а оказывается слева. Scroll-shadow логика требует `inline-start/end` логических props.
+При `dir="rtl"` resize handle на «правой» стороне header'а оказывался слева.
 
-## Issue 12: prefers-reduced-motion + print + colors
+> **Resolution (2026-06-11).** RTL без новых зависимостей — движок уже понимает `rtl:`/`ltr:` (`specialStates` в [unoStatic.ts](../../lib/theme/unoStyle/unoStatic.ts#L555)) и логические `start`/`end`/`pe`/`ps` (`inset-inline-*` / `padding-inline-*`, [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts#L1502)):
+>
+> - **Resize-handle (CSS):** `pr-2` → `pe-2` (padding-inline-end, авто-флип по dir); inset `-right-3`/`right-3` → физический default (работает без `dir`-атрибута — `direction` дефолтит в ltr) + `rtl:`-override (`rtl:right-auto rtl:-left-3` / `rtl:left-3`), т.к. negative-логический inset (`-end-3`) движок не поддерживает (`start`/`end` regex без `negative`-группы). [classResizedColumns](../../lib/table/Table.vue).
+> - **Resize-математика (JS):** [`resizeColumn`](../../lib/table/Table.vue) детектит направление `getComputedStyle(columnEl).direction === "rtl"`: в RTL ширина считается от правого края (`rect.right - pageX`), в LTR — от левого (`pageX - rect.left`). Без нового prop — уважает ambient `dir`.
+> - **Group-label:** sticky-offset `left-10 sm:left-12` → `start-10 sm:start-12`; padding `pr-3 pl-10 sm:pl-12` → `pe-3 ps-10 sm:ps-12` (логические, авто-флип).
+> - **Scroll-shadow:** в Table отсутствует (нет sticky-теней по горизонтали — только нативный `overflow-x-auto`), отдельной логики не требуется. `overflow-x-auto` уважает `dir` нативно.
+> - Тесты: `Table.test.ts` describe «Issue 11 — RTL» (4 кейса: dir-aware handle-классы, resize-математика RTL + LTR-регресс, логический group-label).
+
+## ~~Issue 12: prefers-reduced-motion + print + colors~~ ✅ resolved 2026-06-11
 
 - **Категория:** E29.7, N59, B10
-- **Severity:** low
+- **Severity:** ~~low~~ → resolved
 
 Cross-cutting. См. [button.md](./button.md).
 
-## Issue 13: Источник sourcemaps при опубликованном пакете
+> **Resolution (2026-06-11).** Применён канон FishtVue (motion-safe, как Button/Menu/Select — без правок theme-движка: `unoStatic.ts` media уже содержит `motion-safe`/`print`/`forced-colors`):
+>
+> - **E29.7 (reduced-motion) ✅** — все `transition`/`transition-all`/`transition-opacity`/`transition-colors` + `duration-*` в [Table.vue](../../lib/table/Table.vue) переведены на `motion-safe:`-варианты: `animation`-токен (`styles.animation`), `classIsSort`, `classResizedColumns`, `classTr` (hover), inline `<transition>`-обёртки (clear-filter/loading/no-data/no-column/no-filter) и search-Input. Inline-классы шаблона не идут через computed → их `motion-safe:`-варианты зарегистрированы явно (`Table.setStyle("motion-safe:transition …")`). Под `prefers-reduced-motion: reduce` анимаций нет.
+> - **N59 (print) ✅** — `print:hidden` на loading-overlay (`classIsLoading`) и resize-handle (`classResizedColumns`): печатается читаемая таблица без интерактивного chrome.
+> - **B10 (forced-colors) ✅** — `forced-colors:outline` на active-row (`classTr`): выделение строки остаётся видимым в Windows high-contrast (где background-цвета подменяются OS).
+> - Тесты: `Table.test.ts` describe «Issue 12 — reduced-motion / print / forced-colors» (5 кейсов: 3 unit на `tailwind()`-генерацию media + 2 DOM/CSS). Остаётся low **D26** (отдельный пункт, вне motion/print/colors).
+>
+> **Дополнение (2026-07-05) — B10 структурные нейтрали закрыты.** Резолюция 2026-06-11 закрыла только forced-colors-механизм B10. Table оставалась в «residual»-списке Wave 9 ([theme.md Issue 10](./theme.md), [issues/README.md](./README.md) Wave 9) — структурные нейтрали (`gray-*`/`stone-*`/`neutral-*`) оставались хардкодом до появления семантического токена `surface` (23-й именованный цвет движка, дефолт — копия `gray`, [primitive.ts](../../lib/theme/primitive.ts)). Теперь мигрированы ~24 occurrences в [Table.vue](../../lib/table/Table.vue) — **family rename той же тональности**, без изменения числовых tone/opacity-суффиксов:
+>
+> - `styles.activeRow`/`hoverRows` default ([Table.vue:743](../../lib/table/Table.vue#L743)) — `bg-neutral-100/90 dark:bg-neutral-900/50` → `bg-surface-100/90 dark:bg-surface-900/50` (+ `hover:`-вариант).
+> - `defaultBorder` ([Table.vue:761-762](../../lib/table/Table.vue#L761-L762)) — `border-neutral-200 dark:border-neutral-800` → `border-surface-200 dark:border-surface-800`.
+> - `modeStyle` 3-way ternary ([Table.vue:773](../../lib/table/Table.vue#L773)) — `bg-stone-100 dark:bg-stone-900` / `bg-white dark:bg-neutral-950` / `bg-stone-50 dark:bg-stone-950` → `bg-surface-100 dark:bg-surface-900` / `bg-white dark:bg-surface-950` / `bg-surface-50 dark:bg-surface-950` (`bg-white` литерал не трогается — нет числового tone).
+> - `classIcon`/`classSortIcon` ([Table.vue:808](../../lib/table/Table.vue#L808)) — `text-gray-400 dark:text-gray-600` → `text-surface-400 dark:text-surface-600`.
+> - `classIconClearFilter` — тот же family rename для gray-часть; `group-hover:text-red-400 group-hover:dark:text-red-600` **осознанно не тронут** (semantic "danger" intent, отдельный vocabulary, вне scope B10).
+> - `classNotFilter`, `classThSummaryText`, `classBodySlotHeader`, `classSlotFooterBody`, `classIsLoading`, `classNoData` — `text-gray-400/500` → `text-surface-400/500` (несколько occurrences, идентичный паттерн).
+> - `classResize` ([Table.vue:905](../../lib/table/Table.vue#L905)) — `bg-neutral-300 dark:bg-neutral-600` → `bg-surface-300 dark:bg-surface-600`.
+> - `classGroup`/`classColumnTd` ([Table.vue:914](../../lib/table/Table.vue#L914)) — `text-gray-800 dark:text-gray-300` → `text-surface-800 dark:text-surface-300`.
+> - `classTr` zebra-striping 3-way ternary ([Table.vue:940](../../lib/table/Table.vue#L940)) — `odd:bg-stone-100 even:bg-stone-50 dark:odd:bg-stone-900 dark:even:bg-stone-950` / `odd:bg-white even:bg-neutral-50 dark:odd:bg-neutral-950 dark:even:bg-neutral-900` / `odd:bg-stone-50 even:bg-stone-100 dark:odd:bg-stone-950 dark:even:bg-neutral-900` → surface-эквиваленты (`odd:`/`even:` структура сохранена один-в-один).
+> - `classIsLoadingBody` (loading overlay, [Table.vue:1008](../../lib/table/Table.vue#L1008)) — `bg-neutral-100/70 dark:bg-neutral-800/50` → `bg-surface-100/70 dark:bg-surface-800/50` (opacity-суффиксы сохранены).
+> - Clear-filter button chrome ([Table.vue:1942](../../lib/table/Table.vue#L1942)) — отдельный occurrence `bg-stone-100 dark:bg-stone-900` → `bg-surface-100 dark:bg-surface-900`.
+>
+> Тесты: `Table.test.ts` describe «Table Component - B10 semantic surface tokens» (18 кейсов — по одному на каждый затронутый class-site + zebra-striping/modeStyle 3-way `it.each`), плюс regression-фикс в существующем «applies striped background for rows» (default zebra теперь `even:bg-surface-50`). Whole-file coverage: 141/141 green. Table теперь снята из «residual» Wave 9 (см. [issues/README.md](./README.md)).
+
+## ~~Issue 13: Источник sourcemaps при опубликованном пакете~~ ✅ resolved 2026-06-07
 
 - **Категория:** K51 (source maps)
-- **Severity:** high
+- **Severity:** ~~high~~ → resolved
 - **Где:** [lib/rollup.config.js:365](../../lib/rollup.config.js#L365)
+
+> **Resolution (2026-06-07).** В [lib/package.json](../../lib/package.json) добавлен `files`-whitelist, включающий `**/*.map` — он пробрасывается в `dist/package.json` через `addPackageJson()` и применяется относительно `dist/` при публикации (`@semantic-release/npm` → `pkgRoot: "dist"`). Проверено `npm pack --dry-run` из `dist/`: **174 `.mjs` + 174 парных `.mjs.map`** (1:1), sourcemaps теперь гарантированно в tarball. Контракт зафиксирован тестом [lib/package.test.ts](../../lib/package.test.ts) (`files` обязан содержать `**/*.map`).
 
 ### Что найдено
 
@@ -335,11 +429,13 @@ Sourcemaps генерируются ✅. Но `addPackageJson()` ([rollup.config
 2. Проверить `npm pack` → tarball содержит `.map` файлы.
 3. Документировать в `02-installation.md`.
 
-## Issue 14: Лишние файлы в опубликованном пакете
+## ~~Issue 14: Лишние файлы в опубликованном пакете~~ ✅ resolved 2026-06-07
 
 - **Категория:** K52
-- **Severity:** medium
+- **Severity:** ~~medium~~ → resolved
 - **Где:** [lib/rollup.config.js:528](../../lib/rollup.config.js#L528) (copyDependencies)
+
+> **Resolution (2026-06-07).** Двойная защита: (1) `files`-whitelist в [lib/package.json](../../lib/package.json) перечисляет только дистрибутивные паттерны (`**/*.mjs`, `**/*.map`, `**/*.d.ts`, `**/package.json`, README/LICENSE/CHANGELOG) — всё остальное в tarball не попадает; (2) `copyDependencies()` ([rollup.config.js](../../lib/rollup.config.js)) теперь пропускает любые `*.test.*` артефакты (`if (file.includes(".test.")) return`). Проверено `npm pack --dry-run`: **0** файлов `*.test.*`, **0** не-`.d.ts` `.ts`, **0** `.vue`, **0** sandbox/docs; tarball = 427 файлов / 2.14 MB.
 
 ### Что найдено
 
@@ -352,16 +448,16 @@ Sourcemaps генерируются ✅. Но `addPackageJson()` ([rollup.config
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Table` | ✅ | mode, asyncData, modePagination, и многое другое |
-| `componentsStyle` global | ✅ | через `Table.componentsStyle()` (Table.vue:110) |
-| `unstyled: true` | ❌ | Issue 6 |
-| Theme tokens vs hardcode | ⚠️ | через theme-* tokens частично, gray-* / red-* hardcode |
-| Runtime theme switch | ⚠️ | dark mode через colorSchemeQueryList (auto-detect) — игнорирует FishtVue darkModeSelector |
-| `t()` для текста | ⚠️ | частично — используется `Table.t()` для some strings |
-| Runtime locale switch | ⚠️ | те strings что через `t()` — реагируют |
+| Настройка                 | Поддержано? | Комментарий                                                                               |
+| ------------------------- | ----------- | ----------------------------------------------------------------------------------------- |
+| `componentsOptions.Table` | ✅          | mode, asyncData, modePagination, и многое другое                                          |
+| `componentsStyle` global  | ✅          | через `Table.componentsStyle()` (Table.vue:110)                                           |
+| `unstyled: true`          | ❌          | Issue 6                                                                                   |
+| Theme tokens vs hardcode  | ⚠️          | структурные нейтрали — semantic `surface` token (2026-07-05, B10); `red-*` hardcode остаётся (delete-icon danger-intent, осознанно вне scope) |
+| Runtime theme switch      | ⚠️          | dark mode через colorSchemeQueryList (auto-detect) — игнорирует FishtVue darkModeSelector |
+| `t()` для текста          | ⚠️          | частично — используется `Table.t()` для some strings                                      |
+| Runtime locale switch     | ⚠️          | те strings что через `t()` — реагируют                                                    |
 
-## Dual-API gap
+## Dual-API gap — ✅ resolved 2026-06-07
 
-См. [Issue 3](#issue-3-dual-api-gap-—-нет-compound-tablecolumn-api). Это **главная** dual-API задача FishtVue — Table обязан поддерживать compound `<Column>` для конкурентоспособности с AG Grid / Element Plus / Naive UI.
+См. [Issue 3](#issue-3-dual-api-gap--нет-compound-tablecolumn-api) (resolved). Главная dual-API задача FishtVue закрыта: Table поддерживает compound `<Column>`/`<ColumnGroup>` (+ `<Pagination>`/`<Loading>` overrides) параллельно schema-driven `:columns` — паритет с AG Grid / Element Plus / Naive UI / PrimeVue.

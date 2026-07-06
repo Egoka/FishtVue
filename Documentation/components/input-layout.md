@@ -1,7 +1,7 @@
 ---
 title: InputLayout
 summary: Контейнер-обёртка для form-controls — label, error, help, clear/copy кнопки.
-updated: 2026-05-09
+updated: 2026-07-05
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `InputLayout` — внутренняя обёртка для всех form-controls. Содержит `Label`, error-message, help-text, опциональные copy/clear-кнопки. Используется внутри [Input](./input.md), [Select](./select.md), [Calendar](./calendar.md), [TextEditor](./text-editor.md). `InputLayoutProps` — родительский тип для всех form-controls (через `Omit<InputLayoutProps, "value" | "isValue">`).
 
-Stability: `stable` — 24 кейса, coverage 89.91%.
+Stability: `stable` — 47 кейсов.
 
 Source: [Source](../../lib/inputlayout/InputLayout.vue), [InputLayout.d.ts](../../lib/inputlayout/InputLayout.d.ts), [InputLayout.test.ts](../../lib/inputlayout/InputLayout.test.ts).
 
@@ -22,7 +22,7 @@ Source: [Source](../../lib/inputlayout/InputLayout.vue), [InputLayout.d.ts](../.
 lib/inputlayout/
 ├── InputLayout.vue
 ├── InputLayout.d.ts        # 316 строк
-├── InputLayout.test.ts     # 24 кейса
+├── InputLayout.test.ts     # 47 кейсов
 └── package.json
 ```
 
@@ -30,28 +30,25 @@ lib/inputlayout/
 
 ## 3. How it works
 
-- **Lifecycle:** Component инжекция стилей; `onMounted` для `headerHeight = document.querySelector("header")?.offsetHeight` (для float-label позиционирования) и copy-handler.
+- **Lifecycle:** Component инжекция стилей; `onMounted` для `ResizeObserver`-инициализации (`beforeInput`/`afterInput`/`inputBody`) и резолва `headerHeight` через prop `offsetTop` (см. §5). `onUnmounted` дисконнектит все три observer'а — нет утечек.
 - **Поток данных:** props → computed states → slot rendering. `value`/`isValue` управляют отображением label dynamic states.
 - **Стили:** `InputLayout.setStyle()` интенсивно.
 - **Конфиг:** `componentsOptions.InputLayout` — см. §10.
-- **Локализация:** `InputLayout.t("clear")`, `InputLayout.t("copy")`.
-- **SSR:** `document.querySelector` в `onMounted` — guard'ится самим Vue lifecycle (server не вызывает `onMounted`). `navigator.clipboard.writeText` — только клиент.
-- **Animation:** CSS transitions ("transition-all duration-550", "transition ease-in duration-200").
+- **Локализация:** `InputLayout.t("clear")`, `InputLayout.t("copy")`, `InputLayout.t("inputLayout.copied")` (confirm после copy).
+- **SSR:** все DOM-доступы guard'ятся `isClient()`. `headerHeight` синхронно резолвится из `offsetTop` prop ещё до mount — без coupling с потребительской разметкой (`<header>`). `navigator.clipboard.writeText` — feature-detect + fallback на `document.execCommand("copy")` через скрытый `<textarea>`.
+- **Animation:** все transitions обёрнуты в `motion-safe:` (`motion-safe:transition-all motion-safe:duration-550` для root, `motion-safe:transition motion-safe:ease-in motion-safe:duration-200` для loading/clear `<transition>`-блоков) — при `prefers-reduced-motion: reduce` анимации отключаются. Inline-классы шаблона зарегистрированы явно через module-scope `InputLayout.setStyle`.
+- **Print / high-contrast:** style-for-print (`print:border print:bg-white print:text-black print:shadow-none` на `classBody` — печатается монохромным, не `display:none`); `forced-colors:outline` на поле (`classBase`) — граница видима в Windows high-contrast.
+- **Unstyled:** при `app.use(FishtVue, { unstyled: true })` корень `[data-input-layout]` и все вложенные классы пусты (cross-cutting guard `Component.setStyle()`).
 
 ## 4. Quick Start
 
 ```vue
 <script setup lang="ts">
-import InputLayout from "fishtvue/inputlayout"
+  import InputLayout from "fishtvue/inputlayout"
 </script>
 
 <template>
-  <InputLayout
-    :value="text"
-    label="Custom field"
-    :is-value="!!text"
-    :clear="true"
-    @clear="text = ''">
+  <InputLayout :value="text" label="Custom field" :is-value="!!text" :clear="true" @clear="text = ''">
     <input v-model="text" />
   </InputLayout>
 </template>
@@ -63,54 +60,58 @@ import InputLayout from "fishtvue/inputlayout"
 
 `InputLayoutProps`:
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `value` | `any` | — | Текущее значение (для отображения dynamic-label). **Обязателен**. |
-| `isValue` | `boolean` | — | Есть ли значение (для label-стейта). |
-| `mode` | `StyleMode` (`"filled" \| "outlined" \| "underlined"`) | — | Визуальный режим. |
-| `label` | `string` | — | Текст label. |
-| `labelMode` | `LabelMode` | — | Режим label (`dynamic`/`static`/...). |
-| `isInvalid` | `boolean` | — | Состояние ошибки. |
-| `messageInvalid` | `string` | — | Сообщение ошибки. |
-| `required` | `boolean` | — | Required-маркер. |
-| `loading` | `boolean` | — | Loading-индикатор. |
-| `disabled` | `boolean` | — | Disabled. |
-| `help` | `string` | — | Help-text. |
-| `clear` | `boolean` | — | Показать clear-кнопку. |
-| `width` / `height` | `TWidth` / `THeight` | — | Размеры. |
-| `animation` | `string` | `"transition-all duration-500"` | CSS animation. |
-| `classBody` | `StyleClass` | (preset) | Класс тела. |
-| `class` | `StyleClass` | — | Класс контейнера. |
+| Prop               | Type                                                   | Default                         | Description                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `value`            | `any`                                                  | —                               | Текущее значение (для отображения dynamic-label). **Обязателен**.                                                                                                                          |
+| `id`               | `string`                                               | (auto `useId()`)                | Id slotted-контрола. Если не передан — генерируется стабильный SSR-safe id. Прокидывается в default-слот (`scope.id`) и связывает `<label for>` / `aria-labelledby` (см. §12 A11y).        |
+| `isValue`          | `boolean`                                              | —                               | Есть ли значение (для label-стейта).                                                                                                                                                       |
+| `mode`             | `StyleMode` (`"filled" \| "outlined" \| "underlined"`) | —                               | Визуальный режим.                                                                                                                                                                          |
+| `label`            | `string`                                               | —                               | Текст label.                                                                                                                                                                               |
+| `labelMode`        | `LabelMode`                                            | —                               | Режим label (`dynamic`/`static`/...).                                                                                                                                                      |
+| `isInvalid`        | `boolean`                                              | —                               | Состояние ошибки.                                                                                                                                                                          |
+| `messageInvalid`   | `string`                                               | —                               | Сообщение ошибки.                                                                                                                                                                          |
+| `required`         | `boolean`                                              | —                               | Required-маркер.                                                                                                                                                                           |
+| `loading`          | `boolean`                                              | —                               | Loading-индикатор.                                                                                                                                                                         |
+| `disabled`         | `boolean`                                              | —                               | Disabled.                                                                                                                                                                                  |
+| `help`             | `string`                                               | —                               | Help-text.                                                                                                                                                                                 |
+| `clear`            | `boolean`                                              | —                               | Показать clear-кнопку.                                                                                                                                                                     |
+| `width` / `height` | `TWidth` / `THeight`                                   | —                               | Размеры.                                                                                                                                                                                   |
+| `animation`        | `string`                                               | `"transition-all duration-500"` | CSS animation.                                                                                                                                                                             |
+| `classBody`        | `StyleClass`                                           | (preset)                        | Класс тела.                                                                                                                                                                                |
+| `class`            | `StyleClass`                                           | —                               | Класс контейнера.                                                                                                                                                                          |
+| `offsetTop`        | `number \| string \| (() => number)`                   | `0`                             | Вертикальный offset для `scroll-margin-top` invalid-региона (sticky-header awareness). Заменил hardcoded `document.querySelector("header")` — потребитель явно передаёт значение / геттер. |
 
 ## 6. Events / Emits + v-model contract
 
-| Event | Payload | When fired |
-|---|---|---|
-| `clear` | — | На клик clear-кнопки. |
+| Event   | Payload | When fired            |
+| ------- | ------- | --------------------- |
+| `clear` | —       | На клик clear-кнопки. |
 
 v-model: не применимо — InputLayout не имеет собственного value, только отображает.
 
 ## 7. Slots
 
-| Slot | Slot props | Description |
-|---|---|---|
-| `default` | — | Сам input/select/calendar — основной element. |
-| `before` | — | Контент перед input. |
-| `after` | — | Контент после input. |
-| `body` | — | Полный override body (вместо default). |
+| Slot             | Slot props                            | Description                                                                                                                                                                                                                                                       |
+| ---------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default`        | `{ id: string; labelledby?: string }` | Сам input/select/calendar — основной element. `id` — стабильный id контрола (бинди на `id` → `<label for>` срабатывает); `labelledby` — id `<Label>` (или `undefined` без `label`), для non-labelable триггеров бинди на `aria-labelledby`.                       |
+| `before`         | —                                     | Контент перед input.                                                                                                                                                                                                                                              |
+| `after`          | —                                     | Контент после input.                                                                                                                                                                                                                                              |
+| `body`           | —                                     | Полный override body (вместо default).                                                                                                                                                                                                                            |
+| `help`           | —                                     | Override для содержимого help-tooltip'а. Если не передан — рендерится `help` prop как text-node (XSS-safe). См. §12 Security.                                                                                                                                     |
+| `messageInvalid` | —                                     | Override для содержимого error-tooltip'а (FixWindow). Если не передан — рендерится `messageInvalid` prop как text-node. Корневой `<p data-input-layout-message-invalid>` под input'ом всегда показывает `messageInvalid` текстом + имеет `aria-live="assertive"`. |
 
 ## 8. Exposed methods
 
 `InputLayoutExpose`:
 
-| Name | Type | Description |
-|---|---|---|
-| `input`, `inputBody`, `beforeInput`, `afterInput` | `HTMLElement \| undefined` | DOM-refs. |
-| `headerHeight` | `number` | Высота `<header>` (для расчёта float-label). |
-| `isCopy` | `boolean` | Состояние copy-confirmation. |
-| `beforeWidth`, `afterWidth` | `number \| null` | Ширины before/after слотов. |
-| `value`, `isValue`, `mode`, `label`, `labelMode`, `labelType`, `isRequired`, `isLoading`, `isDisabled`, `isInvalid`, `messageInvalid`, `help`, `width`, `height`, `animation`, `class`, `classBody` | derived | Computed. |
-| `copy()` | `() => void` | Копирует значение в clipboard. |
+| Name                                                                                                                                                                                                | Type                       | Description                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | -------------------------------------------- |
+| `input`, `inputBody`, `beforeInput`, `afterInput`                                                                                                                                                   | `HTMLElement \| undefined` | DOM-refs.                                    |
+| `headerHeight`                                                                                                                                                                                      | `number`                   | Высота `<header>` (для расчёта float-label). |
+| `isCopy`                                                                                                                                                                                            | `boolean`                  | Состояние copy-confirmation.                 |
+| `beforeWidth`, `afterWidth`                                                                                                                                                                         | `number \| null`           | Ширины before/after слотов.                  |
+| `value`, `isValue`, `mode`, `label`, `labelMode`, `labelType`, `isRequired`, `isLoading`, `isDisabled`, `isInvalid`, `messageInvalid`, `help`, `width`, `height`, `animation`, `class`, `classBody` | derived                    | Computed.                                    |
+| `copy()`                                                                                                                                                                                            | `() => void`               | Копирует значение в clipboard.               |
 
 ## 9. Examples
 
@@ -122,21 +123,18 @@ v-model: не применимо — InputLayout не имеет собстве�
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue"
-import InputLayout from "fishtvue/inputlayout"
+  import { ref } from "vue"
+  import InputLayout from "fishtvue/inputlayout"
 
-const value = ref("")
+  const value = ref("")
 </script>
 
 <template>
-  <InputLayout
-    :value="value"
-    :is-value="!!value"
-    label="Custom"
-    mode="outlined"
-    :clear="true"
-    @clear="value = ''">
-    <textarea v-model="value" rows="3" />
+  <InputLayout :value="value" :is-value="!!value" label="Custom" mode="outlined" :clear="true" @clear="value = ''">
+    <!-- scoped default slot отдаёт id (для <label for>) и labelledby (для aria-labelledby) -->
+    <template #default="{ id }">
+      <textarea :id="id" v-model="value" rows="3" />
+    </template>
   </InputLayout>
 </template>
 ```
@@ -168,7 +166,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`InputLayoutOption = Pick<InputLayoutProps, "mode" | "labelMode" | "clear" | "width" | "height" | "animation" | "classBody" | "class">`.
+`InputLayoutOption = Pick<InputLayoutProps, "mode" | "labelMode" | "clear" | "width" | "height" | "animation" | "classBody" | "class" | "offsetTop">`.
 
 ### 10.2 Per-instance
 
@@ -190,13 +188,16 @@ Root класс — `fv fishtvue-input-layout`.
 
 ### A11y
 
-- Связь Label ↔ input — управляется родительским form-control'ом (передаёт `id` в slot).
-- `aria-describedby` для error-message — реализация в шаблоне.
-- Clear/copy кнопки — `<button>` с tooltip через [FixWindow](./fix-window.md).
+- **Связь Label ↔ control (WCAG 1.3.1 / 3.3.2 / 4.1.2).** InputLayout — single source of truth: генерит стабильный id (`useId()`, либо `id` prop) и раздаёт его. `<Label :for-id="fieldId" :id="labelId">`, а default-слот scoped — `<slot :id="fieldId" :labelledby="labelId" />`. Потребитель биндит `scope.id` на контрол: для нативных `<input>`/`<textarea>` (Input/Aria) этого достаточно — клик по метке фокусирует контрол через `<label for>`. Для non-labelable триггеров (Select/Calendar/TextEditor `<div>`) дополнительно биндится `:aria-labelledby="scope.labelledby"` → screen reader озвучивает метку. См. [Issue 10 inputlayout.md](../issues/inputlayout.md).
+- **Error-region** `<p data-input-layout-message-invalid>` имеет `aria-live="assertive"` + `aria-atomic="true"` — screen reader озвучивает появление / изменение `messageInvalid` сразу.
+- Clear/copy кнопки — `<button>` с tooltip через [FixWindow](./fix-window.md). После успешного copy — confirm-icon с `aria-label` и FixWindow tooltip, локализованные через `InputLayout.t("inputLayout.copied")` (`"Copied"` / `"Скопировано"`).
+- **Reduced motion:** все transitions через `motion-safe:` — при `prefers-reduced-motion: reduce` поле и иконки не анимируются.
+- **Forced colors:** `forced-colors:outline` на поле сохраняет видимую границу в Windows high-contrast (где `border-*`/`bg-*` сбрасываются).
 
 ### Security
 
-- `navigator.clipboard.writeText(value)` — копирует значение в системный clipboard. Не используется для security-чувствительных данных по умолчанию (учитывай при работе с password).
+- **XSS-safe рендер `help` / `messageInvalid`.** Props рендерятся как text-node через `{{ }}`-интерполяцию (slot fallback `<span data-input-layout-help-text>` / `<span data-input-layout-message-invalid-text>`). HTML возможен **только** через явный `<template #help>` / `<template #messageInvalid>` — потребитель сам отвечает за санитизацию ввода (`DOMPurify` и т.п.). См. [Issue 1 inputlayout.md](../issues/inputlayout.md). Это закрывает cross-cutting XSS-канал во всех 5 form-controls (Input/Aria/Select/Calendar/TextEditor), которые пробрасывали server-validation HTML в `messageInvalid`.
+- **Clipboard.** `copy()` использует feature-detect (`navigator.clipboard.writeText`); при отсутствии API или TypeError (HTTP, iframe-sandbox, permission-denied) — fallback на `document.execCommand("copy")` через скрытый `<textarea>`. SSR-safe: операции guard'ятся `isClient()`. Не используется для security-чувствительных данных по умолчанию (учитывай при работе с password).
 
 ## 13. TypeScript
 
@@ -210,7 +211,7 @@ import InputLayout from "fishtvue/inputlayout"
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 24 кейса, coverage 89.91%.
+- **Stability flag:** `stable` — 47 кейсов.
 - **Breaking changes:** не зафиксировано.
 - **Deprecations:** нет.
 
@@ -233,17 +234,18 @@ describe("InputLayout", () => {
 })
 ```
 
-Реальные тесты — [InputLayout.test.ts](../../lib/inputlayout/InputLayout.test.ts) (24 кейса).
+Реальные тесты — [InputLayout.test.ts](../../lib/inputlayout/InputLayout.test.ts) (47 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
-| Проблема | Причина | Решение |
-|---|---|---|
-| Floating label не двигается | `value` не обновляется или `isValue: false`. | Передавай `:is-value="!!value"`. |
-| `headerHeight` всегда 0 | Нет `<header>` в DOM или вне body. | Не критично — используется только для специфичных layouts. |
-| Copy кнопка не копирует | Нет `navigator.clipboard` (HTTP, без HTTPS). | Используй на HTTPS или localhost. |
-| Stop showing tooltip | FixWindow обёртка в copy/clear иногда виснет на безопасных движениях. | Проверь [FixWindow](./fix-window.md) issues. |
-| Custom form-controls не используют style — только разметка | Body-slot не передан или default-slot пустой. | Передай `<input>`/`<textarea>` в default. |
+| Проблема                                                   | Причина                                                                                      | Решение                                                                                                                                                                                           |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Floating label не двигается                                | `value` не обновляется или `isValue: false`.                                                 | Передавай `:is-value="!!value"`.                                                                                                                                                                  |
+| `headerHeight` всегда 0                                    | Не передан `offsetTop` prop / опция.                                                         | Передай `:offset-top="80"` (или функцию `() => stickyHeader.offsetHeight`) — компонент больше не делает hardcoded поиск `<header>`.                                                               |
+| Copy кнопка не копирует                                    | Нет `navigator.clipboard` (HTTP без HTTPS) и `document.execCommand("copy")` тоже недоступен. | На HTTPS / localhost — работает clipboard API; на HTTP — fallback через `execCommand`; в SSR — no-op без падения. Если нужен custom-copy, override через `defineExpose`-метод компонента-обёртки. |
+| HTML внутри help / messageInvalid не рендерится            | По умолчанию props рендерятся как text (XSS-safe).                                           | Передай через slot: `<template #help><strong>...</strong></template>` (потребитель отвечает за санитизацию).                                                                                      |
+| Stop showing tooltip                                       | FixWindow обёртка в copy/clear иногда виснет на безопасных движениях.                        | Проверь [FixWindow](./fix-window.md) issues.                                                                                                                                                      |
+| Custom form-controls не используют style — только разметка | Body-slot не передан или default-slot пустой.                                                | Передай `<input>`/`<textarea>` в default.                                                                                                                                                         |
 
 ## 17. Related
 
@@ -254,11 +256,11 @@ describe("InputLayout", () => {
 
 ### TODO / FIXME / HACK / XXX
 
-На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) и [InputLayout.d.ts](../../lib/inputlayout/InputLayout.d.ts) не зафиксировано.
+На момент ревизии (2026-05-11) комментариев `TODO/FIXME/HACK/XXX` в [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) и [InputLayout.d.ts](../../lib/inputlayout/InputLayout.d.ts) не зафиксировано.
 
 ### Incomplete or stubbed behavior
 
-- Coverage 89.91% statements / 75.16% branch — ветви ([InputLayout.vue:198–199, 207, 221](../../lib/inputlayout/InputLayout.vue#L198-L199)) не покрыты.
+- Все numbered issues закрыты ([issues/inputlayout.md](../issues/inputlayout.md): Issues 1–8 ✅, включая Wave 9 residual — 2026-07-05). Структурные нейтрали (`gray-*`/`neutral-*`/`stone-*`/`slate-*`) мигрированы на semantic-токен `surface-*` (family rename, та же числовая тональность); `forced-colors:outline` (high-contrast видимость) добавлен ранее (2026-06-13). Semantic-intent цвета (help-icon `hover:text-yellow-500`, clear-icon `hover:text-red-600`/`hover:dark:text-red-500`, invalid-состояние `red-*`, copy-confirm `emerald-*`) не входили в scope миграции — не structural chrome.
 
 ### Skipped tests
 
@@ -273,10 +275,11 @@ describe("InputLayout", () => {
 
 ### Behavioral caveats
 
-- Copy-функционал использует `navigator.clipboard` — недоступно на HTTP (только HTTPS/localhost).
+- Copy-функционал использует `navigator.clipboard` с feature-detect; при недоступности (HTTP, iframe-sandbox, permission-denied) — fallback на `document.execCommand("copy")` через скрытый `<textarea>`. SSR — no-op без падения.
 - Tooltip'ы для copy/clear через [FixWindow](./fix-window.md) — наследуют все его SSR-проблемы (см. соответствующий документ).
-- `headerHeight` — расчёт через `document.querySelector("header")` — если приложение не имеет `<header>`, этот pollyfill даёт 0; не критично.
+- `headerHeight` резолвится из prop `offsetTop` (`number | string | () => number`) — без coupling с разметкой потребителя. По умолчанию `0`.
 - При `clear: true` без `default-slot` clear-кнопка появляется, но не имеет к чему привязаться.
+- Слоты `help` / `messageInvalid` рендерят пользовательский content «как есть» — потребитель отвечает за санитизацию (DOMPurify и т.п.) при передаче server-данных в slot.
 
 ### Bug report format
 

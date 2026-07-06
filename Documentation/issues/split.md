@@ -1,11 +1,11 @@
 ---
 title: Issues — Split
-summary: Аудит Split — beta stability (coverage 60%), document.body.classList мутация, отсутствие ARIA роли, persistence не SSR-safe.
-updated: 2026-05-10
+summary: Аудит Split. Закрыто 2026-06-06 — Issue 1 (body.classList → drag overlay), 2 (coverage 60→85% / 39→72% branch, 7→32 теста), 3 (dup initStyle снят Wave 2.3 + per-component sideEffects + unstyled regression), 4 (aria-orientation + aria-controls; role/valuenow уже были), 5 (keyboard resize), 6 (localStorage persistence реализована, isClient-guarded), 8 (touch уже через Pointer Events + motion-safe). Закрыто 2026-06-13 — A4-5 (inherited root exports map, Wave 2.1), F31 (RTL: dir-aware resize-математика + keyboard, без логических классов — Split не имеет физических left/right offset'ов), G34 (root-ref expose `resizableGroup` + `focus()`), B10 (resize-handle: forced-colors:outline + grip через preset-aware theme-* токен). Закрыто 2026-06-14 — follow-up к Issue 1: overlay (cursor-*-resize) залипал при release указателя вне компонента → drag завершается window-safety-net (`pointerup`/`pointercancel`) + идемпотентный `stopResizePanel`. Закрыто 2026-07-02 — Issue 11 (focus-ring разделителя: несуществующий shadcn-токен `ring-ring` → `ring-theme-600/700`). Закрыто 2026-07-05 — B10 residual: последняя структурная divider-линия (`bg-gray-200 dark:bg-gray-800`) мигрирована на `surface-*` (Wave 9, второй заход). Матрица 0/0/0/0. Numbered-issues и вся B10-часть для Split закрыты; файл остаётся active — историческая B10-заметка ниже уточнена (см. Issue 10).
+updated: 2026-07-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/split/
 related-doc: ../components/split.md
-stability: beta
+stability: stable
 ---
 
 # Issues — Split
@@ -13,17 +13,27 @@ stability: beta
 ## Сводка
 
 | Severity | Count | Categories |
-|---|---|---|
-| critical | 0 | — |
-| high | 5 | A2, A4-5, C13 (body.classList), C17, J46 (low coverage) |
-| medium | 5 | E29.1, E29.2 (keyboard), F31, G34, K46 (branch 39%) |
-| low | 3 | E29.7, B10, N57 |
+| -------- | ----- | ---------- |
+| critical | 0     | —          |
+| high     | 0     | —          |
+| medium   | 0     | —          |
+| low      | 0     | —          |
 
-## Issue 1: Мутация `document.body.classList` — global side-effect
+> Все numbered + matrix-категории закрыты (matrix `0/0/0/0`). B10 для Split закрыт полностью 2026-07-05 (resize-handle accent — 2026-06-13, структурная divider-линия — 2026-07-05, см. [scope note в Issue 10](#issue-10-b10--resize-handle-цвета-hardcode--tokens)) — это не значит, что библиотечная **Wave 9** миграция завершена целиком: Split был одним из 8 «residual»-компонентов второго захода, централизованный трекинг остальных — в [issues/README.md](./README.md). Файл остаётся в `active/` как исторический cross-cutting-трекер, зеркало [pagination.md](./pagination.md)/[form.md](./form.md)/[table.md](./table.md).
+
+## ~~Issue 1: Мутация `document.body.classList` — global side-effect~~ ✅ resolved 2026-06-06
 
 - **Категория:** C13 (утечка структуры)
-- **Severity:** high
-- **Где:** [Split.vue:525](../../lib/split/Split.vue#L525), [Split.vue:534](../../lib/split/Split.vue#L534), [Split.vue:558-559](../../lib/split/Split.vue#L558-L559)
+- **Severity:** ~~high~~
+- **Где (было):** Split.vue `startResizePanel` / `stopResizePanel` / `watch(activeCursorPanel)`
+- **Resolution:** курсор во время drag задаётся overlay-элементом `<div data-split-drag-overlay :class="classDragOverlay">` ([Split.vue:106-108](../../lib/split/Split.vue#L106-L108), [Split.vue:762](../../lib/split/Split.vue#L762)). Все три мутации `document.body.classList` и `watch(activeCursorPanel)` удалены. `classDragOverlay` (`fixed inset-0 z-[9999]` + `getStyleCursor(activeCursorPanel)`) реактивен и рендерится только при `isStartResize` → несколько Split на странице не конфликтуют, нет global state. Покрыто тестами «Issue 1 — drag overlay» (overlay появляется/исчезает + `document.body.classList` без `cursor-*`).
+
+### ~~Follow-up: overlay залипал при release вне компонента~~ ✅ resolved 2026-06-14
+
+- **Severity:** ~~high~~ (regression от overlay-подхода выше)
+- **Где (было):** Split.vue `stopResizePanel` висел исключительно на separator `@pointerup`/`@pointercancel`.
+- **Что найдено:** overlay гасится только когда `isStartResize → false` (это делает `stopResizePanel`). Если указатель уводили **за пределы компонента** и отпускали там, событие на separator не приходило (pointer capture не всегда доставляет `pointerup` обратно на handle — например при overlay поверх или non-HTMLElement target), `stopResizePanel` не вызывался → overlay `fixed inset-0` с `cursor-*-resize` залипал и блокировал весь сайт.
+- **Resolution:** на `startResizePanel` ставятся window-листенеры `pointerup`/`pointercancel` (safety-net), которые завершают drag независимо от места release; снимаются на stop и на `onUnmounted` ([startResizePanel/stopResizePanel — Split.vue:636-685](../../lib/split/Split.vue#L636-L685), teardown в `onUnmounted` — [Split.vue:182-189](../../lib/split/Split.vue#L182-L189)). `stopResizePanel` сделан идемпотентным (`if (!isStartResize.value) return`) — двойной вызов (separator + window при release внутри) не дублирует `emit`/`persistSizes`. Заодно `$event?.pointerId` → `$event.pointerId != null` (`pointerId === 0` — валидный id touch/pen). Покрыто блоком тестов «drag teardown on pointerup outside the component» (window `pointerup`/`pointercancel` гасит overlay; нет повторного `stop-resize-panel` на посторонний window `pointerup`).
 
 ### Что найдено
 
@@ -34,6 +44,7 @@ document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
 ```
 
 При drag-resize Split добавляет cursor-class к `document.body`. Это глобальное состояние:
+
 - Конфликт с пользовательскими classes на body.
 - При unmount во время active drag — class остаётся (resolved через onUnmounted? Нужно проверить ниже).
 - Конфликт с другими Split-компонентами на странице (двух split-панелей одновременно — race condition).
@@ -49,16 +60,17 @@ document.body.classList.remove(getStyleCursor(activeCursorPanel.value))
 
 ### Acceptance criteria
 
-- [ ] `document.body.classList` не модифицируется Split.
-- [ ] Two simultaneous Split с разной orientation работают без race.
+- [x] `document.body.classList` не модифицируется Split. ✅
+- [x] Two simultaneous Split с разной orientation работают без race (overlay локален для каждого instance). ✅
 
-## Issue 2: Coverage 60% statements / 39% branch — beta-stability
+## ~~Issue 2: Coverage 60% statements / 39% branch — beta-stability~~ ✅ resolved 2026-06-06
 
 - **Категория:** J46, K46
-- **Severity:** high
-- **Где:** [Split.test.ts](../../lib/split/Split.test.ts) (7 tests)
+- **Severity:** ~~high~~
+- **Где:** [Split.test.ts](../../lib/split/Split.test.ts) (7 → 32 tests)
+- **Resolution:** `Split.vue` coverage **60.48 → 85.19%** statements / **39.15 → 71.77%** branch. Добавлены тесты на: pointer-drag flow, min/max constraints, pixel vs percent units (включая default-size без явного `size`), horizontal/vertical, hidden/disabled панели, persistence save/restore, keyboard resize, ARIA, overlay, unstyled, motion-safe. Геометро-зависимые ветви (`resizePanel` math, `updatePanels` pixel-recalc) покрыты через mock `getBoundingClientRect`/`offsetWidth` и mock `ResizeObserver`. Branch ≥ 70% → переход beta → stable.
 
-### Что найдено
+### Что найдено (исторически)
 
 ```
 lib/split: 60.48 / 39.15 / 72.41 / 64.25
@@ -66,30 +78,25 @@ lib/split: 60.48 / 39.15 / 72.41 / 64.25
 
 Очень низкий branch coverage (39%). Основные ветви resize-логики, persistence, panels-API не покрыты.
 
-### Что нужно сделать
-
-1. Добавить тесты для:
-   - Resize handle drag (mousedown → mousemove → mouseup flow).
-   - Min/max size constraints.
-   - Persist save/restore.
-   - Hidden panels.
-   - Pixel vs percent units.
-   - Direction `horizontal` vs `vertical`.
-2. Целевой branch coverage > 70% для перехода beta → stable.
-
-## Issue 3: SSR styles + sideEffects/exports map / unstyled
+## ~~Issue 3: SSR styles + sideEffects/exports map / unstyled~~ ✅ resolved 2026-06-13
 
 См. [button.md Issue 1, 8, 9, 14](./button.md).
 
-## Issue 4: ARIA role="separator" + aria-controls для resize handle
+- ~~**C17 dup initStyle**~~ ✅ resolved 2026-06-06 — удалён ручной `Split.initStyle()` из `onMounted`; стиль инжектится только через `Component.__hooks()` (Wave 2.3, прогресс 13/22). Comment-marker канона — [Split.vue:167](../../lib/split/Split.vue#L167).
+- ~~**A2 sideEffects**~~ ✅ resolved 2026-06-06 — `"sideEffects": false` в [lib/split/package.json](../../lib/split/package.json) (в SFC нет `<style>`; precedent — Separator). Wave 2.1 per-component.
+- ~~**L53 unstyled**~~ ✅ resolved (cross-cutting Wave 3.1, [component/index.ts:138](../../lib/component/index.ts#L138)) — regression-тест «respects unstyled: true via Component.setStyle guard» в [Split.test.ts](../../lib/split/Split.test.ts).
+- ~~**A4-5 exports map**~~ ✅ resolved 2026-06-11 (inherited, Wave 2.1) — корневая `exports`-карта генерируется build-step'ом [`buildRootExports()`](../../lib/rollup.config.js); субпуть `fishtvue/split` (`./split` → `split.mjs` + `Split.d.ts`) входит в strict-superset карты (per-component задачи нет). Контракт — [lib/package.test.ts](../../lib/package.test.ts). См. [button.md Issue 9](./button.md), [table.md Issue 5](./table.md).
+
+## ~~Issue 4: ARIA role="separator" + aria-controls для resize handle~~ ✅ resolved 2026-06-06
 
 - **Категория:** E29.1
-- **Severity:** medium
-- **Где:** [Split.vue](../../lib/split/Split.vue) (resize handle render)
+- **Severity:** ~~medium~~
+- **Где:** [Split.vue:708-730](../../lib/split/Split.vue#L708-L730)
+- **Resolution:** `role="separator"`, `tabindex="0"`, `aria-valuenow`/`aria-valuemin`/`aria-valuemax` уже присутствовали; добавлены `:aria-orientation="direction"` и `:aria-controls="panelDomId(panel.name)"` (`panelDomId` через SSR-safe `useId()`, тот же `id` на `data-split-item` — [Split.vue:699](../../lib/split/Split.vue#L699)). `aria-valuenow` округляется (`Math.round`). Disabled-разделитель помечен `aria-disabled="true"` + `:aria-orientation` ([Split.vue:754-760](../../lib/split/Split.vue#L754-L760)). Покрыто блоком тестов «Issue 4 — ARIA on resize handle».
 
-### Что найдено
+### Что найдено (исторически)
 
-Resize handle (drag-bar between panels) — без `role="separator" aria-orientation="horizontal|vertical"`. Без `aria-valuenow`, `aria-valuemin`, `aria-valuemax`.
+Resize handle уже имел `role="separator"`, `tabindex`, `aria-valuenow/min/max`, но без `aria-orientation` и `aria-controls`.
 
 ### Что нужно сделать
 
@@ -103,19 +110,20 @@ Resize handle (drag-bar between panels) — без `role="separator" aria-orient
      :aria-valuemax="maxSize"
      :aria-controls="panelId"
      tabindex="0"
-     @keydown.left="..." @keydown.right="..."
-   />
+     @keydown.left="..."
+     @keydown.right="..." />
    ```
 
-## Issue 5: Keyboard navigation (стрелки для resize) отсутствует
+## ~~Issue 5: Keyboard navigation (стрелки для resize) отсутствует~~ ✅ resolved 2026-06-06
 
 - **Категория:** E29.2
-- **Severity:** medium
-- **Где:** [Split.vue](../../lib/split/Split.vue)
+- **Severity:** ~~medium~~
+- **Где:** [onSeparatorKeydown — Split.vue:479](../../lib/split/Split.vue#L479), [keyboardResize — Split.vue:454](../../lib/split/Split.vue#L454), handle `@keydown` — [Split.vue:730](../../lib/split/Split.vue#L730)
+- **Resolution:** на focused separator (`tabindex="0"`) добавлен `@keydown`. Direction-aware (как в Menu): horizontal — `ArrowRight`/`ArrowLeft`, vertical — `ArrowDown`/`ArrowUp`; шаг 10, с `Shift` — 50; `Home`/`End` — к минимуму/максимуму. `keyboardResize` переносит размер между смежными панелями с клампами min/max/0, эмитит `updated-panels` + `updated-size-panel` и вызывает `persistSizes()`. `preventDefault` на обрабатываемых клавишах. Покрыто блоком «Issue 5 — keyboard resize» (6 кейсов). Задокументировано в [components/split.md §12](../components/split.md).
 
-### Что найдено
+### Что найдено (исторически)
 
-Resize только через mouse drag. Keyboard-users не могут изменить размер панели.
+Resize только через pointer drag. Keyboard-users не могли изменить размер панели.
 
 ### Что нужно сделать
 
@@ -129,43 +137,70 @@ Resize только через mouse drag. Keyboard-users не могут изм
    ```
 2. Документировать в [components/split.md](../components/split.md) §12 A11y.
 
-## Issue 6: Persistence — `localStorage` без SSR guard
+## ~~Issue 6: Persistence — `localStorage` без SSR guard~~ ✅ resolved 2026-06-06
 
 - **Категория:** C14 + persistence
-- **Severity:** medium
-- **Где:** [Split.vue](../../lib/split/Split.vue) (persist logic)
+- **Severity:** ~~medium~~
+- **Где:** [storageKey/persistSizes/restoreSizes — Split.vue:422-451](../../lib/split/Split.vue#L422-L451)
+- **Resolution:** аудит показал, что persistence вообще **не была реализована** — `autoSaveName` рендерился лишь как `:data-name`, а docs/JSDoc обещали `localStorage["fv-split-{key}"]` (documentation lie). Persistence реализована полностью и сразу SSR-safe: `persistSizes()` (запись `JSON.stringify(sizePanels)` на конец resize — pointer и keyboard) и `restoreSizes()` (чтение + парс + валидация `typeof v === "number" && v >= 0` + кламп по min/max, вызов в `onMounted` **до** `updatePanels`) обёрнуты в `isClient() && props.autoSaveName` + `try/catch`. На SSR — no-op. Повреждённые данные игнорируются. JSDoc `autoSaveName` обновлён ([Split.d.ts:116-122](../../lib/split/Split.d.ts#L116-L122)). Покрыто блоком «Issue 6 — localStorage persistence» (save / restore / clamp / no-autoSaveName / malformed).
 
-### Что найдено
+### Что найдено (исторически)
 
-Если Split persist'ится через localStorage — на SSR `localStorage` undefined → крэш. Нужно проверить наличие `if (isClient())` guards.
+`autoSaveName` присутствовал в `SplitProps`, но никакого `localStorage` в `lib/split` не было — feature отсутствовала, при этом документация её обещала.
 
-### Что нужно сделать
-
-Audit persist save/restore через `isClient()` или `typeof localStorage !== "undefined"`.
-
-## Issue 7: RTL для horizontal direction
+## ~~Issue 7: RTL для horizontal direction~~ ✅ resolved 2026-06-13
 
 - **Категория:** F31
-
-В RTL «left panel» становится «right panel». `cursor: ew-resize` симметричен, OK. Но порядок панелей может ожидаться зеркальным.
+- **Severity:** ~~medium~~
+- **Где:** [isRtlHorizontal — Split.vue:412](../../lib/split/Split.vue#L412), [resizePanel — Split.vue:564-569](../../lib/split/Split.vue#L564-L569), [onSeparatorKeydown — Split.vue:479-488](../../lib/split/Split.vue#L479-L488)
+- **Resolution:** у Split нет физических `left/right` / `pl/pr` / `ml/mr` offset'ов (после-псевдоэлемент центрируется `left-1/2 -translate-x-1/2` — симметрично; вертикальный вариант `inset-y-0` / full-width — тоже симметричны), поэтому логические-классы менять не пришлось — баг был только в **пиксельной resize-математике**. Введён `isRtlHorizontal()` ([Split.vue:412](../../lib/split/Split.vue#L412), `getComputedStyle(resizableGroup).direction === "rtl"`, client-only; зеркало [table.md Issue 11](./table.md)). В RTL: pointer-`addedDistance` считается от **левого** края панели (`panel.x - clientX` вместо `clientX - panel.x - width`), а стрелки инвертируются (`ArrowLeft` растит ведущую панель, `ArrowRight` ужимает); vertical не зависит от dir. Покрыто блоком тестов «F31 — RTL» (keyboard-инверсия + pointer-математика через mock `getComputedStyle`).
 
 ## Issue 8: prefers-reduced-motion / mobile touch
 
 - **Категория:** E29.7, N57
 
-Drag-resize на mobile: нужны touch-event handlers (touchstart, touchmove, touchend). Сейчас только mouse. Mobile users не могут resize.
+- ~~**N57 touch**~~ ✅ resolved 2026-06-06 (уже было) — resize реализован через **Pointer Events** (`pointerdown/move/up/cancel/out` + `setPointerCapture` + window-safety-net на release вне компонента, [Split.vue:636-685](../../lib/split/Split.vue#L636-L685)), что покрывает mouse + touch + pen; `touch-none` на разделителе ([Split.vue:83](../../lib/split/Split.vue#L83)) предотвращает scroll-конфликт. Исходное утверждение «только mouse» было неверным. Покрыто существующим pointer-drag тестом.
+- ~~**E29.7 reduced-motion**~~ ✅ resolved 2026-06-06 — `transition-all` корня → `motion-safe:transition-all` ([Split.vue:98](../../lib/split/Split.vue#L98)); `transition-opacity duration-500` иконки разделителя → `motion-safe:` ([Split.vue:92](../../lib/split/Split.vue#L92)). Regression-тест «wraps root transition in motion-safe:». Зеркалит [done/button.md Issue 10](./done/button.md).
 
-См. [button.md Issue 10](./button.md) для motion.
+## ~~Issue 9: G34 — root-ref expose~~ ✅ resolved 2026-06-13
+
+- **Категория:** G34
+- **Severity:** ~~medium~~
+- **Где:** [focus — Split.vue:141-144](../../lib/split/Split.vue#L141-L144), [defineExpose — Split.vue:164](../../lib/split/Split.vue#L164), [SplitExpose.focus — Split.d.ts:290](../../lib/split/Split.d.ts#L290)
+- **Resolution:** корневой DOM-узел уже экспонировался как `resizableGroup` (root `<div data-split>`); добавлен метод `focus()` — переводит фокус на первый resize handle (`[data-split-separator]`, `tabindex=0`), no-op на SSR / до mount. Зеркало Button `buttonRef`+`focus()` / Pagination `paginationRef`+`focus()` / Form `formElement`. Типизирован в `SplitExpose`. Покрыто тестом «G34 — exposes the root element and a focus() method».
+
+## ~~Issue 10: B10 — resize-handle цвета (hardcode → tokens)~~ ✅ resolved 2026-06-13, divider-часть ✅ 2026-07-05
+
+- **Категория:** B10
+- **Severity:** ~~low~~
+- **Где:** [separatorClass — Split.vue:80-90](../../lib/split/Split.vue#L80-L90), [grip-стили — Split.vue:129-137](../../lib/split/Split.vue#L129-L137), [icon — Split.vue:752](../../lib/split/Split.vue#L752)
+- **Resolution (canon-safe, без правок theme-движка):** (1) **forced-colors** — `forced-colors:outline` на базовом классе разделителя ([Split.vue:83](../../lib/split/Split.vue#L83)) сохраняет его видимым в Windows high-contrast (где `bg-*` сбрасывается); зеркало [table.md Issue 12](./table.md) / [pagination.md Issue 8](./pagination.md). (2) **preset-aware токен** — грип-акцент (`classSeparatorStripStyle` / `classSeparatorIcon` / `classSeparatorHexagonStyle` + custom-icon) переведён с hardcode `bg-neutral-300 dark:bg-neutral-600` / `text-gray-500` на динамический `bg-theme-300 dark:bg-theme-700` / `text-theme-500` (`theme` — единственный preset-управляемый цвет через `var(--theme)`, см. [architecture/theme.md §10.3](../architecture/theme.md)). Покрыто блоком тестов «B10 — resize-handle colors».
+- ~~**Структурная 1px-линия разделителя остаётся нейтральной (`bg-gray-200`) — это divider, не акцент.**~~ ✅ resolved 2026-07-05 — divider-линия мигрирована на именованный semantic-цвет `surface` (23-й named color в [primitive.ts](../../lib/theme/primitive.ts), по умолчанию точная копия `gray`-шкалы, включён в `namesColors` union — [Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)) с сохранением тех же числовых tone: `bg-gray-200 dark:bg-gray-800` → `bg-surface-200 dark:bg-surface-800` ([separatorClass — Split.vue:83](../../lib/split/Split.vue#L83), потребляется и на активном `[data-split-separator]`, и на `classSeparatorDisabled` — оба берут базовый `separatorClass`). Family rename, не value change: `surface` дефолтно равен `gray` 1-в-1, визуального отличия нет до кастомизации палитры через `updateSurfacePalette()`. Regression-тесты — [Split.test.ts](../../lib/split/Split.test.ts), describe «Theming — semantic surface tokens on the divider line, not hardcoded gray-* (B10)» (2 кейса: активный + disabled separator).
+- **Примечание:** это был последний open B10-пункт для Split — resize-handle accent (theme-*, 2026-06-13) + структурный divider (surface-*, 2026-07-05) закрывают B10 полностью для этого компонента. Split входил в «residual»-batch из 8 компонентов (наряду с Pagination/Table/Switch/Badge/InputLayout/FixWindow/Dialog), ранее закрывших номерной B10 только через `forced-colors` + theme-accent и сознательно оставивших структурные нейтрали до этого захода — см. [theme.md Issue 1](./theme.md) / Wave 9 и централизованный трекинг в [issues/README.md](./README.md). Библиотечная Wave 9 **в целом не завершена** — миграция остальных residual-компонентов и отдельный Alert severity-color эпик вне scope этого файла.
+
+## ~~Issue 11: `focus-visible:ring-ring` — несуществующий токен в focus-стиле разделителя~~ ✅ resolved 2026-07-02
+
+- **Категория:** correctness (styling) / a11y
+- **Severity:** ~~medium~~ → resolved
+- **Где (was):** [separatorClass — Split.vue:85](../../lib/split/Split.vue#L85)
+
+### Что найдено
+
+`focus-visible:ring-ring` — copy-paste из shadcn-пресета (semantic-токен `ring`, которого в палитре FishtVue нет). Движок не генерировал для него валидного цвета: до fail-closed — мусорное правило `{ undefined }` в Split-теге, после (uno-engine.md Issue 1) — drop с dev-warn. Итог: keyboard-focus разделителя показывал ring **без цвета** (fallback `--fv-ring-color`), а не осмысленный акцент. Вскрыто sandbox-корпусным диффом волны 1 uno-движка.
+
+### Что сделано
+
+Замена на focus-идиому проекта ([Input.vue:171](../../lib/input/Input.vue#L171), [TextEditor.vue:175](../../lib/texteditor/TextEditor.vue#L175)): `focus-visible:ring-theme-600 dark:focus-visible:ring-theme-700` ([Split.vue:86](../../lib/split/Split.vue#L86)) — preset-aware `theme`-токен, согласован с B10-резолюцией (Issue 10). Regression-тест — [Split.test.ts](../../lib/split/Split.test.ts) («не использует несуществующий ring-ring»).
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Split` | ✅ | direction, panels, persistence |
-| `componentsStyle` global | ❌ | Split не имеет mode-enum |
-| `unstyled: true` | ❌ | Issue 3 |
-| Theme tokens vs hardcode | ⚠️ | resize-handle цвета через theme-* |
-| `t()` для текста | N/A | контент через slot |
+| Настройка                 | Поддержано? | Комментарий                        |
+| ------------------------- | ----------- | ---------------------------------- |
+| `componentsOptions.Split` | ✅          | direction, panels, persistence     |
+| `componentsStyle` global  | ❌          | Split не имеет mode-enum           |
+| `unstyled: true`          | ✅          | Issue 3 — cross-cutting `Component.setStyle()` guard (Wave 3.1) |
+| Theme tokens vs hardcode  | ✅          | B10 — грип через preset-aware `theme-*` + `forced-colors:outline` (2026-06-13); структурная divider-линия — `surface-*` (2026-07-05, Wave 9 residual, [theme.md Issue 1](./theme.md)) |
+| `t()` для текста          | N/A         | контент через slot                 |
 
 ## Dual-API gap
 

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, unref, useSlots, watch } from "vue"
+  import { Comment, Fragment, Text, computed, onBeforeUnmount, onMounted, ref, unref, useSlots, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
+  import { getActiveLocale } from "fishtvue/config"
   import type { BaseDataItem, IDataItem, SelectEmits, SelectProps } from "./Select"
   import type { FixWindowExpose } from "fishtvue/fixwindow"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import * as LD from "lodash-es"
-  import gsap from "gsap"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Input from "fishtvue/input/Input.vue"
   import Badge from "fishtvue/badge/Badge.vue"
@@ -29,6 +29,86 @@
   })
   const emit = defineEmits<SelectEmits>()
   const slots = useSlots()
+  // ---COMPOUND API (Issue 3) -------------
+  // Параллельный декларативный API `<Select><SelectOption>`/`<SelectGroup>` поверх schema-driven
+  // `:data-select`. Механизм — VNode-walk `slots.default()` в computed (зеркало Form.vue): renderless-дети
+  // не регистрируются в рантайме, родитель читает их VNode-дерево. Schema-driven `dataSelect` выигрывает.
+  type CompoundMeta = { disabled: boolean; group: string | null }
+  function compoundNormalize(raw: unknown): Array<any> {
+    if (raw === null || raw === undefined) return []
+    return Array.isArray(raw) ? raw : [raw]
+  }
+  function isVNodeNamed(vn: any, nameComponent: string): boolean {
+    const t = vn?.type
+    return !!t && (t?.name === nameComponent || t?.__name === nameComponent)
+  }
+  function compoundFlatten(nodes: Array<any>): Array<any> {
+    const out: Array<any> = []
+    for (const n of nodes) {
+      if (n === null || n === undefined || typeof n !== "object") continue
+      if (n.type === Comment || n.type === Text) continue
+      if (n.type === Fragment) out.push(...compoundFlatten(compoundNormalize(n.children)))
+      else out.push(n)
+    }
+    return out
+  }
+  function compoundChildren(vn: any): Array<any> {
+    const def = vn?.children?.default
+    return typeof def === "function" ? compoundNormalize(def()) : []
+  }
+  // Текст из default-slot опции — fallback-label, если нет prop `label`.
+  function compoundOptionText(vn: any): string {
+    const def = vn?.children?.default
+    if (typeof def !== "function") return ""
+    let text = ""
+    for (const k of compoundNormalize(def())) {
+      if (typeof k === "string") text += k
+      else if (k && typeof k === "object") {
+        if (k.type === Text) text += String(k.children ?? "")
+        else if (typeof k.children === "string") text += k.children
+      }
+    }
+    return text.trim()
+  }
+  const compoundParsed = computed<{
+    items: Array<Record<string, any>>
+    meta: Map<any, CompoundMeta>
+    hasGroups: boolean
+  }>(() => {
+    const raw = typeof slots.default === "function" ? slots.default() : undefined
+    const top = compoundFlatten(compoundNormalize(raw))
+    const items: Array<Record<string, any>> = []
+    const meta = new Map<any, CompoundMeta>()
+    let hasGroups = false
+    const pushOption = (vn: any, group: string | null) => {
+      const p = (vn?.props ?? {}) as Record<string, any>
+      if (!("value" in p)) return
+      const value = p.value
+      const label = p.label != null ? String(p.label) : compoundOptionText(vn) || String(value)
+      items.push({ id: value, value: label })
+      meta.set(value, { disabled: p.disabled === "" || p.disabled === true, group })
+    }
+    for (const vn of top) {
+      if (isVNodeNamed(vn, "SelectOption")) pushOption(vn, null)
+      else if (isVNodeNamed(vn, "SelectGroup")) {
+        hasGroups = true
+        const label = String(vn?.props?.label ?? vn?.props?.title ?? "")
+        for (const child of compoundFlatten(compoundChildren(vn)))
+          if (isVNodeNamed(child, "SelectOption")) pushOption(child, label)
+      }
+    }
+    return { items, meta, hasGroups }
+  })
+  // schema-driven `dataSelect` выигрывает (даже пустой массив = явный выбор); иначе — compound-опции.
+  const schemaActive = computed<boolean>(() => {
+    const s = unref(props?.dataSelect)
+    return s !== undefined && s !== null
+  })
+  const sourceData = computed<Array<BaseDataItem>>(() =>
+    schemaActive.value
+      ? ((unref(props?.dataSelect) ?? []) as Array<BaseDataItem>)
+      : (compoundParsed.value.items as Array<BaseDataItem>)
+  )
   // ---REF-LINK----------------------------
   const layout = ref<InputLayoutExpose>()
   const selectListWindow = ref<FixWindowExpose>()
@@ -39,6 +119,9 @@
   // ---STATE-------------------------------
   const isFocus = ref<boolean>(false)
   const activeItem = ref<number>(0)
+  // typeahead-буфер для first-char навигации по listbox (Wave 4.3)
+  let typeaheadBuffer = ""
+  let typeaheadTimer: ReturnType<typeof setTimeout> | undefined
   const query = ref<string>("")
   const isOpenList = ref<boolean>(false)
   const classLayout = ref<SelectProps["class"]>()
@@ -57,7 +140,7 @@
     return keySelect.value ? visibleValue.value.map((item) => item[keySelect.value ?? ""]) : []
   })
   const keySelect = computed<NonNullable<SelectProps["keySelect"]>>(() => {
-    const data = unref(props?.dataSelect) ?? []
+    const data = sourceData.value ?? []
     return data && data.length
       ? typeof data[0] === "object"
         ? props?.keySelect && Object.keys(data[0]).includes(props.keySelect)
@@ -67,7 +150,7 @@
       : "id"
   })
   const valueSelect = computed<SelectProps["valueSelect"] | null>(() => {
-    const dataSelectValue = unref(props?.dataSelect)
+    const dataSelectValue = sourceData.value
     if (dataSelectValue && dataSelectValue.length) {
       if (typeof dataSelectValue[0] === "object") {
         if (props?.valueSelect && Object.keys(dataSelectValue[0]).includes(props.valueSelect)) {
@@ -83,7 +166,7 @@
     }
   })
   const dataSelect = computed<Array<BaseDataItem>>(() => {
-    const dataSelectValue = unref(props?.dataSelect) as Array<IDataItem> | undefined
+    const dataSelectValue = sourceData.value as Array<IDataItem> | undefined
     return !!keySelect.value && !!valueSelect.value
       ? (dataSelectValue ?? []).map((item) => ({
           [keySelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[keySelect.value ?? ""] : item,
@@ -94,7 +177,9 @@
   const autoFocus = computed<NonNullable<SelectProps["autoFocus"]>>(
     () => props?.autoFocus ?? options?.autoFocus ?? false
   )
-  const mode = computed<NonNullable<SelectProps["mode"]>>(() => (props.mode as SelectProps["mode"]) ?? "outlined")
+  const mode = computed<NonNullable<SelectProps["mode"]>>(
+    () => (props.mode as SelectProps["mode"]) ?? options?.mode ?? Select.componentsStyle() ?? "outlined"
+  )
   const isDisabled = computed<NonNullable<SelectProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<SelectProps["loading"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<SelectProps["isInvalid"]>>(() => props.isInvalid ?? false)
@@ -117,27 +202,104 @@
   const classMaskQuery = computed<NonNullable<SelectProps["classMaskQuery"]>>(() =>
     Select.setStyle(props?.classMaskQuery ?? options?.classMaskQuery ?? "font-bold text-theme-700 dark:text-theme-300")
   )
-  const dataList = computed(() => {
-    if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
-      return LD.map(
-        LD.filter(dataSelect.value, (item) =>
-          String(typeof item === "object" ? item[valueSelect.value as string] : item)
-            .toLowerCase()
-            .includes(query.value.toLowerCase())
-        ),
-        (item: any) => {
-          item.marker = query.value.length
-            ? String(item[valueSelect.value as string]).replace(
-                new RegExp(query.value, "gi"),
-                `<span class="${classMaskQuery.value}">$&</span>`
-              )
-            : String(item[valueSelect.value as string])
-          return item
-        }
-      )
-    } else {
-      return dataSelect.value ?? []
+  // ---ISSUE 10 — Intl.Collator (locale-aware, diacritic-insensitive substring search) ---
+  const collator = computed(
+    () => new Intl.Collator(getActiveLocale() ?? "en", { sensitivity: "base", usage: "search" })
+  )
+  function matchesQuery(itemValue: string, q: string): boolean {
+    if (!q) return true
+    const hay = String(itemValue)
+    const needle = q
+    if (needle.length > hay.length) return false
+    const c = collator.value
+    for (let i = 0; i <= hay.length - needle.length; i++) {
+      if (c.compare(hay.slice(i, i + needle.length), needle) === 0) return true
     }
+    return false
+  }
+  // ---ISSUE 1 — deprecation warning for `marker` field (XSS surface removed) ---
+  const __markerWarnedItems = new WeakSet<object>()
+  function warnDeprecatedMarker(item: unknown): void {
+    if (!item || typeof item !== "object") return
+    const obj = item as Record<string, unknown>
+    if (!Object.prototype.hasOwnProperty.call(obj, "marker")) return
+    if (__markerWarnedItems.has(obj)) return
+    __markerWarnedItems.add(obj)
+
+    console.warn(
+      "[FishtVue Select] `IDataItem.marker` is deprecated since 2026-05-11 — the field is ignored to prevent XSS. " +
+        "Use the `#marker` scoped slot to customise substring highlighting."
+    )
+  }
+  const dataList = computed<any[]>(() => {
+    if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
+      return LD.filter(dataSelect.value, (item) => {
+        if (typeof item === "object" && item) warnDeprecatedMarker(item)
+        const raw = typeof item === "object" ? (item as IDataItem)[valueSelect.value as string] : item
+        return matchesQuery(String(raw), query.value)
+      }) as any[]
+    }
+    if (dataSelect.value?.length) {
+      for (const item of dataSelect.value) {
+        if (typeof item === "object" && item) warnDeprecatedMarker(item)
+      }
+    }
+    return (dataSelect.value ?? []) as any[]
+  })
+  // ---ISSUE 1 — safe substring highlight helper (replaces v-html marker assembly) ---
+  type MarkerPart = { text: string; mark: boolean }
+  function splitByQuery(text: string, q: string): MarkerPart[] {
+    const hay = String(text ?? "")
+    if (!q || !hay) return hay ? [{ text: hay, mark: false }] : []
+    const needle = q
+    if (needle.length > hay.length) return [{ text: hay, mark: false }]
+    const c = collator.value
+    const parts: MarkerPart[] = []
+    let cursor = 0
+    let i = 0
+    while (i <= hay.length - needle.length) {
+      if (c.compare(hay.slice(i, i + needle.length), needle) === 0) {
+        if (i > cursor) parts.push({ text: hay.slice(cursor, i), mark: false })
+        parts.push({ text: hay.slice(i, i + needle.length), mark: true })
+        cursor = i + needle.length
+        i = cursor
+      } else {
+        i += 1
+      }
+    }
+    if (cursor < hay.length) parts.push({ text: hay.slice(cursor), mark: false })
+    return parts
+  }
+  function markerParts(item: any): MarkerPart[] {
+    const raw = typeof item === "object" && valueSelect.value ? item[valueSelect.value as string] : item
+    return splitByQuery(String(raw ?? ""), query.value)
+  }
+  // ---ISSUE 3 — render-rows: вставляет non-selectable group-headers между опциями + несёт disabled-флаг.
+  // `index` сохраняет позицию в `dataList` (Enter выбирает dataList[activeItem]); headers исключены из
+  // selectable-списка (отдельный data-attr), keyboard-nav таргетит `[data-select-list-item]`.
+  type RenderRow = { type: "group"; label: string } | { type: "option"; item: any; index: number; disabled: boolean }
+  function isOptionDisabled(item: any): boolean {
+    if (schemaActive.value) return false
+    return !!compoundParsed.value.meta.get(item?.[keySelect.value ?? ""])?.disabled
+  }
+  const renderRows = computed<RenderRow[]>(() => {
+    const rows: RenderRow[] = []
+    const useMeta = !schemaActive.value
+    const meta = compoundParsed.value.meta
+    const showGroups = useMeta && compoundParsed.value.hasGroups
+    let lastGroup: string | null | undefined = undefined
+    dataList.value.forEach((item: any, index: number) => {
+      const m = useMeta ? meta.get(item?.[keySelect.value ?? ""]) : undefined
+      if (showGroups) {
+        const g = m?.group ?? null
+        if (g !== lastGroup) {
+          if (g) rows.push({ type: "group", label: g })
+          lastGroup = g
+        }
+      }
+      rows.push({ type: "option", item, index, disabled: !!m?.disabled })
+    })
+    return rows
   })
   const paramsFixWindow = computed<NonNullable<SelectProps["paramsFixWindow"]>>(() => ({
     position: "bottom-left",
@@ -148,10 +310,13 @@
     ...props?.paramsFixWindow
   }))
   const labelInput = computed(() => Select.t("find") ?? "Find...")
-  Select.setStyle(`transition ease-in-out duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`)
+  Select.setStyle(
+    `motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`
+  )
   const classBase = computed<SelectProps["classSelect"]>(() => {
     return Select.setStyle([
       "selectBody w-46 min-h-[36px] max-h-16 focus:outline-0 focus:ring-0",
+      "print:bg-white print:text-black print:shadow-none",
       options?.classSelect ?? "",
       props?.classSelect ?? "",
       "classSelect flex overflow-auto cursor-pointer"
@@ -159,13 +324,13 @@
   })
   const classSelectList = computed<SelectProps["classSelectList"]>(() =>
     Select.setStyle([
-      "min-w-[10rem] mt-1 max-h-60 transition-all",
+      "min-w-[10rem] mt-1 max-h-60 motion-safe:transition-all",
       "text-base rounded-md ring-1 ring-black/5 shadow-xl focus:outline-none sm:text-sm",
-      mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-black" : "",
+      mode.value === "outlined" ? "border border-surface-300 dark:border-surface-600 bg-white dark:bg-black" : "",
       mode.value === "underlined"
-        ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
+        ? "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b bg-surface-50 dark:bg-surface-950"
         : "",
-      mode.value === "filled" ? "border-0 bg-stone-100 dark:bg-stone-900" : "",
+      mode.value === "filled" ? "border-0 bg-surface-100 dark:bg-surface-900" : "",
       options?.classSelectList ?? "",
       props?.classSelectList ?? "",
       "classSelectList overflow-auto"
@@ -176,19 +341,20 @@
   )
   const classSelectContent = ref(Select.setStyle("flex items-center flex-wrap"))
   const classSelectItem = ref(Select.setStyle("z-1"))
-  const classDataListNoData = ref(Select.setStyle("h-9 px-4 text-sm text-gray-500"))
-  const classNoData = ref(Select.setStyle("p-4 text-sm text-gray-500"))
+  const classDataListNoData = ref(Select.setStyle("h-9 px-4 text-sm text-surface-500"))
+  const classNoData = ref(Select.setStyle("p-4 text-sm text-surface-500"))
   const classGradientSelectList = computed(() =>
     Select.setStyle([
       "w-full h-5 bg-gradient-to-t to-transparent pointer-events-none",
       mode.value === "outlined" ? "from-white dark:from-black via-white dark:via-black" : "",
-      mode.value === "underlined" ? "from-stone-50 dark:from-stone-950 via-stone-50 dark:via-stone-950" : "",
-      mode.value === "filled" ? "from-stone-100 dark:from-stone-900 via-stone-100 dark:via-stone-900" : "",
+      mode.value === "underlined" ? "from-surface-50 dark:from-surface-950 via-surface-50 dark:via-surface-950" : "",
+      mode.value === "filled" ? "from-surface-100 dark:from-surface-900 via-surface-100 dark:via-surface-900" : "",
       "sticky z-20" // todo need to switch to absolute
     ])
   )
   const iconCheck = computed(() =>
-    Select.setStyle("flex absolute inset-y-0 left-0 items-center pl-2 text-theme-700 dark:text-theme-400")
+    // ---ISSUE 9 (RTL): логические start-0 / ps-2 вместо физических left-0 / pl-2 (авто-флип при dir="rtl")
+    Select.setStyle("flex absolute inset-y-0 start-0 items-center ps-2 text-theme-700 dark:text-theme-400")
   )
   const classGradientSelectListTop = computed(() =>
     Select.setStyle([classGradientSelectList.value, "bg-gradient-to-b top-0"])
@@ -199,20 +365,36 @@
   const classUl = computed(() => Select.setStyle("p-0"))
   const classLiItem = computed(() =>
     Select.setStyle([
-      "text-gray-900 dark:text-gray-100 items-center h-9 mt-2 mx-2 pl-8 pr-4 last:mb-5",
+      // ---ISSUE 9 (RTL): логические ps-8 / pe-4 вместо физических pl-8 / pr-4 (авто-флип при dir="rtl")
+      "text-surface-900 dark:text-surface-100 items-center h-9 mt-2 mx-2 ps-8 pe-4 last:mb-5",
       "hover:bg-theme-200 hover:dark:bg-theme-900 hover:text-theme-700 dark:hover:text-theme-100",
       "focus-visible:bg-theme-200 focus-visible:dark:bg-theme-900 focus-visible:text-theme-700 dark:focus-visible:text-theme-100 focus-visible:ring-1 focus-visible:ring-theme-100 focus-visible:dark:ring-theme-800 focus-visible:outline-none",
       mode.value === "outlined" ? "rounded-md" : "",
       mode.value === "filled" ? "rounded-md" : "",
-      "group/li relative cursor-default select-none flex transition-colors duration-500"
+      "group/li relative cursor-default select-none flex motion-safe:transition-colors motion-safe:duration-500"
     ])
   )
   const classItemSelectValue = computed(() =>
     Select.setStyle(
-      "text-left text-gray-600 dark:text-gray-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200"
+      // ---ISSUE 9 (RTL): rtl:text-right override (движок сохраняет text-left как LTR-default)
+      "text-left rtl:text-right text-surface-600 dark:text-surface-300 group-hover/li:text-theme-700 dark:group-hover/li:text-theme-200"
     )
   )
+  // ---ISSUE 3 — non-selectable group-header + disabled-опция ---
+  const classGroupHeader = computed(() =>
+    Select.setStyle("px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-surface-500 select-none")
+  )
+  const classOptionDisabled = computed(() => Select.setStyle("opacity-50 cursor-not-allowed"))
+  // ---ISSUE 8 — aria-live announcement for filtered results count ---
+  // Wave 3.5: локализация + плюрализация одним ключом через Component.t(key, { count }) —
+  // CLDR-формы активной локали (см. select.resultsCount в locale messages).
+  const ariaResultsLabel = computed<string>(() => {
+    if (!isQuery.value || !query.value) return ""
+    const n = dataList.value?.length ?? 0
+    return Select.t("select.resultsCount", { count: n })
+  })
   const inputLayout = computed(() => ({
+    id: props.id,
     isValue: isValue.value,
     mode: mode.value,
     label: props.label,
@@ -273,12 +455,26 @@
     select
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // ---ISSUE 2 — ResizeObserver saved in closure-let so onBeforeUnmount can disconnect.
+  // ---Bonus — drop duplicate Select.initStyle() — Component.__hooks() already registers it.
+  let resizeObserver: ResizeObserver | undefined
   onMounted(() => {
-    Select.initStyle()
     if (autoFocus.value) openSelect()
-    new ResizeObserver(() => {
-      if (isOpenList.value) selectListWindow.value?.updatePosition()
-    }).observe(selectBody.value as HTMLElement)
+    if (isClient() && selectBody.value) {
+      resizeObserver = new ResizeObserver(() => {
+        if (isOpenList.value) selectListWindow.value?.updatePosition()
+      })
+      resizeObserver.observe(selectBody.value as HTMLElement)
+    }
+  })
+  onBeforeUnmount(() => {
+    resizeObserver?.disconnect()
+    resizeObserver = undefined
+    if (typeaheadTimer) clearTimeout(typeaheadTimer)
+    if (isClient()) {
+      document.removeEventListener("keydown", openSelectOnEnter)
+      document.removeEventListener("keydown", keydownSelect)
+    }
   })
   // ---WATCHERS----------------------------
   watch(isFocus, (value) => {
@@ -322,33 +518,105 @@
   // })
 
   // ---METHODS-----------------------------
+  // ---ISSUE 2 (defensive) — guards against undefined refs after unmount-while-open ---
+  function listItemEls(): NodeListOf<HTMLElement> | undefined {
+    return (selectItems.value as any)?.$el?.querySelectorAll("li[data-select-list-item]") as
+      | NodeListOf<HTMLElement>
+      | undefined
+  }
   function changeFocus(currentIndex: number, direction: 1 | -1) {
-    const listItems = (selectItems.value as any)?.$el.querySelectorAll("li")
+    const listItems = listItemEls()
+    if (!listItems || !listItems.length) return
     let newIndex = currentIndex + direction
-    listItems[currentIndex].setAttribute("tabindex", "-1")
-    listItems[currentIndex].blur()
+    const cur = listItems[currentIndex]
+    if (cur) {
+      cur.setAttribute("tabindex", "-1")
+      cur.blur()
+    }
     if (newIndex < 0) newIndex = listItems.length - 1
     else if (newIndex >= listItems.length) newIndex = 0
-    listItems[newIndex].setAttribute("tabindex", "0")
-    listItems[newIndex].focus()
+    const next = listItems[newIndex]
+    if (next) {
+      next.setAttribute("tabindex", "0")
+      next.focus()
+    }
     activeItem.value = newIndex
+  }
+  // абсолютный roving-focus (Home/End/typeahead) — индекс клампится в границы, без wrap
+  function focusItemAt(index: number) {
+    const listItems = listItemEls()
+    if (!listItems || !listItems.length) return
+    let newIndex = index
+    if (newIndex < 0) newIndex = 0
+    else if (newIndex >= listItems.length) newIndex = listItems.length - 1
+    const cur = listItems[activeItem.value]
+    if (cur) {
+      cur.setAttribute("tabindex", "-1")
+      cur.blur()
+    }
+    const next = listItems[newIndex]
+    if (next) {
+      next.setAttribute("tabindex", "0")
+      next.focus()
+    }
+    activeItem.value = newIndex
+  }
+  // first-char typeahead для noQuery-listbox: матч по textContent опции;
+  // повтор одного символа в пределах 500 мс циклически перебирает совпадения (APG-паттерн).
+  function typeaheadFocus(char: string) {
+    const items = listItemEls()
+    if (!items || !items.length) return
+    const wasEmpty = typeaheadBuffer === ""
+    if (typeaheadTimer) clearTimeout(typeaheadTimer)
+    typeaheadBuffer += char.toLowerCase()
+    typeaheadTimer = setTimeout(() => (typeaheadBuffer = ""), 500)
+    const allSame = [...typeaheadBuffer].every((c) => c === typeaheadBuffer[0])
+    const needle = allSame ? typeaheadBuffer[0] : typeaheadBuffer
+    // свежий буфер ищет с текущей позиции (включительно), повтор символа — со следующей
+    const from = allSame && !wasEmpty ? activeItem.value + 1 : activeItem.value
+    for (let i = 0; i < items.length; i++) {
+      const idx = (from + i) % items.length
+      if ((items[idx]?.textContent ?? "").trim().toLowerCase().startsWith(needle)) {
+        focusItemAt(idx)
+        return
+      }
+    }
   }
 
   function keydownSelect(event: KeyboardEvent) {
+    // ---ISSUE 2 (defensive) — bail out if component already unmounted ---
+    if (!selectItems.value) return
+    // когда фокус в поле поиска — Home/End и печать символов отдаём нативно (курсор/набор текста)
+    const searchActive =
+      isQuery.value && !!(document.activeElement as HTMLElement | null)?.closest?.("[data-select-search]")
     if (event.key === "Tab") activeItem.value += 1
     else if (event.key === "Enter") select(dataList.value[activeItem.value])
     else if (["Escape", "Esc"].includes(event.key)) isOpenList.value = false
     else if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-      const currentIndex = Array.prototype.indexOf.call(
-        (selectItems.value as any)?.$el.querySelectorAll("li"),
-        document.activeElement
-      )
+      const items = listItemEls()
+      if (!items || !items.length) return
+      const currentIndex = Array.prototype.indexOf.call(items, document.activeElement)
       if (currentIndex !== -1) {
         event.preventDefault()
         if (event.key === "ArrowDown") changeFocus(currentIndex, 1)
         else if (event.key === "ArrowUp") changeFocus(currentIndex, -1)
       } else changeFocus(1, -1)
-    } else if ("which" in event ? event.which : (event as any).keyCode >= 32) selectSearch.value?.focus()
+    } else if (["Home", "End"].includes(event.key)) {
+      if (searchActive) return
+      const items = listItemEls()
+      if (!items || !items.length) return
+      event.preventDefault()
+      focusItemAt(event.key === "Home" ? 0 : items.length - 1)
+    } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (searchActive) return
+      // есть поиск (default) → печать фокусит поле и фильтрует (de-facto typeahead);
+      // noQuery (чистый listbox) → first-char typeahead по списку
+      if (isQuery.value) selectSearch.value?.focus()
+      else {
+        event.preventDefault()
+        typeaheadFocus(event.key)
+      }
+    }
   }
 
   function openSelectOnEnter(event: KeyboardEvent) {
@@ -381,6 +649,8 @@
 
   // ---------------------------------------
   function select(selectValue: BaseDataItem | null): void {
+    // ---ISSUE 3 — disabled compound-опция не выбирается ---
+    if (selectValue && isOptionDisabled(selectValue)) return
     if (selectValue && keySelect.value) {
       activeItem.value = dataList.value.findIndex(
         (value) =>
@@ -403,17 +673,42 @@
     emit("update:modelValue", value.value, visibleValue.value)
   }
 
+  // ---LAZY GSAP (Wave 2.1)----------------------
+  // gsap — optional peerDependency: грузим динамически при первой анимации и кэшируем. Без gsap
+  // дропдаун открывается/закрывается мгновенно (анимация = progressive enhancement); bundle без
+  // Select не тянет ~50KB gsap.
+  let gsapModule: (typeof import("gsap"))["default"] | undefined
+  let gsapTried = false
+  async function loadGsap() {
+    if (gsapTried) return gsapModule
+    gsapTried = true
+    try {
+      gsapModule = (await import("gsap")).default
+    } catch {
+      gsapModule = undefined
+    }
+    return gsapModule
+  }
+
   // ---------------------------------------
   function onBeforeEnter(el: any) {
     el.style.opacity = 0
     el.style.height = 0
   }
 
-  function onEnter(el: any, done: any) {
+  async function onEnter(el: any, done: any) {
+    const gsap = await loadGsap()
+    if (!gsap) {
+      // нет gsap → сразу финальные стили (иначе item остаётся opacity:0/height:0 от onBeforeEnter)
+      el.style.opacity = 1
+      el.style.height = "38px"
+      done()
+      return
+    }
     gsap.to(el, {
       opacity: 1,
       height: "38px",
-      delay: el.dataset.index * (dataList.value?.length >= 80 ? 0 : 0.01),
+      delay: (Number(el.dataset.index) || 0) * (dataList.value?.length >= 80 ? 0 : 0.01),
       onComplete: done
     })
   }
@@ -427,77 +722,93 @@
     return 0
   })
 
-  function onLeave(el: any, done: any) {
-    gsap.to(el, { opacity: 0, height: 0, delay: el.dataset.index * delay.value, onComplete: done })
+  async function onLeave(el: any, done: any) {
+    const gsap = await loadGsap()
+    if (!gsap) {
+      el.style.opacity = 0
+      el.style.height = 0
+      done()
+      return
+    }
+    gsap.to(el, { opacity: 0, height: 0, delay: (Number(el.dataset.index) || 0) * delay.value, onComplete: done })
   }
 </script>
 
 <template>
   <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="select(null)">
-    <div
-      data-select
-      ref="selectBody"
-      :id="id"
-      tabindex="0"
-      :class="classBase"
-      @focusin="focusSelect(true)"
-      @focusout="focusSelect(false)"
-      @click="openSelect">
-      <div data-select-content :class="classSelectContent">
-        <template v-if="isMultiple">
-          <transition-group
-            leave-active-class="transition ease-in-out duration-300"
-            leave-from-class="opacity-100 translate-x-0"
-            leave-to-class="opacity-0 -translate-x-5"
-            enter-active-class="transition ease-in-out duration-300"
-            enter-from-class="opacity-0 -translate-x-5"
-            enter-to-class="opacity-100 translate-x-0">
-            <div
-              v-for="item in typeof maxVisible === 'number' ? visibleValue.slice(0, maxVisible) : visibleValue"
-              :key="item[keySelect]"
-              data-select-item
-              :class="classSelectItem">
-              <slot name="values" :selected="item" :key="valueSelect ? valueSelect : keySelect" :delete-select="select">
-                <Badge
-                  mode="neutral"
-                  :close-button="closeButtonBadge"
-                  class-content="fill-theme-500"
-                  @delete="select(item)"
-                  class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500">
-                  {{ valueSelect ? item[valueSelect] : item[keySelect] }}
-                </Badge>
+    <template #default="{ id: fieldId, labelledby }">
+      <div
+        data-select
+        ref="selectBody"
+        :id="fieldId"
+        role="combobox"
+        :aria-labelledby="labelledby"
+        :aria-expanded="isOpenList"
+        tabindex="0"
+        :class="classBase"
+        @focusin="focusSelect(true)"
+        @focusout="focusSelect(false)"
+        @click="openSelect">
+        <div data-select-content :class="classSelectContent">
+          <template v-if="isMultiple">
+            <transition-group
+              leave-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300"
+              leave-from-class="opacity-100 translate-x-0"
+              leave-to-class="opacity-0 -translate-x-5"
+              enter-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300"
+              enter-from-class="opacity-0 -translate-x-5"
+              enter-to-class="opacity-100 translate-x-0">
+              <div
+                v-for="item in typeof maxVisible === 'number' ? visibleValue.slice(0, maxVisible) : visibleValue"
+                :key="item[keySelect]"
+                data-select-item
+                :class="classSelectItem">
+                <slot
+                  name="values"
+                  :selected="item"
+                  :key="valueSelect ? valueSelect : keySelect"
+                  :delete-select="select">
+                  <Badge
+                    mode="neutral"
+                    :close-button="closeButtonBadge"
+                    class-content="fill-theme-500"
+                    @delete="select(item)"
+                    class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500">
+                    {{ valueSelect ? item[valueSelect] : item[keySelect] }}
+                  </Badge>
+                </slot>
+              </div>
+              <div v-if="typeof maxVisible === 'number' && visibleValue.length > maxVisible" :class="classSelectItem">
+                <slot name="values" :selected="visibleValue.length" :delete-select="select">
+                  <Badge
+                    mode="neutral"
+                    :close-button="closeButtonBadge"
+                    class="m-1 ps-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
+                    class-content="fill-theme-500 flex items-center"
+                    @delete="select(null)">
+                    <Icons type="Funnel" class="h-3 w-3 me-1 text-theme-400 dark:text-theme-600" />
+                    {{ visibleValue.length }}
+                  </Badge>
+                </slot>
+              </div>
+            </transition-group>
+          </template>
+          <template v-else>
+            <div v-for="(item, key) in visibleValue" :key="`${item[keySelect]}-${key}`" :class="classSelectItem">
+              <slot name="values" :selected="item" :key="valueSelect ? valueSelect : keySelect">
+                <div>{{ valueSelect ? item[valueSelect] : item[keySelect] }}</div>
               </slot>
             </div>
-            <div v-if="typeof maxVisible === 'number' && visibleValue.length > maxVisible" :class="classSelectItem">
-              <slot name="values" :selected="visibleValue.length" :delete-select="select">
-                <Badge
-                  mode="neutral"
-                  :close-button="closeButtonBadge"
-                  class="m-1 pl-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 transition-colors duration-500"
-                  class-content="fill-theme-500 flex items-center"
-                  @delete="select(null)">
-                  <Icons type="Funnel" class="h-3 w-3 mr-1 text-theme-400 dark:text-theme-600" />
-                  {{ visibleValue.length }}
-                </Badge>
-              </slot>
-            </div>
-          </transition-group>
-        </template>
-        <template v-else>
-          <div v-for="(item, key) in visibleValue" :key="`${item[keySelect]}-${key}`" :class="classSelectItem">
-            <slot name="values" :selected="item" :key="valueSelect ? valueSelect : keySelect">
-              <div>{{ valueSelect ? item[valueSelect] : item[keySelect] }}</div>
-            </slot>
-          </div>
-        </template>
+          </template>
+        </div>
       </div>
-    </div>
+    </template>
     <template #body>
       <FixWindow
         ref="selectListWindow"
         v-bind="paramsFixWindow"
         :model-value="isOpenList"
-        :class-body="['z-50', `ml-[${layout?.beforeWidth}px]`]"
+        :class-body="['z-50', layout?.beforeWidth != null ? `ms-[${layout.beforeWidth}px]` : '']"
         @close="closeSelect">
         <div
           data-select-list
@@ -521,14 +832,14 @@
             clear
             :class-body="[
               `m-2 mb-5 rounded-md`,
-              mode === 'outlined' ? 'ring-stone-200 dark:ring-black' : '',
-              mode === 'underlined' ? 'ring-stone-200 dark:ring-stone-950' : '',
-              mode === 'filled' ? 'ring-stone-100 dark:ring-stone-900' : '',
+              mode === 'outlined' ? 'ring-surface-200 dark:ring-black' : '',
+              mode === 'underlined' ? 'ring-surface-200 dark:ring-surface-950' : '',
+              mode === 'filled' ? 'ring-surface-100 dark:ring-surface-900' : '',
               'sticky top-2 z-20'
             ]"
             @focus="activeItem = -1">
             <template #before>
-              <Icons type="MagnifyingGlass" class="h-5 w-5 text-gray-400 dark:text-gray-600" />
+              <Icons type="MagnifyingGlass" class="h-5 w-5 text-surface-400 dark:text-surface-600" />
             </template>
           </Input>
           <TransitionGroup
@@ -541,28 +852,58 @@
             @enter="onEnter"
             @leave="onLeave">
             <template v-if="dataSelect?.length">
-              <li
-                v-for="(item, index) in dataList"
-                :key="`${item[keySelect]}`"
-                data-select-list-item
-                :tabindex="activeItem === index ? 0 : -1"
-                :data-index="index"
-                :class="classLiItem"
-                @click="select(item)">
-                <slot name="item" :item="item" :key="valueSelect" :isQuery="isQuery && item?.marker">
-                  <div v-if="isQuery && item?.marker" v-html="item?.marker" :class="classItemSelectValue" />
-                  <div v-else :class="classItemSelectValue">
-                    {{ valueSelect ? item[valueSelect] : item }}
-                  </div>
-                </slot>
-                <span v-if="visibleValue?.find((i) => i[keySelect] === item[keySelect])" :class="iconCheck">
-                  <Icons type="Check" class="w-5 h-5" />
-                </span>
-              </li>
-              <div v-if="!dataList?.length" :class="classDataListNoData" v-html="noData" />
+              <template
+                v-for="row in renderRows"
+                :key="row.type === 'group' ? `g:${row.label}` : `${row.item[keySelect]}`">
+                <!-- ISSUE 3 — non-selectable group-header (compound <SelectGroup>) -->
+                <li v-if="row.type === 'group'" data-select-group role="presentation" :class="classGroupHeader">
+                  {{ row.label }}
+                </li>
+                <li
+                  v-else
+                  data-select-list-item
+                  :tabindex="activeItem === row.index ? 0 : -1"
+                  :data-index="row.index"
+                  :aria-disabled="row.disabled ? 'true' : undefined"
+                  :class="[classLiItem, row.disabled ? classOptionDisabled : '']"
+                  @click="row.disabled ? null : select(row.item)">
+                  <slot name="item" :item="row.item" :key="valueSelect" :isQuery="isQuery && !!query">
+                    <slot
+                      name="marker"
+                      :item="row.item"
+                      :query="query"
+                      :isQuery="isQuery && !!query"
+                      :valueKey="valueSelect ?? null">
+                      <div :class="classItemSelectValue">
+                        <template v-if="isQuery && query">
+                          <template v-for="(part, pi) in markerParts(row.item)" :key="pi">
+                            <mark v-if="part.mark" :class="classMaskQuery">{{ part.text }}</mark>
+                            <template v-else>{{ part.text }}</template>
+                          </template>
+                        </template>
+                        <template v-else>{{ valueSelect ? row.item[valueSelect] : row.item }}</template>
+                      </div>
+                    </slot>
+                  </slot>
+                  <span
+                    v-if="visibleValue?.find((i) => i[keySelect] === row.item[keySelect])"
+                    data-select-check
+                    :class="iconCheck">
+                    <Icons type="Check" class="w-5 h-5" />
+                  </span>
+                </li>
+              </template>
+              <slot v-if="!dataList?.length" name="empty" :noData="noData" :query="query" :hasData="true">
+                <div :class="classDataListNoData">{{ noData }}</div>
+              </slot>
             </template>
-            <div v-else :class="classNoData" v-html="noData" />
+            <slot v-else name="empty" :noData="noData" :query="query" :hasData="false">
+              <div :class="classNoData">{{ noData }}</div>
+            </slot>
           </TransitionGroup>
+          <div data-select-aria-live class="sr-only" aria-live="polite" aria-atomic="true">
+            {{ ariaResultsLabel }}
+          </div>
         </div>
       </FixWindow>
       <slot />

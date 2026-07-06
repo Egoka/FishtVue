@@ -1,4 +1,5 @@
-// Accordion
+// Accordion (AccordionItem — named-экспорт бандла accordion.mjs через `export *`, как Menu/MenuItem;
+// compound `<Accordion><AccordionItem>` собирается из accordion/index.ts)
 export * from "fishtvue/accordion"
 export { default as Accordion } from "fishtvue/accordion"
 // Alert
@@ -43,7 +44,8 @@ export { default as Label } from "fishtvue/label"
 // Loading
 export * from "fishtvue/loading"
 export { default as Loading } from "fishtvue/loading"
-// Menu
+// Menu (MenuItem/MenuGroup — named-экспорты бандла menu.mjs через `export *`, как Table/Column;
+// raw `.vue`-импорт не публикуется в tarball — Issue 5c-a)
 export * from "fishtvue/menu"
 export { default as Menu } from "fishtvue/menu"
 // Pagination
@@ -67,3 +69,6 @@ export { default as Table } from "fishtvue/table"
 // TextEditor
 export * from "fishtvue/texteditor"
 export { default as TextEditor } from "fishtvue/texteditor"
+// VirtualScroller
+export * from "fishtvue/virtualscroller"
+export { default as VirtualScroller } from "fishtvue/virtualscroller"

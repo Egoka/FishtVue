@@ -1,7 +1,7 @@
 ---
 title: Separator
-summary: Разделитель горизонтальный/вертикальный, gradient, depth, контент по центру.
-updated: 2026-05-09
+summary: Разделитель горизонтальный/вертикальный, gradient, depth, контент по логической позиции (start/end/center/full, RTL-aware).
+updated: 2026-07-04
 stability: stable
 since: 0.2.11
 ---
@@ -10,9 +10,9 @@ since: 0.2.11
 
 ## 1. Overview
 
-`Separator` — визуальный разделитель секций. Поддерживает горизонтальную/вертикальную ориентацию, gradient (плавная прозрачность к краям), depth (глубина теневого эффекта), контент по центру/слева/справа. Без emit'ов и v-model.
+`Separator` — визуальный разделитель секций. Поддерживает горизонтальную/вертикальную ориентацию, gradient (плавная прозрачность к краям), depth (глубина теневого эффекта), контент по логической позиции (`start`/`end`/`center`/`full`, RTL-aware). Без emit'ов и v-model.
 
-Stability: `stable` — 25 кейсов, coverage 83.92%.
+Stability: `stable` — 45 кейсов, coverage 88.7%.
 
 Source: [Source](../../lib/separator/Separator.vue), [Separator.d.ts](../../lib/separator/Separator.d.ts), [Separator.test.ts](../../lib/separator/Separator.test.ts).
 
@@ -21,8 +21,8 @@ Source: [Source](../../lib/separator/Separator.vue), [Separator.d.ts](../../lib/
 ```
 lib/separator/
 ├── Separator.vue
-├── Separator.d.ts        # 195 строк
-├── Separator.test.ts     # 25 кейсов
+├── Separator.d.ts        # 205 строк
+├── Separator.test.ts     # 45 кейсов
 └── package.json
 ```
 
@@ -31,11 +31,13 @@ lib/separator/
 ## 3. How it works
 
 - **Lifecycle:** автоматическая инжекция стилей.
-- **Поток данных:** props → computed `vertical`, `content`, `gradient`, `gradientLength`, `depth` → `Separator.setStyle()`.
+- **Поток данных:** props → computed `vertical`, `content` (нормализует deprecated `left → start`, `right → end`), `gradient`, `gradientLength`, `depth` → `Separator.setStyle()`.
+- **A11y:** корень — `role="separator"` + `aria-orientation` (`"vertical"` при `vertical: true`, иначе `"horizontal"`); line-сегменты `aria-hidden="true"`. См. §12.
 - **Стили:** через `setStyle`. Gradient реализован как два line-сегмента слева/справа от контента с прозрачностью.
 - **Конфиг:** `componentsOptions.Separator` — см. §10.
 - **Локализация:** не использует.
 - **SSR:** SSR-safe.
+- **RTL:** `contentPosition` — logical (`start`/`end`); порядок сегментов зеркалится автоматически через flex main-axis при `dir="rtl"` (без `useDirectionality()`), направление градиента — через `rtl:`-вариант. См. §12.
 - **Animation:** нет.
 
 ## 4. Quick Start
@@ -63,7 +65,7 @@ import Separator from "fishtvue/separator"
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `vertical` | `boolean` | `false` | Вертикальная ориентация. |
-| `contentPosition` | `"right" \| "left" \| "center" \| "full"` | — | Позиция slot-content. |
+| `contentPosition` | `"start" \| "end" \| "center" \| "full"` (+ deprecated `"left" \| "right"`) | `center` | Логическая позиция slot-content (RTL-aware). `"left"`/`"right"` — deprecated алиасы (`left → start`, `right → end`), dev-warn. См. §12, §14. |
 | `gradient` | `Gradient \| [Gradient, GradientLength] \| boolean` | — | Плавная прозрачность. `Gradient`/`GradientLength` — `0..100`. |
 | `depth` | `Depth` (`0..7`) | — | Глубина (тень). |
 | `class` | `StyleClass` | — | Класс контейнера. |
@@ -145,7 +147,7 @@ app.use(FishtVue, {
 
 ### 10.3 Theming
 
-Цвет line — `border-neutral-*` / `dark:border-neutral-*`.
+Цвет line — semantic-токен `surface-*` (`via-surface-*`/`to-surface-*`/`bg-surface-*`, `dark:`-варианты); дефолт совпадает с прежней `gray`-шкалой, переопределяется глобально через `updateSurfacePalette()` без правки самого компонента (см. [Theme](../architecture/theme.md)).
 
 ### 10.4 CSS layer override
 
@@ -159,8 +161,15 @@ Root класс — `fv fishtvue-separator`.
 
 ### A11y
 
-- Семантика: декоративный разделитель. Для семантической линии используй `<hr>` либо добавь `role="separator"` явно.
-- ARIA-роль не выставляется автоматически. См. Known issues.
+- Корневой элемент рендерится с `role="separator"` и `aria-orientation` (`"horizontal"` по умолчанию, `"vertical"` при `vertical: true`) — screen reader идентифицирует разделитель автоматически.
+- Slot-контент (например, `"OR"`) становится accessible name разделителя. Декоративные line-сегменты (`[data-separator-left]` / `[data-separator-right]`) помечены `aria-hidden="true"`.
+- Отдельного `decorative` prop нет: разделитель всегда семантический (поведение по умолчанию Radix/shadcn).
+
+### RTL
+
+- `contentPosition` использует logical-значения `"start"`/`"end"` — `"start"` у логического начала строки (слева в LTR, справа в RTL), `"end"` у конца. Порядок line-сегментов зеркалится автоматически: корень — flex, его main-axis следует document `direction`, поэтому при `dir="rtl"` сегменты меняются местами без дополнительного CSS и без `useDirectionality()` (зеркало паттерна Button).
+- Направление градиента горизонтальных сегментов несёт `rtl:`-вариант (`rtl:bg-gradient-to-l` / `rtl:bg-gradient-to-r`) — заливка корректно затухает к краю и в RTL.
+- Deprecated физические `"left"`/`"right"` не RTL-safe; в dev-режиме выводят `console.warn` с рекомендацией перейти на `start`/`end`.
 
 ### Security
 
@@ -176,9 +185,9 @@ import Separator from "fishtvue/separator"
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 25 кейсов, coverage 83.92%.
-- **Breaking changes:** не зафиксировано.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 45 кейсов, coverage 88.7%.
+- **Breaking changes:** не зафиксировано (миграция `contentPosition` — additive, `left`/`right` продолжают работать).
+- **Deprecations:** `contentPosition: "left" | "right"` — deprecated с 2026-06-14, использовать logical `"start" | "end"` (`left → start`, `right → end`); алиасы сохранены для backward compat, dev-warn в консоль.
 
 ## 15. Testing recipes
 
@@ -196,7 +205,7 @@ describe("Separator", () => {
 })
 ```
 
-Реальные тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) (25 кейсов).
+Реальные тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) (45 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
@@ -220,7 +229,7 @@ describe("Separator", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 83.92% — ветка ([Separator.vue:41](../../lib/separator/Separator.vue#L41)) не покрыта.
+- Coverage 88.7% (statements) / 89.07% (branch) — финальная ветка `gradientLength` ([Separator.vue:48](../../lib/separator/Separator.vue#L48)) не покрыта.
 
 ### Skipped tests
 
@@ -230,7 +239,8 @@ describe("Separator", () => {
 
 - `Gradient` и `GradientLength` — оба `0..100` numeric, функционально эквивалентны. Дублирующие типы.
 - `gradient: Gradient | [Gradient, GradientLength] | boolean` — широкий union: number, tuple, boolean.
-- ARIA-роль `role="separator"` не выставляется в шаблоне.
+- ~~ARIA-роль `role="separator"` не выставляется в шаблоне.~~ ✅ resolved 2026-06-06 — корень рендерит `role="separator"` + `aria-orientation`.
+- ~~`contentPosition: "left" | "right"` — буквальные направления, не RTL-safe.~~ ✅ resolved 2026-06-14 — мигрировано на logical `start`/`end` (deprecated алиасы сохранены), порядок сегментов зеркалится через flex, градиент — `rtl:`-вариант. См. [issues/separator.md Issue 3](../issues/separator.md).
 
 ### Behavioral caveats
 

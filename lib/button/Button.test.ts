@@ -1,8 +1,16 @@
-import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { flushPromises, mount } from "@vue/test-utils"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Button from "fishtvue/button/Button.vue"
 import type { ButtonExpose } from "fishtvue/button/Button"
+
+// Дожидается резолва lazy Loading/FixWindow (defineAsyncComponent под polymorphic dynamic
+// root): помимо микротасков (flushPromises) нужен macrotask-тик.
+const flushAsyncComponents = async () => {
+  await flushPromises()
+  await new Promise((r) => setTimeout(r))
+  await flushPromises()
+}
 
 describe("Button Component Tests", () => {
   describe("Without Library Initialization", () => {
@@ -53,7 +61,7 @@ describe("Button Component Tests", () => {
       expect(button.attributes("data-loading")).toBe("true")
     })
 
-    it("renders icon and loading indicators", () => {
+    it("renders icon and loading indicators", async () => {
       const wrapper = mount(Button, {
         props: {
           icon: "check",
@@ -64,6 +72,8 @@ describe("Button Component Tests", () => {
       const icon = wrapper.findComponent({ name: "Icons" })
       expect(icon.exists()).toBe(true)
 
+      // Loading подгружается лениво (Issue 6) — ждём резолва async-компонента.
+      await flushAsyncComponents()
       const loading = wrapper.findComponent({ name: "Loading" })
       expect(loading.exists()).toBe(true)
     })
@@ -113,7 +123,7 @@ describe("Button Component Tests", () => {
       expect(icon.props("type")).toBe("check")
     })
 
-    it("shows loading indicator when loading is true", () => {
+    it("shows loading indicator when loading is true", async () => {
       const wrapper = mount(Button, {
         props: {
           type: "icon",
@@ -121,11 +131,12 @@ describe("Button Component Tests", () => {
         }
       })
 
+      await flushAsyncComponents()
       const loading = wrapper.findComponent({ name: "Loading" })
       expect(loading.exists()).toBe(true)
     })
 
-    it('renders slot content inside FixWindow when type is "icon"', () => {
+    it('renders slot content inside FixWindow when type is "icon"', async () => {
       const wrapper = mount(Button, {
         props: {
           type: "icon"
@@ -135,6 +146,8 @@ describe("Button Component Tests", () => {
         }
       })
 
+      // FixWindow подгружается лениво (Issue 6) — ждём резолва перед проверкой slot/компонента.
+      await flushAsyncComponents()
       const slot = wrapper.find(".slot-content")
       expect(slot.exists()).toBe(true)
       expect(slot.text()).toBe("Slot Content")
@@ -143,7 +156,7 @@ describe("Button Component Tests", () => {
       expect(fixWindow.exists()).toBe(true)
     })
 
-    it('applies rounded style to FixWindow when type is "icon"', () => {
+    it('applies rounded style to FixWindow when type is "icon"', async () => {
       const wrapper = mount(Button, {
         props: {
           type: "icon",
@@ -154,6 +167,7 @@ describe("Button Component Tests", () => {
         }
       })
 
+      await flushAsyncComponents()
       const fixWindow = wrapper.findComponent({ name: "FixWindow" })
       expect(fixWindow.exists()).toBe(true)
       expect(fixWindow.props("mode")).toBe("filled")
@@ -242,6 +256,360 @@ describe("Button Component Tests", () => {
 
       const button = wrapper.find(".global-button-class")
       expect(button.exists()).toBe(true)
+    })
+  })
+
+  describe("A11y, refs, slots, emits (issues 2/4/10/11/12)", () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    // Vue в DEV пишет в console.warn собственные сообщения (например про missing
+    // inject(FishtVueSymbol), когда тест монтирует Button без плагина). Чтобы наш
+    // assertions считал только specific warning Button'а, фильтруем по prefix.
+    const fishtVueButtonWarns = (spy: { mock: { calls: any[][] } }): any[][] =>
+      spy.mock.calls.filter((call) => typeof call[0] === "string" && call[0].includes("[FishtVue Button]"))
+
+    // ---Issue 2: aria-label--------------------
+    it("sets aria-label when ariaLabel prop is provided", () => {
+      const wrapper = mount(Button, {
+        props: { type: "icon", icon: "trash", ariaLabel: "Delete user" }
+      })
+      expect(wrapper.find("[data-button]").attributes("aria-label")).toBe("Delete user")
+    })
+
+    it("falls back to icon name when type=icon and ariaLabel is omitted", () => {
+      const wrapper = mount(Button, {
+        props: { type: "icon", icon: "trash" }
+      })
+      expect(wrapper.find("[data-button]").attributes("aria-label")).toBe("trash")
+    })
+
+    it("does not set aria-label for non-icon button without ariaLabel", () => {
+      const wrapper = mount(Button, {
+        props: { type: "button", icon: "check" },
+        slots: { default: "Save" }
+      })
+      expect(wrapper.find("[data-button]").attributes("aria-label")).toBeUndefined()
+    })
+
+    it("warns in DEV when type=icon without ariaLabel and without default slot", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+      mount(Button, { props: { type: "icon", icon: "trash" } })
+      const ourWarns = fishtVueButtonWarns(warnSpy)
+      expect(ourWarns).toHaveLength(1)
+      expect(ourWarns[0][0]).toContain("aria-label")
+    })
+
+    it("does not warn when icon button has a default slot (tooltip)", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+      mount(Button, {
+        props: { type: "icon", icon: "trash" },
+        slots: { default: "Delete item" }
+      })
+      expect(fishtVueButtonWarns(warnSpy)).toHaveLength(0)
+    })
+
+    it("does not warn when icon button has ariaLabel", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+      mount(Button, {
+        props: { type: "icon", icon: "trash", ariaLabel: "Delete" }
+      })
+      expect(fishtVueButtonWarns(warnSpy)).toHaveLength(0)
+    })
+
+    // ---Issue 11: typed click emit-------------
+    it("emits click with MouseEvent payload", async () => {
+      const wrapper = mount(Button, { slots: { default: "Save" } })
+      await wrapper.find("[data-button]").trigger("click")
+      const events = wrapper.emitted("click")
+      expect(events).toBeTruthy()
+      expect(events?.[0]?.[0]).toBeInstanceOf(MouseEvent)
+    })
+
+    // ---Issue 4: buttonRef + focus / blur------
+    it("exposes buttonRef pointing to the underlying <button> element", () => {
+      const wrapper = mount(Button, { slots: { default: "X" } })
+      const buttonEl = wrapper.find("[data-button]").element
+      expect((wrapper.vm as unknown as ButtonExpose).buttonRef).toBe(buttonEl)
+    })
+
+    it("focuses the underlying button via exposed focus()", () => {
+      const wrapper = mount(Button, {
+        attachTo: document.body,
+        slots: { default: "X" }
+      })
+      ;(wrapper.vm as unknown as ButtonExpose).focus()
+      expect(document.activeElement).toBe(wrapper.find("[data-button]").element)
+      wrapper.unmount()
+    })
+
+    it("blurs the underlying button via exposed blur()", () => {
+      const wrapper = mount(Button, {
+        attachTo: document.body,
+        slots: { default: "X" }
+      })
+      const expose = wrapper.vm as unknown as ButtonExpose
+      expose.focus()
+      expect(document.activeElement).toBe(wrapper.find("[data-button]").element)
+      expose.blur()
+      expect(document.activeElement).not.toBe(wrapper.find("[data-button]").element)
+      wrapper.unmount()
+    })
+
+    // ---Issue 12: start / end slots------------
+    it("renders start slot before default content", () => {
+      const wrapper = mount(Button, {
+        slots: {
+          start: "<span>S</span>",
+          default: "D"
+        }
+      })
+      expect(wrapper.find("[data-button]").text()).toBe("SD")
+    })
+
+    it("renders end slot after default content", () => {
+      const wrapper = mount(Button, {
+        slots: {
+          default: "D",
+          end: "<span>E</span>"
+        }
+      })
+      expect(wrapper.find("[data-button]").text()).toBe("DE")
+    })
+
+    it("renders start before default before end (ordering)", () => {
+      const wrapper = mount(Button, {
+        slots: {
+          start: "<span>S</span>",
+          default: "D",
+          end: "<span>E</span>"
+        }
+      })
+      expect(wrapper.find("[data-button]").text()).toBe("SDE")
+    })
+
+    // ---Issue 10: motion-safe-----------------
+    it("applies motion-safe transition variants instead of unconditional ones", () => {
+      const wrapper = mount(Button)
+      const cls = wrapper.find("[data-button]").attributes("class") ?? ""
+      expect(cls).toContain("motion-safe:transition-colors")
+      expect(cls).toContain("motion-safe:duration-200")
+      expect(cls).not.toMatch(/(^|\s)transition-colors(\s|$)/)
+      expect(cls).not.toMatch(/(^|\s)duration-200(\s|$)/)
+    })
+
+    // ---Issue 3: logical iconPosition (start/end) + RTL-safe----
+    // true → label следует за иконкой в DOM (иконка перед контентом)
+    const iconBeforeLabel = (wrapper: ReturnType<typeof mount>) => {
+      const iconEl = wrapper.findComponent({ name: "Icons" }).element
+      const labelEl = wrapper.find(".lbl").element
+      return Boolean(iconEl.compareDocumentPosition(labelEl) & Node.DOCUMENT_POSITION_FOLLOWING)
+    }
+    const mountWithIcon = (iconPosition?: "start" | "end" | "left" | "right") =>
+      mount(Button, {
+        props: { icon: "check", ...(iconPosition ? { iconPosition } : {}) },
+        slots: { default: '<span class="lbl">L</span>' }
+      })
+
+    it('renders icon before content when iconPosition="start"', () => {
+      expect(iconBeforeLabel(mountWithIcon("start"))).toBe(true)
+    })
+
+    it('renders icon after content when iconPosition="end"', () => {
+      expect(iconBeforeLabel(mountWithIcon("end"))).toBe(false)
+    })
+
+    it("defaults to end position (icon after content) when iconPosition is omitted", () => {
+      expect(iconBeforeLabel(mountWithIcon())).toBe(false)
+    })
+
+    it('maps deprecated "left" → start (icon before content)', () => {
+      expect(iconBeforeLabel(mountWithIcon("left"))).toBe(true)
+    })
+
+    it('maps deprecated "right" → end (icon after content)', () => {
+      expect(iconBeforeLabel(mountWithIcon("right"))).toBe(false)
+    })
+
+    it("warns in dev when deprecated left/right iconPosition is used", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mountWithIcon("left")
+      mountWithIcon("right")
+      const messages = fishtVueButtonWarns(warn).map((call) => call[0])
+      expect(messages.some((m) => m.includes('iconPosition="left" is deprecated'))).toBe(true)
+      expect(messages.some((m) => m.includes('iconPosition="right" is deprecated'))).toBe(true)
+      warn.mockRestore()
+    })
+
+    it("does not warn for logical start/end iconPosition", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mountWithIcon("start")
+      mountWithIcon("end")
+      const messages = fishtVueButtonWarns(warn).map((call) => call[0])
+      expect(messages.some((m) => m.includes("deprecated"))).toBe(false)
+      warn.mockRestore()
+    })
+  })
+
+  describe("Configuration support", () => {
+    // ---Issue 14: unstyled (cross-cutting Component.setStyle guard)----
+    const appWithConfig = (config: Record<string, unknown>) => ({
+      install(app: any) {
+        app.use(FishtVue, config)
+      }
+    })
+
+    // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback):
+    // чистим, чтобы unstyled:true из теста не протёк в соседние тесты/файлы.
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("strips all classes from the root when global unstyled: true", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        slots: { default: "X" }
+      })
+      // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
+      // ни `fv {prefix}-button`-префикса на корне.
+      const cls = (wrapper.find("[data-button]").attributes("class") ?? "").trim()
+      expect(cls).toBe("")
+    })
+
+    it("keeps base classes when unstyled is false (contrast)", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ unstyled: false })] },
+        slots: { default: "X" }
+      })
+      const cls = wrapper.find("[data-button]").attributes("class") ?? ""
+      expect(cls).toContain("inline-flex")
+    })
+
+    // ---Issue 13: global componentsStyle fallback (filled/outlined/underlined)----
+    const modeOf = (wrapper: ReturnType<typeof mount>) => (wrapper.vm as unknown as ButtonExpose).mode
+
+    it("maps global componentsStyle 'filled' -> mode 'primary'", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ componentsStyle: "filled" })] },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("primary")
+    })
+
+    it("maps global componentsStyle 'outlined' -> mode 'outline'", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ componentsStyle: "outlined" })] },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("outline")
+    })
+
+    it("maps global componentsStyle 'underlined' -> mode 'ghost'", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ componentsStyle: "underlined" })] },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("ghost")
+    })
+
+    it("per-instance mode prop overrides global componentsStyle", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [appWithConfig({ componentsStyle: "outlined" })] },
+        props: { mode: "primary" },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("primary")
+    })
+
+    it("componentsOptions.Button.mode overrides global componentsStyle", () => {
+      const wrapper = mount(Button, {
+        global: {
+          plugins: [appWithConfig({ componentsStyle: "outlined", componentsOptions: { Button: { mode: "ghost" } } })]
+        },
+        slots: { default: "X" }
+      })
+      expect(modeOf(wrapper)).toBe("ghost")
+    })
+
+    it("defaults to primary when neither componentsStyle nor mode is set", () => {
+      const wrapper = mount(Button, { slots: { default: "X" } })
+      expect(modeOf(wrapper)).toBe("primary")
+    })
+  })
+
+  describe("Print styles (Issue 15)", () => {
+    // Канон FishtVue: стилизуем для печати (Input/Loading/Table), не прячем display:none.
+    it("renders style-for-print classes on the root (not display:none)", () => {
+      const wrapper = mount(Button, { slots: { default: "X" } })
+      const cls = wrapper.find("[data-button]").attributes("class") ?? ""
+      expect(cls).toContain("print:bg-white")
+      expect(cls).toContain("print:text-black")
+      expect(cls).toContain("print:shadow-none")
+      expect(cls).not.toContain("print:hidden")
+    })
+  })
+
+  describe("Polymorphic as (Issue 5)", () => {
+    it("renders a native <button> by default", () => {
+      const wrapper = mount(Button, { slots: { default: "X" } })
+      expect(wrapper.find("[data-button]").element.tagName).toBe("BUTTON")
+    })
+
+    it('renders an <a> when as="a" and passes href through', () => {
+      const wrapper = mount(Button, {
+        props: { as: "a" },
+        attrs: { href: "/go" },
+        slots: { default: "Go" }
+      })
+      const el = wrapper.find("[data-button]").element
+      expect(el.tagName).toBe("A")
+      expect(el.getAttribute("href")).toBe("/go")
+      expect(el.textContent).toContain("Go")
+    })
+
+    it('does not set a type attribute on a non-button root (as="a")', () => {
+      const wrapper = mount(Button, {
+        props: { as: "a", type: "submit" },
+        slots: { default: "Go" }
+      })
+      expect(wrapper.find("[data-button]").attributes("type")).toBeUndefined()
+    })
+
+    it("keeps native button type='button' for type=icon", () => {
+      const wrapper = mount(Button, { props: { type: "icon", icon: "check", ariaLabel: "x" } })
+      expect(wrapper.find("[data-button]").attributes("type")).toBe("button")
+    })
+
+    it('sets role="button" on a non-button, non-anchor root', () => {
+      const wrapper = mount(Button, { props: { as: "span" }, slots: { default: "X" } })
+      expect(wrapper.find("[data-button]").attributes("role")).toBe("button")
+    })
+
+    it('sets tabindex="0" on a non-button, non-anchor root', () => {
+      const wrapper = mount(Button, { props: { as: "div" }, slots: { default: "X" } })
+      expect(wrapper.find("[data-button]").attributes("tabindex")).toBe("0")
+    })
+
+    it("does not set role/tabindex on a native button", () => {
+      const el = mount(Button, { slots: { default: "X" } }).find("[data-button]")
+      expect(el.attributes("role")).toBeUndefined()
+      expect(el.attributes("tabindex")).toBeUndefined()
+    })
+
+    it("does not set role on an <a> root (natively interactive)", () => {
+      const wrapper = mount(Button, { props: { as: "a" }, attrs: { href: "/x" }, slots: { default: "X" } })
+      expect(wrapper.find("[data-button]").attributes("role")).toBeUndefined()
+    })
+
+    it("marks a disabled non-button root with aria-disabled and tabindex=-1", () => {
+      const wrapper = mount(Button, {
+        props: { as: "span", disabled: true },
+        slots: { default: "X" }
+      })
+      const el = wrapper.find("[data-button]")
+      expect(el.attributes("aria-disabled")).toBe("true")
+      expect(el.attributes("tabindex")).toBe("-1")
     })
   })
 })

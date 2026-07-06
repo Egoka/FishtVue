@@ -1,7 +1,7 @@
 ---
 title: Select
-summary: Single/multiple select с фильтрацией, кастомным dataSelect, slot'ами values/item.
-updated: 2026-05-09
+summary: Single/multiple select с фильтрацией (Intl.Collator), schema + compound API (<SelectOption>/<SelectGroup>), RTL (logical props), keyboard nav (Arrow/Home/End/typeahead), slot'ами values/item/marker/empty.
+updated: 2026-07-04
 stability: stable
 since: 0.2.11
 ---
@@ -21,27 +21,30 @@ Source: [Source](../../lib/select/Select.vue), [Select.d.ts](../../lib/select/Se
 ```
 lib/select/
 ├── Select.vue
-├── Select.d.ts        # 410 строк
-├── Select.test.ts     # 11 кейсов
+├── SelectOption.vue   # renderless compound-дитя (Issue 3)
+├── SelectGroup.vue    # renderless compound-дитя (Issue 3)
+├── index.ts           # runtime barrel (default Select + named SelectOption/SelectGroup)
+├── Select.d.ts
+├── Select.test.ts
 └── package.json
 ```
 
 Зависимости:
 - [InputLayout](./input-layout.md), [Badge](./badge.md), [FixWindow](./fix-window.md).
 - [Component class](../architecture/component-class.md).
-- `lodash-es` (debounce, get) ([lib/package.json:52](../../lib/package.json#L52)).
-- `gsap` (анимация раскрытия списка) ([lib/package.json:51](../../lib/package.json#L51)).
+- `lodash-es` (debounce, get) — runtime-dependency ([lib/package.json](../../lib/package.json)).
+- `gsap` (анимация раскрытия списка) — **Wave 2.1: optional `peerDependency`**. Грузится lazy (`await import("gsap")` при первой анимации, кэшируется). Без установленного `gsap` список открывается/закрывается **мгновенно** (анимация = progressive enhancement); функционально Select полностью работает. Для плавности — `pnpm add gsap`.
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` для стилей; `onMounted` для инициализации.
-- **Поток данных:** `dataSelect` (массив) + `keySelect`/`valueSelect` → reactive `dataList` → user query фильтрует → emit'ы.
+- **Lifecycle:** `Component.__hooks()` (auto-init styles через `onServerPrefetch + vueOnMounted`). `onMounted` инициализирует ResizeObserver + auto-focus. `onBeforeUnmount` отключает observer и убирает document keydown listeners.
+- **Поток данных:** `dataSelect` (массив) + `keySelect`/`valueSelect` → reactive `dataList` → user query фильтрует через `Intl.Collator(locale, { sensitivity: "base" })` (diacritic + case insensitive) → emit'ы.
 - **v-model contract:** стандартный, см. §6.
-- **Стили:** `Select.setStyle()` в computed.
-- **Конфиг:** `componentsOptions.Select` — см. §10.
-- **Локализация:** `noData` prop — сообщение, когда массив пуст.
+- **Стили:** `Select.setStyle()` в computed. При `app.use(FishtVue, { unstyled: true })` все стили отключены (см. [Component class](../architecture/component-class.md)).
+- **Конфиг:** `componentsOptions.Select` + global `componentsStyle` fallback chain (`props ?? options ?? Select.componentsStyle() ?? "outlined"`) — см. §10.
+- **Локализация:** `noData` prop — сообщение, когда массив пуст. Live-region для filtered results count берёт один pluralized-ключ `select.resultsCount` через `Select.t("select.resultsCount", { count })` (Wave 3.5: CLDR-формы активной локали, `Intl.PluralRules`; `=0`/`one`/`other` для en, 4 формы для ru). Старые `resultsCountOne` / `resultsCountNone` — `@deprecated` (формы кодируются в `resultsCount`).
 - **SSR:** `isClient()` guard перед DOM-работой [FixWindow](./fix-window.md). Hydration mismatch нет — initial state совпадает.
-- **Animation:** GSAP анимирует раскрытие списка. `prefers-reduced-motion` не учтён.
+- **Animation:** Tailwind-переходы обёрнуты в `motion-safe:` префикс (CSS variant `@media (prefers-reduced-motion: no-preference)`). GSAP-анимация раскрытия списка пока не учитывает `prefers-reduced-motion` — см. §18.
 
 ## 4. Quick Start
 
@@ -115,7 +118,9 @@ const countries = [
 | `before` | — | Контент слева. |
 | `after` | — | Контент справа. |
 | `values` | `{ selected, key?, deleteSelect? }` | Кастомное отображение выбранных значений (single или multiple). |
-| `item` | `{ item, key, isQuery }` | Кастомный rendering каждого элемента списка. |
+| `item` | `{ item, key, isQuery }` | Кастомный rendering каждого элемента списка (включает корневой DOM `<li>`). |
+| `marker` | `{ item, query, isQuery, valueKey }` | Кастомный рендер подсветки совпадения query внутри значения. По умолчанию рендерит `<mark>`-теги через text-interpolation (без `v-html`). Заменяет deprecated `IDataItem.marker` поле — см. §12 Security. |
+| `empty` | `{ noData, query, hasData }` | Кастомный рендер «нет данных». По умолчанию — text-node с `noData`. `hasData=true` означает: `dataSelect` не пустой, но фильтр без совпадений; `hasData=false` — `dataSelect` пустой изначально. |
 
 ## 8. Exposed methods
 
@@ -156,7 +161,7 @@ const countries = [
   <template #item="{ item, isQuery }">
     <div class="flex gap-2">
       <span>{{ item.email }}</span>
-      <span class="text-gray-500">({{ item.role }})</span>
+      <span class="text-surface-500 dark:text-surface-400">({{ item.role }})</span>
     </div>
   </template>
 </Select>
@@ -186,11 +191,43 @@ watch(query, debounce((q) => store.fetchUsers(q), 300))
 </template>
 ```
 
+### 9.5 Compound API (`<SelectOption>` / `<SelectGroup>`)
+
+Параллельно schema-driven `:data-select` поддерживается декларативный compound-API (canon: VNode-walk
+`slots.default()`, зеркало `<Form><FormField>` / `<Table><Column>`). Если заданы **и** `:data-select`,
+**и** дети — **schema выигрывает** (backward compat).
+
+```vue
+<Select v-model="x">
+  <SelectOption value="a">Apple</SelectOption>
+  <SelectOption value="b" disabled>Banana (locked)</SelectOption>
+  <SelectGroup label="Citrus">
+    <SelectOption value="c" label="Orange" />
+    <SelectOption value="d">Lemon</SelectOption>
+  </SelectGroup>
+</Select>
+```
+
+- `<SelectOption>` props: `value` (required — становится `modelValue` при выборе и identity-ключом),
+  `label?` (display-текст; перекрывает текст default-slot), `disabled?` (не выбирается, `aria-disabled`).
+  Текст опции берётся из `label` → текста default-slot → `String(value)`.
+- `<SelectGroup>` props: `label` (required; алиас `title`) — рендерит non-selectable header-строку
+  (`[data-select-group]`, `role="presentation"`) над вложенными `<SelectOption>`.
+- `value` сохраняет тип: `<SelectOption :value="42">` → `modelValue === 42` (number).
+- В Nuxt оба компонента авто-импортируются; для explicit-import — `import { SelectOption, SelectGroup } from "fishtvue/select"`.
+- Ограничение: rich per-option контент (иконки и т.п.) compound-API не рендерит — для этого используй
+  scoped slot `#item` или schema-driven `:data-select` с `#item`.
+
+См. [Select.vue](../../lib/select/Select.vue) (helpers `compoundParsed`/`renderRows`),
+[SelectOption.vue](../../lib/select/SelectOption.vue), [SelectGroup.vue](../../lib/select/SelectGroup.vue).
+
 ## 10. Configuration & Customization
 
 ### 10.1 Global
 
 `SelectOption = Pick<SelectProps, "autoFocus" | "multiple" | "maxVisible" | "closeButtonBadge" | "noData" | "noQuery" | "classSelect" | "classSelectList" | "classMaskQuery" | "paramsFixWindow" | keyof InputLayoutOption>`.
+
+Resolve `mode` идёт по цепочке `props.mode ?? componentsOptions.Select.mode ?? FishtVueConfiguration.componentsStyle ?? "outlined"`. Global `componentsStyle` влияет на Select, если ни локально, ни через `componentsOptions.Select` не задан `mode`.
 
 ### 10.2 Per-instance
 
@@ -205,6 +242,10 @@ watch(query, debounce((q) => store.fetchUsers(q), 300))
 
 Root класс — `fv fishtvue-select`.
 
+### 10.5 Unstyled mode
+
+При `app.use(FishtVue, { unstyled: true })` базовый `Component.setStyle()` возвращает пустую строку — Select рендерится без Tailwind-классов, потребитель применяет собственный CSS. Удобно для дизайн-систем, конфликтующих с дефолтным styling. См. [Component class](../architecture/component-class.md).
+
 ## 11. Form integration & validation
 
 - В [Form](./form.md) — стандартно через v-model + rules.
@@ -215,15 +256,18 @@ Root класс — `fv fishtvue-select`.
 
 ### A11y
 
-- ARIA-атрибуты `role="combobox"`/`role="listbox"`/`role="option"` — проверь по DOM (см. Known issues).
-- Keyboard: ArrowDown/Up для навигации, Enter для выбора, Escape для закрытия.
+- **Trigger:** `<div data-select role="combobox">` с `:aria-expanded` (реактивен по `isOpenList`) и `:aria-labelledby`, указывающим на id `<Label>` (Wave 4, 2026-06-19) — screen reader озвучивает метку и состояние раскрытия. Связка id↔label обеспечивается [InputLayout](./input-layout.md) (single source, `useId()`); явный `id` prop выигрывает. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
+- ARIA-атрибуты списка `role="listbox"`/`role="option"` — проверь по DOM (см. Known issues).
+- Keyboard (Wave 4.3, 2026-06-20): **ArrowDown/Up** — навигация по опциям (roving tabindex), **Enter** — выбор, **Escape** — закрытие, **Home/End** — прыжок к первой/последней опции, **first-char typeahead** — печать буквы фокусирует первую опцию, начинающуюся с неё; повтор той же буквы (в пределах 500 мс) циклически перебирает совпадения. В режиме с поиском (default) печать символа фокусит search-поле → фильтрация работает как typeahead; чистый listbox (`noQuery: true`) использует встроенный first-char typeahead. Когда фокус в search-поле, Home/End сохраняют нативное поведение курсора.
 - Focus management: при открытии — focus на input query, при закрытии — на trigger.
-- `prefers-reduced-motion` не учтён в GSAP-анимациях.
+- **Live-region**: hidden `<div data-select-aria-live aria-live="polite" aria-atomic="true">` объявляет количество отфильтрованных результатов при печати в search-поле. Скриноридер озвучивает `Results: N` / `1 result` / `No results` (en) — локализовано и плюрализовано через единый ключ `Select.t("select.resultsCount", { count })` (Wave 3.5).
+- `motion-safe:` префикс на Tailwind-переходах respects `prefers-reduced-motion: reduce` пользовательских настроек. **GSAP-анимация раскрытия списка** не учитывает это media-query — см. Known issues.
 
 ### Security
 
+- **XSS guard by default**: `IDataItem.marker` (deprecated) и `noData` prop никогда не рендерятся через `v-html` — только через text-interpolation. Substring highlighting реализован через VNode-структуру `<mark>`-тегов, не через string concatenation HTML.
+- При использовании `#marker` или `#empty` slot — ответственность за безопасность HTML на стороне потребителя (как и у любого scoped slot).
 - Custom slot `item` рендерит то, что передал родитель — санитизируй сам.
-- `dataSelect` не санитизируется внутри.
 
 ## 13. TypeScript
 
@@ -239,9 +283,9 @@ sel.value?.openSelect()
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 11 кейсов, coverage 81.81%.
-- **Breaking changes:** на 2026-05-09 не зафиксировано.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 22 кейса (включая XSS-guard, memory-leak cleanup, Intl.Collator, aria-live, unstyled, componentsStyle fallback), coverage 79.65% statements / 67.55% branch.
+- **Breaking changes:** на 2026-05-11 не зафиксировано (slot pattern для marker/noData — additive, не breaking).
+- **Deprecations:** `IDataItem.marker` field — игнорируется компонентом с 2026-05-11 (XSS surface). Использование вызывает `console.warn`. Удаление — следующий major.
 
 ## 15. Testing recipes
 
@@ -262,7 +306,7 @@ describe("Select", () => {
 })
 ```
 
-Реальные тесты — [Select.test.ts](../../lib/select/Select.test.ts) (11 кейсов).
+Реальные тесты — [Select.test.ts](../../lib/select/Select.test.ts) (22 кейса, включая audit-fix набор от 2026-05-11).
 
 ## 16. Troubleshooting / FAQ
 
@@ -274,6 +318,7 @@ describe("Select", () => {
 | Список открывается мимо trigger | `paramsFixWindow.position` некорректен. | Передай `paramsFixWindow: { position: "bottom-start" }`. |
 | Badge `×` не удаляет | `closeButtonBadge` не задан. | Передай объект с конфигом. |
 | GSAP-анимация дёргается | Старая версия `gsap`. | Проверь `pnpm list gsap`. |
+| Список открывается без анимации | `gsap` не установлен (Wave 2.1: optional peer). Функционально список работает (мгновенное раскрытие). | `pnpm add gsap` для плавности. |
 
 ## 17. Related
 
@@ -285,11 +330,13 @@ describe("Select", () => {
 
 ### TODO / FIXME / HACK / XXX
 
-На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [Select.vue](../../lib/select/Select.vue) и [Select.d.ts](../../lib/select/Select.d.ts) не зафиксировано.
+На момент ревизии (2026-05-11) комментариев `TODO/FIXME/HACK/XXX` в [Select.vue](../../lib/select/Select.vue) и [Select.d.ts](../../lib/select/Select.d.ts) не зафиксировано (один inline `// todo need to switch to absolute` в `classGradientSelectList` — будет адресован в follow-up).
 
 ### Incomplete or stubbed behavior
 
-- Coverage 81.81% statements / 71.38% branch — несколько ветвей не покрыты ([Select.vue:465, 478–479, 529](../../lib/select/Select.vue#L465)).
+- Coverage 79.65% statements / 67.55% branch — несколько ветвей в interaction-логике (keydown nav) не покрыты.
+- **Виртуализация dropdown** не реализована — при `dataSelect.length > 500` рендер всех items в DOM ощутимо лагает. Roadmap: Wave 7 (`@tanstack/vue-virtual`) — см. [issues/select.md Issue 7](../issues/select.md).
+- **Compound `<Select><SelectOption>` API** отсутствует — только schema-driven. Roadmap: Wave 6.3 — см. [issues/select.md Issue 3](../issues/select.md).
 
 ### Skipped tests
 
@@ -306,8 +353,12 @@ describe("Select", () => {
 
 - При смене `dataSelect` с открытым списком — query не сбрасывается; selection может стать невалидным.
 - `multiple` + `modelValue: null` → отображается как пустой массив. Передавай `[]`, не `null`.
-- GSAP-анимация открытия списка — не отключается через props. Override через override `prefers-reduced-motion` CSS.
-- При `noQuery: true` — input для query всё равно рендерится (или нет — проверь поведение в текущей версии).
+- **GSAP-анимация** открытия списка не отключается через `prefers-reduced-motion` (Tailwind transitions — уже да). Override через CSS `[data-select-list] * { transition: none !important; }`. Полная интеграция — Wave 10.1 follow-up.
+- **GSAP — optional peer (Wave 2.1).** `gsap` больше не runtime-dependency; грузится lazy (`await import("gsap")`, кэшируется при первой анимации). Без установленного `gsap` список открывается/закрывается мгновенно (без анимации), но функционально полностью рабочий — анимация деградирует gracefully. Установка плавности: `pnpm add gsap`.
+- При `noQuery: true` search-input **не рендерится** (`v-if="isQuery"`, `isQuery = !noQuery`) — компонент работает как чистый listbox; навигация по опциям доступна через ArrowDown/Up, Home/End и first-char typeahead (Wave 4.3).
+- **RTL** (`<html dir="rtl">`): поддержан через логические Tailwind-классы (`ps-`/`pe-`/`start-`/`me-`/`ms-[...]` + `rtl:text-right`) — авто-флип отступов, check-иконки и dropdown-оффсета (Issue 9 / F31, resolved 2026-06-13). Виртуализация больших списков — см. ниже.
+- **Виртуализация** dropdown >500 items не реализована (рендерятся все элементы) — defer roadmap (Issue 7), требует runtime-зависимости вопреки no-deps цели.
+- **`IDataItem.marker` deprecated** (2026-05-11): передача поля игнорируется + `console.warn`. Используй `#marker` scoped slot.
 
 ### Bug report format
 

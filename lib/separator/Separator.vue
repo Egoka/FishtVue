@@ -13,9 +13,16 @@
   const slots = useSlots()
   // ---PROPS-------------------------------
   const vertical = computed<NonNullable<SeparatorProps["vertical"]>>(() => props.vertical)
-  const content = computed<NonNullable<SeparatorProps["contentPosition"]>>(
-    () => props.contentPosition ?? options?.contentPosition ?? "center"
-  )
+  // Issue 3 / F31: logical start/end. "left"/"right" — deprecated алиасы, мапятся на
+  // logical-значения (left → start, right → end). RTL-корректность порядка сегментов
+  // обеспечивается тем, что корень — flex, и его main-axis следует document direction;
+  // отдельный CSS/`useDirectionality()` не нужен (зеркало Button Issue 3).
+  const content = computed<"start" | "end" | "center" | "full">(() => {
+    const raw = props.contentPosition ?? options?.contentPosition ?? "center"
+    if (raw === "left") return "start"
+    if (raw === "right") return "end"
+    return raw
+  })
   const gradient = computed<number>(() => {
     let gradient = props?.gradient ?? options?.gradient
     if (typeof gradient === "boolean") return gradient ? 20 : 0
@@ -66,9 +73,9 @@
   )
   const classLineLeft = computed<StyleClass>(() =>
     Separator.setStyle([
-      gradient.value ? (vertical.value ? "bg-gradient-to-b" : "bg-gradient-to-r") : "",
-      "from-transparent via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800",
-      "bg-neutral-200 dark:bg-neutral-800",
+      gradient.value ? (vertical.value ? "bg-gradient-to-b" : "bg-gradient-to-r rtl:bg-gradient-to-l") : "",
+      "from-transparent via-surface-200 dark:via-surface-800 to-surface-200 dark:to-surface-800",
+      "bg-surface-200 dark:bg-surface-800",
       "rounded-l-[2px]",
       options?.classLine ?? "",
       props?.classLine ?? "",
@@ -78,7 +85,7 @@
   )
   const classContent = computed<StyleClass>(() =>
     Separator.setStyle([
-      "min-w-max text-sm text-gray-500",
+      "min-w-max text-sm text-surface-500",
       slots?.default ? "mx-1" : "",
       options?.classContent ?? "",
       props?.classContent ?? "",
@@ -98,9 +105,9 @@
   )
   const classLineRight = computed<StyleClass>(() =>
     Separator.setStyle([
-      gradient.value ? (vertical.value ? "bg-gradient-to-t" : "bg-gradient-to-l") : "",
-      "from-transparent via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800",
-      "bg-neutral-200 dark:bg-neutral-800",
+      gradient.value ? (vertical.value ? "bg-gradient-to-t" : "bg-gradient-to-l rtl:bg-gradient-to-r") : "",
+      "from-transparent via-surface-200 dark:via-surface-800 to-surface-200 dark:to-surface-800",
+      "bg-surface-200 dark:bg-surface-800",
       "rounded-r-[2px]",
       options?.classLine ?? "",
       props?.classLine ?? "",
@@ -124,14 +131,25 @@
     classLineRight
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // `Separator.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
   onMounted(() => {
-    Separator.initStyle()
+    // Dev-warning: deprecated физические "left"/"right" не RTL-safe (Issue 3 / F31).
+    if (
+      process.env.NODE_ENV !== "production" &&
+      (props.contentPosition === "left" || props.contentPosition === "right")
+    ) {
+      console.warn(
+        `[FishtVue Separator] contentPosition="${props.contentPosition}" is deprecated; ` +
+          `use "${props.contentPosition === "left" ? "start" : "end"}" for RTL-safe logical positioning.`
+      )
+    }
   })
 </script>
 
 <template>
-  <div data-separator :class="classBase">
-    <div v-if="!['left', 'full'].includes(content)" data-separator-left :class="classBodyLineLeft" aria-hidden="true">
+  <div data-separator role="separator" :aria-orientation="vertical ? 'vertical' : 'horizontal'" :class="classBase">
+    <div v-if="!['start', 'full'].includes(content)" data-separator-left :class="classBodyLineLeft" aria-hidden="true">
       <div
         :class="classLineLeft"
         :style="[
@@ -140,11 +158,7 @@
         ]" />
     </div>
     <span v-if="slots?.default" data-separator-content :class="classContent"><slot /></span>
-    <div
-      v-if="!['right', 'full'].includes(content)"
-      data-separator-right
-      :class="classBodyLineRight"
-      aria-hidden="true">
+    <div v-if="!['end', 'full'].includes(content)" data-separator-right :class="classBodyLineRight" aria-hidden="true">
       <div
         :class="classLineRight"
         :style="[

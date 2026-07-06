@@ -1,7 +1,7 @@
 ---
 title: Calendar
 summary: Date picker на v-calendar — single/range, date/time/dateTime, кастомные шаблоны.
-updated: 2026-05-09
+updated: 2026-06-19
 stability: beta
 since: 0.2.11
 ---
@@ -27,23 +27,24 @@ lib/calendar/
 ```
 
 Зависимости:
-- [v-calendar](../../lib/package.json) `^3.1.2` — core engine.
+- [v-calendar](../../lib/package.json) `^3.0.0` — core engine. **Wave 2.1: optional `peerDependency` + lazy.** v-calendar больше не runtime-dependency: его ставит приложение (`pnpm add v-calendar`), а `DatePicker` грузится lazy в `onMounted` (`DatePicker.value = (await import("v-calendar")).DatePicker`; ref-based, не `defineAsyncComponent` — template-ref `calendarPicker` должен указывать на реальный инстанс для чтения `inputValue`/`dateParts`). Без установленного peer Calendar не падает «жёстко» — picker просто не рендерится (`<component :is="DatePicker" v-if="DatePicker …">`).
 - [InputLayout](./input-layout.md), [FixWindow](./fix-window.md).
 - [Component class](../architecture/component-class.md).
-- `date-fns` для форматирования через [dateHandler](../utilities/dateHandler.md).
-- Css импортируется явно: `v-calendar/style.css` ([rollup.config.js:65](../../lib/rollup.config.js#L65)).
+- `date-fns` для форматирования через [dateHandler](../utilities/dateHandler.md) (остаётся runtime-dependency).
+- CSS грузится lazy в `onMounted` (`import("v-calendar/style.css")`, client-only → SSR-safe), а не top-level side-effect-импортом ([rollup.config.js:65](../../lib/rollup.config.js#L65) — external).
 
 Лицензия v-calendar — MIT (не копилефт).
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили + явный `onMounted(() => initDarkModeObserver())` для трекинга dark-mode на body/html.
+- **Lifecycle:** `Component.__hooks()` ([component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) автоматически вызывает `initStyle()` на `onServerPrefetch` + `vueOnMounted`. В Calendar.vue `onMounted` дополнительно запускает `initDarkModeObserver()` ([Calendar.vue:248-256](../../lib/calendar/Calendar.vue#L248-L256)) и `autoFocus`-логику. `onBeforeUnmount` ([Calendar.vue:258-265](../../lib/calendar/Calendar.vue#L258-L265)) делает `darkObserver.disconnect()` и снимает keydown listener'ы — memory-leak fix 2026-05-11 (Issue 1).
 - **Поток данных:** `modelValue` (string/Date/range) → внутренний state → emit'ы.
 - **v-model contract:** standard.
 - **Стили:** `Calendar.setStyle()` для обёртки. Внутренние стили v-calendar — через `v-calendar/style.css`.
-- **Конфиг:** `componentsOptions.Calendar` — см. §10. Помимо этого, `paramsDatePicker.locale` принимает `date-fns/locale` объект.
-- **Локализация:** через `paramsDatePicker.locale` или `optionsTheme.locale`.
-- **SSR:** `isClient()` guard перед инициализацией observer'а. v-calendar SSR-friendly до версии 3.1.x.
+- **Mode resolution:** `props.mode ?? options?.mode ?? Calendar.componentsStyle() ?? "outlined"` ([Calendar.vue:106-108](../../lib/calendar/Calendar.vue#L106-L108)) — `componentsStyle` global fallback с 2026-05-11 (Issue 6).
+- **Конфиг:** `componentsOptions.Calendar` — см. §10. Помимо этого, `paramsDatePicker.locale` принимает `date-fns/locale` объект или строку.
+- **Локализация:** автоматически пробрасывается `FishtV?.getActiveLocale()` в `<DatePicker :locale>` ([Calendar.vue:102-105](../../lib/calendar/Calendar.vue#L102-L105)). Приоритет: `props.paramsDatePicker.locale > options.paramsDatePicker.locale > getActiveLocale() > "en"`.
+- **SSR:** `isClient()` guard перед инициализацией observer'а и перед `removeEventListener`. v-calendar SSR-friendly до версии 3.1.x.
 - **Animation:** v-calendar использует свои анимации; FixWindow — для popover.
 
 ## 4. Quick Start
@@ -211,6 +212,7 @@ Calendar инжектит часть стилей через `Calendar.setStyle(
 
 ### A11y
 
+- **Trigger** (`<div data-calendar>`) связан с меткой через `:aria-labelledby` → id `<Label>` (Wave 4, 2026-06-19); id раздаётся [InputLayout](./input-layout.md) (`useId()`, либо `id` prop). См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - v-calendar содержит a11y-семантику для grid и кнопок навигации. Проверь актуальность по версии.
 - Keyboard: ArrowKeys для навигации по сетке, Enter для выбора, Escape — close popover.
 - Focus management: open → focus на picker, close → return.
@@ -288,9 +290,9 @@ describe("Calendar", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 63.12% — большая часть веток ([Calendar.vue:319–340, 377–396](../../lib/calendar/Calendar.vue#L319-L340)) не покрыта тестами.
-- 2 skipped тестов в [Calendar.test.ts](../../lib/calendar/Calendar.test.ts).
-- `initDarkModeObserver()` — внутренний; не expose'ится; на cleanup'е компонента observer disconnect'ится (надо проверить).
+- Coverage 63.12% — часть веток (range-mode DatePicker, masks edge cases) не покрыта тестами. После аудит-фикса 2026-05-11 добавлено 7 кейсов в `describe("Audit fixes 2026-05-11 (Issues 1, 6, 8)")` — coverage observer/listener/componentsStyle/locale теперь покрыт.
+- 2 skipped (todo) теста в [Calendar.test.ts](../../lib/calendar/Calendar.test.ts) — `Calendar Component - Date Selection` (требует jsdom day-cell interaction), `renders slot content in the footer` (требует open-state).
+- `initDarkModeObserver()` — внутренний; observer хранится в setup-scoped `let darkObserver` ([Calendar.vue:99](../../lib/calendar/Calendar.vue#L99)) и disconnect'ится в `onBeforeUnmount` ([Calendar.vue:258-265](../../lib/calendar/Calendar.vue#L258-L265)) — Issue 1 ✅ resolved 2026-05-11.
 
 ### Skipped tests
 
@@ -307,6 +309,9 @@ describe("Calendar", () => {
 - При `paramsDatePicker.timezone` v-calendar парсит `Date` относительно зоны — `modelValue` приходит в UTC. Для рендеринга в локальной зоне — преобразуй явно.
 - `isNotCloseOnDateChange: true` оставляет popover открытым после выбора — для UI-паттерна «выбрал-нажал-OK» используй custom `footerPicker`.
 - На server-side render в Nuxt 4 — есть риск инициализации в неправильное время. Проверяй интеграционно.
+- `getActiveLocale()` (Issue 8 ✅) — reactive computed, но v-calendar internally rebuilds month-data только при mount. Если нужен runtime locale-switch без перезагрузки страницы — пробрось `:key="locale"` на Calendar, чтобы форсировать remount.
+- v-calendar dependency (Issue 2, deferred) — в `lib/package.json` `dependencies`, не `peerDependencies`. Если потребитель уже использует v-calendar 4.x — npm может установить две копии. Решается отдельным packaging-аудитом для всей библиотеки.
+- Floating positioning через FixWindow (Issue 9, deferred) — не пересчитывает позицию при scroll внутри scroll-parent. Cross-cutting; решается переходом на floating-ui для FixWindow.
 
 ### Bug report format
 

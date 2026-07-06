@@ -9,9 +9,10 @@ export default defineConfig({
   plugins: [vue()],
   test: {
     globals: true,
-    environment: "jsdom",
+    environment: "./.tests/setup/jsdomEnvironment.ts",
     silent: true,
     include: ["lib/**/*.test.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.claude/worktrees/**"],
     maxWorkers: 1,
     minWorkers: 1,
     isolate: false,

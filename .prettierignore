@@ -8,3 +8,7 @@ node_modules
 .vscode
 .nuxt
 .output
+
+# Claude Code worktrees — temporary working copies, lint/format/typecheck/test
+# run inside каждой ветки отдельно. Сканировать их из main checkout не нужно.
+.claude/worktrees

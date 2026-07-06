@@ -13,6 +13,37 @@ export default <DefaultMessages>{
   find: "Найти...",
   copy: "Копировать",
   clear: "Очистить",
+  inputLayout: {
+    copied: "Скопировано"
+  },
+  select: {
+    resultsCount:
+      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата",
+    resultsCountOne: "1 результат",
+    resultsCountNone: "Результатов не найдено"
+  },
+  table: {
+    resultsCount:
+      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата",
+    resultsCountOne: "1 результат",
+    resultsCountNone: "Результатов не найдено"
+  },
+  alert: {
+    close: "Закрыть"
+  },
+  fixwindow: {
+    close: "Закрыть"
+  },
+  loading: {
+    label: "Загрузка"
+  },
+  pagination: {
+    label: "Навигация по страницам",
+    page: "Страница"
+  },
+  virtualScroller: {
+    loading: "Загрузка…"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

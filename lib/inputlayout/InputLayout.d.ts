@@ -39,6 +39,16 @@ export declare type InputLayoutProps = {
   mode?: StyleMode
 
   /**
+   * Explicit id for the slotted control. When omitted, InputLayout
+   * auto-generates a stable id via `useId()` (SSR-safe). The id is exposed
+   * through the default slot scope and used to wire `<label for>` /
+   * `aria-labelledby` (label↔control association — see
+   * [Issue 9](../../Documentation/issues/inputlayout.md)).
+   * @type {string | undefined}
+   */
+  id?: string
+
+  /**
    * The label text for the input.
    * @type {string | undefined}
    */
@@ -121,13 +131,44 @@ export declare type InputLayoutProps = {
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Vertical offset used by the layout for sticky-header awareness
+   * (e.g. `scroll-margin-top` of the invalid input region).
+   * Accepts a fixed number of pixels, a CSS string, or a getter function
+   * (re-evaluated on mount). Replaces the previous hardcoded
+   * `document.querySelector("header")` coupling — see [Issue 5](../../Documentation/issues/inputlayout.md).
+   * @type {number | string | (() => number) | undefined}
+   */
+  offsetTop?: number | string | (() => number)
 }
 
 export declare type InputLayoutSlots = {
-  default(): VNode[]
+  /**
+   * Default slot for the control element. Receives the association scope:
+   * - `id` — stable control id (explicit `id` prop or auto-generated `useId()`).
+   *   Bind to the control's `id` so `<label for>` resolves.
+   * - `labelledby` — id of the rendered `<Label>` (or `undefined` when no
+   *   `label`). Non-labelable triggers (Select/Calendar/TextEditor) bind it to
+   *   `aria-labelledby` for screen-reader name.
+   */
+  default(props: { id: string; labelledby?: string }): VNode[]
   before(): VNode[]
   after(): VNode[]
   body(): VNode[]
+  /**
+   * Override slot for the help-tooltip content. When provided, replaces the
+   * text-only fallback rendered from the `help` prop. The slot exists to allow
+   * rich, but caller-sanitized, content without forcing the library to use
+   * `v-html` (XSS-safe by default). See [Issue 1](../../Documentation/issues/inputlayout.md).
+   */
+  help(): VNode[]
+  /**
+   * Override slot for the validation-error tooltip content. When provided,
+   * replaces the text-only fallback rendered from the `messageInvalid` prop.
+   * Same XSS-safe contract as the `help` slot.
+   */
+  messageInvalid(): VNode[]
 }
 
 /**
@@ -302,7 +343,7 @@ export declare type InputLayoutExpose = {
 }
 export declare type InputLayoutOption = Pick<
   InputLayoutProps,
-  "mode" | "labelMode" | "clear" | "width" | "height" | "animation" | "classBody" | "class"
+  "mode" | "labelMode" | "clear" | "width" | "height" | "animation" | "classBody" | "class" | "offsetTop"
 >
 
 // ---------------------------------------

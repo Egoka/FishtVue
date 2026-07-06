@@ -1,7 +1,7 @@
 ---
 title: Issues — Locale system
-summary: Аудит locale — coverage 0%, нет fallback chain, нет pluralization, нет interpolation, only en/ru bundled.
-updated: 2026-05-10
+summary: Аудит locale — coverage 0% (Issue 1 open). Fallback chain ✅ 2026-05-20, interpolation + pluralization ✅ 2026-06-19 (Wave 3.5, Component.t(key, params?) + Intl.PluralRules). only en/ru bundled.
+updated: 2026-06-19
 audit-checklist: 60-point + Configuration support
 source: lib/locale/
 related-doc: ../architecture/locale.md
@@ -14,7 +14,7 @@ related-doc: ../architecture/locale.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 5 | A2, A4-5, F30 (no interpolation/pluralization), J46 (0% coverage), L53 (no fallback) |
+| high | 3 | A2, A4-5, J46 (0% coverage); ~~F30~~ ✅ 2026-06-19, ~~L53~~ ✅ 2026-05-20 |
 | medium | 4 | F31 (no RTL flag in NameLocale), F32 (date/number locale), D21, K46 |
 | low | 2 | D22, B10 |
 
@@ -35,45 +35,51 @@ related-doc: ../architecture/locale.md
    - Структура nested-keys валидна.
 2. CI-step: при добавлении ключа в `DefaultMessages` — все locales должны иметь его (TS catches это, но runtime test confirms).
 
-## Issue 2: Нет fallback chain для отсутствующих ключей
+## ~~Issue 2: Нет fallback chain для отсутствующих ключей~~ ✅ resolved 2026-05-20
 
 - **Категория:** L53
-- **Severity:** high
+- **Severity:** ~~high~~ ✅ resolved
 
-См. [config.md Issue 3](./config.md) — fallback логика должна быть в `t(key)` через config-уровень.
+~~См. [config.md Issue 3](./config.md) — fallback логика должна быть в `t(key)` через config-уровень.~~
 
-## Issue 3: Нет interpolation / pluralization
+> ✅ **resolved 2026-05-20** — `Component.t(key)` ([component/index.ts:191](../../lib/component/index.ts#L191)) реализует fallback chain `messages[active][key] → messages[default][key] → key` (dot-path через `objectHandler.get`), возвращает `string` (key как last resort). См. [locale.md §3/§18](../architecture/locale.md#3-how-it-works).
+
+## ~~Issue 3: Нет interpolation / pluralization~~ ✅ resolved 2026-06-19 (Wave 3.5)
 
 - **Категория:** F30
-- **Severity:** high
-- **Где:** [Component.t()](../../lib/component/index.ts) (предположительно)
+- **Severity:** ~~high~~ ✅ resolved
+- **Где:** [Component.t(key, params?)](../../lib/component/index.ts#L191), [stringHandler.interpolate / selectPlural](../../lib/utils/stringHandler.ts)
 
 ### Что найдено
 
-Текущий `t("button.save")` возвращает строку как есть. Нет:
-- **Interpolation**: `t("welcome", { name: "Egor" })` → `"Welcome, Egor!"`.
+~~Текущий `t("button.save")` возвращает строку как есть.~~ Нет было:
+- **Interpolation**: `t("welcome", { name: "Egor" })` → `"Hello, Egor!"`.
 - **Pluralization**: `t("itemsCount", { count: 5 })` → `"5 items"` / `"1 item"`.
 
-### Что нужно сделать
+### Что сделано (✅ 2026-06-19)
 
-1. Расширить `t(key, params?, options?)`:
-   ```ts
-   public t(key: string, params?: Record<string, any>): string {
-     let value = lookup(key, locale)
-     if (params) {
-       value = value.replace(/\{(\w+)\}/g, (_, name) => params[name] ?? "")
-     }
-     // pluralization: choose based on params.count
-     return value
-   }
-   ```
-2. Или интегрировать `vue-i18n` (peer-dep) и делегировать.
-3. Pluralization rules per-locale (Russian имеет 4 формы: 1, 2-4, 5-many, others).
+`Component.t(key, params?)` расширен опциональным `params: Record<string, string | number>` (backward-compatible — без `params` поведение прежнее):
+
+```ts
+public t(key, params?): string {
+  // ...fallback chain даёт value: string (active → default → key)...
+  if (params) {
+    if (typeof params.count === "number" && value.includes("|")) value = selectPlural(value, params.count, active)
+    value = interpolate(value, params)
+  }
+  return value
+}
+```
+
+- **interpolation** — [`interpolate(template, params)`](../../lib/utils/stringHandler.ts): `{name}` → `params[name]`; неизвестный плейсхолдер остаётся литералом (dev-сигнал).
+- **pluralization** — [`selectPlural(template, count, locale)`](../../lib/utils/stringHandler.ts): per-locale CLDR-правила через **`Intl.PluralRules`** (платформенный API, без новой npm-зависимости вопреки `vue-i18n`-варианту). Формат формы — `<selector> <text>` через `|`, selector = `=N` (точное) либо CLDR-категория (`zero|one|two|few|many|other`); порядок выбора `=count → категория → other → первая форма`. Russian-формы корректны для краёв (21 → `one`, 11 → `many`, 22 → `few`), чего эвристика `n === 1` не давала.
+
+Locale-сообщения `select.resultsCount`/`table.resultsCount` переведены на pluralized-формат; `Select.vue`/`Table.vue` (aria-live results) читают через `t("…resultsCount", { count })`.
 
 ### Acceptance criteria
 
-- [ ] `t("welcome", { name: "Egor" })` returns `"Hello, Egor"`.
-- [ ] `t("itemsCount", { count: 5 })` использует Russian pluralization rules.
+- [x] `t("welcome", { name: "Egor" })` returns `"Hello, Egor!"`.
+- [x] `t("itemsCount", { count: 5 })` использует Russian pluralization rules (через `Intl.PluralRules`).
 
 ## Issue 4: NameLocale type — открытый string, нет встроенного RTL flag
 

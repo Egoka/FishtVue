@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, inject, nextTick, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from "vue"
   import {
     CalendarEmits,
     CalendarProps,
@@ -10,8 +10,6 @@
     SimpleDateRange
   } from "./Calendar"
   import { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
-  import { DatePicker } from "v-calendar"
-  import "v-calendar/style.css"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Icons from "fishtvue/icons/Icons.vue"
@@ -20,6 +18,13 @@
   import { isClient } from "fishtvue/utils/domHandler"
   import type { FishtVue } from "fishtvue/config"
   import { FishtVueSymbol } from "fishtvue/config"
+  // ---LAZY V-CALENDAR (Wave 2.1)----------------------
+  // v-calendar — optional peerDependency: грузим DatePicker динамически в onMounted (зеркало
+  // TextEditor/QuillEditor) + CSS lazy (client-only → SSR-safe). Ref-based (НЕ
+  // defineAsyncComponent) специально: template-ref `calendarPicker` должен указывать на РЕАЛЬНЫЙ
+  // инстанс DatePicker — Calendar читает его `inputValue`/`dateParts`; async-wrapper их не отдаёт.
+  // Bundle без Calendar не тянет v-calendar; потребитель Calendar ставит peer сам.
+  const DatePicker = ref<any>()
   // ---BASE-COMPONENT----------------------
   const Calendar = new Component<"Calendar">()
   const options = Calendar.getOptions()
@@ -95,11 +100,18 @@
     () => props?.isNotCloseOnDateChange ?? options?.isNotCloseOnDateChange ?? false
   )
   const isDark = ref<boolean | undefined>(undefined)
-
-  onMounted(() => {
-    initDarkModeObserver()
-  })
-  const mode = computed<NonNullable<CalendarProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  // ---ISSUE 1 — MutationObserver saved in closure-let so onBeforeUnmount can disconnect.
+  // eslint-disable-next-line no-undef
+  let darkObserver: MutationObserver | undefined
+  // ---ISSUE 8 — propagate FishtVue active locale to v-calendar DatePicker.
+  // Priority: props.paramsDatePicker.locale > options.paramsDatePicker.locale > FishtVue active locale > "en"
+  const locale = computed<NonNullable<IParamsDatePicker["locale"]>>(
+    () => props.paramsDatePicker?.locale ?? options?.paramsDatePicker?.locale ?? FishtV?.getActiveLocale() ?? "en"
+  )
+  // ---ISSUE 6 — fall back to global componentsStyle before built-in default.
+  const mode = computed<NonNullable<CalendarProps["mode"]>>(
+    () => props.mode ?? options?.mode ?? Calendar.componentsStyle() ?? "outlined"
+  )
   const placeholder = computed<IParamsDatePicker["placeholder"]>(() =>
     String(props.paramsDatePicker?.placeholder ?? "")
   )
@@ -157,10 +169,10 @@
           "flex flex-wrap items-center z-10 max-h-max cursor-pointer leading-3"
         ])
       : Calendar.setStyle([
-          "border-0 w-full text-left bg-transparent py-1.5 pl-1 cursor-pointer text-gray-900 dark:text-gray-100 placeholder:text-gray-400 placeholder:dark:text-gray-600 focus:ring-0 sm:text-sm sm:leading-6",
+          "border-0 w-full text-left bg-transparent py-1.5 pl-1 cursor-pointer text-surface-900 dark:text-surface-100 placeholder:text-surface-400 placeholder:dark:text-surface-600 focus:ring-0 sm:text-sm sm:leading-6",
           options?.classDateText ?? "",
           props?.classDateText ?? "",
-          isDisabled.value ? "text-slate-500 dark:text-slate-500" : "",
+          isDisabled.value ? "text-surface-500 dark:text-surface-500" : "",
           "block flex-1"
         ])
   )
@@ -168,11 +180,11 @@
     Calendar.setStyle([
       "mt-0 w-min min-w-min max-w-lg max-h-max text-base sm:text-sm rounded-md ring-1 ring-black/5 shadow-xl",
       mode.value === "filled"
-        ? "border-0 bg-stone-100 dark:bg-stone-900"
+        ? "border-0 bg-surface-100 dark:bg-surface-900"
         : mode.value === "outlined"
-          ? "border border-gray-300 dark:border-gray-600 bg-white dark:bg-black"
+          ? "border border-surface-300 dark:border-surface-600 bg-white dark:bg-black"
           : mode.value === "underlined"
-            ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
+            ? "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b bg-surface-50 dark:bg-surface-950"
             : "",
       options?.classPicker ?? "",
       props?.classPicker ?? "",
@@ -180,8 +192,9 @@
     ])
   )
   const classSeparatorNone = ref(Calendar.setStyle("h-5 w-1"))
-  const classPlaceholder = ref(Calendar.setStyle("text-gray-400 dark:text-gray-600"))
+  const classPlaceholder = ref(Calendar.setStyle("text-surface-400 dark:text-surface-600"))
   const inputLayout = computed<Omit<InputLayoutProps, "value">>(() => ({
+    id: props.id,
     isValue: isValue.value,
     mode: mode.value,
     label: props.label,
@@ -238,17 +251,56 @@
     clearDataPicker
   })
   // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
-    Calendar.initStyle()
+  // ---Wave 2.3 — drop duplicate Calendar.initStyle() — Component.__hooks() already registers it.
+  // ---ISSUE 1 — onBeforeUnmount cleanup for MutationObserver + keydown listeners (memory leak fix).
+  onMounted(async () => {
+    initDarkModeObserver()
     if (autoFocus.value) openCalendar()
-    nextTick(() => {
-      visibleDate.value = <ICalendarPicker["inputValue"]>(
-        (calendarPicker.value?.inputValue as ICalendarPicker["inputValue"])
-      )
-    })
+    // ---Wave 2.1 — lazy v-calendar (optional peer): компонент + CSS грузятся на клиенте при mount,
+    // не на import-time (SSR-safe, bundle без Calendar не тянет). Отсутствие peer → picker не рендерится.
+    try {
+      DatePicker.value = (await import("v-calendar")).DatePicker
+      import("v-calendar/style.css").catch(() => {})
+    } catch {
+      /* v-calendar не установлен (optional peer) — picker остаётся нерендеренным */
+    }
+    // читаем начальный inputValue после того, как picker смонтировался (await nextTick)
+    await nextTick()
+    visibleDate.value = <ICalendarPicker["inputValue"]>(
+      (calendarPicker.value?.inputValue as ICalendarPicker["inputValue"])
+    )
+  })
+  onBeforeUnmount(() => {
+    darkObserver?.disconnect()
+    darkObserver = undefined
+    if (isClient()) {
+      document.removeEventListener("keydown", keydownCalendar)
+      document.removeEventListener("keydown", openCalendarOnEnter)
+    }
   })
   // ---WATCHERS----------------------------
   watch(calendarPicker, () => emit("getCalendar", calendarPicker.value as ICalendarPicker), { deep: true })
+  // Issue 11 (calendar.md): inputValue у v-calendar считается не мгновенно после mount — сам
+  // DatePicker ещё не успел посчитать форматированную строку/диапазон из modelValue+mask.
+  // Раньше синхронизация была через watch(calendarPicker, ..., {deep:true}) с guard'ом
+  // "visibleDate.value == null" — не работало по двум причинам: (а) onMounted-read (L268-271)
+  // успевает присвоить visibleDate ДО того, как v-calendar досчитает значение, присваивая уже
+  // непустой объект (`{start:"",end:""}` в range-режиме) — после этого guard навсегда false;
+  // (б) deep-watch на весь calendarPicker-инстанс срабатывает только один раз, при первом
+  // появлении самого рефа, и не видит последующих внутренних изменений inputValue у v-calendar.
+  // watch на геттер конкретно inputValue решает оба: триггерится на каждое его реальное
+  // изменение, а guard — "значение непустое", а не "visibleDate ещё не выставлен".
+  const hasInputValue = (v: ICalendarPicker["inputValue"] | undefined) =>
+    typeof v === "string" ? v !== "" : !!(v as Partial<IRangeValue>)?.start || !!(v as Partial<IRangeValue>)?.end
+  watch(
+    () => calendarPicker.value?.inputValue as ICalendarPicker["inputValue"] | undefined,
+    (inputValue) => {
+      if (calendarPicker.value && hasInputValue(inputValue)) {
+        visibleDate.value = inputValue as ICalendarPicker["inputValue"]
+      }
+    },
+    { deep: true }
+  )
   watch(isOpenPicker, (value) => {
     if (!isClient()) return
     if (value) document.addEventListener("keydown", keydownCalendar)
@@ -319,8 +371,8 @@
     const checkDarkMode = () => (isDark.value = !!document.querySelector(selector))
     checkDarkMode()
     // eslint-disable-next-line no-undef
-    const observer = new MutationObserver(checkDarkMode)
-    observer.observe(document.documentElement, {
+    darkObserver = new MutationObserver(checkDarkMode)
+    darkObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class"],
       subtree: true
@@ -330,40 +382,48 @@
 
 <template>
   <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="clearDataPicker">
-    <div
-      ref="datePickerLink"
-      :id="id"
-      data-calendar
-      tabindex="0"
-      :class="classDataPicker"
-      @focusin="focus(true)"
-      @focusout="focus(false)"
-      @click="openCalendar">
-      <div v-if="datePickerOptions?.isRange" :class="classDateText">
-        {{ (visibleDate as IRangeValue)?.start }}
-        <Icons
-          v-if="separator === 'arrow' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
-          type="ArrowLongRight"
-          :class="[isDisabled ? 'text-slate-500 dark:text-slate-500' : 'text-gray-400 dark:text-gray-400', 'mx-1']" />
-        <Icons
-          v-if="separator === 'points' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
-          type="EllipsisVertical"
-          :class="[isDisabled ? 'text-slate-500 dark:text-slate-500' : 'text-gray-600 dark:text-gray-400']" />
-        <div
-          v-if="separator === 'none' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
-          :class="classSeparatorNone" />
-        <div
-          v-if="!(visibleDate as IRangeValue)?.start && !(visibleDate as IRangeValue)?.end && isOpenPicker"
-          :class="classPlaceholder">
-          {{ placeholder }}
+    <template #default="{ id: fieldId, labelledby }">
+      <div
+        ref="datePickerLink"
+        :id="fieldId"
+        :aria-labelledby="labelledby"
+        data-calendar
+        tabindex="0"
+        :class="classDataPicker"
+        @focusin="focus(true)"
+        @focusout="focus(false)"
+        @click="openCalendar">
+        <div v-if="datePickerOptions?.isRange" :class="classDateText">
+          {{ (visibleDate as IRangeValue)?.start }}
+          <Icons
+            v-if="separator === 'arrow' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
+            type="ArrowLongRight"
+            :class="[
+              isDisabled ? 'text-surface-500 dark:text-surface-500' : 'text-surface-400 dark:text-surface-400',
+              'mx-1'
+            ]" />
+          <Icons
+            v-if="separator === 'points' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
+            type="EllipsisVertical"
+            :class="[
+              isDisabled ? 'text-surface-500 dark:text-surface-500' : 'text-surface-600 dark:text-surface-400'
+            ]" />
+          <div
+            v-if="separator === 'none' && (visibleDate as IRangeValue)?.start && (visibleDate as IRangeValue)?.end"
+            :class="classSeparatorNone" />
+          <div
+            v-if="!(visibleDate as IRangeValue)?.start && !(visibleDate as IRangeValue)?.end && isOpenPicker"
+            :class="classPlaceholder">
+            {{ placeholder }}
+          </div>
+          {{ (visibleDate as IRangeValue)?.end }}
         </div>
-        {{ (visibleDate as IRangeValue)?.end }}
+        <div v-else :class="classDateText">
+          <span v-if="!visibleDate && isOpenPicker" :class="classPlaceholder">{{ placeholder }}</span>
+          {{ visibleDate }}
+        </div>
       </div>
-      <div v-else :class="classDateText">
-        <span v-if="!visibleDate && isOpenPicker" :class="classPlaceholder">{{ placeholder }}</span>
-        {{ visibleDate }}
-      </div>
-    </div>
+    </template>
     <template #body>
       <FixWindow
         v-bind="paramsFixWindow"
@@ -372,30 +432,34 @@
         class="px-0 rounded-[0.4rem]"
         @close="(env) => closeCalendar(env)">
         <div data-calendar-picker ref="picker" :class="classPicker">
-          <DatePicker
-            v-if="datePickerOptions?.isRange"
+          <component
+            :is="DatePicker"
+            v-if="DatePicker && datePickerOptions?.isRange"
             v-model.range.string="value"
-            v-bind="fieldsOmit(datePickerOptions, ['isRange'])"
+            v-bind="fieldsOmit(datePickerOptions, ['isRange', 'locale'])"
             ref="calendarPicker"
             :is-dark="isDark"
+            :locale="locale"
             class="vc-primary"
             @update:modelValue="changeDate">
             <template #footer>
               <slot name="footerPicker" />
             </template>
-          </DatePicker>
-          <DatePicker
-            v-else
+          </component>
+          <component
+            :is="DatePicker"
+            v-else-if="DatePicker"
             v-model.string="value"
-            v-bind="fieldsOmit(datePickerOptions, ['isRange'])"
+            v-bind="fieldsOmit(datePickerOptions, ['isRange', 'locale'])"
             :is-dark="isDark"
+            :locale="locale"
             ref="calendarPicker"
             class="vc-primary"
             @update:modelValue="changeDate">
             <template #footer>
               <slot name="footerPicker" />
             </template>
-          </DatePicker>
+          </component>
         </div>
       </FixWindow>
       <slot />

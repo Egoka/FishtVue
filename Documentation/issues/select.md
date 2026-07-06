@@ -1,7 +1,7 @@
 ---
 title: Issues — Select
-summary: Аудит Select — CRITICAL XSS через v-html (marker/noData), memory leak (ResizeObserver + keydown listeners без disconnect), нет dual-API (только schema-driven).
-updated: 2026-05-10
+summary: 13/14 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports; 2026-07-02 — Issue 12 ms-[undefinedpx] guard; 2026-07-04 — B10 миграция на semantic-токен `surface`). Открытый — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending). Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
+updated: 2026-07-04
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
 related-doc: ../components/select.md
@@ -11,18 +11,40 @@ related-doc: ../components/select.md
 
 ## Сводка
 
-| Severity | Count | Categories |
-|---|---|---|
-| critical | 2 | C13 (XSS v-html × 3), H41 (memory leaks) |
-| high | 6 | A2, A4-5, C17, L53, P (dual-API), H43 (virtualization) |
-| medium | 4 | E29.5, F31, F32, G34 |
-| low | 3 | E29.7, B10, N59 |
+| Severity | Count (open) | Categories                                            |
+| -------- | ------------ | ----------------------------------------------------- |
+| critical | 0            | —                                                     |
+| high     | 1            | H43 (virtualization, unblocked — integration pending) |
+| medium   | 0            | —                                                     |
+| low      | 0            | ~~B10 (colors → semantic tokens, deferred)~~ ✅ resolved 2026-07-04 |
 
-## Issue 1: CRITICAL — XSS через `v-html` в `marker` и `noData`
+> Открытый пункт — **не баг**: Issue 7 **разблокирован** (2026-06-13) — добавлен dependency-free [VirtualScroller](../components/virtualscroller.md) + `useVirtualScroll`; осталась интеграция в Select (отдельным ТЗ). B10 закрыт 2026-07-04 — все остальные 12 пунктов закрыты.
+
+> **Wave 4.3 keyboard (✅ 2026-06-20):** в [keydownSelect](../../lib/select/Select.vue#L586) добавлены **Home/End** (`focusItemAt`) и **first-char typeahead** для `noQuery`-listbox (`typeaheadFocus`, APG-циклирование). Это roadmap-only пункт ([issues/README.md Wave 4.3](./README.md)) без numbered issue — **матрица severity не меняется**. См. [components/select.md §12](../components/select.md).
+
+## ~~Issue 1: CRITICAL — XSS через `v-html` в `marker` и `noData`~~ ✅ resolved 2026-05-11
 
 - **Категория:** C13 + security
-- **Severity:** **critical**
-- **Где:** [Select.vue:553](../../lib/select/Select.vue#L553), [Select.vue:562](../../lib/select/Select.vue#L562), [Select.vue:564](../../lib/select/Select.vue#L564)
+- **Severity:** ~~**critical**~~
+- **Где (was):** ~~[Select.vue:553, 562, 564]~~ — все три `v-html` сайта удалены.
+- **Status:** ✅ resolved 2026-05-11
+
+**Что сделано (2026-05-11):**
+
+- `v-html="item?.marker"` (Select.vue:553) → scoped slot `#marker` с default-template, который рендерит `<mark>`-теги через `<template v-for>` + text-interpolation (без `v-html`). См. [Select.vue](../../lib/select/Select.vue) (slot `marker` в template, helper `splitByQuery` + `markerParts` в script).
+- `v-html="noData"` (Select.vue:562, 564) → объединено в `#empty` slot с default text-node `<div>{{ noData }}</div>`.
+- `dataList` computed больше **не** мутирует `item.marker` HTML-строкой — подсветка вычисляется на render-time через safe helper.
+- `IDataItem.marker?: string` помечен `@deprecated`; передача поля логируется через `console.warn` один раз на item (WeakSet guard).
+- Slots `marker` и `empty` объявлены в `SelectSlots` ([Select.d.ts](../../lib/select/Select.d.ts)) с типизированными scoped-props.
+
+**Acceptance criteria:**
+
+- [x] `<Select :data-select="[{ id: 1, value: 'X', marker: '<script>alert(1)</script>' }]">` — НЕ исполняет скрипт. Тест: `Select.test.ts` > `does not execute XSS payload from item.marker (legacy field is ignored)`.
+- [x] Payload с `<img src=x onerror=...>` в `noData` — DOM не содержит `<img>`. Тест: `does not execute XSS payload from noData prop`.
+- [x] Поиск/highlighting работает: substring matches рендерится в `<mark>`-тегах через safe-helper.
+- [x] `#marker` scoped slot позволяет custom override без потери безопасности.
+
+### Историческая запись (что было)
 
 ### Что найдено
 
@@ -46,6 +68,7 @@ related-doc: ../components/select.md
 ### Что нужно сделать
 
 **Опция A — slot вместо v-html (рекомендуется):**
+
 1. В [Select.vue:553](../../lib/select/Select.vue#L553) заменить `v-html="item?.marker"` на:
    ```vue
    <slot name="marker" :item="item" :query="query" :class="classItemSelectValue">
@@ -72,11 +95,27 @@ related-doc: ../components/select.md
 - [ ] Тест: payload с `<img src=x onerror=...>` в `marker` или `noData` — DOM не содержит `<img>`.
 - [ ] Поиск/highlighting продолжает работать через slot или helper-функцию.
 
-## Issue 2: CRITICAL — Memory leak (ResizeObserver + keydown listeners без cleanup)
+## ~~Issue 2: CRITICAL — Memory leak (ResizeObserver + keydown listeners без cleanup)~~ ✅ resolved 2026-05-11
 
 - **Категория:** H41 (memory leaks)
-- **Severity:** **critical**
-- **Где:** [Select.vue:279-281](../../lib/select/Select.vue#L279-L281), [Select.vue:284-292](../../lib/select/Select.vue#L284-L292)
+- **Severity:** ~~**critical**~~
+- **Где (was):** ~~[Select.vue:279-281, 284-292]~~ — `let resizeObserver` сохраняется в closure, `onBeforeUnmount` отключает observer и удаляет оба document keydown listener'а.
+- **Status:** ✅ resolved 2026-05-11
+
+**Что сделано (2026-05-11):**
+
+- `new ResizeObserver(...)` теперь присваивается `let resizeObserver: ResizeObserver | undefined` в setup-scope (зеркалит [InputLayout pattern](../../lib/inputlayout/InputLayout.vue#L196-L237)).
+- Добавлен `onBeforeUnmount` hook, который вызывает `resizeObserver?.disconnect()` + `document.removeEventListener("keydown", openSelectOnEnter)` + `document.removeEventListener("keydown", keydownSelect)`.
+- `Select.initStyle()` дубликат в `onMounted` удалён — `Component.__hooks()` ([component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) уже регистрирует через `vueOnMounted + onServerPrefetch`. Bonus: закрывает 1 пункт в [component-class.md Issue 1](./component-class.md) Wave 2.3 (progress 2/22 → 3/22).
+- SSR-guard `if (isClient())` обернут вокруг `document.removeEventListener` вызовов.
+
+**Acceptance criteria:**
+
+- [x] `mount → focus → unmount` — keydown listener (`openSelectOnEnter`) удалён. Тест: `Select.test.ts` > `removes keydown listeners on unmount-while-focused`.
+- [x] `mount → openSelect → unmount` — `ResizeObserver.disconnect()` вызван. Тест: `disconnects ResizeObserver on unmount`.
+- [x] `onBeforeUnmount` существует и вызывает disconnect/removeEventListener.
+
+### Историческая запись (что было)
 
 ### Что найдено
 
@@ -100,6 +139,7 @@ watch(isOpenList, (value) => {
 ```
 
 Проблемы:
+
 1. `new ResizeObserver(...)` — instance создан, но не сохранён в ref → нельзя disconnect. **Утечка observer + closure**.
 2. Если компонент unmount'ится в момент `isFocus === true` — listener `openSelectOnEnter` остаётся на `document` навсегда.
 3. То же для `keydownSelect` если unmount во время `isOpenList === true`.
@@ -129,9 +169,9 @@ watch(isOpenList, (value) => {
 2. Альтернативно — использовать VueUse `useResizeObserver(target, callback)` — auto-cleanup.
 3. Тест:
    ```ts
-   const wrapper = mount(Select, { props: { dataSelect: [{id:1,value:'a'}] }, attachTo: document.body })
-   wrapper.find('input').trigger('focus')
-   const beforeUnmount = document.querySelectorAll('*').length
+   const wrapper = mount(Select, { props: { dataSelect: [{ id: 1, value: "a" }] }, attachTo: document.body })
+   wrapper.find("input").trigger("focus")
+   const beforeUnmount = document.querySelectorAll("*").length
    wrapper.unmount()
    // assert listeners removed (sniff via spy or check that triggering keydown after unmount doesn't crash)
    ```
@@ -143,17 +183,46 @@ watch(isOpenList, (value) => {
 - [ ] `onBeforeUnmount` существует и вызывает disconnect/removeEventListener.
 - [ ] Unit-тест на listener cleanup.
 
-## Issue 3: Dual-API gap — нет compound `<Select><Option>` API
+## ~~Issue 3: Dual-API gap — нет compound `<Select><Option>` API~~ ✅ resolved 2026-06-13
 
 - **Категория:** P (Dual-API)
-- **Severity:** high
-- **Где:** [Select.d.ts:25-34](../../lib/select/Select.d.ts), вся [Select.vue](../../lib/select/Select.vue)
+- **Severity:** ~~high~~
+- **Status:** ✅ resolved 2026-06-13
+
+**Что сделано (2026-06-13):**
+
+- Добавлены renderless-дети [SelectOption.vue](../../lib/select/SelectOption.vue) (props `value` required, `label?`, `disabled?`) и [SelectGroup.vue](../../lib/select/SelectGroup.vue) (props `label`/`title`) — зеркало [FormField](../../lib/form/FormField.vue)/[FormSection](../../lib/form/FormSection.vue).
+- В [Select.vue](../../lib/select/Select.vue) — VNode-walk `slots.default()` в computed `compoundParsed` (helpers `compoundFlatten`/`isVNodeNamed`/`compoundChildren`, обработка Fragment/Comment/Text); `sourceData` computed подменяет `props.dataSelect` в `keySelect`/`valueSelect`/`dataSelect` пайплайне. **Schema-driven `dataSelect` выигрывает** (`schemaActive`), иначе — compound-опции.
+- `renderRows` computed вставляет non-selectable group-headers (`[data-select-group]`, `role="presentation"`) между опциями; keyboard-nav таргетит `li[data-select-list-item]` (headers исключены). `disabled`-опции — `aria-disabled`, guard в `select()`, dimmed-класс.
+- Runtime barrel [index.ts](../../lib/select/index.ts) (rollup-entry, зеркало form/table/menu); типы `SelectOptionProps`/`SelectGroupProps` + `declare class` + `GlobalComponents` в [Select.d.ts](../../lib/select/Select.d.ts). Naming: value-`SelectOption` сосуществует с options-типом `SelectOption` (разные namespace TS, companion pattern).
+- Nuxt auto-import: `SelectOption`/`SelectGroup` добавлены в `FISHT_VUE_SUBCOMPONENTS` ([module/nuxt.ts](../../lib/module/nuxt.ts)). Build: `select` переключён на `index.ts`-entry в [rollup.config.js](../../lib/rollup.config.js) (`select.mjs` экспортирует default + named).
+- Документация: [select.md §9.5 «Compound API»](../components/select.md).
+
+**Acceptance criteria:**
+
+- [x] Schema-driven `<Select :data-select=[...]>` работает без изменений (regression-тесты зелёные).
+- [x] Compound `<Select><SelectOption value="a">A</SelectOption></Select>` рендерит 1 опцию. Тест: `Select.test.ts` > `renders options from compound <SelectOption> children`.
+- [x] Mix `:data-select` + дети → schema выигрывает. Тест: `schema-driven dataSelect wins over compound children`.
+- [x] Type-safe value: `<SelectOption :value="42">` → `modelValue === 42`. Тест: `infers value type — numeric value round-trips through modelValue`.
+- [x] `disabled` опция не выбирается + `aria-disabled`. Тест: `disabled compound option is marked aria-disabled and is not selectable`.
+- [x] `<SelectGroup>` рендерит header. Тест: `renders <SelectGroup> label header above its options`.
+
+**Ограничение:** rich per-option контент (иконки) compound-API не рендерит — используй `#item` slot / schema-driven `:data-select`.
+
+### Историческая запись (что было)
 
 ### Что найдено
 
 API только schema-driven:
+
 ```vue
-<Select :data-select="[{ id: 1, value: 'A' }, { id: 2, value: 'B' }]" key-select="id" value-select="value" />
+<Select
+  :data-select="[
+    { id: 1, value: 'A' },
+    { id: 2, value: 'B' }
+  ]"
+  key-select="id"
+  value-select="value" />
 ```
 
 Custom rendering каждого option возможен только через единый slot `selectItem` для всего списка. Нет per-option конфигурации (disabled, group, custom icon, custom render per item) через template-уровень.
@@ -180,10 +249,10 @@ Custom rendering каждого option возможен только через 
 1. Создать `lib/select/SelectOption.vue`:
    ```vue
    <script setup lang="ts">
-   import { inject } from "vue"
-   const ctx = inject(SELECT_CONTEXT)
-   const props = defineProps<{ value: any; disabled?: boolean; label?: string }>()
-   ctx?.registerOption({ value: props.value, disabled: props.disabled, label: props.label, slot: useSlots().default })
+     import { inject } from "vue"
+     const ctx = inject(SELECT_CONTEXT)
+     const props = defineProps<{ value: any; disabled?: boolean; label?: string }>()
+     ctx?.registerOption({ value: props.value, disabled: props.disabled, label: props.label, slot: useSlots().default })
    </script>
    <template><!-- not rendered directly; rendered via parent context --></template>
    ```
@@ -210,36 +279,47 @@ Custom rendering каждого option возможен только через 
 - [ ] Можно смешивать (но schema выигрывает / документировано).
 - [ ] Type-safe: `<SelectOption :value=42>` инфёрит value type.
 
-## Issue 4: SSR styles + sideEffects/exports map (cross-cutting)
+## ~~Issue 4: SSR styles + sideEffects/exports map (cross-cutting)~~ ✅ resolved (inherited)
 
 - **Категория:** C17, A2, A4, A5
-- **Severity:** high
+- **Severity:** ~~high~~
+- **Status:** ✅ resolved (inherited) — закрыт на уровне фреймворка, кода Select не требует.
 
-См. [button.md Issue 1, Issue 8, Issue 9](./button.md).
+**Почему inherited:**
 
-## Issue 5: Нет componentsStyle global fallback
+- **C17 (SSR styles):** Select инстанцирует `new Component<"Select">()` → `Component.__hooks()` ([component/index.ts](../../lib/component/index.ts)) регистрирует `onServerPrefetch(() => initStyle())` + `onMounted` → стили попадают в `cssComponents` Map и инлайнятся Nuxt server-плагином до hydration. Дубль `initStyle()` в SFC убран ещё в Issue 2 (см. ниже).
+- **A2 (sideEffects):** root `lib/package.json` → `"sideEffects": false`; build инжектит то же в `dist/select/package.json` (проверено: `dist/select/package.json` содержит `"sideEffects": false`).
+- **A4/A5 (exports map + ESM-only):** root exports-map генерит `buildRootExports()` в [rollup.config.js](../../lib/rollup.config.js); `dist/package.json` содержит `"./select": { types, import, default }`. Переключение select на `index.ts`-entry (Issue 3) build-инфраструктурой обработано идентично form/table/menu — exports/sideEffects сохранены.
+
+Канонический паттерн — [button.md Issue 1, Issue 8, Issue 9](./button.md).
+
+## ~~Issue 5: Нет componentsStyle global fallback~~ ✅ resolved 2026-05-11
 
 - **Категория:** L53
-- **Severity:** high
+- **Severity:** ~~high~~
+- **Status:** ✅ resolved 2026-05-11
 
-См. [input.md Issue 2](./input.md). Select имеет ту же проблему — `mode` не учитывает `Select.componentsStyle()`.
+`mode` computed в [Select.vue](../../lib/select/Select.vue) теперь резолвится по полной fallback chain: `props.mode ?? options?.mode ?? Select.componentsStyle() ?? "outlined"`. Зеркалит [Input.vue:62-64](../../lib/input/Input.vue#L62-L64) pattern. Тесты: `Select.test.ts` > `falls back to global componentsStyle when props.mode not provided` + `prop.mode wins over global componentsStyle`.
 
-## Issue 6: `unstyled: true` не обрабатывается
+## ~~Issue 6: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-05-11
 
 - **Категория:** L53
-- **Severity:** high
+- **Severity:** ~~high~~
+- **Status:** ✅ resolved 2026-05-11 (cross-cutting fix в `lib/component/index.ts` — закрывает Issue 6 во всех 22 компонентах + [component-class.md Issue 6](./component-class.md))
 
-См. [button.md Issue 14](./button.md).
+`Component.setStyle()` теперь проверяет `this.__globalConfig?.config?.unstyled` и возвращает `""` если true — это отключает рендер Tailwind-классов во всех компонентах, использующих базовый класс. Тест: `Select.test.ts` > `respects unstyled: true via Component.setStyle guard`. Roadmap Wave 3.1 — done.
 
-## Issue 7: Нет виртуализации списка — лагает при >500 items
+## Issue 7: Нет виртуализации списка — лагает при >500 items — 🔓 unblocked (integration pending)
 
 - **Категория:** H43 (виртуализация)
-- **Severity:** high
-- **Где:** [Select.vue:540-570](../../lib/select/Select.vue) (рендер dropdown списка)
+- **Severity:** high (integration pending)
+- **Где:** рендер dropdown списка в [Select.vue](../../lib/select/Select.vue) (`renderRows` / `<TransitionGroup>`)
+- **Status:** 🔓 **unblocked 2026-06-13.** Прежний блокер (нужна runtime-зависимость вопреки no-deps цели) снят: в `lib/` добавлен **dependency-free** примитив виртуализации — [VirtualScroller](../components/virtualscroller.md) + headless composable `useVirtualScroll` ([lib/virtualscroller/](../../lib/virtualscroller/useVirtualScroll.ts)). Осталась **интеграция** в Select (отдельным ТЗ/коммитом, см. план §10 спеки): при `count > threshold` рендерить опции через `useVirtualScroll`, переписать keyboard-nav с DOM-scan на index-математику + `scrollToIndex`, отключить GSAP-stagger в virtual-режиме. Группы (variable-height заголовки) — проверить отдельно.
 
 ### Что найдено
 
 Все `dataList` items рендерятся в DOM одновременно. При `dataSelect` с >500 элементами:
+
 - Скролл лагает.
 - Initial open — задержка 200-500ms.
 - Memory растёт (каждый item — несколько DOM узлов + reactive computed).
@@ -250,86 +330,120 @@ Custom rendering каждого option возможен только через 
 
 ### Что нужно сделать
 
-1. Интегрировать `vue-virtual-scroller` (или TanStack Virtual `@tanstack/vue-virtual`) для виртуализации dropdown list.
+1. Использовать **dependency-free** [`useVirtualScroll`](../../lib/virtualscroller/useVirtualScroll.ts) (НЕ внешнюю библиотеку — no-deps цель сохранена).
 2. Добавить prop `virtual?: boolean` (default false для backward compat) или `virtualThreshold?: number` (default 100 — auto-enable если items.length > threshold).
-3. При virtual mode: render только visible window + 1-2 buffer items.
-4. Tooltip в [Documentation/components/select.md](../components/select.md): performance benchmark до/после.
+3. При virtual mode: render только visible window + overscan-buffer; keyboard-nav на index-математику + `scrollToIndex`; отключить GSAP-stagger.
+4. В [Documentation/components/select.md](../components/select.md): performance benchmark до/после.
 
 ### Acceptance criteria
 
 - [ ] `<Select :data-select="thousand_items" virtual>` — first render <50ms.
 - [ ] Скролл 60fps в Chrome DevTools profiler.
 
-## Issue 8: aria-live для search results отсутствует
+## ~~Issue 8: aria-live для search results отсутствует~~ ✅ resolved 2026-05-11
 
 - **Категория:** E29.5 (announcements)
-- **Severity:** medium
-- **Где:** [Select.vue:540-570](../../lib/select/Select.vue) (dropdown render)
+- **Severity:** ~~medium~~
+- **Status:** ✅ resolved 2026-05-11
 
-### Что найдено
+`<div data-select-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>` рендерится внутри dropdown. `ariaResultsLabel` computed формирует строку через `Select.t("select.resultsCount" | "select.resultsCountOne" | "select.resultsCountNone")` с подстановкой `%d`. Новые locale-ключи добавлены в [TypesLocale.d.ts](../../lib/locale/TypesLocale.d.ts), [locales/en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts). Тест: `Select.test.ts` > `renders aria-live region with results count when query is active`.
 
-При фильтрации (query) screen reader не объявляет «X results found». Пользователь печатает в search input и не получает feedback.
-
-### Что нужно сделать
-
-1. Добавить hidden live region:
-   ```vue
-   <div aria-live="polite" aria-atomic="true" class="sr-only">
-     {{ dataList?.length }} {{ t("select.resultsCount") }}
-   </div>
-   ```
-2. Добавить ключ в [lib/locale/locales/en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts).
-
-### Acceptance criteria
-
-- [ ] axe-core тест проходит для Select с открытым dropdown.
-
-## Issue 9: RTL — left/right в `right-0`, `mr-2`, etc.
+## ~~Issue 9: RTL — left/right в `right-0`, `mr-2`, etc.~~ ✅ resolved 2026-06-13
 
 - **Категория:** F31
+- **Severity:** ~~medium~~
+- **Status:** ✅ resolved 2026-06-13
 
-См. [switch.md Issue 8](./switch.md). Select имеет много left/right в dropdown позиционировании.
+**Что сделано (2026-06-13):** физические left/right Tailwind-классы в [Select.vue](../../lib/select/Select.vue) заменены на логические (авто-флип при `dir="rtl"`, зеркало [switch.md Issue 8](./switch.md) / [table.md](./table.md)):
 
-## Issue 10: Локаль для filtering search query
+- `iconCheck`: `left-0` → `start-0`, `pl-2` → `ps-2`.
+- `classLiItem`: `pl-8 pr-4` → `ps-8 pe-4`.
+- `classItemSelectValue`: добавлен `rtl:text-right` override (движок сохраняет `text-left` как LTR-default).
+- maxVisible-badge: `pl-2` → `ps-2`; Funnel-иконка: `mr-1` → `me-1`.
+- Динамический dropdown-оффсет: `ml-[${beforeWidth}px]` → `ms-[${beforeWidth}px]` (arbitrary logical margin — подтверждено `unoRules.ts` margin-rule поддерживает axis `s`/`e` + arbitrary).
+
+Тесты: `Select.test.ts` > блок «Issue 9: RTL via logical Tailwind properties» (`ps-/pe-` вместо `pl-/pr-`, `start-0`/`ps-2` на check-иконке, `ms-[` вместо `ml-[`, `rtl:text-right`).
+
+## ~~Issue 10: Локаль для filtering search query~~ ✅ resolved 2026-05-11
 
 - **Категория:** F32
-- **Severity:** medium
-- **Где:** [Select.vue](../../lib/select/Select.vue) (filter logic)
+- **Severity:** ~~medium~~
+- **Status:** ✅ resolved 2026-05-11
+
+Фильтрация теперь использует `Intl.Collator(getActiveLocale() ?? "en", { sensitivity: "base", usage: "search" })` — diacritic-insensitive (немецкое `ü` matches `u`, французское `é` matches `e`) и case-insensitive. Helper `matchesQuery(itemValue, q)` — sliding-window substring match через `collator.compare`. Подсветка совпадений (`splitByQuery` → `markerParts`) использует тот же collator для согласованности с фильтром. Тест: `Select.test.ts` > `filters dataList through Intl.Collator (diacritic-insensitive)`.
+
+## ~~Issue 11: prefers-reduced-motion + print + colors hardcode~~ ✅ resolved 2026-05-11 (motion + print), ✅ 2026-07-04 (B10 colors)
+
+- **Категория:** E29.7, N59, B10
+- **Severity:** ~~low~~
+- **Status:** ✅ resolved 2026-05-11 (motion-safe + print). ✅ resolved 2026-07-04 (B10 — миграция на semantic-токен `surface`).
+
+**Что сделано:**
+
+- Все Tailwind `transition*` / `duration-*` классы в [Select.vue](../../lib/select/Select.vue) обёрнуты в `motion-safe:` префикс (CSS variant `@media (prefers-reduced-motion: no-preference)`). Зеркалит [Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98) pattern.
+- Корневой контейнер получил `print:bg-white print:text-black print:shadow-none`.
+- `<transition-group>` в template (multiple-mode badges) использует `motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300` (вместо безусловного `transition`).
+- Inline `transition-colors duration-500` на Badge-компонентах в template заменены на `motion-safe:transition-colors motion-safe:duration-500`.
+- Тест: `Select.test.ts` > `uses motion-safe: prefix on transition classes`.
+
+**Что осталось открытым:**
+
+- GSAP-анимация раскрытия списка не учитывает `prefers-reduced-motion` — потребует JS-проверки media query или Motion-One интеграцию. Wave 10.1 follow-up.
+
+### B10 — hardcoded `gray-*`/`stone-*` → semantic-токен `surface` ✅ resolved 2026-07-04
+
+**Историческая запись (что было, до 2026-07-04):** research 2026-06-13 фиксировала, что в `lib/theme/primitive.ts` semantic-токенов (`bg-background`/`text-muted-foreground`/`border-border`) не существовало — только примитивная палитра (22 цвета × 11 тонов) + динамический брендовый `theme-*`; «полная миграция» требовала сначала построить token-слой, cross-cutting изменение `lib/theme/`. Решение пользователя (2026-06-13) — отложить (Wave 9).
+
+**Что изменилось:** эта предпосылка больше не верна. 2026-07-04 в `lib/theme/primitive.ts` добавлен 23-й именованный цвет **`surface`** (структурный semantic-слот, [primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317)) — дефолт является точной копией шкалы `gray`, переопределяемой через `updateSurfacePalette()` без правки самого файла. Цвет зарегистрирован в union `namesColors` ([Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)), поэтому `bg-surface-*`/`text-surface-*`/`border-surface-*`/`ring-surface-*`/`from-surface-*`/`via-surface-*` работают как любой другой именованный цвет движка — изменений в `unoRules.ts` не потребовалось.
+
+**Что сделано в Select (2026-07-04):** все структурные `gray-*`/`stone-*` классы в [Select.vue](../../lib/select/Select.vue) переименованы в family `surface-*` с **той же числовой тональностью** (не value change, а family rename):
+
+- Border дропдауна: `border-gray-300 dark:border-gray-600` (outlined) / `border-gray-300 dark:border-gray-700` (underlined) → `border-surface-300 dark:border-surface-600` / `border-surface-300 dark:border-surface-700` — [Select.vue:329, 331](../../lib/select/Select.vue#L329).
+- Background дропдауна: `bg-stone-50 dark:bg-stone-950` (underlined) / `bg-stone-100 dark:bg-stone-900` (filled) → `bg-surface-50 dark:bg-surface-950` / `bg-surface-100 dark:bg-surface-900` — [Select.vue:331, 333](../../lib/select/Select.vue#L331).
+- No-data текст (`classDataListNoData`/`classNoData`): `text-gray-500` → `text-surface-500` — [Select.vue:344-345](../../lib/select/Select.vue#L344-L345).
+- Gradient-overlay (`classGradientSelectList`): `from-stone-50 dark:from-stone-950 via-stone-50 dark:via-stone-950` / `from-stone-100 dark:from-stone-900 via-stone-100 dark:via-stone-900` → `from-surface-*`/`via-surface-*` эквиваленты — [Select.vue:350-351](../../lib/select/Select.vue#L350-L351).
+- Текст опции (`classLiItem`): `text-gray-900 dark:text-gray-100` → `text-surface-900 dark:text-surface-100` — [Select.vue:369](../../lib/select/Select.vue#L369).
+- Sublabel опции (`classItemSelectValue`): `text-gray-600 dark:text-gray-300` → `text-surface-600 dark:text-surface-300` — [Select.vue:380](../../lib/select/Select.vue#L380).
+- Group-header (`classGroupHeader`, Issue 3): `text-gray-500` → `text-surface-500` — [Select.vue:385](../../lib/select/Select.vue#L385).
+- Search-input ring (`class-body` на вложенный `Input`): `ring-stone-200` (outlined/underlined) / `ring-stone-100` (filled) → `ring-surface-200`/`ring-surface-100` — [Select.vue:835-837](../../lib/select/Select.vue#L835-L837). **Не тронуто:** `dark:ring-black` (outlined) — литеральный специальный цвет `black`, не тон `stone`, вне скоупа этой миграции.
+- Search-иконка: `text-gray-400 dark:text-gray-600` → `text-surface-400 dark:text-surface-600` — [Select.vue:842](../../lib/select/Select.vue#L842).
+
+**Не тронуто намеренно (литеральные специальные цвета, не часть B10):** `bg-white dark:bg-black` (outlined mode background), `from-white dark:from-black via-white dark:via-black` (outlined gradient), `ring-black/5` (dropdown shadow-ring), `dark:ring-black` (search-ring в outlined mode).
+
+**Vue-компонент `InputLayout.vue`** (вложенный через `Input`/`InputLayout` fallthrough) несёт собственные независимые `gray-*`/`stone-*`/`neutral-*`/`slate-*` классы на том же DOM-узле, что и Select-контролируемый `ring-surface-*` (class-fallthrough merge) — вне скоупа этой задачи (Select-only), потребует отдельного B10-прохода по `lib/inputlayout/`.
+
+**Тест:** `Select.test.ts` > `describe("Select Component - B10 semantic surface tokens")` — 13 кейсов (border/background по режимам, no-data text, group-header, sublabel, search-icon, search-ring по режимам + regression на нетронутый `dark:ring-black`, gradient overlay). Плюс обновлены 3 pre-existing теста `applies correct styles for mode '...'` (assertions на новые `surface-*` строки).
+
+## ~~Issue 12: `ms-[undefinedpx]` в class-body дропдауна до готовности layout~~ ✅ resolved 2026-07-02
+
+- **Категория:** correctness (styling)
+- **Severity:** ~~medium~~ → resolved
+- **Где (was):** [Select.vue:811](../../lib/select/Select.vue#L811)
 
 ### Что найдено
 
-`String.includes(query)` для фильтрации. Не учитывает diacritics (немецкое `ü` ≠ `u`), case-sensitive в некоторых локалях.
+`:class-body="['z-50', \`ms-[${layout?.beforeWidth}px]\`]"` интерполировал `undefined` на первом рендере (template ref `layout` ещё не привязан) → класс `ms-[undefinedpx]`. До fail-closed движка (uno-engine.md Issue 1) это генерировало `margin-inline-start: undefinedpx` в FixWindow-теге; после — класс дропался с dev-warn, т. е. offset дропдауна молча не применялся на первом рендере. Вскрыто sandbox-корпусным диффом волны 1 uno-движка.
 
-### Что нужно сделать
+### Что сделано
 
-1. Использовать `Intl.Collator(locale, { sensitivity: 'base' })` для сравнения.
-2. Подключить через `FishtVue.getActiveLocale()`.
-3. Альтернатива — `localeCompare`.
-
-## Issue 11: prefers-reduced-motion + print + colors hardcode
-
-- **Категория:** E29.7, N59, B10
-- **Severity:** low
-
-См. [button.md Issue 10, 15](./button.md), [switch.md Issue 12](./switch.md).
+Guard по образцу [InputLayout.vue:131](../../lib/inputlayout/InputLayout.vue#L131): `layout?.beforeWidth != null ? ... : ""` — `undefined`/`null` отсекаются, `0` сохраняет `ms-[0px]` (контракт RTL-теста Issue 9). Regression-тест — [Select.test.ts](../../lib/select/Select.test.ts) («не рендерит ms-[undefinedpx] до готовности layout.beforeWidth»).
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.Select` | ✅ | mode, autoFocus, valueSelect, keySelect, и др. |
-| `componentsStyle` global | ❌ | Issue 5 |
-| `unstyled: true` | ❌ | Issue 6 |
-| Theme tokens vs hardcode | ⚠️ | через theme-* tokens частично |
-| Runtime theme switch | ⚠️ | через CSS-vars OK |
-| `t()` для текста | ❌ | `noData` хардкоден prop, нет fallback к `t("select.noData")` |
-| Runtime locale switch | ❌ | search-filter не использует locale (Issue 10) |
+| Настройка                  | Поддержано? | Комментарий                                                  |
+| -------------------------- | ----------- | ------------------------------------------------------------ |
+| `componentsOptions.Select` | ✅          | mode, autoFocus, valueSelect, keySelect, и др.               |
+| `componentsStyle` global   | ✅          | Issue 5 (resolved) — fallback chain в `mode`                 |
+| `unstyled: true`           | ✅          | Issue 6 (resolved) — `Component.setStyle` guard              |
+| Theme tokens vs hardcode   | ✅          | theme-\* для акцентов; структурные нейтральные — semantic-токен `surface-*` (B10, resolved 2026-07-04) |
+| Runtime theme switch       | ⚠️          | через CSS-vars OK                                            |
+| `t()` для текста           | ⚠️          | `noData` имеет fallback `Select.t("noData")` (Select.vue)    |
+| Runtime locale switch      | ✅          | Issue 10 (resolved) — `Intl.Collator(getActiveLocale())`     |
 
-## Dual-API gap
+## Dual-API gap — ✅ resolved 2026-06-13
 
-См. [Issue 3](#issue-3-dual-api-gap-—-нет-compound-selectoption-api).
+См. Issue 3 выше (✅ resolved).
 
-**Текущий API:** schema-driven `<Select :data-select="[...]" />`.
-**Предлагаемый параллельный compound API:** `<Select><SelectOption /></Select>`.
+**Текущий API:** schema-driven `<Select :data-select="[...]" />` (primary, не breaking).
+**Параллельный compound API (реализован):** `<Select><SelectOption value=".." />` + `<SelectGroup label="..">` — opt-in через children, schema выигрывает при совместном использовании.
 **Industry parallel:** Element Plus `<el-select><el-option>`, Naive UI `<n-select :options>` + `<n-select-option>`, PrimeVue `<Dropdown :options>` + `<DropdownItem>`.
-**Migration:** schema-driven остаётся primary; compound — opt-in через children. Не breaking.

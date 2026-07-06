@@ -1,7 +1,7 @@
 ---
 title: Aria
 summary: Многострочный input (textarea-like) с InputLayout-обёрткой, validation, focus/blur events.
-updated: 2026-05-09
+updated: 2026-05-11
 stability: stable
 since: 0.2.11
 ---
@@ -32,7 +32,7 @@ lib/aria/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили; `onMounted` для подключения focus/blur listener'ов.
+- **Lifecycle:** `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) сам регистрирует `onServerPrefetch + vueOnMounted → initStyle()` в конструкторе — никакого `onMounted(() => Aria.initStyle())` в SFC.
 - **Поток данных:** `modelValue` ↔ внутренний `<textarea>` value через v-model contract (4 шага, как в [dev-patterns §4](../dev-patterns.md#4-sfc-pattern)).
 - **Стили:** `Aria.setStyle()` для контейнера и textarea.
 - **Конфиг:** `componentsOptions.Aria` — см. §10.
@@ -57,7 +57,7 @@ const text = ref("")
 
 ## 5. Props
 
-`AriaProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseAriaProps>` ([Aria.d.ts:55–67](../../lib/aria/Aria.d.ts#L55-L67)).
+`AriaProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseAriaProps>` ([Aria.d.ts:55–72](../../lib/aria/Aria.d.ts#L55-L72)).
 
 `BaseAriaProps`:
 
@@ -75,19 +75,19 @@ const text = ref("")
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `id` | `string` | — | id `<textarea>`. |
-| `modelValue` | `string \| number \| null \| undefined` | — | v-model. |
+| `modelValue` | `string \| null \| undefined` | — | v-model. Narrowed 2026-05-11: `number` removed (textarea не принимает числовой ввод). |
 
 Поля `InputLayoutProps` — см. [InputLayout §5](./input-layout.md#5-props).
 
 ## 6. Events / Emits + v-model contract
 
-`AriaEmits` ([Aria.d.ts:77–112](../../lib/aria/Aria.d.ts#L77-L112)):
+`AriaEmits` ([Aria.d.ts:102–142](../../lib/aria/Aria.d.ts#L102-L142)):
 
 | Event | Payload | When fired |
 |---|---|---|
 | `update:modelValue` | `string` | На input event. |
 | `update:isInvalid` | `boolean` | На смену состояния валидации. |
-| `change:modelValue` | `boolean` | **Type bug** — должно быть `string`. См. Known issues. |
+| `change:modelValue` | `string` | На native `change` event textarea и при `clear()` (payload `""`). Fixed 2026-05-11 (раньше тип был ошибочно `boolean`). |
 | `focus` | `FocusEvent` | На native focus. |
 | `blur` | `FocusEvent` | На native blur. |
 
@@ -98,8 +98,17 @@ const text = ref("")
 | Slot | Slot props | Description |
 |---|---|---|
 | `default` | — | Контент textarea (редко используется). |
-| `before` | — | Контент слева. |
-| `after` | — | Контент справа. |
+| `before` | `{ isInvalid: boolean; isFocused: boolean }` | Контент слева. Slot context добавлен 2026-05-11. |
+| `after` | `{ isInvalid: boolean; isFocused: boolean; clear: () => void }` | Контент справа. Slot context добавлен 2026-05-11 — позволяет условно стилизовать содержимое и вызывать `clear()` изнутри slot-шаблона. |
+
+```vue
+<Aria v-model="comment" :is-invalid="hasError" clear>
+  <template #after="{ isInvalid, isFocused, clear }">
+    <button v-if="isInvalid" type="button" @click="clear">сбросить</button>
+    <span v-else-if="isFocused" class="text-xs text-gray-500">{{ comment.length }} / 500</span>
+  </template>
+</Aria>
+```
 
 ## 8. Exposed methods
 
@@ -171,6 +180,8 @@ const { content } = storeToRefs(store)
 
 `AriaOption = Pick<AriaProps, "autocomplete" | "wrap" | "rows" | "maxLength" | "classInput" | keyof InputLayoutOption>`.
 
+`mode` определяется через стандартный fallback chain — `props.mode ?? componentsOptions.Aria.mode ?? Aria.componentsStyle() ?? "outlined"` ([Aria.vue:49–51](../../lib/aria/Aria.vue#L49-L51)). Установка глобального `componentsStyle: "filled"` через `FishtVue` plugin автоматически меняет `mode` в Aria, если он не задан per-instance.
+
 ### 10.2 Per-instance
 
 Через props.
@@ -196,7 +207,8 @@ Root класс — `fv fishtvue-aria`.
 - Корневой `<textarea>` — нативные семантика и keyboard.
 - `aria-describedby` для error — управляется [InputLayout](./input-layout.md).
 - `aria-required` через `required` prop.
-- `prefers-reduced-motion` не учтён.
+- `placeholder:transition-all` обёрнут в `motion-safe:` ([Aria.vue:65](../../lib/aria/Aria.vue#L65)) — Tailwind транспилирует это в `@media (prefers-reduced-motion: no-preference)`, поэтому пользователи с настройкой `reduce` не видят анимации placeholder'а. WCAG 2.3.3.
+- `print:*` классы ([Aria.vue:68](../../lib/aria/Aria.vue#L68)) гарантируют читаемое отображение textarea при печати (`bg-white text-black border-black`, без теней).
 
 ### Security
 
@@ -249,7 +261,6 @@ describe("Aria", () => {
 |---|---|---|
 | Высота не реагирует на rows | CSS-override родительского `height`. | Снять `height` или передавать `class` явно. |
 | `wrap: "off"` создаёт горизонтальный scroll | By design — soft-wrap отключён. | Используй `wrap: "soft"` для wrap при overflow. |
-| `change:modelValue` приходит с `boolean` | Type bug — реальный payload — `string`. | Используй runtime; type — игнорировать. См. Known issues. |
 | `maxLength` не enforce'ится при paste | Native поведение зависит от браузера. | Дополнительная проверка на input handler. |
 | Form не распознаёт `typeField: "Aria"` | Возможно тип не зарегистрирован. | Проверь FieldType в [Form.d.ts](../../lib/form/Form.d.ts). |
 
@@ -267,7 +278,7 @@ describe("Aria", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 98.43% statements / 87.5% branch — одна строка ([Aria.vue:178](../../lib/aria/Aria.vue#L178)) не покрыта тестами.
+- Coverage 98.43% statements / 87.5% branch (на момент 2026-05-11 — после close-out увеличится; пересчитать `pnpm coverage`).
 
 ### Skipped tests
 
@@ -275,9 +286,17 @@ describe("Aria", () => {
 
 ### API inconsistencies
 
-- **Type bug:** `change:modelValue(payload: boolean)` ([Aria.d.ts:97](../../lib/aria/Aria.d.ts#L97)) — должен быть `string`. Аналогичный bug есть в [TextEditor](./text-editor.md).
-- `modelValue?: string | number | null | undefined` — `number` для текста странно.
-- Имя «Aria» вводит в заблуждение — компонент не общая a11y abstraction, а textarea-аналог.
+- Имя «Aria» вводит в заблуждение — компонент не общая a11y abstraction, а textarea-аналог. Tracked в [Documentation/issues/aria.md](../issues/aria.md) Issue 6 — переименование в `Textarea` отложено в отдельный breaking-change PR.
+
+### Resolved 2026-05-11
+
+- ~~`change:modelValue(payload: boolean)` type bug~~ — исправлено: payload теперь `string` ([Aria.d.ts:125](../../lib/aria/Aria.d.ts#L125)). Cross-cutting fix также в TextEditor.
+- ~~`modelValue?: string | number | null | undefined`~~ — narrowed до `string | null | undefined`.
+- ~~Дубль `onMounted(() => Aria.initStyle())`~~ — удалён, остался только `Component.__hooks()`-канон.
+- ~~`mode` не учитывает `Aria.componentsStyle()`~~ — добавлен fallback chain.
+- ~~Slots `before` / `after` без типизированного контекста~~ — добавлены `{ isInvalid, isFocused, clear }`.
+- ~~`placeholder:transition-all` без `motion-safe:`~~ — обёрнут в `motion-safe:`.
+- ~~Нет print styles~~ — добавлены `print:*` классы в classInput.
 
 ### Behavioral caveats
 

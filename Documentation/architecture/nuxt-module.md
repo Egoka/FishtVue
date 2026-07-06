@@ -1,7 +1,7 @@
 ---
 title: Nuxt module + plugin
 summary: fishtvue/module — defineNuxtModule с auto-import; fishtvue/plugins/nuxt — SSR-инжекция CSS.
-updated: 2026-05-09
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -42,15 +42,17 @@ lib/plugins/
 - `fishtvue/utils/objectHandler.fieldsOmit` — фильтрация module-only-полей перед передачей в plugin.
 - `fishtvue/config` — собственно plugin, который запускается из generated runtime-plugin.
 
-Внешние peer-зависимости (optional, [lib/package.json:30–43](../../lib/package.json#L30-L43)):
+Внешние peer-зависимости (optional, [lib/package.json:41–72](../../lib/package.json#L41-L72)):
 
 | Пакет | Версия |
 |---|---|
-| `@nuxt/kit` | `^4.1.2` |
-| `@nuxt/schema` | `^4.1.2` |
+| `@nuxt/kit` | `>=3.0.0` |
+| `@nuxt/schema` | `>=3.0.0` |
 | `nuxt` | `>=3.0.0` |
 
 В Vite-only проекте эти peer-deps опциональны и не подключаются.
+
+> **Wave 2.1 (Issue 4):** `@nuxt/kit`/`@nuxt/schema` peer-range расширен `^4.1.2` → `>=3.0.0` — раньше major-pin `^4.1.2` ломал Nuxt 3 (хотя `nuxt` допускал `>=3.0.0`). Теперь модуль корректно ставится и в Nuxt 3 (`@nuxt/kit ^3.x`), и в Nuxt 4. Tested with Nuxt 3.x and 4.x.
 
 Bundle: `dist/module/module.mjs`, `dist/plugins/Plugins.mjs`.
 
@@ -277,7 +279,7 @@ Module расширяет `NuxtConfig`/`NuxtOptions` через augmentation ([m
 ## 14. Compatibility & Stability
 
 - **Nuxt:** `>=3.0.0` декларировано через `compatibility.nuxt`. Реально протестировано — Nuxt 3.x. Nuxt 4 — экспериментально (детект `isNuxt4()` присутствует, но используется только для `importPath`-выбора, и текущая ветка возвращает `"#app"` в обоих случаях).
-- **`@nuxt/kit`:** `^4.1.2` peer.
+- **`@nuxt/kit` / `@nuxt/schema`:** `>=3.0.0` optional peer (Wave 2.1 — раньше `^4.1.2`, ломал Nuxt 3). Tested with Nuxt 3.x and 4.x.
 - **Stability flag:** `stable` (для Nuxt 3); Nuxt 4 — `beta`.
 - **Breaking changes:** не зафиксировано в публичном API между 0.2.x.
 - **Deprecations:** на момент ревизии (2026-05-09) `@deprecated`-меток нет.

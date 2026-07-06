@@ -23,5 +23,14 @@
     "declaration": false
   },
   "include": ["lib/**/*.ts", "lib/**/*.d.ts", "lib/**/*.tsx", "lib/**/*.vue"],
-  "exclude": ["node_modules", "**/node_modules/**", "dist", "vite.config.ts", "docs", "sandbox", "sandbox-nuxt"]
+  "exclude": [
+    "node_modules",
+    "**/node_modules/**",
+    "dist",
+    "vite.config.ts",
+    "docs",
+    "sandbox",
+    "sandbox-nuxt",
+    ".claude/worktrees"
+  ]
 }

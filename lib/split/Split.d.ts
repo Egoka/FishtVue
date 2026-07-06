@@ -114,7 +114,9 @@ export type Group = {
  */
 export declare type SplitProps = {
   /**
-   * Automatically saves the panel configuration under this name.
+   * Persists panel sizes in `localStorage` under the key `fv-split-{autoSaveName}`.
+   * Sizes are written on resize end (pointer + keyboard) and restored on mount.
+   * The read/write is `isClient()`-guarded, so it is a no-op during SSR.
    * @type {string | undefined}
    */
   autoSaveName?: string
@@ -278,6 +280,14 @@ export declare type SplitExpose = {
    * @type {StyleClass}
    */
   classBase: StyleClass
+
+  // ---METHODS-----------------------------
+  /**
+   * Moves focus to the first resize handle (separator) of the group.
+   * No-op during SSR or before mount.
+   * @type {() => void}
+   */
+  focus: () => void
 }
 export declare type SplitOption = Pick<SplitProps, "separatorType" | "separatorNotHoverOpacity" | "class" | "styles">
 

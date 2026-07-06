@@ -1,8 +1,9 @@
-import { createApp } from "vue"
-import { mount } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { createApp, h, nextTick, Transition } from "vue"
+import { flushPromises, mount } from "@vue/test-utils"
+import { describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Accordion from "fishtvue/accordion/Accordion.vue"
+import AccordionItem from "fishtvue/accordion/AccordionItem.vue"
 
 describe("Accordion Component Tests", () => {
   describe("Without Library Initialization", () => {
@@ -145,6 +146,371 @@ describe("Accordion Component Tests", () => {
       expect(wrapper.props("animationDuration")).toBe("invalid")
       // Ensure component doesn't break on invalid props
       expect(wrapper.exists()).toBe(true)
+    })
+  })
+
+  describe("Security — XSS in subtitle", () => {
+    it("renders subtitle as text, not HTML, when no slot provided", () => {
+      const payload = "<img src=x onerror=alert(1)>"
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "t", subtitle: payload, open: true }] }
+      })
+      expect(wrapper.html()).not.toContain("<img")
+      expect(wrapper.text()).toContain(payload)
+    })
+
+    it("allows consumer to opt-in to HTML via #item-subtitle slot", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "t", subtitle: "raw", open: true }] },
+        slots: { "item-subtitle": '<strong class="custom-subtitle-slot">custom</strong>' }
+      })
+      expect(wrapper.find(".custom-subtitle-slot").exists()).toBe(true)
+      expect(wrapper.find(".custom-subtitle-slot").text()).toBe("custom")
+    })
+
+    it("does not render fallback <p> when slot is provided", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "t", subtitle: "default", open: true }] },
+        slots: { "item-subtitle": '<span class="only-slot">only</span>' }
+      })
+      expect(wrapper.find(".only-slot").exists()).toBe(true)
+      expect(wrapper.html()).not.toContain("default")
+    })
+  })
+
+  describe("Accessibility — disclosure pattern", () => {
+    it("links header to panel via aria-controls/aria-labelledby with stable ids", () => {
+      const wrapper = mount(Accordion, {
+        props: {
+          dataSource: [
+            { title: "A", subtitle: "sa", open: true },
+            { title: "B", subtitle: "sb", open: false }
+          ]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      const panels = wrapper.findAll('[role="region"]')
+      expect(buttons).toHaveLength(2)
+      expect(panels).toHaveLength(2)
+      for (let i = 0; i < buttons.length; i++) {
+        const headerId = buttons[i].attributes("id")
+        const panelId = panels[i].attributes("id")
+        expect(headerId).toBeTruthy()
+        expect(panelId).toBeTruthy()
+        expect(headerId).not.toBe(panelId)
+        expect(buttons[i].attributes("aria-controls")).toBe(panelId)
+        expect(panels[i].attributes("aria-labelledby")).toBe(headerId)
+      }
+    })
+
+    it("ArrowDown moves focus to next header", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }, { title: "C" }]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      ;(buttons[0].element as HTMLElement).focus()
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "ArrowDown" })
+      expect(document.activeElement).toBe(buttons[1].element)
+      wrapper.unmount()
+    })
+
+    it("ArrowUp moves focus to previous header", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }, { title: "C" }]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      ;(buttons[2].element as HTMLElement).focus()
+      // simulate roving via two ArrowDown to land on idx 2, then ArrowUp
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "End" })
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "ArrowUp" })
+      expect(document.activeElement).toBe(buttons[1].element)
+      wrapper.unmount()
+    })
+
+    it("Home / End move focus to first / last header", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }, { title: "C" }, { title: "D" }]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      ;(buttons[0].element as HTMLElement).focus()
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "End" })
+      expect(document.activeElement).toBe(buttons[3].element)
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "Home" })
+      expect(document.activeElement).toBe(buttons[0].element)
+      wrapper.unmount()
+    })
+
+    it("roving tabindex — only focused header is tabbable", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }, { title: "C" }]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      expect(buttons[0].attributes("tabindex")).toBe("0")
+      expect(buttons[1].attributes("tabindex")).toBe("-1")
+      expect(buttons[2].attributes("tabindex")).toBe("-1")
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "ArrowDown" })
+      const buttons2 = wrapper.findAll('[type="button"]')
+      expect(buttons2[0].attributes("tabindex")).toBe("-1")
+      expect(buttons2[1].attributes("tabindex")).toBe("0")
+      expect(buttons2[2].attributes("tabindex")).toBe("-1")
+      wrapper.unmount()
+    })
+
+    it("exposes focus(index) helper", () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: {
+          dataSource: [{ title: "A" }, { title: "B" }]
+        }
+      })
+      const accordionRef = wrapper.vm as any
+      expect(typeof accordionRef.focus).toBe("function")
+      accordionRef.focus(1)
+      const buttons = wrapper.findAll('[type="button"]')
+      expect(document.activeElement).toBe(buttons[1].element)
+      wrapper.unmount()
+    })
+
+    it("non-handled keys are ignored", async () => {
+      const wrapper = mount(Accordion, {
+        attachTo: document.body,
+        props: { dataSource: [{ title: "A" }, { title: "B" }] }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      ;(buttons[0].element as HTMLElement).focus()
+      await wrapper.find("[data-accordion]").trigger("keydown", { key: "Tab" })
+      expect(document.activeElement).toBe(buttons[0].element)
+      wrapper.unmount()
+    })
+  })
+
+  describe("Animation lifecycle — Transition unmount race", () => {
+    it("renders <Transition> wrapper around root for unmount delay", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }], animationDuration: 300 }
+      })
+      // The rendered subtree's root must be a Transition VNode so Vue can run the leave hook
+      // before removing the panel DOM. Compare subTree.type with Vue's built-in Transition.
+      const subTree: any = (wrapper.vm.$ as any).subTree
+      expect(subTree?.type).toBe(Transition)
+      wrapper.unmount()
+    })
+  })
+
+  describe("Dual-API — compound <Accordion><AccordionItem>", () => {
+    it("renders sections declared as <AccordionItem> children", () => {
+      const wrapper = mount(Accordion, {
+        slots: {
+          default: () => [
+            h(AccordionItem, { title: "A", open: true }, { default: () => "Content A" }),
+            h(AccordionItem, { title: "B" }, { default: () => "Content B" })
+          ]
+        }
+      })
+      const groups = wrapper.findAll('[role="group"]')
+      expect(groups).toHaveLength(2)
+      const buttons = wrapper.findAll('[type="button"]')
+      expect(buttons[0].text()).toContain("A")
+      expect(buttons[1].text()).toContain("B")
+      expect(wrapper.text()).toContain("Content A")
+      expect(wrapper.text()).toContain("Content B")
+    })
+
+    it("uses AccordionItem `open` prop as initial state", () => {
+      const wrapper = mount(Accordion, {
+        slots: {
+          default: () => [
+            h(AccordionItem, { title: "A", open: true }, { default: () => "ca" }),
+            h(AccordionItem, { title: "B" }, { default: () => "cb" })
+          ]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      expect(buttons[0].attributes("aria-expanded")).toBe("true")
+      expect(buttons[1].attributes("aria-expanded")).toBe("false")
+    })
+
+    it("schema :dataSource wins over compound children (backward compat)", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "Schema", subtitle: "s", open: false }] },
+        slots: {
+          default: () => [h(AccordionItem, { title: "Compound" }, { default: () => "cc" })]
+        }
+      })
+      const buttons = wrapper.findAll('[type="button"]')
+      expect(buttons).toHaveLength(1)
+      expect(buttons[0].text()).toContain("Schema")
+      expect(wrapper.text()).not.toContain("Compound")
+    })
+
+    it("falls back to subtitle text when AccordionItem has no default slot", () => {
+      const wrapper = mount(Accordion, {
+        slots: {
+          default: () => [h(AccordionItem, { title: "A", subtitle: "Plain sub", open: true })]
+        }
+      })
+      expect(wrapper.text()).toContain("Plain sub")
+    })
+
+    it("toggles a compound section and emits toggle", async () => {
+      const wrapper = mount(Accordion, {
+        slots: {
+          default: () => [
+            h(AccordionItem, { title: "A" }, { default: () => "ca" }),
+            h(AccordionItem, { title: "B" }, { default: () => "cb" })
+          ]
+        }
+      })
+      const button = wrapper.find('[type="button"]')
+      expect(button.attributes("aria-expanded")).toBe("false")
+      await button.trigger("click")
+      expect(button.attributes("aria-expanded")).toBe("true")
+      expect(wrapper.emitted("toggle")).toBeTruthy()
+    })
+
+    it("wires aria-controls/labelledby for compound sections", () => {
+      const wrapper = mount(Accordion, {
+        slots: {
+          default: () => [h(AccordionItem, { title: "A", open: true }, { default: () => "ca" })]
+        }
+      })
+      const button = wrapper.find('[type="button"]')
+      const panel = wrapper.find('[role="region"]')
+      expect(button.attributes("aria-controls")).toBe(panel.attributes("id"))
+      expect(panel.attributes("aria-labelledby")).toBe(button.attributes("id"))
+    })
+
+    it("renders nothing when no children and no dataSource", () => {
+      const wrapper = mount(Accordion)
+      expect(wrapper.find("[data-accordion]").exists()).toBe(false)
+    })
+
+    it("preserves open-state across parent re-render", async () => {
+      const wrapper = mount(Accordion, {
+        slots: {
+          default: () => [
+            h(AccordionItem, { title: "A" }, { default: () => "ca" }),
+            h(AccordionItem, { title: "B" }, { default: () => "cb" })
+          ]
+        }
+      })
+      const button = wrapper.find('[type="button"]')
+      await button.trigger("click")
+      expect(button.attributes("aria-expanded")).toBe("true")
+      await wrapper.setProps({ multiple: true })
+      expect(wrapper.find('[type="button"]').attributes("aria-expanded")).toBe("true")
+    })
+  })
+
+  describe("A11y — motion-safe & RTL (E29.7 / F31)", () => {
+    it("uses logical text alignment (text-start, not text-left) on header button", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const button = wrapper.find("[data-accordion-button]")
+      expect(button.classes()).toContain("text-start")
+      expect(button.classes()).not.toContain("text-left")
+    })
+
+    it("uses logical margin (ms-8, not ml-8) on the icon", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }], icon: "Plus" }
+      })
+      const icon = wrapper.find("svg.PlusIcon")
+      expect(icon.classes()).toContain("ms-8")
+      expect(icon.classes()).not.toContain("ml-8")
+    })
+
+    it("gates the panel transition behind motion-safe", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const panel = wrapper.find('[role="region"]')
+      expect(panel.classes()).toContain("motion-safe:transition-all")
+      expect(panel.classes()).not.toContain("transition-all")
+    })
+  })
+
+  describe("Theming — semantic surface tokens, not hardcoded slate-* (B10)", () => {
+    it("uses surface-* divider classes on the root, not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const root = wrapper.find("[data-accordion]")
+      expect(root.classes()).toContain("divide-surface-200")
+      expect(root.classes()).toContain("dark:divide-surface-800")
+      expect(root.classes()).not.toContain("divide-slate-200")
+      expect(root.classes()).not.toContain("dark:divide-slate-800")
+    })
+
+    it("uses surface-* text classes on the title, not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const title = wrapper.find("[data-accordion-button] span")
+      expect(title.classes()).toContain("text-surface-800")
+      expect(title.classes()).toContain("dark:text-surface-300")
+      expect(title.classes()).not.toContain("text-slate-800")
+      expect(title.classes()).not.toContain("dark:text-slate-300")
+    })
+
+    it("uses surface-* text classes on the subtitle panel, not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const panel = wrapper.find('[role="region"]')
+      expect(panel.classes()).toContain("text-surface-600")
+      expect(panel.classes()).toContain("dark:text-surface-400")
+      expect(panel.classes()).not.toContain("text-slate-600")
+      expect(panel.classes()).not.toContain("dark:text-slate-400")
+    })
+
+    it("uses surface-* classes on the trigger icon (incl. group-hover), not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }], icon: "ChevronDown" }
+      })
+      const icon = wrapper.find("svg.ChevronDownIcon")
+      expect(icon.classes()).toContain("text-surface-400")
+      expect(icon.classes()).toContain("dark:text-surface-500")
+      expect(icon.classes()).toContain("group-hover/item:text-surface-500")
+      expect(icon.classes()).toContain("group-hover/item:dark:text-surface-400")
+      expect(icon.classes()).not.toContain("text-slate-400")
+      expect(icon.classes()).not.toContain("dark:text-slate-500")
+      expect(icon.classes()).not.toContain("group-hover/item:text-slate-500")
+      expect(icon.classes()).not.toContain("group-hover/item:dark:text-slate-400")
+    })
+
+    it("uses surface-* fill classes on the Plus icon, not slate-*", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }], icon: "Plus" }
+      })
+      const icon = wrapper.find("svg.PlusIcon")
+      expect(icon.classes()).toContain("fill-surface-600")
+      expect(icon.classes()).toContain("dark:fill-surface-500")
+      expect(icon.classes()).not.toContain("fill-slate-600")
+      expect(icon.classes()).not.toContain("dark:fill-slate-500")
+    })
+  })
+
+  describe("Expose — root element ref (G34)", () => {
+    it("exposes rootRef pointing at the [data-accordion] root", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const root = wrapper.find("[data-accordion]")
+      expect((wrapper.vm as any).rootRef).toBe(root.element)
     })
   })
 

@@ -1,7 +1,7 @@
 ---
 title: TextEditor
-summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar.
-updated: 2026-05-09
+summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar. mode-цепочка учитывает глобальный componentsStyle (Wave 3.2, 2026-07-02).
+updated: 2026-07-02
 stability: experimental
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `TextEditor` — обёртка над [Quill](https://quilljs.com/) (через [@vueup/vue-quill](https://vueup.github.io/vue-quill/)) внутри [Dialog](./dialog.md). Поддерживает темы `snow` (toolbar сверху) и `bubble` (toolbar появляется при выделении), кастомные toolbar-конфиги (`essential`/`minimal`/`full` или custom), reactive v-model.
 
-Stability: `experimental` — все 17 тестов пропущены ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)); coverage `TextEditor.vue` — 0%; в `change:modelValue` payload объявлен как `boolean` вместо `string` (явный type bug — см. Known issues).
+Stability: `experimental` — все 17 тестов пропущены ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)); coverage `TextEditor.vue` — 0%. Type-bug `change:modelValue(payload: boolean)` исправлен 2026-05-11 — payload теперь корректно типизирован как `string` (cross-cutting fix с [Aria](./aria.md)).
 
 Source: [Source](../../lib/texteditor/TextEditor.vue), [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts), [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts).
 
@@ -27,9 +27,8 @@ lib/texteditor/
 ```
 
 Зависимости:
-- [@vueup/vue-quill](../../lib/package.json) `^1.2.0` — Vue 3 wrapper для Quill.
-- [quill](../../lib/package.json) `^2.0.2` — core editor.
-- CSS-импорты темы Snow/Bubble: `@vueup/vue-quill/dist/vue-quill.snow.css`, `@vueup/vue-quill/dist/vue-quill.bubble.css` ([rollup.config.js:59–60](../../lib/rollup.config.js#L59-L60)).
+- [@vueup/vue-quill](../../lib/package.json) `^1.2.0` + [quill](../../lib/package.json) `^2.0.0` — Vue 3 wrapper + core editor. **Wave 2.1: optional `peerDependencies` + lazy.** Больше не runtime-deps (~200kb quill не тянулся ко всем потребителям): ставит приложение (`pnpm add @vueup/vue-quill quill`). `QuillEditor` грузится lazy в `onMounted` (`(await import("@vueup/vue-quill")).QuillEditor`); без peer редактор не рендерится (`template v-if="QuillEditor"`).
+- CSS темы Snow/Bubble грузятся lazy в том же `onMounted` (`import("@vueup/vue-quill/dist/vue-quill.snow.css")` + `.bubble.css`), а не top-level side-effect-импортом ([rollup.config.js:59–60](../../lib/rollup.config.js#L59-L60) — external).
 - [Dialog](./dialog.md), [InputLayout](./input-layout.md).
 
 Лицензия quill — BSD-3, vue-quill — MIT (не копилефт).
@@ -100,7 +99,7 @@ Note: компонент рендерит trigger-кнопку, которая �
 |---|---|---|
 | `update:modelValue` | `string` (HTML) | На каждый change в Quill. |
 | `update:isInvalid` | `boolean` | При смене статуса валидации. |
-| `change:modelValue` | `boolean` | **Type bug** — должно быть `string`. См. Known issues. |
+| `change:modelValue` | `string` (HTML) | На blur / programmatic save. Fixed 2026-05-11 (раньше тип был ошибочно `boolean`). |
 
 ## 7. Slots
 
@@ -185,6 +184,8 @@ app.use(FishtVue, {
 
 `TextEditorOption = Pick<TextEditorProps, "paramsDialog" | "paramsTextEditor" | "theme" | keyof InputLayoutOption>`.
 
+`mode` (стиль InputLayout-обёртки) резолвится по цепочке `props.mode ?? options?.mode ?? TextEditor.componentsStyle() ?? "outlined"` — глобальный `componentsStyle` учитывается (Wave 3.2, зеркало [Input](./input.md)). Quill-тема `theme: "snow" | "bubble"` — независимая ось (тема редактора, не обёртки).
+
 ### 10.2 Per-instance
 
 Через props.
@@ -209,6 +210,7 @@ Quill CSS импортируется вне `@layer fishtvue` — он имее�
 
 ### A11y
 
+- **Editor-контейнер** (`<div :id>`) связан с меткой через `:aria-labelledby` → id `<Label>` (Wave 4, 2026-06-19); id раздаётся [InputLayout](./input-layout.md) (`useId()`, либо `id` prop). См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - Quill поддерживает базовую a11y: keyboard-shortcuts (Cmd/Ctrl+B/I/U), ARIA-атрибуты на toolbar.
 - Focus management при open/close Dialog — на стороне [Dialog](./dialog.md).
 - Screen-reader: Quill использует contenteditable; SR может не идеально читать формат.
@@ -239,7 +241,7 @@ const quill = ed.value?.quillEditorLink?.getQuill()
 - **Vue:** `^3.5.x`.
 - **Quill:** `^2.0.2`.
 - **vue-quill:** `^1.2.0`.
-- **Stability flag:** `experimental` — нет покрытия тестами; type bug в emits; Quill инжектит inline стили без layer'а.
+- **Stability flag:** `experimental` — нет покрытия тестами; Quill инжектит inline стили без layer'а. (Type bug в `change:modelValue` emits исправлен 2026-05-11.)
 - **Breaking changes:** при апгрейде Quill 3.x — ожидаются.
 
 ## 15. Testing recipes
@@ -269,7 +271,6 @@ describe.skip("TextEditor smoke", () => {
 |---|---|---|
 | Toolbar не отображается | `theme` не задан или CSS не подгружен. | Установи `theme="snow"` и проверь, что `vue-quill.snow.css` подгружен. |
 | HTML «теряет» форматирование при v-model | Quill нормализует HTML — некоторые atypical тэги фильтруются. | Используй `contentType: "delta"` и работай с Delta-объектом. |
-| `change:modelValue` приходит с `boolean` | Type bug — payload объявлен `boolean`, но реально `string`. | Игнорируй type, используй runtime значение. См. Known issues. |
 | XSS через paste | Нет санитизации. | Добавь `sanitize-html` перед `v-model`. |
 | Размер bundle вырос | Quill — ~200KB minified. | Ленивая загрузка через dynamic import + Suspense. |
 | `image`-toolbar не работает | По умолчанию upload не реализован. | Регистрируй custom Quill module для image-handler. |
@@ -297,7 +298,7 @@ describe.skip("TextEditor smoke", () => {
 
 ### API inconsistencies
 
-- **Type bug:** `change:modelValue(payload: boolean)` ([TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts)) — payload объявлен `boolean`, но семантически и runtime — это HTML-строка `string`. Должно быть `change:modelValue(payload: string)`.
+- ~~**Type bug:** `change:modelValue(payload: boolean)`~~ ✅ resolved 2026-05-11 — payload теперь корректно типизирован как `string` ([TextEditor.d.ts:121](../../lib/texteditor/TextEditor.d.ts#L121)). Cross-cutting fix вместе с [aria.md Issue 1](../issues/aria.md).
 - `modelValue?: string | number | null` — `number` не имеет смысла для HTML-content.
 - `toolbar: "essential" \| "minimal" \| "full" \| string \| object \| Array<any>` — open union, narrow не работает.
 - `IDataTextEditor.options: any`, `globalOptions: any` — потеря типизации.

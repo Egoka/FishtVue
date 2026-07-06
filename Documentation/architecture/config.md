@@ -1,7 +1,7 @@
 ---
 title: Config (FishtVue plugin)
-summary: Vue plugin, FishtVueConfiguration, useFishtVue, getOptions, setActiveLocale.
-updated: 2026-05-09
+summary: Vue plugin, FishtVueConfiguration, useFishtVue, getOptions, setActiveLocale, extensibility API (use/registerComponent/extendTheme). Install инжектит tokens-тег FishtVueTokens для runtime theme API (Wave 3.3).
+updated: 2026-07-02
 stability: stable
 since: 0.2.11
 ---
@@ -40,16 +40,17 @@ lib/config/
 
 ## 3. How it works
 
-`install(app, options)` ([config/index.ts:109–143](../../lib/config/index.ts#L109-L143)):
+`install(app, options)` ([config/index.ts:125–166](../../lib/config/index.ts#L125-L166)):
 
-1. `getDefaultOptions(options?.optionsTheme?.nameTheme)` — выбирает встроенную тему по имени; default — `Aurora`.
-2. `deepMerge(defaultOptions, options)` — мерж пользовательских опций поверх дефолтов. Реактивизуется через `reactive(...)`.
-3. `linksTheme(FishtVue.config.theme)` — резолв ссылок между primitive- и semantic-уровнями темы.
-4. `FishtVue.config.locale.activeLocale ??= defaultLocale` — авто-выставление активной локали.
-5. `FishtVueSymbol = Symbol("FishtVue")` — пере-присвоение symbol'а после успешного install.
+1. **Middleware queue** — последовательно прогоняются все `FishtVue.use((cfg) => ...)`-зарегистрированные функции; каждая может мутировать `cfg` in-place или вернуть новый объект (см. §10.5).
+2. `getDefaultOptions(options?.optionsTheme?.nameTheme)` — выбирает встроенную тему по имени или custom-зарегистрированную через `extendTheme`; default — `Aurora`.
+3. `deepMerge(defaultOptions, options)` — мерж пользовательских опций поверх дефолтов. Реактивизуется через `reactive(...)`.
+4. `linksTheme(FishtVue.config.theme)` — резолв ссылок между primitive- и semantic-уровнями темы.
+5. `FishtVue.config.locale.activeLocale ??= defaultLocale` — авто-выставление активной локали.
 6. На клиенте: `(window as any).FishtVue = FishtVue`. На сервере шаг пропускается.
-7. `app.provide(FishtVueSymbol, FishtVue)` + `app.config.globalProperties.$fishtVue = FishtVue`.
-8. Создаётся `BaseStylesComponent = new Component("BaseComponent" as any)`, через `initStyle(...)` инжектится базовый layer:
+7. `app.provide(FishtVueSymbol, FishtVue)` + `app.config.globalProperties.$fishtVue = FishtVue`. `FishtVueSymbol` — **стабильный `const InjectionKey<FishtVue>`** ([config/index.ts:18](../../lib/config/index.ts#L18)); никогда не пере-присваивается. Multi-app safe: `createApp().use(FishtVue, A)` × 2 с разными configs дают изолированные инстансы (каждый app имеет свой `provide`).
+8. **Custom components** — все компоненты, зарегистрированные через `FishtVue.registerComponent(name, ctor)`, регистрируются на app через `app.component(name, ctor)`.
+9. Создаётся `BaseStylesComponent = new Component("BaseComponent" as any)`, через `initStyle(...)` инжектится базовый layer:
 
 ```css
 :root {
@@ -60,6 +61,8 @@ lib/config/
 ```
 
 обёрнутый в `@layer fishtvue { ... }` и опционально с `@layer <user-layers>;` если задан `optionsTheme.layers`.
+
+10. **Tokens-тег (Wave 3.3):** `injectTokens(FishtVue)` ([config/index.ts:169-172](../../lib/config/index.ts#L169-L172)) инжектит `:root`-блок дизайн-токенов live-темы (`--fv-{color}-{tone}` rgb-триплеты, `--fv-theme-*`, `--fv-surface-*`) тегом `style[data-fishtvue-style-id="FishtVueTokens"]` + пишет строку в `cssComponents` (SSR). Runtime theme API (`usePreset`/`updatePreset`/…, см. [Theme §8](./theme.md#8-exposed-methods)) переписывает этот же тег.
 
 **SSR / hydration:**
 
@@ -146,9 +149,12 @@ app.use<FishtVueConfiguration>(FishtVue, config)
 | `setActiveLocale(name)` | `(name: NameLocale) => string \| boolean \| undefined` | Меняет `locale.activeLocale`. Возвращает новое значение, `false` при отсутствии `activeLocale` в config или `undefined` если plugin не установлен. |
 | `getActiveLocale()` | `() => string \| undefined` | Текущая активная локаль. |
 | `getDefaultLocale()` | `() => string \| undefined` | Локаль по умолчанию. |
-| `FishtVueSymbol` | `InjectionKey<string>` | Symbol для `inject()`. Пере-присваивается на каждом `install`. |
+| `FishtVueSymbol` | `InjectionKey<FishtVue>` | Стабильный `const` symbol для `inject()`. **Никогда** не пере-присваивается — multi-app safe. |
+| `FishtVue.use(mw)` | `(middleware: FishtVueMiddleware) => void` | Регистрирует middleware, мутирующий config до merge. Запускается на каждый `install`. См. §10.5. |
+| `FishtVue.registerComponent(name, ctor)` | `(string, VueComponent) => void` | Регистрирует custom-компонент глобально для всех будущих `install` — эквивалент `app.component(name, ctor)` без необходимости держать ссылку на app. |
+| `FishtVue.extendTheme(name, theme)` | `(string, Theme) => void` | Регистрирует custom theme. После — `optionsTheme.nameTheme: name` резолвится на переданный theme. Override built-in допустим. |
 
-Все функции guard'ятся через `isExistFishtVue()` ([config/index.ts:70–79](../../lib/config/index.ts#L70-L79)) — она проверяет, что symbol установлен (`!== Symbol("FishtVue")` базовый), читает instance из `window.FishtVue` (если client) или `inject(FishtVueSymbol)` (если есть injection context), затем вызывает callback.
+Все getter-функции guard'ятся через `isExistFishtVue()` ([config/index.ts:81–92](../../lib/config/index.ts#L81-L92)) — она читает instance через `inject(FishtVueSymbol)` (primary path, требует Vue setup context), затем fallback на `(window as any).FishtVue` для client-side imperative API (например, `openAlert`).
 
 ## 9. Examples
 
@@ -245,6 +251,62 @@ Plugin задаёт базовый layer:
 
 Поздние layers побеждают. Для override стилей в приложении объяви `@layer fishtvue, app;` и пиши свои стили в `@layer app { ... }`.
 
+### 10.5 Extensibility
+
+Plugin поддерживает 3 extension-метода поверх стандартного `app.use(...)`. Вызываются ДО `app.use(FishtVue, options)`; module-level registries shared между installs.
+
+#### `FishtVue.use(middleware)`
+
+Регистрирует middleware-функцию, которая мутирует `FishtVueConfiguration` до merge с defaults. Запускается на каждый install, в порядке регистрации. Middleware может:
+
+- Мутировать переданный объект in-place (возвращать `void`).
+- Возвращать новый объект (становится `options` для следующих middleware и финального merge).
+
+```ts
+import FishtVue from "fishtvue/config"
+
+FishtVue.use((cfg) => {
+  cfg.unstyled = process.env.NODE_ENV === "test"
+})
+
+FishtVue.use((cfg) => {
+  cfg.componentsOptions = { ...(cfg.componentsOptions ?? {}), Button: { mode: "outline" } }
+})
+
+app.use(FishtVue, { optionsTheme: { nameTheme: "Aurora" } })
+// Финальный config: { unstyled: ..., optionsTheme: ..., componentsOptions: { Button: { mode: "outline" } } }
+```
+
+#### `FishtVue.registerComponent(name, component)`
+
+Регистрирует custom Vue component, который автоматически становится глобальным (`app.component(name, ctor)`) при каждом install. Полезно для plugin-ов поверх FishtVue, которые хотят добавить свои компоненты без явного `app.component()`.
+
+```ts
+import FishtVue from "fishtvue/config"
+import MyButton from "./MyButton.vue"
+
+FishtVue.registerComponent("MyButton", MyButton)
+app.use(FishtVue, {})
+// Теперь <MyButton /> доступен в любом template без impotr.
+```
+
+#### `FishtVue.extendTheme(name, theme)`
+
+Регистрирует custom theme. После регистрации `optionsTheme.nameTheme: <name>` резолвится на переданный theme. Override built-in (`Aurora`/`Harmony`/`Sapphire`) допустим — custom побеждает.
+
+```ts
+import FishtVue from "fishtvue/config"
+import sunset from "./themes/sunset"
+
+FishtVue.extendTheme("Sunset", sunset)
+app.use(FishtVue, { optionsTheme: { nameTheme: "Sunset" } })
+```
+
+#### Limitations
+
+- Module-level state — все registries shared между install'ами в текущем worker'е. Для multi-tenant SSR это может быть нежелательно; в таком случае используй stateful approach (передавай custom theme прямо в `options.theme`).
+- `__resetForTests()` — test-only utility для очистки registries между Vitest-тестами; не использовать в production-коде.
+
 ## 11. Form integration & validation
 
 Не применимо.
@@ -329,7 +391,7 @@ describe("FishtVue plugin", () => {
 
 | Проблема | Причина | Решение |
 |---|---|---|
-| `useFishtVue()` возвращает `undefined` | Plugin не установлен или `FishtVueSymbol` не пере-присвоен. | Убедись, что `app.use(FishtVue, ...)` вызывается ДО `app.mount(...)`. Не вызывай `useFishtVue` в global setup до install. |
+| `useFishtVue()` возвращает `undefined` | Plugin не установлен или вызван вне Vue setup context без window fallback. | Убедись, что `app.use(FishtVue, ...)` вызывается ДО `app.mount(...)`. Для вызова `useFishtVue` вне setup — на клиенте сработает fallback на `window.FishtVue`, на сервере — нет. |
 | `getOptions("Button")` возвращает `undefined` | В `componentsOptions` нет ключа `Button` либо передано `undefined` для секции. | Передай объект (`{}` минимум) либо проверь имя ключа (PascalCase). |
 | `setActiveLocale("xx")` возвращает `false` | `locale.activeLocale` не выставлено в конфиге. | Передай `locale: { defaultLocale: "en" }` — на install `activeLocale ??= defaultLocale` срабатывает. |
 | Stylesheet `@layer fishtvue` не появляется | `unstyled: true` или `BaseStylesComponent.initStyle` не отработал на сервере. | Сними `unstyled` или проверь, что `onServerPrefetch` пайплайн запущен. |
@@ -352,24 +414,24 @@ describe("FishtVue plugin", () => {
 
 ### Incomplete or stubbed behavior
 
-- В [config/index.ts:77](../../lib/config/index.ts#L77) закомментирован `console.warn("FishtVue is not installed!")` — нет диагностики при пропущенном `app.use`.
-- `unstyled: boolean` объявлен в `FishtVueConfiguration` ([FishtVue.d.ts:130](../../lib/config/FishtVue.d.ts#L130)), но `install` сам флаг не проверяет — обработка распределена между компонентами.
-- `componentsStyle` ([FishtVue.d.ts:128](../../lib/config/FishtVue.d.ts#L128)) — то же, читается компонентами через `Component.componentsStyle()`.
+- `unstyled: boolean` объявлен в `FishtVueConfiguration` ([FishtVue.d.ts:130](../../lib/config/FishtVue.d.ts#L130)), enforce'ится через `Component.setStyle()` guard ([component/index.ts:138](../../lib/component/index.ts#L138)) — cross-cutting, применяется ко всем компонентам.
+- `componentsStyle` ([FishtVue.d.ts:128](../../lib/config/FishtVue.d.ts#L128)) — читается компонентами через `Component.componentsStyle()`, не enforced на уровне install.
 
 ### Skipped tests
 
-В [FishtVue.test.ts](../../lib/config/FishtVue.test.ts) на момент ревизии (2026-05-09) — 2 skipped кейса. Подробности — в самом файле.
+На момент ревизии (2026-05-20) skipped тестов в [FishtVue.test.ts](../../lib/config/FishtVue.test.ts) нет. Раньше было 2 skipped — оба unblocked в рамках Issue 6 audit close-out.
 
 ### API inconsistencies
 
-- `FishtVueSymbol` в `FishtVue.d.ts` объявлен как `InjectionKey<string>` ([FishtVue.d.ts:69](../../lib/config/FishtVue.d.ts#L69)), но в `index.ts` он `Symbol` без typed payload. Это работает в рантайме, но тип некорректен.
-- `getOptions` в `index.ts` ([config/index.ts:26–38](../../lib/config/index.ts#L26-L38)) приводит результат к жёсткому типу через `as`-cast — обход TS, который не идеален при добавлении новых ключей `ComponentsOptions`.
+- ~~`FishtVueSymbol` в `FishtVue.d.ts` объявлен как `InjectionKey<string>`~~ — ✅ resolved 2026-05-20: теперь `const FishtVueSymbol: InjectionKey<FishtVue>` в обоих местах.
+- `getOptions` в `index.ts` приводит результат к жёсткому типу через `as`-cast — обход TS, который не идеален при добавлении новых ключей `ComponentsOptions`.
 
 ### Behavioral caveats
 
-- `FishtVueSymbol` пере-присваивается при каждом `install`. Повторная установка plugin'а в том же `app` может оставить «висячие» injects на старый symbol.
-- На клиенте записывается `window.FishtVue` — global pollution.
+- ~~`FishtVueSymbol` пере-присваивается при каждом `install`~~ — ✅ resolved 2026-05-20: symbol теперь `const`, безопасен для multi-app.
+- На клиенте записывается `window.FishtVue` — global pollution. Используется как fallback для imperative API (`openAlert`) вне Vue setup context.
 - `deepMerge` ([utils/objectHandler.ts](../../lib/utils/objectHandler.ts)) производит глубокий мерж массивов и объектов; для пользовательских массивов (`locale.locales`) это значит конкатенацию, а не замену — учти при override.
+- Extensibility registries (`use`/`registerComponent`/`extendTheme`) — module-level state, shared между install'ами. См. §10.5 Limitations.
 
 ### Bug report format
 

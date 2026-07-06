@@ -37,7 +37,10 @@ export declare type PseudoClasses = {
     | "out-of-range"
     | "placeholder-shown"
     | "autofill"
-    | "read-only",
+    | "read-only"
+    | "optional"
+    | "user-valid"
+    | "user-invalid",
     string
   >
   // prettier-ignore
@@ -67,12 +70,14 @@ export declare type PseudoClasses = {
     | "selection"
     | "file"
     | "backdrop"
-    | "placeholder",
+    | "placeholder"
+    | "details-content",
     string
   >
   // prettier-ignore
   specialStates: Record<
     | "open"
+    | "inert"
     | "rtl"
     | "ltr",
     string
@@ -85,6 +90,8 @@ export declare type Modifier = Partial<{
   child: string
   has: string
   hasValue: string
+  hasNamed: string
+  selectorsBoolean: string
   media: string[]
   mediaDynamic: string
   mediaAbstract: string

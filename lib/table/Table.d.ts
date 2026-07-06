@@ -391,6 +391,14 @@ export interface IColumnPrivate extends Omit<IColumn, "dataField"> {
   id: string
   dataField: string
   isEdit: boolean
+  /** Compound-API: ключ родительской `<ColumnGroup>` (null — колонка вне группы). Internal. */
+  _groupKey?: number | null
+  /** Compound-API: захваченный `#cell` scoped-slot со `<Column>`. Internal. */
+  _cellSlot?: (props: any) => any
+  /** Compound-API: захваченный `#header` scoped-slot со `<Column>`. Internal. */
+  _headerSlot?: (props: any) => any
+  /** Compound-API: захваченный `#filter` scoped-slot со `<Column>`. Internal. */
+  _filterSlot?: (props: any) => any
 }
 
 /**
@@ -791,6 +799,29 @@ export declare type TableProps = {
   noColumn?: string
 
   /**
+   * Accessible table caption, rendered as a visually-hidden `<caption>` element
+   * (for screen readers). Use the `caption` slot to provide HTML content instead.
+   * @type {string | undefined}
+   */
+  caption?: string
+
+  /**
+   * Row virtualization for large client-side tables (renders only the visible window).
+   *
+   * - `undefined` (default) — auto-enabled when row count exceeds the threshold
+   *   (client-side, non-grouped, non-paginated tables only).
+   * - `false` — always render every row (legacy behavior).
+   * - `true` — force-enable regardless of row count.
+   * - object — force-enable with config: `rowHeight` (fixed px, default `heightCell + 9`),
+   *   `overscan` (extra rows above/below, default `6`), `threshold` (auto cutoff, default `100`).
+   *
+   * Not applied with `grouping`, active `pagination`, or `asyncData: true`/function mode.
+   * Fixed row height — multi-line cells are clipped to `rowHeight`.
+   * @type {boolean | { rowHeight?: number; overscan?: number; threshold?: number } | undefined}
+   */
+  virtual?: boolean | { rowHeight?: number; overscan?: number; threshold?: number }
+
+  /**
    * Number of rows simulated during data loading.
    * @type {number | 100 | 1000 | 10000 | undefined}
    */
@@ -852,6 +883,14 @@ export declare type TableSlots = {
   header(): VNode[]
   footer(): VNode[]
   group(args: { item: string; length: number }): VNode[]
+  /** Accessible `<caption>` content (HTML allowed). Overrides the `caption` prop. */
+  caption(): VNode[]
+  /** Empty state shown when there is no data. Overrides the `noData` text. */
+  empty(): VNode[]
+  /** Empty state shown when no columns are defined. Overrides the `noColumn` text. */
+  "empty-columns"(): VNode[]
+  /** Empty state shown when filters/search produce no rows. Overrides the `noFilter` text. */
+  "empty-filter"(): VNode[]
 } & DynamicSlots
 /**
  * Defines the events emitted by the Table component.
@@ -1456,16 +1495,115 @@ export declare type TableOption = Pick<
   | "noData"
   | "noColumn"
   | "countDataOnLoading"
+  | "virtual"
   | "class"
   | "styles"
 >
+
+// ---COMPOUND API (<Column> / <ColumnGroup>) -----------------------------------
+// Renderless descriptors для compound-режима `<Table><Column>`. Свой DOM не рендерят —
+// <Table> читает их props/slots через VNode-walk (см. Table.vue) и строит <th>/ячейки сам.
+// Schema-driven `:columns` при наличии выигрывает (backward compat).
+
+/**
+ * Props for the `<Column>` descriptor. Полностью повторяют [IColumn](#IColumn) — одна колонка
+ * в compound-режиме. В шаблоне kebab-case: `data-field`, `is-sort`, `is-filter`, `data-type`…
+ */
+export declare type ColumnProps = IColumn
+
+/**
+ * Scoped slots `<Column>`. Пробрасываются `<Table>` в рендер соответствующей колонки.
+ */
+export declare type ColumnSlots = {
+  /**
+   * Кастомный рендер ячейки колонки (замена дефолтного `markerParts`-рендера). Slot-props
+   * совпадают с `cellTemplate`-slot на `<Table>`.
+   */
+  cell(props: {
+    rowData: Record<string, any>
+    value: any
+    valueWithMarker: string
+    column: IColumnPrivate
+    isCloseEditor: (isActive: boolean) => void
+    editValue: (value: any) => void
+  }): VNode[]
+  /**
+   * Кастомный рендер заголовка колонки (замена `caption`-текста в `<th>`).
+   */
+  header(props: { column: IColumnPrivate }): VNode[]
+  /**
+   * Кастомный рендер фильтра колонки (замена встроенного Input/Select/Calendar-фильтра).
+   */
+  filter(props: { column: IColumnPrivate }): VNode[]
+  /**
+   * Default slot — для вложения `<Column>` внутрь `<ColumnGroup>`; напрямую не рендерится.
+   */
+  default(): VNode[]
+}
+
+/**
+ * `<Column>` — renderless column descriptor for the compound `<Table>` API.
+ *
+ * ```vue
+ * <Table :data-source="rows">
+ *   <Column data-field="name" caption="Имя" is-sort>
+ *     <template #cell="{ rowData }"><strong>{{ rowData.name }}</strong></template>
+ *   </Column>
+ * </Table>
+ * ```
+ */
+declare class Column extends ClassComponent<ColumnProps, ColumnSlots, null, NonNullable<unknown>> {}
+
+/**
+ * Props for the `<ColumnGroup>` descriptor (multi-level headers).
+ */
+export declare type ColumnGroupProps = {
+  /**
+   * Заголовок группы — рендерится в верхнем ряду шапки как `<th colspan>` над колонками группы.
+   * @type {string | undefined}
+   */
+  caption?: string
+
+  /**
+   * Custom CSS class для группового `<th>`.
+   * @type {StyleClass | undefined}
+   */
+  class?: StyleClass
+}
+
+/**
+ * Slots of the `<ColumnGroup>` descriptor.
+ */
+export declare type ColumnGroupSlots = {
+  /**
+   * Default slot — вложенные `<Column>` группы.
+   */
+  default(): VNode[]
+}
+
+/**
+ * `<ColumnGroup>` — renderless multi-level-header descriptor for the compound `<Table>` API.
+ *
+ * ```vue
+ * <Table :data-source="rows">
+ *   <ColumnGroup caption="Личное">
+ *     <Column data-field="name" />
+ *     <Column data-field="age" type="number" />
+ *   </ColumnGroup>
+ * </Table>
+ * ```
+ */
+declare class ColumnGroup extends ClassComponent<ColumnGroupProps, ColumnGroupSlots, null, NonNullable<unknown>> {}
 
 // ---------------------------------------
 
 declare module "vue" {
   export interface GlobalComponents {
     Table: GlobalComponentConstructor<Table>
+    Column: GlobalComponentConstructor<Column>
+    ColumnGroup: GlobalComponentConstructor<ColumnGroup>
   }
 }
 
 export default Table
+export { Column, ColumnGroup }

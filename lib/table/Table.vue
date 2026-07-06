@@ -1,5 +1,20 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, unref, useSlots, watch } from "vue"
+  import {
+    Comment,
+    Fragment,
+    Text,
+    computed,
+    defineComponent,
+    nextTick,
+    onMounted,
+    onUnmounted,
+    reactive,
+    ref,
+    toRaw,
+    unref,
+    useSlots,
+    watch
+  } from "vue"
   import * as LD from "lodash-es"
   import { isEqual, isWithinInterval, startOfDay } from "date-fns"
   import {
@@ -73,10 +88,91 @@
     pagination: undefined,
     search: undefined,
     columns: undefined,
-    summary: undefined
+    summary: undefined,
+    virtual: undefined
   })
   const emit = defineEmits<TableEmits>()
   const slots = useSlots()
+  // ---COMPOUND-API (VNode-walk <Column>/<ColumnGroup>/<Pagination>/<Loading>) ----------
+  // Считываем декларативные дети из default slot и синтезируем descriptor'ы колонок + header-группы
+  // + override-конфиги пейджера/лоадера. Schema-driven `:columns`/`:pagination` при наличии выигрывают
+  // (backward compat). Сопоставление по ИМЕНИ компонента — Column.vue/ColumnGroup.vue НЕ импортируем
+  // в этот SFC: импорт SFC в SFC ломает type-resolver @vue/compiler-sfc на re-export
+  // `declare class ... extends ClassComponent` (урок Menu.vue:206). Имя надёжно и не минифицируется.
+  function compoundNormalize(raw: unknown): Array<any> {
+    if (raw === null || raw === undefined) return []
+    return Array.isArray(raw) ? (raw as Array<any>) : [raw]
+  }
+  function isVNodeNamed(vn: any, name: string): boolean {
+    const t = vn?.type
+    return !!t && (t?.name === name || t?.__name === name)
+  }
+  function compoundFlatten(nodes: Array<any>): Array<any> {
+    const out: Array<any> = []
+    for (const n of nodes) {
+      if (n === null || n === undefined || typeof n !== "object") continue
+      if (n.type === Comment || n.type === Text) continue
+      if (n.type === Fragment) out.push(...compoundFlatten(compoundNormalize(n.children)))
+      else out.push(n)
+    }
+    return out
+  }
+  function compoundChildren(vn: any): Array<any> {
+    const def = vn?.children?.default
+    return typeof def === "function" ? compoundNormalize(def()) : []
+  }
+  // Извлекаем IColumn из <Column>-vnode: props + захваченные scoped-slots (cell/header/filter) + ключ группы.
+  function extractColumn(vn: any, groupKey: number | null): IColumn {
+    const childSlots = (vn?.children && typeof vn.children === "object" ? vn.children : {}) as Record<string, any>
+    return {
+      ...(vn?.props ?? {}),
+      _groupKey: groupKey,
+      _cellSlot: typeof childSlots.cell === "function" ? childSlots.cell : undefined,
+      _headerSlot: typeof childSlots.header === "function" ? childSlots.header : undefined,
+      _filterSlot: typeof childSlots.filter === "function" ? childSlots.filter : undefined
+    } as IColumn
+  }
+  type CompoundHeaderGroupMeta = { key: number; caption?: string; class?: any }
+  const compoundParsed = computed<{
+    columns: Array<IColumn>
+    groups: Array<CompoundHeaderGroupMeta>
+    pagination?: Record<string, any>
+    loading?: Record<string, any>
+  }>(() => {
+    const raw = typeof slots.default === "function" ? slots.default() : undefined
+    const top = compoundFlatten(compoundNormalize(raw))
+    const columnsAcc: Array<IColumn> = []
+    const groupsAcc: Array<CompoundHeaderGroupMeta> = []
+    let pagination: Record<string, any> | undefined
+    let loading: Record<string, any> | undefined
+    let groupKey = 0
+    for (const vn of top) {
+      if (isVNodeNamed(vn, "Column")) {
+        columnsAcc.push(extractColumn(vn, null))
+      } else if (isVNodeNamed(vn, "ColumnGroup")) {
+        const key = groupKey++
+        groupsAcc.push({ key, caption: vn?.props?.caption, class: vn?.props?.class })
+        for (const child of compoundFlatten(compoundChildren(vn)))
+          if (isVNodeNamed(child, "Column")) columnsAcc.push(extractColumn(child, key))
+      } else if (isVNodeNamed(vn, "Pagination")) {
+        pagination = { ...(vn?.props ?? {}) }
+      } else if (isVNodeNamed(vn, "Loading")) {
+        loading = { ...(vn?.props ?? {}) }
+      }
+    }
+    return { columns: columnsAcc, groups: groupsAcc, pagination, loading }
+  })
+  const compoundColumns = computed<Array<IColumn>>(() => compoundParsed.value.columns)
+  const compoundPaginationConfig = computed<Record<string, any> | undefined>(() => compoundParsed.value.pagination)
+  const compoundLoadingProps = computed<Record<string, any>>(() => compoundParsed.value.loading ?? {})
+  // Стабильный рендерер захваченного со <Column> scoped-slot (cell/header/filter): определён один раз,
+  // props (fn/args) объявлены — slot-props передаются корректно (в отличие от `<component :is="fn">`,
+  // где недекларированные атрибуты ушли бы в attrs, а не в первый аргумент slot-функции).
+  const RenderColumnSlot = defineComponent({
+    name: "RenderColumnSlot",
+    props: { render: { type: Function, default: undefined }, args: { type: Object, default: undefined } },
+    setup: (p) => () => (p.render ? (p.render as (a: any) => any)(p.args) : null)
+  })
   // ---REF-LINK----------------------------
   const componentTable = ref<HTMLElement>()
   const tableHeader = ref<HTMLElement>()
@@ -113,10 +209,18 @@
   const sort = computed<ISort | boolean>(() => deepMerge(options?.sort, unref(props?.sort)) ?? false)
   const filter = computed<IFilter | boolean>(() => deepMerge(options?.filter, unref(props?.filter)) ?? false)
   const grouping = computed<IGrouping | string>(() => deepMerge(options?.grouping, unref(props?.grouping)))
-  const pagination = computed<TablePagination | boolean>(
-    () => deepMerge(options?.pagination, unref(props?.pagination)) ?? false
-  )
-  const columns = computed<boolean | Array<IColumn>>(() => unref(props?.columns) ?? false)
+  const pagination = computed<TablePagination | boolean>(() => {
+    // Явный `:pagination` (object/false) выигрывает над compound `<Pagination>`-child.
+    const explicit = unref(props?.pagination)
+    if (explicit !== undefined && explicit !== null) return deepMerge(options?.pagination, explicit) ?? false
+    return (deepMerge(options?.pagination, compoundPaginationConfig.value) as TablePagination | boolean) ?? false
+  })
+  const columns = computed<boolean | Array<IColumn>>(() => {
+    // Schema `:columns` (массив ИЛИ false) выигрывает; иначе — compound `<Column>`-дети.
+    const schema = unref(props?.columns)
+    if (schema !== undefined && schema !== null) return schema as boolean | Array<IColumn>
+    return compoundColumns.value.length ? compoundColumns.value : false
+  })
   // -----------
   const isVisibleToolbar = computed<boolean>(
     () => (isSearch.value || !!toolbar.value) && ((toolbar.value as IToolbar)?.visible ?? true)
@@ -151,12 +255,20 @@
   const noFilter = computed<NonNullable<IFilter["noFilter"]>>(
     () => (filter.value as IFilter)?.noFilter ?? Table.t("noDataForQuery") ?? "No data was found for your query"
   )
+  const caption = computed<NonNullable<TableProps["caption"]>>(() => props.caption ?? "")
   const iconSort = computed<ISort["icon"]>(() => (sort.value as ISort)?.icon ?? "Arrow")
   const resizedColumns = computed<NonNullable<TableProps["resizedColumns"]>>(
     () => props?.resizedColumns ?? options?.resizedColumns ?? false
   )
   const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props?.edit ?? options?.edit ?? false)
   const lengthData = computed<number>(() => totalCountAsync.value ?? props.totalCount ?? dataSource.value.length)
+  // aria-live: озвучивание количества строк после filter/search/sort (polite, sr-only).
+  // Wave 3.5: локализация + плюрализация одним ключом через Component.t(key, { count }) —
+  // CLDR-формы активной локали (например, ru: 21 → "результат", 5 → "результатов"; см. table.resultsCount в locale messages).
+  const ariaResultsLabel = computed<string>(() => {
+    const count = lengthData.value ?? 0
+    return Table.t("table.resultsCount", { count })
+  })
   const isFilter = computed<boolean>(() =>
     typeof filter.value === "object"
       ? typeof filter.value?.visible === "boolean"
@@ -233,6 +345,38 @@
   const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
     () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
   )
+  // ---VIRTUALIZATION----------------------
+  const virtualScrollTop = ref<number>(0)
+  const virtualViewportHeight = ref<number>(0)
+  const virtualConfig = computed<{
+    enabled: boolean
+    force: boolean
+    rowHeight: number
+    overscan: number
+    threshold: number
+  }>(() => {
+    const raw = props.virtual ?? options?.virtual
+    const obj = (typeof raw === "object" && raw !== null ? raw : {}) as Exclude<
+      TableProps["virtual"],
+      boolean | undefined
+    >
+    return {
+      enabled: raw !== false,
+      force: raw === true || (typeof raw === "object" && raw !== null),
+      rowHeight: Math.max(1, obj?.rowHeight ?? heightCell.value + 9),
+      overscan: obj?.overscan ?? 6,
+      threshold: obj?.threshold ?? 100
+    }
+  })
+  // Auto по умолчанию + opt-out через :virtual=false. Только client-side flat-режим:
+  // не виртуализируем asyncData(boolean/function) / grouping / активную pagination.
+  const isVirtual = computed<boolean>(() => {
+    const c = virtualConfig.value
+    if (!c.enabled) return false
+    if (isAsyncDataBoolean.value || isAsyncDataFunction.value || isGroup.value || isPagination.value) return false
+    return c.force || lengthData.value > c.threshold
+  })
+  const virtualRowHeight = computed<number>(() => virtualConfig.value.rowHeight)
   // ---PAGINATION--------------------------
   const startPage = computed<NonNullable<TablePagination["startPage"]>>(() =>
     isNumber((pagination.value as TablePagination)?.startPage as number) ? +(pagination.value as any).startPage : 1
@@ -277,7 +421,7 @@
   const resultDataSource = computed<ResultData>(() => {
     let resultData: Record<string, any> = toRaw(dataGrouping.value)
     let limit = countVisibleRows.value + sizeLoadedRows.value
-    if (resultData && countVisibleRows.value > 0) {
+    if (resultData && countVisibleRows.value > 0 && !isVirtual.value) {
       const result: Record<string, any> = {}
       for (const item of Object.keys(resultData)) {
         if (limit > resultData[item]?.length) {
@@ -294,6 +438,37 @@
     emit("result-data", resultData)
     return resultData
   })
+  // Окно виртуализации поверх плоского (non-grouped) результата. Читает resultDataSource,
+  // поэтому result-data продолжает эмититься. countVisibleRows-слайс в virtual-режиме отключён.
+  const virtualWindow = computed<{ rows: any[]; startIndex: number; topPad: number; bottomPad: number }>(() => {
+    if (!isVirtual.value) return { rows: [], startIndex: 0, topPad: 0, bottomPad: 0 }
+    const { rowHeight, overscan } = virtualConfig.value
+    const all = ((resultDataSource.value as any)?.[0] as any[]) ?? []
+    const total = all.length
+    const count = Math.ceil((virtualViewportHeight.value || 0) / rowHeight) + overscan * 2
+    const startIndex = Math.max(0, Math.floor(virtualScrollTop.value / rowHeight) - overscan)
+    const endIndex = Math.min(total, startIndex + count)
+    return {
+      rows: all.slice(startIndex, endIndex),
+      startIndex,
+      topPad: startIndex * rowHeight,
+      bottomPad: Math.max(0, (total - endIndex) * rowHeight)
+    }
+  })
+  // Единый источник для рендера tbody: окно (virtual) или сгруппированный resultDataSource.
+  const renderSource = computed<Record<string, any[]>>(() =>
+    isVirtual.value ? { 0: virtualWindow.value.rows } : (resultDataSource.value as any)
+  )
+  // Absolute index строки: для virtual = startIndex + локальный; иначе — локальный (без изменений).
+  const absIndex = (localIndex: number): number =>
+    isVirtual.value ? virtualWindow.value.startIndex + localIndex : localIndex
+  // Захватываем элемент scroll-viewport: в onUnmounted template-ref уже может быть null.
+  let virtualScrollEl: HTMLElement | null = null
+  function onVirtualScroll() {
+    if (!virtualScrollEl) return
+    virtualScrollTop.value = virtualScrollEl.scrollTop
+    virtualViewportHeight.value = virtualScrollEl.clientHeight
+  }
   const dataColumns = computed<Array<IColumnPrivate>>(() => {
     const listFields: Array<string> = LD.uniq(
       LD.flatMap(allData.value, (item) => Object.keys(item)) as string[]
@@ -458,6 +633,24 @@
       })
     }
   })
+  // Верхний ряд шапки для compound `<ColumnGroup>`: группируем ВИДИМЫЕ dataColumns по `_groupKey`.
+  // Подряд идущие колонки одной группы сливаются в один `<th colspan>`; не сгруппированные — span 1.
+  const hasColumnGroups = computed<boolean>(() => compoundParsed.value.groups.length > 0)
+  const headerGroups = computed<Array<{ key: number | null; caption?: string; class?: any; span: number }>>(() => {
+    if (!hasColumnGroups.value) return []
+    const groupsMeta = compoundParsed.value.groups
+    const out: Array<{ key: number | null; caption?: string; class?: any; span: number }> = []
+    for (const col of (dataColumns.value ?? []).filter((c) => c.visible)) {
+      const gk = col._groupKey ?? null
+      const last = out[out.length - 1]
+      if (last && gk !== null && last.key === gk) last.span += 1
+      else {
+        const meta = gk !== null ? groupsMeta.find((g) => g.key === gk) : undefined
+        out.push({ key: gk, caption: meta?.caption, class: meta?.class, span: 1 })
+      }
+    }
+    return out
+  })
   const dataSummary = computed<Array<ISummaryPrivate>>(() => {
     if (!isSummary.value) return []
     const summaryValue = unref(props.summary)
@@ -547,17 +740,17 @@
         typeof s?.activeRow === "string"
           ? (s?.activeRow as string)
           : typeof s?.activeRow === "boolean" && s?.activeRow
-            ? "bg-neutral-100/90 dark:bg-neutral-900/50"
+            ? "bg-surface-100/90 dark:bg-surface-900/50"
             : "",
       hoverRows:
         typeof s?.hoverRows === "string"
           ? (s?.hoverRows as string)
           : typeof s?.hoverRows === "boolean" && s?.hoverRows
-            ? "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50"
+            ? "hover:bg-surface-100/90 dark:hover:bg-surface-900/50"
             : "",
       width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
       height: s?.height ? (typeof s?.height === "number" ? `${s?.height}px` : s?.height) : "",
-      animation: s?.animation ?? "transition-all duration-500",
+      animation: s?.animation ?? "motion-safe:transition-all motion-safe:duration-500",
       borderRadiusPx: s?.borderRadiusPx ?? (mode.value === "underlined" ? 0 : 7),
       isStripedRows: s?.isStripedRows ?? false,
       horizontalLines: s?.horizontalLines ?? true
@@ -565,8 +758,8 @@
   })
   const defaultBorder = computed(() =>
     typeof styles.value?.border === "object"
-      ? (styles.value?.border.default ?? "border-neutral-200 dark:border-neutral-800")
-      : (styles.value?.border ?? "border-neutral-200 dark:border-neutral-800")
+      ? (styles.value?.border.default ?? "border-surface-200 dark:border-surface-800")
+      : (styles.value?.border ?? "border-surface-200 dark:border-surface-800")
   )
   const tableBodyStyle = computed<string>(() => {
     const borderTop = !slots.header
@@ -579,17 +772,22 @@
   })
   const modeStyle = computed<string>(() =>
     mode.value === "filled"
-      ? "bg-stone-100 dark:bg-stone-900"
+      ? "bg-surface-100 dark:bg-surface-900"
       : mode.value === "outlined"
-        ? "bg-white dark:bg-neutral-950"
+        ? "bg-white dark:bg-surface-950"
         : mode.value === "underlined"
-          ? "bg-stone-50 dark:bg-stone-950"
+          ? "bg-surface-50 dark:bg-surface-950"
           : ""
   )
-  Table.setStyle("transition ease-in opacity-100 opacity-0")
-  Table.setStyle("duration-200")
-  Table.setStyle("duration-500")
-  Table.setStyle("duration-1000")
+  // Issue 12: reduced-motion канон FishtVue — анимируем только при motion-safe (как Button/Menu/Select).
+  // Inline-<transition>/Input-классы шаблона не проходят через computed → регистрируем их варианты явно.
+  Table.setStyle("motion-safe:transition motion-safe:transition-all ease-in opacity-100 opacity-0")
+  Table.setStyle("motion-safe:duration-200")
+  Table.setStyle("motion-safe:duration-500")
+  Table.setStyle("motion-safe:duration-1000")
+  // print / forced-colors варианты overlay/resize/active-row — явная регистрация для гарантии CSS.
+  Table.setStyle("print:hidden")
+  Table.setStyle("forced-colors:outline")
   const classBaseTable = computed<StyleClass>(() =>
     Table.setStyle([
       "componentTable classBody inline-block align-middle relative w-full p-1.5",
@@ -607,16 +805,18 @@
     ])
   )
   const classSearch = ref(Table.setStyle("ml-1"))
-  const classIcon = ref(Table.setStyle("h-5 w-5 text-gray-400 dark:text-gray-600"))
+  const classIcon = ref(Table.setStyle("h-5 w-5 text-surface-400 dark:text-surface-600"))
   const classIconClearFilter = ref(
-    Table.setStyle("h-4 w-4 text-gray-400 dark:text-gray-600 group-hover:text-red-400 group-hover:dark:text-red-600")
+    Table.setStyle(
+      "h-4 w-4 text-surface-400 dark:text-surface-600 group-hover:text-red-400 group-hover:dark:text-red-600"
+    )
   )
   const classTableBody = computed(() =>
     Table.setStyle(["flex flex-col border", defaultBorder.value, styles.value.border?.table])
   )
   const classBodySlotHeader = computed(() =>
     Table.setStyle([
-      "min-h-[1.5rem] text-gray-500",
+      "min-h-[1.5rem] text-surface-500",
       isSummary.value || isPagination.value ? "relative" : "",
       modeStyle.value
     ])
@@ -685,24 +885,26 @@
   const classNotFilter = (column: IColumnPrivate) =>
     Table.setStyle([
       "block text-sm font-medium truncate",
-      "text-left text-gray-400 dark:text-gray-500",
+      "text-left text-surface-400 dark:text-surface-500",
       column.class?.colText
     ])
   const classIsSort = (column: IColumnPrivate) =>
     Table.setStyle([
-      "flex items-center transition-opacity duration-500 pr-1 cursor-pointer",
+      "flex items-center motion-safe:transition-opacity motion-safe:duration-500 pr-1 cursor-pointer",
       !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100" : "opacity-100"
     ])
-  const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-gray-400 dark:text-gray-600"))
+  const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-surface-400 dark:text-surface-600"))
   const classResizedColumns = (column: IColumnPrivate, key: number) =>
     Table.setStyle([
-      "resizable absolute z-10 inset-y-0 flex items-center hover:opacity-100 pr-2 cursor-ew-resize transition-opacity duration-500",
-      dataColumns.value.length - 1 > key ? "-right-3" : "right-3",
+      // Issue 11 (RTL): pe-2 (padding-inline-end) авто-флипается по dir; inset — физический default
+      // (работает без dir-атрибута) + rtl:-override (negative-логический inset движок не поддерживает).
+      "resizable absolute z-10 inset-y-0 flex items-center hover:opacity-100 pe-2 cursor-ew-resize motion-safe:transition-opacity motion-safe:duration-500 print:hidden",
+      dataColumns.value.length - 1 > key ? "-right-3 rtl:right-auto rtl:-left-3" : "right-3 rtl:right-auto rtl:left-3",
       resizableColumn.value === column.id ? "opacity-100" : "opacity-0"
     ])
   const classResize = computed(() =>
     Table.setStyle([
-      "h-8 w-1.5 bg-neutral-300 dark:bg-neutral-600",
+      "h-8 w-1.5 bg-surface-300 dark:bg-surface-600",
       mode.value === "filled" ? "rounded-full" : "",
       mode.value === "outlined" ? "rounded-full" : "",
       mode.value === "underlined" ? "rounded-none" : ""
@@ -714,7 +916,7 @@
       "classGroup sticky",
       "border-t-2 border-b",
       "font-medium text-base whitespace-nowrap",
-      "text-left text-gray-800 dark:text-gray-300 px-6 py-2 pr-3 pl-10 sm:pl-12",
+      "text-left text-surface-800 dark:text-surface-300 px-6 py-2 pe-3 ps-10 sm:ps-12",
       styles.value.class?.group ?? modeStyle.value,
       defaultBorder.value,
       styles.value.border?.cell
@@ -723,7 +925,7 @@
   const styleGroup = computed(() => `top:${thead.value?.clientHeight ?? 1 - 1}px`)
   const classGroupText = computed(() =>
     Table.setStyle([
-      "sticky classGroupText left-10 sm:left-12 flex items-center w-fit min-h-[2.5rem] truncate",
+      "sticky classGroupText start-10 sm:start-12 flex items-center w-fit min-h-[2.5rem] truncate",
       styles.value.class?.groupText
     ])
   )
@@ -738,15 +940,17 @@
   const classTr = (data: Record<string, any>, indexRow: number): string =>
     Table.setStyle([
       `tr--${indexRow} group/tr`,
-      activeRow.value === `${data?._key}-${indexRow}` ? `active-row ${styles.value.activeRow}` : "",
-      styles.value.hoverRows ? `${styles.value.hoverRows} transition-colors duration-200` : "",
+      activeRow.value === `${data?._key}-${indexRow}`
+        ? `active-row forced-colors:outline ${styles.value.activeRow}`
+        : "",
+      styles.value.hoverRows ? `${styles.value.hoverRows} motion-safe:transition-colors motion-safe:duration-200` : "",
       styles.value.isStripedRows
         ? mode.value === "filled"
-          ? "odd:bg-stone-100 even:bg-stone-50 dark:odd:bg-stone-900 dark:even:bg-stone-950"
+          ? "odd:bg-surface-100 even:bg-surface-50 dark:odd:bg-surface-900 dark:even:bg-surface-950"
           : mode.value === "outlined"
-            ? "odd:bg-white even:bg-neutral-50 dark:odd:bg-neutral-950 dark:even:bg-neutral-900"
+            ? "odd:bg-white even:bg-surface-50 dark:odd:bg-surface-950 dark:even:bg-surface-900"
             : mode.value === "underlined"
-              ? "odd:bg-stone-50 even:bg-stone-100 dark:odd:bg-stone-950 dark:even:bg-neutral-900"
+              ? "odd:bg-surface-50 even:bg-surface-100 dark:odd:bg-surface-950 dark:even:bg-surface-900"
               : ""
         : ""
     ])
@@ -756,7 +960,7 @@
       `td--${indexRow}--${column?.name ?? indexCol}`,
       "first:border-l-0 group-first/tr:border-t-0 last:border-r-0 group-last/tr:border-b-0",
       "text-sm font-medium",
-      "px-4 py-1 text-gray-800 dark:text-gray-300",
+      "px-4 py-1 text-surface-800 dark:text-surface-300",
       column.class?.td,
       styles.value.class?.cellText,
       defaultBorder.value,
@@ -787,7 +991,7 @@
     Table.setStyle(["px-3 py-3", column.class?.tf, "border-t", defaultBorder.value, styles.value.border?.summary])
   const classThSummaryText = (column: IColumnPrivate) =>
     Table.setStyle([
-      "block font-normal text-sm text-left text-gray-400 dark:text-gray-500 truncate",
+      "block font-normal text-sm text-left text-surface-400 dark:text-surface-500 truncate",
       column.class?.sumText
     ])
   const classIsPagination = computed(() => Table.setStyle([isSummary.value ? "relative sm:px-5" : "", modeStyle.value]))
@@ -797,19 +1001,21 @@
       : ""
   )
   const classIsLoading = ref(
-    Table.setStyle("absolute z-30 top-0 bottom-0 left-0 w-full select-none text-center text-sm text-gray-500")
+    Table.setStyle(
+      "absolute z-30 top-0 bottom-0 left-0 w-full select-none text-center text-sm text-surface-500 print:hidden"
+    )
   )
   const classIsLoadingBody = ref(
-    Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-neutral-100/70 dark:bg-neutral-800/50")
+    Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-surface-100/70 dark:bg-surface-800/50")
   )
   const classNoData = ref(
     Table.setStyle(
-      "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500"
+      "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-surface-500"
     )
   )
   const classSlotFooterBody = computed(() =>
     Table.setStyle([
-      "min-h-[1.5rem] -mt-[1px] text-gray-500",
+      "min-h-[1.5rem] -mt-[1px] text-surface-500",
       isSummary.value || isPagination.value ? "relative sm:px-5" : "",
       modeStyle.value
     ])
@@ -933,8 +1139,9 @@
     reloadData: loadDataFromFunction
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // `Table.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
   onMounted(() => {
-    Table.initStyle()
     if (isClient() && tbody.value) tableObserver.observe(tbody.value as Element)
     suppressLoadFromFunctionInWatchers = true
     Object.assign(
@@ -958,9 +1165,15 @@
     Promise.resolve().then(() => {
       suppressLoadFromFunctionInWatchers = false
     })
+    // Scroll-listener вешаем синхронно (template-ref уже доступен в onMounted) —
+    // иначе cleanup в onUnmounted может не найти элемент при раннем размонтировании.
+    virtualScrollEl = (tableBody.value as HTMLElement) ?? null
+    virtualScrollEl?.addEventListener("scroll", onVirtualScroll, { passive: true })
     nextTick(() => {
       updateHeightTable()
-      startLastRowVisibleObserver()
+      onVirtualScroll()
+      // virtual заменяет lazy-load: lastRowVisibleObserver не нужен.
+      if (!isVirtual.value) startLastRowVisibleObserver()
     })
     setTimeout(() => {
       updateHeightTable()
@@ -970,7 +1183,17 @@
     // Function mode: initial load triggered by sizePage/startPage immediate watchers
   })
   onUnmounted(() => {
-    if (isClient() && tableObserver) tableObserver.disconnect()
+    if (isClient()) {
+      tableObserver?.disconnect()
+      // IntersectionObserver lazy-load: без disconnect наблюдатель продолжает держать DOM-узел.
+      lastRowVisibleObserver?.disconnect()
+      // window-listeners снимаются и в stopResizeColumn, но при unmount во время drag mouseup не приходит.
+      window.removeEventListener("mousemove", moveResizedColumns)
+      window.removeEventListener("mouseup", stopResizeColumn)
+      // virtual scroll listener.
+      virtualScrollEl?.removeEventListener("scroll", onVirtualScroll)
+      virtualScrollEl = null
+    }
   })
   // ---WATCHERS----------------------------
   let loadDataFromFunctionPending = false
@@ -1341,10 +1564,36 @@
   function setMarker(column: IColumnPrivate, valueCell: any): string {
     if (valueCell && (filterColumns[column.dataField] || queryTable.value.length))
       valueCell = valueCell.replace(
-        new RegExp(filterColumns[column.dataField] ?? queryTable.value, "gi"),
+        new RegExp(escapeRegExp(String(filterColumns[column.dataField] ?? queryTable.value)), "gi"),
         `<span class="${classMaskQuery.value}">$&</span>`
       )
     return valueCell
+  }
+
+  // Экранирование regex-спецсимволов — query/filter приходят от пользователя.
+  function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  }
+
+  // Безопасный аналог setMarker: разбивает значение ячейки на текстовые части, отмечая
+  // совпадения с query/filter. Рендерится через <mark> + text-node (без v-html) — нет XSS.
+  function markerParts(column: IColumnPrivate, valueCell: any): Array<{ text: string; mark: boolean }> {
+    const text = valueCell === null || valueCell === undefined ? "" : String(valueCell)
+    const rawQuery = filterColumns[column.dataField] ?? queryTable.value
+    const query = typeof rawQuery === "string" ? rawQuery : ""
+    if (!text || !query.length) return [{ text, mark: false }]
+    const parts: Array<{ text: string; mark: boolean }> = []
+    const regex = new RegExp(escapeRegExp(query), "gi")
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) parts.push({ text: text.slice(lastIndex, match.index), mark: false })
+      parts.push({ text: match[0], mark: true })
+      lastIndex = match.index + match[0].length
+      if (match.index === regex.lastIndex) regex.lastIndex++
+    }
+    if (lastIndex < text.length) parts.push({ text: text.slice(lastIndex), mark: false })
+    return parts.length ? parts : [{ text, mark: false }]
   }
 
   function getSorted(sorted: Sorted): Sorted {
@@ -1532,7 +1781,10 @@
     if (columnEl) {
       const column = <IColumnPrivate>dataColumns.value.find((item) => item.id === columnId)
       const rect = columnEl.getBoundingClientRect()
-      let newW = $event.pageX - rect.left
+      // Issue 11 (RTL): resize-handle живёт на trailing-крае колонки. В RTL trailing = левый край,
+      // поэтому ширину считаем от ПРАВОГО края (rect.right - pageX), а не от левого.
+      const isRTL = isClient() && getComputedStyle(columnEl).direction === "rtl"
+      let newW = isRTL ? rect.right - $event.pageX : $event.pageX - rect.left
       const maxW = column.maxWidth
       if (maxW && newW > maxW) newW = maxW
       const minW = column.minWidth ?? 100
@@ -1657,6 +1909,7 @@
     ref="componentTable"
     :class="classBaseTable"
     :style="`width:${styles.width};height:${styles.height};`">
+    <div data-table-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>
     <div v-if="isVisibleToolbar" data-table-toolbar ref="tableToolbar" :class="classBaseToolbar">
       <slot v-if="slots.toolbar" data-table-toolbar-slot name="toolbar" />
       <div v-if="isSearch" data-table-search :class="classSearch">
@@ -1667,7 +1920,7 @@
           :mode="mode"
           label-mode="vanishing"
           autocomplete="off"
-          class-input="min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] transition-all duration-500"
+          class-input="min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] motion-safe:transition-all motion-safe:duration-500"
           :class-body="`sticky top-1 rounded-md ease-out ${modeStyle} mb-2`"
           @change:model-value="(v) => searching(v)"
           @update:model-value="(v) => lengthData > 100 || searching(v)">
@@ -1677,16 +1930,16 @@
         </Input>
       </div>
       <transition
-        leave-active-class="transition ease-in duration-1000"
+        leave-active-class="motion-safe:transition ease-in motion-safe:duration-1000"
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
-        enter-active-class="transition ease-in duration-1000"
+        enter-active-class="motion-safe:transition ease-in motion-safe:duration-1000"
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
         <Button
           v-if="isFilterClear"
           data-table-clear-filter
-          class="group rounded-md ml-2 h-[38px] min-w-[38px] px-2 bg-stone-100 dark:bg-stone-900"
+          class="group rounded-md ml-2 h-[38px] min-w-[38px] px-2 bg-surface-100 dark:bg-surface-900"
           @click="clearFilter">
           <FunnelIcon aria-hidden="true" :class="classIconClearFilter" />
           <FixWindow :mode="mode">{{ Table.t("clearAllFilters") ?? "Clear all filters" }}</FixWindow>
@@ -1700,10 +1953,26 @@
         </div>
       </div>
       <div data-table-body-base :class="classBaseTableBody">
-        <div ref="tableBody" :class="classBodyTable" :style="styleBodyTable">
-          <table data-table ref="table" :class="classTable">
+        <div ref="tableBody" data-table-scroll :class="classBodyTable" :style="styleBodyTable">
+          <table data-table ref="table" :class="classTable" :aria-rowcount="isVirtual ? lengthData : undefined">
+            <caption v-if="caption || slots.caption" data-table-caption class="sr-only">
+              <slot name="caption">{{ caption }}</slot>
+            </caption>
             <!-- -------------------------------- -->
             <thead v-if="isColumns" data-table-thead ref="thead" :class="classTHead">
+              <tr v-if="hasColumnGroups" data-table-thead-group-tr :class="classHeadTr">
+                <th
+                  v-for="(g, gi) in headerGroups"
+                  :key="`group-${gi}`"
+                  data-table-thead-group-col
+                  scope="colgroup"
+                  :colspan="g.span"
+                  :class="classTh({ class: { th: g.class } } as IColumnPrivate)">
+                  <div :class="classBodyFilter">
+                    <div :class="classNotFilter({} as IColumnPrivate)">{{ g.caption }}</div>
+                  </div>
+                </th>
+              </tr>
               <tr :class="classHeadTr">
                 <template v-for="(column, key) in dataColumns" :key="column.id">
                   <th
@@ -1714,8 +1983,9 @@
                     :style="styleTh(column)">
                     <div :class="classBodyFilter">
                       <div v-if="column.isFilter" data-table-thead-col-filter :class="classIsFilter(column)">
+                        <RenderColumnSlot v-if="column._filterSlot" :render="column._filterSlot" :args="{ column }" />
                         <Input
-                          v-if="column.type === 'string' || column.type === 'number'"
+                          v-else-if="column.type === 'string' || column.type === 'number'"
                           :model-value="filterColumns[column?.dataField]"
                           v-bind="column?.paramsFilter as BaseInputProps"
                           :label="column.caption"
@@ -1734,7 +2004,13 @@
                         <Select
                           v-else-if="column.type === 'select'"
                           :model-value="filterColumns[column?.dataField]"
-                          v-bind="column?.paramsFilter as BaseSelectProps"
+                          v-bind="{
+                            ...(column?.paramsFilter as BaseSelectProps),
+                            paramsFixWindow: {
+                              scrollableEl: tableBody,
+                              ...(column?.paramsFilter as Partial<BaseSelectProps>)?.paramsFixWindow
+                            }
+                          }"
                           :label="column.caption"
                           :mode="mode"
                           :class="['border-none font-normal', column.class?.colFilterClass as string]"
@@ -1748,7 +2024,13 @@
                         <Calendar
                           v-else-if="column.type === 'date'"
                           :model-value="filterColumns[column?.dataField]"
-                          v-bind="column?.paramsFilter as BaseCalendarProps"
+                          v-bind="{
+                            ...(column?.paramsFilter as BaseCalendarProps),
+                            paramsFixWindow: {
+                              scrollableEl: tableBody,
+                              ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.paramsFixWindow
+                            }
+                          }"
                           :label="column.caption"
                           :mode="mode"
                           label-mode="offsetDynamic"
@@ -1762,7 +2044,8 @@
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                       </div>
                       <div v-else data-table-thead-col-no-filter :class="classNotFilter(column)">
-                        {{ column.caption }}
+                        <RenderColumnSlot v-if="column._headerSlot" :render="column._headerSlot" :args="{ column }" />
+                        <template v-else>{{ column.caption }}</template>
                       </div>
                       <div
                         v-if="column.isSort ?? isSort"
@@ -1797,7 +2080,14 @@
             </thead>
             <!-- -------------------------------- -->
             <tbody data-table-tbody ref="tbody" :class="classTBody">
-              <template v-for="(group, key) in resultDataSource" :key="key">
+              <tr
+                v-if="isVirtual && virtualWindow.topPad"
+                data-table-virtual-spacer-top
+                aria-hidden="true"
+                :style="`height:${virtualWindow.topPad}px`">
+                <td :colspan="dataColumns.length" class="p-0 border-0"></td>
+              </tr>
+              <template v-for="(group, key) in renderSource" :key="key">
                 <tr v-if="isGroup" data-table-tbody-group>
                   <th
                     :colspan="dataColumns.length"
@@ -1810,37 +2100,68 @@
                     </div>
                   </th>
                 </tr>
-                <template v-for="(data, indexRow) in group" :key="`${data?._key}-${indexRow}`">
+                <template v-for="(data, indexRow) in group" :key="data?._key">
                   <tr
                     data-table-tbody-tr
-                    :class="classTr(data, indexRow)"
-                    @click="clickRow(`tr--${indexRow}`, data, indexRow)">
-                    <template v-for="(column, indexCol) in dataColumns" :key="`${data?._key}-${indexRow}-${indexCol}`">
+                    :class="classTr(data, absIndex(indexRow))"
+                    :style="isVirtual ? `height:${virtualRowHeight}px` : undefined"
+                    :aria-rowindex="isVirtual ? absIndex(indexRow) + 1 : undefined"
+                    @click="clickRow(`tr--${absIndex(indexRow)}`, data, absIndex(indexRow))">
+                    <template v-for="(column, indexCol) in dataColumns" :key="`${data?._key}-${indexCol}`">
                       <td
                         v-if="column.visible"
                         data-table-tbody-td
-                        :class="classColumnTd(data, indexRow, column, indexCol)"
+                        :class="classColumnTd(data, absIndex(indexRow), column, indexCol)"
                         :style="styleColumnTd(column)"
                         @click="
                           clickCell(
-                            `td--${indexRow}--${column?.name ?? indexCol}`,
+                            `td--${absIndex(indexRow)}--${column?.name ?? indexCol}`,
                             column,
                             data[column.dataField],
                             setMarker(column, setCell(column, data[column.dataField], data)),
                             data,
-                            indexRow,
+                            absIndex(indexRow),
                             indexCol
                           )
                         ">
                         <div
-                          v-if="!column?.cellTemplate"
+                          v-if="column?._cellSlot"
+                          data-table-tbody-cell-slot
+                          :class="classTemplate(column)"
+                          :style="styleCellTable">
+                          <RenderColumnSlot
+                            :render="column._cellSlot"
+                            :args="{
+                              rowData: data,
+                              value: setCell(column, data[column.dataField], data),
+                              valueWithMarker: setMarker(column, setCell(column, data[column.dataField], data)),
+                              column,
+                              isCloseEditor: (isActive: boolean) =>
+                                isActive || clearEditableCell(absIndex(indexRow), indexCol),
+                              editValue: (value: any) => updateCell(data?._key, column, value)
+                            }" />
+                        </div>
+                        <div
+                          v-else-if="!column?.cellTemplate"
                           data-table-tbody-not-cell-template
                           :class="classCellTable(indexRow, column, indexCol)"
                           :style="styleCellTable">
                           <div
-                            v-if="!(editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol)"
-                            v-html="setMarker(column, setCell(column, data[column.dataField], data))" />
-                          <template v-if="editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol">
+                            v-if="
+                              !(editableCell?.indexRow === absIndex(indexRow) && editableCell?.indexCol === indexCol)
+                            ">
+                            <template
+                              v-for="(part, partIndex) in markerParts(
+                                column,
+                                setCell(column, data[column.dataField], data)
+                              )"
+                              :key="partIndex"
+                              ><mark v-if="part.mark" :class="classMaskQuery">{{ part.text }}</mark
+                              ><template v-else>{{ part.text }}</template></template
+                            >
+                          </div>
+                          <template
+                            v-if="editableCell?.indexRow === absIndex(indexRow) && editableCell?.indexCol === indexCol">
                             <Input
                               v-if="column.type === 'string' || column.type === 'number'"
                               :model-value="data[column.dataField]"
@@ -1854,7 +2175,7 @@
                               class="border-none font-normal bg-transparent dark:bg-transparent"
                               class-body="pt-0 -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
                               @change:model-value="(value) => updateCell(data?._key, column, value)" />
                             <Select
                               v-else-if="column.type === 'select'"
@@ -1873,7 +2194,7 @@
                               class="border-none font-normal bg-transparent dark:bg-transparent"
                               class-body="pt-[0px] -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
                               @update:model-value="
                                 (value) => {
                                   updateCell(data?._key, column, value)
@@ -1896,7 +2217,7 @@
                               class="border-none font-normal bg-transparent dark:bg-transparent"
                               class-body="pt-0 -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
                               @update:model-value="(value) => updateCell(data?._key, column, value)" />
                           </template>
                         </div>
@@ -1912,7 +2233,9 @@
                             :rowData="data"
                             :value="setCell(column, data[column.dataField], data)"
                             :value-with-marker="setMarker(column, setCell(column, data[column.dataField], data))"
-                            :is-close-editor="(isActive: boolean) => isActive || clearEditableCell(indexRow, indexCol)"
+                            :is-close-editor="
+                              (isActive: boolean) => isActive || clearEditableCell(absIndex(indexRow), indexCol)
+                            "
                             :edit-valiue="(value: any) => updateCell(data?._key, column, value)" />
                         </div>
                       </td>
@@ -1920,6 +2243,13 @@
                   </tr>
                 </template>
               </template>
+              <tr
+                v-if="isVirtual && virtualWindow.bottomPad"
+                data-table-virtual-spacer-bottom
+                aria-hidden="true"
+                :style="`height:${virtualWindow.bottomPad}px`">
+                <td :colspan="dataColumns.length" class="p-0 border-0"></td>
+              </tr>
             </tbody>
             <!-- -------------------------------- -->
             <tr
@@ -1936,7 +2266,7 @@
               <tr data-table-tfoot-tr>
                 <template v-for="column in dataColumns" :key="column.id">
                   <th v-if="column.visible" data-table-tfoot-th scope="col" :class="classThSummary(column)">
-                    <div :class="classThSummaryText(column)" v-html="summaryColumns[column.dataField]" />
+                    <div :class="classThSummaryText(column)">{{ summaryColumns[column.dataField] }}</div>
                   </th>
                 </template>
               </tr>
@@ -1974,48 +2304,56 @@
         </div>
         <!-- -------------------------------- -->
         <transition
-          leave-active-class="transition ease-in duration-500"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-500"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-500"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-500"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="isLoading" data-table-loading :class="classIsLoading">
             <div :class="classIsLoadingBody">
-              <Loading type="FingerprintSpinner" :size="100" :color="isDark ? 'theme.600' : 'theme.500'" />
+              <Loading
+                type="FingerprintSpinner"
+                :size="100"
+                :color="isDark ? 'theme.600' : 'theme.500'"
+                v-bind="compoundLoadingProps" />
             </div>
           </div>
         </transition>
         <!-- -------------------------------- -->
         <transition
-          leave-active-class="transition ease-in duration-200"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-200"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="!isLoading && !allData?.length" data-table-no-data :class="classNoData">
             <TableCellsIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noData" />
+            <div>
+              <slot name="empty">{{ noData }}</slot>
+            </div>
           </div>
         </transition>
         <transition
-          leave-active-class="transition ease-in duration-200"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-200"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="!isLoading && allData?.length && !dataColumns?.length" data-table-no-column :class="classNoData">
             <ViewColumnsIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noColumn" />
+            <div>
+              <slot name="empty-columns">{{ noColumn }}</slot>
+            </div>
           </div>
         </transition>
         <transition
-          leave-active-class="transition-all ease-in duration-200"
+          leave-active-class="motion-safe:transition-all ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition-all ease-in duration-200"
+          enter-active-class="motion-safe:transition-all ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div
@@ -2023,7 +2361,9 @@
             data-table-no-filter
             :class="classNoData">
             <FunnelIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noFilter" />
+            <div>
+              <slot name="empty-filter">{{ noFilter }}</slot>
+            </div>
           </div>
         </transition>
       </div>

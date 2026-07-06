@@ -1,8 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
   import { IQuillEditor, TextEditorEmits, TextEditorProps } from "./TextEditor"
-  import "@vueup/vue-quill/dist/vue-quill.snow.css"
-  import "@vueup/vue-quill/dist/vue-quill.bubble.css"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Dialog from "fishtvue/dialog/Dialog.vue"
   import Button from "fishtvue/button/Button.vue"
@@ -51,7 +49,10 @@
   const isValue = computed<boolean>(() =>
     Boolean(modelValue.value ? String(modelValue.value).length : (modelValue.value ?? isActiveTextEditor.value))
   )
-  const mode = computed<NonNullable<TextEditorProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  // Wave 3.2 (texteditor.md Issue 7): глобальный componentsStyle в fallback-chain — зеркало Input.vue.
+  const mode = computed<NonNullable<TextEditorProps["mode"]>>(
+    () => props.mode ?? options?.mode ?? TextEditor.componentsStyle() ?? "outlined"
+  )
   const isDisabled = computed<NonNullable<TextEditorProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<TextEditorProps["isInvalid"]>>(() => props.loading ?? false)
   const isInvalid = computed<NonNullable<TextEditorProps["isInvalid"]>>(() =>
@@ -63,10 +64,10 @@
   )
   const editor = computed<StyleClass>(() =>
     TextEditor.setStyle([
-      "border rounded-md border-neutral-200 dark:border-neutral-800 dark:text-gray-400",
+      "border rounded-md border-surface-200 dark:border-surface-800 dark:text-surface-400",
       mode.value === "outlined" ? "bg-white dark:bg-black" : "",
-      mode.value === "underlined" ? "bg-stone-50 dark:bg-stone-950" : "",
-      mode.value === "filled" ? "bg-stone-100 dark:bg-stone-900" : "",
+      mode.value === "underlined" ? "bg-surface-50 dark:bg-surface-950" : "",
+      mode.value === "filled" ? "bg-surface-100 dark:bg-surface-900" : "",
       "st-text-editor caret-theme-500"
     ])
   )
@@ -101,6 +102,7 @@
     ...props?.paramsTextEditor
   }))
   const inputLayout = computed<Omit<InputLayoutProps, "value">>(() => ({
+    id: props.id,
     isValue: isValue.value,
     mode: mode.value,
     label: props.label,
@@ -146,8 +148,20 @@
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(async () => {
-    TextEditor.initStyle()
-    QuillEditor.value = (await import("@vueup/vue-quill")).QuillEditor
+    // ---CANON (Wave 2.3) — без ручного TextEditor.initStyle(): базовый Component.__hooks() уже
+    // регистрирует onServerPrefetch + vueOnMounted → initStyle() (см. lib/component/index.ts:79–84).
+    // ---Wave 2.1 — Quill (@vueup/vue-quill + quill) = optional peerDependencies: и компонент, и его
+    // CSS грузятся lazy на клиенте при mount, не на import-time (bundle без TextEditor их не тянет,
+    // SSR-safe). При отсутствии peer редактор просто не рендерится (template v-if="QuillEditor").
+    try {
+      QuillEditor.value = (await import("@vueup/vue-quill")).QuillEditor
+      await Promise.all([
+        import("@vueup/vue-quill/dist/vue-quill.snow.css"),
+        import("@vueup/vue-quill/dist/vue-quill.bubble.css")
+      ])
+    } catch {
+      /* @vueup/vue-quill не установлен (optional peer) — редактор остаётся нерендеренным */
+    }
   })
   // ---WATCHERS----------------------------
   watch(theme, (theme) => {
@@ -195,18 +209,20 @@
     :class="classLayout"
     v-bind="inputLayout"
     @clear="clear">
-    <div :id="id" :class="editorSmall">
-      <component
-        :is="QuillEditor"
-        v-if="QuillEditor && theme === 'bubble'"
-        ref="quillEditorLink"
-        theme="bubble"
-        v-bind="paramsQuillEditor"
-        @update:content="inputModelValue"
-        @focus="isActiveTextEditor = true"
-        @blur="isActiveTextEditor = false"
-        @ready="ready" />
-    </div>
+    <template #default="{ id: fieldId, labelledby }">
+      <div :id="fieldId" :aria-labelledby="labelledby" :class="editorSmall">
+        <component
+          :is="QuillEditor"
+          v-if="QuillEditor && theme === 'bubble'"
+          ref="quillEditorLink"
+          theme="bubble"
+          v-bind="paramsQuillEditor"
+          @update:content="inputModelValue"
+          @focus="isActiveTextEditor = true"
+          @blur="isActiveTextEditor = false"
+          @ready="ready" />
+      </div>
+    </template>
     <template #body>
       <Dialog
         v-model="open"
@@ -226,7 +242,7 @@
               size="xs"
               mode="ghost"
               icon="ArrowsPointingIn"
-              class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400">
+              class-icon="text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400">
             </Button>
           </div>
         </div>
@@ -244,7 +260,7 @@
           mode="ghost"
           icon="ArrowsPointingOut"
           data-switch-size
-          class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400">
+          class-icon="text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400">
           {{ TextEditor.t("increase") ?? "Increase" }}
         </Button>
       </div>
@@ -366,8 +382,9 @@
       --background-quill-toolbar: var(--ql-theme-100);
       --border-quill-editor: var(--ql-theme-200);
       --placeholder-quill-editor: #00000099;
-      --background-quill-editor: #f6f3f4;
-      --background-picker-options-quill-editor: #f5f5f5;
+      /* surface-100 (Wave 9 — texteditor.md Issue 2 / B10): ближайший тон к прежнему хардкоду #f6f3f4/#f5f5f5. */
+      --background-quill-editor: rgb(var(--fv-surface-100, 243 244 246));
+      --background-picker-options-quill-editor: rgb(var(--fv-surface-100, 243 244 246));
     }
   }
 
@@ -376,8 +393,9 @@
       --background-quill-toolbar: var(--ql-theme-900);
       --border-quill-editor: var(--ql-theme-800);
       --placeholder-quill-editor: #ffffff99;
-      --background-quill-editor: #212121;
-      --background-picker-options-quill-editor: #131313;
+      /* surface-900 (Wave 9 — texteditor.md Issue 2 / B10): ближайший тон к прежнему хардкоду #212121/#131313. */
+      --background-quill-editor: rgb(var(--fv-surface-900, 17 24 39));
+      --background-picker-options-quill-editor: rgb(var(--fv-surface-900, 17 24 39));
     }
   }
 

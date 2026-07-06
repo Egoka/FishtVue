@@ -111,11 +111,14 @@ export declare type TextEditorEmits = {
   (event: "update:isInvalid", payload: boolean): void
 
   /**
-   * Emitted when the value changes.
+   * Emitted when the value changes (after blur / programmatic save).
+   *
+   * Fixed in 2026-05-11: payload type was `boolean` by mistake — runtime always emits the HTML string content.
+   *
    * @param event
-   * @param {boolean} payload - Indicates the change.
+   * @param {string} payload - The new HTML content of the editor (empty string on clear).
    */
-  (event: "change:modelValue", payload: boolean): void
+  (event: "change:modelValue", payload: string): void
 }
 
 /**

@@ -40,6 +40,7 @@ jobs:
           allowBuilds:
             '@parcel/watcher': true
             esbuild: true
+            vue-demi: true
           EOF
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
