@@ -279,15 +279,24 @@
     }
   })
   // ---WATCHERS----------------------------
+  watch(calendarPicker, () => emit("getCalendar", calendarPicker.value as ICalendarPicker), { deep: true })
+  // Issue 11 (calendar.md): inputValue у v-calendar считается не мгновенно после mount — сам
+  // DatePicker ещё не успел посчитать форматированную строку/диапазон из modelValue+mask.
+  // Раньше синхронизация была через watch(calendarPicker, ..., {deep:true}) с guard'ом
+  // "visibleDate.value == null" — не работало по двум причинам: (а) onMounted-read (L268-271)
+  // успевает присвоить visibleDate ДО того, как v-calendar досчитает значение, присваивая уже
+  // непустой объект (`{start:"",end:""}` в range-режиме) — после этого guard навсегда false;
+  // (б) deep-watch на весь calendarPicker-инстанс срабатывает только один раз, при первом
+  // появлении самого рефа, и не видит последующих внутренних изменений inputValue у v-calendar.
+  // watch на геттер конкретно inputValue решает оба: триггерится на каждое его реальное
+  // изменение, а guard — "значение непустое", а не "visibleDate ещё не выставлен".
+  const hasInputValue = (v: ICalendarPicker["inputValue"] | undefined) =>
+    typeof v === "string" ? v !== "" : !!(v as Partial<IRangeValue>)?.start || !!(v as Partial<IRangeValue>)?.end
   watch(
-    calendarPicker,
-    () => {
-      emit("getCalendar", calendarPicker.value as ICalendarPicker)
-      // ---Wave 2.1 — DatePicker грузится lazy (v-calendar = optional peer) и монтируется ПОСЛЕ
-      // onMounted: когда picker впервые стал доступен, инициализируем `visibleDate` из его
-      // `inputValue` (только если значение ещё не выставлено) — на случай гонки с onMounted-read.
-      if (calendarPicker.value && visibleDate.value == null) {
-        visibleDate.value = calendarPicker.value?.inputValue as ICalendarPicker["inputValue"]
+    () => calendarPicker.value?.inputValue as ICalendarPicker["inputValue"] | undefined,
+    (inputValue) => {
+      if (calendarPicker.value && hasInputValue(inputValue)) {
+        visibleDate.value = inputValue as ICalendarPicker["inputValue"]
       }
     },
     { deep: true }

@@ -1,7 +1,7 @@
 ---
 title: Issues — Calendar
-summary: 6/10 issues закрыты — memory leaks (MutationObserver disconnect + keydown cleanup), componentsStyle fallback, locale propagation, Wave 2.3 dup initStyle, + Wave 2.1 packaging (Issue 2 v-calendar → optional peer + lazy, Issue 3 vue → peer) + Wave 5 floating-ui (Issue 9, inherited от FixWindow) + B10 color-часть Issue 10 (hardcoded gray-*/stone-*/slate-* → semantic surface-* tokens). Открытые — SSR-packaging cross-cutting (Issue 4), dual-API (5), unstyled (7, framework-level), Issue 10 остаток (E29.7/N59/F31 — print/RTL/motion, cross-cutting).
-updated: 2026-07-04
+summary: 7/11 issues закрыты — memory leaks (MutationObserver disconnect + keydown cleanup), componentsStyle fallback, locale propagation, Wave 2.3 dup initStyle, + Wave 2.1 packaging (Issue 2 v-calendar → optional peer + lazy, Issue 3 vue → peer) + Wave 5 floating-ui (Issue 9, inherited от FixWindow) + B10 color-часть Issue 10 (hardcoded gray-*/stone-*/slate-* → semantic surface-* tokens) + Issue 11 (visibleDate stale-sync race с lazy-loaded v-calendar, CI-only flaky, PR #48). Открытые — SSR-packaging cross-cutting (Issue 4), dual-API (5), unstyled (7, framework-level), Issue 10 остаток (E29.7/N59/F31 — print/RTL/motion, cross-cutting).
+updated: 2026-07-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/calendar/
 related-doc: ../components/calendar.md
@@ -284,6 +284,34 @@ Picker открывается через `<FixWindow v-bind="paramsFixWindow">`.
 - [x] Нет `gray-*`/`stone-*`/`slate-*`/`zinc-*`/`neutral-*` классов FishtVue-обёртки в [Calendar.vue](../../lib/calendar/Calendar.vue).
 - [x] `surface-*` классы того же числового tone рендерятся для каждого `mode` (`outlined`/`filled`/`underlined`) и для disabled/separator состояний.
 - [x] v-calendar's own `--vc-accent-*`/`vc-primary` theming не изменено.
+
+## ~~Issue 11: visibleDate навсегда остаётся пустым — stale-sync race с lazy-loaded v-calendar~~ ✅ resolved 2026-07-06
+
+- **Категория:** вне 60-точечного чек-листа — data correctness / reactive stale-sync race между родителем и lazy-loaded async-child
+- **Severity:** ~~high~~ (не крашит, но показывает пустую/устаревшую дату конечному пользователю на медленном устройстве/сети)
+- **Где (was):** [Calendar.vue:281-294](../../lib/calendar/Calendar.vue#L281) (`watch(calendarPicker, ..., {deep:true})` + guard `visibleDate.value == null`)
+- **Status:** ✅ resolved 2026-07-06
+
+**Как найдено:** PR #48 — CI (GitHub Actions, ubuntu-24.04) стабильно ронял 3 теста в `Calendar.test.ts` (`does not display placeholder when value is provided`, `renders correct range dates`, `applies mask correctly`) с `expected '' to contain/be '<дата>'`, при этом **ни разу не воспроизводилось локально** (macOS), ни изолированно, ни в полном прогоне. Промежуточная гипотеза (флуд `console.error` от несвязанного jsdom/`@layer`-бага плюс leak `vi.useFakeTimers()` из-за не-exception-safe cleanup в том же тесте) объясняла флаки в `Icons.test.ts`/`stringHandler.test.ts`, но не сами 3 теста Calendar — они продолжали падать даже после устранения обеих причин. Прямая репродукция в Docker-контейнере (`node:22-bookworm`, тот же образ, что CI) + diagnostic-логи показали: `calendarPicker.value.inputValue` (то, что реально знает v-calendar) корректен **с первого же тика**, а `visibleDate` (`ref` в Calendar.vue, из которого рендерится текст) навсегда остаётся `{start:"",end:""}` — сколько ни жди (проверено вплоть до 60 тиков / 3000ms).
+
+**Что сделано (2026-07-06):**
+
+Синхронизация `visibleDate` из `calendarPicker.value?.inputValue` не работала по двум независимым причинам:
+
+1. `onMounted` (см. [Calendar.vue:256-272](../../lib/calendar/Calendar.vue#L256)) читает `calendarPicker.value?.inputValue` сразу после `await nextTick()` — v-calendar на этот момент ещё не успел посчитать форматированную строку из `modelValue`+`mask` и отдаёт пустой placeholder (`""` / `{start:"",end:""}`). `onMounted` присваивает этот пустой placeholder в `visibleDate.value` — теперь это уже не `null`, а пустой, но НЕ-`null` объект.
+2. Watch-страховка "на случай гонки с onMounted-read" была реализована как `watch(calendarPicker, () => {...}, {deep:true})` с guard'ом `visibleDate.value == null`. Это ломается вдвойне: guard навсегда `false` после (1), а сам `deep`-watch на РЕФ, хранящий инстанс дочернего компонента, эмпирически (diagnostic-логи) срабатывает **только один раз** — при первом присвоении самого рефа — и не видит последующих внутренних реактивных изменений `inputValue` у v-calendar. Guard, даже если бы был правильным, всё равно не получил бы второго шанса сработать.
+
+Фикс — [Calendar.vue:281-303](../../lib/calendar/Calendar.vue#L281): второй watch переписан на геттер конкретного свойства — `watch(() => calendarPicker.value?.inputValue, callback, {deep:true})` — вместо deep-watch на весь инстанс. Такой watch триггерится на каждое реальное изменение `inputValue` (подтверждено diagnostic-логами: второй fire с уже корректными датами). Guard заменён с «`visibleDate` ещё `null`» на «пришедшее значение непустое» (`hasInputValue()` — `""` для строкового режима, `{start:"",end:""}` для range — трактуются как «ещё не готово»), что и было изначальным намерением комментария «на случай гонки» — просто реализация guard'а была неверной. `emit("getCalendar", ...)` вынесен в отдельный (первый) watch — он должен реагировать на любое изменение инстанса picker'а, а не только на `inputValue`, поэтому не стоит смешивать оба назначения в одном callback'е.
+
+**Тесты:** отдельно от этого фикса, [Calendar.test.ts](../../lib/calendar/Calendar.test.ts) заменил фиксированные `flushPromises()`/`nextTick()` (угадывание числа тиков) на condition-based `waitFor(condition, timeoutMs=3000)` в 5 тестах, ожидающих picker — устраняет саму по себе таймингозависимость на медленном CI-раннере, независимо от production-фикса выше.
+
+**Как проверено:** Docker-репродукция (`node:22-bookworm`, тот же `pnpm install --frozen-lockfile` + `pnpm-workspace.yaml`, что и `.github/workflows/pull_request.yml`) — полный pipeline (`typecheck` → `lint` → `vitest run`, весь suite) зелёный, 55/55 файлов, 5610/5610 реальных тестов. Дополнительно проверено интерактивно в sandbox (клик по дню в открытом picker'е → `[data-calendar]` корректно обновляет текст через тот же исправленный watch).
+
+### Acceptance criteria
+
+- [x] `Calendar` смонтирован с непустым `modelValue` (single и range режимы) — отображаемый текст показывает реальную дату, а не остаётся пустым, независимо от того, сколько времени занимает резолв lazy-loaded v-calendar.
+- [x] Полный `vitest run` (весь suite, `isolate:false`) зелёный на Linux/Node 22 (CI-эквивалентная среда), не только на macOS.
+- [x] Интерактивный выбор даты в открытом picker'е по-прежнему корректно обновляет отображаемый текст (regression-check ручной выбор через тот же watch).
 
 ## Cross-cutting: Configuration support
 
