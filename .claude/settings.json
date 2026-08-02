@@ -19,12 +19,6 @@
     ],
     "deny": [],
     "ask": [
-      "Write",
-      "Edit",
-      "MultiEdit",
-      "NotebookEdit",
-      "TodoWrite",
-      "Bash(*)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(git reset:*)",
