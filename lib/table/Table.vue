@@ -889,12 +889,34 @@
       "text-left text-surface-400 dark:text-surface-500",
       column.class?.colText
     ])
-  const classIsSort = (column: IColumnPrivate) =>
-    Table.setStyle([
+  const classIsSort = (column: IColumnPrivate) => {
+    const classes = Table.setStyle([
       "flex items-center motion-safe:transition-opacity motion-safe:duration-500 pr-1 cursor-pointer",
-      !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+      // T2: триггер сортировки доступен с клавиатуры, поэтому у несортированной колонки он обязан
+      // проявляться не только по hover, но и по focus-visible — иначе фокус «пропадает» (opacity-0).
+      !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "opacity-100"
     ])
+    // T2 (unstyled): при `config.unstyled` Component.setStyle возвращает "" (component/index.ts),
+    // поэтому на <button> не попадает и класс `fv` — а именно на него завязан preflight из baseStyle
+    // (`button.fv` → background-color: transparent, padding/margin: 0, font: inherit; `.fv` → border-width: 0).
+    // Без него браузер рисует нативный chrome кнопки (рамка, серый фон) в каждой сортируемой ячейке.
+    // Сам baseStyle инжектится независимо от `unstyled` (config/index.ts → BaseStylesComponent.initStyle),
+    // поэтому достаточно вернуть голый `fv`: `unstyled` означает «без темы», а не «сломанный UA-хром».
+    // В styled-режиме setStyle уже возвращает строку, начинающуюся с `fv` — вывод байт-в-байт прежний.
+    return classes || "fv"
+  }
   const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-surface-400 dark:text-surface-600"))
+  // T2 (a11y): aria-sort отражает live-состояние sortColumns — параллельного state нет.
+  // `undefined` убирает атрибут целиком: несортируемая колонка не должна объявляться sortable.
+  const ariaSort = (column: IColumnPrivate): "ascending" | "descending" | "none" | undefined => {
+    if (!(column?.isSort ?? isSort.value)) return undefined
+    const sort = sortColumns?.[column?.dataField]
+    return sort === "asc" ? "ascending" : sort === "desc" ? "descending" : "none"
+  }
+  // T2 (a11y): accessible name триггера берётся из уже существующего caption колонки (он всегда
+  // заполнен при нормализации колонок, fallback выводится из dataField). Явно переданный
+  // пустой caption добиваем самим dataField — новый locale-key не нужен.
+  const ariaSortLabel = (column: IColumnPrivate): string => String(column?.caption || column?.dataField || "")
   const classResizedColumns = (column: IColumnPrivate, key: number) =>
     Table.setStyle([
       // Issue 11 (RTL): pe-2 (padding-inline-end) авто-флипается по dir; inset — физический default
@@ -2019,6 +2041,7 @@
                     v-if="column.visible"
                     data-table-thead-col
                     scope="col"
+                    :aria-sort="ariaSort(column)"
                     :class="classTh(column)"
                     :style="styleTh(column)">
                     <div :class="classBodyFilter">
@@ -2087,11 +2110,23 @@
                         <RenderColumnSlot v-if="column._headerSlot" :render="column._headerSlot" :args="{ column }" />
                         <template v-else>{{ column.caption }}</template>
                       </div>
-                      <div
+                      <!--
+                        T2 (a11y): нативный <button> — единственный способ получить и tab order,
+                        и роль button, и активацию Enter/Space «из коробки». UA-хром кнопки снят
+                        глобальным reset'ом (baseStyle: button.fv → background transparent,
+                        border-width 0, padding 0), поэтому вёрстка не меняется.
+                        `.prevent` на keydown обязателен: он гасит синтетический click, который
+                        браузер сам генерирует по Enter/Space, — иначе sorting() отработал бы дважды.
+                      -->
+                      <button
                         v-if="column.isSort ?? isSort"
+                        type="button"
                         data-table-thead-col-sort
                         :class="classIsSort(column)"
-                        @click="sorting(column?.dataField)">
+                        :aria-label="ariaSortLabel(column)"
+                        @click="sorting(column?.dataField)"
+                        @keydown.enter.prevent="sorting(column?.dataField)"
+                        @keydown.space.prevent="sorting(column?.dataField)">
                         <ArrowLongUpIcon
                           v-if="iconSort === 'Arrow' && [null, 'asc'].includes(sortColumns[column?.dataField])"
                           :class="classSortIcon" />
@@ -2104,7 +2139,7 @@
                         <BarsArrowDownIcon
                           v-if="iconSort === 'Bars' && sortColumns[column?.dataField] === 'desc'"
                           :class="classSortIcon" />
-                      </div>
+                      </button>
                       <div
                         v-if="column.isResized ?? resizedColumns"
                         data-table-thead-col-resized

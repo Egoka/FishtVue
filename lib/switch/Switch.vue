@@ -86,6 +86,10 @@
         : ""
   )
   const classInputDiv = ref(Switch.setStyle("flex h-6 items-center"))
+  // `classSwitch` — часть публичного expose, поэтому её значение остаётся «чистым» результатом
+  // setStyle: "" при `config.unstyled`, тема — в остальных случаях. UA-reset подмешивается не сюда,
+  // а в отдельный template-only binding ниже (`classSwitchElement`), чтобы правка DOM не меняла
+  // наблюдаемое consumer'ом значение.
   const classSwitch = computed<StyleClass>(() =>
     switchingType.value === "switch"
       ? Switch.setStyle([
@@ -108,6 +112,18 @@
           ])
         : ""
   )
+  // L2 (unstyled): при `config.unstyled` Component.setStyle возвращает "" (component/index.ts:138),
+  // поэтому на native control не попадает и класс `fv` — а именно на него завязан preflight из baseStyle
+  // (`button.fv`/`input.fv` → background-color: transparent, padding/margin: 0, font: inherit, cursor: pointer;
+  // `.fv` → border-width: 0). Без него браузер рисует нативный chrome (рамка, серый фон) на `<button role="switch">`
+  // и нативные margin'ы на `<input type="checkbox">`.
+  // Сам baseStyle инжектится независимо от `unstyled` (config/index.ts → BaseStylesComponent.initStyle),
+  // поэтому достаточно голого `fv`: `unstyled` означает «без темы», а не «сломанный UA-хром».
+  // Split: fallback живёт в отдельном template-only computed, а не в `classSwitch`, потому что
+  // `classSwitch` отдаётся наружу через defineExpose — её значение под `unstyled` обязано остаться "".
+  // В styled-режиме setStyle всегда возвращает truthy-строку `fv {prefix}-switch …` (component/index.ts:156),
+  // поэтому `|| "fv"` там — доказуемый no-op и DOM байт-в-байт прежний.
+  const classSwitchElement = computed<StyleClass>(() => classSwitch.value || "fv")
   const classLabel = computed(() =>
     switchingType.value === "switch"
       ? Switch.setStyle([
@@ -236,7 +252,7 @@
         :disabled="isDisabled as any"
         :aria-checked="modelValue as boolean | 'mixed' | undefined"
         :data-headlessui-state="modelValue ? 'checked' : ''"
-        :class="classSwitch"
+        :class="classSwitchElement"
         :style="`border-radius: ${rounded}px`"
         @focus="isActiveSwitch = true"
         @blur="isActiveSwitch = false"
@@ -259,7 +275,7 @@
         :checked="modelValue as any[] | boolean | Set<any> | undefined"
         :disabled="isDisabled"
         type="checkbox"
-        :class="classSwitch"
+        :class="classSwitchElement"
         :style="`border-radius: ${rounded - 1}px`"
         @keydown.stop.enter="inputEvent(!modelValue)"
         @focus="isActiveSwitch = true"

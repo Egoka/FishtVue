@@ -1,6 +1,6 @@
 import { createApp, h, nextTick, Transition } from "vue"
 import { flushPromises, mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import Accordion from "fishtvue/accordion/Accordion.vue"
 import AccordionItem from "fishtvue/accordion/AccordionItem.vue"
@@ -672,6 +672,58 @@ describe("Accordion Component Tests", () => {
           { title: "Item 2", subtitle: "Subtitle 2", open: false }
         ]
       ])
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Configuration support — unstyled (L2, cross-cutting Component.setStyle guard)
+  // ---------------------------------------------------------------------------
+  describe("Configuration support — unstyled", () => {
+    const appWithConfig = (config: Record<string, unknown>) => ({
+      install(app: any) {
+        app.use(FishtVue, config)
+      }
+    })
+
+    // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback):
+    // чистим, чтобы unstyled:true из теста не протёк в соседние тесты/файлы.
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    const dataSource = [{ title: "Item 1", subtitle: "Subtitle 1", open: false }]
+
+    it("strips all classes from the root when global unstyled: true", () => {
+      const wrapper = mount(Accordion, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { dataSource }
+      })
+      const cls = (wrapper.find("[data-accordion]").attributes("class") ?? "").trim()
+      expect(cls).toBe("")
+    })
+
+    // L2: preflight из baseStyle (`button.fv`) инжектится независимо от `unstyled`,
+    // но завязан на класс `fv`. Без него header-кнопка остаётся с UA-хромом.
+    it("keeps the bare `fv` class on the header <button> when unstyled: true", () => {
+      const wrapper = mount(Accordion, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { dataSource }
+      })
+      const cls = (wrapper.find("[data-accordion-button]").attributes("class") ?? "").trim()
+      // Ровно `fv` — темы нет, есть только зацепка за UA-reset.
+      expect(cls).toBe("fv")
+    })
+
+    it("leaves styled-mode classes on the header <button> untouched (contrast)", () => {
+      const wrapper = mount(Accordion, {
+        global: { plugins: [appWithConfig({ unstyled: false })] },
+        props: { dataSource }
+      })
+      const cls = (wrapper.find("[data-accordion-button]").attributes("class") ?? "").trim()
+      // setStyle в styled-режиме всегда truthy (`fv {prefix}-accordion …`), поэтому fallback — no-op.
+      expect(cls.startsWith("fv ")).toBe(true)
+      expect(cls).not.toBe("fv")
+      expect(cls).toContain("font-semibold")
     })
   })
 })

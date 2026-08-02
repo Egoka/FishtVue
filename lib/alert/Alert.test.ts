@@ -705,6 +705,636 @@ describe("Alert Component", () => {
     })
   })
 
+  describe("sanitizeHtml() — санитизация не изготавливает опасный элемент из инертного ввода", () => {
+    // Разбираем РЕЗУЛЬТАТ, а не строку: важно, какой элемент получит браузер.
+    const parseAll = (html: string) => {
+      const host = document.createElement("div")
+      host.innerHTML = html
+      return host
+    }
+
+    // Вырезание «осиротевшего» закрывающего тега склеивает соседние куски: `<scr` + `ipt>`.
+    // Пока шаг 2 стоял после цикла, вход НИЖЕ (инертный в браузере) превращался в живой
+    // `<script>alert(1)</script>` — санитайзер сам создавал то, чего во входе не было.
+    const fusion: Array<[string, string]> = [
+      ["<scr</script>ipt>alert(1)</scr</script>ipt>", "script"],
+      ["<scr</script>ipt src=//evil></scr</script>ipt>", "script"],
+      ["<sty</style>le>body{}</sty</style>le>", "style"],
+      ["<sv</svg>g onload=alert(1)></sv</svg>g>", "svg"]
+    ]
+
+    it.each(fusion)("вход %j инертен в браузере ДО санитизации (предпосылка теста)", (raw, tag) => {
+      expect(parseAll(raw).querySelector(tag)).toBeNull()
+    })
+
+    it.each(fusion)("и не становится элементом <%s> ПОСЛЕ санитизации", (raw, tag) => {
+      const out = sanitizeHtml(raw)
+      expect(out).not.toMatch(new RegExp(`<\\s*/?\\s*${tag}\\b`, "i"))
+      expect(parseAll(out).querySelector(tag)).toBeNull()
+    })
+
+    it("не оставляет исполняемого содержимого от склейки", () => {
+      expect(sanitizeHtml("<scr</script>ipt>alert(1)</scr</script>ipt>")).toBe("")
+      expect(sanitizeHtml("<sty</style>le>body{}</sty</style>le>")).toBe("")
+    })
+
+    it("осиротевший закрывающий тег в безобидной разметке по-прежнему просто удаляется", () => {
+      expect(sanitizeHtml("<p>text</script>more</p>")).toBe("<p>textmore</p>")
+      expect(sanitizeHtml("<p>обычный текст</p>")).toBe("<p>обычный текст</p>")
+    })
+  })
+
+  describe("sanitizeHtml() — HTML-entity bypass in URL schemes", () => {
+    // Атрибут вырезается целиком, поэтому надёжный маркер «заблокировано» — отсутствие имени атрибута.
+    const blocked = (html: string) => expect(sanitizeHtml(html)).not.toMatch(/href|srcset|formaction/i)
+
+    it("blocks decimal character references (with and without the trailing semicolon)", () => {
+      blocked('<a href="&#106;avascript:alert(1)">x</a>')
+      blocked('<a href="&#106avascript:alert(1)">x</a>')
+    })
+
+    it("blocks zero-padded decimal character references", () => {
+      blocked('<a href="&#0000106;avascript:alert(1)">x</a>')
+      blocked('<a href="&#0000106avascript:alert(1)">x</a>')
+    })
+
+    it("blocks hex character references (with and without the trailing semicolon)", () => {
+      blocked('<a href="&#x6a;avascript:alert(1)">x</a>')
+      blocked('<a href="&#X6A;avascript:alert(1)">x</a>')
+      // Без `;` жадный разбор дал бы `0x6aa` — ловится ASCII-щадящим вариантом нормализации.
+      blocked('<a href="&#x6aavascript:alert(1)">x</a>')
+    })
+
+    it("blocks partial / mixed encodings inside the scheme", () => {
+      blocked('<a href="ja&#118;ascript:alert(1)">x</a>')
+      blocked('<a href="&#106;&#97;vascript:alert(1)">x</a>')
+      blocked('<a href="&#106;av&#x61;script:alert(1)">x</a>')
+    })
+
+    it("blocks encoded colons (named &colon; and numeric &#58;)", () => {
+      blocked('<a href="javascript&colon;alert(1)">x</a>')
+      blocked('<a href="javascript&#58;alert(1)">x</a>')
+      blocked('<a href="javascript&#x3a;alert(1)">x</a>')
+    })
+
+    it("blocks encoded forms of vbscript: and data:text/html", () => {
+      blocked('<a href="&#118;bscript:msgbox(1)">x</a>')
+      blocked('<a href="&#100;ata:text/html,<b>hi</b>">x</a>')
+      blocked('<a href="data:text&sol;html,<b>hi</b>">x</a>')
+    })
+
+    it("blocks control characters embedded in the scheme (tab/newline/CR/NUL)", () => {
+      blocked('<a href="java\tscript:alert(1)">x</a>')
+      blocked('<a href="java\nscript:alert(1)">x</a>')
+      blocked('<a href="java\rscript:alert(1)">x</a>')
+      // NUL не входит в `\s` — до фикса проходил насквозь.
+      blocked(`<a href="java${String.fromCharCode(0)}script:alert(1)">x</a>`)
+      // Control character, полученный из entity, тоже вырезается.
+      blocked('<a href="java&#9;script:alert(1)">x</a>')
+    })
+
+    it("applies the same decoding to every URL attribute, not just href", () => {
+      blocked('<img srcset="&#106;avascript:alert(1)">')
+      blocked('<button formaction="&#x6a;avascript:alert(1)">b</button>')
+      blocked("<a href=&#106;avascript:alert(1)>x</a>")
+    })
+
+    it("keeps safe URLs and legitimate &#-sequences byte-identical", () => {
+      const safe = [
+        '<a href="https://x.io/a?b=1&#38;c=2">l</a>',
+        '<a href="/rel/path">l</a>',
+        '<a href="#anchor">l</a>',
+        '<a href="mailto:a@b.c">l</a>',
+        '<a href="/search?q=a&#38;b=1">s</a>',
+        // Числовая ссылка без `;` в безопасном URL — проходит оба варианта нормализации.
+        '<a href="/p?x=&#38y=1">s</a>',
+        '<a href="/s?a=1&amp;b=2">s</a>',
+        "<div data-on='x'>y</div>",
+        "<span>&#106;avascript: as text</span>",
+        "price &#38; tax &#106; text"
+      ]
+      for (const html of safe) expect(sanitizeHtml(html)).toBe(html)
+    })
+
+    it("does not resolve prototype keys as named references", () => {
+      const html = '<a href="javascript&constructor;alert(1)">x</a>'
+      expect(sanitizeHtml(html)).toBe(html)
+    })
+
+    it("tolerates out-of-range numeric references without throwing", () => {
+      expect(sanitizeHtml('<a href="&#99999999;/path">x</a>')).toContain("href")
+    })
+
+    it("stays linear on pathological self-regenerating entities", () => {
+      // `&#38;` декодируется в `&`, воспроизводя следующую ссылку — вход, на котором наивный
+      // fixed-point-цикл не завершается. Цикла нет: декодирование делает ровно один проход,
+      // поэтому стоимость линейна по длине входа независимо от глубины вложенности.
+      const nested = `<a href="&#38;${"#38;".repeat(64)}#106;avascript:alert(1)">x</a>`
+      const wide = `<a href="${"&#38;".repeat(20000)}javascript:alert(1)">x</a>`
+      const started = Date.now()
+      expect(typeof sanitizeHtml(nested)).toBe("string")
+      expect(typeof sanitizeHtml(wide)).toBe("string")
+      expect(Date.now() - started).toBeLessThan(2000)
+    })
+  })
+
+  describe("sanitizeHtml() — attribute-boundary bypasses", () => {
+    // HTML-парсер начинает новый атрибут не только после whitespace, но и после `/`
+    // и после закрывающей кавычки предыдущего значения (`<a x="1"href=…>`).
+    const noLiveAttr = (html: string) => {
+      const out = sanitizeHtml(html)
+      expect(out).not.toMatch(/javascript|vbscript/i)
+      expect(out).not.toMatch(/on(error|click|load)\s*=/i)
+    }
+
+    it("blocks URL attributes glued to the previous quoted value", () => {
+      noLiveAttr('<a title="x"href="javascript:alert(1)">x</a>')
+      noLiveAttr("<a title='x'href='javascript:alert(1)'>x</a>")
+      noLiveAttr('<button x="1"formaction="javascript:alert(1)">b</button>')
+      noLiveAttr('<img alt="1"srcset="javascript:alert(1)">')
+      noLiveAttr('<a x="1"xlink:href="vbscript:msgbox(1)">x</a>')
+    })
+
+    it("blocks URL attributes separated only by a slash", () => {
+      noLiveAttr('<a/href="javascript:alert(1)">x</a>')
+      noLiveAttr('<img/src="javascript:alert(1)">')
+      noLiveAttr('<a x=1 /href="javascript:alert(1)">x</a>')
+      noLiveAttr('<a//href="javascript:alert(1)">x</a>')
+    })
+
+    it("blocks event-handler attributes glued to a quote or a slash", () => {
+      noLiveAttr('<img src="x"onerror="alert(1)">')
+      noLiveAttr("<img src=x /onerror=alert(1)>")
+      noLiveAttr("<div/onclick=alert(1)>x</div>")
+      noLiveAttr("<div x='1'/onload=alert(1)>x</div>")
+    })
+
+    it("blocks every attribute in an adjacent chain (fixed-point loop)", () => {
+      // Первое совпадение съедает закрывающую кавычку, за которой прячется следующий
+      // атрибут — без повторного прохода уцелел бы второй (и третий).
+      noLiveAttr('<img onerror="a"onerror="alert(1)">')
+      noLiveAttr('<a href="javascript:a"href="javascript:b">x</a>')
+      noLiveAttr('<a href="javascript:a"href="javascript:b"href="javascript:c">x</a>')
+      noLiveAttr('<img src="javascript:a"onerror="alert(1)"href="javascript:b">')
+    })
+
+    it("does not let a safe attribute shield the dangerous one behind it", () => {
+      // Совпадение по безопасному атрибуту поглощает закрывающую кавычку, которая служит
+      // границей для следующего — без отката `lastIndex` опасный атрибут уцелел бы.
+      noLiveAttr('<a href="/ok"href="javascript:alert(1)">y</a>')
+      noLiveAttr('<img alt="1" src="/ok.png"src="javascript:alert(1)">')
+      noLiveAttr('<a href="/ok"href="/ok2"href="javascript:alert(1)">y</a>')
+      expect(sanitizeHtml('<a title="t" href="/ok"href="&#106;avascript:alert(1)">y</a>')).toBe(
+        '<a title="t" href="/ok">y</a>'
+      )
+    })
+
+    it("keeps the following safe attribute intact when the dangerous one comes first", () => {
+      // Зеркало предыдущего кейса: опасный атрибут стоит ПЕРВЫМ, безопасный — за ним.
+      // Из-за отката `lastIndex` следующее совпадение начинается внутри уже вырезанного
+      // куска, и его «граница» — закрывающая кавычка удалённого значения. Возврат этой
+      // кавычки в вывод приклеивал её к имени следующего атрибута (`<a "href="/ok">`),
+      // и парсер видел атрибут с именем `"href` — безопасный href уничтожался.
+      const dangerousFirst = [
+        '<a href="javascript:x" href="/ok">y</a>',
+        '<a href="javascript:x"href="/ok">y</a>',
+        '<a href="javascript:a"href="javascript:b"href="/ok">y</a>',
+        '<a href="javascript:a"href="javascript:b" href="/ok">y</a>',
+        '<a href="javascript:a"href="&#106;avascript:b"href="/ok">y</a>'
+      ]
+      for (const html of dangerousFirst) {
+        const out = sanitizeHtml(html)
+        noLiveAttr(html)
+        expect(out).toContain('href="/ok"')
+        expect(out).not.toMatch(/"href/)
+      }
+    })
+
+    it("re-parses to a real href attribute after a dangerous-first chain (jsdom)", () => {
+      // Проверяем не строку, а РЕЗУЛЬТАТ РАЗБОРА: строка может «выглядеть» целой, но
+      // парситься как атрибут с именем `"href`.
+      const parse = (html: string, selector: string) => {
+        const host = document.createElement("div")
+        host.innerHTML = sanitizeHtml(html)
+        const el = host.querySelector(selector)
+        expect(el).not.toBeNull()
+        return el as Element
+      }
+
+      const spaced = parse('<a href="javascript:x" href="/ok">y</a>', "a")
+      expect(spaced.getAttribute("href")).toBe("/ok")
+
+      const glued = parse('<a href="javascript:x"href="/ok">y</a>', "a")
+      expect(glued.getAttribute("href")).toBe("/ok")
+
+      const chain = parse('<a href="javascript:a"href="javascript:b"href="/ok">y</a>', "a")
+      expect(chain.getAttribute("href")).toBe("/ok")
+      expect(chain.getAttributeNames()).toEqual(["href"])
+
+      // Смешанная цепочка из трёх атрибутов: опасный URL + on*-handler + безопасный src.
+      const mixed = parse('<img src="javascript:a"onerror="alert(1)"src="/ok.png">', "img")
+      expect(mixed.getAttribute("src")).toBe("/ok.png")
+      expect(mixed.getAttributeNames()).toEqual(["src"])
+
+      // Цепочка on*-handler'ов перед безопасным атрибутом — та же фантомная граница.
+      const handlers = parse('<img onerror="a"onerror="b"src="/ok.png">', "img")
+      expect(handlers.getAttribute("src")).toBe("/ok.png")
+      expect(handlers.getAttributeNames()).toEqual(["src"])
+    })
+
+    it("never fuses the surrounding text into a new tag when removing an attribute", () => {
+      // Символ границы остаётся в выводе — иначе `<scr` + `ipt>` склеились бы в `<script>`
+      // уже ПОСЛЕ того, как шаг 1 отработал.
+      expect(sanitizeHtml('<scr href="javascript:x"ipt>alert(1)</script>')).not.toMatch(/<script/i)
+      expect(sanitizeHtml('<scr onclick="1"ipt>alert(1)</script>')).not.toMatch(/<script/i)
+      expect(sanitizeHtml("<scr href=javascript:x ipt>alert(1)</script>")).not.toMatch(/<script/i)
+    })
+
+    it("blocks entity-encoded and mixed-case schemes behind a boundary", () => {
+      const out = sanitizeHtml('<a x="1"href="&#106;avascript:alert(1)">x</a>')
+      expect(out).toBe('<a x="1">x</a>')
+      noLiveAttr('<a x="1"HREF="JaVaScRiPt:alert(1)">x</a>')
+      noLiveAttr('<a x="1"href="java&#9;script:alert(1)">x</a>')
+    })
+
+    it("terminates in bounded time on long adjacent-attribute chains", () => {
+      const chain = `<img ${'onerror="a"'.repeat(2000)}>`
+      const urls = `<a ${'href="javascript:a"'.repeat(2000)}>x</a>`
+      const started = Date.now()
+      expect(sanitizeHtml(chain)).not.toMatch(/onerror\s*=/i)
+      expect(sanitizeHtml(urls)).not.toMatch(/javascript/i)
+      expect(Date.now() - started).toBeLessThan(2000)
+    })
+
+    it("stays linear on long zero-padded character references", () => {
+      // Ссылка без `;`, чей жадный разбор безопасен, уводит нормализацию в ASCII-щадящую
+      // ветку; разбор префикса заново на каждом шаге давал O(n²) — 200 000 нулей вешали
+      // санитизацию на ~6 с. Значение накапливается инкрементально.
+      const dec = `<a href="/p?x=&#${"0".repeat(200000)}38y=1">s</a>`
+      const hex = `<a href="/p?x=&#x${"0".repeat(200000)}26y=1">s</a>`
+      const started = Date.now()
+      expect(sanitizeHtml(dec)).toBe(dec)
+      expect(sanitizeHtml(hex)).toBe(hex)
+      expect(Date.now() - started).toBeLessThan(1000)
+    })
+
+    it("keeps safe markup byte-identical despite the wider boundary", () => {
+      const safe = [
+        '<a href="https://x.io" title="t">l</a>',
+        "<a href='/rel' class='c'>l</a>",
+        '<img src="/a.png" alt="a">',
+        '<a href="#anchor">l</a>',
+        '<a href="mailto:a@b.c">l</a>',
+        "<div data-on='x'>y</div>",
+        '<div title="x"data-href="/ok">y</div>',
+        // Проза с кавычкой ПЕРЕД настоящим `name=value` — именно то, что широкая граница
+        // атрибута выкусывала из текстового узла (`<p>write " here</p>`).
+        '<p>write "href=javascript:x" here</p>',
+        '<p>писать "onclick=foo" нельзя</p>',
+        "<p>цитата: \"href=/ok\" и 'onclick=1' в тексте</p>"
+      ]
+      for (const html of safe) expect(sanitizeHtml(html)).toBe(html)
+    })
+
+    it("никогда не трогает текст между тегами, как бы он ни выглядел", () => {
+      // Атрибуты существуют только ВНУТРИ тега, поэтому и вырезаются только там
+      // (`mapTagRegions` + `findTagEnd`). Раньше поиск шёл по всей строке, и любая проза,
+      // где за кавычкой/слэшем/пробелом следует `name=value`, теряла кусок текста —
+      // видимая потеря контента в `subtitle`.
+      const prose = [
+        '<p>write "href=javascript:x" here</p>',
+        '<p>писать "onclick=foo" нельзя</p>',
+        "<p>don't onload=1 here</p>",
+        "<p>цитата: \"href=/ok\" и 'onclick=1' в тексте</p>",
+        "<p>путь a/href=javascript:x — это не атрибут</p>",
+        '<b>bold</b> хвост: "onerror=alert(1)" и всё',
+        "<p>2 < 3 onclick=1 ok</p>",
+        'обычный текст без тегов: "href=javascript:x"'
+      ]
+      for (const html of prose) expect(sanitizeHtml(html)).toBe(html)
+    })
+
+    it("определяет конец тега как HTML-токенизатор, а не по первому '>'", () => {
+      // `>` внутри значения в кавычках НЕ закрывает тег — атрибут за ним обязан быть найден.
+      noLiveAttr('<a title="a>b" href="javascript:alert(1)">z</a>')
+      noLiveAttr('<a title="a>b" onclick="alert(1)">z</a>')
+      noLiveAttr('<a title="a>b"href="javascript:x">z</a>')
+      expect(sanitizeHtml('<a title="a>b" href="javascript:alert(1)">z</a>')).toContain('title="a>b"')
+
+      // `<` внутри значения не начинает новый тег.
+      noLiveAttr('<a title="<b" href="javascript:x">z</a>')
+
+      // Незакрытый тег / незакрытая кавычка в конце входа: браузер выбрасывает такой тег
+      // целиком, санитайзер тоже не должен оставлять в нём живой атрибут.
+      noLiveAttr('<a href="javascript:alert(1)"')
+      noLiveAttr('<a href="javascript:alert(1)')
+      noLiveAttr('<a href="javascript:x>text onclick=1')
+
+      // Текстовый `<` (не буква/`/`/`!`/`?` следом) разметку не открывает, но и не сбивает
+      // поиск настоящего тега дальше по строке.
+      noLiveAttr('<p>2 < 3</p><a href="javascript:x">z</a>')
+      expect(sanitizeHtml('<p>2 < 3</p><a href="javascript:x">z</a>')).toContain("<p>2 < 3</p>")
+
+      // Взаимодействие с шагом 1 (удаление опасных элементов идёт ДО поиска атрибутов).
+      expect(sanitizeHtml('<script title="a>b">alert(1)</script>')).not.toContain("alert(1)")
+      noLiveAttr('<div>t</div><img src="x"onerror="alert(1)">')
+    })
+
+    it("совпадает с парсером там, где кавычка стоит не в позиции значения (jsdom)", () => {
+      // `<a "b>c" href="javascript:x">` браузер разбирает как тег `<a "b>` с именем атрибута
+      // `"b` плюс ТЕКСТ `c" href="javascript:x">z`. href там неживой, поэтому санитайзер
+      // обязан оставить текст нетронутым — и это не обход.
+      const html = '<a "b>c" href="javascript:x">z</a>'
+      expect(sanitizeHtml(html)).toBe(html)
+
+      const host = document.createElement("div")
+      host.innerHTML = sanitizeHtml(html)
+      const anchor = host.querySelector("a") as HTMLAnchorElement
+      expect(anchor).not.toBeNull()
+      expect(anchor.getAttribute("href")).toBeNull()
+      expect(host.textContent).toContain('c" href="javascript:x">z')
+    })
+
+    it("не считает границей атрибута позицию ВНУТРИ чужого значения (jsdom)", () => {
+      // Регулярка не знает состояния токенизатора и цеплялась за символ-границу, лежащий
+      // внутри значения соседнего атрибута. Дальше `ATTR_VALUE` спаривал НЕ ТЕ кавычки:
+      // в `<a title="href=" href="javascript:x">` совпадение начиналось на ОТКРЫВАЮЩЕЙ
+      // кавычке `title`, «значением» считалось `" href="`, проверка схемы его пропускала —
+      // и живой `href="javascript:x"` доезжал до DOM нетронутым.
+      const bypasses = [
+        '<a title="href=" href="javascript:alert(1)">x</a>',
+        "<a title='href=' href='javascript:alert(1)'>x</a>",
+        '<a title="href= " href="javascript:alert(1)">x</a>',
+        '<a title="/href=" href="javascript:alert(1)">x</a>',
+        '<a title="q href=" href="javascript:alert(1)">x</a>',
+        '<a title="<a href=" href="javascript:alert(1)">x</a>',
+        '<img alt="src=" src="javascript:alert(1)">',
+        '<a data-x="formaction=" formaction="javascript:alert(1)">x</a>',
+        '<p title="onclick=" onclick="alert(1)">x</p>',
+        // Значение БЕЗ кавычек: `title=href=` — значение `href=`, а whitespace после него
+        // регулярка проглатывала как `\s*` внутри `name\s*=\s*value`.
+        "<img title= href=\thref=javascript:alert(1)>",
+        "<a href= href=javascript:alert(1)>x</a>",
+        // Кавычки и `=` внутри ИМЕНИ ТЕГА (`<ahref="href="`) — там атрибут начаться не может.
+        '<ahref="href="/href="javascript:alert(1)">x</a>',
+        "<adata-x='src='/href='javascript:alert(1)'>x</a>"
+      ]
+      // Проверяем РЕЗУЛЬТАТ РАЗБОРА, а не строку: `title="onclick="` в выводе остаётся
+      // законно (это безопасное значение), поэтому строковый `noLiveAttr` тут не годится.
+      for (const html of bypasses) {
+        const host = document.createElement("div")
+        host.innerHTML = sanitizeHtml(html)
+        for (const el of Array.from(host.querySelectorAll("*")))
+          for (const attr of el.getAttributeNames()) {
+            expect(attr).not.toMatch(/^on/i)
+            // Схема проверяется по НАЧАЛУ значения, как её видит URL-парсер: значение
+            // `href=javascript:alert(1)` — относительный путь, а не опасная схема.
+            const value = (el.getAttribute(attr) ?? "").replace(/\s+/g, "").toLowerCase()
+            expect(value).not.toMatch(/^(?:javascript:|vbscript:|data:text\/html)/)
+          }
+      }
+    })
+
+    it("не путает `=` в начале имени атрибута с началом значения в кавычках (jsdom)", () => {
+      // `<a =" href="javascript:x">`: `=` перед именем атрибута — это «unexpected-equals-sign-
+      // before-attribute-name», символ становится ПЕРВЫМ СИМВОЛОМ ИМЕНИ, а не присваиванием.
+      // Значит следующая кавычка значение НЕ открывает, и href за ней — живой.
+      const html = '<a =" href="javascript:alert(1)">x</a>'
+      const host = document.createElement("div")
+      host.innerHTML = html
+      expect(host.querySelector("a")?.getAttribute("href")).toBe("javascript:alert(1)")
+
+      noLiveAttr(html)
+      host.innerHTML = sanitizeHtml(html)
+      expect(host.querySelector("a")?.getAttribute("href")).toBeNull()
+
+      // То же для одинарной кавычки и для `=` внутри ИМЕНИ ТЕГА (`<a=` — часть имени).
+      noLiveAttr("<a =' href='javascript:alert(1)'>x</a>")
+      noLiveAttr('<a="x" href="javascript:alert(1)">x</a>')
+    })
+
+    it("выбрасывает тег без закрывающего `>` целиком, а не чинит его вырезом атрибута", () => {
+      // Парсер доедает незакрытый тег до конца входа и ВЫБРАСЫВАЕТ его. Частичный вырез
+      // атрибута из такого тега «чинит» разметку и оживляет то, чего браузер бы не исполнил:
+      // вход инертен (кавычка не закрыта), но после выреза первого `onclick="` остаётся тег
+      // с живым обработчиком.
+      const revived = [
+        "<pdata-x=\" onclick=\"\nonclick=alert(1)\nsrc='x'>",
+        "<pid=' onclick='  data-x=\" href=\" onclick=alert(1)>x</a>"
+      ]
+      for (const html of revived) {
+        // Контроль: в исходном виде браузер этот тег выбрасывает — живого обработчика нет.
+        const host = document.createElement("div")
+        host.innerHTML = html
+        for (const el of Array.from(host.querySelectorAll("*")))
+          for (const attr of el.getAttributeNames()) expect(attr).not.toMatch(/^on/i)
+
+        // После санитизации живой обработчик не должен ПОЯВИТЬСЯ.
+        host.innerHTML = sanitizeHtml(html)
+        for (const el of Array.from(host.querySelectorAll("*")))
+          for (const attr of el.getAttributeNames()) expect(attr).not.toMatch(/^on/i)
+      }
+
+      // Зеркало: тег ЗАКРЫТ и обработчик в нём живой — его обязаны вырезать, а безопасные
+      // соседние атрибуты (включая значение `"onclick="`) оставить.
+      const live = '<a alt=\' onclick=\'\nhref="onclick="\tonclick=alert(1)class=x">'
+      const host = document.createElement("div")
+      host.innerHTML = live
+      expect(host.querySelector("a")?.getAttributeNames()).toContain("onclick")
+
+      host.innerHTML = sanitizeHtml(live)
+      const anchor = host.querySelector("a")
+      // Раньше вырез съедал куски соседних значений, и тег переставал разбираться вовсе
+      // (`<a alt=' \nhref=">` → ни одного элемента) — видимая потеря контента.
+      expect(anchor).not.toBeNull()
+      expect(anchor?.getAttributeNames()).not.toContain("onclick")
+      expect(anchor?.getAttribute("href")).toBe("onclick=")
+    })
+
+    it("leaves double-encoded references alone — the sanitizer decodes exactly once", () => {
+      // Общее правило (не исключение): санитайзер раскрывает character references столько же
+      // раз, сколько HTML-парсер, — один. `&amp;#106;` даёт текст `&#106;avascript:`, это
+      // относительный URL, а не схема, поэтому блокировать его было бы избыточно.
+      const html = '<a href="&amp;#106;avascript:alert(1)">x</a>'
+      expect(sanitizeHtml(html)).toBe(html)
+    })
+  })
+
+  describe("sanitizeHtml() — decode policy: exactly one pass", () => {
+    const blocked = (html: string) => expect(sanitizeHtml(html)).not.toMatch(/href|src/i)
+
+    it("blocks payloads that reach a dangerous scheme after ONE decode", () => {
+      blocked('<a href="&#106;avascript:alert(1)">x</a>')
+      blocked('<a href="&#x6a;avascript:alert(1)">x</a>')
+      blocked('<a href="javascript&colon;alert(1)">x</a>')
+      // Control character из entity вырезается в том же единственном проходе.
+      blocked('<a href="java&#9;script:alert(1)">x</a>')
+    })
+
+    it("lets double-encoded payloads through — one decode leaves an inert relative URL", () => {
+      // Обе записи после одного декодирования дают байт-в-байт одинаковый текст
+      // `&#106;avascript:alert(1)`. Раньше вердикты расходились: `&#38;#106;…` резался
+      // (`&#38;` → `&` на первом проходе + второй проход), а `&amp;#106;…` — нет,
+      // потому что `amp` отсутствует в NAMED_REFS. Теперь оба пропускаются.
+      const ampNumeric = '<a href="&#38;#106;avascript:alert(1)">x</a>'
+      const ampNamed = '<a href="&amp;#106;avascript:alert(1)">x</a>'
+      expect(sanitizeHtml(ampNumeric)).toBe(ampNumeric)
+      expect(sanitizeHtml(ampNamed)).toBe(ampNamed)
+    })
+
+    it("has no depth cliff: former-depth-6 nesting behaves like depth 2", () => {
+      // Вложенность глубины n: каждый проход снимает ровно одну обёртку `&#38;`.
+      // При MAX_DECODE_PASSES = 5 глубина 2-5 резалась, а 6+ проходила насквозь — вердикт
+      // зависел от числа обёрток. Теперь любая глубина ≥ 2 одинаково инертна.
+      const depth = (n: number) => `<a href="&${"#38;".repeat(n - 1)}#106;avascript:alert(1)">x</a>`
+      expect(depth(2)).toContain('href="&#38;#106;avascript:alert(1)"')
+      for (const n of [2, 5, 6, 7]) expect(sanitizeHtml(depth(n))).toBe(depth(n))
+    })
+  })
+
+  describe("sanitizeHtml() — adversarial confirmation: single-decode не ослабил guard", () => {
+    // Оракул «живости» — разбор ВЫВОДА настоящим HTML-парсером: строка может выглядеть
+    // безобидной, а парситься в живой атрибут (и наоборот). Проверяем результат разбора,
+    // а не подстроку.
+    const URL_ATTRS = ["href", "src", "srcset", "action", "formaction", "background", "poster", "xlink:href"]
+    const NUL = String.fromCharCode(0)
+    const TAB = String.fromCharCode(9)
+    const browserView = (value: string) => value.replace(/\s+/g, "").split(NUL).join("").toLowerCase()
+
+    const parse = (html: string) => {
+      const host = document.createElement("div")
+      host.innerHTML = sanitizeHtml(html)
+      return host
+    }
+
+    /** В разобранном выводе нет ни on*-handler'ов, ни URL-атрибута с опасной схемой. */
+    const noLiveDanger = (html: string) => {
+      for (const el of Array.from(parse(html).querySelectorAll("*"))) {
+        for (const name of el.getAttributeNames()) {
+          expect(name).not.toMatch(/^on/i)
+          if (!URL_ATTRS.includes(name.toLowerCase())) continue
+          expect(browserView(el.getAttribute(name) ?? "")).not.toMatch(/^(?:javascript:|vbscript:|data:text\/html)/)
+        }
+      }
+    }
+
+    it("blocks every single-decode spelling of a dangerous scheme", () => {
+      // Расширенный корпус: всё, до чего опасная схема добирается за ОДНО декодирование.
+      const payloads = [
+        // hex — с нулевым padding, без `;`, в обоих регистрах маркера и цифр
+        '<a href="&#x0006a;avascript:alert(1)">x</a>',
+        '<a href="&#x0006aavascript:alert(1)">x</a>',
+        '<a href="&#x6Aavascript:alert(1)">x</a>',
+        '<a href="&#X6Aavascript:alert(1)">x</a>',
+        // decimal — двоеточие без `;`, полностью закодированная схема
+        '<a href="javascript&#58alert(1)">x</a>',
+        '<a href="&#106avascript&#58alert(1)">x</a>',
+        '<a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;alert(1)">x</a>',
+        '<a href="jav&#x0000000061;script:alert(1)">x</a>',
+        // именованные ссылки: регистр имени не спасает, `&tab;`/`&newline;` тоже декодируются
+        '<a href="javascript&COLON;alert(1)">x</a>',
+        '<a href="&#106;avascript&colon;alert(1)">x</a>',
+        '<a href="java&tab;script:alert(1)">x</a>',
+        '<a href="java&newline;script:alert(1)">x</a>',
+        // control characters из entity и в виде префикса значения
+        '<a href="java&#0;script:alert(1)">x</a>',
+        '<a href="java&#10;script:alert(1)">x</a>',
+        '<a href="java&#x9;script:alert(1)">x</a>',
+        '<a href="&#32;javascript:alert(1)">x</a>',
+        '<a href="&#9;javascript:alert(1)">x</a>',
+        '<a href="   javascript:alert(1)">x</a>',
+        `<a href="&#1${TAB}06;avascript:alert(1)">x</a>`,
+        // регистр схемы
+        '<a href="JaVaScRiPt:alert(1)">x</a>',
+        '<a href="VBSCRIPT:msgbox(1)">x</a>',
+        '<a href="DATA:TEXT/HTML,x">x</a>',
+        // значение без кавычек
+        "<a href=javascript:alert(1)>x</a>",
+        "<a href=&#106;avascript:alert(1)>x</a>",
+        // остальные URL-атрибуты
+        '<div action="javascript:alert(1)">x</div>',
+        '<video poster="javascript:alert(1)"></video>',
+        '<table background="javascript:alert(1)"></table>',
+        '<a x="1"xlink:href="&#118;bscript:msgbox(1)">x</a>'
+      ]
+      for (const html of payloads) {
+        expect(sanitizeHtml(html)).not.toMatch(/javascript|vbscript|data:text\/html/i)
+        noLiveDanger(html)
+      }
+    })
+
+    it("сохраняет over-approximation: режет даже то, что браузер не исполнил бы", () => {
+      // Спека: `&#x6aavascript:` жадно читается как U+06AA, `&COLON;` не существует (регистр
+      // именованных ссылок значим), NUL в атрибуте становится U+FFFD. Ни один из этих URL
+      // не запустил бы код, но санитайзер всё равно вырезает атрибут — запас прочности.
+      expect(sanitizeHtml('<a href="&#x6aavascript:alert(1)">x</a>')).not.toMatch(/href/i)
+      expect(sanitizeHtml('<a href="javascript&COLON;alert(1)">x</a>')).not.toMatch(/href/i)
+      expect(sanitizeHtml(`<a href="java${NUL}script:alert(1)">x</a>`)).not.toMatch(/href/i)
+    })
+
+    it("оставляет double-encoded значения нетронутыми, и они инертны при разборе", () => {
+      // Каждая запись после ОДНОГО декодирования — относительный URL, а не схема. Проверяем
+      // не строку, а `a.protocol` после разбора: браузер резолвит их относительно документа.
+      const inert: Array<[string, string]> = [
+        ['<a href="&amp;#106;avascript:alert(1)">x</a>', "&#106;avascript:alert(1)"],
+        ['<a href="&#38;#106;avascript:alert(1)">x</a>', "&#106;avascript:alert(1)"],
+        ['<a href="&#x26;#106;avascript:alert(1)">x</a>', "&#106;avascript:alert(1)"],
+        ['<a href="&AMP;#106;avascript:alert(1)">x</a>', "&#106;avascript:alert(1)"],
+        ['<a href="&amp;#x6a;avascript:alert(1)">x</a>', "&#x6a;avascript:alert(1)"],
+        ['<a href="&#38;#x6a;avascript:alert(1)">x</a>', "&#x6a;avascript:alert(1)"],
+        ['<a href="javascript&amp;colon;alert(1)">x</a>', "javascript&colon;alert(1)"],
+        ['<a href="javascript&#38;colon;alert(1)">x</a>', "javascript&colon;alert(1)"],
+        ['<a href="jav&#38;#97;script:alert(1)">x</a>', "jav&#97;script:alert(1)"],
+        ['<a href="&#106;&#38;#97;vascript:alert(1)">x</a>', "j&#97;vascript:alert(1)"]
+      ]
+      for (const [html, decodedOnce] of inert) {
+        expect(sanitizeHtml(html)).toBe(html)
+        const a = parse(html).querySelector("a") as HTMLAnchorElement
+        expect(a.getAttribute("href")).toBe(decodedOnce)
+        expect(a.protocol).not.toBe("javascript:")
+        expect(a.protocol).not.toBe("vbscript:")
+        noLiveDanger(html)
+      }
+    })
+
+    it("в цепочке дубликатов побеждает инертное значение, а не опасное", () => {
+      // Дубликаты атрибутов: парсер оставляет ПЕРВЫЙ. Раньше первый (double-encoded) вырезался
+      // и выигрывал безопасный `/ok.png`; теперь выигрывает double-encoded — но он инертен,
+      // а опасный `onerror` по-прежнему вырезан.
+      const html = '<img src="&#38;#106;avascript:a"onerror="alert(1)"src="/ok.png">'
+      const out = sanitizeHtml(html)
+      expect(out).not.toMatch(/onerror/i)
+      const img = parse(html).querySelector("img") as Element
+      expect(img.getAttributeNames()).toEqual(["src"])
+      expect(img.getAttribute("src")).toBe("&#106;avascript:a")
+      expect(new URL(img.getAttribute("src") as string, "https://example.test/").protocol).toBe("https:")
+      noLiveDanger(html)
+    })
+
+    it("ранее исправленные дефекты остаются исправленными", () => {
+      // Безопасный атрибут перед опасным — опасный всё равно вырезается.
+      expect(sanitizeHtml('<a href="/ok"href="&#x6a;avascript:alert(1)">y</a>')).toBe('<a href="/ok">y</a>')
+      expect(sanitizeHtml('<img alt="1" src="/ok.png"src="&#x6a;avascript:x">')).toBe('<img alt="1" src="/ok.png">')
+      // Опасный + разрешённый инертный + безопасный: живой схемы не остаётся.
+      const chain = '<a href="javascript:a"href="&amp;#106;avascript:b"href="/ok">y</a>'
+      expect(sanitizeHtml(chain)).not.toMatch(/javascript:a/)
+      noLiveDanger(chain)
+      // Нет склейки токенов при удалении атрибута с entity-значением.
+      expect(sanitizeHtml('<scr href="&#x6a;avascript:x"ipt>alert(1)</script>')).not.toMatch(/<script/i)
+    })
+
+    it("не зависит от глубины вложенности по времени", () => {
+      // Цикла проходов нет ⇒ стоимость линейна по длине входа: глубина 2000 обрабатывается
+      // так же, как глубина 2 (раньше цена росла до MAX_DECODE_PASSES).
+      const deep = `<a href="&${"#38;".repeat(2000)}#106;avascript:alert(1)">x</a>`
+      const wide = `<a href="${"&#38;".repeat(5000)}&#106;avascript:x">y</a>`
+      const started = Date.now()
+      expect(sanitizeHtml(deep)).toBe(deep)
+      expect(sanitizeHtml(wide)).toBe(wide)
+      expect(Date.now() - started).toBeLessThan(1000)
+    })
+  })
+
   describe("Slots — subtitle (Issue 1)", () => {
     it("renders subtitle prop as plain text when no #subtitle slot is provided", () => {
       const wrapper = mount(Alert, {

@@ -514,6 +514,71 @@ describe("Switch Component Tests", () => {
       const cls = wrapper.find("[data-switch]").attributes("class") ?? ""
       expect(cls).toContain("relative")
     })
+
+    // L2: preflight из baseStyle (`button.fv`/`input.fv`) инжектится независимо от `unstyled`,
+    // но завязан на класс `fv`. Без него native control остаётся с UA-хромом.
+    it("keeps the bare `fv` class on <button role=switch> when unstyled: true", () => {
+      const wrapper = mount(Switch, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { switchingType: "switch" }
+      })
+      const cls = (wrapper.find("[data-input-switch]").attributes("class") ?? "").trim()
+      // Ровно `fv` — темы нет, есть только зацепка за UA-reset.
+      expect(cls).toBe("fv")
+    })
+
+    it("keeps the bare `fv` class on <input type=checkbox> when unstyled: true", () => {
+      const wrapper = mount(Switch, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { switchingType: "checkbox" }
+      })
+      const cls = (wrapper.find("[data-input-checkbox]").attributes("class") ?? "").trim()
+      expect(cls).toBe("fv")
+    })
+
+    it("leaves styled-mode classes on the native control untouched (contrast)", () => {
+      const wrapper = mount(Switch, {
+        global: { plugins: [appWithConfig({ unstyled: false })] },
+        props: { switchingType: "switch" }
+      })
+      const cls = (wrapper.find("[data-input-switch]").attributes("class") ?? "").trim()
+      // setStyle в styled-режиме всегда truthy (`fv {prefix}-switch …`), поэтому fallback — no-op.
+      expect(cls.startsWith("fv ")).toBe(true)
+      expect(cls).not.toBe("fv")
+      expect(cls).toContain("cursor-pointer")
+    })
+
+    // L2: UA-reset-зацепка `fv` живёт только в template-only binding (`classSwitchElement`).
+    // Публичный expose `classSwitch` обязан остаться тем же, чем был до фикса.
+    it("keeps the exposed `classSwitch` empty under unstyled: true while the DOM keeps `fv` (switch)", () => {
+      const wrapper = mount(Switch, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { switchingType: "switch" }
+      })
+      expect((wrapper.vm as any).classSwitch).toBe("")
+      expect((wrapper.find("[data-input-switch]").attributes("class") ?? "").trim()).toBe("fv")
+    })
+
+    it("keeps the exposed `classSwitch` empty under unstyled: true while the DOM keeps `fv` (checkbox)", () => {
+      const wrapper = mount(Switch, {
+        global: { plugins: [appWithConfig({ unstyled: true })] },
+        props: { switchingType: "checkbox" }
+      })
+      expect((wrapper.vm as any).classSwitch).toBe("")
+      expect((wrapper.find("[data-input-checkbox]").attributes("class") ?? "").trim()).toBe("fv")
+    })
+
+    it("leaves the exposed `classSwitch` identical to the rendered class in styled mode", () => {
+      const wrapper = mount(Switch, {
+        global: { plugins: [appWithConfig({ unstyled: false })] },
+        props: { switchingType: "switch" }
+      })
+      const exposed = String((wrapper.vm as any).classSwitch ?? "")
+      // setStyle вне unstyled всегда truthy и начинается с `fv ` → fallback не срабатывает,
+      // expose и DOM совпадают байт-в-байт.
+      expect(exposed.startsWith("fv ")).toBe(true)
+      expect(exposed).toBe(wrapper.find("[data-input-switch]").attributes("class"))
+    })
   })
 
   // ---------------------------------------------------------------------------

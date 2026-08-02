@@ -1435,17 +1435,25 @@ describe("Table Component", () => {
       expect(wrapper.find("[data-table]").attributes("aria-rowcount")).toBe("10")
     })
 
-    it("does NOT virtualize with grouping / pagination / asyncData:true", () => {
+    // Три opt-out-условия проверяются отдельными it(), а не одним: каждый mount на 500 строк
+    // рендерится без virtual-окна (это и есть суть проверки) и стоит ~0.5-2s в jsdom. Собранные
+    // в один тест, они выбирали почти весь testTimeout (5000ms) и падали по timeout при нагрузке
+    // на машину. Раздельные it() дают каждому случаю собственный бюджет времени.
+    it("does NOT virtualize with grouping", () => {
       const grouped = mount(Table, {
         props: { dataSource: genRows(500), grouping: "name" } as TableProps
       })
       expect(grouped.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+    })
 
+    it("does NOT virtualize with pagination", () => {
       const paged = mount(Table, {
         props: { dataSource: genRows(500), pagination: true, countVisibleRows: 3 } as TableProps
       })
       expect(paged.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+    })
 
+    it("does NOT virtualize with asyncData:true", () => {
       const asyncTrue = mount(Table, { props: { dataSource: genRows(500), asyncData: true } as TableProps })
       expect(asyncTrue.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
     })
@@ -3275,6 +3283,217 @@ describe("Table Component - T1 public API surface + T3 darkModeSelector", () => 
       await flushPromises()
       await nextTick()
       expect(wrapper.findComponent(Loading).props("color")).toBe("theme.500")
+    })
+  })
+})
+
+describe("Table Component - T2 aria-sort + доступный клавиатурный триггер сортировки", () => {
+  beforeAll(() => {
+    // @ts-ignore — этот describe — sibling основного, нужен свой IO-mock
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] } as Response)
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  const fruits = [
+    { name: "orange", color: "orange" },
+    { name: "banana", color: "yellow" }
+  ]
+
+  const mountTable = (columns: Array<Record<string, unknown>>) =>
+    mount(Table, { props: { dataSource: fruits, columns } as TableProps })
+
+  // sorting() пишет в sortColumns внутри setTimeout — без прокрутки таймеров aria-sort не обновится.
+  const settleSort = async () => {
+    vi.advanceTimersByTime(850)
+    await nextTick()
+  }
+
+  it('sortable <th> стартует с aria-sort="none", у несортируемой колонки атрибута нет вовсе', async () => {
+    const wrapper = mountTable([
+      { dataField: "name", isSort: true },
+      { dataField: "color", isSort: false }
+    ])
+    await nextTick()
+
+    const ths = wrapper.findAll("[data-table-thead-col]")
+    expect(ths[0].attributes("aria-sort")).toBe("none")
+    // Именно отсутствие атрибута: aria-sort="none" на несортируемой колонке объявил бы её sortable.
+    expect(ths[1].element.hasAttribute("aria-sort")).toBe(false)
+  })
+
+  it("aria-sort проходит цикл none → ascending → descending → none по мере активации", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([
+      { dataField: "name", isSort: true },
+      { dataField: "color", isSort: true }
+    ])
+    await nextTick()
+    const ariaSortOf = (index: number) => wrapper.findAll("[data-table-thead-col]")[index].attributes("aria-sort")
+    const trigger = () => wrapper.findAll("[data-table-thead-col-sort]")[0]
+
+    expect(ariaSortOf(0)).toBe("none")
+
+    await trigger().trigger("click")
+    await settleSort()
+    expect(ariaSortOf(0)).toBe("ascending")
+
+    await trigger().trigger("click")
+    await settleSort()
+    expect(ariaSortOf(0)).toBe("descending")
+
+    await trigger().trigger("click")
+    await settleSort()
+    expect(ariaSortOf(0)).toBe("none")
+
+    // Соседняя сортируемая колонка своё состояние не меняла.
+    expect(ariaSortOf(1)).toBe("none")
+  })
+
+  it("aria-sort отражает defaultSort ещё до любого взаимодействия", async () => {
+    const wrapper = mountTable([
+      { dataField: "name", isSort: true, defaultSort: "asc" },
+      { dataField: "color", isSort: true, defaultSort: "desc" }
+    ])
+    await nextTick()
+
+    const ths = wrapper.findAll("[data-table-thead-col]")
+    expect(ths[0].attributes("aria-sort")).toBe("ascending")
+    expect(ths[1].attributes("aria-sort")).toBe("descending")
+  })
+
+  it('триггер сортировки — нативный <button type="button">, попадающий в tab order', async () => {
+    const wrapper = mountTable([{ dataField: "name", isSort: true }])
+    await nextTick()
+
+    const trigger = wrapper.find("[data-table-thead-col-sort]")
+    expect(trigger.element.tagName).toBe("BUTTON")
+    expect(trigger.attributes("type")).toBe("button")
+    // Нативная кнопка фокусируется сама: отрицательного tabindex быть не должно.
+    expect(trigger.attributes("tabindex")).toBeUndefined()
+    expect((trigger.element as HTMLButtonElement).tabIndex).toBe(0)
+  })
+
+  it("Enter запускает сортировку ровно на один шаг цикла (нет double-fire)", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([{ dataField: "name", isSort: true }])
+    await nextTick()
+
+    await wrapper.find("[data-table-thead-col-sort]").trigger("keydown.enter")
+    await settleSort()
+    // Двойной вызов sorting() увёл бы состояние сразу в "descending".
+    expect(wrapper.find("[data-table-thead-col]").attributes("aria-sort")).toBe("ascending")
+  })
+
+  it("keydown Enter помечается defaultPrevented — именно это гасит синтетический click браузера", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([{ dataField: "name", isSort: true }])
+    await nextTick()
+
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+    const notPrevented = wrapper.find("[data-table-thead-col-sort]").element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(notPrevented).toBe(false)
+
+    await settleSort()
+    expect(wrapper.find("[data-table-thead-col]").attributes("aria-sort")).toBe("ascending")
+  })
+
+  it("Space запускает сортировку и preventDefault'ит событие (страница не скроллится)", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([{ dataField: "name", isSort: true }])
+    await nextTick()
+
+    const event = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true })
+    const notPrevented = wrapper.find("[data-table-thead-col-sort]").element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(notPrevented).toBe(false)
+
+    await settleSort()
+    expect(wrapper.find("[data-table-thead-col]").attributes("aria-sort")).toBe("ascending")
+  })
+
+  it("клик по триггеру тоже сдвигает цикл ровно на один шаг", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([{ dataField: "name", isSort: true }])
+    await nextTick()
+
+    await wrapper.find("[data-table-thead-col-sort]").trigger("click")
+    await settleSort()
+    expect(wrapper.find("[data-table-thead-col]").attributes("aria-sort")).toBe("ascending")
+  })
+
+  it("accessible name триггера берётся из caption колонки", async () => {
+    const wrapper = mountTable([
+      { dataField: "name", isSort: true },
+      { dataField: "color", isSort: true, caption: "Цвет" }
+    ])
+    await nextTick()
+
+    const triggers = wrapper.findAll("[data-table-thead-col-sort]")
+    // caption по умолчанию выводится из dataField при нормализации колонок — новый locale-key не нужен.
+    expect(triggers[0].attributes("aria-label")).toBe("Name")
+    expect(triggers[1].attributes("aria-label")).toBe("Цвет")
+  })
+
+  it("явно пустой caption откатывается на dataField — безымянных кнопок не остаётся", async () => {
+    const wrapper = mountTable([{ dataField: "color", isSort: true, caption: "" }])
+    await nextTick()
+
+    expect(wrapper.find("[data-table-thead-col-sort]").attributes("aria-label")).toBe("color")
+  })
+
+  describe("unstyled — UA-хром нативного триггера", () => {
+    // unstyled инициализируется через window.FishtVue fallback при install — чистим, чтобы
+    // не утекало в соседние тесты/файлы (см. memory: window.FishtVue leak across Vitest files).
+    afterEach(() => {
+      try {
+        // @ts-ignore
+        delete window.FishtVue
+      } catch {
+        // @ts-ignore
+        window.FishtVue = undefined
+      }
+    })
+
+    it("в unstyled-режиме триггер сохраняет класс `fv` — preflight снимает нативный chrome кнопки", async () => {
+      const wrapper = mount(Table, {
+        global: { plugins: [[FishtVue, { unstyled: true }] as any] },
+        props: { dataSource: fruits, columns: [{ dataField: "name", isSort: true }] } as TableProps
+      })
+      await nextTick()
+
+      const trigger = wrapper.find("[data-table-thead-col-sort]")
+      // Элемент остаётся нативной кнопкой — клавиатурная семантика T2 не откатывается.
+      expect(trigger.element.tagName).toBe("BUTTON")
+      const classes = trigger.classes()
+      // `fv` — единственный крючок, по которому baseStyle гасит border/background/padding кнопки.
+      expect(classes).toContain("fv")
+      // При этом никакой темы: ни component-scope класса, ни utility-классов.
+      expect(classes).not.toContain("fishtvue-table")
+      expect(classes).toEqual(["fv"])
+    })
+
+    it("styled-режим не меняется: триггер по-прежнему получает полный набор классов темы", async () => {
+      const wrapper = mountTable([{ dataField: "name", isSort: true }])
+      await nextTick()
+
+      const classes = wrapper.find("[data-table-thead-col-sort]").classes()
+      expect(classes).toContain("fv")
+      expect(classes).toContain("fishtvue-table")
+      expect(classes).toContain("flex")
+      expect(classes).toContain("items-center")
+      expect(classes).toContain("cursor-pointer")
     })
   })
 })
