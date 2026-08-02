@@ -5,11 +5,17 @@ import Button from "fishtvue/button/Button.vue"
 import type { ButtonExpose } from "fishtvue/button/Button"
 
 // Дожидается резолва lazy Loading/FixWindow (defineAsyncComponent под polymorphic dynamic
-// root): помимо микротасков (flushPromises) нужен macrotask-тик.
-const flushAsyncComponents = async () => {
-  await flushPromises()
-  await new Promise((r) => setTimeout(r))
-  await flushPromises()
+// root): помимо микротасков (flushPromises) нужны macrotask-тики. Их количество не
+// фиксировано — при холодном графе модулей Vite догружает цепочку динамического импорта за
+// несколько тиков, поэтому опрашиваем готовность, а не ждём ровно один тик.
+const flushAsyncComponents = async (isReady: () => boolean, maxTicks = 50) => {
+  for (let tick = 0; tick < maxTicks; tick++) {
+    await flushPromises()
+    await new Promise((r) => setTimeout(r))
+    await flushPromises()
+    if (isReady()) return
+  }
+  throw new Error(`lazy-компонент не резолвился за ${maxTicks} macrotask-тиков`)
 }
 
 describe("Button Component Tests", () => {
@@ -73,7 +79,7 @@ describe("Button Component Tests", () => {
       expect(icon.exists()).toBe(true)
 
       // Loading подгружается лениво (Issue 6) — ждём резолва async-компонента.
-      await flushAsyncComponents()
+      await flushAsyncComponents(() => wrapper.findComponent({ name: "Loading" }).exists())
       const loading = wrapper.findComponent({ name: "Loading" })
       expect(loading.exists()).toBe(true)
     })
@@ -131,7 +137,7 @@ describe("Button Component Tests", () => {
         }
       })
 
-      await flushAsyncComponents()
+      await flushAsyncComponents(() => wrapper.findComponent({ name: "Loading" }).exists())
       const loading = wrapper.findComponent({ name: "Loading" })
       expect(loading.exists()).toBe(true)
     })
@@ -147,7 +153,7 @@ describe("Button Component Tests", () => {
       })
 
       // FixWindow подгружается лениво (Issue 6) — ждём резолва перед проверкой slot/компонента.
-      await flushAsyncComponents()
+      await flushAsyncComponents(() => wrapper.findComponent({ name: "FixWindow" }).exists())
       const slot = wrapper.find(".slot-content")
       expect(slot.exists()).toBe(true)
       expect(slot.text()).toBe("Slot Content")
@@ -167,7 +173,7 @@ describe("Button Component Tests", () => {
         }
       })
 
-      await flushAsyncComponents()
+      await flushAsyncComponents(() => wrapper.findComponent({ name: "FixWindow" }).exists())
       const fixWindow = wrapper.findComponent({ name: "FixWindow" })
       expect(fixWindow.exists()).toBe(true)
       expect(fixWindow.props("mode")).toBe("filled")
