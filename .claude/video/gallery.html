@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Gallery</title>
+
+  <!-- Tailwind CDN with config matching dashboard EXACTLY -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar matching dashboard */
+    ::-webkit-scrollbar { width: 12px; height: 12px; }
+    ::-webkit-scrollbar-track { background: #030712; }
+    ::-webkit-scrollbar-thumb { background: #991b1b; border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+    * { scrollbar-color: #991b1b #030712; scrollbar-width: thin; }
+
+    /* Play button overlay */
+    .play-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.3);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .video-card:hover .play-overlay { opacity: 1; }
+
+    /* Duration badge */
+    .duration-badge {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Type badges */
+    .badge-demo { background: rgba(220, 38, 38, 0.2); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.3); }
+    .badge-surreal { background: rgba(147, 51, 234, 0.2); color: #d8b4fe; border: 1px solid rgba(147, 51, 234, 0.3); }
+
+    /* Filter pills */
+    .filter-pill {
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-pill.active {
+      background: #991b1b;
+      color: #e5e7eb;
+    }
+    .filter-pill:not(.active):hover {
+      background: rgba(153, 27, 27, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-300 min-h-screen p-4 font-mono">
+
+  <!-- Main Container - Full Width -->
+  <div class="w-full">
+
+    <!-- Terminal Card Header (matching TerminalCard.tsx EXACTLY) -->
+    <div class="font-mono relative flex flex-col min-h-0">
+      <!-- Terminal prompt line - ABOVE the bordered container -->
+      <div class="flex items-center gap-2 mb-2 shrink-0">
+        <!-- Terminal icon (SVG matching lucide Terminal) -->
+        <svg class="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+        <span class="text-gray-400">ls -la</span>
+        <span class="text-red-300 font-mono">.claude/video/</span>
+      </div>
+
+      <!-- Bordered container -->
+      <div class="border border-red-800 rounded bg-gray-900/80 flex flex-col min-h-0">
+        <!-- Header row inside container -->
+        <div class="bg-gray-900 px-4 py-2 border-b border-red-800 flex items-center justify-between gap-2 rounded-t shrink-0">
+          <div class="text-gray-400 text-sm">
+            Project: <span id="project-name" class="text-red-400">Loading...</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <!-- Filter pills -->
+            <div id="filter-pills" class="flex items-center gap-1">
+              <button class="filter-pill active px-2.5 py-1 text-xs rounded border border-red-800" data-filter="all">All</button>
+              <button class="filter-pill px-2.5 py-1 text-xs rounded border border-red-800 text-gray-400" data-filter="demo">Demo</button>
+              <button class="filter-pill px-2.5 py-1 text-xs rounded border border-red-800 text-gray-400" data-filter="surreal">Surreal</button>
+            </div>
+            <span id="run-count" class="text-gray-500 text-xs"></span>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="flex flex-col items-center justify-center py-12">
+          <div class="w-8 h-8 border-2 border-gray-600 border-t-red-500 rounded-full animate-spin mb-4"></div>
+          <p class="text-gray-400">Loading gallery...</p>
+        </div>
+
+        <!-- Gallery Content (populated by JavaScript) -->
+        <div id="gallery-container" class="hidden p-4 overflow-auto"></div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-12 text-center px-4">
+          <svg class="w-16 h-16 text-gray-600 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="23 7 16 12 23 17 23 7"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+          <h2 class="text-xl font-semibold text-gray-300 mb-2">No Videos Yet</h2>
+          <p class="text-gray-500 text-sm">Run the <code class="text-red-400">/demo</code> or <code class="text-purple-400">/surreal</code> workflow to generate your first videos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for video playback -->
+  <div id="modal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="absolute inset-0 bg-black/90 cursor-pointer" onclick="closeModal()"></div>
+    <div class="relative flex flex-col items-center gap-4 z-10 max-w-[90vw] max-h-[90vh] m-auto mt-[5vh]">
+      <button onclick="closeModal()" aria-label="Close modal" class="absolute -top-10 right-0 text-gray-300 text-4xl cursor-pointer p-2 leading-none hover:text-red-400 transition-colors">&times;</button>
+      <div class="max-w-[80vw] max-h-[70vh] rounded overflow-hidden flex items-center justify-center border border-red-800 bg-black">
+        <video id="modal-video" controls class="max-w-full max-h-[70vh]">
+          <source id="modal-source" src="" type="video/mp4">
+        </video>
+      </div>
+      <div class="flex gap-2 items-center">
+        <span id="modal-title" class="text-gray-300 text-sm font-semibold"></span>
+        <span id="modal-type-badge" class="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded"></span>
+        <a id="modal-download" href="" download class="bg-transparent border border-red-800 text-gray-400 hover:bg-red-800 hover:text-gray-900 px-3 py-1.5 text-xs rounded transition-colors">Download</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Video Gallery JavaScript - Matching Dashboard Patterns
+     */
+
+    let currentFilter = 'all';
+    let allRuns = [];
+
+    // ========================================
+    // Manifest Loading
+    // ========================================
+    async function loadManifest() {
+      try {
+        const response = await fetch('./manifest.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        console.warn('Could not load manifest.json:', error.message);
+        return null;
+      }
+    }
+
+    // ========================================
+    // Formatting Helpers
+    // ========================================
+    function formatDuration(seconds) {
+      if (!seconds || seconds <= 0) return '';
+      const m = Math.floor(seconds / 60);
+      const s = Math.round(seconds % 60);
+      return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `0:${String(s).padStart(2, '0')}`;
+    }
+
+    function formatDate(iso) {
+      return new Date(iso).toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    const escapeHtml = (str) => str ? str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;') : '';
+
+    // ========================================
+    // Filter Logic
+    // ========================================
+    function setupFilters() {
+      document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          currentFilter = pill.dataset.filter;
+          document.querySelectorAll('.filter-pill').forEach(p => {
+            p.classList.remove('active');
+            p.classList.add('text-gray-400');
+          });
+          pill.classList.add('active');
+          pill.classList.remove('text-gray-400');
+          renderGallery();
+        });
+      });
+    }
+
+    // ========================================
+    // Gallery Rendering
+    // ========================================
+    function renderGallery() {
+      const filtered = currentFilter === 'all'
+        ? allRuns
+        : allRuns.filter(r => r.type === currentFilter);
+
+      if (filtered.length === 0) {
+        if (allRuns.length === 0) {
+          showEmptyState();
+        } else {
+          // Has runs but none match filter
+          const container = document.getElementById('gallery-container');
+          container.innerHTML = '<div class="text-center py-8 text-gray-500">No videos match this filter.</div>';
+          container.classList.remove('hidden');
+          document.getElementById('empty-state').classList.add('hidden');
+        }
+        document.getElementById('run-count').textContent = `${filtered.length} video${filtered.length !== 1 ? 's' : ''}`;
+        return;
+      }
+
+      const container = document.getElementById('gallery-container');
+      container.innerHTML = '';
+
+      document.getElementById('run-count').textContent = `${filtered.length} video${filtered.length !== 1 ? 's' : ''}`;
+
+      const grid = document.createElement('div');
+      grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+
+      filtered.forEach(run => {
+        const card = createVideoCard(run);
+        grid.appendChild(card);
+      });
+
+      container.appendChild(grid);
+      container.classList.remove('hidden');
+      document.getElementById('empty-state').classList.add('hidden');
+    }
+
+    function createVideoCard(run) {
+      const card = document.createElement('div');
+      card.className = 'video-card bg-gray-900/50 rounded-lg p-3 border border-red-800 hover:border-red-600 transition-colors cursor-pointer';
+      card.onclick = () => openModal(run);
+
+      const thumbnailSrc = run.thumbnail || '';
+      const duration = formatDuration(run.duration_seconds);
+      const typeBadge = run.type === 'demo' ? 'badge-demo' : 'badge-surreal';
+      const typeLabel = run.type === 'demo' ? 'Demo' : 'Surreal';
+      const title = escapeHtml(run.title || run.id);
+      const date = run.timestamp ? formatDate(run.timestamp) : '';
+
+      // Metadata line
+      const meta = [];
+      if (run.metadata?.platform) meta.push(run.metadata.platform);
+      if (run.metadata?.provider) meta.push(run.metadata.provider);
+
+      card.innerHTML = `
+        <div class="relative w-full aspect-video bg-gray-800 rounded overflow-hidden">
+          ${thumbnailSrc
+            ? `<img src="${thumbnailSrc}" alt="${title}" loading="lazy" class="w-full h-full object-cover">`
+            : `<div class="w-full h-full flex items-center justify-center text-gray-600">
+                <svg class="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <polygon points="23 7 16 12 23 17 23 7"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+              </div>`
+          }
+          <div class="play-overlay">
+            <svg class="w-12 h-12 text-white drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </div>
+          ${duration ? `<span class="duration-badge text-white">${duration}</span>` : ''}
+        </div>
+        <div class="flex justify-between items-start mt-3 gap-2">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-gray-300 truncate">${title}</div>
+            <div class="text-xs text-gray-500 mt-0.5">${date}</div>
+            ${meta.length > 0 ? `<div class="text-xs text-gray-600 mt-0.5">${escapeHtml(meta.join(' / '))}</div>` : ''}
+          </div>
+          <span class="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded shrink-0 ${typeBadge}">${typeLabel}</span>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // ========================================
+    // Modal Functions
+    // ========================================
+    function openModal(run) {
+      const modal = document.getElementById('modal');
+      const video = document.getElementById('modal-video');
+      const source = document.getElementById('modal-source');
+      const title = document.getElementById('modal-title');
+      const badge = document.getElementById('modal-type-badge');
+      const download = document.getElementById('modal-download');
+
+      source.src = run.video || '';
+      source.type = run.video?.endsWith('.webm') ? 'video/webm' : 'video/mp4';
+      video.load();
+
+      title.textContent = run.title || run.id;
+
+      badge.textContent = run.type === 'demo' ? 'Demo' : 'Surreal';
+      badge.className = `px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded ${run.type === 'demo' ? 'badge-demo' : 'badge-surreal'}`;
+
+      download.href = run.video || '';
+      download.download = `${run.id}.mp4`;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex', 'items-center', 'justify-center');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      const video = document.getElementById('modal-video');
+      video.pause();
+      modal.classList.add('hidden');
+      modal.classList.remove('flex', 'items-center', 'justify-center');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    // ========================================
+    // Empty State
+    // ========================================
+    function showEmptyState() {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('gallery-container').classList.add('hidden');
+      document.getElementById('empty-state').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      document.getElementById('loading').classList.add('hidden');
+    }
+
+    // ========================================
+    // Initialization
+    // ========================================
+    document.addEventListener('DOMContentLoaded', async () => {
+      setupFilters();
+
+      const manifest = await loadManifest();
+
+      if (!manifest || !manifest.runs || manifest.runs.length === 0) {
+        showEmptyState();
+        document.getElementById('project-name').textContent = manifest?.projectName || 'Untitled Project';
+        return;
+      }
+
+      document.getElementById('project-name').textContent = manifest.projectName || manifest.project_name || 'Untitled Project';
+
+      // Sort by timestamp descending
+      allRuns = [...manifest.runs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      hideLoading();
+      renderGallery();
+    });
+  </script>
+</body>
+</html>

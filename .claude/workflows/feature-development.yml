@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=../schemas/workflow.schema.json
+# Feature Development Workflow
+# Demonstrates: Linear phase execution, dynamic agent counts, aggregation
+#
+# This workflow orchestrates complete feature development from planning through implementation.
+# Each phase depends on the previous one, creating a linear execution flow.
+# Research phases run BEFORE planning to inform architectural decisions.
+
+name: feature-development
+description: |
+  Complete feature development workflow from research through implementation.
+  Research-planner identifies topics, parallel research agents investigate them,
+  then feature-planner creates an informed task breakdown.
+
+# Phase 0: Research Planning
+# - Spawns one research-planner agent to analyze the feature request
+# - Identifies 3-8 research topics from multiple analysis angles
+# - Outputs research specification for downstream research agents
+phases:
+  - id: research_planning
+    agent: research-planner
+    count: 1
+    description: Analyze feature request and identify research topics
+    next: research
+    next_conditions: []
+
+  # Phase 1: Research
+  # - Spawns research agents dynamically based on research-planner output
+  # - Uses 'from_previous' to spawn one research agent per topic
+  # - Each research agent writes a report to docs/research/<topic>.md
+  - id: research
+    agent: research
+    count: from_previous
+    description: Conduct parallel research on identified topics
+    next: planning
+    next_conditions:
+      - condition: all_passed
+        next_phase: planning
+
+  # Phase 2: Feature Planning
+  # - Spawns one feature-planner agent to analyze requirements
+  # - Now informed by research reports from the previous phase
+  # - Outputs task specifications for downstream task creation
+  - id: planning
+    agent: feature-planner
+    count: 1
+    description: Analyze requirements and create task specifications (informed by research)
+    next: task_creation
+    next_conditions: []
+
+  # Phase 3: Task Creation
+  # - Spawns task-maker agents dynamically based on planning output
+  # - Uses 'from_previous' to spawn one task-maker per task specification
+  # - Each task-maker creates one backlog task file
+  #
+  # How from_previous works:
+  #   1. Feature-planner outputs results (e.g., 3 task specifications)
+  #   2. Workflow engine counts results and spawns that many task-makers
+  #   3. Each task-maker receives one task specification
+  - id: task_creation
+    agent: task-maker
+    count: from_previous
+    description: Create detailed backlog task files from specifications
+    next: implementation
+    next_conditions:
+      - condition: all_passed
+        next_phase: implementation
+      - condition: any_failed
+        next_phase: task_creation
+
+  # Phase 4: Implementation
+  # - Spawns implementation agents based on task assignee
+  # - Agent type determined by task.assignee field (frontend-engineer, backend-engineer, etc.)
+  # - Runs in parallel for each task
+  # - Proceeds to review phase after all implementations complete
+  - id: implementation
+    agent: by_assignment
+    count: from_previous
+    description: Implement tasks with type-specific agents
+    next: review
+    next_conditions:
+      - condition: all_passed
+        next_phase: review
+
+  # Phase 5: Code Review
+  # - Spawns one code-reviewer agent after all implementations complete
+  # - Aggregates all implementation outputs for comprehensive review
+  # - Terminal phase (next: null) - workflow completes after this phase
+  - id: review
+    agent: code-reviewer
+    count: 1
+    aggregation: collect_all
+    description: Review all implementation changes
+    next: null
+    next_conditions: []
+
+# Workflow Metadata
+metadata:
+  author: claude-workflow
+  tags:
+    - feature
+    - multi-phase
+    - linear
+    - research
+  created: "2025-12-09"
+version: "2.0.0"
+
+# Notes:
+# - This is a fully linear workflow with no loops or conditional branches
+# - Each phase waits for the previous phase to complete before starting
+# - Dynamic agent spawning ensures scalability for any feature size
+# - Research phases (0-1) inform the planning phase with concrete findings
+# - The workflow is deterministic and easy to reason about

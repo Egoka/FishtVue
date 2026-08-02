@@ -1,0 +1,93 @@
+{
+  "components": {
+    "agents": [
+      "Explore",
+      "auto-fixer",
+      "backend-engineer",
+      "cleanup-agent",
+      "code-reviewer",
+      "config-setup-agent",
+      "cto-architect",
+      "debugger",
+      "devops-engineer",
+      "feature-planner",
+      "frontend-engineer",
+      "lint-fixer",
+      "lint-resolution-planner",
+      "pr-document-maker",
+      "qa-engineer",
+      "qa-resolution-planner",
+      "research",
+      "research-planner",
+      "task-maker",
+      "workflow-aggregator"
+    ],
+    "docs": false,
+    "hooks": {
+      "compliance": true,
+      "integrations": true,
+      "orchestration": true,
+      "proactive": true,
+      "quality": true,
+      "recovery": true,
+      "taskWorkflow": true,
+      "tracking": true,
+      "videoWorkflow": true
+    },
+    "scripts": false,
+    "skills": [
+      "behavioral-testing",
+      "chrome-devtools",
+      "context7-research",
+      "d",
+      "exa-research",
+      "lint-fix",
+      "playwright-testing",
+      "project-setup",
+      "qa-testing",
+      "react-development",
+      "ref-research",
+      "replicate-models",
+      "sequential-thinking",
+      "serena-integration",
+      "tailwind-v4",
+      "task-management",
+      "testing-workflow",
+      "workflow-generator",
+      "worktree"
+    ]
+  },
+  "created": "2026-08-02T11:14:33.299Z",
+  "mcpServers": {
+    "localServers": [],
+    "useProxy": false
+  },
+  "tooling": {
+    "codeQuality": {
+      "eslint": true,
+      "knip": true,
+      "stylelint": true,
+      "typescript": true
+    },
+    "tailwind": false,
+    "gitHooks": {
+      "enabled": true,
+      "eslint": true,
+      "stylelint": true,
+      "tailwind": false,
+      "typescript": true
+    }
+  },
+  "updated": "2026-08-02T11:14:33.300Z",
+  "version": "1.0",
+  "packageVersion": "1.0.19",
+  "workflow": {},
+  "features": [
+    "core",
+    "qa",
+    "lint",
+    "setup"
+  ],
+  "_packagePath": "/Users/egorbondarenko/.nvm/versions/node/v24.12.0/lib/node_modules/claude-workflow/dist",
+  "_projectRoot": "/Users/egorbondarenko/WebstormProjects/FishtVue"
+}

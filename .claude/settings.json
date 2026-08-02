@@ -1,0 +1,257 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "WebFetch",
+      "WebSearch",
+      "Glob",
+      "Grep",
+      "Task",
+      "ExitPlanMode",
+      "Skill",
+      "BashOutput",
+      "KillShell",
+      "mcp__mcp-proxy__*",
+      "mcp__chrome-devtools__*",
+      "mcp__playwright__*",
+      "mcp__sequential-thinking__*",
+      "mcp__serena__*"
+    ],
+    "deny": [],
+    "ask": [
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "NotebookEdit",
+      "TodoWrite",
+      "Bash(*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)",
+      "Bash(git rebase:*)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git clean:*)",
+      "Bash(git stash drop:*)",
+      "Bash(git stash pop:*)",
+      "Bash(git worktree add:*)",
+      "Bash(git worktree remove:*)",
+      "Bash(docker *)",
+      "Bash(npm run docker*)",
+      "Bash(gh:*)",
+      "Bash(npm publish:*)",
+      "Bash(npm version:*)",
+      "Bash(rm:*)",
+      "Bash(rm -r:*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/recovery/workflow-context-restore.js",
+            "description": "Restore workflow context after /compact or session restart."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/workflow-initializer.js",
+            "description": "Initialize workflow state when /workflow command is detected."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/compliance/worktree-boundary-bypass.js",
+            "description": "Clears worktree boundary when user says 'edit main repo' or similar bypass phrases"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/recovery/goal-context-restore.js",
+            "description": "Restore goal context after /compact."
+          },
+          {
+            "type": "command",
+            "command": "CLAUDE_HOOK_EVENT_NAME=UserPromptSubmit node .claude/hooks/tracking/session-state-writer.js",
+            "description": "Write session state 'working' when user submits a prompt"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/agent-context-writer.js",
+            "description": "Writes agent context to file BEFORE Task tool spawns agent. Must run FIRST so path-validator can identify the agent."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/tracking/session-start.js",
+            "description": "Track session start for analytics. Writes session_start event with idempotency."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/phase-enforcement.js"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/compliance/config-file-protection.js"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/compliance/planning-agent-tool-blocker.js",
+            "description": "Blocks Task/NotebookEdit tools for planning agents (feature-planner, cto-architect, v0-planner)"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/video-workflow/demo-video-tool-blocker.js",
+            "description": "Blocks chrome-devtools MCP tools for demo-recorder - must use Playwright/mcp-proxy instead"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/video-workflow/video-prompt-enforcement.js",
+            "description": "Blocks demo-recorder spawn unless video prompt file has status Ready with all required fields"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/compliance/worktree-boundary-enforcer.js",
+            "description": "Enforces worktree boundary by blocking Write/Edit outside boundary. Bypass: CLAUDE_WORKTREE_BOUNDARY=ignore"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/compliance/path-validator.js",
+            "description": "Unified path validation hook with rule-based architecture for task files, feature specs, logos, and video workflows"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/recovery/large-file-precheck-pretooluse.js",
+            "description": "Proactively blocks Read operations on files >100KB to prevent token limit failures. Provides helpful pagination/Grep instructions instead of allowing Read tool to fail silently."
+          },
+          {
+            "type": "command",
+            "command": "CLAUDE_HOOK_EVENT_NAME=PreToolUse node .claude/hooks/tracking/session-state-writer.js",
+            "description": "Write session state 'working' on tool use"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/agent-schema-injector.js",
+            "description": "Injects output schema into agent prompts to ensure structured JSON responses from spawned agents"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/agent-context-cleaner.js",
+            "description": "Clears agent context file AFTER Task tool completes. Must run FIRST to prevent stale context affecting subsequent operations."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/compliance/worktree-boundary-detector.js",
+            "description": "Detects git worktree add/remove commands and manages worktree boundary state"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/tracking/post-tool-use-tracker.js"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/tracking/agent-spawning-tracker.js"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/tracking/skill-tracker-posttooluse.js"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/agent-orchestrator.js"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/phase-completion-tracker.js"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/feature-planner-validator.js",
+            "description": "Validates feature-planner created spec file before outputting JSON. Marks phase failed and recommends respawn if missing."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/task-outcome-tracker.js",
+            "description": "Detects rate limit, cancellation, and error patterns in Task tool results. Updates agent status for respawn enforcement."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/task-workflow/pipeline-agent-trigger.js",
+            "description": "Triggers next agent in pipeline: task-maker → implementation → code-reviewer"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/task-workflow/enforce-ac-completion.js",
+            "description": "Blocks task completion unless ALL ACs are checked. Requires blocker documentation if marking Blocked."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/recovery/large-file-retry-posttooluse.js"
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/compliance/planning-agent-json-validator.js",
+            "description": "Validates feature-planner outputs valid JSON matching the universal agent schema"
+          },
+          {
+            "type": "command",
+            "command": "CLAUDE_HOOK_EVENT_NAME=PostToolUse node .claude/hooks/tracking/session-state-writer.js",
+            "description": "Write session state 'working' after tool use"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/orchestration/rate-limit-rotation.js",
+            "description": "Detects rate limit errors in main session and triggers automatic account rotation via dashboard API."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/tracking/goal-progress-checkpoint.js",
+            "description": "Saves goal progress checkpoint when Claude's turn ends."
+          },
+          {
+            "type": "command",
+            "command": "node /Users/egorbondarenko/WebstormProjects/FishtVue/.claude/hooks/tracking/tmux-notification.js",
+            "description": "Triggers tmux bell and desktop notification when Claude finishes"
+          },
+          {
+            "type": "command",
+            "command": "CLAUDE_HOOK_EVENT_NAME=Stop node .claude/hooks/tracking/session-state-writer.js",
+            "description": "Write session state 'idle' when Claude's turn ends"
+          }
+        ]
+      }
+    ]
+  },
+  "outputStyle": "default",
+  "thinkingMode": "enabled",
+  "workflow": {
+    "max_concurrent_agents": 3
+  }
+}

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banner Gallery</title>
+
+  <!-- Tailwind CDN with config matching dashboard EXACTLY -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar matching dashboard */
+    ::-webkit-scrollbar { width: 12px; height: 12px; }
+    ::-webkit-scrollbar-track { background: #030712; }
+    ::-webkit-scrollbar-thumb { background: #991b1b; border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+    * { scrollbar-color: #991b1b #030712; scrollbar-width: thin; }
+
+    /* Background variants for banner preview */
+    .dark-bg { background: #030712; }
+    .light-bg { background: #f3f4f6; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-300 min-h-screen p-4 font-mono">
+
+  <!-- Main Container - Full Width -->
+  <div class="w-full">
+
+    <!-- Terminal Card Header (matching TerminalCard.tsx EXACTLY) -->
+    <div class="font-mono relative flex flex-col min-h-0">
+      <!-- Terminal prompt line - ABOVE the bordered container -->
+      <div class="flex items-center gap-2 mb-2 shrink-0">
+        <svg class="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+        <span class="text-gray-400">ls -la</span>
+        <span class="text-red-300 font-mono">.claude/banners/</span>
+      </div>
+
+      <!-- Bordered container -->
+      <div class="border border-red-800 rounded bg-gray-900/80 flex flex-col min-h-0">
+        <!-- Header row inside container -->
+        <div class="bg-gray-900 px-4 py-2 border-b border-red-800 flex items-center justify-between gap-2 rounded-t shrink-0">
+          <div class="text-gray-400 text-sm">
+            Project: <span id="project-name" class="text-red-400">Loading...</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="run-count" class="text-gray-500 text-xs"></span>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="flex flex-col items-center justify-center py-12">
+          <div class="w-8 h-8 border-2 border-gray-600 border-t-red-500 rounded-full animate-spin mb-4"></div>
+          <p class="text-gray-400">Loading gallery...</p>
+        </div>
+
+        <!-- Gallery Content (populated by JavaScript) -->
+        <div id="gallery-container" class="hidden p-4 overflow-auto"></div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-12 text-center px-4">
+          <svg class="w-16 h-16 text-gray-600 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="7" width="20" height="10" rx="2"/>
+            <path d="M6 12h12" stroke-dasharray="2 2"/>
+          </svg>
+          <h2 class="text-xl font-semibold text-gray-300 mb-2">No Banners Yet</h2>
+          <p class="text-gray-500 text-sm">Run the banner-designer agent to generate your first banners.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for enlarged view -->
+  <div id="modal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="absolute inset-0 bg-black/90 cursor-pointer" onclick="closeModal()"></div>
+    <div class="relative flex flex-col items-center gap-4 z-10 max-w-[95vw] max-h-[90vh] m-auto mt-[5vh]">
+      <button onclick="closeModal()" aria-label="Close modal" class="absolute -top-10 right-0 text-gray-300 text-4xl cursor-pointer p-2 leading-none hover:text-red-400 transition-colors">&times;</button>
+      <div id="modal-img-container" class="dark-bg max-w-[90vw] max-h-[65vh] rounded overflow-hidden flex items-center justify-center p-4 border border-red-800">
+        <img id="modal-img" src="" alt="Full size banner" class="max-w-full max-h-full object-contain">
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex gap-2">
+          <button class="modal-bg-btn active bg-red-800 border border-red-800 text-gray-300 px-3 py-1.5 text-xs rounded transition-colors" data-bg="dark">Dark</button>
+          <button class="modal-bg-btn bg-transparent border border-red-800 text-gray-400 hover:bg-red-800 hover:text-gray-900 px-3 py-1.5 text-xs rounded transition-colors" data-bg="light">Light</button>
+        </div>
+        <a id="modal-download" href="" download class="flex items-center gap-1.5 bg-red-800 border border-red-700 text-gray-200 hover:bg-red-700 px-3 py-1.5 text-xs rounded transition-colors">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Banner Gallery JavaScript - Matching Dashboard Patterns
+     * Adapted from Logo Gallery with banner-specific layout (3:1 aspect ratio)
+     */
+
+    const PLATFORM_LABELS = {
+      'x-twitter': 'X/Twitter',
+      'youtube': 'YouTube',
+      'linkedin': 'LinkedIn',
+      'facebook': 'Facebook',
+      'github': 'GitHub',
+      'discord': 'Discord',
+      'generic': 'Generic',
+    };
+
+    // ========================================
+    // Manifest Loading
+    // ========================================
+    async function loadManifest() {
+      try {
+        const response = await fetch('./manifest.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        console.warn('Could not load manifest.json:', error.message);
+        return null;
+      }
+    }
+
+    // ========================================
+    // Gallery Rendering
+    // ========================================
+    function renderGallery(manifest) {
+      if (!manifest || !manifest.runs || manifest.runs.length === 0) {
+        showEmptyState();
+        return;
+      }
+
+      // Manifest.runs is already newest-first via unshift, but sort defensively
+      const sortedRuns = [...manifest.runs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const container = document.getElementById('gallery-container');
+      container.innerHTML = '';
+
+      document.getElementById('run-count').textContent = `${sortedRuns.length} run${sortedRuns.length !== 1 ? 's' : ''}`;
+
+      sortedRuns.forEach((run, runIndex) => {
+        const runSection = createRunSection(run, sortedRuns.length - runIndex);
+        container.appendChild(runSection);
+      });
+
+      container.classList.remove('hidden');
+    }
+
+    function createRunSection(run, runNumber) {
+      const section = document.createElement('section');
+      section.className = 'mb-8 last:mb-0';
+
+      const formattedDate = new Date(run.timestamp).toLocaleString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+
+      // Collect unique models from banners
+      const models = [...new Set((run.banners || []).map(b => b.model).filter(Boolean))];
+      const modelBadges = models.map(m =>
+        `<span class="text-xs px-2 py-0.5 bg-gray-900 border border-red-800 rounded text-gray-400">${escapeHtml(m)}</span>`
+      ).join('');
+
+      section.innerHTML = `
+        <div class="flex flex-wrap items-center gap-3 mb-4 pb-2 border-b border-red-800/50">
+          <span class="text-red-400 font-semibold">Run ${runNumber}</span>
+          <span class="text-gray-500 text-xs">${formattedDate}</span>
+          ${modelBadges}
+        </div>
+        ${run.prompt ? createRunPromptPreview(run.prompt) : ''}
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="grid-${run.id}"></div>
+      `;
+
+      const grid = section.querySelector('.grid');
+
+      if (run.banners && run.banners.length > 0) {
+        run.banners.forEach((banner, bannerIndex) => {
+          const bannerPath = banner.path || `./${run.id}/${banner.filename}`;
+          const card = createBannerCard({ ...banner, path: bannerPath }, bannerIndex + 1);
+          grid.appendChild(card);
+        });
+      }
+
+      return section;
+    }
+
+    function createRunPromptPreview(prompt) {
+      return `
+        <div class="mb-4 p-3 bg-gray-900/60 border border-red-800/40 rounded-lg">
+          <div class="flex items-center gap-2 mb-1">
+            <svg class="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span class="text-red-400 text-xs font-semibold uppercase tracking-wider">Run Prompt</span>
+          </div>
+          <p class="text-gray-400 text-xs leading-relaxed line-clamp-3">${escapeHtml(prompt)}</p>
+        </div>
+      `;
+    }
+
+    function createBannerCard(banner, number) {
+      const card = document.createElement('div');
+      card.className = 'bg-gray-900/50 rounded-lg p-3 border border-red-800 hover:border-red-600 transition-colors';
+
+      const format = banner.format || (banner.path.toLowerCase().endsWith('.png') ? 'PNG' : 'JPEG');
+      const platformKey = banner.platform || 'generic';
+      const platformLabel = PLATFORM_LABELS[platformKey] || platformKey;
+      const dimensions = banner.dimensions || '';
+      const apiModel = banner.apiModel || '';
+      const prompt = banner.prompt || '';
+
+      // Format badge - JPEG blue, PNG green
+      const formatBadgeClass = format.toLowerCase() === 'png'
+        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
+
+      // Platform badge - amber/yellow
+      const platformBadge = platformLabel
+        ? `<span class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">${escapeHtml(platformLabel)}${dimensions ? ' ' + dimensions : ''}</span>`
+        : '';
+
+      card.innerHTML = `
+        <div class="banner-preview dark-bg w-full rounded overflow-hidden cursor-pointer hover:opacity-90 transition-opacity" style="aspect-ratio: 3/1;" onclick="openModal('${banner.path}')">
+          <img src="${banner.path}" alt="Banner ${number}" loading="lazy" class="w-full h-full object-cover">
+        </div>
+        <div class="flex flex-wrap justify-between items-center mt-3 gap-2">
+          <span class="text-sm font-semibold text-gray-300">#${number}</span>
+          <span class="flex flex-wrap items-center gap-2">
+            <span class="text-gray-500 text-xs">${escapeHtml(banner.model || '')}</span>
+            ${platformBadge}
+            <span class="px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded ${formatBadgeClass}">${format}</span>
+          </span>
+        </div>
+        ${apiModel ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono bg-red-900/30 text-red-400 border border-red-800/50 rounded mt-1">API: ${escapeHtml(apiModel)}</span>` : ''}
+        ${banner.description ? `<p class="text-gray-500 text-xs mt-1 line-clamp-2">${escapeHtml(banner.description)}</p>` : ''}
+        <div class="flex gap-1 mt-2">
+          <button class="bg-btn flex-1 bg-red-800 text-gray-900 border border-red-800 px-2 py-1 text-xs rounded transition-colors active" data-bg="dark">Dark</button>
+          <button class="bg-btn flex-1 bg-transparent border border-red-800 text-gray-400 hover:bg-red-800 hover:text-gray-900 px-2 py-1 text-xs rounded transition-colors" data-bg="light">Light</button>
+        </div>
+        ${prompt ? `
+        <div class="mt-2">
+          <button class="prompt-toggle flex items-center gap-1.5 w-full bg-transparent border border-red-800 text-gray-400 hover:bg-red-800 hover:text-gray-900 px-2 py-1.5 text-xs rounded transition-colors" onclick="togglePrompt(this)">
+            <span class="prompt-toggle-icon transition-transform text-[10px]">&#9654;</span>
+            <span>Show Prompt</span>
+          </button>
+          <div class="prompt-content hidden p-3 border border-red-800 border-t-0 rounded-b bg-gray-900/90 max-h-48 overflow-y-auto">
+            <span class="block text-[10px] text-red-400 uppercase tracking-wider mb-2 font-semibold">Generation Prompt</span>
+            <div class="whitespace-pre-wrap text-xs text-gray-300 leading-relaxed">${escapeHtml(prompt)}</div>
+          </div>
+        </div>
+        ` : ''}
+      `;
+
+      setupBackgroundToggle(card);
+      return card;
+    }
+
+    function togglePrompt(btn) {
+      const isActive = btn.classList.contains('active');
+      btn.classList.toggle('active');
+      const content = btn.nextElementSibling;
+      content.classList.toggle('hidden');
+      const icon = btn.querySelector('.prompt-toggle-icon');
+      icon.style.transform = !isActive ? 'rotate(90deg)' : '';
+      btn.querySelector('span:last-child').textContent = !isActive ? 'Hide Prompt' : 'Show Prompt';
+      if (!isActive) {
+        btn.classList.add('bg-red-800', 'text-gray-900', 'rounded-b-none');
+      } else {
+        btn.classList.remove('bg-red-800', 'text-gray-900', 'rounded-b-none');
+      }
+    }
+
+    // ========================================
+    // Background Toggle
+    // ========================================
+    function setupBackgroundToggle(card) {
+      const preview = card.querySelector('.banner-preview');
+      const buttons = card.querySelectorAll('.bg-btn');
+
+      buttons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          buttons.forEach(b => {
+            b.classList.remove('bg-red-800', 'text-gray-900');
+            b.classList.add('bg-transparent', 'text-gray-400');
+          });
+          btn.classList.remove('bg-transparent', 'text-gray-400');
+          btn.classList.add('bg-red-800', 'text-gray-900');
+
+          const bg = btn.dataset.bg;
+          preview.classList.remove('dark-bg', 'light-bg');
+          preview.classList.add(`${bg}-bg`);
+        });
+      });
+    }
+
+    // ========================================
+    // Modal Functions
+    // ========================================
+    function openModal(imgSrc) {
+      const modal = document.getElementById('modal');
+      const modalImg = document.getElementById('modal-img');
+      const modalImgContainer = document.getElementById('modal-img-container');
+      const modalDownload = document.getElementById('modal-download');
+
+      modalImg.src = imgSrc;
+      modalDownload.href = imgSrc;
+      modalImgContainer.className = 'dark-bg max-w-[90vw] max-h-[65vh] rounded overflow-hidden flex items-center justify-center p-4 border border-red-800';
+
+      document.querySelectorAll('.modal-bg-btn').forEach((btn, i) => {
+        if (i === 0) {
+          btn.classList.remove('bg-transparent', 'text-gray-400');
+          btn.classList.add('bg-red-800', 'text-gray-300');
+        } else {
+          btn.classList.remove('bg-red-800', 'text-gray-300');
+          btn.classList.add('bg-transparent', 'text-gray-400');
+        }
+      });
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex', 'items-center', 'justify-center');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex', 'items-center', 'justify-center');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    document.querySelectorAll('.modal-bg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const modalImgContainer = document.getElementById('modal-img-container');
+        document.querySelectorAll('.modal-bg-btn').forEach(b => {
+          b.classList.remove('bg-red-800', 'text-gray-300');
+          b.classList.add('bg-transparent', 'text-gray-400');
+        });
+        btn.classList.remove('bg-transparent', 'text-gray-400');
+        btn.classList.add('bg-red-800', 'text-gray-300');
+
+        const bg = btn.dataset.bg;
+        modalImgContainer.className = `${bg}-bg max-w-[90vw] max-h-[65vh] rounded overflow-hidden flex items-center justify-center p-4 border border-red-800`;
+      });
+    });
+
+    // ========================================
+    // Utility
+    // ========================================
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // ========================================
+    // Empty State
+    // ========================================
+    function showEmptyState() {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('gallery-container').classList.add('hidden');
+      document.getElementById('empty-state').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      document.getElementById('loading').classList.add('hidden');
+    }
+
+    // ========================================
+    // Initialization
+    // ========================================
+    document.addEventListener('DOMContentLoaded', async () => {
+      const manifest = await loadManifest();
+
+      if (!manifest || !manifest.runs || manifest.runs.length === 0) {
+        showEmptyState();
+        return;
+      }
+
+      const projectNameEl = document.getElementById('project-name');
+      projectNameEl.textContent = manifest.projectName || manifest.project_name || 'Untitled Project';
+
+      hideLoading();
+      renderGallery(manifest);
+    });
+  </script>
+</body>
+</html>

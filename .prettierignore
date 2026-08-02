@@ -12,3 +12,13 @@ node_modules
 # Claude Code worktrees — temporary working copies, lint/format/typecheck/test
 # run inside каждой ветки отдельно. Сканировать их из main checkout не нужно.
 .claude/worktrees
+
+# Vendor-код claude-workflow: генерируется CLI и перезаписывается на
+# `claude-workflow update`. Форматирование под наш стиль сломало бы сверку
+# с шаблонами, а к канону lib/ эти файлы отношения не имеют.
+.claude/hooks
+.claude/scripts
+scripts/update-project-structure.js
+scripts/validate-task.js
+eslint.config.ts
+knip.config.ts
