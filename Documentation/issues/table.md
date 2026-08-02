@@ -1,7 +1,7 @@
 ---
 title: Issues — Table
-summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Issue 3 (compound `<Column>`/`<ColumnGroup>` + Pagination/Loading overrides) закрыт 2026-06-07. 2026-06-11 закрыты Issue 10 (filter popovers via FixWindow scrollableEl), 11 (RTL — dir-aware resize + logical props), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map + Menu publish-gap fix, verified npm pack/install). Все аудит-issue 1–14 закрыты; остаются только cross-cutting категории G34 (medium) / D26 (low) без отдельной Table-секции. 2026-07-05 — Issue 12/B10 дополнен: структурные нейтрали (gray-*/stone-*/neutral-*, ~24 occurrences) мигрированы на semantic `surface` token (family rename, та же тональность); Table снята из «residual» Wave 9.
-updated: 2026-07-05
+summary: Аудит Table — оба CRITICAL закрыты 2026-06-07 (XSS через 5 v-html сайтов → safe <mark>/text + opt-in slots; IntersectionObserver + window-listeners cleanup). Также закрыты Issue 6 (unstyled regression), 8 (caption; scope уже был), 9 (aria-live), 4 (dependency-free virtualization), 7 (branch coverage 80%) и packaging/SSR bundle (Issue 5 partial — SSR C17 + sideEffects A2; 13 — sourcemaps/files; 14 — junk-exclusion). Issue 3 (compound `<Column>`/`<ColumnGroup>` + Pagination/Loading overrides) закрыт 2026-06-07. 2026-06-11 закрыты Issue 10 (filter popovers via FixWindow scrollableEl), 11 (RTL — dir-aware resize + logical props), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map + Menu publish-gap fix, verified npm pack/install). Все аудит-issue 1–14 закрыты; остаются только cross-cutting категории G34 (medium) / D26 (low) без отдельной Table-секции. 2026-07-05 — Issue 12/B10 дополнен: структурные нейтрали (gray-*/stone-*/neutral-*, ~24 occurrences) мигрированы на semantic `surface` token (family rename, та же тональность); Table снята из «residual» Wave 9. 2026-08-02 — закрыт G34 (`componentTable` + `focus()` в `defineExpose`/`TableExpose`); дополнительно: `aria-sort` + клавиатурная активация сортировки, `isDark` учитывает `optionsTheme.darkModeSelector`, `IColumnPrivate.isEdit` помечен internal, сохранён UA-reset нативного триггера под `unstyled`. Остаётся открытым только D26 (low).
+updated: 2026-08-02
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/table/
 related-doc: ../components/table.md
@@ -15,10 +15,12 @@ related-doc: ../components/table.md
 | -------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
 | critical | 0     | ~~C13/security (5× v-html)~~ ✅, ~~H41 (partial cleanup)~~ ✅                                                           |
 | high     | 0     | ~~A2~~ ✅, ~~A4-5~~ ✅, ~~C17~~ ✅, ~~H43 (виртуализация)~~ ✅, ~~L53~~ ✅, ~~P (dual-API)~~ ✅, ~~J47~~ ✅, ~~K51~~ ✅ |
-| medium   | 1     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, ~~F31~~ ✅, G34, ~~H39~~ ✅, ~~K52~~ ✅                                                     |
+| medium   | 0     | ~~E29.1~~ ✅, ~~E29.5~~ ✅, ~~F31~~ ✅, ~~G34~~ ✅, ~~H39~~ ✅, ~~K52~~ ✅                                             |
 | low      | 1     | ~~E29.7~~ ✅, ~~B10~~ ✅, ~~N59~~ ✅, D26                                                                               |
 
 > **2026-06-07 — закрыты Issue 1, 2, 6, 8, 9** (Critical + a11y bundle), **Issue 4** (virtualization), **Issue 7** (branch coverage 67.74% → 80.01%) **и packaging/SSR bundle (5 partial / 13 / 14)**: SSR-стили (C17) подтверждены работающими через `onServerPrefetch` + регрессионный тест; `sideEffects:false` (A2) на root + per-component; `files`-whitelist шлёт sourcemaps (K51) и отсекает junk (K52); ESM-only ратифицирован (`engines.node >=18`). **2026-06-11 — закрыты Issue 3 (compound API), 10 (filter popovers via FixWindow), 11 (RTL), 12 (reduced-motion/print/forced-colors) и 5c (root `exports` map — build-generated, verified npm pack + Node ESM/bundler/nodenext-резолв; + Menu publish-gap fix 5c-a).** Все аудит-issue 1–14 закрыты — остаются лишь cross-cutting G34 (medium) / D26 (low).
+
+> **2026-08-02 — закрыт G34, плюс a11y сортировки и resolution темы.** `componentTable` и `focus()` выведены в `defineExpose` / `TableExpose` (см. секцию G34 ниже) — матрица medium `1 → 0`. Дополнительно, вне numbered-issue: (1) **`aria-sort` + клавиатура** — атрибут на `<th scope="col">` биндится к живому `sortColumns` (`ascending`/`descending`/`none`, у несортируемой колонки атрибут отсутствует), триггер сортировки переведён с `<div>` на нативный `<button type="button">` с `@keydown.enter.prevent` / `@keydown.space.prevent`; accessible name берётся из `column.caption ?? dataField` — **нового ключа локали не заводили**. (2) **`isDark` учитывает `optionsTheme.darkModeSelector`** через `MutationObserver` (зеркало `Calendar.vue`), при отсутствии селектора остаётся прежняя ветка `matchMedia`. (3) `IColumnPrivate.isEdit` помечен как internal. (4) Нативный триггер сохраняет класс `fv` под `config.unstyled`, иначе браузер рисовал бы собственную рамку и фон поверх preflight'а `baseStyle`. **D26 не трогали** — остаётся единственным открытым пунктом Table.
 
 ## ~~Issue 1: CRITICAL — XSS через 5 сайтов `v-html`~~ ✅ resolved 2026-06-07
 
@@ -446,15 +448,33 @@ Sourcemaps генерируются ✅. Но `addPackageJson()` ([rollup.config
 1. Добавить `.npmignore` в lib/ или `files` whitelist.
 2. `npm pack --dry-run` → проверить content tarball.
 
+## ~~G34: root element ref не экспонируется~~ ✅ resolved 2026-08-02
+
+- **Категория:** G34
+- **Severity:** ~~medium~~ → resolved
+- **Где:** [lib/table/Table.vue](../../lib/table/Table.vue) (`defineExpose`), [lib/table/Table.d.ts](../../lib/table/Table.d.ts) (`TableExpose`)
+
+> **Resolution (2026-08-02).** Ref на корневой элемент существовал (`const componentTable = ref<HTMLElement>()`) и был привязан в шаблоне, но отсутствовал в `defineExpose` — потребитель не мог достать узел через template-ref. Добавлены `componentTable` и метод `focus(options?: FocusOptions)`, оба зеркалированы в `TableExpose`. Корню выставлен `tabindex="-1"`: без него программный `focus()` был бы no-op, при этом корень не попадает в естественный tab order. Зеркалит закрытие того же G34 у [Accordion](./accordion.md) (Issue 8).
+
+### Что найдено
+
+`defineExpose` перечислял state / props / pagination / cell / data / style / methods, но не корневой узел и не метод фокуса. Потребитель, которому нужен `scrollIntoView`, `getBoundingClientRect` или программный фокус на таблице, вынужден был искать DOM снаружи по `data-table-component`.
+
+### Acceptance criteria
+
+- `wrapper.vm.componentTable` — живой `HTMLElement`, равный `[data-table-component]`.
+- Вызов `focus()` через template-ref переводит `document.activeElement` на корневой узел; `FocusOptions` пробрасываются в `HTMLElement.focus`.
+- `TableExpose` содержит оба члена, `pnpm typecheck` проходит на template-ref-сценарии.
+
 ## Cross-cutting: Configuration support
 
 | Настройка                 | Поддержано? | Комментарий                                                                               |
 | ------------------------- | ----------- | ----------------------------------------------------------------------------------------- |
 | `componentsOptions.Table` | ✅          | mode, asyncData, modePagination, и многое другое                                          |
 | `componentsStyle` global  | ✅          | через `Table.componentsStyle()` (Table.vue:110)                                           |
-| `unstyled: true`          | ❌          | Issue 6                                                                                   |
+| `unstyled: true`          | ✅          | Issue 6 (2026-06-07); 2026-08-02 — нативный триггер сортировки сохраняет класс `fv`, чтобы UA-reset из `baseStyle` продолжал применяться |
 | Theme tokens vs hardcode  | ⚠️          | структурные нейтрали — semantic `surface` token (2026-07-05, B10); `red-*` hardcode остаётся (delete-icon danger-intent, осознанно вне scope) |
-| Runtime theme switch      | ⚠️          | dark mode через colorSchemeQueryList (auto-detect) — игнорирует FishtVue darkModeSelector |
+| Runtime theme switch      | ✅          | 2026-08-02 — `isDark` читает `optionsTheme.darkModeSelector` (`MutationObserver`, зеркало `Calendar.vue`); при отсутствии селектора — прежний `matchMedia("(prefers-color-scheme: dark)")` |
 | `t()` для текста          | ⚠️          | частично — используется `Table.t()` для some strings                                      |
 | Runtime locale switch     | ⚠️          | те strings что через `t()` — реагируют                                                    |
 

@@ -1,7 +1,7 @@
 ---
 title: Issues — Alert
-summary: Все numbered issues закрыты, кроме B10 (theme tokens hardcode → Wave 9). 2026-06-14 закрыты Issue 7 (RTL/F31 — logical start/end + deprecated физ. алиасы), unstyled-support (L53, regression-тест к глобальному guard), mobile (mobile-first gutters). Ранее (2026-05-11): XSS subtitle slot, openAlert createApp + Vue-bound cleanup, role/aria-live, motion-safe, sideEffects, dup initStyle; 3 N/A (toast-pattern).
-updated: 2026-06-14
+summary: Все numbered issues закрыты, кроме B10 (theme tokens hardcode → Wave 9). 2026-06-14 закрыты Issue 7 (RTL/F31 — logical start/end + deprecated физ. алиасы), unstyled-support (L53, regression-тест к глобальному guard), mobile (mobile-first gutters). Ранее (2026-05-11): XSS subtitle slot, openAlert createApp + Vue-bound cleanup, role/aria-live, motion-safe, sideEffects, dup initStyle; 3 N/A (toast-pattern). 2026-08-02 — hardening `sanitizeHtml` (Issue 1 amendment): границы атрибутов, entity-декодирование с политикой «ровно один проход», tag-aware поиск атрибутов, устранение склейки в исполняемый тег; плюс defensive `default:` в `classesStyle`/`icon`, типизированный `styleBase`, allow-list `type` в `openAlert`, поведенческий RTL-тест. Открытым остаётся только Issue 9 theme-tokens (B10, semantic-intent эпик).
+updated: 2026-08-02
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/alert/
 related-doc: ../components/alert.md
@@ -19,6 +19,8 @@ related-doc: ../components/alert.md
 | low      | 1            | theme tokens hardcode (B10 → Wave 9)        |
 
 Closed 2026-06-14: Issue 7 (F31/RTL — logical `start`/`end` + deprecated физ. алиасы), Issue 4 unstyled-часть (L53 — regression-тест к глобальному `Component.setStyle` guard), Issue 9 mobile-часть (mobile-first gutters). Closed 2026-05-11: Issues 1 (XSS), 2 (openAlert refactor), 3 (ARIA), 4 partial (sideEffects + dup initStyle), 9 partial (motion-safe). N/A 2026-05-11: Issues 5, 6 (toast pattern не имеет Confirm/Cancel UI), 8 (нет form). Остаётся открытым только Issue 9 theme-tokens-часть (B10).
+
+> **2026-08-02 — hardening санитайзера и типовая гигиена.** Матрица **не менялась**: Issue 1 был закрыт ещё 2026-05-11 (amended 2026-06-14), этот заход его укрепляет — подробности в amendment'е ниже. Вне numbered-issue закрыто: (1) `styleBase` типизирован через `AlertProps["style"]` вместо `as any`; (2) в `classesStyle` и `icon` появилась ветка `default:` — out-of-union `type` больше не даёт `undefined` у семи консьюмеров; (3) `openAlert` валидирует `type` по allow-list с dev-warn и фолбэком, зеркаля существующую нормализацию `position`; (4) добавлен поведенческий RTL-тест с реальным `document.body.dir`. **Ограничение теста:** jsdom не вычисляет `direction` и logical properties, поэтому проверки структурные (разметка внутри RTL-поддерева, логические утилиты вместо физических), а не визуальные. **Issue 9 (theme tokens / semantic-intent) не трогали.**
 
 ## ~~Issue 1: CRITICAL — XSS через `subtitle` v-html~~ ✅ resolved 2026-05-11 · ⚠️ amended 2026-06-14 (sanitized v-html restored)
 
@@ -38,6 +40,15 @@ Closed 2026-06-14: Issue 7 (F31/RTL — logical `start`/`end` + deprecated фи�
 - NEW [sanitizeHtml.ts](../../lib/alert/sanitizeHtml.ts) — best-effort dependency-free sanitizer (**чисто строковый → SSR-safe**): итеративно вырезает опасные элементы (`<script>`/`<style>`/`<iframe>`/`<object>`/`<embed>`/`<svg>`/`<form>`/… с содержимым), inline `on*`-обработчики, протоколы `javascript:`/`vbscript:`/`data:text/html` в URL-атрибутах. Безопасные теги (`<span class>`, `<b>`, `<img src="https://…">`) рендерятся.
 - `openAlert({ subtitle })` наследует санитизацию (subtitle проходит через тот же computed в Alert).
 - ⚠️ **Residual risk:** best-effort sanitizer **не** заменяет DOMPurify (строковая санитизация не ловит все обфускации). Для недоверенного ввода — slot `#subtitle` + проверенный sanitizer. Зафиксировано в [components/alert.md §12, §18](../components/alert.md#12-accessibility--security).
+
+**Amendment 2026-08-02 — hardening санитайзера (обходы, найденные adversarial-прогоном):**
+
+- **Границы атрибута.** HTML-парсер начинает новый атрибут не только после whitespace, но и после `/` и после закрывающей кавычки предыдущего значения. Проверка на `\s+` пропускала `<a/href=…>`, `<a x="1"href=…>`, `<img src="x"onerror=…>`. Граница расширена до `[\s/"']`; при вырезании атрибута символ границы возвращается в вывод, а для «фантомной» границы (внутри уже удалённого куска) пишется пробел — иначе уничтожался следующий безопасный атрибут.
+- **Совпадение внутри чужого значения.** Регулярка не знает состояний токенизатора и могла зацепиться за кавычку ВНУТРИ значения соседнего атрибута, после чего опасный атрибут проглатывался как часть безобидного: `<a title="href=" href="javascript:alert(1)">` доезжал до DOM живым. Добавлен проход `scanMarkup` (конечный автомат подмножества состояний спецификации), который помечает позиции, где новый атрибут начаться не может.
+- **Текстовые узлы.** Расширенная граница срабатывала в обычной прозе и удаляла видимый текст (`<p>писать "onclick=foo" нельзя</p>`). Поиск атрибутов ограничен участками разметки (`mapTagRegions`), текст между тегами копируется байт-в-байт.
+- **Склейка в исполняемый тег.** Удаление осиротевшего закрывающего тега шло отдельным проходом ПОСЛЕ цикла и само изготавливало опасный элемент из инертного ввода: `<scr</script>ipt>alert(1)</scr</script>ipt>` (браузер видит тег с именем `scr<`) превращался в настоящий `<script>alert(1)</script>`. Шаг перенесён внутрь цикла — оба шага крутятся до общей неподвижной точки.
+- **Политика декодирования — ровно один проход.** Прежний `MAX_DECODE_PASSES = 5` давал «обрыв» по глубине вложенности (1–5 режем, 6+ нет) и разный вердикт для эквивалентных записей одного значения. Один проход соответствует тому, что делает парсер при токенизации; over-approximation внутри прохода (вырезание control characters до и после, `toLowerCase`, двойная жадная/ASCII-щадящая нормализация) сохранена намеренно.
+- ⚠️ **Residual risk не изменился:** это по-прежнему best-effort строковый санитайзер, а не DOMPurify. Известные незакрытые места — `ping=`, `style=` (в т.ч. `url('javascript:…')` и clickjacking-оверлеи), варианты `data:` вне `text/html`.
 
 **Acceptance criteria (amended 2026-06-14):**
 

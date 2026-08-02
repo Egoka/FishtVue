@@ -1,6 +1,6 @@
 ---
 title: Issues — Accordion
-summary: Аудит Accordion — XSS / ARIA / keyboard / animation закрыты 2026-05-11; dual-API / SSR+sideEffects+unstyled / RTL / motion-safe / root-ref-expose закрыты 2026-06-14; B10 закрыт полностью (color-часть 2026-07-04, high-contrast/forced-colors часть 2026-08-02). Открытых пунктов нет — матрица 0/0/0/0.
+summary: Аудит Accordion — XSS / ARIA / keyboard / animation закрыты 2026-05-11; dual-API / SSR+sideEffects+unstyled / RTL / motion-safe / root-ref-expose закрыты 2026-06-14; B10 закрыт полностью (color-часть 2026-07-04, high-contrast/forced-colors часть 2026-08-02). Открытых пунктов нет — матрица 0/0/0/0. 2026-08-02 (второй заход) — устранена регрессия `unstyled`: нативная header-кнопка сохраняет класс-хук `fv`, иначе UA-ресеты из `baseStyle` к ней не применялись; матрица не менялась.
 updated: 2026-08-02
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/accordion/
@@ -25,6 +25,8 @@ related-doc: ../components/accordion.md
 **Закрыто 2026-07-04:** B10 color-часть — hardcoded `slate-*` заменены на семантический токен `surface-*` (см. ниже).
 
 **Закрыто 2026-08-02:** B10 high-contrast/forced-colors часть — на header-кнопку добавлен `forced-colors:outline` (см. блок B10 ниже). Это был последний открытый пункт карточки; матрица severity — 0/0/0/0.
+
+> **2026-08-02 — регрессия `unstyled` у header-кнопки (Issue 5 / L53), матрица не менялась.** `Component.setStyle` под `config.unstyled` возвращает `""`, а UA-ресеты в `lib/config/baseStyle.ts` (`button.fv { margin/padding/font }`, `button.fv { background-color: transparent }`, `.fv { border-width: 0 }`) навешены на класс `fv`. Preflight при этом инжектится и в unstyled-режиме — `BaseStylesComponent.initStyle()` вызывается в `install()` безусловно, гард стоит только на выдаче классов. В результате нативный `<button type="button">` заголовка оставался вообще без классов и получал браузерные рамку, фон и padding. `classButton` теперь возвращает `classes || "fv"`: в unstyled остаётся ровно один класс-хук, в styled-режиме фолбэк доказуемо недостижим (`setStyle` вне unstyled всегда возвращает непустую строку с префиксом `fv`). `lib/config/baseStyle.ts` **не** правился — CSS уже был на месте, не хватало только селектора на элементе.
 
 ## ~~Issue 1: CRITICAL — XSS через `item.subtitle` v-html~~ ✅ resolved 2026-05-11
 

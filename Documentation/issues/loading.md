@@ -1,7 +1,7 @@
 ---
 title: Issues — Loading
-summary: Аудит Loading. Закрыто 2026-06-03 — coverage loadingTypes 3% → 100% (Issue 1), ARIA role="status"+aria-live+sr-only+локализованный aria-label (Issue 3), LoadingOption.type (Issue 4), снят dup initStyle + sideEffects (Issue 5), reduced-motion static fallback (Issue 6), print:hidden (Issue 8); lazy import (Issue 2) уже был. Закрыто 2026-06-14 — root exports map A4-5 (Issue 5, doc-sync inherited из buildRootExports()). Открыто — hardcoded HEX в Epic/SVG (Issue 7, deferred Wave 9).
-updated: 2026-06-14
+summary: Аудит Loading. Закрыто 2026-06-03 — coverage loadingTypes 3% → 100% (Issue 1), ARIA role="status"+aria-live+sr-only+локализованный aria-label (Issue 3), LoadingOption.type (Issue 4), снят dup initStyle + sideEffects (Issue 5), reduced-motion static fallback (Issue 6), print:hidden (Issue 8); lazy import (Issue 2) уже был. Закрыто 2026-06-14 — root exports map A4-5 (Issue 5, doc-sync inherited из buildRootExports()). Открыто — hardcoded HEX в Epic/SVG (Issue 7, deferred Wave 9). 2026-08-02 — DX-полировка вне numbered-issue: open-union типы props, снят редундантный `"simple"`, dev-warn для неизвестного color-токена и гейт существующего warn.
+updated: 2026-08-02
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/loading/
 related-doc: ../components/loading.md
@@ -20,6 +20,8 @@ stability: beta
 | low | 1 | B10 (hardcoded HEX — deferred Wave 9) |
 
 > Закрыто 2026-06-03: Issue 1 (J46), Issue 2 (I44), Issue 3 (E29.1/E29.5/F30), Issue 4 (L53), Issue 5 частично — A2 (sideEffects) + C17 (dup initStyle) + #14 unstyled (cross-cutting), Issue 6 (E29.7), Issue 8 (N59). Закрыто 2026-06-14: Issue 5 финально — A4-5 (root exports map, doc-sync inherited). Остаётся только Issue 7 (B10).
+
+> **2026-08-02 — DX-полировка, матрица не менялась.** Вне numbered-issue: (1) `animationDuration` переведён на open-union по канону `Icons.d.ts` (`… | (number & {})`) — литералы дают autocomplete, любое число по-прежнему допустимо; `size` сведён к `number` (прежние литералы не были осмысленной шкалой — runtime-default 20 в неё даже не входил); из `type` убран редундантный `| "simple"` (это ключ `componentsMapSvg`, то есть уже член `SvgLoading`) — набор допустимых значений не изменился. (2) Неизвестный токен палитры в `color` больше не проглатывается молча — добавлен dev-only warn по канону `Button.vue`; существующий warn в `loadComponent` загейчен `NODE_ENV` и отпрефиксен `[FishtVue Loading]`. **Issue 7 (hardcoded HEX в `epic/*.vue` и `svg/*.vue`) не трогали** — `epic/*` остаются на Options API, что отдельно конфликтует с каноном `<script setup lang="ts">`; промоушен `beta → stable` по-прежнему заблокирован Issue 7, поле `stability` не меняли.
 
 ## ~~Issue 1: loadingTypes.ts coverage 3% — большинство EpicLoading вариаций нигде не tested~~ ✅ resolved 2026-06-03
 
