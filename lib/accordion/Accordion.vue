@@ -133,7 +133,10 @@
       "grid overflow-hidden"
     ])
   )
-  const classButton = Accordion.setStyle("flex items-center justify-between w-full text-start font-semibold py-2")
+  // B10: forced-colors:outline сохраняет header-кнопку различимой в Windows high-contrast (bg-*/border-* там сбрасываются)
+  const classButton = Accordion.setStyle(
+    "flex items-center justify-between w-full text-start font-semibold py-2 forced-colors:outline"
+  )
   const styleIcon = Accordion.setStyle(
     "h-5 w-5 shrink-0 ms-8 text-surface-400 dark:text-surface-500 group-hover/item:text-surface-500 group-hover/item:dark:text-surface-400 motion-safe:transition-all duration-200 ease-out"
   )

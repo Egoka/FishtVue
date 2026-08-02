@@ -441,6 +441,14 @@ describe("Accordion Component Tests", () => {
       expect(panel.classes()).toContain("motion-safe:transition-all")
       expect(panel.classes()).not.toContain("transition-all")
     })
+
+    it("keeps the focusable header visible in forced-colors (high-contrast) mode", () => {
+      const wrapper = mount(Accordion, {
+        props: { dataSource: [{ title: "A", subtitle: "s", open: true }] }
+      })
+      const button = wrapper.find("[data-accordion-button]")
+      expect(button.classes()).toContain("forced-colors:outline")
+    })
   })
 
   describe("Theming — semantic surface tokens, not hardcoded slate-* (B10)", () => {
