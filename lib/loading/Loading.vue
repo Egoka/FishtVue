@@ -48,7 +48,14 @@
   function loadComponent(type: EpicLoading | SvgLoading) {
     if (type in componentsMapEpic) return componentsMapEpic[type as EpicLoading]()
     if (type in componentsMapSvg) return componentsMapSvg[type as SvgLoading]()
-    console.warn(`Unknown loading type: ${type}. Falling back to 'simple'.`)
+    // Dev-warning: тип не найден ни в Epic-, ни в Svg-карте — рендерим "simple",
+    // но в production молчим, чтобы не тратить bundle/консоль на диагностику.
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[FishtVue Loading] Unknown loading type "${type}" — falling back to "simple". ` +
+          `Pass a key of componentsMapEpic or componentsMapSvg (see fishtvue/loading/loadingTypes).`
+      )
+    }
     return componentsMapSvg["simple"]()
   }
 
@@ -93,7 +100,18 @@
       // })
       return hslToHex(color)
     }
-    return color ?? "currentColor"
+    const resolvedColor = color ?? "currentColor"
+    // Dev-warning: токен не найден в палитре темы. Тихий fallback на `currentColor` маскирует
+    // опечатку в имени цвета (`emrald` вместо `emerald`) — цвет «просто не применяется».
+    // `resolvedColor !== color` истинно ровно тогда, когда резолв не дал значения.
+    // Явный `"currentColor"` — валидное CSS-значение и default компонента, его не ругаем.
+    if (process.env.NODE_ENV !== "production" && resolvedColor !== color && colorProp !== "currentColor") {
+      console.warn(
+        `[FishtVue Loading] Unknown color token "${colorProp}" — falling back to "currentColor". ` +
+          `Pass a theme palette token (e.g. "emerald", "blue-500") or a hex value like "#10b981".`
+      )
+    }
+    return resolvedColor
   })
 
   const classLoading = computed<LoadingProps["class"]>(() =>

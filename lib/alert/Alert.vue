@@ -79,15 +79,6 @@
   const classesStyle = computed<Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>>(
     () => {
       switch (type.value) {
-        case "success":
-          return {
-            body: "bg-green-50 dark:bg-green-950",
-            icon: "text-green-400 dark:text-green-600",
-            title: "text-green-800 dark:text-green-200",
-            subtitle: "text-green-700 dark:text-green-300",
-            button: "hover:bg-green-200 dark:hover:bg-green-800",
-            buttonIcon: "fill-green-500 dark:fill-green-500"
-          }
         case "warning":
           return {
             body: "bg-yellow-50 dark:bg-yellow-950",
@@ -124,14 +115,25 @@
             button: "hover:bg-neutral-200 dark:hover:bg-neutral-700",
             buttonIcon: "fill-neutral-500 dark:fill-neutral-500"
           }
+        // `success` — default-тип; сюда же попадает `type` вне union (untyped JS-потребитель
+        // или openAlert). Без `default:` computed вернул бы `undefined`, и каждый консьюмер
+        // (`classesStyle.value.body/.icon/.title/.subtitle/.button/.buttonIcon`) падал бы с TypeError.
+        case "success":
+        default:
+          return {
+            body: "bg-green-50 dark:bg-green-950",
+            icon: "text-green-400 dark:text-green-600",
+            title: "text-green-800 dark:text-green-200",
+            subtitle: "text-green-700 dark:text-green-300",
+            button: "hover:bg-green-200 dark:hover:bg-green-800",
+            buttonIcon: "fill-green-500 dark:fill-green-500"
+          }
       }
     }
   )
 
   const icon = computed(() => {
     switch (type.value) {
-      case "success":
-        return CheckCircleIcon
       case "warning":
         return ExclamationTriangleIcon
       case "info":
@@ -140,6 +142,11 @@
         return XCircleIcon
       case "neutral":
         return ChatBubbleOvalLeftIcon
+      // Тот же defensive default, что и в `classesStyle`: `type` вне union не должен
+      // отдавать `undefined` в `<component :is="icon">` (Vue-warn + пустая иконка).
+      case "success":
+      default:
+        return CheckCircleIcon
     }
   })
   const size = computed<StyleClass>(() => {
@@ -194,7 +201,8 @@
       size.value
     ])
   )
-  const styleBase = computed(() => (props.style ?? options?.style) as any)
+  // `AlertProps["style"]` = `CSSProperties | undefined` (Alert.d.ts) — `as any` тут не нужен.
+  const styleBase = computed<AlertProps["style"]>(() => props.style ?? options?.style)
   const classBody = computed(() => Alert.setStyle("flex"))
   const classDivIcon = computed(() => Alert.setStyle("shrink-0"))
   const classIcon = computed(() => Alert.setStyle(["h-5 w-5", classesStyle.value.icon]))

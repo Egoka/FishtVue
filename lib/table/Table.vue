@@ -65,6 +65,7 @@
   import Select from "fishtvue/select/Select.vue"
   import Calendar from "fishtvue/calendar/Calendar.vue"
   import Component from "fishtvue/component"
+  import { useFishtVue } from "fishtvue/config"
   import { StyleClass, TLoading } from "fishtvue/types"
   import { BaseInputProps } from "fishtvue/input"
   import { BaseSelectProps } from "fishtvue/select"
@@ -1045,23 +1046,60 @@
   }
 
   // ---IS-DARK-----------------------------
+  // T3: источник истины о dark-режиме — тот же `optionsTheme.darkModeSelector`, который движок
+  // получает как `darkSelector` (lib/component/index.ts:150). Если селектор сконфигурирован,
+  // движок скоупит все `dark:*` на него ВМЕСТО `prefers-color-scheme`, поэтому и `isDark` обязан
+  // читать DOM, а не OS-preference: иначе при `<html class="dark">` и светлой системной теме
+  // isDark === false, и Loading красился бы в light-оттенок посреди тёмной таблицы.
+  // Селектор не задан → дефолт движка, fallback на `prefers-color-scheme: dark`.
+  // Зеркало Calendar.initDarkModeObserver() (lib/calendar/Calendar.vue:367).
   const isDark = ref<boolean>(false)
+  // eslint-disable-next-line no-undef
+  let darkObserver: MutationObserver | undefined
   if (isClient()) {
-    const colorSchemeQueryList = window.matchMedia("(prefers-color-scheme: dark)")
-    const setColorScheme = (e: any) => (isDark.value = e.matches)
+    const darkModeSelector = useFishtVue()?.config?.optionsTheme?.darkModeSelector ?? ""
+    if (darkModeSelector) {
+      const checkDarkMode = () => (isDark.value = !!document.querySelector(darkModeSelector))
+      checkDarkMode()
+      // eslint-disable-next-line no-undef
+      darkObserver = new MutationObserver(checkDarkMode)
+      darkObserver.observe(document.documentElement, {
+        attributes: true,
+        // селектором может быть и класс (`.dark`), и data-атрибут (`[data-theme='dark']`)
+        attributeFilter: ["class", "data-theme"],
+        subtree: true
+      })
+      onUnmounted(() => {
+        darkObserver?.disconnect()
+        darkObserver = undefined
+      })
+    } else {
+      const colorSchemeQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+      const setColorScheme = (e: any) => (isDark.value = e.matches)
 
-    isDark.value = colorSchemeQueryList.matches
-    colorSchemeQueryList.addEventListener("change", setColorScheme)
+      isDark.value = colorSchemeQueryList.matches
+      colorSchemeQueryList.addEventListener("change", setColorScheme)
 
-    onUnmounted(() => {
-      colorSchemeQueryList.removeEventListener("change", setColorScheme)
-    })
+      onUnmounted(() => {
+        colorSchemeQueryList.removeEventListener("change", setColorScheme)
+      })
+    }
   }
 
   const resizableColumn = ref<string | null>(null)
 
+  // ---FOCUS-------------------------------
+  // T1: программный фокус корневого контейнера через exposed `componentTable` — зеркало
+  // Pagination/Split focus(). Корень несёт `tabindex="-1"`: фокусируется только программно,
+  // в natural tab order не попадает.
+  function focus(options?: FocusOptions) {
+    componentTable.value?.focus(options)
+  }
+
   // ---EXPOSE------------------------------
   defineExpose({
+    // ---REF-LINK----------------------------
+    componentTable,
     //---STATE-------------------------
     activeRow,
     sortColumns,
@@ -1136,7 +1174,8 @@
     startLoading,
     stopLoading,
     updateHeightTable,
-    reloadData: loadDataFromFunction
+    reloadData: loadDataFromFunction,
+    focus
   })
   // ---MOUNT-UNMOUNT-----------------------
   // `Table.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
@@ -1907,6 +1946,7 @@
   <div
     data-table-component
     ref="componentTable"
+    tabindex="-1"
     :class="classBaseTable"
     :style="`width:${styles.width};height:${styles.height};`">
     <div data-table-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>

@@ -25,11 +25,27 @@ const valuesPosition = [
   "top-right"
 ]
 
+const valuesType = ["success", "warning", "info", "error", "neutral"]
+
 // Issue 7 / F31 (RTL): валидация + нормализация позиции в logical (left → start, right → end).
 function toLogicalPosition(position?: BaseAlert["position"]): string {
   let p = (position ?? "top") as string
   if (!valuesPosition.includes(p)) p = "top"
   return p.replace("left", "start").replace("right", "end")
+}
+
+// Allow-list для `type` (зеркало `toLogicalPosition`): openAlert вызывают в том числе из untyped JS,
+// где TS-union не защищает. Неизвестное значение — dev-warn + фолбэк на default-тип "success",
+// а не throw: рантайм-ошибка в toast-е дороже неверного цвета.
+function toValidType(type: string): BaseAlert["type"] {
+  if (valuesType.includes(type)) return type as BaseAlert["type"]
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(
+      `[FishtVue Alert] type="${type}" is not supported; ` +
+        `expected one of ${valuesType.join(", ")}. Falling back to "success".`
+    )
+  }
+  return "success"
 }
 
 // Принимает уже нормализованную logical-позицию. Logical-utilities (start/end/ps/pe) авто-зеркалятся
@@ -63,6 +79,8 @@ export function openAlert(optionsAlert: BaseAlert) {
   }
   const pos = toLogicalPosition(options.position)
   options.position = pos as BaseAlert["position"]
+  // `undefined` не трогаем: глобальные options компонента должны сохранить право подставить свой `type`.
+  if (options.type !== undefined) options.type = toValidType(options.type)
   if (!("modelValue" in options) || typeof options?.modelValue !== "boolean") {
     options.modelValue = true
   }

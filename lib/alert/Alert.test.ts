@@ -252,6 +252,95 @@ describe("Alert Component", () => {
     )
   })
 
+  // -------------------------------------------------------------------------
+  // A1 — типовая гигиена (styleBase без `as any`) + defensive default
+  // в switch-ах `classesStyle` / `icon`.
+  // -------------------------------------------------------------------------
+
+  describe("styleBase — типизированный резолв style (A1)", () => {
+    afterEach(() => {
+      // window.FishtVue — глобальный singleton, утекает между тестами (см. Configuration support).
+      delete (window as any).FishtVue
+    })
+
+    it("applies style from global options when the prop is absent", () => {
+      const app: any = createApp({})
+      app.use(FishtVue, {
+        componentsOptions: { Alert: { style: { color: "blue" } } }
+      })
+
+      const wrapper = mount(Alert, {
+        global: { plugins: [app] },
+        props: { modelValue: true }
+      })
+
+      expect(wrapper.find("[data-alert] > div").attributes("style")).toContain("color: blue;")
+    })
+
+    it("prop style overrides the options layer", () => {
+      const app: any = createApp({})
+      app.use(FishtVue, {
+        componentsOptions: { Alert: { style: { color: "blue" } } }
+      })
+
+      const wrapper = mount(Alert, {
+        global: { plugins: [app] },
+        props: { modelValue: true, style: { color: "red" } }
+      })
+
+      const style = wrapper.find("[data-alert] > div").attributes("style")
+      expect(style).toContain("color: red;")
+      expect(style).not.toContain("blue")
+    })
+
+    it("renders no inline style when neither layer provides one", () => {
+      const wrapper = mount(Alert, { props: { modelValue: true } })
+      expect(wrapper.find("[data-alert] > div").attributes("style")).toBeUndefined()
+    })
+  })
+
+  describe("Defensive default for an out-of-union type (A1)", () => {
+    // `type` вне union приходит только из untyped JS / openAlert — TS такой вызов не пропустит,
+    // поэтому в тестах нужен явный `as any`.
+    const unknownType = "chartreuse" as unknown as AlertProps["type"]
+
+    it("falls back to the default type styles instead of returning undefined classesStyle", () => {
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, type: unknownType }
+      })
+
+      expect(wrapper.vm.classesStyle).toBeDefined()
+      expect(wrapper.vm.classesStyle.body).toBe("bg-green-50 dark:bg-green-950")
+      expect(wrapper.vm.classesStyle.button).toBe("hover:bg-green-200 dark:hover:bg-green-800")
+      expect(wrapper.vm.classesStyle.buttonIcon).toBe("fill-green-500 dark:fill-green-500")
+    })
+
+    it("keeps every classesStyle consumer renderable for an out-of-union type", () => {
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, type: unknownType, title: "t", subtitle: "s", closeButton: true },
+        slots: { default: "<p>slot content</p>" }
+      })
+
+      // classBase (body), classIcon, classTitle, classSubtitle, classSlotDefault
+      expect(wrapper.find("[data-alert] > div").attributes("class")).toContain("bg-green-50")
+      expect(wrapper.find("[data-alert-icon] svg").attributes("class")).toContain("text-green-400")
+      expect(wrapper.find("[data-alert-title]").attributes("class")).toContain("text-green-800")
+      expect(wrapper.find("[data-alert-subtitle]").attributes("class")).toContain("text-green-700")
+      expect(wrapper.find("[data-alert-slot]").attributes("class")).toContain("text-green-700")
+    })
+
+    it("still renders an icon (not an empty <component :is>) for an out-of-union type", () => {
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, type: unknownType }
+      })
+
+      const icon = wrapper.find("[data-alert-icon] svg")
+      expect(icon.exists()).toBe(true)
+      // Иконка default-типа "success" — CheckCircleIcon.
+      expect(icon.html()).toContain("M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809")
+    })
+  })
+
   describe("openAlert Function", () => {
     beforeEach(() => {
       document.body.innerHTML = "" // Очистить DOM перед каждым тестом
@@ -286,6 +375,30 @@ describe("Alert Component", () => {
       expect(alertElement).not.toBeNull()
       expect(alertElement?.className).toContain("top-0")
       expect(alertElement?.className).toContain("-translate-x-1/2")
+    })
+
+    it("should handle invalid type gracefully (allow-list fallback + dev-warn)", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      openAlert({ type: "invalid-type" as any })
+
+      const alertBody = document.querySelector("[data-alert] > div")
+      expect(alertBody).not.toBeNull()
+      // Фолбэк на default-тип "success" — стили отрисованы, undefined-классов нет.
+      expect(alertBody?.className).toContain("bg-green-50")
+      expect(alertBody?.className).not.toContain("undefined")
+      expect(document.querySelector("[data-alert-icon] svg")).not.toBeNull()
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('type="invalid-type"'))
+      warn.mockRestore()
+    })
+
+    it("should pass a valid type through without warning", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      openAlert({ type: "error" })
+
+      const alertBody = document.querySelector("[data-alert] > div")
+      expect(alertBody?.className).toContain("bg-red-50")
+      expect(warn).not.toHaveBeenCalled()
+      warn.mockRestore()
     })
 
     it("should apply displayTime and unmount alert after the timeout", async () => {
@@ -809,6 +922,78 @@ describe("Alert Component", () => {
       expect(warn).not.toHaveBeenCalled()
       warn.mockRestore()
     })
+
+    // A2 — поведенческие кейсы с реальным dir="rtl" на <body>.
+    // ВАЖНО: jsdom не вычисляет `direction` и logical properties (getComputedStyle их не
+    // резолвит), а tailwind()-движок в тестах не запускается — поэтому проверки СТРУКТУРНЫЕ:
+    // разметка под dir="rtl" остаётся на logical-утилитах (ms/ps/start/end) и не содержит
+    // физических ml/pl/left. Что alert реально уезжает вправо — проверяется только в
+    // настоящем браузере (Playwright), это вне scope unit-тестов.
+    it("renders with logical (not physical) spacing inside a dir='rtl' body", () => {
+      document.body.dir = "rtl"
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, title: "t", subtitle: "s", closeButton: true },
+        attachTo: document.body
+      })
+      try {
+        expect(wrapper.find("[data-alert]").element.closest("[dir='rtl']")).toBe(document.body)
+
+        const content = wrapper.find("[data-alert-content]")
+        expect(content.attributes("class")).toContain("ms-3")
+        expect(content.attributes("class")).not.toContain("ml-3")
+
+        const btnBox = wrapper.find("[data-alert-button]")
+        expect(btnBox.attributes("class")).toContain("ms-auto")
+        expect(btnBox.attributes("class")).toContain("ps-3")
+        expect(btnBox.attributes("class")).not.toContain("ml-auto")
+        expect(btnBox.attributes("class")).not.toContain("pl-3")
+      } finally {
+        document.body.dir = ""
+        wrapper.unmount()
+      }
+    })
+
+    it("keeps the rtl: translate flip on the slide-in class inside a dir='rtl' body", () => {
+      document.body.dir = "rtl"
+      const wrapper = mount(Alert, {
+        props: { modelValue: true, position: "start" },
+        attachTo: document.body
+      })
+      try {
+        expect(wrapper.vm.positionLogical).toBe("start")
+        expect(wrapper.vm.startEnterAndLeaveClass).toContain("rtl:translate-x-[200%]")
+      } finally {
+        document.body.dir = ""
+        wrapper.unmount()
+      }
+    })
+
+    it.each([
+      { position: "start", side: "start-0", padding: "ps-3", items: "items-start", physical: ["left-0", "pl-3"] },
+      { position: "end", side: "end-0", padding: "pe-3", items: "items-end", physical: ["right-0", "pr-3"] }
+    ])(
+      "openAlert container for logical '$position' stays logical inside a dir='rtl' body",
+      ({ position, side, padding, items, physical }) => {
+        document.body.innerHTML = ""
+        document.body.dir = "rtl"
+        try {
+          openAlert({ position: position as AlertPosition })
+
+          const container = document.querySelector(`.alert-${position}`)
+          expect(container).not.toBeNull()
+          expect(container?.closest("[dir='rtl']")).toBe(document.body)
+          expect(container?.querySelector("[data-alert]")).not.toBeNull()
+
+          expect(container?.className).toContain(side)
+          expect(container?.className).toContain(padding)
+          expect(container?.className).toContain(items)
+          physical.forEach((cls) => expect(container?.className).not.toContain(cls))
+        } finally {
+          document.body.dir = ""
+          document.body.innerHTML = ""
+        }
+      }
+    )
   })
 
   describe("Mobile-first responsive gutters", () => {

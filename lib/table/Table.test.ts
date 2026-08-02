@@ -11,6 +11,7 @@ import { tailwind } from "fishtvue/theme"
 import { cssComponents } from "fishtvue/component"
 import Select from "fishtvue/select/Select.vue"
 import Calendar from "fishtvue/calendar/Calendar.vue"
+import Loading from "fishtvue/loading/Loading.vue"
 
 describe("Table Component", () => {
   beforeAll(() => {
@@ -3089,5 +3090,191 @@ describe("Table Component - B10 semantic surface tokens", () => {
     expect(cls).toContain("bg-surface-100/70")
     expect(cls).toContain("dark:bg-surface-800/50")
     expect(cls).not.toMatch(legacyGrayFamily)
+  })
+})
+
+describe("Table Component - T1 public API surface + T3 darkModeSelector", () => {
+  beforeAll(() => {
+    // @ts-ignore — этот describe — sibling основного, нужен свой IO-mock
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] } as Response)
+  })
+
+  const fruits = [
+    { name: "orange", color: "orange" },
+    { name: "banana", color: "yellow" }
+  ]
+
+  // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback), а
+  // documentElement переживает mount: чистим обоих, чтобы darkModeSelector не протёк ни в
+  // соседние тесты, ни в соседние файлы (см. memory: window.FishtVue leak across Vitest files).
+  const resetGlobals = () => {
+    try {
+      // @ts-ignore
+      delete window.FishtVue
+    } catch {
+      // @ts-ignore
+      window.FishtVue = undefined
+    }
+    document.documentElement.classList.remove("dark")
+    document.documentElement.removeAttribute("data-theme")
+  }
+  beforeEach(resetGlobals)
+  afterEach(() => {
+    resetGlobals()
+    vi.restoreAllMocks()
+  })
+
+  const appWithTheme = (optionsTheme: Record<string, unknown>) => ({
+    install(app: any) {
+      app.use(FishtVue, { optionsTheme })
+    }
+  })
+
+  // Подменяем ТОЛЬКО "(prefers-color-scheme: dark)": Loading.vue читает
+  // "(prefers-reduced-motion: reduce)" через тот же window.matchMedia, и его ответ портить нельзя.
+  const stubColorSchemeMedia = (darkMatches: boolean) => {
+    const darkQuery = "(prefers-color-scheme: dark)"
+    const removeEventListener = vi.fn()
+    const handlers: Array<(e: any) => void> = []
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          media: query,
+          matches: query === darkQuery ? darkMatches : false,
+          onchange: null,
+          addEventListener: (_type: string, handler: (e: any) => void) => {
+            if (query === darkQuery) handlers.push(handler)
+          },
+          removeEventListener,
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => false
+        }) as any
+    )
+    return { handlers, removeEventListener }
+  }
+
+  describe("T1 — componentTable / focus()", () => {
+    it("exposes componentTable pointing at the root [data-table-component] element", () => {
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps })
+      expect(wrapper.vm.componentTable).toBe(wrapper.find("[data-table-component]").element)
+    })
+
+    it('root carries tabindex="-1" — фокус только программный, tab order не меняется', () => {
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps })
+      expect(wrapper.find("[data-table-component]").attributes("tabindex")).toBe("-1")
+    })
+
+    it("focus() moves document.activeElement onto the root container", () => {
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps, attachTo: document.body })
+      const root = wrapper.find("[data-table-component]").element as HTMLElement
+      expect(document.activeElement).not.toBe(root)
+      wrapper.vm.focus()
+      expect(document.activeElement).toBe(root)
+      wrapper.unmount()
+    })
+
+    it("focus() forwards FocusOptions to HTMLElement.focus", () => {
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps, attachTo: document.body })
+      const root = wrapper.find("[data-table-component]").element as HTMLElement
+      const focusSpy = vi.spyOn(root, "focus")
+      wrapper.vm.focus({ preventScroll: true })
+      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+      wrapper.unmount()
+    })
+  })
+
+  describe("T3 — isDark follows optionsTheme.darkModeSelector", () => {
+    it("derives dark from the configured selector present in the DOM, ignoring the OS preference", () => {
+      document.documentElement.classList.add("dark")
+      // OS говорит «light» — сконфигурированный селектор обязан победить.
+      stubColorSchemeMedia(false)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: ".dark" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      expect(wrapper.vm.isDark).toBe(true)
+    })
+
+    it("stays light when the configured selector is absent, even if the OS prefers dark", () => {
+      // Обратная сторона контракта: селектор задан → media-query больше не источник истины.
+      stubColorSchemeMedia(true)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: ".dark" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      expect(wrapper.vm.isDark).toBe(false)
+    })
+
+    it("reacts to the selector being toggled at runtime (MutationObserver)", async () => {
+      stubColorSchemeMedia(false)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: "[data-theme='dark']" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      expect(wrapper.vm.isDark).toBe(false)
+
+      document.documentElement.setAttribute("data-theme", "dark")
+      await flushPromises()
+      expect(wrapper.vm.isDark).toBe(true)
+
+      document.documentElement.removeAttribute("data-theme")
+      await flushPromises()
+      expect(wrapper.vm.isDark).toBe(false)
+    })
+
+    it("stops tracking the selector after unmount (observer disconnected)", async () => {
+      stubColorSchemeMedia(false)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: ".dark" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      const vm = wrapper.vm
+      expect(vm.isDark).toBe(false)
+
+      wrapper.unmount()
+      document.documentElement.classList.add("dark")
+      await flushPromises()
+      expect(vm.isDark).toBe(false)
+    })
+
+    it("falls back to prefers-color-scheme when no darkModeSelector is configured and unsubscribes on unmount", () => {
+      const { handlers, removeEventListener } = stubColorSchemeMedia(true)
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps })
+      expect(wrapper.vm.isDark).toBe(true)
+      expect(handlers.length).toBe(1)
+
+      // Живой media-listener сохранён — реакция на смену OS-темы не потеряна.
+      handlers[0]({ matches: false })
+      expect(wrapper.vm.isDark).toBe(false)
+
+      wrapper.unmount()
+      expect(removeEventListener).toHaveBeenCalledWith("change", handlers[0])
+    })
+
+    it("Loading colour follows the darkModeSelector (theme.600 in dark, theme.500 in light)", async () => {
+      // Единственный template-потребитель isDark — цвет спиннера в loading-оверлее.
+      document.documentElement.classList.add("dark")
+      stubColorSchemeMedia(false)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: ".dark" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      wrapper.vm.startLoading()
+      await nextTick()
+      expect(wrapper.find("[data-table-loading]").exists()).toBe(true)
+      expect(wrapper.findComponent(Loading).props("color")).toBe("theme.600")
+
+      document.documentElement.classList.remove("dark")
+      await flushPromises()
+      await nextTick()
+      expect(wrapper.findComponent(Loading).props("color")).toBe("theme.500")
+    })
   })
 })

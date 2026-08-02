@@ -390,6 +390,7 @@ export type IColumn = {
 export interface IColumnPrivate extends Omit<IColumn, "dataField"> {
   id: string
   dataField: string
+  /** Резолвленный флаг редактируемости ячеек колонки (`column.edit` → `column.edit.isEdit` → глобальный `edit`). Internal. */
   isEdit: boolean
   /** Compound-API: ключ родительской `<ColumnGroup>` (null — колонка вне группы). Internal. */
   _groupKey?: number | null
@@ -1054,6 +1055,14 @@ export declare type TableEmits = {
  * Exposes state, props, and methods for interacting with the Table component programmatically.
  */
 export declare type TableExpose = {
+  // ---REF-LINK----------------------------
+  /**
+   * Корневой DOM-элемент компонента (`<div data-table-component>`).
+   * `undefined` до mount и при SSR.
+   * @type {HTMLElement | undefined}
+   */
+  componentTable: HTMLElement | undefined
+
   // ---STATE-------------------------
   /**
    * Уникальный идентификатор текущей активной (выбранной) строки.
@@ -1368,6 +1377,8 @@ export declare type TableExpose = {
 
   /**
    * Indicates whether dark mode is active.
+   * Источник — `optionsTheme.darkModeSelector` (наличие селектора в DOM), а при отсутствии
+   * конфигурации — `prefers-color-scheme: dark`.
    * @type {boolean}
    */
   isDark: boolean
@@ -1478,6 +1489,12 @@ export declare type TableExpose = {
    * Only works when asyncData is configured as a function.
    */
   reloadData(): Promise<void>
+
+  /**
+   * Устанавливает фокус на корневой контейнер таблицы (`tabindex="-1"` — только программный фокус).
+   * @param {FocusOptions} [options] - Стандартные опции `HTMLElement.focus()`, например `preventScroll`.
+   */
+  focus(options?: FocusOptions): void
 }
 export declare type TableOption = Pick<
   TableProps,

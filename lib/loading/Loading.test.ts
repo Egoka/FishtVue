@@ -55,6 +55,19 @@ describe("Loading Component", () => {
     })
   })
 
+  describe("Open prop unions", () => {
+    // Type-test: `animationDuration`/`size` должны принимать произвольные числа, а `type` —
+    // любой ключ Svg-карты (включая "simple" без отдельного литерала в union).
+    // Присваивание в `LoadingProps` проверяется `pnpm typecheck`, значения — рантаймом.
+    it("accepts arbitrary numeric values outside the preset literals", () => {
+      const props: LoadingProps = { type: "simple", animationDuration: 1234, size: 7 }
+      const wrapper = mount(Loading, { props })
+      expect(vm(wrapper).type).toBe("simple")
+      expect(vm(wrapper).animationDuration).toBe(1234)
+      expect(vm(wrapper).size).toBe(7)
+    })
+  })
+
   describe("Accessibility (Issue 3)", () => {
     it("marks the root as an ARIA live status region", () => {
       const wrapper = mount(Loading)
@@ -175,9 +188,42 @@ describe("Loading Component", () => {
       expect(vm(wrapper).color).toBe("#10b981")
     })
 
-    it("falls back to currentColor for an unknown token", () => {
+    it("warns and falls back to currentColor for an unknown token", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
       const wrapper = mount(Loading, { props: { color: "totallyUnknownToken" } })
       expect(vm(wrapper).color).toBe("currentColor")
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("[FishtVue Loading]"))
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown color token "totallyUnknownToken"'))
+    })
+
+    it("warns for an unknown token coming from componentsOptions", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const app = createAppWithFishtVue({ componentsOptions: { Loading: { color: "definitelyNotAToken" } } })
+      const wrapper = mount(Loading, { global: { plugins: [app as any] } })
+      expect(vm(wrapper).color).toBe("currentColor")
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown color token "definitelyNotAToken"'))
+    })
+
+    it("stays silent for hex, palette token, explicit currentColor and an unset color", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mount(Loading, { props: { color: "#3b82f6" } })
+      mount(Loading, { props: { color: "emerald" } })
+      mount(Loading, { props: { color: "currentColor" } })
+      mount(Loading)
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Unknown color token"))
+    })
+
+    it("suppresses the dev-warning in a production build", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const nodeEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "production"
+      try {
+        const wrapper = mount(Loading, { props: { color: "totallyUnknownToken" } })
+        expect(vm(wrapper).color).toBe("currentColor")
+      } finally {
+        process.env.NODE_ENV = nodeEnv
+      }
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Unknown color token"))
     })
   })
 
@@ -187,7 +233,30 @@ describe("Loading Component", () => {
       const wrapper = mount(Loading, { props: { type: "does-not-exist" as any } })
       await flushPromises()
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("Unknown loading type"))
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("[FishtVue Loading]"))
       expect(wrapper.find("[data-loading]").exists()).toBe(true)
+    })
+
+    it("does not warn for a known type", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const wrapper = mount(Loading, { props: { type: "bars" } })
+      await flushPromises()
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Unknown loading type"))
+      expect(wrapper.find("[data-loading]").exists()).toBe(true)
+    })
+
+    it("suppresses the dev-warning in a production build", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const nodeEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "production"
+      try {
+        const wrapper = mount(Loading, { props: { type: "does-not-exist" as any } })
+        await flushPromises()
+        expect(wrapper.find("[data-loading]").exists()).toBe(true)
+      } finally {
+        process.env.NODE_ENV = nodeEnv
+      }
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Unknown loading type"))
     })
   })
 
