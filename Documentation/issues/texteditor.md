@@ -17,7 +17,7 @@ stability: experimental (на момент аудита 17 тестов skipped)
 | critical | 0            | —                                                                                                     |
 | high     | 0            | ~~A2, A4-5, C17~~ ✅ (cross-cutting packaging закрыт Wave 2, см. [button.md](./button.md) Issues 1, 8, 9), ~~J46 (tests todo)~~ ✅ 2026-09-05, ~~L53~~ ✅ 2026-07-02, ~~B10~~ ✅ 2026-07-04 |
 | medium   | 3            | F30, F32, security (image upload); ~~M55 (native form submit)~~ ✅ 2026-09-05, ~~D26~~ ✅ 2026-05-11   |
-| low      | 3            | E29.7, N59, G34                                                                                       |
+| low      | 2            | N59 (print), G34 (ref/focus expose); ~~E29.7~~ N/A 2026-09-05 — ноль `transition` в файле            |
 
 ## ~~Issue 1: 17 тестов skipped, coverage 0% — компонент не верифицирован~~ ✅ resolved 2026-09-05
 
@@ -298,9 +298,11 @@ Quill editor рендерится через div'ы. Нет hidden `<input>` д�
 >
 > **Что стало.** Переменные вычисляются в computed `quillVars` и биндятся инлайном на **оба** контейнера. Источник истины о теме — новый composable [`useDarkMode()`](../../lib/theme/useDarkMode.ts), вынесенный из копий в Table и Calendar.
 
-## Issue 11: print, motion, color cross-cutting
+## Issue 11: print, motion, color cross-cutting — ⚠️ partial
 
-См. [button.md](./button.md).
+- **motion (E29.7):** ✅ **N/A, зафиксировано 2026-09-05.** В [TextEditor.vue](../../lib/texteditor/TextEditor.vue) **ноль** вхождений `transition` — ни Tailwind-класса, ни `<transition>`, ни CSS-свойства ни в шаблоне, ни в `<style>`-блоке. Гейтить нечего; собственные анимации Quill — его поверхность. Cross-cutting guard — [lib/motionSafe.test.ts](../../lib/motionSafe.test.ts).
+- **color (B10):** ✅ resolved 2026-07-04 (Issue 2) + 2026-09-05 (тематические переменные ушли в inline, Issue 12).
+- **print (N59):** ❌ открыто — в файле нет ни одного `print:`-класса. Входит в общий print-заход, см. [button.md](./button.md).
 
 ## Cross-cutting: Configuration support
 

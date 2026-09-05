@@ -16,7 +16,7 @@ related-doc: ../components/calendar.md
 | critical | 0 | — |
 | high | 1 | P (dual-API — Issue 5, deferred redesign); ~~A2, A4-5, C17 (Issue 4)~~ ✅ закрыты волной 2, ~~L53 (Issue 7)~~ ✅ framework-level |
 | medium | 2 | F31, G34 |
-| low | 2 | E29.7, N59 |
+| low | 1 | N59 (print); ~~E29.7~~ N/A 2026-09-05 — в Calendar.vue ноль `transition`, гейтить нечего |
 
 ## ~~Issue 1: CRITICAL — MutationObserver на documentElement не disconnect'ится при unmount~~ ✅ resolved 2026-05-11
 
@@ -270,8 +270,11 @@ Picker открывается через `<FixWindow v-bind="paramsFixWindow">`.
 
 > **Status:** частично deferred — cross-cutting (затрагивает все 22 компонента). См. [button.md](./button.md), [switch.md](./switch.md). **B10 — resolved 2026-07-04** (см. подраздел ниже), остаётся **только** E29.7/N59/F31.
 
-- **Категория:** E29.7, N59, F31
+- **Категория:** ~~E29.7~~ (N/A), N59, F31
 - **Severity:** low
+
+> **E29.7 — N/A, зафиксировано 2026-09-05.** Построчная проверка: в [Calendar.vue](../../lib/calendar/Calendar.vue) **ноль** вхождений `transition` — ни Tailwind-класса, ни `<transition>`-обёртки, ни CSS-свойства. Гейтить `prefers-reduced-motion` нечего. Собственные анимации v-calendar — его внутренняя поверхность, не наша. Пункт снят со счётчика, а не отложен.
+> Остаются **N59** (`print:` в файле нет вовсе) и **F31** (RTL).
 
 ### ~~B10 — hardcoded gray-*/stone-*/slate-* → semantic surface-* tokens~~ ✅ resolved 2026-07-04
 

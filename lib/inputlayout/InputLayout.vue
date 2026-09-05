@@ -409,11 +409,17 @@
             </div>
           </FixWindow>
         </div>
+        <!--
+          E29.7: active-классы `<transition>` тоже обязаны гейтиться `motion-safe:` — они
+          применяются к DOM напрямую, минуя `setStyle`, поэтому cross-cutting-заход по классам
+          компонента их не задел. Без гейта появление/исчезновение clear-иконки анимируется
+          даже при `prefers-reduced-motion: reduce`.
+        -->
         <transition
-          leave-active-class="transition ease-in duration-200"
+          leave-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-200"
+          enter-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="clear && (value?.length || value > 0)" data-input-layout-clear :class="classIconBody">

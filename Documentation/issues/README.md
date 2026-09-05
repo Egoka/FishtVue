@@ -17,14 +17,12 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 
 | Target          | File                                       | Critical | High  | Medium | Low    |
 | --------------- | ------------------------------------------ | -------- | ----- | ------ | ------ |
-| Button          | [button.md](./button.md)                   | 0        | 0     | 1      | 3      |
 | Label           | [label.md](./label.md)                     | 0        | 0     | 1      | 0      |
 | Aria            | [aria.md](./aria.md)                       | 0        | 0     | 1      | 1      |
 | Select          | [select.md](./select.md)                   | 0        | 1     | 0      | 0      |
-| Calendar        | [calendar.md](./calendar.md)               | 0        | 1     | 2      | 2      |
-| TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 0     | 3      | 3      |
+| Calendar        | [calendar.md](./calendar.md)               | 0        | 1     | 2      | 1      |
+| TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 0     | 3      | 2      |
 | VirtualScroller | [virtualscroller.md](./virtualscroller.md) | 0        | 0     | 1      | 0      |
-| Table           | [table.md](./table.md)                     | 0        | 0     | 0      | 1      |
 | Alert           | [alert.md](./alert.md)                     | 0        | 0     | 0      | 1      |
 | Loading         | [loading.md](./loading.md)                 | 0        | 0     | 0      | 1      |
 | Theme           | [theme.md](./theme.md)                     | 0        | 1     | 3      | 2      |
@@ -32,7 +30,7 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 | Locale          | [locale.md](./locale.md)                   | 0        | 1     | 4      | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 0     | 3      | 2      |
 | Utilities       | [\_utilities.md](./_utilities.md)          | 0        | 1     | 0      | 0      |
-| **TOTAL**       | **27 active + 3 done**                     | **0**    | **5** | **21** | **18** |
+| **TOTAL**       | **27 active + 3 done**                     | **0**    | **5** | **20** | **12** |
 
 > ✅ **Ревизия счётчиков проведена 2026-09-05.** Дрейф, о котором предупреждала врезка от 2026-08-02, устранён: строка TOTAL пересчитана **по фактическим «Сводка»-таблицам всех активных файлов**, счётчик «открыто» ниже приведён к той же сумме, ячейка `active + done` исправлена по реальному содержимому каталога. Пять несогласованных чисел (TOTAL, текстовый счётчик, сумма по столбцам, сумма по файлам, число документов) сведены в одно.
 >
@@ -40,6 +38,14 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 >
 > **VirtualScroller добавлен в сводку** — 23-й компонент библиотеки отсутствовал в матрице целиком, хотя имеет документ, спеку, тесты, locale-ключи и Nuxt-регистрацию. Заведён [virtualscroller.md](./virtualscroller.md) с единственной реальной позицией (coverage 73.35 / 56.28 при пороге 80 / 70).
 >
+> **Второй проход 2026-09-05 — верификация каждой активной строки.** Проверка «а точно ли это открыто» сняла ещё три позиции как **фантомные**:
+>
+> - **Button** (`0/0/1/3`) — незачёркнутых issue в файле ноль, а четыре счётчика (`G34`/`D26`/`E29.7`/`G37`) файл сам описывает как «cross-cutting категории, локально решены» ещё 2026-05-10. → `0/0/0/0`, строка перенесена в «Завершённые».
+> - **Table** (`0/0/0/1`) — `D26` «консистентность событий» без отдельной секции. Проверено по [Table.d.ts](../../lib/table/Table.d.ts): все 15 эмитов типизированы, kebab-case, payload'ы структурны. → `0/0/0/0`, строка перенесена.
+> - **`E29.7` у Calendar и TextEditor** — в обоих файлах **ноль** `transition`. Гейтить нечего: это N/A, а не долг.
+>
+> Тем же проходом закрыт **сам пункт Wave 10.1**: построчный аудит (а не «есть/нет в файле») нашёл два настоящих пробела — active-классы `<transition>` в InputLayout и голый `transition` на иконке Switch. Оба исправлены, и заведён cross-cutting guard [lib/motionSafe.test.ts](../../lib/motionSafe.test.ts), который валит сборку на любом новом негейтнутом переходе. Ручная сверка больше не нужна.
+
 > **Методологическая оговорка сохраняется:** счётчик считает **категории чек-листа**, а не задачи. Cross-cutting категория остаётся у компонента, пока не закрыта глобальная волна, даже если локально делать нечего — см. [button.md](./button.md) («Button-локальных открытых секций нет; G34/D26/E29.7/G37 — cross-cutting категории, локально решены»). Поэтому 44 в матрице ≠ 44 задачи.
 
 > **2026-07-04 — Wave 9 (B10), первый батч:** Menu, Icons, Separator закрыли последний открытый пункт (B10 — semantic surface token) и переехали в таблицу «Завершённые» ниже. Select/Calendar/TextEditor/Theme закрыли свою B10-часть, но остаются active — другие открытые issues не связаны с этим заходом. ~~Accordion закрыл color-часть B10, но остаётся active — отдельный, не связанный с этим изменением gap (`forced-colors:outline` отсутствует).~~ **superseded 2026-08-02** — см. врезку ниже. См. [theme.md Issue 10](./theme.md) и раздел «Wave 9 — Theming polish» ниже.
@@ -66,6 +72,8 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 | Icons           | [icons.md](./icons.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
 | Separator       | [separator.md](./separator.md)             | 0        | 0    | 0      | 0   | active/ ¹ |
 | Accordion       | [accordion.md](./accordion.md)             | 0        | 0    | 0      | 0   | active/ ¹ |
+| Button          | [button.md](./button.md)                   | 0        | 0    | 0      | 0   | active/ ¹ |
+| Table           | [table.md](./table.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
 | FixWindow       | [done/fixwindow.md](./done/fixwindow.md)   | 0        | 0    | 0      | 0   | done/     |
 | Dialog          | [done/dialog.md](./done/dialog.md)         | 0        | 0    | 0      | 0   | done/     |
 | Config          | [done/config.md](./done/config.md)         | 0        | 0    | 0      | 0   | done/     |
@@ -429,9 +437,13 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.1 prefers-reduced-motion
 
-- [~] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([button.md Issue 10](./button.md)) — pattern готов к применению на остальных 21 компонента. **Прогресс 2026-05-11:** Input ([Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98)) ✅; Select ([Select.vue](../../lib/select/Select.vue) — root transition + classSelectList + classLiItem + TransitionGroup leave/enter classes + Badge inline + print: prefixes) ✅; Aria ([Aria.vue:65](../../lib/aria/Aria.vue#L65) — `motion-safe:placeholder:transition-all` + `print:*`) ✅; Label ([Label.vue:36](../../lib/label/Label.vue#L36) — `motion-safe:transition-all motion-safe:duration-200`) ✅; Menu ([Menu.vue](../../lib/menu/Menu.vue) — default `styles.animation = "motion-safe:transition-all motion-safe:duration-500"` в `classMenu`/`classMenuItem`) ✅ 2026-06-06; Split ([Split.vue:89, 95](../../lib/split/Split.vue#L89-L95) — root `motion-safe:transition-all` + separator-icon `motion-safe:transition-opacity`) ✅ 2026-06-06; Table ([Table.vue](../../lib/table/Table.vue) — `animation`-токен + `classIsSort`/`classResizedColumns`/`classTr` + 5 inline `<transition>`-обёрток + search-Input → `motion-safe:`) ✅ 2026-06-11. **2026-06-13:** Switch ([Switch.vue:64, 98, 106, 136](../../lib/switch/Switch.vue#L64) — root `classBaseSwitch` + switch/checkbox-track + thumb `motion-safe:`; inline `<Icons>`-thumb вынесен в NEW computed `classSwitchIconImg` через `setStyle`) ✅ [switch.md Issue 7](./switch.md); InputLayout ([InputLayout.vue:67-72, 149-154](../../lib/inputlayout/InputLayout.vue#L67-L72) — root `animation` `motion-safe:transition-all motion-safe:duration-550` + оба `<transition>`-блока + hover-иконки `motion-safe:*`; inline-классы зарегистрированы явно module-scope `InputLayout.setStyle`) ✅ [inputlayout.md Issue 8](./inputlayout.md). **2026-06-14:** Accordion ([Accordion.vue](../../lib/accordion/Accordion.vue) — `classSubtitle`/`styleIcon`/`classRect` → `motion-safe:transition*` + `onRootLeave` мгновенный unmount под `prefers-reduced-motion: reduce`) ✅ [accordion.md Issue 7 · E29.7](./accordion.md).
+- [x] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([button.md Issue 10](./button.md)) — pattern готов к применению на остальных 21 компонента. **Прогресс 2026-05-11:** Input ([Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98)) ✅; Select ([Select.vue](../../lib/select/Select.vue) — root transition + classSelectList + classLiItem + TransitionGroup leave/enter classes + Badge inline + print: prefixes) ✅; Aria ([Aria.vue:65](../../lib/aria/Aria.vue#L65) — `motion-safe:placeholder:transition-all` + `print:*`) ✅; Label ([Label.vue:36](../../lib/label/Label.vue#L36) — `motion-safe:transition-all motion-safe:duration-200`) ✅; Menu ([Menu.vue](../../lib/menu/Menu.vue) — default `styles.animation = "motion-safe:transition-all motion-safe:duration-500"` в `classMenu`/`classMenuItem`) ✅ 2026-06-06; Split ([Split.vue:89, 95](../../lib/split/Split.vue#L89-L95) — root `motion-safe:transition-all` + separator-icon `motion-safe:transition-opacity`) ✅ 2026-06-06; Table ([Table.vue](../../lib/table/Table.vue) — `animation`-токен + `classIsSort`/`classResizedColumns`/`classTr` + 5 inline `<transition>`-обёрток + search-Input → `motion-safe:`) ✅ 2026-06-11. **2026-06-13:** Switch ([Switch.vue:64, 98, 106, 136](../../lib/switch/Switch.vue#L64) — root `classBaseSwitch` + switch/checkbox-track + thumb `motion-safe:`; inline `<Icons>`-thumb вынесен в NEW computed `classSwitchIconImg` через `setStyle`) ✅ [switch.md Issue 7](./switch.md); InputLayout ([InputLayout.vue:67-72, 149-154](../../lib/inputlayout/InputLayout.vue#L67-L72) — root `animation` `motion-safe:transition-all motion-safe:duration-550` + оба `<transition>`-блока + hover-иконки `motion-safe:*`; inline-классы зарегистрированы явно module-scope `InputLayout.setStyle`) ✅ [inputlayout.md Issue 8](./inputlayout.md). **2026-06-14:** Accordion ([Accordion.vue](../../lib/accordion/Accordion.vue) — `classSubtitle`/`styleIcon`/`classRect` → `motion-safe:transition*` + `onRootLeave` мгновенный unmount под `prefers-reduced-motion: reduce`) ✅ [accordion.md Issue 7 · E29.7](./accordion.md).
 
-  **Ревизия 2026-09-05:** счётчик «11 / 22» вводил в заблуждение — знаменатель считал все компоненты, включая те, у которых `transition` нет вовсе. Фактически `motion-safe:` несут **все 15 компонентов, у которых есть переходы**; оставшиеся 7 (Badge, Calendar, Icons, Loading, Pagination, Separator, TextEditor) анимаций не имеют — гейтить нечего. Оговорка: проверка велась на уровне «есть/нет в файле», построчный аудит на unprefixed-остатки внутри файлов не проводился.
+  **✅ closed 2026-09-05.** Счётчик «11 / 22» вводил в заблуждение — знаменатель считал все компоненты, включая те, у которых `transition` нет вовсе. Фактически из 23 компонентов переходы есть у 16, у остальных 7 (Badge, Calendar, Icons, Loading, Pagination, Separator, TextEditor) гейтить нечего.
+
+  **Построчный аудит, который откладывался всё это время, наконец проведён** — и нашёл два реальных пробела, которых покомпонентный заход не видел: (1) [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) — `leave-active-class`/`enter-active-class` у `<transition>` (эти классы попадают в DOM напрямую, минуя `Component.setStyle()`, поэтому сверка по классам компонента их не задевала); (2) [Switch.vue](../../lib/switch/Switch.vue) — голый `transition` на иконке помощи. Оба исправлены.
+
+  Чтобы вопрос не возвращался, заведён cross-cutting guard [lib/motionSafe.test.ts](../../lib/motionSafe.test.ts): он сканирует все SFC и валит сборку на любом негейтнутом `transition-*`, указывая файл и строку. Отдельно проверено, что guard видит именно active-классы `<transition>` — тот случай, который и был пропущен.
 - [x] [Loading.vue](../../lib/loading/Loading.vue) — статичный fallback (`simple`-loader, `animation-duration=0`) в reduced-motion mode через `matchMedia` guard в обёртке · [loading.md Issue 6](./loading.md) · ✅ resolved 2026-06-03
 
 #### 10.2 Print styles

@@ -296,6 +296,20 @@ Style-for-print (не `display:none`) — корневой `classBody` полу�
 - **Тесты:** `InputLayout.test.ts` блок «label↔control association» (auto-id, props.id wins, `<Label>` `for`+`id`, slot `{id, labelledby}`, нет `labelledby` без label); `Input.test.ts`/`Aria.test.ts` (id всегда есть, `<label for>` === control id, явный id уважается); `Select.test.ts` (`role=combobox` + `aria-labelledby` + `aria-expanded` реактивен); `Calendar.test.ts` (aria-labelledby на триггере); `TextEditor.test.ts` source-scan (`#default` scope + `aria-labelledby` binding — mount Quill крашит jsdom rAF, см. Issue 1 todo); `Label.test.ts` (`id` fallthrough на `<label>`).
 - **Note (Switch):** Switch не использует InputLayout (собственный label-рендер) → вне scope этого fix.
 
+## Issue 11: E29.7 — active-классы `<transition>` не гейтились `motion-safe:` ✅ resolved 2026-09-05
+
+- **Категория:** E29.7
+- **Severity:** low
+- **Где:** [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) — `<transition>` вокруг clear-иконки
+
+> Заведён и закрыт в один заход, найден построчным аудитом Wave 10.1 (до него сверка велась на уровне «есть ли `motion-safe` в файле», и этот пробел она пройти не могла).
+>
+> **Что было.** Issue 8 закрыл E29.7 для InputLayout по классам компонента — они идут через `Component.setStyle()`. Но `leave-active-class`/`enter-active-class` у `<transition>` попадают в DOM **напрямую, минуя `setStyle`**, и остались с голым `transition ease-in duration-200`. Появление и исчезновение clear-иконки анимировалось даже при `prefers-reduced-motion: reduce`.
+>
+> **Что стало.** Оба active-класса переведены на `motion-safe:transition motion-safe:ease-in motion-safe:duration-200`. `from`/`to`-классы не тронуты: они задают конечные состояния (`opacity-0`/`opacity-100`), а не анимацию — без них элемент просто не появится.
+>
+> Чтобы класс ошибки не вернулся, заведён cross-cutting guard [lib/motionSafe.test.ts](../../lib/motionSafe.test.ts) с отдельной проверкой, что он видит именно active-классы `<transition>`.
+
 ## Cross-cutting: Configuration support
 
 | Настройка                       | Поддержано? | Комментарий                                                                                                                                                        |

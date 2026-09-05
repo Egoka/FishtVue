@@ -337,6 +337,20 @@ switchingType: "checkbox" | "switch" | string
 
 См. [button.md Issue 15](./button.md).
 
+## Issue 15: E29.7 — голый `transition` на иконке помощи ✅ resolved 2026-09-05
+
+- **Категория:** E29.7
+- **Severity:** low
+- **Где:** [Switch.vue](../../lib/switch/Switch.vue) — `<Icons type="QuestionMarkCircle">`
+
+> Заведён и закрыт в один заход, найден построчным аудитом Wave 10.1.
+>
+> **Что было.** Issue 7 закрыл E29.7 для Switch — но по классам, идущим через `Switch.setStyle()`. Иконка помощи получала классы **литералом в атрибуте `class`**, и там остался негейтнутый `transition`: hover-переход цвета проигрывался при `prefers-reduced-motion: reduce`.
+>
+> **Что стало.** `transition` → `motion-safe:transition`.
+>
+> Показательно, что оба пробела Wave 10.1 (здесь и в InputLayout) оказались там, где классы **обходят `setStyle`** — литеральный `class`-атрибут и active-классы `<transition>`. Именно поэтому покомпонентная сверка их не находила, и понадобился построчный guard [lib/motionSafe.test.ts](../../lib/motionSafe.test.ts).
+
 ## Cross-cutting: Configuration support
 
 | Настройка                  | Поддержано? | Комментарий                                                                                  |

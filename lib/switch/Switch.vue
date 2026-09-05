@@ -291,7 +291,7 @@
       <div data-switch-help v-if="help?.length || $slots.help" :class="classIconBody">
         <Icons
           type="QuestionMarkCircle"
-          class="text-surface-500 dark:text-surface-400 hover:text-yellow-500 transition cursor-help" />
+          class="text-surface-500 dark:text-surface-400 hover:text-yellow-500 motion-safe:transition cursor-help" />
         <FixWindow
           :mode="mode as StyleMode"
           event-open="click"
