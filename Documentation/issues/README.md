@@ -20,15 +20,13 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 | Label           | [label.md](./label.md)                     | 0        | 0     | 1      | 0      |
 | Aria            | [aria.md](./aria.md)                       | 0        | 0     | 1      | 0      |
 | Select          | [select.md](./select.md)                   | 0        | 1     | 0      | 0      |
-| Calendar        | [calendar.md](./calendar.md)               | 0        | 1     | 1      | 1      |
-| TextEditor      | [texteditor.md](./texteditor.md)           | 0        | 0     | 3      | 1      |
 | Alert           | [alert.md](./alert.md)                     | 0        | 0     | 0      | 1      |
 | Loading         | [loading.md](./loading.md)                 | 0        | 0     | 0      | 1      |
 | Theme           | [theme.md](./theme.md)                     | 0        | 0     | 2      | 2      |
 | Uno engine      | [uno-engine.md](./uno-engine.md)           | 0        | 0     | 2      | 0      |
 | Locale          | [locale.md](./locale.md)                   | 0        | 0     | 4      | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 0     | 1      | 2      |
-| **TOTAL**       | **27 active + 3 done**                     | **0**    | **2** | **14** | **10** |
+| **TOTAL**       | **27 active + 3 done**                     | **0**    | **1** | **10** | **8**  |
 
 > ✅ **Ревизия счётчиков проведена 2026-09-05.** Дрейф, о котором предупреждала врезка от 2026-08-02, устранён: строка TOTAL пересчитана **по фактическим «Сводка»-таблицам всех активных файлов**, счётчик «открыто» ниже приведён к той же сумме, ячейка `active + done` исправлена по реальному содержимому каталога. Пять несогласованных чисел (TOTAL, текстовый счётчик, сумма по столбцам, сумма по файлам, число документов) сведены в одно.
 >
@@ -53,6 +51,19 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 > **2026-08-02 — Table закрыл G34; Alert/Loading/Accordion/Switch — правки без изменения матриц:** `componentTable` + `focus()` выведены в `defineExpose`/`TableExpose` ([table.md — секция G34](./table.md)), матрица Table `0/0/1/1` → `0/0/0/1`, TOTAL Medium `31 → 30`. Строка Table **остаётся в «Активных»** — D26 (low) не трогали. Вне numbered-issue в том же заходе: Table — `aria-sort` + клавиатурная активация сортировки (accessible name из `column.caption`, **нового ключа локали не заводили**) и `isDark` через `optionsTheme.darkModeSelector`; Alert — hardening `sanitizeHtml` (границы атрибутов, совпадение внутри чужого значения, tag-aware поиск, склейка в исполняемый тег, политика «ровно один проход» декодирования) плюс типизированный `styleBase`, `default:`-ветки и allow-list `type` в `openAlert` ([alert.md Issue 1 amendment](./alert.md)); Loading — open-union типы props и dev-warn для неизвестного color-токена ([loading.md](./loading.md)); Accordion / Switch / Table — нативные контролы сохраняют класс-хук `fv` под `config.unstyled`, иначе UA-ресеты из `baseStyle` к ним не применялись. **Намеренно НЕ закрывалось:** Loading Issue 7 (hardcoded HEX) и промоушен `beta → stable`, Alert Issue 9 (theme tokens / semantic-intent эпик), D26, виртуализация, `displayTime`, print styles, `caption` в `TableOption`. Дрейф строки TOTAL относительно суммы по столбцам — **предсуществующий**, отдельной ревизией снова не занимались; тронута единственная ячейка (Medium), зеркалящая закрытие G34.
 >
 > **2026-08-02 — Accordion, B10 закрыт полностью:** high-contrast часть закрыта — в `classButton` ([Accordion.vue:136-138](../../lib/accordion/Accordion.vue#L136-L138)) добавлен `forced-colors:outline`, зеркалируя канон Badge / InputLayout / Pagination / Switch / Split / Table. Accordion был последним компонентом, у которого forced-colors-часть B10 оставалась открытым трекаемым пунктом (сплошного `forced-colors:*`-покрытия по библиотеке нет — вариант применяется точечно). Матрица `0/0/0/0` → строка перенесена в «Завершённые» ниже (папка `active/ ¹`). Утверждение врезки 2026-07-04 о сохраняющемся forced-colors gap — **superseded**. Обычное focus-состояние header-кнопки (`focus-visible:ring` / `outline`) в этот заход **не** трогалось — отдельная задача.
+
+### Заморожено до переписывания
+
+| Target     | File                             | Critical | High | Medium | Low | Причина |
+| ---------- | -------------------------------- | -------- | ---- | ------ | --- | ------- |
+| Calendar   | [calendar.md](./calendar.md)     | 0        | 1    | 1      | 1   | rewrite без v-calendar |
+| TextEditor | [texteditor.md](./texteditor.md) | 0        | 0    | 3      | 1   | rewrite без Quill      |
+
+> **Решение R30/R33/R34 от 2026-09-06.** В следующем major оба компонента переписываются на собственные реализации — без `v-calendar` и без Quill. Это продолжение линии, уже пройденной FixWindow (свой движок позиционирования вместо Floating UI) и VirtualScroller (своё окно вместо внешней библиотеки): меньше зависимостей, чище код, полный контроль над a11y и темизацией.
+>
+> Их открытые позиции **вынесены из активной матрицы и в счёт TOTAL не идут**: это обвязка вокруг кода, который будет удалён целиком, и вкладываться в неё — работа в мусорную корзину. Сам rewrite — **отдельный проект после** закрытия сводки, а не её часть.
+>
+> Что переносится во входные требования к новым компонентам: загрузка картинок через хук приложения вместо base64-инжекции (бывший [texteditor.md](./texteditor.md) Issue 6), локализуемый toolbar (Issues 8, 9), логические CSS-свойства и print-стили с самого начала, `darkModeSelector` вместо системной цветовой схемы, ref на корень и `focus()` (G34). Для date-picker зафиксировано отдельно: **паритет с v-calendar обязателен**, понижения функционала быть не должно — диапазоны дат, выбор времени, несколько месяцев рядом, отключённые даты и правила. Для редактора — базовое форматирование плюс таблицы и картинки.
 
 ### Завершённые — matrix `0/0/0/0`
 
