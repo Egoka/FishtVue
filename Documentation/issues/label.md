@@ -1,7 +1,7 @@
 ---
 title: Issues — Label
-summary: Аудит Label — 8 из 11 issues ✅ resolved (for-id, dup initStyle, translateX/maxWidth typing, type-via-options, unstyled cross-cutting, motion-safe, default slot, B10 semantic-token). Остаются Issues 3 (packaging), 5 (CSS vars), 9 (RTL) — все cross-cutting волны.
-updated: 2026-07-04
+summary: Аудит Label — 9 из 11 issues ✅ resolved (for-id, dup initStyle, translateX/maxWidth typing, type-via-options, unstyled cross-cutting, motion-safe, default slot, B10 semantic-token, translate через CSS custom properties). Остаются Issues 3 (packaging, cross-cutting закрыт волной 2) и 9 (RTL).
+updated: 2026-09-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/label/
 related-doc: ../components/label.md
@@ -14,8 +14,8 @@ related-doc: ../components/label.md
 | Severity | Count | Categories |
 | -------- | ----- | ---------- |
 | critical | 0     | —          |
-| high     | 1     | A2, A4-5   |
-| medium   | 2     | B11, F31   |
+| high     | 0     | ~~A2, A4-5~~ ✅ — cross-cutting packaging закрыт волной 2 (см. [button.md](./button.md) Issues 8, 9) |
+| medium   | 1     | F31 (RTL — Issue 9); ~~B11~~ ✅ resolved 2026-09-05 |
 | low      | 0     | ~~B10~~ ✅ resolved 2026-07-04 |
 
 **Закрыто 2026-05-11 (7 of 10):** Issues 1 (E29.1 — `<label for>`), 2 (C17 — dup initStyle), 4 (D25 — translateX/maxWidth typing), 6 (L53 — type via componentsOptions, de facto уже было), 7 (L53 — unstyled cross-cutting через `Component.setStyle` guard), 8 (E29.7 — motion-safe), 10 (G37 — default slot). Нумерация исходная — cross-references из соседних issue-доков сохраняются.
@@ -77,11 +77,32 @@ Label рендерился как `<div>`, без `for`/`htmlFor`. Связь с
 - [x] `<Label :translate-x="'1rem'">` рендерит `--fv-translate-x: 1rem`.
 - [x] `<Label :translate-x="20">` рендерит `--fv-translate-x: 20px` (backward compat).
 
-## Issue 5: type="static"/"dynamic"/"vanishing" — буквальные translate в px, не работает на разных font-size
+## ~~Issue 5: type="static"/"dynamic"/"vanishing" — буквальные translate в px, не работает на разных font-size~~ ✅ resolved 2026-09-05
+
+> **Закрыто.** Блокер («deferred to Wave 3.3») снят: Wave 3.3 закрыта 2026-07-02. Реализовано **не** через component-токены темы, а через CSS custom properties с fallback'ами прямо в классах — движок это переваривает, что подтверждено тестом:
+>
+> ```
+> -translate-y-[var(--fv-label-translate-y,60px)]
+>   → --fv-translate-y: calc(var(--fv-label-translate-y,60px) * -1)
+> ```
+>
+> Три переменные покрывают все шесть `type`-вариантов:
+>
+> | Переменная                       | Default | Где используется                          |
+> | -------------------------------- | ------- | ----------------------------------------- |
+> | `--fv-label-translate-y`         | `60px`  | `dynamic` (focus), `static`               |
+> | `--fv-label-translate-y-offset`  | `48px`  | `offsetDynamic` (focus), `offsetStatic`   |
+> | `--fv-label-translate-y-rest`    | `28px`  | покоящееся положение, `vanishing`, `none` |
+>
+> Fallback'и равны прежним литералам — поведение по умолчанию не изменилось. Переопределяется на любом предке: `.my-form { --fv-label-translate-y: 68px }`.
+>
+> **Почему без токенов темы.** Вариант из плана (`theme/Aurora.ts` → `$dt`) добавил бы Label-специфичные ключи во все три пресета и в `ThemeSemantic`, то есть расширил бы публичный API темы ради трёх чисел одного компонента. CSS-переменная с fallback'ом даёт тот же результат для потребителя, ничего не добавляя в поверхность темы. Если позже понадобится управлять этим из `updatePreset`, переменные останутся точкой подключения.
+>
+> **Горизонтальные `translate-x-*` намеренно не тронуты** — они относятся к Issue 9 (RTL), где нужна смена знака, а не параметризация величины.
 
 - **Категория:** B11 (theming)
-- **Severity:** medium
-- **Где:** [Label.vue:37-42](../../lib/label/Label.vue#L37-L42)
+- **Severity:** ~~medium~~
+- **Где:** [Label.vue:50-59](../../lib/label/Label.vue#L50-L59)
 
 ### Что найдено
 
@@ -103,7 +124,7 @@ type.value === 'offsetDynamic' ? `peer-focus:-translate-y-[48px] peer-focus:tran
 
 ### Acceptance criteria
 
-- [ ] Изменение `--fv-label-translate-y` через CSS перепозиционирует label без правки JS.
+- [x] Изменение `--fv-label-translate-y` через CSS перепозиционирует label без правки JS ✅ 2026-09-05. Покрыто тестами `Label Component - translate custom properties (Issue 5)`: матрица по всем шести `type` плюс проверка, что движок разворачивает переменную с сохранением fallback и знака (включая `peer-focus:`).
 
 ## ~~Issue 6: Не реагирует на componentsStyle (частично) — есть `Label.componentsStyle()` но не для всех режимов~~ ✅ resolved 2026-05-11 (de facto, уже было)
 

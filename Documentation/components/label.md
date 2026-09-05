@@ -1,7 +1,7 @@
 ---
 title: Label
-summary: Label с пятью режимами (dynamic/static/offset*/vanishing/none), required-маркером, нативной for-связкой с input, default-слотом для кастомного контента и prop `animate` (mount-tick gate против «переезда» позиции).
-updated: 2026-06-19
+summary: Label с пятью режимами (dynamic/static/offset*/vanishing/none), required-маркером, нативной for-связкой с input, default-слотом для кастомного контента и prop `animate` (mount-tick gate против «переезда» позиции). §10.3 — вертикальные смещения через CSS custom properties (2026-09-05).
+updated: 2026-09-05
 stability: stable
 since: 0.2.11
 ---
@@ -32,7 +32,7 @@ lib/label/
 
 - **Lifecycle:** автоматическая инжекция стилей через `Component.__hooks()` (`onServerPrefetch + vueOnMounted -> initStyle`). SFC не дублирует вызов — см. [dev-patterns §2](../dev-patterns.md) decision row 1.
 - **Поток данных:** props + `Label.getOptions()` → computed `mode`/`type`/`translateX`/`maxWidth` → `classBase` (через `Label.setStyle`) и `classContent`. Resolve: `props ?? options ?? Label.componentsStyle() ?? "outlined"`.
-- **Стили:** transform-классы зависят от `type`. Для `dynamic`: `peer-focus:-translate-y-[60px] peer-focus:translate-x-4 -translate-y-7` ([Label.vue:37](../../lib/label/Label.vue#L37)). Required-маркер `*` через `after:content-['*']` ([Label.vue:43-45](../../lib/label/Label.vue#L43-L45)).
+- **Стили:** transform-классы зависят от `type`. Для `dynamic`: `peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]` ([Label.vue:50-51](../../lib/label/Label.vue#L50-L51)). Required-маркер `*` через `after:content-['*']` ([Label.vue:60-62](../../lib/label/Label.vue#L60-L62)).
 - **For-id association:** при заданном `forId` корневой `<label>` получает нативный `for="<id>"` ([Label.vue:71](../../lib/label/Label.vue#L76)) — браузер автоматически связывает label и input, click фокусирует input, screen-reader озвучивает связку.
 - **Конфиг:** `componentsOptions.Label` ключи — `mode`, `type`, `translateX`, `maxWidth`, `class`, `classBody`.
 - **Локализация:** не использует.
@@ -183,7 +183,27 @@ const store = useFormStore()
 ### 10.3 Theming
 
 - Цвет текста по умолчанию — `text-surface-400 dark:text-surface-500` ([Label.vue:57](../../lib/label/Label.vue#L57)) — semantic-token (Issue 11 / B10, resolved 2026-07-04; ранее хардкоднутый `gray-*`). Required-маркер — `text-red-500 dark:text-red-800` ([Label.vue:44](../../lib/label/Label.vue#L44)).
-- `surface` — семантический design-token (см. [theme.md §3.1](../architecture/theme.md)), default = точная копия `gray`-шкалы — переход не меняет визуал, но подключает цвет к theme-token indirection. CSS custom properties для px-смещений — Wave 3.3 (Theme runtime API, см. [issues/label.md Issue 5](../issues/label.md)).
+- `surface` — семантический design-token (см. [theme.md §3.1](../architecture/theme.md)), default = точная копия `gray`-шкалы — переход не меняет визуал, но подключает цвет к theme-token indirection.
+
+#### Вертикальные смещения (2026-09-05)
+
+Позиция «плавающей» метки задаётся тремя CSS custom properties, а не литералами в px. Переопредели любую на предке — Label пересчитается без правки JS:
+
+| Переменная                      | Default | Где применяется                           |
+| ------------------------------- | ------- | ----------------------------------------- |
+| `--fv-label-translate-y`        | `60px`  | `dynamic` (в фокусе), `static`            |
+| `--fv-label-translate-y-offset` | `48px`  | `offsetDynamic` (в фокусе), `offsetStatic` |
+| `--fv-label-translate-y-rest`   | `28px`  | покоящееся положение, `vanishing`, `none` |
+
+```css
+/* Метка при увеличенном шрифте поля */
+.my-form {
+  --fv-label-translate-y: 68px;
+  --fv-label-translate-y-rest: 32px;
+}
+```
+
+Значения по умолчанию совпадают с прежними литералами, поэтому апгрейд ничего не сдвигает. Горизонтальные `translate-x-*` пока литеральны — их параметризация относится к RTL-задаче ([issues/label.md](../issues/label.md) Issue 9).
 
 ### 10.4 CSS layer override
 
@@ -276,9 +296,9 @@ describe("Label", () => {
 
 ### Incomplete or stubbed behavior
 
-- Cross-cutting packaging (`sideEffects`, `exports` map) — Wave 2.1, см. [issues/label.md Issue 3](../issues/label.md).
-- CSS custom properties для px-смещений (`60px`/`48px`/`28px` хардкодны в Tailwind arbitrary values) — Wave 3.3 (Theme runtime API), см. [issues/label.md Issue 5](../issues/label.md).
-- RTL — `translate-x-4` / `after:ml-0.5` ([Label.vue:44](../../lib/label/Label.vue#L44)) буквальны; logical properties — отдельная RTL-волна, см. [issues/label.md Issue 9](../issues/label.md).
+- ~~Cross-cutting packaging (`sideEffects`, `exports` map)~~ ✅ закрыт волной 2 (см. [issues/button.md](../issues/button.md) Issues 8, 9).
+- ~~CSS custom properties для px-смещений~~ ✅ resolved 2026-09-05 — см. §10.3 «Вертикальные смещения».
+- RTL — `translate-x-4` / `after:ml-0.5` ([Label.vue:61](../../lib/label/Label.vue#L61)) буквальны; logical properties — отдельная RTL-волна, см. [issues/label.md Issue 9](../issues/label.md).
 
 ### Skipped tests
 

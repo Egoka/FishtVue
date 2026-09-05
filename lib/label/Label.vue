@@ -39,12 +39,24 @@
       // иначе на первом кадре лейбл «переезжает» из исходной точки в финальную.
       props.animate ? "motion-safe:transition-all motion-safe:duration-200" : "",
       "px-1",
-      type.value === "dynamic" ? `peer-focus:-translate-y-[60px] peer-focus:translate-x-4 -translate-y-7` : "",
-      type.value === "offsetDynamic" ? `peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7` : "",
-      type.value === "offsetStatic" ? `-translate-y-[48px] translate-x-4` : "",
-      type.value === "static" ? "-translate-y-[60px] translate-x-4" : "",
-      type.value === "vanishing" ? `-translate-y-[28px]` : "",
-      type.value === "none" ? "opacity-0 -translate-y-[28px] translate-x-8" : "",
+      // Issue 5 (B11): вертикальные смещения идут через CSS custom properties, а не литералами в px.
+      // Прежние `-translate-y-[60px]` не учитывали увеличенный font-size (например,
+      // `componentsOptions.Label.classBody = "text-base"`) — лейбл вылезал за пределы поля.
+      // Переопределяется на любом предке без правки JS:
+      //   .my-form { --fv-label-translate-y: 68px }
+      // Fallback'и в var() равны прежним литералам, поэтому поведение по умолчанию не изменилось.
+      // Горизонтальные `translate-x-*` намеренно не тронуты — их починка это RTL-задача (Issue 9),
+      // там нужна смена знака, а не параметризация величины.
+      type.value === "dynamic"
+        ? `peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]`
+        : "",
+      type.value === "offsetDynamic"
+        ? `peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]`
+        : "",
+      type.value === "offsetStatic" ? `-translate-y-[var(--fv-label-translate-y-offset,48px)] translate-x-4` : "",
+      type.value === "static" ? "-translate-y-[var(--fv-label-translate-y,60px)] translate-x-4" : "",
+      type.value === "vanishing" ? `-translate-y-[var(--fv-label-translate-y-rest,28px)]` : "",
+      type.value === "none" ? "opacity-0 -translate-y-[var(--fv-label-translate-y-rest,28px)] translate-x-8" : "",
       props.isRequired
         ? `after:content-['*'] after:relative after:-top-[10px] after:text-red-500 after:dark:text-red-800 after:ml-0.5`
         : "",

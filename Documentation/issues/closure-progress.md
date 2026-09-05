@@ -38,10 +38,10 @@ updated: 2026-09-05
 | T3. Nuxt: dead code + `disableGlobalStyles` | B16 (N2, N3) | ✅ | `fix(nuxt-module)` |
 | T4. TextEditor: native form submit | B3 | ✅ | `feat(texteditor)` |
 | T10. TextEditor: разблокировать тест-суиту | Wave 11 / C2 (не было в плане сессии) | ✅ | `feat(texteditor)` |
-| T5. Label: translate px → CSS custom properties | B2 | ⏳ | — |
+| T5. Label: translate px → CSS custom properties | B2 | ✅ | `feat(label)` |
 | T6. TextEditor: локализация hardcoded-строк | B12 частично (N4) | ✅ | `feat(texteditor)` |
 | T7. TextEditor: `darkModeSelector` | N5 | ✅ | `feat(theme)` |
-| T8. `arrayHandler.sort` — документировать | B4 | ⏳ | — |
+| T8. `arrayHandler.sort` — документировать | B4 | ✅ | `docs(utilities)` |
 | T9. Doc-sync: 22 позиции §3 + матрица + roadmap | B13 + B1 + N7 | ⏳ | — |
 
 Не входит в сессию (эпики и длинные волны): C1, C2, C5, C7, C9, B5–B11, B18, D1–D4. Причина — объём, см. [closure-assessment.md §7.1](./closure-assessment.md).
@@ -163,6 +163,34 @@ updated: 2026-09-05
 **Технически:** `content` в псевдоэлементе из шаблона не задать, поэтому строка локали приезжает CSS-переменной и оборачивается в `JSON.stringify` — CSS ждёт строку в кавычках.
 
 **Находка N14 — `enableAutoUnmount` нельзя ставить в общий setup.** Попытка вынести его в `.tests/setup/setupTests.ts` уронила 56 файлов из 57: `setupFiles` переисполняются на каждый тест-файл, а счётчик внутри @vue/test-utils глобальный — со второго файла «cannot be called more than once». Вызов оставлен в `TextEditor.test.ts`, а `useDarkMode.test.ts` размонтирует свои обёртки вручную. Ограничение зафиксировано комментарием в setup-файле, чтобы следующий не повторил попытку.
+
+---
+
+## T5 + T8. Label и `arrayHandler.sort`
+
+**Батчи:** B2, B4.
+
+| Подзадача | Что делаем |
+| --------- | ---------- |
+| T5.1 | Проверить, переваривает ли движок `var()` внутри arbitrary value |
+| T5.2 | Заменить шесть px-литералов на три CSS custom property с fallback'ами |
+| T5.3 | Обновить существующие тесты + завести тест на сам контракт переопределения |
+| T8.1 | Установить фактическую семантику `sort` и задокументировать контракт стабильности |
+
+**T5 — почему без токенов темы.** План в issue предписывал component-токены (`theme/Aurora.ts` → `$dt`) и был помечен «deferred to Wave 3.3». Wave 3.3 закрыта ещё 2026-07-02, то есть блокер снят. Но вариант с токенами добавил бы Label-специфичные ключи во все три пресета и в `ThemeSemantic` — расширение публичного API темы ради трёх чисел одного компонента. Взят более узкий путь: CSS custom properties с fallback'ами прямо в классах. Для потребителя результат тот же (`.my-form { --fv-label-translate-y: 68px }`), поверхность темы не растёт.
+
+Ключевая проверка перед реализацией — движок должен уметь `var()` внутри arbitrary value **вместе с отрицанием и variant'ом**. Умеет:
+
+```
+-translate-y-[var(--fv-label-translate-y,60px)]
+  → --fv-translate-y: calc(var(--fv-label-translate-y,60px) * -1)
+```
+
+Три переменные (`--fv-label-translate-y` 60px, `-offset` 48px, `-rest` 28px) покрывают все шесть `type`-вариантов. Fallback'и равны прежним литералам — визуально ничего не сдвинулось. Горизонтальные `translate-x-*` намеренно не тронуты: это Issue 9 (RTL), где нужна смена знака, а не параметризация.
+
+**T8 — issue задавал вопрос, ответ оказался «вопрос некорректен».** `arrayHandler.sort` — не сортировщик, а **comparator**: принимает два значения, возвращает число, `Array.prototype.sort` внутри не вызывает. Стабильность обеспечивает вызывающая сторона и она гарантирована — `Array.prototype.sort` стабилен по спецификации с ES2019, библиотека evergreen-only. Дополнительно выяснено, что внутри `lib/` эта функция не используется ни одним компонентом (Table сортирует своим `localeCompare`-компаратором) — то есть это чисто публичная утилита.
+
+Попутно закрыты ещё две позиции в `_utilities.md`: Issue 4 (coverage `dateHandler` **подтверждён** — те же 72.61 / 65.38, вопрос «требует подтверждения» снят, issue переквалифицирован в конкретный gap) и Issue 11 (`Utils.ts` — non-issue, заголовок не был зачёркнут и попадал в счётчики).
 
 ---
 

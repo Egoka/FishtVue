@@ -2,6 +2,7 @@ import { mount } from "@vue/test-utils"
 import { afterEach, describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
 import Label from "fishtvue/label/Label.vue"
+import { tailwind } from "fishtvue/theme"
 
 describe("Label Component Tests", () => {
   describe("Label Component - Without Library Initialization", () => {
@@ -35,7 +36,9 @@ describe("Label Component Tests", () => {
         }
       })
 
-      expect(wrapper.find("[data-label]").classes()).toContain("peer-focus:-translate-y-[60px]")
+      expect(wrapper.find("[data-label]").classes()).toContain(
+        "peer-focus:-translate-y-[var(--fv-label-translate-y,60px)]"
+      )
     })
 
     it("applies required marker when 'isRequired' is true", () => {
@@ -77,15 +80,15 @@ describe("Label Component Tests", () => {
       it.each([
         [
           "outlined",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
         ],
         [
           "underlined",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
         ],
         [
           "filled",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
         ]
       ])('applies correct background style for mode "%s"', (mode, expectedBackground) => {
         const wrapper = mount(Label, {
@@ -104,12 +107,18 @@ describe("Label Component Tests", () => {
 
     describe("Label Component - Type Variants", () => {
       it.each([
-        ["dynamic", "peer-focus:-translate-y-[60px] peer-focus:translate-x-4 -translate-y-7"],
-        ["offsetDynamic", "peer-focus:-translate-y-[48px] peer-focus:translate-x-4 -translate-y-7"],
-        ["offsetStatic", "-translate-y-[48px] translate-x-4"],
-        ["static", "-translate-y-[60px] translate-x-4"],
-        ["vanishing", "-translate-y-[28px]"],
-        ["none", "opacity-0 -translate-y-[28px] translate-x-8"]
+        [
+          "dynamic",
+          "peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
+        ],
+        [
+          "offsetDynamic",
+          "peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
+        ],
+        ["offsetStatic", "-translate-y-[var(--fv-label-translate-y-offset,48px)] translate-x-4"],
+        ["static", "-translate-y-[var(--fv-label-translate-y,60px)] translate-x-4"],
+        ["vanishing", "-translate-y-[var(--fv-label-translate-y-rest,28px)]"],
+        ["none", "opacity-0 -translate-y-[var(--fv-label-translate-y-rest,28px)] translate-x-8"]
       ])('applies correct class for type "%s"', (type, expectedClass) => {
         const wrapper = mount(Label, {
           props: {
@@ -121,6 +130,48 @@ describe("Label Component Tests", () => {
 
         const classList = wrapper.find("[data-label]")
         expect(classList.classes().join(" ")).toContain(expectedClass)
+      })
+    })
+
+    /**
+     * Issue 5 (B11): вертикальные смещения параметризованы CSS custom properties.
+     * Прежние литералы (`-translate-y-[60px]`) не масштабировались вместе с font-size —
+     * при `classBody: "text-base"` лейбл вылезал за пределы поля, и починить это без правки
+     * исходника было нельзя.
+     */
+    describe("Label Component - translate custom properties (Issue 5)", () => {
+      it.each([
+        ["dynamic", "--fv-label-translate-y,60px"],
+        ["offsetDynamic", "--fv-label-translate-y-offset,48px"],
+        ["offsetStatic", "--fv-label-translate-y-offset,48px"],
+        ["static", "--fv-label-translate-y,60px"],
+        ["vanishing", "--fv-label-translate-y-rest,28px"],
+        ["none", "--fv-label-translate-y-rest,28px"]
+      ])('type "%s" ссылается на переменную, а не на литерал px', (type, variable) => {
+        const wrapper = mount(Label, {
+          // @ts-ignore
+          props: { title: "Test Label", type }
+        })
+        const classes = wrapper.find("[data-label]").classes().join(" ")
+
+        expect(classes).toContain(variable)
+        // Голых px-смещений по вертикали не остаётся: любое `-translate-y-[…]` идёт через var().
+        expect(classes).not.toMatch(/-translate-y-\[\d+px]/)
+      })
+
+      it("движок разворачивает переменную в CSS с сохранением fallback и знака", () => {
+        const css = tailwind("-translate-y-[var(--fv-label-translate-y,60px)]") ?? ""
+
+        // Отрицание арбитрарного значения делается через calc(… * -1) — литерал 60px остаётся
+        // fallback'ом, поэтому переопределение переменной работает без правки JS.
+        expect(css).toContain("--fv-translate-y: calc(var(--fv-label-translate-y,60px) * -1)")
+      })
+
+      it("fallback сохраняется и под peer-focus", () => {
+        const css = tailwind("peer-focus:-translate-y-[var(--fv-label-translate-y,60px)]") ?? ""
+
+        expect(css).toContain(".peer:focus ~")
+        expect(css).toContain("var(--fv-label-translate-y,60px)")
       })
     })
   })
@@ -191,7 +242,9 @@ describe("Label Component Tests", () => {
         }
       })
 
-      expect(wrapper.find("[data-label]").classes()).toContain("peer-focus:-translate-y-[48px]")
+      expect(wrapper.find("[data-label]").classes()).toContain(
+        "peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)]"
+      )
     })
 
     it("local 'type' overrides global 'type'", () => {
@@ -209,8 +262,10 @@ describe("Label Component Tests", () => {
         }
       })
 
-      expect(wrapper.find("[data-label]").classes()).toContain("-translate-y-[28px]")
-      expect(wrapper.find("[data-label]").classes()).not.toContain("peer-focus:-translate-y-[48px]")
+      expect(wrapper.find("[data-label]").classes()).toContain("-translate-y-[var(--fv-label-translate-y-rest,28px)]")
+      expect(wrapper.find("[data-label]").classes()).not.toContain(
+        "peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)]"
+      )
     })
   })
 
@@ -348,7 +403,7 @@ describe("Label Component Tests", () => {
       expect(classes).not.toContain("motion-safe:transition-all")
       expect(classes).not.toContain("motion-safe:duration-200")
       // позиционные классы остаются — лейбл сразу в нужном месте, просто без анимации перехода
-      expect(classes).toContain("-translate-y-7")
+      expect(classes).toContain("-translate-y-[var(--fv-label-translate-y-rest,28px)]")
     })
   })
 

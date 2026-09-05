@@ -16,9 +16,9 @@ related-doc: ../utilities/
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 1 | J46 (dateHandler coverage не подтверждено после рефакторинга) |
+| high | 1 | J46 (dateHandler coverage 72.61 / 65.38 — подтверждён 2026-09-05) |
 | medium | 0 | — |
-| low | 2 | D22 (arrayHandler.sort документация), J46 (Utils.ts re-export — не реальная проблема) |
+| low | 0 | ~~D22 (arrayHandler.sort документация)~~ ✅ 2026-09-05, ~~J46 (Utils.ts re-export)~~ ✅ 2026-09-05 (non-issue) |
 
 ## ~~Issue 1: `functionHandler.generateUUID` использует `Math.random()` — не cryptographically secure~~ ✅ resolved (2026-05-10)
 
@@ -50,13 +50,13 @@ related-doc: ../utilities/
 
 Тесты — [numberHandler.test.ts](../../lib/utils/numberHandler.test.ts) (`custom phoneFormats option` describe block, 4 кейса: UK +44, DE +49, fallback при пустом массиве, fallback при отсутствии options).
 
-## Issue 4: `dateHandler` coverage — требует подтверждения
+## Issue 4: `dateHandler` coverage — подтверждён, 72.61 / 65.38
 
 - **Категория:** J46
 - **Severity:** high
-- **Где:** [dateHandler.test.ts](../../lib/utils/dateHandler.test.ts)
+- **Где:** [dateHandler.ts:342-362](../../lib/utils/dateHandler.ts#L342-L362) — непокрытый блок
 
-После рефакторинга файл [dateHandler.ts](../../lib/utils/dateHandler.ts) вырос до ~375 строк. Прежний отчёт (72.61 / 65.38) был на старой версии. Текущий coverage не подтверждён — нужен запуск `pnpm coverage` и аудит покрытия switch-case'ов форматирования (Do, A/a, W/WW/WWW/WWWW, L, ZZ-ZZZZ).
+> **Обновлено 2026-09-05:** прогон `pnpm coverage` на текущей версии дал **ровно те же 72.61 / 65.38**, что и старый отчёт — цифра не устарела, файл действительно недотестирован. Вопрос «требует подтверждения» снят, issue переквалифицирован из неопределённости в конкретный coverage-gap с известными строками. Работа не выполнялась — входит в coverage-волну (батч B10 в [closure-assessment.md](./closure-assessment.md)).
 
 ### Что нужно сделать
 
@@ -90,15 +90,19 @@ Issue снимается без действий.
 
 Поведение явно зафиксировано в JSDoc и регрессионном тесте. **Канон:** `deepMerge` мутирует и возвращает первый non-empty object аргумент; subsequent objects merge into it. Безопасный паттерн — `deepMerge(deepCopy(defaults), overrides)`. Тесты — [objectHandler.test.ts](../../lib/utils/objectHandler.test.ts) (`should mutate and return the first non-empty object argument`, `should preserve later inputs unchanged when first argument is deep-cloned`).
 
-## Issue 9: `arrayHandler.sort` — stability не гарантируется
+## ~~Issue 9: `arrayHandler.sort` — stability не гарантируется~~ ✅ resolved 2026-09-05 (doc-only)
 
 - **Категория:** D22
-- **Severity:** low
-- **Где:** [arrayHandler.ts](../../lib/utils/arrayHandler.ts) (sort/filter)
+- **Severity:** ~~low~~
+- **Где:** [arrayHandler.ts:222](../../lib/utils/arrayHandler.ts#L222)
 
-### Что нужно сделать
-
-Документировать: используется ли native `Array.prototype.sort` (stable since ES2019)? Custom comparator? Только doc-update; код не трогаем.
+> **Ответ на вопрос issue.** `sort` — **comparator, а не сортировщик**: принимает два значения, возвращает число, `Array.prototype.sort` внутри не вызывает вовсе. Значит стабильность обеспечивает вызывающая сторона, и она гарантирована: `Array.prototype.sort` стабилен по спецификации с **ES2019**, а библиотека таргетирует evergreen-браузеры.
+>
+> Оговорка, специфичная именно для этой функции: при `nullSortOrder ≠ order` пары с `null`/`undefined` сравниваются другим множителем, чем остальные. Стабильность это не нарушает, но «пустые» значения образуют отдельный блок в начале или конце, а не участвуют в общей шкале.
+>
+> Отдельно проверено: внутри `lib/` `sort` не вызывается ни одним компонентом — это чисто публичная утилита (Table сортирует своим `localeCompare`-компаратором).
+>
+> Документировано в [utilities/arrayHandler.md §9.1](../utilities/arrayHandler.md). Код не трогали, как и предписывал план.
 
 ## ~~Issue 10: `stringHandler.toCapitalCase` — non-ASCII и Unicode~~ ✅ resolved (2026-05-10)
 
@@ -110,7 +114,7 @@ Issue снимается без действий.
 
 Тесты — [stringHandler.test.ts](../../lib/utils/stringHandler.test.ts) (Unicode diacritics, Turkish locale, locale array).
 
-## Issue 11: `Utils.ts` (агрегатор) coverage 0% — не реальная проблема
+## ~~Issue 11: `Utils.ts` (агрегатор) coverage 0% — не реальная проблема~~ ✅ closed 2026-09-05 (non-issue)
 
 - **Категория:** K46 → non-issue
 
