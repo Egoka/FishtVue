@@ -23,7 +23,8 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 - `fishtvue` — barrel из [lib/index.ts](../lib/index.ts) — все 22 компонента + `Config`.
 - `fishtvue/{name}` — точечный импорт компонента (например, `fishtvue/button`).
 - `fishtvue/table` дополнительно отдаёт named-экспорты compound-API: `import { Column, ColumnGroup } from "fishtvue/table"` (см. [Table §10.6](./components/table.md#106-compound-api-column--columngroup)). В Nuxt — auto-import глобально.
-- `fishtvue/menu` аналогично отдаёт named-экспорты `import { MenuItem, MenuGroup } from "fishtvue/menu"` (бандл `menu.mjs`, а не raw `.vue` — Issue 5c-a). В Nuxt — глобальны.
+- `fishtvue/menu` аналогично отдаёт named-экспорты `import { MenuItem, MenuGroup } from "fishtvue/menu"` (бандл `menu.mjs`, а не raw `.vue` — Issue 5c-a). В Nuxt — глобальны (регистрация в auto-import добавлена 2026-09-05; до этого обещание не выполнялось — см. [issues/nuxt-module.md](./issues/nuxt-module.md) Issue 3).
+- `fishtvue/form` — `FormField`, `FormSection`; `fishtvue/select` — `SelectOption`, `SelectGroup`; `fishtvue/accordion` — `AccordionItem`. Все compound-дети также auto-import'ятся в Nuxt.
 - `fishtvue/config` — Vue plugin + глобальные функции `useFishtVue`, `getOptions`, `setActiveLocale`.
 - `fishtvue/component` — базовый класс `Component<T>` (для разработки внутри библиотеки).
 - `fishtvue/theme` — `tailwind`, `palette`, `toVarsCss`, `linksTheme`, `useStyle`, `NamesTheme`.
@@ -196,7 +197,7 @@ export default defineNuxtConfig({
 })
 ```
 
-Передача всего, кроме module-only-полей (`global`, `mode`, `prefix`, `autoImport`, `disableGlobalStyles`), пробрасывается в `app.use(FishtVue, …)` через generated plugin ([module/nuxt.ts:73](../lib/module/nuxt.ts#L73)).
+Передача всего, кроме module-only-полей (`global`, `mode`, `prefix`, `autoImport`, `disableGlobalStyles`), пробрасывается в `app.use(FishtVue, …)` через generated plugin ([module/nuxt.ts:63](../lib/module/nuxt.ts#L63)).
 
 ### 9.3 Точечный импорт без auto-import (Nuxt)
 
@@ -377,11 +378,11 @@ describe("Button after install", () => {
 ### API inconsistencies
 
 - `FishtVueOptions` (Nuxt) расширяет `FishtVueConfiguration`, но поле `componentsStyle` не используется на уровне модуля — оно прокидывается в плагин и читается уже компонентами.
-- `MODULE_OPTIONS` ([module/nuxt.ts:78](../lib/module/nuxt.ts#L78)) перечисляет поля для отсечения от plugin-конфига: `["global", "mode", "prefix", "autoImport", "disableGlobalStyles"]`. Если в `ModuleOptions` ([module/index.d.ts:9–37](../lib/module/index.d.ts#L9-L37)) появятся новые поля — список нужно обновить вручную.
+- `MODULE_OPTIONS` ([module/nuxt.ts:78](../lib/module/nuxt.ts#L78)) перечисляет поля для отсечения от plugin-конфига: `["global", "mode", "prefix", "autoImport", "disableGlobalStyles"]`. Если в `ModuleOptions` ([module/index.d.ts:9–37](../lib/module/index.d.ts#L9-L37)) появятся новые поля — список нужно обновить вручную. Само отсечение покрыто тестом ([module/nuxt.test.ts](../lib/module/nuxt.test.ts)), синхронность списка с типом — нет.
 
 ### Behavioral caveats
 
-- `disableGlobalStyles` объявлен как опция модуля, но обработка флага распределена по компонентам — поведение в Nuxt не централизовано.
+- `disableGlobalStyles: true` отключает регистрацию server-плагина SSR-инжекции CSS ([plugins/nuxt.ts](../lib/plugins/nuxt.ts)) — стили не попадают в `ssrContext.head`, страница приезжает без них до гидратации. Client-плагин конфигурации не затрагивается: config, локали и тема продолжают работать. Реализовано 2026-09-05 (до этого флаг был no-op).
 - `prefix` из `ModuleOptions` применяется только к auto-import (`addComponent`); если консумер использует точечный импорт `import Button from "fishtvue/button"`, prefix игнорируется.
 
 ### Bug report format

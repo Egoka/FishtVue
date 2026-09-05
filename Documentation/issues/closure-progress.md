@@ -34,8 +34,8 @@ updated: 2026-09-05
 | Задача | Батч из assessment | Статус | Коммит |
 | ------ | ------------------ | ------ | ------ |
 | T1. Tooling hygiene + CI gate | B17 + N6 + N8 + R1–R4 | ✅ | `chore(tooling)` |
-| T2. Nuxt: compound-дети в auto-import | B15 (N1) | ⏳ | — |
-| T3. Nuxt: dead code + `disableGlobalStyles` | B16 (N2, N3) | ⏳ | — |
+| T2. Nuxt: compound-дети в auto-import | B15 (N1) | ✅ | `fix(nuxt-module)` |
+| T3. Nuxt: dead code + `disableGlobalStyles` | B16 (N2, N3) | ✅ | `fix(nuxt-module)` |
 | T4. TextEditor: native form submit | B3 | ⏳ | — |
 | T5. Label: translate px → CSS custom properties | B2 | ⏳ | — |
 | T6. TextEditor: локализация hardcoded-строк | B12 частично (N4) | ⏳ | — |
@@ -97,6 +97,14 @@ updated: 2026-09-05
 | T3.2 | Удалить `getNuxtVersion`/`isNuxt4`/`createRequire` — обе ветки `importPath` одинаковы (N3). Закрывает `nuxt-module.md` Issue 2 |
 | T3.3 | Тесты на обе ветки `disableGlobalStyles` |
 
+**Результат T2 + T3.** Один тест-файл на 11 тестов покрыл оба батча: `lib/module` **0% → 100% stmts / 75% branch**, агрегат по проекту 89.72 → **90.11 / 79.48 / 92.35 / 94.11**. Закрыты `nuxt-module.md` Issues 1 (частично — `lib/plugins` остаётся), 2 и 5. Синхронизированы [architecture/nuxt-module.md](../architecture/nuxt-module.md) и [02-installation.md](../02-installation.md).
+
+**N11 — находка, вскрытая первым же прогоном теста.** `lib/module/nuxt.ts` импортировал `join`/`dirname` из голого `"path"`, а в devDependencies монорепозитория лежит legacy-пакет **`path@0.12.7`**, который перехватывает спецификатор и падает на современном Node: `TypeError: util.isString is not a function`. Файл рядом уже использовал `node:url`, то есть импорт был просто непоследовательным. Исправлено на `node:path`.
+
+Находка показательна тем, что это **прямое следствие нулевого покрытия**: модуль ни разу не исполнялся в тестах, поэтому падение не всплывало. Сам пакет `path@0.12.7` из devDependencies не трогали — он может использоваться сборочными скриптами; проверка остальных потребителей голого `"path"` вынесена в открытые вопросы.
+
+**Корректировка плана.** B15 и B16 в assessment оценивались как 0.25–0.5 д и 0.5–1 д раздельно. Фактически они склеились в один PR (общий тест-файл, общий файл кода) и заняли меньше — но добавили N11, которого в плане не было.
+
 ---
 
 ## Журнал изменений плана
@@ -104,4 +112,5 @@ updated: 2026-09-05
 Сюда попадает всё, что разошлось с [closure-assessment.md](./closure-assessment.md) по ходу работы.
 
 - **2026-09-05, старт.** Найдены три новые позиции при чтении CI-конфигов, отсутствующие в assessment: **N8** (issue-labeler хардкодит 22 компонента без `VirtualScroller`), **N9** (`pnpm lint` в CI — это `eslint --fix`, гейт не может упасть на автофиксимой ошибке), **N10** (`pnpm lib:build` закомментирован в PR-workflow — rollup-сборка не проверяется до релиза). Все три включены в T1 вместо заведения отдельных батчей.
+- **2026-09-05, T2/T3.** Новая находка **N11**: голый импорт `"path"` в `lib/module/nuxt.ts` перехватывался legacy-пакетом `path@0.12.7` из devDependencies и падал на современном Node. Исправлено на `node:path`. В assessment не значилась — обнаружилась только при первом исполнении модуля под тестом.
 - **2026-09-05.** Выяснено, что `pnpm-workspace.yaml` **gitignored** и генерируется в CI (комментарий в workflow: иначе ломается Vercel-деплой `docs/` с Root Directory = `docs`). Это подтверждает безопасность удаления `pnpm.onlyBuiltDependencies` из package.json — поле мёртвое с обеих сторон.
