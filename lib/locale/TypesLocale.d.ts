@@ -66,6 +66,12 @@ export declare interface DefaultMessages extends DeepPartial<TypeLocale> {
   virtualScroller?: {
     loading?: string
   }
+  textEditor?: {
+    /** Подпись поля ввода ссылки в Quill-tooltip. Подставляется в `content` через CSS-переменную. */
+    linkLabel?: string
+    /** Подпись кнопки подтверждения ссылки. По умолчанию берётся из общего ключа `save`. */
+    saveLabel?: string
+  }
 }
 
 export declare type Messages = DeepPartial<Record<NameLocale, DefaultMessages>>

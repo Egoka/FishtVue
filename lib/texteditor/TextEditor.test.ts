@@ -54,6 +54,9 @@ async function mountEditor(options: Record<string, any> = {}) {
  * на несколько файлов. TextEditor тянет за собой InputLayout с mount-tick'ом на `setTimeout(100)` —
  * если инстанс не размонтирован, таймер срабатывает уже во время следующего тест-файла, когда
  * документ подменён, и валит его `TypeError: Cannot read properties of null (reading 'insertBefore')`.
+ *
+ * Вызов живёт здесь, а не в общем setup: счётчик внутри @vue/test-utils глобальный, а setupFiles
+ * переисполняются на каждый файл — второй вызов упал бы с «cannot be called more than once».
  */
 enableAutoUnmount(afterEach)
 
@@ -464,7 +467,7 @@ describe("TextEditor — surface-* token migration (Wave 9 — texteditor.md Iss
     expect(iconHoverMatches?.length).toBe(2)
   })
 
-  it("raw hex in the <style> block is routed through var(--fv-surface-{tone}) except the alpha-suffixed placeholder overlays", async () => {
+  it("больше не хардкодит hex в <style> — тематические переменные ушли в инлайн", async () => {
     const fs = await import("node:fs/promises")
     const path = await import("node:path")
     const url = await import("node:url")
@@ -477,14 +480,55 @@ describe("TextEditor — surface-* token migration (Wave 9 — texteditor.md Iss
     expect(src).not.toMatch(/--background-quill-editor:\s*#212121/)
     expect(src).not.toMatch(/--background-picker-options-quill-editor:\s*#131313/)
 
-    // Заменены на var(--fv-surface-{tone}, <rgb-triplet>) — формат зеркалит unoStyle/helpers.resolveColor.
-    expect(src).toMatch(/--background-quill-editor:\s*rgb\(var\(--fv-surface-100,\s*243 244 246\)\)/)
-    expect(src).toMatch(/--background-picker-options-quill-editor:\s*rgb\(var\(--fv-surface-100,\s*243 244 246\)\)/)
-    expect(src).toMatch(/--background-quill-editor:\s*rgb\(var\(--fv-surface-900,\s*17 24 39\)\)/)
-    expect(src).toMatch(/--background-picker-options-quill-editor:\s*rgb\(var\(--fv-surface-900,\s*17 24 39\)\)/)
+    // `@media (prefers-color-scheme)` заменён на darkModeSelector-aware inline-переменные.
+    expect(src).not.toMatch(/@media\s*\(prefers-color-scheme/)
+  })
+})
 
-    // Alpha-suffixed placeholder overlays (translucent black/white) — вне scope, остаются литералами.
-    expect(src).toMatch(/--placeholder-quill-editor:\s*#00000099/)
-    expect(src).toMatch(/--placeholder-quill-editor:\s*#ffffff99/)
+/**
+ * Тема редактора и подписи Quill-tooltip'ов (N5 + Issue 9).
+ *
+ * До 2026-09-05 переменные жили в двух `@media (prefers-color-scheme)`-блоках: они игнорировали
+ * `optionsTheme.darkModeSelector` и вешались только на `.editor`, из-за чего bubble-редактор
+ * (`.editor-small` — отдельный узел вне `.editor`) их вообще не наследовал.
+ */
+describe("TextEditor — тема и подписи через CSS-переменные", () => {
+  it("вешает тематические переменные на оба контейнера редактора", async () => {
+    const wrapper = await mountEditor({ props: { modelValue: "", theme: "bubble" } })
+    const style = wrapper.find("[data-quill-stub]").element.parentElement?.getAttribute("style") ?? ""
+
+    expect(style).toContain("--background-quill-editor")
+    expect(style).toContain("--border-quill-editor")
+    expect(style).toContain("--placeholder-quill-editor")
+  })
+
+  it("берёт фон из surface-токенов, а не из hex", async () => {
+    const wrapper = await mountEditor({ props: { modelValue: "" } })
+    const style = wrapper.find("[data-quill-stub]").element.parentElement?.getAttribute("style") ?? ""
+
+    // Формат зеркалит unoStyle/helpers.resolveColor: rgb(var(--fv-{color}-{tone}, <triplet>)).
+    expect(style).toMatch(/--background-quill-editor:\s*rgb\(var\(--fv-surface-\d+/)
+  })
+
+  it("подставляет локализованные подписи tooltip'а как CSS-строки", async () => {
+    const wrapper = await mountEditor({ props: { modelValue: "" } })
+    const style = wrapper.find("[data-quill-stub]").element.parentElement?.getAttribute("style") ?? ""
+
+    // Значение обязано быть в кавычках — это CSS-строка для `content`.
+    expect(style).toMatch(/--fv-quill-link-label:\s*"[^"]+"/)
+    expect(style).toMatch(/--fv-quill-save-label:\s*"[^"]+"/)
+  })
+
+  it("переводит подписи вместе с активной локалью", async () => {
+    const localeApp = {
+      install(app: any) {
+        app.use(FishtVue, { locale: { activeLocale: "ru" } })
+      }
+    }
+    const wrapper = await mountEditor({ global: { plugins: [localeApp] }, props: { modelValue: "" } })
+    const style = wrapper.find("[data-quill-stub]").element.parentElement?.getAttribute("style") ?? ""
+
+    expect(style).toContain('--fv-quill-link-label: "Ваша ссылка"')
+    expect(style).toContain('--fv-quill-save-label: "Сохранить"')
   })
 })

@@ -10,6 +10,7 @@ import updatePrimaryPalette from "./updatePrimaryPalette"
 import updateSurfacePalette from "./updateSurfacePalette"
 import $dt from "./$dt"
 import { buildTokensCss, injectTokens, TOKENS_STYLE_NAME } from "./helpers/tokensCss"
+import useDarkMode from "./useDarkMode"
 import type { NamesTheme as Themes } from "./Theme"
 
 const NamesTheme: (keyof typeof Themes)[] = [
@@ -37,6 +38,7 @@ export {
   updatePrimaryPalette,
   updateSurfacePalette,
   $dt,
+  useDarkMode,
   buildTokensCss,
   injectTokens,
   TOKENS_STYLE_NAME
@@ -52,5 +54,6 @@ export default {
   updatePreset,
   updatePrimaryPalette,
   updateSurfacePalette,
-  $dt
+  $dt,
+  useDarkMode
 }

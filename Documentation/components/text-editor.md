@@ -308,8 +308,9 @@ describe.skip("TextEditor smoke", () => {
 
 - ~~**Все 17 тестов пропущены.** Coverage `TextEditor.vue` — 0%~~ ✅ resolved 2026-09-05 — см. «Skipped tests» ниже.
 - `IDataTextEditor.options` и `globalOptions` объявлены как `any` ([TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts)).
-- Тёмная тема редактора переключается по `@media (prefers-color-scheme)`, а не по `darkModeSelector` из конфига — расходится с остальной библиотекой.
-- Строки Quill-tooltip (`content: "Ваша ссылка"`, `content: "Сохранить"` в `<style>`) захардкожены по-русски вне locale-механизма.
+- ~~Тёмная тема редактора переключается по системной цветовой схеме, а не по `darkModeSelector`~~ ✅ resolved 2026-09-05 — тема идёт через [`useDarkMode()`](../../lib/theme/useDarkMode.ts), переменные биндятся инлайном на оба контейнера редактора.
+- ~~Строки Quill-tooltip захардкожены по-русски вне locale-механизма~~ ✅ resolved 2026-09-05 — ключи `textEditor.linkLabel` / `textEditor.saveLabel`.
+- **Toolbar самого Quill не локализован** — лейблы `font`/`align` и tooltip'ы кнопок приходят из Quill на английском. Требует i18n-плагина Quill либо DOM-modify; см. [issues/texteditor.md](../issues/texteditor.md) Issues 8, 9.
 
 ### Skipped tests
 

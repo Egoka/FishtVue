@@ -8,6 +8,11 @@ config.global.stubs.transition = false
 
 mockFishtvueTheme()
 
+// NB: `enableAutoUnmount` сюда поставить нельзя — setupFiles переисполняются на каждый тест-файл,
+// а счётчик внутри @vue/test-utils глобальный: со второго файла прогон падает с
+// «enableAutoUnmount cannot be called more than once». Размонтирование делается в тех файлах,
+// где оно нужно (см. `TextEditor.test.ts`).
+
 // vite.config.ts isolate:false — vi-состояние общее на весь прогон (все *.test.ts в одном
 // worker'е). Если тест берёт vi.useFakeTimers() и падает раньше своего vi.useRealTimers()
 // (inline-cleanup в теле теста, а не afterEach), фейковые таймеры остаются висеть на ВСЕ

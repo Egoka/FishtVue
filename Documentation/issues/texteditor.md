@@ -239,21 +239,27 @@ Quill image-button по умолчанию вставляет base64-encoded ima
 
 Quill toolbar tooltips («Bold», «Italic», ...) — на английском по умолчанию. FishtVue не пробрасывает translations. См. [calendar.md Issue 8](./calendar.md) — аналогичный fix-план.
 
-## Issue 9: Hardcoded UI text — alignment options
+## Issue 9: Hardcoded UI text — alignment options — ⚠️ partial (2026-09-05)
 
 - **Категория:** F30 (хардкод текста)
 - **Severity:** medium
-- **Где:** [TextEditor.vue:96-97](../../lib/texteditor/TextEditor.vue#L96-L97), Dialog "Save"/"Cancel" buttons
+- **Где:** toolbar-конфиг [TextEditor.vue](../../lib/texteditor/TextEditor.vue) (`{ font: [] }`, `{ align: [] }`)
 
 ### Что найдено
 
-Toolbar `[{ font: [] }]`, `[{ align: [] }]` — Quill default labels. Также Dialog для editor-resize ([TextEditor.vue:74-75](../../lib/texteditor/TextEditor.vue#L74-L75)) использует Buttons с английским текстом.
+Toolbar `[{ font: [] }]`, `[{ align: [] }]` — Quill default labels.
 
-### Что нужно сделать
+> **Уточнение 2026-09-05.** Утверждение про «Dialog Save/Cancel buttons с английским текстом» **неверно**: в Dialog'е editor-resize стоит единственная icon-кнопка без текста, а кнопка увеличения уже локализована через `TextEditor.t("increase")`. Зато нашлось то, чего в issue не было — **две захардкоженные русские строки прямо в CSS**: `content: "Ваша ссылка"` и `content: "Сохранить"` для Quill-tooltip'а. Они не зависели от локали вообще и показывали русский текст англоязычным пользователям.
 
-1. Использовать `t("textEditor.save")`, `t("textEditor.cancel")` для Dialog buttons.
-2. Передать Quill custom labels через `i18n` Quill plugin (если есть), либо через DOM-modify в onMounted.
-3. Добавить ключи в [lib/locale/locales/en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts).
+### Что сделано (2026-09-05)
+
+- Обе CSS-строки переведены на локаль: `content: var(--fv-quill-link-label, "Enter link:")` / `var(--fv-quill-save-label, "Save")`. Значения приходят инлайновыми CSS-переменными из computed `quillVars` — `content` в псевдоэлементе иначе из шаблона не задать. Значение оборачивается в `JSON.stringify`, потому что CSS ждёт строку в кавычках.
+- Заведены ключи `textEditor.linkLabel` / `textEditor.saveLabel` в [en.ts](../../lib/locale/locales/en.ts), [ru.ts](../../lib/locale/locales/ru.ts) и `DefaultMessages` ([TypesLocale.d.ts](../../lib/locale/TypesLocale.d.ts)). `saveLabel` падает обратно на общий ключ `save`.
+- Тест «переводит подписи вместе с активной локалью» проверяет переключение на `ru`.
+
+### Что осталось
+
+1. Toolbar-лейблы самого Quill (`font`, `align`, tooltip'ы кнопок) — требуют либо i18n-плагина Quill, либо DOM-modify в `onMounted`. **Открыто**, общая часть с Issue 8.
 
 ## ~~Issue 10: Native form integration отсутствует~~ ✅ resolved 2026-09-05
 
@@ -278,6 +284,18 @@ Quill editor рендерится через div'ы. Нет hidden `<input>` д�
 
 1. ~~Добавить hidden `<input type="hidden" :name="id" :value="modelValue">`~~ ✅ 2026-09-05.
 2. ~~Документировать в [components/text-editor.md](../components/text-editor.md)~~ ✅ 2026-09-05.
+
+## ~~Issue 12: dark-тема игнорирует `darkModeSelector`~~ ✅ resolved 2026-09-05
+
+- **Категория:** L53 / B10
+- **Severity:** ~~low~~
+- **Где:** [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — computed `quillVars`
+
+> Заведён и закрыт в одном заходе (находка аудита 2026-09-05, N5).
+>
+> **Что было.** Тематические переменные Quill-обвязки жили в двух media-блоках по системной цветовой схеме. Они не знали про `optionsTheme.darkModeSelector`, поэтому при `<html class="dark">` и светлой системной теме редактор оставался светлым посреди тёмной страницы — расхождение с остальной библиотекой (Table получил `darkModeSelector`-aware `isDark` ещё 2026-08-02). Вдобавок переменные вешались только на `.editor`, а bubble-редактор рендерится в `.editor-small` — отдельном узле вне `.editor`, который их не наследовал вовсе.
+>
+> **Что стало.** Переменные вычисляются в computed `quillVars` и биндятся инлайном на **оба** контейнера. Источник истины о теме — новый composable [`useDarkMode()`](../../lib/theme/useDarkMode.ts), вынесенный из копий в Table и Calendar.
 
 ## Issue 11: print, motion, color cross-cutting
 

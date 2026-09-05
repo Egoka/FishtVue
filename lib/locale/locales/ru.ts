@@ -44,6 +44,10 @@ export default <DefaultMessages>{
   virtualScroller: {
     loading: "Загрузка…"
   },
+  textEditor: {
+    linkLabel: "Ваша ссылка",
+    saveLabel: "Сохранить"
+  },
   requiredField: "Обязательное поле",
   noData: "Нет данных",
   noColumn: "Нет столбцов",

@@ -42,6 +42,10 @@ export default <DefaultMessages>{
   virtualScroller: {
     loading: "Loading…"
   },
+  textEditor: {
+    linkLabel: "Enter link:",
+    saveLabel: "Save"
+  },
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

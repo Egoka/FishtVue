@@ -39,8 +39,8 @@ updated: 2026-09-05
 | T4. TextEditor: native form submit | B3 | ✅ | `feat(texteditor)` |
 | T10. TextEditor: разблокировать тест-суиту | Wave 11 / C2 (не было в плане сессии) | ✅ | `feat(texteditor)` |
 | T5. Label: translate px → CSS custom properties | B2 | ⏳ | — |
-| T6. TextEditor: локализация hardcoded-строк | B12 частично (N4) | ⏳ | — |
-| T7. TextEditor: `darkModeSelector` | N5 | ⏳ | — |
+| T6. TextEditor: локализация hardcoded-строк | B12 частично (N4) | ✅ | `feat(texteditor)` |
+| T7. TextEditor: `darkModeSelector` | N5 | ✅ | `feat(theme)` |
 | T8. `arrayHandler.sort` — документировать | B4 | ⏳ | — |
 | T9. Doc-sync: 22 позиции §3 + матрица + roadmap | B13 + B1 + N7 | ⏳ | — |
 
@@ -137,6 +137,32 @@ updated: 2026-09-05
 **Находка N13 — кросс-файловая утечка, поймана pre-commit'ом.** Суита проходила при прямом запуске, но валилась на husky-хуке: `FixWindow.test.ts` падал с `TypeError: Cannot read properties of null (reading 'insertBefore')` плюс 23 unhandled-ошибки. Причина — `isolate: false` в [vite.config.ts](../../vite.config.ts): воркер переиспользует одно jsdom-окружение на несколько файлов. TextEditor тянет за собой InputLayout с mount-tick'ом на `setTimeout(100)`; тест завершается за ~5 мс, инстанс остаётся живым, таймер срабатывает уже во время следующего файла — когда документ подменён. Лечится `enableAutoUnmount(afterEach)`.
 
 Практический вывод: **добавляя mount-тесты к компоненту, который раньше не монтировался, всегда ставь авто-unmount** — при `isolate: false` цена забытого инстанса ложится на чужой файл, и локальный прогон одного файла её не покажет. Стабильность подтверждена тремя полными прогонами подряд.
+
+---
+
+## T6 + T7. TextEditor: локализация подписей и `darkModeSelector`
+
+**Батчи:** B12 частично (N4), находка N5.
+
+| Подзадача | Что делаем |
+| --------- | ---------- |
+| T7.1 | Вынести `isDark` из копий в Table/Calendar в composable `useDarkMode()` |
+| T7.2 | Экспортировать из барреля `fishtvue/theme` + декларация в `Theme.d.ts` |
+| T7.3 | Тесты composable на обе ветки (DOM-селектор и media) |
+| T6.1 | Ключи `textEditor.linkLabel` / `saveLabel` в `en`/`ru` + `DefaultMessages` |
+| T6.2 | Подписи Quill-tooltip'а через CSS-переменные из computed `quillVars` |
+| T6.3 | Убрать media-блоки по системной цветовой схеме, биндить переменные инлайном |
+
+**Результат.** `useDarkMode.ts` покрыт на 95.23 / 83.33. `TextEditor.vue` — 93.42 / 75 (просел с 95.89: добавились ветки `isDark`, часть которых в jsdom не достижима). Агрегат 91.02 / 80.23 / 93.67 / 95.09. Тесты 5760 passed, 57 файлов.
+
+**Две ошибки исходных issue, вскрытые при работе:**
+
+- `texteditor.md` Issue 9 винил «Dialog Save/Cancel buttons с английским текстом». Таких кнопок нет: в Dialog'е одна icon-кнопка без текста, а кнопка увеличения уже локализована через `t("increase")`. Зато нашлось то, чего в issue не было — **две захардкоженные русские строки в CSS** (`content: "Ваша ссылка"` / `"Сохранить"`), которые показывали русский текст всем пользователям независимо от локали.
+- Переменные темы вешались только на `.editor`, тогда как bubble-редактор рендерится в `.editor-small` — отдельном узле **вне** `.editor`. То есть в bubble-режиме они не наследовались вовсе; это не было записано ни в одном issue.
+
+**Технически:** `content` в псевдоэлементе из шаблона не задать, поэтому строка локали приезжает CSS-переменной и оборачивается в `JSON.stringify` — CSS ждёт строку в кавычках.
+
+**Находка N14 — `enableAutoUnmount` нельзя ставить в общий setup.** Попытка вынести его в `.tests/setup/setupTests.ts` уронила 56 файлов из 57: `setupFiles` переисполняются на каждый тест-файл, а счётчик внутри @vue/test-utils глобальный — со второго файла «cannot be called more than once». Вызов оставлен в `TextEditor.test.ts`, а `useDarkMode.test.ts` размонтирует свои обёртки вручную. Ограничение зафиксировано комментарием в setup-файле, чтобы следующий не повторил попытку.
 
 ---
 

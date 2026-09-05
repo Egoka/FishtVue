@@ -8,6 +8,7 @@
   import { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
   import { StyleClass } from "fishtvue/types"
   import { htmlToText } from "fishtvue/utils/domHandler"
+  import { useDarkMode } from "fishtvue/theme"
   // ---BASE-COMPONENT----------------------
   const TextEditor = new Component<"TextEditor">()
   const options = TextEditor.getOptions()
@@ -73,6 +74,28 @@
       "st-text-editor caret-theme-500"
     ])
   )
+  // Тема Quill-обвязки и подписи его tooltip'ов идут CSS-переменными, а не `@media` / литералами:
+  //
+  // - dark-режим определяется через `optionsTheme.darkModeSelector` (единый источник истины с
+  //   движком стилей), иначе при `<html class="dark">` и светлой системной теме редактор оставался
+  //   светлым посреди тёмной страницы — прежняя привязка к системной цветовой схеме этого не умела;
+  // - подписи `content:` в псевдоэлементах Quill нельзя проставить из шаблона, поэтому строки
+  //   локали заезжают переменными (значение обязано быть в кавычках — это CSS-строка).
+  const isDark = useDarkMode()
+  const quillVars = computed<Record<string, string>>(() => ({
+    "--background-quill-toolbar": isDark.value ? "var(--ql-theme-900)" : "var(--ql-theme-100)",
+    "--border-quill-editor": isDark.value ? "var(--ql-theme-800)" : "var(--ql-theme-200)",
+    "--placeholder-quill-editor": isDark.value ? "#ffffff99" : "#00000099",
+    // surface-100 / surface-900 (Wave 9 — Issue 2 / B10): ближайшие тона к прежним хардкодам.
+    "--background-quill-editor": isDark.value
+      ? "rgb(var(--fv-surface-900, 17 24 39))"
+      : "rgb(var(--fv-surface-100, 243 244 246))",
+    "--background-picker-options-quill-editor": isDark.value
+      ? "rgb(var(--fv-surface-900, 17 24 39))"
+      : "rgb(var(--fv-surface-100, 243 244 246))",
+    "--fv-quill-link-label": JSON.stringify(TextEditor.t("textEditor.linkLabel") ?? "Enter link:"),
+    "--fv-quill-save-label": JSON.stringify(TextEditor.t("textEditor.saveLabel") ?? TextEditor.t("save") ?? "Save")
+  }))
   const resizeButtonToBubble = ref<StyleClass>(TextEditor.setStyle("absolute top-0 right-0"))
   const resizeButtonToSnow = ref<StyleClass>(TextEditor.setStyle("relative flex text-left h-[36px]"))
   const paramsDialog = computed<NonNullable<TextEditorProps["paramsDialog"]>>(() => ({
@@ -212,7 +235,7 @@
     v-bind="inputLayout"
     @clear="clear">
     <template #default="{ id: fieldId, labelledby }">
-      <div :id="fieldId" :aria-labelledby="labelledby" :class="editorSmall">
+      <div :id="fieldId" :aria-labelledby="labelledby" :class="editorSmall" :style="quillVars">
         <component
           :is="QuillEditor"
           v-if="QuillEditor && theme === 'bubble'"
@@ -239,7 +262,7 @@
         v-bind="paramsDialog"
         @update:modelValue="theme = 'bubble'"
         :class="['p-0 max-w-screen-sm sm:max-w-5xl sm:m-3 sm:w-[90%] max-h-screen']">
-        <div :class="['editor', isDisabled ? 'editor-disabled' : '', editor]">
+        <div :class="['editor', isDisabled ? 'editor-disabled' : '', editor]" :style="quillVars">
           <component
             :is="QuillEditor"
             v-if="QuillEditor && theme === 'snow'"
@@ -387,27 +410,13 @@
     stroke: var(--ql-theme-500);
   }
 
-  @media (prefers-color-scheme: light) {
-    .editor {
-      --background-quill-toolbar: var(--ql-theme-100);
-      --border-quill-editor: var(--ql-theme-200);
-      --placeholder-quill-editor: #00000099;
-      /* surface-100 (Wave 9 — texteditor.md Issue 2 / B10): ближайший тон к прежнему хардкоду #f6f3f4/#f5f5f5. */
-      --background-quill-editor: rgb(var(--fv-surface-100, 243 244 246));
-      --background-picker-options-quill-editor: rgb(var(--fv-surface-100, 243 244 246));
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .editor {
-      --background-quill-toolbar: var(--ql-theme-900);
-      --border-quill-editor: var(--ql-theme-800);
-      --placeholder-quill-editor: #ffffff99;
-      /* surface-900 (Wave 9 — texteditor.md Issue 2 / B10): ближайший тон к прежнему хардкоду #212121/#131313. */
-      --background-quill-editor: rgb(var(--fv-surface-900, 17 24 39));
-      --background-picker-options-quill-editor: rgb(var(--fv-surface-900, 17 24 39));
-    }
-  }
+  /*
+    Тематические переменные (--background-quill-*, --border-quill-editor, --placeholder-quill-editor)
+    инжектятся инлайном из `quillVars` — на .editor и на .editor-small одновременно.
+    Раньше здесь стояла пара media-блоков по системной цветовой схеме: они игнорировали
+    `optionsTheme.darkModeSelector` и вешали переменные только на .editor, из-за чего
+    bubble-редактор (.editor-small, отдельный узел вне .editor) их вовсе не наследовал.
+  */
 
   .editor-small .ql-editor {
     padding: 9px 5px;
@@ -495,12 +504,14 @@
     background-color: var(--background-quill-editor);
   }
 
+  /* Подписи Quill-tooltip'а: `content` в псевдоэлементе не задать из шаблона, поэтому строка
+     локали приезжает CSS-переменной из `quillVars` (fallback — английский литерал). */
   .editor .ql-snow .ql-tooltip[data-mode="link"]::before {
-    content: "Ваша ссылка";
+    content: var(--fv-quill-link-label, "Enter link:");
   }
 
   .editor .ql-snow .ql-tooltip.ql-editing a.ql-action::after {
-    content: "Сохранить";
+    content: var(--fv-quill-save-label, "Save");
   }
 
   .editor-small .ql-editor.ql-blank::before,

@@ -54,6 +54,15 @@ export declare function injectTokens(fv: import("fishtvue/config").FishtVue | un
 /** Имя style-тега токенов + ключ в cssComponents. */
 export declare const TOKENS_STYLE_NAME: string
 
+/**
+ * Реактивный флаг тёмной темы, согласованный с движком стилей.
+ *
+ * Читает DOM по `optionsTheme.darkModeSelector` (тот же селектор, что движок получает как
+ * `darkSelector`), иначе — `prefers-color-scheme: dark`. Слушатели снимаются в `onUnmounted`,
+ * поэтому вызывать только из `setup()`. На сервере всегда `false`.
+ */
+export declare function useDarkMode(): Ref<boolean>
+
 export declare type PrimaryPaletteInput = string | Partial<ThemeColor>
 export declare type SurfacePaletteInput =
   | Partial<ThemeColor>
