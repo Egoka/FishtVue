@@ -99,7 +99,7 @@ ArrowUp/Down/Home/End на root `<div data-accordion>` + roving tabindex на he
 - **`unstyled` (L53):** guard в `Component.setStyle()` (Wave 3.1, 2026-05-11) применяется ко всем 22 компонентам — Accordion наследует.
 - **`sideEffects` (A2):** [lib/accordion/package.json](../../lib/accordion/package.json) явно помечен `["**/*.css", "**/*.vue"]` (compound-bundle, зеркало `lib/menu/package.json`); dist-`exports`-карта генерируется `buildRootExports()`.
 
-Cross-cutting часть (общий guard) исходно из [button.md Issue 1, 8, 9, 14](../button.md) / Wave 2 / Wave 3 — теперь подтверждена для Accordion локально.
+Cross-cutting часть (общий guard) исходно из [button.md Issue 1, 8, 9, 14](./button.md) / Wave 2 / Wave 3 — теперь подтверждена для Accordion локально.
 
 ## ~~Issue 6: Animation `animationDuration` блокирует unmount~~ ✅ resolved 2026-05-11
 

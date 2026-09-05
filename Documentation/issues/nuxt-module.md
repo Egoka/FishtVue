@@ -14,7 +14,7 @@ related-doc: ../architecture/nuxt-module.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 2 | A2, A4-5 — cross-cutting packaging (см. [button.md](./button.md) Issues 8, 9); ~~C18~~ ✅, ~~J46 (module 0%)~~ ✅, ~~L53 (disableGlobalStyles)~~ ✅ 2026-09-05 |
+| high | 0 | ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2, ~~C18~~ ✅, ~~J46 (module 0%)~~ ✅, ~~L53 (disableGlobalStyles)~~ ✅ 2026-09-05 |
 | medium | 3 | D21, F30, K46 (lib/plugins 0%); ~~K52 (require dynamic)~~ ✅ 2026-09-05 |
 | low | 2 | E29, B10 |
 
@@ -154,9 +154,9 @@ const getNuxtVersion = () => {
 1. Тест: `disableGlobalStyles: true` — server plugin не подключается.
 2. Документировать use-cases (например, для Tailwind potlight без global CSS).
 
-## Issue 6: SSR styles + sideEffects + unstyled
+## ~~Issue 6: SSR styles + sideEffects + unstyled~~ ✅ resolved (наследуется от волн 2 и 3.1)
 
-См. [button.md Issue 1, 8, 9, 14](./button.md). Server plugin должен корректно инжектить styles в SSR.
+Все четыре корневых issue закрыты: [button.md Issue 1](./button.md) (SSR-инжекция) ✅ 2026-06-07, [Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map) ✅ 2026-06-11, [Issue 14](./button.md) (`unstyled`) ✅ 2026-05-11. Работу server-плагина по инжекции стилей в SSR см. в Issue 5 (`disableGlobalStyles`) и Issue 7 (его покрытие тестами).
 
 ## Issue 7: `lib/plugins/{Plugins,nuxt}` coverage 0%
 

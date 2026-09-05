@@ -55,13 +55,13 @@ Label рендерился как `<div>`, без `for`/`htmlFor`. Связь с
 - **Где (was):** ~~[Label.vue:57]~~ → удалено. Style injection регистрируется конструктором базового класса через `Component.__hooks()` ([lib/component/index.ts:79-84](../../lib/component/index.ts#L79-L84)) — `onServerPrefetch + vueOnMounted -> initStyle`.
 - **Resolution:** удалён `onMounted(() => Label.initStyle())` и связанный импорт. Добавлен поясняющий комментарий ([Label.vue:65-67](../../lib/label/Label.vue#L65-L67)). Wave 2.3 progress 5/22 → 6/22.
 
-## Issue 3: Нет sideEffects, нет ESM/CJS, нет exports map
+## ~~Issue 3: Нет sideEffects, нет ESM/CJS, нет exports map~~ ✅ resolved (наследуется от волны 2)
 
 - **Категория:** A2, A4, A5
-- **Severity:** high
-- **Где:** [lib/package.json](../../lib/package.json), [lib/label/package.json](../../lib/label/package.json)
+- **Severity:** ~~high~~
+- **Где:** [lib/package.json](../../lib/package.json)
 
-См. [button.md Issue 8 и Issue 9](./button.md) — cross-cutting fix Wave 2.1 (root-level packaging).
+Закрыт корневым фиксом: [button.md Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07 и [Issue 9](./button.md) (exports map, ESM/CJS) ✅ 2026-06-11. Контракт зафиксирован в [lib/package.test.ts](../../lib/package.test.ts).
 
 ## ~~Issue 4: `translateX`/`maxWidth` принимаются только числом, не CSS unit'ами~~ ✅ resolved 2026-05-11
 

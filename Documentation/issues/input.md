@@ -144,7 +144,7 @@ related-doc: ../components/input.md
 - **Категория:** E29.7
 - **Severity:** ~~low~~
 - **Где:** [Input.vue:87, 89](../../lib/input/Input.vue#L87-L89), [Input.vue:98](../../lib/input/Input.vue#L98)
-- **Resolution:** Применён pattern из [done/button.md Issue 10](./done/button.md): `transition-all` → `motion-safe:transition-all`; `placeholder:transition-all` → `motion-safe:placeholder:transition-all`; eye-icon `transition` → `motion-safe:transition`. Tailwind transpилирует `motion-safe:` в `@media (prefers-reduced-motion: no-preference)`. Покрыто regression-тестом (`classBaseInput` содержит `motion-safe:transition-all`, не содержит unconditional `transition-all`).
+- **Resolution:** Применён pattern из [done/button.md Issue 10](./button.md): `transition-all` → `motion-safe:transition-all`; `placeholder:transition-all` → `motion-safe:placeholder:transition-all`; eye-icon `transition` → `motion-safe:transition`. Tailwind transpилирует `motion-safe:` в `@media (prefers-reduced-motion: no-preference)`. Покрыто regression-тестом (`classBaseInput` содержит `motion-safe:transition-all`, не содержит unconditional `transition-all`).
 
 ### Acceptance criteria
 
@@ -161,7 +161,7 @@ related-doc: ../components/input.md
   2. `focus({ preventScroll: true })` — programmatic с native `FocusOptions`.
   3. `focus(focusEvent)` — template handler (эмитит `"focus"`).
 
-  В `InputExpose` ([Input.d.ts](../../lib/input/Input.d.ts)) сигнатура также обновлена. Паритет с `Button.focus()` ([done/button.md Issue 4](./done/button.md)). Покрыто 3 тестами (argless / FocusEvent / FocusOptions).
+  В `InputExpose` ([Input.d.ts](../../lib/input/Input.d.ts)) сигнатура также обновлена. Паритет с `Button.focus()` ([done/button.md Issue 4](./button.md)). Покрыто 3 тестами (argless / FocusEvent / FocusOptions).
 - **Cross-cutting (deferred):** Aria/Select/TextEditor имеют ту же проблему — оставлены открытыми в [aria.md](./aria.md), [select.md](./select.md), [texteditor.md](./texteditor.md) (вне scope Input-ТЗ).
 
 ### Acceptance criteria

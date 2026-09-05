@@ -14,7 +14,7 @@ related-doc: ../architecture/theme.md
 | Severity | Count | Categories                                                                                |
 | -------- | ----- | ----------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                         |
-| high     | 3     | A2, A4-5, J46 (themes 0% coverage)                                                        |
+| high     | 1     | J46 (themes 0% coverage — Issue 2); ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2             |
 | medium   | 3     | D21, F31, K46 (uno.ts 0%)                                                                 |
 | low      | 2     | E29, N59                                                                                  |
 
@@ -169,9 +169,9 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 > **Примечание:** `lightModeSelector` (типизирован в [OptionsTheme](../../lib/config/FishtVue.d.ts#L179)) пока НЕ транслируется — light это дефолт, dark — override; отдельная фича, вне B11.
 
-## Issue 6: SSR styles + sideEffects + unstyled
+## ~~Issue 6: SSR styles + sideEffects + unstyled~~ ✅ resolved (наследуется от волн 2 и 3.1)
 
-См. [button.md Issue 1, 8, 9, 14](./button.md). Theme — корень проблемы для всех.
+Все четыре корневых issue закрыты: [button.md Issue 1](./button.md) (SSR-инжекция) ✅ 2026-06-07, [Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map) ✅ 2026-06-11, [Issue 14](./button.md) (`unstyled`) ✅ 2026-05-11.
 
 ## Issue 7: theme/primitive.ts 761 lines — gigantic palette monolith
 

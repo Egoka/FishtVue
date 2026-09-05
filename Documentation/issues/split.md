@@ -160,7 +160,7 @@ Resize только через pointer drag. Keyboard-users не могли из
 - **Категория:** E29.7, N57
 
 - ~~**N57 touch**~~ ✅ resolved 2026-06-06 (уже было) — resize реализован через **Pointer Events** (`pointerdown/move/up/cancel/out` + `setPointerCapture` + window-safety-net на release вне компонента, [Split.vue:636-685](../../lib/split/Split.vue#L636-L685)), что покрывает mouse + touch + pen; `touch-none` на разделителе ([Split.vue:83](../../lib/split/Split.vue#L83)) предотвращает scroll-конфликт. Исходное утверждение «только mouse» было неверным. Покрыто существующим pointer-drag тестом.
-- ~~**E29.7 reduced-motion**~~ ✅ resolved 2026-06-06 — `transition-all` корня → `motion-safe:transition-all` ([Split.vue:98](../../lib/split/Split.vue#L98)); `transition-opacity duration-500` иконки разделителя → `motion-safe:` ([Split.vue:92](../../lib/split/Split.vue#L92)). Regression-тест «wraps root transition in motion-safe:». Зеркалит [done/button.md Issue 10](./done/button.md).
+- ~~**E29.7 reduced-motion**~~ ✅ resolved 2026-06-06 — `transition-all` корня → `motion-safe:transition-all` ([Split.vue:98](../../lib/split/Split.vue#L98)); `transition-opacity duration-500` иконки разделителя → `motion-safe:` ([Split.vue:92](../../lib/split/Split.vue#L92)). Regression-тест «wraps root transition in motion-safe:». Зеркалит [done/button.md Issue 10](./button.md).
 
 ## ~~Issue 9: G34 — root-ref expose~~ ✅ resolved 2026-06-13
 

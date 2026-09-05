@@ -336,7 +336,8 @@ describe("Select", () => {
 
 - Coverage 79.65% statements / 67.55% branch — несколько ветвей в interaction-логике (keydown nav) не покрыты.
 - **Виртуализация dropdown** не реализована — при `dataSelect.length > 500` рендер всех items в DOM ощутимо лагает. Roadmap: Wave 7 (`@tanstack/vue-virtual`) — см. [issues/select.md Issue 7](../issues/select.md).
-- **Compound `<Select><SelectOption>` API** отсутствует — только schema-driven. Roadmap: Wave 6.3 — см. [issues/select.md Issue 3](../issues/select.md).
+- ~~**Compound `<Select><SelectOption>` API** отсутствует — только schema-driven~~ ✅ resolved 2026-06-13 — реализовано через VNode-walk, см. [§9.5](#95-compound-api-selectoption--selectgroup) выше и [issues/select.md Issue 3](../issues/select.md). Строка противоречила собственному §9.5 этого же документа; исправлено doc-sync'ом 2026-09-05.
+- **Ограничение compound-API:** rich per-option контент (иконки, сложная разметка) через `<SelectOption>` не рендерится — используй `#item`-слот или schema-driven `:data-select`.
 
 ### Skipped tests
 

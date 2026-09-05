@@ -1,7 +1,7 @@
 ---
 title: Issues — Locale system
-summary: Аудит locale — coverage 0% (Issue 1 open). Fallback chain ✅ 2026-05-20, interpolation + pluralization ✅ 2026-06-19 (Wave 3.5, Component.t(key, params?) + Intl.PluralRules). only en/ru bundled.
-updated: 2026-06-19
+summary: Аудит locale — coverage 0% (Issue 1 open). Fallback chain ✅ 2026-05-20, interpolation + pluralization ✅ 2026-06-19 (Wave 3.5, Component.t(key, params?) + Intl.PluralRules), packaging ✅ волна 2 (Issue 5). only en/ru bundled. Открыты: coverage, RTL-flag в NameLocale, date/number locale.
+updated: 2026-09-05
 audit-checklist: 60-point + Configuration support
 source: lib/locale/
 related-doc: ../architecture/locale.md
@@ -14,7 +14,7 @@ related-doc: ../architecture/locale.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 3 | A2, A4-5, J46 (0% coverage); ~~F30~~ ✅ 2026-06-19, ~~L53~~ ✅ 2026-05-20 |
+| high | 1 | J46 (0% coverage — Issue 1); ~~A2, A4-5 (Issue 5)~~ ✅ закрыты волной 2, ~~F30~~ ✅ 2026-06-19, ~~L53~~ ✅ 2026-05-20 |
 | medium | 4 | F31 (no RTL flag in NameLocale), F32 (date/number locale), D21, K46 |
 | low | 2 | D22, B10 |
 
@@ -40,7 +40,7 @@ related-doc: ../architecture/locale.md
 - **Категория:** L53
 - **Severity:** ~~high~~ ✅ resolved
 
-~~См. [config.md Issue 3](./config.md) — fallback логика должна быть в `t(key)` через config-уровень.~~
+~~См. [config.md Issue 3](./done/config.md) — fallback логика должна быть в `t(key)` через config-уровень.~~
 
 > ✅ **resolved 2026-05-20** — `Component.t(key)` ([component/index.ts:191](../../lib/component/index.ts#L191)) реализует fallback chain `messages[active][key] → messages[default][key] → key` (dot-path через `objectHandler.get`), возвращает `string` (key как last resort). См. [locale.md §3/§18](../architecture/locale.md#3-how-it-works).
 
@@ -105,9 +105,9 @@ Locale-сообщения `select.resultsCount`/`table.resultsCount` перев�
    ```
 2. Auto-set `<html dir="rtl">` для RTL locales.
 
-## Issue 5: SSR styles + sideEffects + unstyled
+## ~~Issue 5: SSR styles + sideEffects + unstyled~~ ✅ resolved (наследуется от волн 2 и 3.1)
 
-См. [button.md Issue 1, 8, 9, 14](./button.md).
+Все четыре корневых issue закрыты: [button.md Issue 1](./button.md) (SSR-инжекция) ✅ 2026-06-07, [Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map) ✅ 2026-06-11, [Issue 14](./button.md) (`unstyled`) ✅ 2026-05-11.
 
 ## Issue 6: Date/number formatting не уважает locale
 
@@ -123,10 +123,12 @@ Locale-сообщения `select.resultsCount`/`table.resultsCount` перев�
 | `locale.activeLocale` | ✅ | runtime через setActiveLocale |
 | `locale.locales` (metadata) | ⚠️ | structure private |
 | `locale.messages` (custom) | ✅ | через config |
-| Fallback chain | ❌ | Issue 2 |
-| Interpolation | ❌ | Issue 3 |
-| Pluralization | ❌ | Issue 3 |
-| RTL detection | ❌ | Issue 4 |
+| Fallback chain | ✅ | `Component.t()`: active → default → key (Issue 2 ✅ 2026-05-20) |
+| Interpolation | ✅ | `t(key, params)` → `interpolate()` (Issue 3 ✅ 2026-06-19) |
+| Pluralization | ✅ | `Intl.PluralRules` + формы через `\|` (Issue 3 ✅ 2026-06-19) |
+| RTL detection | ❌ | Issue 4 — открыт |
+
+> Три строки этой таблицы стояли `❌` со ссылками на issue, закрытые ещё в мае-июне. Синхронизировано 2026-09-05.
 
 ## Dual-API gap
 

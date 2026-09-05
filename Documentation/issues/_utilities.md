@@ -1,7 +1,7 @@
 ---
 title: Issues — Utilities (consolidated)
-summary: Сводный аудит 11 utility-handlers — большинство пунктов закрыто (`crypto.randomUUID`, locale-aware phone, Unicode caseing, rules i18n hook, packaging metadata). Open — coverage/документация sort-stability и dateHandler.
-updated: 2026-05-11
+summary: Сводный аудит 11 utility-handlers — большинство пунктов закрыто (`crypto.randomUUID`, locale-aware phone, Unicode caseing, rules i18n hook, packaging metadata, sort-stability документирована 2026-09-05). Открыт один — coverage `dateHandler` (72.61 / 65.38).
+updated: 2026-09-05
 audit-checklist: 60-point (subset relevant) + Configuration support
 source: lib/utils/
 related-doc: ../utilities/
@@ -38,7 +38,7 @@ related-doc: ../utilities/
 
 В `DefaultMessages` ([locale/TypesLocale.d.ts](../../lib/locale/TypesLocale.d.ts)) добавлены optional ключи: `invalidEmail`, `invalidPhone`, `invalidNumeric`, `regexMismatch`, `valueOutOfRange`, `invalidLength`, `invalidField`, `compareMismatch`. Переводы — в [en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts).
 
-Вызов `setDefaultRuleMessages` из Form/Input setup-блока (с маппингом на `t()`) — отдельная задача за пределами `lib/utils/`; обсуждается в [form.md Issue 6](../form.md).
+Вызов `setDefaultRuleMessages` из Form/Input setup-блока (с маппингом на `t()`) — отдельная задача за пределами `lib/utils/`; обсуждается в [form.md Issue 6](./form.md).
 
 ## ~~Issue 3: `numberHandler.convertToPhone` — hardcoded РФ-формат~~ ✅ resolved (2026-05-10)
 
@@ -60,8 +60,8 @@ related-doc: ../utilities/
 
 ### Что нужно сделать
 
-1. `pnpm coverage -- lib/utils/dateHandler.test.ts`.
-2. Если < 90% — добавить тесты для непокрытых ветвей.
+1. ~~Прогнать coverage и подтвердить цифру~~ ✅ 2026-09-05 — 72.61 / 65.38, непокрыт блок [dateHandler.ts:342-362](../../lib/utils/dateHandler.ts#L342-L362).
+2. Добавить тесты на непокрытые ветви форматирования (`Do`, `A`/`a`, `W`/`WW`/`WWW`/`WWWW`, `L`, `ZZ`–`ZZZZ`) до порога ≥80 % statements / ≥70 % branch.
 
 ## ~~Issue 5: `domHandler.minifyCSS` использует document.createElement — нужен SSR guard~~ ✅ resolved + doc-error fix (2026-05-10)
 
@@ -131,7 +131,7 @@ Issue снимается без действий.
 - Аналогичный fix для [lib/package.json](../../lib/package.json) и каждого [lib/{component}/package.json](../../lib/).
 - CJS-вариант (требует расширения [lib/rollup.config.js](../../lib/rollup.config.js)).
 
-Полный fix — отдельное ТЗ; см. [button.md Issue 8 и Issue 9](../button.md), [issues/README.md cross-cutting](../README.md).
+Полный fix — отдельное ТЗ; см. [button.md Issue 8 и Issue 9](./button.md), [issues/README.md cross-cutting](../README.md).
 
 ## Cross-cutting: Configuration support
 

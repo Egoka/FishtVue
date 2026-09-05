@@ -201,7 +201,7 @@ Alert не содержит form-control. Для form-сценариев (confir
 - ✅ **Mobile** (2026-06-14) — добавлены явные mobile-first gutters: body `p-3 sm:p-4` ([Alert.vue:190](../../lib/alert/Alert.vue#L190)); `openAlert`-контейнер `gap-3 sm:gap-4` ([openAlert.ts:80](../../lib/alert/openAlert.ts#L80)) + offsets `pt-3 sm:pt-5`/`pb-3 sm:pb-5`/`ps-3 sm:ps-5`/`pe-3 sm:pe-5` ([openAlert.ts:37–46](../../lib/alert/openAlert.ts#L37-L46)). На мобиле компактнее, на desktop — прежние отступы; ширина ограничена `max-w-[89vw]`. Тесты: `Alert.test.ts` > `Mobile-first responsive gutters`. Канон mobile-first (без JS `innerWidth`).
 - ⚠️ **Theme tokens (B10)** — severity colors (`bg-green-50`, `text-red-400` и т.д.) пока хардкодены Tailwind-примитивами. Миграция на semantic theme-tokens отложена (cross-cutting Wave 9, отдельный pass для `lib/theme/`). **Остаётся открытым** — единственный open low.
 
-См. [done/button.md Issue 10](./done/button.md) — каноничный motion-safe pattern.
+См. [done/button.md Issue 10](./button.md) — каноничный motion-safe pattern.
 
 ## Cross-cutting: Configuration support
 

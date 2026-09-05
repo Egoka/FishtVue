@@ -93,7 +93,7 @@ Family rename (тот же numeric tone, значение не менялось)
 
 Regression-тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) describe "Semantic color tokens (Issue 4 / B10)": проверяют наличие `surface-*` классов на line-сегментах и content, и отсутствие `neutral-*`/`text-gray-*` в рендере.
 
-Cross-cutting motion-safe pattern (если анимации появятся) — [done/button.md Issue 10](./done/button.md).
+Cross-cutting motion-safe pattern (если анимации появятся) — [done/button.md Issue 10](./button.md).
 
 ## Cross-cutting: Configuration support
 

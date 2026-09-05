@@ -212,7 +212,7 @@ Help icon `text-gray-400` (#9ca3af) на body `bg-stone-50` (#fafaf9) → contra
   - Inline `<Icons>`-thumb (ветка `iconActive/iconInactive`) вынесен в NEW computed `classSwitchIconImg` через `Switch.setStyle` ([Switch.vue:148](../../lib/switch/Switch.vue#L148)) — inline-классы шаблона не регистрируются движком, поэтому их `motion-safe:`-варианты не попадали бы в инжектируемый CSS (зеркало [table.md Issue 12](./table.md)).
     Тесты блока «Reduced motion — motion-safe transitions» (4 кейса) подтверждают `motion-safe:`-присутствие + отсутствие unconditional-вариантов.
 
-См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern.
+См. [done/button.md Issue 10](./button.md) — там готовый motion-safe pattern.
 
 ## ~~Issue 8: RTL — left/right специфичные классы (`right-0`, `mr-2`, `translate-x-3.5`)~~ ✅ resolved 2026-05-11 (partial)
 

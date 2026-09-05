@@ -14,7 +14,7 @@ related-doc: ../components/calendar.md
 | Severity | Count (open) | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 3 | A2, A4-5 (packaging — Issue 4), C17 (SSR), L53 (unstyled — framework-level), P (dual-API) |
+| high | 1 | P (dual-API — Issue 5, deferred redesign); ~~A2, A4-5, C17 (Issue 4)~~ ✅ закрыты волной 2, ~~L53 (Issue 7)~~ ✅ framework-level |
 | medium | 2 | F31, G34 |
 | low | 2 | E29.7, N59 |
 
@@ -153,12 +153,12 @@ Vue должен быть `peerDependency`, иначе npm мог установ
 
 - [x] `npm ls vue` в Nuxt-проекте + fishtvue — одна копия Vue (vue резолвится из приложения).
 
-## Issue 4: SSR styles + cross-cutting (sideEffects, exports map)
+## ~~Issue 4: SSR styles + cross-cutting (sideEffects, exports map)~~ ✅ resolved (наследуется от волны 2)
 
-> **Status:** deferred — cross-cutting SSR-фикс, см. [button.md Issue 1, 8, 9](./button.md).
+> **Status:** ✅ закрыт корневыми фиксами: [button.md Issue 1](./button.md) (SSR-инжекция стилей) ✅ 2026-06-07, [Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map, ESM/CJS) ✅ 2026-06-11. Все три — one-time правки уровня пакета, покрывающие Calendar вместе с остальными компонентами.
 
 - **Категория:** C17, A2, A4, A5
-- **Severity:** high
+- **Severity:** ~~high~~
 
 ## Issue 5: Нет dual-API — компонент только schema-driven через `datePickerOptions`
 
@@ -216,7 +216,7 @@ const mode = computed<NonNullable<CalendarProps["mode"]>>(
 - [x] `prop.mode` побеждает над глобальным componentsStyle. Тест: `prop.mode wins over global componentsStyle`.
 - [x] Без plugin'а — `mode` падает на `"outlined"`. Тест: `falls back to "outlined" when nothing is set`.
 
-## Issue 7: `unstyled: true` не обрабатывается
+## ~~Issue 7: `unstyled: true` не обрабатывается~~ ✅ resolved (framework-level)
 
 > **Status:** ✅ framework-level resolved — `Component.setStyle()` уже гейтит на `__globalConfig.config.unstyled` ([component/index.ts:138](../../lib/component/index.ts#L138)) cross-cutting фиксом. Calendar-controlled классы (через `Calendar.setStyle([...])`) отключаются автоматически. Внешние v-calendar intrinsic классы (`vc-primary`) — не наша поверхность.
 

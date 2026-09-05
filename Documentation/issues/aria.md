@@ -14,7 +14,7 @@ related-doc: ../components/aria.md
 | Severity | Count (open) | Categories         |
 | -------- | ------------ | ------------------ |
 | critical | 0            | —                  |
-| high     | 1            | A2, A4-5 (Issue 3) |
+| high     | 0            | ~~A2, A4-5 (Issue 3)~~ ✅ — cross-cutting packaging закрыт волной 2 (см. [button.md](./button.md) Issues 8, 9) |
 | medium   | 1            | D25 (Issue 6 — rename, deferred) |
 | low      | 1            | M55 (Issue 10 — docs-only) |
 
@@ -74,12 +74,12 @@ Runtime передаёт `string` (содержимое textarea), но тип �
 
 Полный cross-cutting SSR-style fix (layer wrapping, HMR teardown, top-level SSR collector) остаётся в [button.md Issue 1](./button.md) и [component-class.md Issue 3](./component-class.md) — общий вопрос, не aria-specific.
 
-## Issue 3: Нет sideEffects/exports map
+## ~~Issue 3: Нет sideEffects/exports map~~ ✅ resolved (наследуется от волны 2)
 
 - **Категория:** A2, A4, A5
-- **Severity:** high
+- **Severity:** ~~high~~
 
-См. [button.md Issue 8 и Issue 9](./button.md).
+Закрыт корневым фиксом в [lib/package.json](../../lib/package.json): [button.md Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07 и [Issue 9](./button.md) (exports map, ESM/CJS) ✅ 2026-06-11. Оба — one-time правки на уровне пакета, покрывающие все компоненты сразу; контракт зафиксирован в [lib/package.test.ts](../../lib/package.test.ts).
 
 ## ~~Issue 4: Нет componentsStyle global fallback~~ ✅ resolved 2026-05-11
 

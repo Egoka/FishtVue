@@ -30,7 +30,7 @@ related-doc: ../components/badge.md
 - **Severity:** high
 - **Status:** resolved — Badge-specific закрыт 2026-05-10; packaging наследует Wave 2.1 (landed в каноне), per-component правок нет.
 
-См. [button.md Issue 1, 8, 9](../button.md). Идентичный fix для всех 22 компонентов.
+См. [button.md Issue 1, 8, 9](./button.md). Идентичный fix для всех 22 компонентов.
 
 - ~~C17 — `onMounted(() => Badge.initStyle())` дублирующий init в Badge.vue~~ ✅ resolved 2026-05-10: удалён, авто-init идёт через [Component.\_\_hooks()](../../lib/component/index.ts#L79-L84).
 - ~~A2 (`sideEffects`), A4-A5 (ESM-only + root `exports` map)~~ ✅ resolved 2026-06-13 (doc-sync): корневой `"sideEffects": false` (✅2026-06-07) + `buildRootExports()` (✅2026-06-11) покрывают `fishtvue/badge` strict-superset'ом из авторитетных rollup-выходов ([Wave 2.1](../README.md#21-packaging-one-time-fix-в-libpackagejson)). Badge наследует, правок в [lib/package.json](../../lib/package.json) не требуется.
@@ -56,7 +56,7 @@ const mode = computed<NonNullable<BadgeProps["mode"]>>(
 
 Маппинг по аналогии с Button (Wave 3.2: `underlined→ghost`): для Badge `underlined→neutral` — ближайший минимально-визуальный mode.
 
-См. [button.md Issue 13](../button.md) — параллельный fix.
+См. [button.md Issue 13](./button.md) — параллельный fix.
 
 ## ~~Issue 3: `unstyled: true` не обрабатывается~~ ✅ resolved 2026-06-13
 
@@ -64,7 +64,7 @@ const mode = computed<NonNullable<BadgeProps["mode"]>>(
 - **Severity:** high
 - **Status:** resolved — канонический guard `Component.setStyle()` (`if (config.unstyled) return ""`, [component/index.ts:138](../../lib/component/index.ts#L138)) landed 2026-05-11 во всех 22 компонентах ([Wave 3.1](../README.md#31-unstyled-true-enforcement-один-фикс--22-компонента)); Badge-SFC исходник не меняет. Закрыт Badge-scoped regression-тестом (`describe("Configuration support — unstyled")`: `classBase === ""` при `unstyled:true` + базовые классы при `false`; `afterEach` чистит `window.FishtVue` singleton-leak).
 
-См. [button.md Issue 14](../button.md), [switch.md Issue 10](../switch.md).
+См. [button.md Issue 14](./button.md), [switch.md Issue 10](./switch.md).
 
 ## ~~Issue 4: Outline-mode + neutral — низкий contrast в light mode~~ ✅ resolved 2026-05-10
 
@@ -125,7 +125,7 @@ function deleteBadge() {
 ### Что найдено и сделано
 
 - **F31 (RTL).** ~~Аудит считал, что «Badge left-right-классов не имеет» — неверно:~~ `classBase` использовал физические `pl-1` (point-only) / `pr-1` (close-only). Заменены на логические `ps-1` / `pe-1` (`padding-inline-start/end`) — авто-флип в RTL без `dir`-атрибута (движок понимает `ps`/`pe`, [dev-patterns §2](../dev-patterns.md)). Симметричный `px-1` (point + close) не трогался. Зеркало [table.md Issue 11](./table.md) / [pagination.md Issue 6](./pagination.md).
-- **B10 (colors / forced-colors).** Добавлен `forced-colors:outline` на базовый класс — badge остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается (зеркало [switch.md Issue 12](../switch.md) / [split.md B10](./split.md)). Accents `bg-theme-*`/`text-theme-*`/`ring-theme-*` уже preset-aware (`var(--theme)`). ~~Структурные `neutral-*` в outline-ветке — намеренный WCAG-contrast (Issue 4), не трогались; полная semantic-token миграция (`surface`/`border`) → Wave 9 (extension движка) — файл остаётся active.~~ ✅ resolved 2026-07-05 (Wave 9 residual batch): [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `text-neutral-600 dark:text-neutral-200 ring-neutral-300 dark:ring-neutral-700` → `text-surface-600 dark:text-surface-200 ring-surface-300 dark:ring-surface-700`. WCAG-contrast свойство Issue 4 сохранено без изменений: `surface` по умолчанию — точная копия `gray` (hex-значения byte-identical), меняется только token-словарь, не рендерящийся цвет.
+- **B10 (colors / forced-colors).** Добавлен `forced-colors:outline` на базовый класс — badge остаётся видимым в Windows high-contrast, где `bg-*` сбрасывается (зеркало [switch.md Issue 12](./switch.md) / [split.md B10](./split.md)). Accents `bg-theme-*`/`text-theme-*`/`ring-theme-*` уже preset-aware (`var(--theme)`). ~~Структурные `neutral-*` в outline-ветке — намеренный WCAG-contrast (Issue 4), не трогались; полная semantic-token миграция (`surface`/`border`) → Wave 9 (extension движка) — файл остаётся active.~~ ✅ resolved 2026-07-05 (Wave 9 residual batch): [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `text-neutral-600 dark:text-neutral-200 ring-neutral-300 dark:ring-neutral-700` → `text-surface-600 dark:text-surface-200 ring-surface-300 dark:ring-surface-700`. WCAG-contrast свойство Issue 4 сохранено без изменений: `surface` по умолчанию — точная копия `gray` (hex-значения byte-identical), меняется только token-словарь, не рендерящийся цвет.
 - **E29.7 (reduced-motion).** N/A — Badge сам transition/animate-классов не имеет; close-кнопка рендерится через `<Button mode="ghost">`, чьи transitions уже `motion-safe:` (button-side). Зеркало [pagination.md Issue 8](./pagination.md) (motion N/A).
 
 ## Cross-cutting: Configuration support

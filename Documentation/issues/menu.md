@@ -220,7 +220,7 @@ Submenu позиционируется через FixWindow. См. [done/fixwind
 
 ## ~~Issue 9: prefers-reduced-motion / RTL / colors~~ ✅ resolved 2026-07-04
 
-Cross-cutting. См. [done/button.md Issue 10](./done/button.md) — там готовый motion-safe pattern, плюс [switch.md](./switch.md).
+Cross-cutting. См. [done/button.md Issue 10](./button.md) — там готовый motion-safe pattern, плюс [switch.md](./switch.md).
 
 > ✅ **resolved:**
 > - ✅ E29.7 (`prefers-reduced-motion`) — default `styles.animation` = `"motion-safe:transition-all motion-safe:duration-500"`

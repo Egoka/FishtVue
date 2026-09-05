@@ -164,11 +164,12 @@ Quill ≈ 200kb minified тянулся ВСЕМИ потребителями fi
 - [x] Bundle без TextEditor — без quill в chunk (точечный импорт `fishtvue/button` не грузит `texteditor.mjs`).
 - [x] Установка `npm i fishtvue` без явного quill — не падает (optional peer).
 
-## Issue 4: SSR styles + sideEffects/exports map
+## ~~Issue 4: SSR styles + sideEffects/exports map~~ ✅ resolved (наследуется от волны 2)
 
 - **Категория:** C17, A2, A4, A5
+- **Severity:** ~~high~~
 
-См. [button.md Issue 1, 8, 9](./button.md).
+Закрыт корневыми фиксами: [button.md Issue 1](./button.md) (SSR-инжекция) ✅ 2026-06-07, [Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map) ✅ 2026-06-11.
 
 ## ~~Issue 5: Type bug `change:modelValue(payload: boolean)` должно быть string~~ ✅ resolved 2026-05-11
 
