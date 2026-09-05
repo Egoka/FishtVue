@@ -1,7 +1,7 @@
 ---
 title: TextEditor
-summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar. mode-цепочка учитывает глобальный componentsStyle (Wave 3.2, 2026-07-02).
-updated: 2026-07-02
+summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar. mode-цепочка учитывает глобальный componentsStyle (Wave 3.2, 2026-07-02). Native form submit через скрытое поле и полное покрытие тестами — 2026-09-05.
+updated: 2026-09-05
 stability: experimental
 since: 0.2.11
 ---
@@ -206,6 +206,23 @@ Quill CSS импортируется вне `@layer fishtvue` — он имее�
 - Валидация — `required` через rules; для типичных правил «минимум N символов» парси HTML на стороне rules: `<TextEditor>` отдаёт HTML, не plain text.
 - Reset — `modelValue: ""`.
 
+### Native form submit (M54-55, 2026-09-05)
+
+Quill рендерит контент в contenteditable-`div`'ах, поэтому сам по себе в `FormData` не попадает. Компонент дополнительно выводит скрытое поле:
+
+```html
+<input type="hidden" data-text-editor-value :name="id" :value="modelValue ?? ''" />
+```
+
+- **Имя поля — это `id`.** Канон общий с [Aria](./aria.md): `<TextEditor id="bio">` → `formData.get("bio")`.
+- **Без `id` поле не рендерится** — безымянный input в `FormData` всё равно не попал бы.
+- Значение обновляется на каждый ввод, а не по `change:modelValue` (тот эмитится на blur) — submit в любой момент отдаёт актуальный HTML.
+
+```ts
+const form = document.querySelector("form")!
+new FormData(form).get("bio") // "<p>Привет</p>"
+```
+
 ## 12. Accessibility & Security
 
 ### A11y
@@ -289,12 +306,18 @@ describe.skip("TextEditor smoke", () => {
 
 ### Incomplete or stubbed behavior
 
-- **Все 17 тестов пропущены** ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)). Coverage `TextEditor.vue` — 0%. Реальное поведение проверено только интеграционно (через `sandbox`).
+- ~~**Все 17 тестов пропущены.** Coverage `TextEditor.vue` — 0%~~ ✅ resolved 2026-09-05 — см. «Skipped tests» ниже.
 - `IDataTextEditor.options` и `globalOptions` объявлены как `any` ([TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts)).
+- Тёмная тема редактора переключается по `@media (prefers-color-scheme)`, а не по `darkModeSelector` из конфига — расходится с остальной библиотекой.
+- Строки Quill-tooltip (`content: "Ваша ссылка"`, `content: "Сохранить"` в `<style>`) захардкожены по-русски вне locale-механизма.
 
 ### Skipped tests
 
-17 кейсов в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) — `it.skip`. Причина: jsdom не поддерживает Quill DOM-layout.
+~~17 кейсов — `it.skip`. Причина: jsdom не поддерживает Quill DOM-layout.~~ ✅ resolved 2026-09-05.
+
+Блок был под `describe.todo` (не `it.skip`), и причина оказалась не в DOM-layout: настоящий Quill планирует `requestAnimationFrame`-колбэки, которые срабатывали после teardown jsdom и роняли весь прогон. С момента Wave 2.1 Quill грузится lazy (`await import()` в `onMounted`), поэтому его достаточно подменить через `vi.mock("@vueup/vue-quill")` — настоящий редактор не инстанцируется вовсе.
+
+Сейчас: **27/27 тестов проходят, 0 todo**, coverage `TextEditor.vue` — **95.89% stmts / 85.18% branch**.
 
 ### API inconsistencies
 

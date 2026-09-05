@@ -1,11 +1,63 @@
-import { mount, flushPromises } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { mount, flushPromises, enableAutoUnmount } from "@vue/test-utils"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import FishtVue from "fishtvue/config"
 import TextEditor from "fishtvue/texteditor/TextEditor.vue"
 import { QuillEditor } from "@vueup/vue-quill"
 import { nextTick } from "vue"
 
-describe.todo("TextEditor Component", () => {
+/**
+ * Стаб Quill (Wave 11 — texteditor.md Issue 1).
+ *
+ * Настоящий Quill при mount планирует `requestAnimationFrame`-колбэки, которые стреляют уже
+ * после teardown jsdom и роняют прогон — из-за этого основная суита ниже держалась в
+ * `describe.todo`, а компонент имел 0% coverage. С Wave 2.1 `@vueup/vue-quill` грузится lazy
+ * (`await import(...)` в onMounted), поэтому его достаточно подменить на уровне модуля:
+ * реальный Quill не инстанцируется вовсе, mount проходит штатно.
+ *
+ * Стаб держит контракт, которым пользуется TextEditor.vue: props `content`/`readOnly`, эмиты
+ * `update:content`/`focus`/`blur`/`ready`.
+ */
+vi.mock("@vueup/vue-quill", async () => {
+  // `vi.mock` хойстится выше импортов файла, поэтому `defineComponent`/`h` берём внутри фабрики —
+  // статические биндинги на момент её вызова ещё не инициализированы.
+  const { defineComponent, h } = await import("vue")
+  return {
+    QuillEditor: defineComponent({
+      name: "QuillEditor",
+      props: {
+        content: { default: undefined },
+        readOnly: { type: Boolean, default: false },
+        contentType: { default: undefined },
+        toolbar: { default: undefined }
+      },
+      emits: ["update:content", "focus", "blur", "ready"],
+      setup: () => () => h("div", { "data-quill-stub": true })
+    })
+  }
+})
+
+/**
+ * Монтирует TextEditor и дожидается lazy-загрузки стаба.
+ *
+ * Два `flushPromises()` — не перестраховка: в `onMounted` последовательно резолвятся
+ * `await import("@vueup/vue-quill")` и `Promise.all([...css])`, это две разные микротаск-очереди.
+ */
+async function mountEditor(options: Record<string, any> = {}) {
+  const wrapper = mount(TextEditor, options)
+  await flushPromises()
+  await flushPromises()
+  return wrapper
+}
+
+/**
+ * Обязательно при `isolate: false` (см. vite.config.ts): воркер переиспользует одно jsdom-окружение
+ * на несколько файлов. TextEditor тянет за собой InputLayout с mount-tick'ом на `setTimeout(100)` —
+ * если инстанс не размонтирован, таймер срабатывает уже во время следующего тест-файла, когда
+ * документ подменён, и валит его `TypeError: Cannot read properties of null (reading 'insertBefore')`.
+ */
+enableAutoUnmount(afterEach)
+
+describe("TextEditor Component", () => {
   describe("Without Library Initialization", () => {
     it("renders the TextEditor and updates modelValue on text input", async () => {
       const wrapper: any = mount(TextEditor, {
@@ -99,7 +151,7 @@ describe.todo("TextEditor Component", () => {
     })
 
     it("handles disabled state", async () => {
-      const wrapper = mount(TextEditor, {
+      const wrapper = await mountEditor({
         props: {
           modelValue: "",
           disabled: true
@@ -121,7 +173,7 @@ describe.todo("TextEditor Component", () => {
     })
     describe("TextEditor Component - isActiveTextEditor State", () => {
       it("sets isActiveTextEditor to true when editor gains focus", async () => {
-        const wrapper = mount(TextEditor, {
+        const wrapper = await mountEditor({
           props: {
             modelValue: "<p>Initial content</p>"
           }
@@ -139,7 +191,7 @@ describe.todo("TextEditor Component", () => {
       })
 
       it("sets isActiveTextEditor to false when editor loses focus", async () => {
-        const wrapper = mount(TextEditor, {
+        const wrapper = await mountEditor({
           props: {
             modelValue: "<p>Initial content</p>"
           }
@@ -247,7 +299,7 @@ describe.todo("TextEditor Component", () => {
         paramsTextEditor: { contentType: "delta" }
       })
 
-      const wrapper = mount(TextEditor, {
+      const wrapper = await mountEditor({
         global: { plugins: [localVue] },
         props: {
           modelValue: "<p>Initial content</p>"
@@ -270,10 +322,60 @@ describe.todo("TextEditor Component", () => {
   })
 })
 
-// Standalone (non-todo) block. Mounting TextEditor boots Quill, whose
-// requestAnimationFrame callbacks fire after jsdom teardown and crash the run
-// (the very fragility that keeps the suite above `todo`). So the label↔control
-// association is verified at the source level — mirrors Aria.test's source scan.
+/**
+ * Native form integration (texteditor.md Issue 10 — M54-55).
+ *
+ * Quill рендерит контент в contenteditable-div'ах: при native submit значение не попадало в
+ * FormData вообще. Скрытый input повторяет канон Aria.vue (`:name="id"`).
+ */
+describe("TextEditor — native form submit (Issue 10)", () => {
+  it("отдаёт значение в FormData под именем id", async () => {
+    const wrapper = await mountEditor({
+      attachTo: document.body,
+      props: { id: "bio", modelValue: "<p>Привет</p>" }
+    })
+
+    const form = document.createElement("form")
+    form.appendChild(wrapper.find("[data-text-editor-value]").element.cloneNode(true))
+
+    expect(new FormData(form).get("bio")).toBe("<p>Привет</p>")
+    wrapper.unmount()
+  })
+
+  it("обновляет скрытое значение при вводе, не дожидаясь change-эмита", async () => {
+    const wrapper = await mountEditor({ props: { id: "bio", modelValue: "<p>было</p>" } })
+
+    // inputModelValue пишет в локальный modelValue — скрытый input должен отражать его сразу,
+    // а не значение props (change:modelValue эмитится только на blur).
+    await wrapper.findComponent({ name: "QuillEditor" }).vm.$emit("update:content", "<p>стало</p>")
+    await nextTick()
+
+    expect(wrapper.find("[data-text-editor-value]").attributes("value")).toBe("<p>стало</p>")
+  })
+
+  it("подставляет пустую строку вместо null/undefined", async () => {
+    const wrapper = await mountEditor({ props: { id: "bio", modelValue: null } })
+    expect(wrapper.find("[data-text-editor-value]").attributes("value")).toBe("")
+  })
+
+  it("не рендерит скрытое поле без id — иначе в FormData ушёл бы безымянный ключ", async () => {
+    const wrapper = await mountEditor({ props: { modelValue: "<p>x</p>" } })
+    expect(wrapper.find("[data-text-editor-value]").exists()).toBe(false)
+  })
+})
+
+describe("TextEditor — lazy-загрузка редактора", () => {
+  it("не держит определение компонента в глубоко-реактивном ref", async () => {
+    const wrapper = await mountEditor({ props: { modelValue: "" } })
+    // shallowRef: Vue иначе пишет warn «received a Component that was made a reactive object».
+    // Косвенная проверка — компонент отрендерился и не обёрнут в Proxy-реактивность.
+    expect(wrapper.find("[data-quill-stub]").exists()).toBe(true)
+  })
+})
+
+// Проверки на уровне source остаются там, где утверждение относится к тексту файла
+// (порядок fallback-цепочки, отсутствие top-level импортов, наличие токенов),
+// а не к поведению — mount такие вещи не покажет.
 describe("TextEditor — accessibility label association (Wave 4)", () => {
   it("binds the editor container to the InputLayout label via aria-labelledby", async () => {
     const fs = await import("node:fs/promises")

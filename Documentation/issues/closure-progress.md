@@ -36,7 +36,8 @@ updated: 2026-09-05
 | T1. Tooling hygiene + CI gate | B17 + N6 + N8 + R1–R4 | ✅ | `chore(tooling)` |
 | T2. Nuxt: compound-дети в auto-import | B15 (N1) | ✅ | `fix(nuxt-module)` |
 | T3. Nuxt: dead code + `disableGlobalStyles` | B16 (N2, N3) | ✅ | `fix(nuxt-module)` |
-| T4. TextEditor: native form submit | B3 | ⏳ | — |
+| T4. TextEditor: native form submit | B3 | ✅ | `feat(texteditor)` |
+| T10. TextEditor: разблокировать тест-суиту | Wave 11 / C2 (не было в плане сессии) | ✅ | `feat(texteditor)` |
 | T5. Label: translate px → CSS custom properties | B2 | ⏳ | — |
 | T6. TextEditor: локализация hardcoded-строк | B12 частично (N4) | ⏳ | — |
 | T7. TextEditor: `darkModeSelector` | N5 | ⏳ | — |
@@ -107,10 +108,45 @@ updated: 2026-09-05
 
 ---
 
+## T4 + T10. TextEditor: native form submit и разблокировка тест-суиты
+
+**Батчи:** B3; сверх плана — содержательная цель Wave 11 и половина эпика C2.
+
+| Подзадача | Что делаем |
+| --------- | ---------- |
+| T4.1 | Скрытый `<input type="hidden" :name="id">` в `#default`-слот, значение из локального `modelValue` |
+| T4.2 | Тесты native submit через реальный `new FormData(form)` |
+| T10.1 | Стаб Quill через `vi.mock("@vueup/vue-quill")` + хелпер `mountEditor()` |
+| T10.2 | Снять `describe.todo` с основного блока |
+| T10.3 | Перевести legacy-тесты на асинхронный mount |
+| T10.4 | Синхронизировать `texteditor.md` и `components/text-editor.md` |
+
+**Результат.** `TextEditor.vue` **0% → 95.89% stmts / 85.18% branch / 92.85% funcs**, тесты **27/27, 0 todo** (было 0 исполняемых из 17). Агрегат по проекту 90.11 → **91.04 / 80.34 / 93.76 / 95.10** — branch впервые перешагнул 80%. Закрыты `texteditor.md` Issues 1 и 10.
+
+**Почему это оказалось дёшево, хотя в assessment числилось эпиком C2 (4–7 д).** Рецепт был записан в roadmap с самого начала — `vi.mock("@vueup/vue-quill")`. Невыполнимым он был до Wave 2.1: пока Quill импортировался статически, подмена не успевала. После перевода на `await import()` в `onMounted` стаб перехватывает загрузку, и настоящий Quill не создаёт своих `requestAnimationFrame`-колбэков — тех самых, что стреляли после teardown jsdom и роняли прогон. То есть блокер сняла чужая волна, а roadmap об этом не узнал.
+
+**Ошибка аудита, которую это вскрыло.** [closure-assessment.md](./closure-assessment.md) §3 поз. 11 утверждала: «0 `it.skip`, 15 живых тестов, `vi.mock` отсутствует — формулировка задачи устарела». Неверно: блок был под `describe.todo`, тестов ровно 17, как и говорил roadmap, а предложенный им `vi.mock` был правильным решением. Ошибка счёта возникла из-за того, что `describe.todo` не даёт `it.skip` в исходнике. Позиция снята из §3.
+
+**Две технические детали, стоившие итераций:**
+
+- фабрика `vi.mock` хойстится выше импортов файла — `defineComponent`/`h` приходится брать через `await import("vue")` внутри неё, иначе `ReferenceError: Cannot access '__vi_import_4__' before initialization`;
+- нужны **два** `flushPromises()` подряд: в `onMounted` последовательно резолвятся `await import("@vueup/vue-quill")` и `Promise.all([...css])` — разные микротаск-очереди.
+
+**Попутная находка N12.** Mount выдал `[Vue warn]: received a Component that was made a reactive object` — определение компонента лежало в глубоко-реактивном `ref`. Переведено на `shallowRef`.
+
+**Находка N13 — кросс-файловая утечка, поймана pre-commit'ом.** Суита проходила при прямом запуске, но валилась на husky-хуке: `FixWindow.test.ts` падал с `TypeError: Cannot read properties of null (reading 'insertBefore')` плюс 23 unhandled-ошибки. Причина — `isolate: false` в [vite.config.ts](../../vite.config.ts): воркер переиспользует одно jsdom-окружение на несколько файлов. TextEditor тянет за собой InputLayout с mount-tick'ом на `setTimeout(100)`; тест завершается за ~5 мс, инстанс остаётся живым, таймер срабатывает уже во время следующего файла — когда документ подменён. Лечится `enableAutoUnmount(afterEach)`.
+
+Практический вывод: **добавляя mount-тесты к компоненту, который раньше не монтировался, всегда ставь авто-unmount** — при `isolate: false` цена забытого инстанса ложится на чужой файл, и локальный прогон одного файла её не покажет. Стабильность подтверждена тремя полными прогонами подряд.
+
+---
+
 ## Журнал изменений плана
 
 Сюда попадает всё, что разошлось с [closure-assessment.md](./closure-assessment.md) по ходу работы.
 
 - **2026-09-05, старт.** Найдены три новые позиции при чтении CI-конфигов, отсутствующие в assessment: **N8** (issue-labeler хардкодит 22 компонента без `VirtualScroller`), **N9** (`pnpm lint` в CI — это `eslint --fix`, гейт не может упасть на автофиксимой ошибке), **N10** (`pnpm lib:build` закомментирован в PR-workflow — rollup-сборка не проверяется до релиза). Все три включены в T1 вместо заведения отдельных батчей.
+- **2026-09-05, T10.** Эпик **C2 (TextEditor, 4–7 д, «высокий риск»)** ужался: его самая дорогая часть — coverage 0% при заблокированной суите — закрыта за одну итерацию. Остаток C2: Quill toolbar i18n (Issues 8, 9 + N4), `image-upload-request` handler (Issue 6), `darkModeSelector` (N5). Переоценка: **1.5–3 д вместо 4–7**, риск с высокого на низкий — mock-харнесс уже есть. Это меняет критический путь всей сводки: C2 был его самым длинным звеном.
+- **2026-09-05, T10.** Позиция 11 в §3 assessment признана **ошибочной** и снята: тесты были `describe.todo` (17 штук, счёт roadmap верный), а не «15 живых без vi.mock».
+- **2026-09-05, T4.** Находка **N12**: определение lazy-загружаемого Quill хранилось в глубоко-реактивном `ref` → Vue-warn. Переведено на `shallowRef`.
 - **2026-09-05, T2/T3.** Новая находка **N11**: голый импорт `"path"` в `lib/module/nuxt.ts` перехватывался legacy-пакетом `path@0.12.7` из devDependencies и падал на современном Node. Исправлено на `node:path`. В assessment не значилась — обнаружилась только при первом исполнении модуля под тестом.
 - **2026-09-05.** Выяснено, что `pnpm-workspace.yaml` **gitignored** и генерируется в CI (комментарий в workflow: иначе ломается Vercel-деплой `docs/` с Root Directory = `docs`). Это подтверждает безопасность удаления `pnpm.onlyBuiltDependencies` из package.json — поле мёртвое с обеих сторон.

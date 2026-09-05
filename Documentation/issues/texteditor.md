@@ -1,7 +1,7 @@
 ---
 title: Issues — TextEditor
-summary: Аудит TextEditor — coverage 0% (skipped tests), image upload не задокументирован. Issue 2 (B10 — hardcode Tailwind-классов + HEX в style на surface-*) закрыт 2026-07-04 (Wave 9). Issue 7 (componentsStyle fallback + unstyled) закрыт 2026-07-02 (Wave 3.2). Issue 3 (Quill → optional peer + lazy CSS) закрыт 2026-06-19 (Wave 2.1). Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11.
-updated: 2026-07-04
+summary: Аудит TextEditor. Issue 1 (0% coverage / todo-тесты) и Issue 10 (native form submit) закрыты 2026-09-05 — vi.mock Quill, 27/27 тестов, покрытие 0% → 95.89%. Issue 2 (B10 — hardcode на surface-*) закрыт 2026-07-04 (Wave 9). Issue 7 (componentsStyle fallback + unstyled) закрыт 2026-07-02 (Wave 3.2). Issue 3 (Quill → optional peer + lazy CSS) закрыт 2026-06-19 (Wave 2.1). Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11. Открыты: image upload, i18n Quill, cross-cutting print/motion/RTL.
+updated: 2026-09-05
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/texteditor/
 related-doc: ../components/text-editor.md
@@ -15,24 +15,32 @@ stability: experimental (на момент аудита 17 тестов skipped)
 | Severity | Count (open) | Categories                                                                                            |
 | -------- | ------------ | ----------------------------------------------------------------------------------------------------- |
 | critical | 0            | —                                                                                                     |
-| high     | 4            | A2, A4-5, C17, J46 (tests skipped) — L53 (Issue 7) closed 2026-07-02, B10 (Issue 2) closed 2026-07-04 |
-| medium   | 4            | F30, F32, M55, security (image upload) — Issue 5 D26 closed 2026-05-11                                |
+| high     | 0            | ~~A2, A4-5, C17~~ ✅ (cross-cutting packaging закрыт Wave 2, см. [button.md](./button.md) Issues 1, 8, 9), ~~J46 (tests todo)~~ ✅ 2026-09-05, ~~L53~~ ✅ 2026-07-02, ~~B10~~ ✅ 2026-07-04 |
+| medium   | 3            | F30, F32, security (image upload); ~~M55 (native form submit)~~ ✅ 2026-09-05, ~~D26~~ ✅ 2026-05-11   |
 | low      | 3            | E29.7, N59, G34                                                                                       |
 
-## Issue 1: 17 тестов skipped, coverage 0% — компонент не верифицирован
+## ~~Issue 1: 17 тестов skipped, coverage 0% — компонент не верифицирован~~ ✅ resolved 2026-09-05
+
+> **Закрыто 2026-09-05 ровно по п. 2 плана ниже** — `vi.mock("@vueup/vue-quill")` со стабом редактора. Диагноз оказался верным, но выполнимым он стал только после Wave 2.1: пока Quill импортировался статически, подмена модуля не спасала — теперь он грузится через `await import()` в `onMounted`, и стаб перехватывает загрузку до того, как настоящий Quill создаст свои `requestAnimationFrame`-колбэки (именно они стреляли после teardown jsdom и роняли прогон).
+>
+> **Результат:** `describe.todo` снят, **27/27 тестов проходят, 0 todo**; `TextEditor.vue` **0% → 95.89% stmts / 85.18% branch / 92.85% funcs** — цель ≥70% из п. 4 перекрыта с запасом. Агрегат по проекту 90.11 → **91.04 / 80.34 / 93.76 / 95.10** (branch впервые перешагнул 80%).
+>
+> **Что потребовалось, кроме мока:** четыре legacy-теста вызывали `mount()` синхронно и не находили редактор — вынесен хелпер `mountEditor()` с двумя `flushPromises()` (в `onMounted` последовательно резолвятся `await import(...)` и `Promise.all([...css])` — это две разные микротаск-очереди). Фабрику `vi.mock` пришлось сделать асинхронной и брать `defineComponent`/`h` через `await import("vue")`: вызов хойстится выше импортов файла.
+>
+> **Уточнение формулировки:** тесты были не `it.skip`, а `describe.todo` на всём блоке — поэтому в отчётах они шли как «todo», а не «skipped». Счёт 17 при этом был верный.
 
 - **Категория:** J46 (Тесты)
-- **Severity:** high
-- **Где:** [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) (17 skipped), coverage 0% statements
+- **Severity:** ~~high~~
+- **Где:** [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)
 
-### Что найдено
+### Что найдено (was)
 
 ```
-lib/texteditor/TextEditor.test.ts (17 tests | 17 skipped)
+lib/texteditor/TextEditor.test.ts (17 tests | 17 todo)
 lib/texteditor: 0/0/0/0
 ```
 
-Все тесты `it.skip(...)`. Компонент рендерится, эмитит, но нет никакой автоматизированной проверки. Помечен в [Documentation/components/text-editor.md](../components/text-editor.md) как `experimental`.
+Весь блок под `describe.todo(...)`. Компонент рендерится, эмитит, но нет никакой автоматизированной проверки. Помечен в [Documentation/components/text-editor.md](../components/text-editor.md) как `experimental`.
 
 ### Почему это проблема
 
@@ -50,9 +58,9 @@ lib/texteditor: 0/0/0/0
 
 ### Acceptance criteria
 
-- [ ] `lib/texteditor` coverage > 70% statements.
-- [ ] 0 skipped tests.
-- [ ] Stability flag поднят до `beta`.
+- [x] `lib/texteditor` coverage > 70% statements — **95.89%** ✅ 2026-09-05.
+- [x] 0 skipped tests — 27/27 проходят, `describe.todo` снят ✅ 2026-09-05.
+- [ ] Stability flag поднят до `beta` — **открыто**: покрытие больше не блокер, но остаются Issues 6 (image upload), 8/9 (i18n Quill) и `darkModeSelector`. Решение о промоушене — отдельное, зеркалит Loading Issue 7.
 
 ## ~~Issue 2: HEX цвета хардкодом в `<style>` блоке~~ ✅ resolved 2026-07-04 (Wave 9)
 
@@ -247,20 +255,29 @@ Toolbar `[{ font: [] }]`, `[{ align: [] }]` — Quill default labels. Также
 2. Передать Quill custom labels через `i18n` Quill plugin (если есть), либо через DOM-modify в onMounted.
 3. Добавить ключи в [lib/locale/locales/en.ts](../../lib/locale/locales/en.ts) и [ru.ts](../../lib/locale/locales/ru.ts).
 
-## Issue 10: Native form integration отсутствует
+## ~~Issue 10: Native form integration отсутствует~~ ✅ resolved 2026-09-05
+
+> **Закрыто.** В `#default`-слот добавлен `<input type="hidden" data-text-editor-value :name="id" :value="modelValue ?? ''">` — канон зеркалит [Aria.vue:172](../../lib/aria/Aria.vue#L172), где `id` компонента служит и именем поля формы.
+>
+> Два уточнения против исходного плана:
+>
+> - значение берётся из **локального** `modelValue`-ref, а не из props — правки попадают в `FormData` сразу, не дожидаясь `change:modelValue` (тот эмитится только на blur);
+> - поле рендерится **только при заданном `id`** (`v-if="id"`) — безымянный input в `FormData` не попадает, но и мусорить пустым узлом незачем.
+>
+> Покрыто четырьмя тестами (describe «native form submit»), включая реальный `new FormData(form)`.
 
 - **Категория:** M54-55
-- **Severity:** medium
-- **Где:** [TextEditor.vue](../../lib/texteditor/TextEditor.vue)
+- **Severity:** ~~medium~~
+- **Где:** [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — `#default`-слот
 
-### Что найдено
+### Что найдено (was)
 
 Quill editor рендерится через div'ы. Нет hidden `<input>` для native form submit. modelValue (HTML string) не попадает в FormData при native submit.
 
 ### Что нужно сделать
 
-1. Добавить hidden `<input type="hidden" :name="id" :value="modelValue">`.
-2. Документировать в [components/text-editor.md](../components/text-editor.md) §M.
+1. ~~Добавить hidden `<input type="hidden" :name="id" :value="modelValue">`~~ ✅ 2026-09-05.
+2. ~~Документировать в [components/text-editor.md](../components/text-editor.md)~~ ✅ 2026-09-05.
 
 ## Issue 11: print, motion, color cross-cutting
 

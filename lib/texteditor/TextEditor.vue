@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, useSlots, watch } from "vue"
+  import { computed, onMounted, ref, shallowRef, useSlots, watch } from "vue"
   import { IQuillEditor, TextEditorEmits, TextEditorProps } from "./TextEditor"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Dialog from "fishtvue/dialog/Dialog.vue"
@@ -23,7 +23,9 @@
   const emit = defineEmits<TextEditorEmits>()
   const slots = useSlots()
   // ---STATE-------------------------------
-  const QuillEditor = ref<any>()
+  // shallowRef, а не ref: сюда кладётся определение компонента. Глубокий reactive-прокси на нём
+  // не нужен и вызывает Vue-warn «received a Component that was made a reactive object».
+  const QuillEditor = shallowRef<any>()
   const layout = ref<InputLayoutExpose>()
   const valueLayout = ref<TextEditorProps["modelValue"]>()
   const classLayout = ref<TextEditorProps["class"]>()
@@ -222,6 +224,14 @@
           @blur="isActiveTextEditor = false"
           @ready="ready" />
       </div>
+      <!--
+        Issue 10 (M54-55): Quill рендерится в contenteditable-div'ах, поэтому при native submit
+        содержимое не попадало в FormData. Скрытый input переносит HTML-строку в форму.
+        `:name="id"` — канон формы, зеркало Aria.vue: id компонента служит и именем поля.
+        Значение берётся из локального modelValue (а не props), чтобы правки попадали в FormData
+        сразу, не дожидаясь change-эмита на blur.
+      -->
+      <input v-if="id" type="hidden" data-text-editor-value :name="id" :value="modelValue ?? ''" />
     </template>
     <template #body>
       <Dialog
