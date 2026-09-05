@@ -1,8 +1,8 @@
 ---
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
-updated: 2026-09-05
-last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Строка TOTAL пересчитана по фактическим «Сводка»-таблицам всех активных файлов: `0 / 23 / 30 / 16` → **`0 / 5 / 21 / 18`**. Основной сдвиг High дал не объём работы, а синхронизация: девять компонентов держали открытыми категории A2/A4-5/C17 (packaging + SSR-инжекция стилей), закрытые волной 2 ещё в июне корневыми правками `lib/package.json`. Текстовый счётчик «115 numbered issues, из них открыто 77» удалён как недостоверный — заменён на число открытых позиций матрицы. Ячейка `25 active + 6 done` исправлена на `27 active + 3 done` по реальному содержимому каталога. В сводку добавлен **VirtualScroller** — 23-й компонент библиотеки, отсутствовавший в матрице целиком. Проставлено 14 чекбоксов Fix roadmap, отражающих уже сделанное. Закрыто в коде в тот же день: Nuxt auto-import compound-детей + `disableGlobalStyles` + удаление мёртвого version-detection; TextEditor — native form submit, разблокировка тест-суиты (0% → 95.89% coverage) и локализация подписей; Label — translate через CSS custom properties; новый composable `useDarkMode`. Детальный журнал — [closure-progress.md](./closure-progress.md), оценка остатка — [closure-assessment.md](./closure-assessment.md). Предыдущая запись (2026-08-02) — Table закрыл G34, Accordion закрыл B10; см. историю коммитов.
+updated: 2026-09-06
+last-changes: 2026-09-06 — закрыт последний High: виртуализация списка опций Select (Wave 7). Ядро — headless `useVirtualScroll`, общее с VirtualScroller; внешних зависимостей не добавилось. Матрица `0/1/10/8` → **`0/0/10/8`**, строка Select перенесена в «Завершённые». Вместе с окном пришлось переписать keyboard-nav на index-математику и завести ARIA-роли listbox/option: без `aria-setsize`/`aria-posinset` виртуализация объявляла бы скринридеру размер окна вместо длины списка. Пункт Wave 7 про TextEditor `image-upload-request` снят решением R33 — относится к коду, который удаляется при переписывании редактора. Предыдущая запись (2026-09-05) — ревизия счётчиков и doc-sync. Строка TOTAL пересчитана по фактическим «Сводка»-таблицам всех активных файлов: `0 / 23 / 30 / 16` → **`0 / 5 / 21 / 18`**. Основной сдвиг High дал не объём работы, а синхронизация: девять компонентов держали открытыми категории A2/A4-5/C17 (packaging + SSR-инжекция стилей), закрытые волной 2 ещё в июне корневыми правками `lib/package.json`. Текстовый счётчик «115 numbered issues, из них открыто 77» удалён как недостоверный — заменён на число открытых позиций матрицы. Ячейка `25 active + 6 done` исправлена на `27 active + 3 done` по реальному содержимому каталога. В сводку добавлен **VirtualScroller** — 23-й компонент библиотеки, отсутствовавший в матрице целиком. Проставлено 14 чекбоксов Fix roadmap, отражающих уже сделанное. Закрыто в коде в тот же день: Nuxt auto-import compound-детей + `disableGlobalStyles` + удаление мёртвого version-detection; TextEditor — native form submit, разблокировка тест-суиты (0% → 95.89% coverage) и локализация подписей; Label — translate через CSS custom properties; новый composable `useDarkMode`. Детальный журнал — [closure-progress.md](./closure-progress.md), оценка остатка — [closure-assessment.md](./closure-assessment.md). Предыдущая запись (2026-08-02) — Table закрыл G34, Accordion закрыл B10; см. историю коммитов.
 ---
 
 # Issues — Index
@@ -19,14 +19,13 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 | --------------- | ------------------------------------------ | -------- | ----- | ------ | ------ |
 | Label           | [label.md](./label.md)                     | 0        | 0     | 1      | 0      |
 | Aria            | [aria.md](./aria.md)                       | 0        | 0     | 1      | 0      |
-| Select          | [select.md](./select.md)                   | 0        | 1     | 0      | 0      |
 | Alert           | [alert.md](./alert.md)                     | 0        | 0     | 0      | 1      |
 | Loading         | [loading.md](./loading.md)                 | 0        | 0     | 0      | 1      |
 | Theme           | [theme.md](./theme.md)                     | 0        | 0     | 2      | 2      |
 | Uno engine      | [uno-engine.md](./uno-engine.md)           | 0        | 0     | 2      | 0      |
 | Locale          | [locale.md](./locale.md)                   | 0        | 0     | 4      | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 0     | 1      | 2      |
-| **TOTAL**       | **27 active + 3 done**                     | **0**    | **1** | **10** | **8**  |
+| **TOTAL**       | **27 active + 3 done**                     | **0**    | **0** | **10** | **8**  |
 
 > ✅ **Ревизия счётчиков проведена 2026-09-05.** Дрейф, о котором предупреждала врезка от 2026-08-02, устранён: строка TOTAL пересчитана **по фактическим «Сводка»-таблицам всех активных файлов**, счётчик «открыто» ниже приведён к той же сумме, ячейка `active + done` исправлена по реальному содержимому каталога. Пять несогласованных чисел (TOTAL, текстовый счётчик, сумма по столбцам, сумма по файлам, число документов) сведены в одно.
 >
@@ -85,13 +84,14 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 | Table           | [table.md](./table.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
 | Utilities       | [\_utilities.md](./_utilities.md)          | 0        | 0    | 0      | 0   | active/ ¹ |
 | VirtualScroller | [virtualscroller.md](./virtualscroller.md) | 0        | 0    | 0      | 0   | active/ ¹ |
+| Select          | [select.md](./select.md)                   | 0        | 0    | 0      | 0   | active/ ¹ |
 | FixWindow       | [done/fixwindow.md](./done/fixwindow.md)   | 0        | 0    | 0      | 0   | done/     |
 | Dialog          | [done/dialog.md](./done/dialog.md)         | 0        | 0    | 0      | 0   | done/     |
 | Config          | [done/config.md](./done/config.md)         | 0        | 0    | 0      | 0   | done/     |
 
 > ¹ Numbered-матрица `0/0/0/0`, но файл остаётся в `active/` как трекер cross-cutting волн (semantic-token Wave 9 и т.п.); полностью закрытые файлы перемещены в `./done/`.
 
-Аудит-документов — **27 активных** в `issues/` плюс **3** в [./done/](./done/) (Dialog ✅ 2026-05-11, FixWindow ✅ 2026-05-16, Config ✅ 2026-05-20). Открытых позиций по матрице — **44** (0 Critical / 5 High / 21 Medium / 18 Low); решённые остаются в файлах зачёркнутыми. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
+Аудит-документов — **27 активных** в `issues/` плюс **3** в [./done/](./done/) (Dialog ✅ 2026-05-11, FixWindow ✅ 2026-05-16, Config ✅ 2026-05-20). Открытых позиций по матрице — **18** (0 Critical / 0 High / 10 Medium / 8 Low); плюс 6 позиций Calendar и TextEditor в разделе «Заморожено до переписывания», которые в TOTAL не идут. Решённые остаются в файлах зачёркнутыми. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
 
 > Прежняя формулировка «115 numbered issues … из них открыто 77» удалена как недостоверная: заголовков `## Issue N` в активных документах — 253 (вместе с зачёркнутыми), а 77 не сходилось ни с одной другой цифрой в файле. Считать имеет смысл только открытые позиции матрицы.
 
@@ -390,9 +390,9 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **Параллельно с:** Wave 8.
 
 - [x] [Table.vue](../../lib/table/Table.vue) — `virtual?: boolean | { rowHeight?, overscan?, threshold? }`, **dependency-free** windowing (fixed rowHeight, spacer-`<tr>`, absolute index, `aria-rowcount`/`aria-rowindex`); auto + opt-out · [table.md Issue 4](./table.md) · ✅ resolved 2026-06-07
-- [ ] [Select.vue](../../lib/select/Select.vue) — то же для dropdown list · [select.md Issue 7](./select.md)
+- [x] [Select.vue](../../lib/select/Select.vue) — dropdown list через headless `useVirtualScroll` (общее ядро с [VirtualScroller](../components/virtualscroller.md), **не** отдельная реализация); подключено безусловно, окно включается по внутреннему порогу 100 (R13/R19); keyboard-nav переписан на index-математику (R17), GSAP-stagger гасится только в windowed-режиме (R18), группы окно не включают (R20). `aria-setsize`/`aria-posinset` + `role="listbox"`/`option` — обязательная часть, иначе виртуализация ухудшила бы a11y · [select.md Issue 7](./select.md) · ✅ resolved 2026-09-06
 - [ ] [Menu.vue](../../lib/menu/Menu.vue) — то же для длинных menu (опционально) · [menu.md](./menu.md)
-- [ ] [TextEditor.vue:98](../../lib/texteditor/TextEditor.vue#L98) — Quill image-button → custom handler с emit `image-upload-request` (вместо base64-инжекции) · [texteditor.md Issue 6](./texteditor.md)
+- [x] ~~[TextEditor.vue:98](../../lib/texteditor/TextEditor.vue#L98) — Quill image-button → custom handler с emit `image-upload-request`~~ → **снят решением R33** (2026-09-06): относится к коду, который удаляется целиком при переписывании TextEditor без Quill. Требование «загрузка через хук приложения, а не base64» перенесено во входные требования нового редактора · [texteditor.md Issue 6](./texteditor.md)
 
 **Acceptance:** 10k rows Table initial render <100ms, scroll 60fps. 5k options Select dropdown — same. Quill image-handler не инжектит multi-megabyte data-URLs.
 

@@ -1,7 +1,7 @@
 ---
 title: Issues — Select
-summary: 13/14 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports; 2026-07-02 — Issue 12 ms-[undefinedpx] guard; 2026-07-04 — B10 миграция на semantic-токен `surface`). Открытый — Issue 7 (virtualization, 🔓 unblocked — добавлен VirtualScroller, integration pending). Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
-updated: 2026-07-04
+summary: 14/14 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports; 2026-07-02 — Issue 12 ms-[undefinedpx] guard; 2026-07-04 — B10 миграция на semantic-токен `surface`; 2026-09-06 — Issue 7 виртуализация списка опций). Открытых позиций нет. Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
 related-doc: ../components/select.md
@@ -11,14 +11,14 @@ related-doc: ../components/select.md
 
 ## Сводка
 
-| Severity | Count (open) | Categories                                            |
-| -------- | ------------ | ----------------------------------------------------- |
-| critical | 0            | —                                                     |
-| high     | 1            | H43 (virtualization, unblocked — integration pending) |
-| medium   | 0            | —                                                     |
+| Severity | Count (open) | Categories                                                          |
+| -------- | ------------ | ------------------------------------------------------------------- |
+| critical | 0            | —                                                                   |
+| high     | 0            | ~~H43 (virtualization)~~ ✅ resolved 2026-09-06                      |
+| medium   | 0            | —                                                                   |
 | low      | 0            | ~~B10 (colors → semantic tokens, deferred)~~ ✅ resolved 2026-07-04 |
 
-> Открытый пункт — **не баг**: Issue 7 **разблокирован** (2026-06-13) — добавлен dependency-free [VirtualScroller](../components/virtualscroller.md) + `useVirtualScroll`; осталась интеграция в Select (отдельным ТЗ). B10 закрыт 2026-07-04 — все остальные 12 пунктов закрыты.
+> ✅ **Открытых позиций нет** (2026-09-06). Последним закрылся Issue 7: виртуализация списка опций реализована на собственном `useVirtualScroll` — том же ядре, что и у [VirtualScroller](../components/virtualscroller.md). Файл остаётся в `active/` как трекер cross-cutting волн.
 
 > **Wave 4.3 keyboard (✅ 2026-06-20):** в [keydownSelect](../../lib/select/Select.vue#L586) добавлены **Home/End** (`focusItemAt`) и **first-char typeahead** для `noQuery`-listbox (`typeaheadFocus`, APG-циклирование). Это roadmap-only пункт ([issues/README.md Wave 4.3](./README.md)) без numbered issue — **матрица severity не меняется**. См. [components/select.md §12](../components/select.md).
 
@@ -309,12 +309,45 @@ Custom rendering каждого option возможен только через 
 
 `Component.setStyle()` теперь проверяет `this.__globalConfig?.config?.unstyled` и возвращает `""` если true — это отключает рендер Tailwind-классов во всех компонентах, использующих базовый класс. Тест: `Select.test.ts` > `respects unstyled: true via Component.setStyle guard`. Roadmap Wave 3.1 — done.
 
-## Issue 7: Нет виртуализации списка — лагает при >500 items — 🔓 unblocked (integration pending)
+## ~~Issue 7: Нет виртуализации списка — лагает при >500 items~~ ✅ resolved 2026-09-06
 
 - **Категория:** H43 (виртуализация)
-- **Severity:** high (integration pending)
-- **Где:** рендер dropdown списка в [Select.vue](../../lib/select/Select.vue) (`renderRows` / `<TransitionGroup>`)
-- **Status:** 🔓 **unblocked 2026-06-13.** Прежний блокер (нужна runtime-зависимость вопреки no-deps цели) снят: в `lib/` добавлен **dependency-free** примитив виртуализации — [VirtualScroller](../components/virtualscroller.md) + headless composable `useVirtualScroll` ([lib/virtualscroller/](../../lib/virtualscroller/useVirtualScroll.ts)). Осталась **интеграция** в Select (отдельным ТЗ/коммитом, см. план §10 спеки): при `count > threshold` рендерить опции через `useVirtualScroll`, переписать keyboard-nav с DOM-scan на index-математику + `scrollToIndex`, отключить GSAP-stagger в virtual-режиме. Группы (variable-height заголовки) — проверить отдельно.
+- **Severity:** ~~high~~
+- **Где (was):** рендер dropdown списка в [Select.vue](../../lib/select/Select.vue) (`renderRows` / `<TransitionGroup>`)
+- **Status:** ✅ **resolved 2026-09-06.** Разблокирован был 2026-06-13 появлением dependency-free примитива; интеграция выполнена сейчас.
+
+### Что сделано
+
+Окно рендера считает headless-ядро [`useVirtualScroll`](../../lib/virtualscroller/useVirtualScroll.ts) — то же, на котором работает [VirtualScroller](../components/virtualscroller.md). Внешних зависимостей не добавилось: `@tanstack/vue-virtual` из исходного плана не понадобился.
+
+Ядро подключено **безусловно, одной веткой кода** (решение R13). Пока опций не больше внутреннего порога (100), оно отдаёт полный диапазон `{0, n}` с нулевыми spacer'ами — разметка и поведение короткого списка не отличаются от довиртуальных ни одним узлом. Выше порога в DOM живёт только видимое окно плюс overscan, а место остального занимают два `li[data-select-virtual-pad]`.
+
+Скролл-контейнером остался сам `[data-select-list]`, а не вложенный viewport примитива — иначе пришлось бы перекладывать sticky-поле поиска и градиентные оверлеи. Модель — fixed-size, шаг строки 44 px (`h-9` плюс схлопывающийся `mt-2`).
+
+**Сопутствующие изменения, без которых окно было бы неверным:**
+
+- **Keyboard-nav переписан на index-математику** (решение R17). Прежняя реализация адресовала опцию позицией узла в `querySelectorAll` — при включённом окне нужного узла в DOM может не быть вовсе, и `End` упёрся бы в отрисованный срез. Теперь индекс считается по `dataList`, а DOM трогается один раз, точечным `querySelector` по `data-index`.
+- **Typeahead сопоставляет значение опции из `dataList`**, а не `textContent` узла — по той же причине.
+- **GSAP-stagger выключен в windowed-режиме** (решение R18): появление строки там означает прокрутку окна, а не изменение данных. Короткие списки анимацию сохраняют.
+- **`aria-setsize` / `aria-posinset` на каждой опции.** Без них скринридер объявил бы размер окна вместо реальной длины списка — прямая a11y-регрессия от виртуализации. Заодно список получил `role="listbox"`, опции — `role="option"` и `aria-selected`: **до этого захода ARIA-ролей у списка не было вовсе**.
+
+### Сознательные ограничения
+
+- **Со сгруппированными списками окно не включается** (решение R20). Заголовки групп имеют другую высоту, а модель fixed-size; сгруппированный список на тысячи позиций — вырожденный сценарий, ради которого не стоит вводить variable-height путь.
+- **Порог наружу не выведен** (решение R19): prop'ов `virtual` / `virtualThreshold` нет. Это деталь производительности, а не контракт компонента. Инвариант держит тест — он падает, если такой prop появится в `Select.d.ts`.
+- **Кастомный `#item` нестандартной высоты** на длинном списке рассинхронит spacer'ы. Зафиксировано в [components/select.md §18](../components/select.md#18-known-issues--limitations).
+
+### Отличие от исходного плана
+
+План предлагал prop `virtual?: boolean` (default `false`) либо `virtualThreshold`. Ни того, ни другого не сделано — по решению владельца порог остаётся внутренним, а ветка одна. Пункт про `@tanstack/vue-virtual` был снят ещё в 2026-06-13.
+
+### Acceptance criteria
+
+- [x] Длинный список рендерит окно, а не все элементы: [SelectVirtual.test.ts](../../lib/select/SelectVirtual.test.ts) — 500 опций, в DOM меньше 40.
+- [x] Скролл сдвигает окно и корректирует spacer'ы (проверка высоты верхнего spacer'а против `data-index` первой отрисованной опции).
+- [x] Короткий список остаётся побайтово прежним — spacer'ов нет, отрисованы все опции.
+- [x] `End` находит последнюю опцию, которой не было в DOM.
+- [x] Скринридеру объявляется полная длина списка (`aria-setsize`), а не размер окна.
 
 ### Что найдено
 

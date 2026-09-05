@@ -1,7 +1,20 @@
 <script setup lang="ts">
-  import { Comment, Fragment, Text, computed, onBeforeUnmount, onMounted, ref, unref, useSlots, watch } from "vue"
+  import {
+    Comment,
+    Fragment,
+    Text,
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    unref,
+    useSlots,
+    watch
+  } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import { getActiveLocale } from "fishtvue/config"
+  import { useVirtualScroll } from "fishtvue/virtualscroller/useVirtualScroll"
   import type { BaseDataItem, IDataItem, SelectEmits, SelectProps } from "./Select"
   import type { FixWindowExpose } from "fishtvue/fixwindow"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
@@ -278,6 +291,10 @@
   // `index` сохраняет позицию в `dataList` (Enter выбирает dataList[activeItem]); headers исключены из
   // selectable-списка (отдельный data-attr), keyboard-nav таргетит `[data-select-list-item]`.
   type RenderRow = { type: "group"; label: string } | { type: "option"; item: any; index: number; disabled: boolean }
+  function isOptionSelected(item: any): boolean {
+    const key = keySelect.value ?? ""
+    return !!visibleValue.value?.some((i) => i[key] === item?.[key])
+  }
   function isOptionDisabled(item: any): boolean {
     if (schemaActive.value) return false
     return !!compoundParsed.value.meta.get(item?.[keySelect.value ?? ""])?.disabled
@@ -301,6 +318,44 @@
     })
     return rows
   })
+  // ---ISSUE 7 — виртуализация списка опций -------------------------------------------------
+  // Ядро — headless `useVirtualScroll` из примитива VirtualScroller (общий движок окна, без внешних
+  // зависимостей). Подключено **безусловно, одной веткой кода**: при `count <= VIRTUAL_THRESHOLD`
+  // composable отдаёт полный диапазон `{0, n}` с нулевыми spacer'ами, то есть разметка и поведение
+  // короткого списка не отличаются от прежних ни на узел.
+  //
+  // Порог намеренно **внутренний**, prop'ом наружу не выводится: это деталь производительности,
+  // а не контракт компонента (решение R19).
+  //
+  // Группы (`<SelectGroup>`) окно **не включают** (решение R20): заголовки групп имеют другую
+  // высоту, а fixed-size модель ниже опирается на единый шаг строки. Сгруппированные списки на
+  // тысячи позиций — вырожденный сценарий, ради него не стоит вводить variable-height путь.
+  const VIRTUAL_THRESHOLD = 100
+  // h-9 (36px) + mt-2 (8px) — фактический шаг строки в `classLiItem`. Вертикальные margin соседних
+  // `li` схлопываются, поэтому каждая строка занимает ровно 44px, а spacer высотой `44 * start`
+  // ставит первую отрисованную опцию точно туда же, где она была бы в полном списке.
+  const VIRTUAL_ITEM_SIZE = 44
+  const hasGroupRows = computed<boolean>(() => renderRows.value.some((row) => row.type === "group"))
+  // Размеры скролл-контейнера. В SSR и jsdom остаются нулевыми → окно не включается, рендерится всё.
+  const listViewportSize = ref<number>(0)
+  const listScrollOffset = ref<number>(0)
+  const listContentTop = ref<number>(0)
+  const isVirtualEnabled = computed<boolean>(() => renderRows.value.length > VIRTUAL_THRESHOLD && !hasGroupRows.value)
+  const isWindowed = computed<boolean>(() => isVirtualEnabled.value && listViewportSize.value > 0)
+  const virtual = useVirtualScroll({
+    count: () => renderRows.value.length,
+    itemSize: VIRTUAL_ITEM_SIZE,
+    estimatedItemSize: VIRTUAL_ITEM_SIZE,
+    overscan: 6,
+    viewportSize: () => listViewportSize.value,
+    scrollOffset: () => listScrollOffset.value,
+    enabled: () => isWindowed.value
+  })
+  const visibleRows = computed<RenderRow[]>(() =>
+    isWindowed.value ? renderRows.value.slice(virtual.range.value.start, virtual.range.value.end) : renderRows.value
+  )
+  const virtualTopPad = computed<number>(() => (isWindowed.value ? virtual.topPad.value : 0))
+  const virtualBottomPad = computed<number>(() => (isWindowed.value ? virtual.bottomPad.value : 0))
   const paramsFixWindow = computed<NonNullable<SelectProps["paramsFixWindow"]>>(() => ({
     position: "bottom-left",
     eventOpen: "click",
@@ -470,6 +525,7 @@
   onBeforeUnmount(() => {
     resizeObserver?.disconnect()
     resizeObserver = undefined
+    detachListViewport()
     if (typeaheadTimer) clearTimeout(typeaheadTimer)
     if (isClient()) {
       document.removeEventListener("keydown", openSelectOnEnter)
@@ -489,6 +545,33 @@
     focusSelect(value)
     emit("isActive", value)
   })
+  // ---ISSUE 7 — измерение скролл-контейнера списка. Контейнер существует только пока дропдаун открыт,
+  // поэтому listener и ResizeObserver живут ровно на время открытия.
+  watch(isOpenList, async (value) => {
+    if (!isClient()) return
+    if (!value) {
+      detachListViewport()
+      return
+    }
+    await nextTick()
+    const el = selectList.value
+    if (!el) return
+    el.addEventListener("scroll", syncListScroll, { passive: true })
+    if (typeof ResizeObserver !== "undefined") {
+      listResizeObserver = new ResizeObserver(() => measureListViewport())
+      listResizeObserver.observe(el)
+    }
+    measureListViewport()
+  })
+  // Смена набора строк (фильтр/новые данные) сбрасывает позицию окна к началу списка.
+  watch(
+    () => renderRows.value.length,
+    () => {
+      const el = selectList.value
+      if (el && el.scrollTop > 0) el.scrollTop = 0
+      listScrollOffset.value = 0
+    }
+  )
   watch(
     value,
     () => {
@@ -518,54 +601,98 @@
   // })
 
   // ---METHODS-----------------------------
-  // ---ISSUE 2 (defensive) — guards against undefined refs after unmount-while-open ---
-  function listItemEls(): NodeListOf<HTMLElement> | undefined {
-    return (selectItems.value as any)?.$el?.querySelectorAll("li[data-select-list-item]") as
-      | NodeListOf<HTMLElement>
-      | undefined
+  // ---ISSUE 7 — измерение viewport'а списка (см. блок виртуализации выше).
+  let listResizeObserver: ResizeObserver | undefined
+  // Смещение `<ul>` внутри скролл-контейнера: сверху над ним лежит поле поиска. Читается только при
+  // открытии и ресайзе — на каждый scroll-тик хватит одного `scrollTop`.
+  function measureListViewport(): void {
+    const el = selectList.value
+    if (!el) return
+    listViewportSize.value = el.clientHeight || 0
+    const ul = (selectItems.value as any)?.$el as HTMLElement | undefined
+    listContentTop.value = ul
+      ? ul.getBoundingClientRect().top - el.getBoundingClientRect().top + (el.scrollTop || 0)
+      : 0
+    syncListScroll()
   }
-  function changeFocus(currentIndex: number, direction: 1 | -1) {
-    const listItems = listItemEls()
-    if (!listItems || !listItems.length) return
-    let newIndex = currentIndex + direction
-    const cur = listItems[currentIndex]
-    if (cur) {
-      cur.setAttribute("tabindex", "-1")
-      cur.blur()
-    }
-    if (newIndex < 0) newIndex = listItems.length - 1
-    else if (newIndex >= listItems.length) newIndex = 0
-    const next = listItems[newIndex]
-    if (next) {
-      next.setAttribute("tabindex", "0")
-      next.focus()
-    }
-    activeItem.value = newIndex
+  function syncListScroll(): void {
+    const el = selectList.value
+    if (!el) return
+    listScrollOffset.value = Math.max(0, (el.scrollTop || 0) - listContentTop.value)
   }
-  // абсолютный roving-focus (Home/End/typeahead) — индекс клампится в границы, без wrap
+  function detachListViewport(): void {
+    listResizeObserver?.disconnect()
+    listResizeObserver = undefined
+    selectList.value?.removeEventListener("scroll", syncListScroll)
+    listViewportSize.value = 0
+    listScrollOffset.value = 0
+    listContentTop.value = 0
+  }
+  // ---ISSUE 7 — roving focus на index-математике -------------------------------------------
+  // Прежняя реализация сканировала DOM (`querySelectorAll` по всем `li`) и адресовала опции позицией
+  // узла в NodeList. При включённом окне отрисован лишь срез, поэтому позиция узла перестаёт
+  // совпадать с индексом опции. Вся навигация переведена на индекс в `dataList` — он одинаково
+  // валиден в обоих режимах, а DOM трогается ровно один раз, точечным `querySelector` по
+  // `data-index` (решение R17).
+  function optionsCount(): number {
+    return dataList.value?.length ?? 0
+  }
+  function optionElAt(index: number): HTMLElement | undefined {
+    const ul = (selectItems.value as any)?.$el as HTMLElement | undefined
+    return (ul?.querySelector(`[data-select-list-item][data-index="${index}"]`) as HTMLElement | null) ?? undefined
+  }
+  // Индекс опции, на которой сейчас фокус (`-1` — фокус вне списка). Читает `data-index` активного
+  // элемента, а не ищет его перебором. Проверка `ul.contains` обязательна: `document.activeElement`
+  // глобален, и без неё чужой открытый Select на той же странице подменил бы наш индекс.
+  function focusedOptionIndex(): number {
+    if (!isClient()) return -1
+    const ul = (selectItems.value as any)?.$el as HTMLElement | undefined
+    const el = (document.activeElement as HTMLElement | null)?.closest?.(
+      "[data-select-list-item]"
+    ) as HTMLElement | null
+    if (!el || !ul?.contains(el)) return -1
+    const i = Number(el.dataset.index)
+    return Number.isFinite(i) ? i : -1
+  }
+  // При включённом окне целевая опция может быть ещё не отрисована — сначала подводим скролл к её
+  // расчётному офсету, и только после патча DOM забираем фокус.
   function focusItemAt(index: number) {
-    const listItems = listItemEls()
-    if (!listItems || !listItems.length) return
-    let newIndex = index
-    if (newIndex < 0) newIndex = 0
-    else if (newIndex >= listItems.length) newIndex = listItems.length - 1
-    const cur = listItems[activeItem.value]
-    if (cur) {
-      cur.setAttribute("tabindex", "-1")
-      cur.blur()
+    const count = optionsCount()
+    if (!count) return
+    const next = index < 0 ? 0 : index >= count ? count - 1 : index
+    activeItem.value = next
+    if (isWindowed.value) {
+      const el = selectList.value
+      if (el) {
+        el.scrollTop = virtual.scrollOffsetForIndex(next, "auto") + listContentTop.value
+        syncListScroll()
+      }
+      nextTick(() => optionElAt(next)?.focus())
+      return
     }
-    const next = listItems[newIndex]
-    if (next) {
-      next.setAttribute("tabindex", "0")
-      next.focus()
-    }
-    activeItem.value = newIndex
+    optionElAt(next)?.focus()
   }
-  // first-char typeahead для noQuery-listbox: матч по textContent опции;
+  // Циклический шаг (ArrowDown/ArrowUp): с последней опции — на первую и обратно.
+  function changeFocus(currentIndex: number, direction: 1 | -1) {
+    const count = optionsCount()
+    if (!count) return
+    let newIndex = currentIndex + direction
+    if (newIndex < 0) newIndex = count - 1
+    else if (newIndex >= count) newIndex = 0
+    focusItemAt(newIndex)
+  }
+  // first-char typeahead для noQuery-listbox: матч по значению опции из `dataList` (а не по
+  // textContent узла — при включённом окне нужного узла может не быть в DOM);
   // повтор одного символа в пределах 500 мс циклически перебирает совпадения (APG-паттерн).
+  function optionText(item: any): string {
+    const raw = typeof item === "object" && item && valueSelect.value ? item[valueSelect.value as string] : item
+    return String(raw ?? "")
+      .trim()
+      .toLowerCase()
+  }
   function typeaheadFocus(char: string) {
-    const items = listItemEls()
-    if (!items || !items.length) return
+    const count = optionsCount()
+    if (!count) return
     const wasEmpty = typeaheadBuffer === ""
     if (typeaheadTimer) clearTimeout(typeaheadTimer)
     typeaheadBuffer += char.toLowerCase()
@@ -574,9 +701,9 @@
     const needle = allSame ? typeaheadBuffer[0] : typeaheadBuffer
     // свежий буфер ищет с текущей позиции (включительно), повтор символа — со следующей
     const from = allSame && !wasEmpty ? activeItem.value + 1 : activeItem.value
-    for (let i = 0; i < items.length; i++) {
-      const idx = (from + i) % items.length
-      if ((items[idx]?.textContent ?? "").trim().toLowerCase().startsWith(needle)) {
+    for (let i = 0; i < count; i++) {
+      const idx = (((from + i) % count) + count) % count
+      if (optionText(dataList.value[idx]).startsWith(needle)) {
         focusItemAt(idx)
         return
       }
@@ -593,20 +720,18 @@
     else if (event.key === "Enter") select(dataList.value[activeItem.value])
     else if (["Escape", "Esc"].includes(event.key)) isOpenList.value = false
     else if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-      const items = listItemEls()
-      if (!items || !items.length) return
-      const currentIndex = Array.prototype.indexOf.call(items, document.activeElement)
+      if (!optionsCount()) return
+      const currentIndex = focusedOptionIndex()
       if (currentIndex !== -1) {
         event.preventDefault()
-        if (event.key === "ArrowDown") changeFocus(currentIndex, 1)
-        else if (event.key === "ArrowUp") changeFocus(currentIndex, -1)
-      } else changeFocus(1, -1)
+        changeFocus(currentIndex, event.key === "ArrowDown" ? 1 : -1)
+      } else changeFocus(1, -1) // фокус вне списка → встаём на первую опцию
     } else if (["Home", "End"].includes(event.key)) {
       if (searchActive) return
-      const items = listItemEls()
-      if (!items || !items.length) return
+      const count = optionsCount()
+      if (!count) return
       event.preventDefault()
-      focusItemAt(event.key === "Home" ? 0 : items.length - 1)
+      focusItemAt(event.key === "Home" ? 0 : count - 1)
     } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
       if (searchActive) return
       // есть поиск (default) → печать фокусит поле и фильтрует (de-facto typeahead);
@@ -691,12 +816,21 @@
   }
 
   // ---------------------------------------
+  // ---ISSUE 7 / R18 — в windowed-режиме анимация выключена целиком. Появление и исчезновение
+  // строк там означает не изменение данных, а прокрутку окна: stagger по `data-index` на каждый
+  // scroll-тик и выглядит неверно, и стоит кадров. Короткие списки — то есть подавляющее
+  // большинство — анимацию сохраняют.
   function onBeforeEnter(el: any) {
+    if (isWindowed.value) return
     el.style.opacity = 0
     el.style.height = 0
   }
 
   async function onEnter(el: any, done: any) {
+    if (isWindowed.value) {
+      done()
+      return
+    }
     const gsap = await loadGsap()
     if (!gsap) {
       // нет gsap → сразу финальные стили (иначе item остаётся opacity:0/height:0 от onBeforeEnter)
@@ -723,6 +857,10 @@
   })
 
   async function onLeave(el: any, done: any) {
+    if (isWindowed.value) {
+      done()
+      return
+    }
     const gsap = await loadGsap()
     if (!gsap) {
       el.style.opacity = 0
@@ -845,6 +983,8 @@
           <TransitionGroup
             name="ul"
             tag="ul"
+            role="listbox"
+            :aria-multiselectable="isMultiple || undefined"
             :class="classUl"
             ref="selectItems"
             data-select-list-items
@@ -852,16 +992,30 @@
             @enter="onEnter"
             @leave="onLeave">
             <template v-if="dataSelect?.length">
+              <!-- ISSUE 7 — spacer'ы окна виртуализации. Оба нулевые (и потому не отрисованы),
+                   пока список короче внутреннего порога: разметка совпадает с довиртуальной. -->
+              <li
+                v-if="virtualTopPad > 0"
+                key="vs-pad-top"
+                data-select-virtual-pad="top"
+                aria-hidden="true"
+                :style="{ height: `${virtualTopPad}px` }" />
               <template
-                v-for="row in renderRows"
+                v-for="row in visibleRows"
                 :key="row.type === 'group' ? `g:${row.label}` : `${row.item[keySelect]}`">
                 <!-- ISSUE 3 — non-selectable group-header (compound <SelectGroup>) -->
                 <li v-if="row.type === 'group'" data-select-group role="presentation" :class="classGroupHeader">
                   {{ row.label }}
                 </li>
+                <!-- ISSUE 7 — aria-setsize/aria-posinset обязательны при виртуализации: в DOM лежит
+                     только окно, и без них скринридер объявил бы «12 элементов» вместо реальных 500. -->
                 <li
                   v-else
                   data-select-list-item
+                  role="option"
+                  :aria-selected="isOptionSelected(row.item)"
+                  :aria-setsize="dataList.length"
+                  :aria-posinset="row.index + 1"
                   :tabindex="activeItem === row.index ? 0 : -1"
                   :data-index="row.index"
                   :aria-disabled="row.disabled ? 'true' : undefined"
@@ -885,14 +1039,17 @@
                       </div>
                     </slot>
                   </slot>
-                  <span
-                    v-if="visibleValue?.find((i) => i[keySelect] === row.item[keySelect])"
-                    data-select-check
-                    :class="iconCheck">
+                  <span v-if="isOptionSelected(row.item)" data-select-check :class="iconCheck">
                     <Icons type="Check" class="w-5 h-5" />
                   </span>
                 </li>
               </template>
+              <li
+                v-if="virtualBottomPad > 0"
+                key="vs-pad-bottom"
+                data-select-virtual-pad="bottom"
+                aria-hidden="true"
+                :style="{ height: `${virtualBottomPad}px` }" />
               <slot v-if="!dataList?.length" name="empty" :noData="noData" :query="query" :hasData="true">
                 <div :class="classDataListNoData">{{ noData }}</div>
               </slot>

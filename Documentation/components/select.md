@@ -1,7 +1,7 @@
 ---
 title: Select
-summary: Single/multiple select с фильтрацией (Intl.Collator), schema + compound API (<SelectOption>/<SelectGroup>), RTL (logical props), keyboard nav (Arrow/Home/End/typeahead), slot'ами values/item/marker/empty.
-updated: 2026-07-04
+summary: Single/multiple select с фильтрацией (Intl.Collator), schema + compound API (<SelectOption>/<SelectGroup>), виртуализацией списка опций, RTL (logical props), keyboard nav (Arrow/Home/End/typeahead), slot'ами values/item/marker/empty.
+updated: 2026-09-06
 stability: stable
 since: 0.2.11
 ---
@@ -45,6 +45,32 @@ lib/select/
 - **Локализация:** `noData` prop — сообщение, когда массив пуст. Live-region для filtered results count берёт один pluralized-ключ `select.resultsCount` через `Select.t("select.resultsCount", { count })` (Wave 3.5: CLDR-формы активной локали, `Intl.PluralRules`; `=0`/`one`/`other` для en, 4 формы для ru). Старые `resultsCountOne` / `resultsCountNone` — `@deprecated` (формы кодируются в `resultsCount`).
 - **SSR:** `isClient()` guard перед DOM-работой [FixWindow](./fix-window.md). Hydration mismatch нет — initial state совпадает.
 - **Animation:** Tailwind-переходы обёрнуты в `motion-safe:` префикс (CSS variant `@media (prefers-reduced-motion: no-preference)`). GSAP-анимация раскрытия списка пока не учитывает `prefers-reduced-motion` — см. §18.
+- **Виртуализация списка опций (2026-09-06):** окно рендера считает headless-ядро [`useVirtualScroll`](../../lib/virtualscroller/useVirtualScroll.ts) — то же, на котором работает [VirtualScroller](./virtualscroller.md). Подключено **безусловно**, отдельного prop'а нет: пока опций не больше внутреннего порога (100), ядро отдаёт полный диапазон, spacer'ы нулевые, и разметка не отличается от довиртуальной ни одним узлом. Выше порога в DOM живёт только видимое окно плюс overscan, а место остального списка занимают два `li[data-select-virtual-pad]`. Подробности и границы применимости — §3.1.
+
+### 3.1 Виртуализация списка опций
+
+Проблема, которую это закрывает: список из ~10 000 контактов CRM рендерился в DOM целиком — первое открытие занимало сотни миллисекунд, скролл заметно дёргался, память росла линейно.
+
+**Как устроено.** Ядро — `useVirtualScroll` из примитива [VirtualScroller](./virtualscroller.md), то есть общий движок окна, а не вторая его реализация. Внешних зависимостей не добавилось: [FixWindow](./fix-window.md) уже показал, что свой движок дешевле пакета.
+
+Скролл-контейнером остаётся сам `[data-select-list]`, а не вложенный viewport: поле поиска и градиентные оверлеи продолжают работать ровно как раньше. Модель окна — fixed-size, шаг строки 44 px (`h-9` плюс схлопывающийся `mt-2`). Место невидимых опций занимают два `li` с `aria-hidden`, поэтому позиция скроллбара соответствует полной длине списка.
+
+**Когда окно НЕ включается.** Три случая, и все три намеренные:
+
+| Условие | Поведение | Почему |
+| ------- | --------- | ------ |
+| Опций не больше 100 | Рендерится всё, spacer'ов нет | На коротком списке offset-математика — чистые накладные расходы. Разметка совпадает с довиртуальной |
+| Есть группы (`<SelectGroup>`) | Рендерится всё | Заголовки групп имеют другую высоту, а модель окна — fixed-size. Сгруппированные списки на тысячи позиций — вырожденный сценарий |
+| SSR и любой рантайм без layout | Рендерится всё | `clientHeight` контейнера равен нулю, окно не открывается — разметка сервера и клиента совпадает |
+
+**Порог наружу не выведен.** Это деталь производительности, а не контракт компонента: prop'а `virtual` или `virtualThreshold` в [Select.d.ts](../../lib/select/Select.d.ts) нет и не планируется (тест `SelectVirtual.test.ts` следит, чтобы не появился).
+
+**Что изменилось в поведении вместе с окном:**
+
+- **Клавиатурная навигация переехала на index-математику.** Раньше Arrow/Home/End адресовали опцию позицией узла в `querySelectorAll` — при включённом окне узла может не быть в DOM вообще. Теперь индекс считается по `dataList`, а DOM трогается один раз, точечным `querySelector` по `data-index`. Для коротких списков поведение не изменилось; `End` на списке из 10 000 позиций теперь работает, а не упирался бы в отрисованный срез.
+- **Typeahead ищет по данным, а не по `textContent`.** Следствие того же: сопоставление идёт со значением опции из `dataList`.
+- **GSAP-stagger в windowed-режиме выключен.** Появление строки там означает не изменение данных, а прокрутку окна — анимировать её и неверно, и дорого. Списки короче порога анимацию сохраняют полностью.
+- **`aria-setsize` / `aria-posinset` объявляют реальную длину списка.** Без них скринридер сообщал бы размер окна («12 элементов» вместо 500). Заодно список получил `role="listbox"`, опции — `role="option"` и `aria-selected`; до этого ARIA-ролей у списка не было вовсе.
 
 ## 4. Quick Start
 
@@ -257,7 +283,9 @@ Root класс — `fv fishtvue-select`.
 ### A11y
 
 - **Trigger:** `<div data-select role="combobox">` с `:aria-expanded` (реактивен по `isOpenList`) и `:aria-labelledby`, указывающим на id `<Label>` (Wave 4, 2026-06-19) — screen reader озвучивает метку и состояние раскрытия. Связка id↔label обеспечивается [InputLayout](./input-layout.md) (single source, `useId()`); явный `id` prop выигрывает. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
-- ARIA-атрибуты списка `role="listbox"`/`role="option"` — проверь по DOM (см. Known issues).
+- **Listbox (2026-09-06):** `<ul data-select-list-items role="listbox">` с `aria-multiselectable` в multiple-режиме; каждая опция — `role="option"` + `aria-selected`. До этого захода ролей у списка не было вовсе, и связка combobox → listbox держалась только на визуальной вложенности.
+- **`aria-setsize` / `aria-posinset` на каждой опции** — обязательны из-за виртуализации (§3.1): в DOM лежит только окно, и без них скринридер объявил бы его размер вместо реальной длины списка. `aria-posinset` — абсолютная позиция в `dataList`, а не позиция в окне.
+- Полная APG-обвязка combobox (`aria-controls`, `aria-activedescendant`) пока не реализована — см. Known issues.
 - Keyboard (Wave 4.3, 2026-06-20): **ArrowDown/Up** — навигация по опциям (roving tabindex), **Enter** — выбор, **Escape** — закрытие, **Home/End** — прыжок к первой/последней опции, **first-char typeahead** — печать буквы фокусирует первую опцию, начинающуюся с неё; повтор той же буквы (в пределах 500 мс) циклически перебирает совпадения. В режиме с поиском (default) печать символа фокусит search-поле → фильтрация работает как typeahead; чистый listbox (`noQuery: true`) использует встроенный first-char typeahead. Когда фокус в search-поле, Home/End сохраняют нативное поведение курсора.
 - Focus management: при открытии — focus на input query, при закрытии — на trigger.
 - **Live-region**: hidden `<div data-select-aria-live aria-live="polite" aria-atomic="true">` объявляет количество отфильтрованных результатов при печати в search-поле. Скриноридер озвучивает `Results: N` / `1 result` / `No results` (en) — локализовано и плюрализовано через единый ключ `Select.t("select.resultsCount", { count })` (Wave 3.5).
@@ -335,7 +363,8 @@ describe("Select", () => {
 ### Incomplete or stubbed behavior
 
 - Coverage 79.65% statements / 67.55% branch — несколько ветвей в interaction-логике (keydown nav) не покрыты.
-- **Виртуализация dropdown** не реализована — при `dataSelect.length > 500` рендер всех items в DOM ощутимо лагает. Roadmap: Wave 7 (`@tanstack/vue-virtual`) — см. [issues/select.md Issue 7](../issues/select.md).
+- ~~**Виртуализация dropdown** не реализована — при `dataSelect.length > 500` рендер всех items в DOM ощутимо лагает. Roadmap: Wave 7 (`@tanstack/vue-virtual`)~~ ✅ resolved 2026-09-06 — реализована на собственном `useVirtualScroll`, без `@tanstack/vue-virtual` и любых других внешних пакетов. См. [§3.1](#31-виртуализация-списка-опций) и [issues/select.md Issue 7](../issues/select.md).
+- **Полная APG-обвязка combobox не реализована.** Список получил `role="listbox"` и `role="option"` (2026-09-06), но `aria-controls` с trigger'а на список и `aria-activedescendant` вместо roving tabindex — нет. Навигация работает через реальный фокус на опции, что для скринридеров корректно, но отличается от эталонного APG-паттерна.
 - ~~**Compound `<Select><SelectOption>` API** отсутствует — только schema-driven~~ ✅ resolved 2026-06-13 — реализовано через VNode-walk, см. [§9.5](#95-compound-api-selectoption--selectgroup) выше и [issues/select.md Issue 3](../issues/select.md). Строка противоречила собственному §9.5 этого же документа; исправлено doc-sync'ом 2026-09-05.
 - **Ограничение compound-API:** rich per-option контент (иконки, сложная разметка) через `<SelectOption>` не рендерится — используй `#item`-слот или schema-driven `:data-select`.
 
@@ -357,8 +386,10 @@ describe("Select", () => {
 - **GSAP-анимация** открытия списка не отключается через `prefers-reduced-motion` (Tailwind transitions — уже да). Override через CSS `[data-select-list] * { transition: none !important; }`. Полная интеграция — Wave 10.1 follow-up.
 - **GSAP — optional peer (Wave 2.1).** `gsap` больше не runtime-dependency; грузится lazy (`await import("gsap")`, кэшируется при первой анимации). Без установленного `gsap` список открывается/закрывается мгновенно (без анимации), но функционально полностью рабочий — анимация деградирует gracefully. Установка плавности: `pnpm add gsap`.
 - При `noQuery: true` search-input **не рендерится** (`v-if="isQuery"`, `isQuery = !noQuery`) — компонент работает как чистый listbox; навигация по опциям доступна через ArrowDown/Up, Home/End и first-char typeahead (Wave 4.3).
-- **RTL** (`<html dir="rtl">`): поддержан через логические Tailwind-классы (`ps-`/`pe-`/`start-`/`me-`/`ms-[...]` + `rtl:text-right`) — авто-флип отступов, check-иконки и dropdown-оффсета (Issue 9 / F31, resolved 2026-06-13). Виртуализация больших списков — см. ниже.
-- **Виртуализация** dropdown >500 items не реализована (рендерятся все элементы) — defer roadmap (Issue 7), требует runtime-зависимости вопреки no-deps цели.
+- **RTL** (`<html dir="rtl">`): поддержан через логические Tailwind-классы (`ps-`/`pe-`/`start-`/`me-`/`ms-[...]` + `rtl:text-right`) — авто-флип отступов, check-иконки и dropdown-оффсета (Issue 9 / F31, resolved 2026-06-13).
+- **Виртуализация не работает со сгруппированными списками** (`<SelectGroup>`) — намеренно, см. [§3.1](#31-виртуализация-списка-опций). Сгруппированный список из тысяч опций отрендерится целиком и будет тормозить так же, как до 2026-09-06. Обходной путь — плоский `:data-select` с сортировкой вместо групп.
+- **Модель окна — fixed-size (44 px).** Кастомный `#item`-слот с высотой, отличной от штатной, на длинном списке даст рассинхрон spacer'ов и позиции скролла. Для нестандартной высоты строк используй списки короче порога либо собственную обёртку над [VirtualScroller](./virtualscroller.md).
+- **Смена набора опций сбрасывает позицию скролла в начало.** Ввод в поле поиска меняет длину `dataList`, окно пересчитывается от нуля — это осознанный выбор: сохранять офсет между разными наборами данных бессмысленно.
 - **`IDataItem.marker` deprecated** (2026-05-11): передача поля игнорируется + `console.warn`. Используй `#marker` scoped slot.
 
 ### Bug report format
