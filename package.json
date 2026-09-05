@@ -36,6 +36,7 @@
     "format": "prettier --write \"**/*.{js,ts,vue,d.ts}\" --cache",
     "format:check": "prettier --check \"**/*.{js,ts,vue,d.ts}\"",
     "lint": "eslint --fix .",
+    "lint:check": "eslint .",
     "lint:fix": "eslint --fix --ext \".js,.ts,.vue\" --ignore-pattern .gitignore .",
     "test": "vitest run",
     "test:watch": "vitest --watch",
@@ -48,14 +49,7 @@
     "node": ">=20.18 <25",
     "pnpm": ">=9"
   },
-  "packageManager": "pnpm@11.0.9",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@parcel/watcher",
-      "esbuild",
-      "vue-demi"
-    ]
-  },
+  "packageManager": "pnpm@11.23.0+sha512.f00082e5b283a199b74e079da28d155c008fe232f44c8a06ea7ddfa014ecf719fc362f790ecc67b28106ddac2afb24c49a9a079159da560b2ce7d1e98efd11af",
   "devDependencies": {
     "@babel/eslint-parser": "^7.25.7",
     "@babel/preset-env": "^7.25.7",

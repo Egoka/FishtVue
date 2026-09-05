@@ -45,7 +45,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Lint library
-        run: pnpm lint
+        # lint:check = `eslint .` без --fix — см. комментарий в pull_request.yml.
+        run: pnpm lint:check
       - name: Type check
         run: pnpm typecheck
       - name: Test library

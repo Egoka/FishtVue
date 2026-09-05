@@ -42,6 +42,7 @@ body:
         - Table
         - TextEditor
         - Form
+        - VirtualScroller
     validations:
       required: true
 

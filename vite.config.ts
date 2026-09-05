@@ -22,7 +22,17 @@ export default defineConfig({
       reportsDirectory: "./coverage",
       reporter: ["text", "json", "html"],
       include: ["lib/**/*.ts", "lib/**/*.vue"],
-      exclude: ["node_modules", "dist", "**/*.d.ts", "**/*.test.ts", "lib/loading/epic/*", "lib/loading/svg/*"]
+      exclude: [
+        "node_modules",
+        "dist",
+        "**/*.d.ts",
+        "**/*.test.ts",
+        // Хелперы для тестов движка: исполняются только из .test.ts, но сами тестами не покрыты —
+        // без исключения занижали агрегат (test-helpers-advanced.ts давал 0%).
+        "lib/theme/unoStyle/test-helpers*.ts",
+        "lib/loading/epic/*",
+        "lib/loading/svg/*"
+      ]
     },
     setupFiles: ["./.tests/setup/setupTests.ts"],
     ui: false,

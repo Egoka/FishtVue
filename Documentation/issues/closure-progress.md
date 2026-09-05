@@ -33,7 +33,7 @@ updated: 2026-09-05
 
 | Задача | Батч из assessment | Статус | Коммит |
 | ------ | ------------------ | ------ | ------ |
-| T1. Tooling hygiene + CI gate | B17 + N6 + N8 + R1–R4 | ⏳ | — |
+| T1. Tooling hygiene + CI gate | B17 + N6 + N8 + R1–R4 | ✅ | `chore(tooling)` |
 | T2. Nuxt: compound-дети в auto-import | B15 (N1) | ⏳ | — |
 | T3. Nuxt: dead code + `disableGlobalStyles` | B16 (N2, N3) | ⏳ | — |
 | T4. TextEditor: native form submit | B3 | ⏳ | — |
@@ -63,6 +63,14 @@ updated: 2026-09-05
 | T1.7 | Добавить `VirtualScroller` в список компонентов issue-labeler (N8) | `.github/workflows/issue-labeler.yml` |
 | T1.8 | Затрекать `AGENTS.md` + внести регламент синхронизации с CLAUDE.md (R1) | `AGENTS.md`, `CLAUDE.md` |
 | T1.9 | Удалить артефакт `Documentation/issues/coverage/` (gitignored мусор от прошлого аудита) | — |
+
+**Результат.** `[WARN]` про `pnpm.onlyBuiltDependencies` больше не печатается ни на одной команде. Coverage-агрегат поднялся **88.22 / 78.68 / 89.56 / 91.98 → 89.72 / 79.40 / 92.04 / 93.71** — тест-хелперы движка действительно занижали цифру, реальное покрытие библиотеки было выше заявленного. Тесты: 5716 passed, без изменений.
+
+**Сверх плана в T1:**
+
+- `VirtualScroller` добавлен не только в issue-labeler, но и в dropdown-списки всех трёх issue-шаблонов (`bug_report` / `feature_request` / `question`) — там был тот же захардкоженный список из 22 компонентов.
+- Счётчик «22 компонента» в agent-guide исправлен на 23 сразу (N7), чтобы не трогать `CLAUDE.md` второй раз в T9.
+- Раздел «Два agent-guide» написан **байт-идентичным** в обоих файлах: вместо таблицы сопоставления (она вырождалась при генерации `AGENTS.md` через `sed`) — прозаическое описание плюс sync-check, нормализующий оба файла к общему виду. Расхождение между файлами сведено ровно к двум строкам с путями.
 
 ---
 

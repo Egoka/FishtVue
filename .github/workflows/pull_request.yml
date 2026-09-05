@@ -37,10 +37,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Lint library
-        run: pnpm lint
+        # lint:check = `eslint .` без --fix. Локальный `pnpm lint` чинит автоматически,
+        # но в CI это делало гейт нерабочим: автофиксимая ошибка молча правилась
+        # в раннере и шаг завершался с 0.
+        run: pnpm lint:check
       - name: Type check
         run: pnpm typecheck
       - name: Test library
         run: pnpm test
-#      - name: Build library
-#        run: pnpm lib:build
+      - name: Build library
+        run: pnpm lib:build

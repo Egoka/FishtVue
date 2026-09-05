@@ -108,8 +108,8 @@ norm() { sed 's#\.Codex#.claude#g; s#AGENTS\.md#CLAUDE.md#g' "$1"; }; diff <(nor
 
 ## Slash-команды
 
-- [`/tz`](./.claude/commands/tz.md) — ТЗ-driven workflow (plan-mode → docs read → canon validation → tests-first → docs sync → report). Используй для любого нетривиального ТЗ.
+- [`/tz`](./.Codex/commands/tz.md) — ТЗ-driven workflow (plan-mode → docs read → canon validation → tests-first → docs sync → report). Используй для любого нетривиального ТЗ.
 
 ## Trace-mcp routing
 
-Для навигации по коду используй `trace-mcp` (`get_outline`, `get_symbol`, `find_usages`, `get_feature_context`, `get_change_impact`) — это дешевле и точнее, чем `Read`/`Grep`/`Glob` по `lib/`. Полная таблица соответствий — в глобальном `~/.claude/CLAUDE.md`. `Read`/`Grep` оставь для `.md`/`.json`/`.yaml` и подготовки `Edit`.
+Для навигации по коду используй `trace-mcp` (`get_outline`, `get_symbol`, `find_usages`, `get_feature_context`, `get_change_impact`) — это дешевле и точнее, чем `Read`/`Grep`/`Glob` по `lib/`. Полная таблица соответствий — в глобальном `~/.Codex/AGENTS.md`. `Read`/`Grep` оставь для `.md`/`.json`/`.yaml` и подготовки `Edit`.

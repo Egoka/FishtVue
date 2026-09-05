@@ -21,7 +21,7 @@ jobs:
       - name: Check for Component Header
         id: check_component
         run: |
-          COMPONENTS=("Accordion" "Alert" "Aria" "Badge" "Button" "Calendar" "Dialog" "FixWindow" "Icons" "Input" "InputLayout" "Label" "Loading" "Menu" "Pagination" "Select" "Separator" "Split" "Switch" "Table" "TextEditor" "Form")
+          COMPONENTS=("Accordion" "Alert" "Aria" "Badge" "Button" "Calendar" "Dialog" "FixWindow" "Icons" "Input" "InputLayout" "Label" "Loading" "Menu" "Pagination" "Select" "Separator" "Split" "Switch" "Table" "TextEditor" "Form" "VirtualScroller")
           ISSUE_BODY=$(echo "${{ github.event.issue.body }}" | tr -d '\r')
           COMPONENT_NAME=$(echo "$ISSUE_BODY" | awk '/^### Component/{flag=1; next} /^###/{flag=0} flag && NF {print $0}' | xargs)
 
