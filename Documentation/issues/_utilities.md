@@ -1,6 +1,6 @@
 ---
 title: Issues — Utilities (consolidated)
-summary: Сводный аудит 11 utility-handlers — большинство пунктов закрыто (`crypto.randomUUID`, locale-aware phone, Unicode caseing, rules i18n hook, packaging metadata, sort-stability документирована 2026-09-05). Открыт один — coverage `dateHandler` (72.61 / 65.38).
+summary: Сводный аудит 11 utility-handlers — большинство пунктов закрыто (`crypto.randomUUID`, locale-aware phone, Unicode caseing, rules i18n hook, packaging metadata, sort-stability документирована 2026-09-05, coverage dateHandler 72.61 → 92.2 с фиксом регистра AM/PM). Открытых пунктов нет.
 updated: 2026-09-05
 audit-checklist: 60-point (subset relevant) + Configuration support
 source: lib/utils/
@@ -16,7 +16,7 @@ related-doc: ../utilities/
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 1 | J46 (dateHandler coverage 72.61 / 65.38 — подтверждён 2026-09-05) |
+| high | 0 | ~~J46 (dateHandler coverage)~~ ✅ 2026-09-05 — 72.61 / 65.38 → **92.2 / 85.71** |
 | medium | 0 | — |
 | low | 0 | ~~D22 (arrayHandler.sort документация)~~ ✅ 2026-09-05, ~~J46 (Utils.ts re-export)~~ ✅ 2026-09-05 (non-issue) |
 
@@ -50,18 +50,36 @@ related-doc: ../utilities/
 
 Тесты — [numberHandler.test.ts](../../lib/utils/numberHandler.test.ts) (`custom phoneFormats option` describe block, 4 кейса: UK +44, DE +49, fallback при пустом массиве, fallback при отсутствии options).
 
-## Issue 4: `dateHandler` coverage — подтверждён, 72.61 / 65.38
+## ~~Issue 4: `dateHandler` coverage — подтверждён, 72.61 / 65.38~~ ✅ resolved 2026-09-05
 
 - **Категория:** J46
-- **Severity:** high
-- **Где:** [dateHandler.ts:342-362](../../lib/utils/dateHandler.ts#L342-L362) — непокрытый блок
+- **Severity:** ~~high~~
+- **Где:** [dateHandler.ts](../../lib/utils/dateHandler.ts) — мёртвый switch удалён, регистр AM/PM решается по исходной маске
 
-> **Обновлено 2026-09-05:** прогон `pnpm coverage` на текущей версии дал **ровно те же 72.61 / 65.38**, что и старый отчёт — цифра не устарела, файл действительно недотестирован. Вопрос «требует подтверждения» снят, issue переквалифицирован из неопределённости в конкретный coverage-gap с известными строками. Работа не выполнялась — входит в coverage-волну (батч B10 в [closure-assessment.md](./closure-assessment.md)).
+> **Закрыто 2026-09-05: 72.61 / 65.38 → 92.2 / 85.71** (порог 80 / 70 перекрыт). Заведён
+> [dateHandlerMasks.test.ts](../../lib/utils/dateHandlerMasks.test.ts) — 37 кейсов.
+>
+> **Непокрытый блок оказался недостижимым кодом, а не пробелом в тестах.** В `formatDate` строкой выше switch'а
+> стоит `mask = convertMask(mask)`, которая переписывает маску (`Do` → `do`, `W` → `w`, `L` → `P`, `ZZ` → `xx`,
+> `ZZZZ` → `zzzz`). Все метки switch'а — исходные dayjs-маски, поэтому **ни одна не могла совпасть**. Coverage
+> годами показывал этот блок непокрытым именно потому, что исполнить его было нельзя.
+>
+> **Найденный баг.** Единственной живой веткой была `case "a"` — `A` и `a` конвертируются в один токен. Поэтому
+> `formatDate(date, "A")` возвращала `"pm"` вместо `"PM"`, хотя мёртвая ветка `case "A"` рядом объявляла верхний
+> регистр. Исправлено: регистр решается по **исходной** маске, до конвертации. Обе ветки заданы явно — у date-fns
+> токен `a` отдаёт верхний регистр, у dayjs нижний, так что нижний тоже приходится восстанавливать вручную.
+>
+> **Мёртвые ветки удалены, а не «оживлены»** переносом switch'а до конвертации: часть из них расходилась с
+> семантикой dayjs, которую модуль эмулирует (`W` в dayjs — номер недели года, а switch отдавал `getDay()`, то есть
+> день недели; `Do` — порядковый день месяца, а switch добавлял название месяца). Текущее поведение ближе к dayjs
+> и теперь зафиксировано тестами. Заодно ушёл ставший неиспользуемым импорт `getDay`.
+>
+> Остаток непокрытого — редкие ветки `detectLocale` (скандинавские и восточноевропейские диакритики), низкий приоритет.
 
 ### Что нужно сделать
 
-1. ~~Прогнать coverage и подтвердить цифру~~ ✅ 2026-09-05 — 72.61 / 65.38, непокрыт блок [dateHandler.ts:342-362](../../lib/utils/dateHandler.ts#L342-L362).
-2. Добавить тесты на непокрытые ветви форматирования (`Do`, `A`/`a`, `W`/`WW`/`WWW`/`WWWW`, `L`, `ZZ`–`ZZZZ`) до порога ≥80 % statements / ≥70 % branch.
+1. ~~Прогнать coverage и подтвердить цифру~~ ✅ 2026-09-05.
+2. ~~Добавить тесты на ветви форматирования (`Do`, `A`/`a`, `W`/`WW`/`WWW`/`WWWW`, `L`, `ZZ`–`ZZZZ`) до порога ≥80 % / ≥70 %~~ ✅ 2026-09-05 — 92.2 / 85.71.
 
 ## ~~Issue 5: `domHandler.minifyCSS` использует document.createElement — нужен SSR guard~~ ✅ resolved + doc-error fix (2026-05-10)
 

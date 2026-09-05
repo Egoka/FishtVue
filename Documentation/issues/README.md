@@ -29,8 +29,7 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 | Uno engine      | [uno-engine.md](./uno-engine.md)           | 0        | 0     | 2      | 0      |
 | Locale          | [locale.md](./locale.md)                   | 0        | 0     | 4      | 2      |
 | Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 0     | 2      | 2      |
-| Utilities       | [\_utilities.md](./_utilities.md)          | 0        | 1     | 0      | 0      |
-| **TOTAL**       | **27 active + 3 done**                     | **0**    | **3** | **18** | **12** |
+| **TOTAL**       | **27 active + 3 done**                     | **0**    | **2** | **18** | **12** |
 
 > ✅ **Ревизия счётчиков проведена 2026-09-05.** Дрейф, о котором предупреждала врезка от 2026-08-02, устранён: строка TOTAL пересчитана **по фактическим «Сводка»-таблицам всех активных файлов**, счётчик «открыто» ниже приведён к той же сумме, ячейка `active + done` исправлена по реальному содержимому каталога. Пять несогласованных чисел (TOTAL, текстовый счётчик, сумма по столбцам, сумма по файлам, число документов) сведены в одно.
 >
@@ -74,6 +73,7 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 | Accordion       | [accordion.md](./accordion.md)             | 0        | 0    | 0      | 0   | active/ ¹ |
 | Button          | [button.md](./button.md)                   | 0        | 0    | 0      | 0   | active/ ¹ |
 | Table           | [table.md](./table.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Utilities       | [\_utilities.md](./_utilities.md)          | 0        | 0    | 0      | 0   | active/ ¹ |
 | FixWindow       | [done/fixwindow.md](./done/fixwindow.md)   | 0        | 0    | 0      | 0   | done/     |
 | Dialog          | [done/dialog.md](./done/dialog.md)         | 0        | 0    | 0      | 0   | done/     |
 | Config          | [done/config.md](./done/config.md)         | 0        | 0    | 0      | 0   | done/     |
