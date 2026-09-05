@@ -145,10 +145,25 @@
     classBody: props.classBody ?? options?.classBody,
     class: classStyle.value
   }))
+  // G34: ссылка на КОРНЕВОЙ элемент + `focus()`. Корень TextEditor — `<InputLayout>`, поэтому
+  // элемент берётся из его expose (`inputBody`). Зеркало `componentTable`/`buttonRef`.
+  const componentTextEditor = computed<HTMLElement | undefined>(() => layout.value?.inputBody)
+
+  /**
+   * Ставит фокус в редактор. Делегирует Quill'у, если тот загружен (он сам знает, куда именно
+   * внутри contenteditable вернуть каретку); иначе фокусирует корневой элемент, чтобы вызов
+   * не был молча бесполезным при отсутствующем optional peer-dep.
+   */
+  function focus() {
+    if (quillEditorLink.value) quillEditorLink.value.focus()
+    else componentTextEditor.value?.focus()
+  }
+
   // ---EXPOSE------------------------------
   defineExpose({
     // ---STATE-------------------------
     layout,
+    componentTextEditor,
     valueLayout,
     classLayout,
     open,
@@ -169,7 +184,8 @@
     inputLayout,
     // ---METHODS-----------------------------
     clear,
-    ready
+    ready,
+    focus
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(async () => {

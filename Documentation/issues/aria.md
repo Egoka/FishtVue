@@ -16,7 +16,7 @@ related-doc: ../components/aria.md
 | critical | 0            | —                  |
 | high     | 0            | ~~A2, A4-5 (Issue 3)~~ ✅ — cross-cutting packaging закрыт волной 2 (см. [button.md](./button.md) Issues 8, 9) |
 | medium   | 1            | D25 (Issue 6 — rename, deferred) |
-| low      | 1            | M55 (Issue 10 — docs-only) |
+| low      | 0            | ~~M55 (Issue 10 — docs-only)~~ ✅ 2026-09-05 |
 
 **Закрыто 2026-05-11:** Issues 1 (type bug change:modelValue → string + cross-cutting fix в TextEditor.d.ts), 2 (drop duplicate initStyle, Wave 2.3), 4 (componentsStyle fallback chain), 5 (unstyled regression test — cross-cutting Wave 3.1), 7 (modelValue type narrow), 8 (typed slot props before/after), 9 (motion-safe placeholder), 11 print part (print:* классы в classInput) — зачёркнуты ниже с `✅ resolved`-маркерами. Нумерация исходная — cross-references сохраняются.
 
@@ -158,19 +158,21 @@ Runtime передаёт `string` (содержимое textarea), но тип �
 - **Где:** [Aria.vue:65](../../lib/aria/Aria.vue#L65)
 - **Resolution:** `placeholder:transition-all` → `motion-safe:placeholder:transition-all` в `classInput` (zero-impact для пользователей без `prefers-reduced-motion: reduce`, отключает анимацию placeholder'а для тех, кто его выставил). Tailwind транспилирует `motion-safe:` в `@media (prefers-reduced-motion: no-preference)`. Покрыто regression-тестом (`classInput` содержит `motion-safe:placeholder:transition-all`, не содержит unconditional `placeholder:transition-all`). Зеркалит [button.md Issue 10](./button.md) ✅ pattern.
 
-## Issue 10: maxLength enforce только client-side
+## ~~Issue 10: maxLength enforce только client-side~~ ✅ resolved 2026-09-05 (doc-only)
 
 - **Категория:** M55 (FormData / submit)
-- **Severity:** low (Documentation flag)
-- **Где:** [Aria.vue:171](../../lib/aria/Aria.vue#L171)
+- **Severity:** ~~low~~ (Documentation flag)
+- **Где:** [Aria.vue](../../lib/aria/Aria.vue) — поведение корректное, вопрос был в документации
 
 ### Что найдено
 
 `<textarea :maxlength="maxLength">` — native HTML maxlength, enforce только в браузере. На server при native form submit пользователь может обойти через DevTools.
 
-### Что нужно сделать
+### Что сделано
 
-Документировать в [Documentation/components/aria.md](../components/aria.md) §12 Security: «дублируй на server». Уже частично есть, оставить.
+Раздел §12 Security в [components/aria.md](../components/aria.md) расширен с одной строки до явного объяснения: `maxLength` — **UX-ограничение, а не проверка**, атрибут снимается через DevTools, и полагаться на него нельзя. Показан рабочий паттерн из двух уровней — правило `length` из [rulesHandler](../utilities/rulesHandler.md) на клиенте (оно, в отличие от нативного `maxlength`, срабатывает и при вставке из буфера, и при программной установке `modelValue`) плюс серверная валидация как единственная гарантия.
+
+Код не трогали: нативный `maxlength` сам по себе корректен, менять его семантику нечего.
 
 ## Issue 11: print styles, RTL, hardcode цветов — кросс-cutting
 

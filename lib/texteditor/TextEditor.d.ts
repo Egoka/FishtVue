@@ -133,6 +133,15 @@ export declare type TextEditorExpose = {
   layout: InputLayoutExpose | undefined
 
   /**
+   * Reference to the component's ROOT element (G34).
+   *
+   * The root of TextEditor is `<InputLayout>`, so the element is taken from its own expose
+   * (`inputBody`). Mirrors `componentTable` on Table and `buttonRef` on Button.
+   * @type {HTMLElement | undefined}
+   */
+  componentTextEditor: HTMLElement | undefined
+
+  /**
    * The value displayed in the editor layout.
    * @type {TextEditorProps["modelValue"]}
    */
@@ -243,6 +252,15 @@ export declare type TextEditorExpose = {
    * Prepares the editor for interaction.
    */
   ready(): void
+
+  /**
+   * Moves focus into the editor (G34).
+   *
+   * Delegates to Quill when it is loaded — it knows where inside the contenteditable to put the
+   * caret. Falls back to focusing the root element, so the call is not silently useless when the
+   * optional `@vueup/vue-quill` peer is absent.
+   */
+  focus(): void
 }
 export declare type TextEditorOption = Pick<
   TextEditorProps,

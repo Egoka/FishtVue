@@ -213,9 +213,15 @@
     class: props.class
   }))
   // ---EXPOSE------------------------------
+  // G34: ссылка на КОРНЕВОЙ элемент компонента. Корень Calendar — это `<InputLayout>`, поэтому
+  // элемент берётся из его же expose (`inputBody`), а не заводится второй ref на тот же узел.
+  // Зеркало `componentTable` у Table и `buttonRef` у Button.
+  const componentCalendar = computed<HTMLElement | undefined>(() => layout.value?.inputBody)
+
   defineExpose({
     //---STATE-------------------------
     layout,
+    componentCalendar,
     inputLayout,
     datePickerLink,
     picker,

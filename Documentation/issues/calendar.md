@@ -15,7 +15,7 @@ related-doc: ../components/calendar.md
 |---|---|---|
 | critical | 0 | — |
 | high | 1 | P (dual-API — Issue 5, deferred redesign); ~~A2, A4-5, C17 (Issue 4)~~ ✅ закрыты волной 2, ~~L53 (Issue 7)~~ ✅ framework-level |
-| medium | 2 | F31, G34 |
+| medium | 1 | F31 (RTL); ~~G34~~ ✅ 2026-09-05 |
 | low | 1 | N59 (print); ~~E29.7~~ N/A 2026-09-05 — в Calendar.vue ноль `transition`, гейтить нечего |
 
 ## ~~Issue 1: CRITICAL — MutationObserver на documentElement не disconnect'ится при unmount~~ ✅ resolved 2026-05-11
@@ -315,6 +315,19 @@ Picker открывается через `<FixWindow v-bind="paramsFixWindow">`.
 - [x] `Calendar` смонтирован с непустым `modelValue` (single и range режимы) — отображаемый текст показывает реальную дату, а не остаётся пустым, независимо от того, сколько времени занимает резолв lazy-loaded v-calendar.
 - [x] Полный `vitest run` (весь suite, `isolate:false`) зелёный на Linux/Node 22 (CI-эквивалентная среда), не только на macOS.
 - [x] Интерактивный выбор даты в открытом picker'е по-прежнему корректно обновляет отображаемый текст (regression-check ручной выбор через тот же watch).
+
+
+## ~~G34: ref на корневой элемент~~ ✅ resolved 2026-09-05
+
+- **Категория:** G34
+- **Severity:** ~~medium~~
+
+> Корень компонента — `<InputLayout>`, поэтому корневой DOM-узел берётся из **его** expose
+> (`inputBody`), а не дублируется вторым `ref` на тот же элемент. Наружу выведен как
+> ``componentCalendar``. Канон зеркалит `componentTable` у [Table](./table.md) и `buttonRef` у
+> [Button](./button.md).
+> 
+> Метод `focus()` у Calendar был уже — экспонирован ранее, поэтому в этом заходе добавлена только ссылка на элемент.
 
 ## Cross-cutting: Configuration support
 

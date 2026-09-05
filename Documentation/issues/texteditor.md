@@ -17,7 +17,7 @@ stability: experimental (на момент аудита 17 тестов skipped)
 | critical | 0            | —                                                                                                     |
 | high     | 0            | ~~A2, A4-5, C17~~ ✅ (cross-cutting packaging закрыт Wave 2, см. [button.md](./button.md) Issues 1, 8, 9), ~~J46 (tests todo)~~ ✅ 2026-09-05, ~~L53~~ ✅ 2026-07-02, ~~B10~~ ✅ 2026-07-04 |
 | medium   | 3            | F30, F32, security (image upload); ~~M55 (native form submit)~~ ✅ 2026-09-05, ~~D26~~ ✅ 2026-05-11   |
-| low      | 2            | N59 (print), G34 (ref/focus expose); ~~E29.7~~ N/A 2026-09-05 — ноль `transition` в файле            |
+| low      | 1            | N59 (print); ~~G34 (ref/focus expose)~~ ✅ 2026-09-05, ~~E29.7~~ N/A 2026-09-05 — ноль `transition` |
 
 ## ~~Issue 1: 17 тестов skipped, coverage 0% — компонент не верифицирован~~ ✅ resolved 2026-09-05
 
@@ -303,6 +303,24 @@ Quill editor рендерится через div'ы. Нет hidden `<input>` д�
 - **motion (E29.7):** ✅ **N/A, зафиксировано 2026-09-05.** В [TextEditor.vue](../../lib/texteditor/TextEditor.vue) **ноль** вхождений `transition` — ни Tailwind-класса, ни `<transition>`, ни CSS-свойства ни в шаблоне, ни в `<style>`-блоке. Гейтить нечего; собственные анимации Quill — его поверхность. Cross-cutting guard — [lib/motionSafe.test.ts](../../lib/motionSafe.test.ts).
 - **color (B10):** ✅ resolved 2026-07-04 (Issue 2) + 2026-09-05 (тематические переменные ушли в inline, Issue 12).
 - **print (N59):** ❌ открыто — в файле нет ни одного `print:`-класса. Входит в общий print-заход, см. [button.md](./button.md).
+
+
+## ~~G34: ref на корневой элемент~~ ✅ resolved 2026-09-05
+
+- **Категория:** G34
+- **Severity:** ~~low~~
+
+> Корень компонента — `<InputLayout>`, поэтому корневой DOM-узел берётся из **его** expose
+> (`inputBody`), а не дублируется вторым `ref` на тот же элемент. Наружу выведен как
+> ``componentTextEditor``. Канон зеркалит `componentTable` у [Table](./table.md) и `buttonRef` у
+> [Button](./button.md).
+> 
+> Вместе с ним добавлен `focus()`, которого у TextEditor не было вовсе. Он делегирует Quill'у,
+> когда тот загружен — редактор сам знает, куда внутри contenteditable вернуть каретку, — и падает
+> обратно на фокус корневого элемента, если optional peer `@vueup/vue-quill` не установлен.
+> Так вызов не оказывается молча бесполезным.
+>
+> Покрыто тремя кейсами в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts).
 
 ## Cross-cutting: Configuration support
 

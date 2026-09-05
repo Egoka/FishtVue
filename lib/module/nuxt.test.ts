@@ -50,12 +50,51 @@ beforeEach(() => {
   addPluginTemplate.mockClear()
 })
 
+/**
+ * Имена, которые корневой barrel отдаёт как компоненты.
+ *
+ * `Config` — Vue plugin, а не компонент: он экспортируется тем же `export { default as … }`,
+ * но регистрировать его в auto-import нечего. Это единственное расхождение между barrel'ом
+ * и `FISHT_VUE_COMPONENTS`, поэтому исключение задано явно, а не «на глаз».
+ */
+const NON_COMPONENT_EXPORTS = ["Config"]
+
+function rootBarrelComponents(): string[] {
+  const source = readFileSync(resolve(process.cwd(), "lib/index.ts"), "utf-8")
+  return [...source.matchAll(/export\s*\{\s*default\s+as\s+(\w+)\s*}/g)]
+    .map((match) => match[1])
+    .filter((name) => !NON_COMPONENT_EXPORTS.includes(name))
+}
+
 describe("Nuxt module — auto-import компонентов", () => {
-  it("регистрирует все top-level компоненты публичного barrel", () => {
+  /**
+   * Issue 3: `FISHT_VUE_COMPONENTS` заполняется вручную. Ровно этот механизм уже выстрелил на
+   * соседнем массиве `FISHT_VUE_SUBCOMPONENTS` — там потерялись `MenuItem`/`MenuGroup`/
+   * `AccordionItem`. Инвариант против корневого barrel закрывает ту же дыру для top-level списка:
+   * добавил компонент в `lib/index.ts`, забыл в модуле — тест падает с именем пропажи.
+   */
+  it("регистрирует ровно те компоненты, что отдаёт корневой barrel", () => {
+    runSetup()
+    const registered = addComponent.mock.calls.map(([arg]) => arg.name as string)
+    const expected = rootBarrelComponents()
+
+    const missing = expected.filter((name) => !registered.includes(name))
+    expect(missing, `не зарегистрированы в Nuxt: ${missing.join(", ")}`).toEqual([])
+
+    // Обратная сторона: в модуле не должно быть имён, которых barrel не экспортирует —
+    // иначе `addComponent` укажет на несуществующий filePath и Nuxt упадёт при резолве.
+    const compoundChildren = ["table", "form", "select", "menu", "accordion"].flatMap(namedExportsOf)
+    const phantom = registered.filter((name) => !expected.includes(name) && !compoundChildren.includes(name))
+    expect(phantom, `нет в корневом barrel: ${phantom.join(", ")}`).toEqual([])
+  })
+
+  it("покрывает все 23 компонента библиотеки, включая VirtualScroller", () => {
     runSetup()
     const registered = addComponent.mock.calls.map(([arg]) => arg.name)
+
+    expect(rootBarrelComponents()).toHaveLength(23)
     expect(registered).toContain("Table")
-    // VirtualScroller — 23-й компонент, добавлен в barrel позже остальных.
+    // VirtualScroller добавлен в barrel позже остальных и до 2026-09-05 отсутствовал в сводке.
     expect(registered).toContain("VirtualScroller")
   })
 

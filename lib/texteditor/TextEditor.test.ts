@@ -367,6 +367,38 @@ describe("TextEditor — native form submit (Issue 10)", () => {
   })
 })
 
+/**
+ * G34 — ref на корневой элемент + `focus()` (texteditor.md Issue 11).
+ * Канон зеркалит `componentTable` у Table и `buttonRef` у Button.
+ */
+describe("TextEditor — expose корневого элемента и focus (G34)", () => {
+  it("отдаёт корневой элемент компонента", async () => {
+    const wrapper = await mountEditor({ props: { modelValue: "" } })
+
+    // Корень TextEditor — InputLayout, поэтому элемент берётся из его expose (`inputBody`),
+    // а не дублируется вторым ref на тот же узел.
+    expect(wrapper.vm.componentTextEditor).toBe(wrapper.find("[data-input-layout]").element)
+  })
+
+  it("focus() делегирует Quill, когда тот загружен", async () => {
+    const wrapper = await mountEditor({ props: { modelValue: "" } })
+    const quill = wrapper.findComponent({ name: "QuillEditor" })
+    const spy = vi.fn()
+    ;(quill.vm as any).focus = spy
+
+    wrapper.vm.focus()
+
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it("focus() не падает и без загруженного Quill", async () => {
+    const wrapper = await mountEditor({ props: { modelValue: "", theme: "snow" } })
+    // При theme="snow" bubble-редактор не рендерится, quillEditorLink пуст —
+    // фокус уходит на корневой элемент, а не теряется молча.
+    expect(() => wrapper.vm.focus()).not.toThrow()
+  })
+})
+
 describe("TextEditor — lazy-загрузка редактора", () => {
   it("не держит определение компонента в глубоко-реактивном ref", async () => {
     const wrapper = await mountEditor({ props: { modelValue: "" } })

@@ -15,7 +15,7 @@ related-doc: ../architecture/nuxt-module.md
 |---|---|---|
 | critical | 0 | — |
 | high | 0 | ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2, ~~C18~~ ✅, ~~J46 (module 0%)~~ ✅, ~~L53 (disableGlobalStyles)~~ ✅ 2026-09-05 |
-| medium | 2 | D21, F30; ~~K46 (lib/plugins — Issue 7)~~ ✅ 2026-09-05, ~~K52 (require dynamic)~~ ✅ 2026-09-05 |
+| medium | 1 | F30; ~~D21 (Issue 3 — hardcoded списки)~~ ✅ 2026-09-05, ~~K46 (Issue 7)~~ ✅ 2026-09-05, ~~K52~~ ✅ 2026-09-05 |
 | low | 2 | E29, B10 |
 
 ## ~~Issue 1: lib/module/nuxt.ts coverage 0% — нет тестов~~ ✅ resolved 2026-09-05 (частично — `lib/plugins` остаётся, см. Issue 7)
@@ -84,7 +84,7 @@ const getNuxtVersion = () => {
 2. Или через `@nuxt/kit` API — если доступно.
 3. Тест: Bun + Vite — модуль загружается без require-shim.
 
-## Issue 3: Hardcoded `FISHT_VUE_COMPONENTS` list — ручная поддержка
+## ~~Issue 3: Hardcoded `FISHT_VUE_COMPONENTS` list — ручная поддержка~~ ✅ resolved 2026-09-05
 
 - **Категория:** D21
 - **Severity:** medium
@@ -104,7 +104,11 @@ const getNuxtVersion = () => {
 
 1. Auto-derive из [lib/index.ts](../../lib/index.ts) или из filesystem (`fs.readdirSync('./lib').filter(...)`).
 2. ~~Тест: `FISHT_VUE_SUBCOMPONENTS` соответствует реальным экспортам compound-баррелей~~ ✅ 2026-09-05.
-3. Тест: `FISHT_VUE_COMPONENTS` соответствует экспортам корневого barrel — **открыто**.
+3. ~~Тест: `FISHT_VUE_COMPONENTS` соответствует экспортам корневого barrel~~ ✅ 2026-09-05.
+
+> **Закрыто инвариантом, а не auto-derive.** Списки остались явными, но рассинхронить их больше нельзя: тест парсит `export { default as X }` из [lib/index.ts](../../lib/index.ts) и сверяет с `FISHT_VUE_COMPONENTS` **в обе стороны** — и «забыли добавить», и «осталось имя, которого barrel не отдаёт» (второе опаснее: `addComponent` указал бы на несуществующий `filePath`, и Nuxt упал бы при резолве). Единственное легитимное расхождение — `Config`, это Vue plugin, а не компонент; исключение задано явным списком, а не «на глаз».
+>
+> Auto-derive (п. 1) сознательно не делался: явный список читается при ревью, а чтение barrel'а в рантайме модуля добавило бы Nuxt-сборке зависимость от парсинга исходника. Инвариант даёт ту же гарантию без этой цены.
 
 ## ~~Issue 4: peer Nuxt range — `nuxt: ">=3.0.0"` и `@nuxt/kit ^4.1.2` несогласованы~~ ✅ resolved 2026-06-19 (Wave 2.1)
 

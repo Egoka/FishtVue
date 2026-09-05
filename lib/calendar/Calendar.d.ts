@@ -410,6 +410,16 @@ export declare type CalendarExpose = {
   layout: InputLayoutExpose | undefined
 
   /**
+   * Reference to the component's ROOT element (G34).
+   *
+   * The root of Calendar is `<InputLayout>`, so the element is taken from its own expose
+   * (`inputBody`) rather than duplicating a ref on the same node. Mirrors `componentTable`
+   * on Table and `buttonRef` on Button.
+   * @type {HTMLElement | undefined}
+   */
+  componentCalendar: HTMLElement | undefined
+
+  /**
    * Reference to the input layout properties.
    * @type {Omit<InputLayoutProps, "value">}
    */
