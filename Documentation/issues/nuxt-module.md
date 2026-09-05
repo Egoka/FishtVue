@@ -15,7 +15,7 @@ related-doc: ../architecture/nuxt-module.md
 |---|---|---|
 | critical | 0 | — |
 | high | 0 | ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2, ~~C18~~ ✅, ~~J46 (module 0%)~~ ✅, ~~L53 (disableGlobalStyles)~~ ✅ 2026-09-05 |
-| medium | 3 | D21, F30, K46 (lib/plugins 0%); ~~K52 (require dynamic)~~ ✅ 2026-09-05 |
+| medium | 2 | D21, F30; ~~K46 (lib/plugins — Issue 7)~~ ✅ 2026-09-05, ~~K52 (require dynamic)~~ ✅ 2026-09-05 |
 | low | 2 | E29, B10 |
 
 ## ~~Issue 1: lib/module/nuxt.ts coverage 0% — нет тестов~~ ✅ resolved 2026-09-05 (частично — `lib/plugins` остаётся, см. Issue 7)
@@ -158,7 +158,13 @@ const getNuxtVersion = () => {
 
 Все четыре корневых issue закрыты: [button.md Issue 1](./button.md) (SSR-инжекция) ✅ 2026-06-07, [Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map) ✅ 2026-06-11, [Issue 14](./button.md) (`unstyled`) ✅ 2026-05-11. Работу server-плагина по инжекции стилей в SSR см. в Issue 5 (`disableGlobalStyles`) и Issue 7 (его покрытие тестами).
 
-## Issue 7: `lib/plugins/{Plugins,nuxt}` coverage 0%
+## ~~Issue 7: `lib/plugins/{Plugins,nuxt}` coverage 0%~~ ✅ resolved 2026-09-05
+
+> **Закрыто тестами** — [plugins.test.ts](../../lib/plugins/plugins.test.ts), 6 кейсов. `plugins/nuxt.ts` **0% → 100%** по всем метрикам: пуш по одному style-узлу на компонент, формат записи (`type: text/css`, `data-fishtvue-style-id`, `innerHTML`), пустой реестр, и обе ветки отказа — вне SSR-контекста и при `process.server === false`. `defineNuxtPlugin` мокается тождественной функцией, поэтому Nuxt поднимать не нужно.
+>
+> `Plugins.ts` — чистый ре-экспорт, его контракт проверен отдельным кейсом; цифра в отчёте останется нулём (0 исполняемых инструкций, см. ниже).
+>
+> **Важно про саму метрику.** Поднять её тестами **нельзя**: у модуля 0 исполняемых инструкций после трансформа (`export default <литерал>` / чистый ре-экспорт), v8 рапортует `0/0 statements`, а репортер рисует это как «0%». Проверено по `coverage-final.json`. На агрегат такие файлы не влияют — они не добавляют ни в числитель, ни в знаменатель. Это тот же класс, что уже описанные «ложные нули — renderless-дети». Issue закрыт по существу: поведение теперь проверяется тестами, а цифра в отчёте останется нулём навсегда.
 
 - **Категория:** J46
 - **Где:** [lib/plugins/](../../lib/plugins/), coverage 0%

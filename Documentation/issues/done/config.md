@@ -81,6 +81,33 @@ related-doc: ../../architecture/config.md
   - Новый coverage: per-theme resolve (Aurora/Harmony/Sapphire + invalid → Aurora fallback), `setActiveLocale` для non-existent locale.
   - 16 → 29 тестов в FishtVue.test.ts.
 
+## ~~Issue 7: `install()` мутирует встроенные пресеты тем и локали — утечка конфига между запросами~~ ✅ resolved 2026-09-05
+
+- **Категория:** C18 (SSR), D22 (контракт мутации)
+- **Severity:** ~~high~~
+- **Где:** [config/index.ts](../../../lib/config/index.ts) — `getDefaultOptions()`
+
+> Заведён и закрыт в один заход. Обнаружен косвенно: четыре новых coverage-теста проходили по отдельности и падали в полной сюите — классический признак утечки состояния между файлами. Причина оказалась не в тестах.
+>
+> **Что было.** `install()` собирает конфиг как `deepMerge(defaults, userOptions)`, а `deepMerge` по канону библиотеки **мутирует первый аргумент** — это зафиксировано в [utilities/objectHandler.md](../../utilities/objectHandler.md) (Issue 8) вместе с безопасным паттерном `deepMerge(deepCopy(defaults), overrides)`. Но `getDefaultOptions()` возвращал модульные синглтоны **по ссылке**: `resolveTheme()` отдавал сам импортированный пресет, а `locale.messages` — сами объекты `Locales.en` / `Locales.ru`.
+>
+> Итог: любой `app.use(FishtVue, { theme, locale })` **навсегда портил** встроенные пресеты и локали для всего процесса. Проверено экспериментально:
+>
+> ```
+> Aurora.semantic  до  {"customThemeColor":0,"customThemeColorContrast":0}
+> Aurora.semantic  после {"customThemeColor":210,"customThemeColorContrast":0,"injected":"boom"}
+> Harmony.semantic после {"customThemeColor":210,"customThemeColorContrast":0,"injected":"boom"}
+> en.save          до "Save"  после "MUTATED"
+> ```
+>
+> Обратите внимание на Harmony: все три пресета разделяют один `defaultSemantic`/`defaultPrimitive` ([themes.test.ts](../../../lib/theme/themes/themes.test.ts) фиксирует это отдельным кейсом), поэтому правка «только Aurora» протекала во все темы сразу.
+>
+> **Где это било по-настоящему — SSR.** Один Node-процесс обслуживает много запросов; конфиг первого запроса становился дефолтом для всех последующих. Рядом: несколько Vue-приложений на странице (микрофронтенды) — второе наследовало настройки первого; и `usePreset(Aurora)` после кастомной установки применял уже испорченный пресет.
+>
+> **Фикс** — ровно тот паттерн, который библиотека сама документирует: `getDefaultOptions()` отдаёт `deepCopyObject()` пресета и локалей. `deepCopyObject` уже был импортирован в файле, просто не применялся к дефолтам.
+>
+> **Регрессия** — [defaultsIsolation.test.ts](../../../lib/config/defaultsIsolation.test.ts), 8 кейсов: непорченность Aurora, непротекание в Harmony/Sapphire и общий `defaultSemantic`, отсутствие чужих ключей в пресете, чистые дефолты у второго app, целостность `en` и `ru`, и текст по умолчанию у второго app после переопределения первым.
+
 ## Cross-cutting: Configuration support
 
 | Настройка | Поддержано? | Комментарий |

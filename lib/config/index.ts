@@ -107,14 +107,27 @@ function resolveTheme(nameTheme: OptionsTheme["nameTheme"] | string | undefined)
   }
 }
 
+/**
+ * Дефолты конфигурации — **всегда свежая копия**.
+ *
+ * `install()` собирает итоговый конфиг как `deepMerge(defaults, userOptions)`, а `deepMerge` по
+ * канону библиотеки мутирует первый аргумент (см. `utilities/objectHandler.md`, Issue 8).
+ * Пока здесь возвращались модульные синглтоны по ссылке — сам импортированный пресет темы и сами
+ * объекты `Locales.en`/`Locales.ru` — любая пользовательская опция навсегда портила встроенные
+ * пресеты и локали для всего процесса. Причём все три темы разделяют один `defaultSemantic`,
+ * поэтому правка «только Aurora» протекала в Harmony и Sapphire.
+ *
+ * Больнее всего это било по SSR: один Node-процесс обслуживает много запросов, и конфиг первого
+ * запроса становился дефолтом для всех остальных.
+ */
 function getDefaultOptions(nameTheme: OptionsTheme["nameTheme"] | string | undefined): FishtVueConfiguration {
   return {
-    theme: resolveTheme(nameTheme),
+    theme: deepCopyObject(resolveTheme(nameTheme) ?? {}) as FishtVueConfiguration["theme"],
     locale: {
       defaultLocale: "en",
       messages: {
-        en: Locales.en,
-        ru: Locales.ru
+        en: deepCopyObject(Locales.en ?? {}),
+        ru: deepCopyObject(Locales.ru ?? {})
       }
     }
   }

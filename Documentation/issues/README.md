@@ -25,12 +25,12 @@ last-changes: 2026-09-05 — ревизия счётчиков и doc-sync. Ст
 | VirtualScroller | [virtualscroller.md](./virtualscroller.md) | 0        | 0     | 1      | 0      |
 | Alert           | [alert.md](./alert.md)                     | 0        | 0     | 0      | 1      |
 | Loading         | [loading.md](./loading.md)                 | 0        | 0     | 0      | 1      |
-| Theme           | [theme.md](./theme.md)                     | 0        | 1     | 3      | 2      |
+| Theme           | [theme.md](./theme.md)                     | 0        | 0     | 2      | 2      |
 | Uno engine      | [uno-engine.md](./uno-engine.md)           | 0        | 0     | 2      | 0      |
-| Locale          | [locale.md](./locale.md)                   | 0        | 1     | 4      | 2      |
-| Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 0     | 3      | 2      |
+| Locale          | [locale.md](./locale.md)                   | 0        | 0     | 4      | 2      |
+| Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 0     | 2      | 2      |
 | Utilities       | [\_utilities.md](./_utilities.md)          | 0        | 1     | 0      | 0      |
-| **TOTAL**       | **27 active + 3 done**                     | **0**    | **5** | **20** | **12** |
+| **TOTAL**       | **27 active + 3 done**                     | **0**    | **3** | **18** | **12** |
 
 > ✅ **Ревизия счётчиков проведена 2026-09-05.** Дрейф, о котором предупреждала врезка от 2026-08-02, устранён: строка TOTAL пересчитана **по фактическим «Сводка»-таблицам всех активных файлов**, счётчик «открыто» ниже приведён к той же сумме, ячейка `active + done` исправлена по реальному содержимому каталога. Пять несогласованных чисел (TOTAL, текстовый счётчик, сумма по столбцам, сумма по файлам, число документов) сведены в одно.
 >
@@ -507,11 +507,11 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 - [x] [Table.test.ts](../../lib/table/Table.test.ts) — branch coverage 67% → 80% (edit-cells + asyncData ветви) · [table.md Issue 7](./table.md). **Достигнуто: 80.34%** (чекбокс проставлен 2026-09-05)
 - [ ] [Form.test.ts](../../lib/form/Form.test.ts) — async validators, conditional rules, nested structure · [form.md Issue 8](./form.md)
 - [ ] **Infrastructure tests:**
-  - [ ] [config/baseStyle.ts](../../lib/config/baseStyle.ts) — coverage 0% → mount-test что styles в head · [config.md Issue 2](./done/config.md)
-  - [ ] [theme/themes/{Aurora,Harmony,Sapphire}.ts](../../lib/theme/themes/) — coverage 0% → preset structure tests + apply test · [theme.md Issue 2](./theme.md)
-  - [ ] [theme/uno.ts](../../lib/theme/uno.ts) + [semantic.ts](../../lib/theme/semantic.ts) — coverage 0% → tests · [theme.md Issue 3](./theme.md)
-  - [ ] [locale/locales/{en,ru}.ts](../../lib/locale/locales/) — coverage 0% → completeness test (все ключи DefaultMessages) · [locale.md Issue 1](./locale.md)
-  - [~] [module/nuxt.ts](../../lib/module/nuxt.ts) + [plugins/{nuxt,Plugins}.ts](../../lib/plugins/) — coverage 0% → тесты · [nuxt-module.md Issue 1, 7](./nuxt-module.md). **2026-09-05:** `lib/module` закрыт — [nuxt.test.ts](../../lib/module/nuxt.test.ts), 11 тестов, **0% → 100% stmts / 75% branch** (мок `@nuxt/kit` + прямой вызов `setup()`). `lib/plugins/` остаётся 0%; полноценный integration-тест через `@nuxt/test-utils` не делался.
+  - [x] [config/baseStyle.ts](../../lib/config/baseStyle.ts) — mount-test, что стили доезжают до head · [config.md Issue 2](./done/config.md) · ✅ 2026-09-05 ([baseStyle.test.ts](../../lib/config/baseStyle.test.ts))
+  - [x] [theme/themes/{Aurora,Harmony,Sapphire}.ts](../../lib/theme/themes/) — preset structure + apply · [theme.md Issue 2](./theme.md) · ✅ 2026-09-05 ([themes.test.ts](../../lib/theme/themes/themes.test.ts))
+  - [x] [theme/uno.ts](../../lib/theme/uno.ts) + [semantic.ts](../../lib/theme/semantic.ts) — покрыты поведенчески · [theme.md Issue 3](./theme.md) · ✅ 2026-09-05
+  - [x] [locale/locales/{en,ru}.ts](../../lib/locale/locales/) — симметрия ключей en↔ru, непустота значений, формат pluralization · [locale.md Issue 1](./locale.md) · ✅ 2026-09-05 ([locale.test.ts](../../lib/locale/locale.test.ts))
+  - [x] [module/nuxt.ts](../../lib/module/nuxt.ts) + [plugins/{nuxt,Plugins}.ts](../../lib/plugins/) — тесты · [nuxt-module.md Issue 1, 7](./nuxt-module.md) · ✅ 2026-09-05. `lib/module` — [nuxt.test.ts](../../lib/module/nuxt.test.ts), 11 тестов, **0% → 100% stmts / 75% branch**; `lib/plugins/nuxt.ts` — [plugins.test.ts](../../lib/plugins/plugins.test.ts), 6 тестов, **0% → 100%** по всем метрикам. Оба через мок (`@nuxt/kit`, `nuxt/app`), без поднятия Nuxt. Integration-тест через `@nuxt/test-utils` **не** делался — отдельная задача, если понадобится проверять реальный SSR-рендер.
 
 **Acceptance:** project-wide coverage ≥85% statements / ≥75% branch. CI badge обновлён. TextEditor поднят с `experimental` до `beta`. Loading / Split поднят с `beta` до `stable`.
 

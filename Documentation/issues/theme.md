@@ -14,8 +14,8 @@ related-doc: ../architecture/theme.md
 | Severity | Count | Categories                                                                                |
 | -------- | ----- | ----------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                         |
-| high     | 1     | J46 (themes 0% coverage — Issue 2); ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2             |
-| medium   | 3     | D21, F31, K46 (uno.ts 0%)                                                                 |
+| high     | 0     | ~~J46 (themes coverage — Issue 2)~~ ✅ 2026-09-05, ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2 |
+| medium   | 2     | D21, F31; ~~K46 (uno.ts / semantic.ts — Issue 3)~~ ✅ 2026-09-05                           |
 | low      | 2     | E29, N59                                                                                  |
 
 ~~B10~~ ✅ resolved 2026-07-04 — см. ниже, theme-часть Wave 9 закрыта (residual в issues/README.md).
@@ -86,7 +86,15 @@ related-doc: ../architecture/theme.md
 - [ ] Runtime `usePreset(SapphireTheme)` — все компоненты перерисуются с новой палитрой.
 - [ ] Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) и [Documentation/architecture/theme.md](../architecture/theme.md) согласованы.
 
-## Issue 2: themes/{Aurora,Harmony,Sapphire}.ts coverage 0%
+## ~~Issue 2: themes/{Aurora,Harmony,Sapphire}.ts coverage 0%~~ ✅ resolved 2026-09-05
+
+> **Закрыто тестами** — [themes.test.ts](../../lib/theme/themes/themes.test.ts), 14 кейсов: структура пресета, применение через plugin по `nameTheme`, откат на Aurora при неизвестном имени, состав `NamesTheme`, дефолты `semantic`.
+>
+> **Главное, что вскрыл тест:** все три пресета **идентичны по содержимому** и различаются только полем `name` — `primitive` и `semantic` во всех трёх это один и тот же импортированный объект. Зафиксировано отдельным кейсом: если пресеты начнут расходиться, он упадёт и заставит обновить документацию, где сейчас написано «три встроенные темы».
+>
+> Оттуда же вырос [config.md-баг с мутацией дефолтов](./done/config.md) — общий `defaultSemantic` означал, что порча Aurora протекает в Harmony и Sapphire.
+>
+> **Важно про саму метрику.** Поднять её тестами **нельзя**: у модуля 0 исполняемых инструкций после трансформа (`export default <литерал>` / чистый ре-экспорт), v8 рапортует `0/0 statements`, а репортер рисует это как «0%». Проверено по `coverage-final.json`. На агрегат такие файлы не влияют — они не добавляют ни в числитель, ни в знаменатель. Это тот же класс, что уже описанные «ложные нули — renderless-дети». Issue закрыт по существу: поведение теперь проверяется тестами, а цифра в отчёте останется нулём навсегда.
 
 - **Категория:** J46
 - **Severity:** high
@@ -107,7 +115,11 @@ related-doc: ../architecture/theme.md
 2. После Issue 1 — тест `usePreset(Aurora)` → проверка применения.
 3. Visual-regression: рендер 22 компонентов с каждой темой → snapshot.
 
-## Issue 3: `theme/uno.ts` (3 lines) и `theme/semantic.ts` (19 lines) coverage 0%
+## ~~Issue 3: `theme/uno.ts` (3 lines) и `theme/semantic.ts` (19 lines) coverage 0%~~ ✅ resolved 2026-09-05
+
+> Оба покрыты поведенчески: `semantic.ts` — кейсами «не задаёт `primary`» и «держит нулевые дефолты» в [themes.test.ts](../../lib/theme/themes/themes.test.ts); `uno.ts` — это трёхстрочный ре-экспорт `tailwind`, который прогоняется всей сюитой движка ([unoStyle/*.test.ts](../../lib/theme/unoStyle/)).
+>
+> **Важно про саму метрику.** Поднять её тестами **нельзя**: у модуля 0 исполняемых инструкций после трансформа (`export default <литерал>` / чистый ре-экспорт), v8 рапортует `0/0 statements`, а репортер рисует это как «0%». Проверено по `coverage-final.json`. На агрегат такие файлы не влияют — они не добавляют ни в числитель, ни в знаменатель. Это тот же класс, что уже описанные «ложные нули — renderless-дети». Issue закрыт по существу: поведение теперь проверяется тестами, а цифра в отчёте останется нулём навсегда.
 
 - **Категория:** J46, K46
 - **Severity:** medium
