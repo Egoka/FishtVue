@@ -34,12 +34,12 @@ related-doc: ../components/input-layout.md
 <div v-html="messageInvalid" :class="classIconContent" />
 ```
 
-`help: string` и `messageInvalid: string` — пользовательские props (приходят из Input/Aria/Select/Calendar/TextEditor через `inputLayout` computed-объект).
+`help: string` и `messageInvalid: string` — пользовательские props (приходят из Input/Textarea/Select/Calendar/TextEditor через `inputLayout` computed-объект).
 
 ### Почему это проблема
 
 - Самое критичное: `messageInvalid` часто формируется из server-validation messages (`response.errors[0].message`). Если backend возвращает HTML/escapes плохо — XSS payload в DOM.
-- Cross-cutting: ВСЕ form-controls (Input, Aria, Select, Calendar, TextEditor) пробрасывают эти props в InputLayout — фикс здесь устраняет XSS во всех 5 компонентах разом.
+- Cross-cutting: ВСЕ form-controls (Input, Textarea, Select, Calendar, TextEditor) пробрасывают эти props в InputLayout — фикс здесь устраняет XSS во всех 5 компонентах разом.
 
 ### Что нужно сделать
 
@@ -50,7 +50,7 @@ related-doc: ../components/input-layout.md
    ```
 2. `help`/`messageInvalid` остаются props как fallback — рендерятся как text-node.
 3. Если HTML-форматирование требуется — пользователь явно использует slot.
-4. Cross-cutting эффект: устраняет XSS в Input, Aria, Select, Calendar, TextEditor.
+4. Cross-cutting эффект: устраняет XSS в Input, Textarea, Select, Calendar, TextEditor.
 5. Тест с payload `<img src=x onerror=alert(1)>` для `messageInvalid` — НЕ исполняется.
 
 ### Acceptance criteria
@@ -58,7 +58,7 @@ related-doc: ../components/input-layout.md
 - [x] `<InputLayout :message-invalid="<script>alert(1)</script>">` НЕ исполняет — рендер как text-node (тест `Security / XSS guard` в `InputLayout.test.ts`).
 - [x] `<InputLayout><template #messageInvalid><strong>Error</strong></template></InputLayout>` рендерит strong-text (тест `renders user-provided messageInvalid slot`).
 - [x] `help` идентично: `<template #help>` overrides text-node fallback; XSS payload не выполняется.
-- [ ] Cross-cutting forwarding в Input/Aria/Select/Calendar/TextEditor (`<template #help><slot name="help" /></template>`) — отдельный follow-up PR; на уровне самого InputLayout XSS невозможен — fallback всегда text.
+- [ ] Cross-cutting forwarding в Input/Textarea/Select/Calendar/TextEditor (`<template #help><slot name="help" /></template>`) — отдельный follow-up PR; на уровне самого InputLayout XSS невозможен — fallback всегда text.
 
 ## Issue 2: ~~CRITICAL — Memory leak: 2 anonymous ResizeObservers без disconnect~~ ✅ resolved 2026-05-11
 
@@ -291,9 +291,9 @@ Style-for-print (не `display:none`) — корневой `classBody` полу�
 - **Категория:** E29 (a11y — WCAG 1.3.1 Info & Relationships, 3.3.2 Labels, 4.1.2 Name Role Value)
 - **Severity:** ~~high~~ (Wave 4; найден и закрыт в одной сессии → open-counts матрицы не затрагивает — остаётся 0/0/0/0)
 - **Где (was):** [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) (`<Label>` без `:for-id`, сейчас [:338](../../lib/inputlayout/InputLayout.vue#L338)), плюс все 5 потребителей.
-- **Симптом:** `Label` уже умел `<label :for="forId">` ([Issue 1 label.md](./label.md) ✅ 2026-05-11), но InputLayout рендерил `<Label v-if="label" :title …>` **без `:forId`** → у `<label>` пустой `for`. Контролы (`<input>`/`<textarea>`/триггеры) принимали `id?` опционально и **без автогенерации**; `inputLayout`-computed потребителей даже не пробрасывал `id`. Итог: клик по метке не фокусировал контрол, screen-reader не озвучивал связку — во **всех** form-controls (Input/Aria/Select/Calendar/TextEditor).
-- **Resolution (single source of truth = InputLayout):** добавлен `InputLayoutProps.id?` + автогенерация `useId()` (SSR-stable, зеркало Accordion/Split). Computed `fieldId = props.id ?? autoId`, `labelId = label ? `${fieldId}-label` : undefined` ([InputLayout.vue](../../lib/inputlayout/InputLayout.vue)). `<Label :id="labelId" :for-id="fieldId">`, дефолт-слот стал scoped — `<slot :id="fieldId" :labelledby="labelId" />`. Потребители забиндили scope: **Input/Aria** (labelable нативные) — `:id="fieldId"` → `<label for>` срабатывает нативно; **Select** — `:id` + `role="combobox"` + `:aria-labelledby="labelledby"` + `:aria-expanded="isOpenList"`; **Calendar/TextEditor** (div-триггеры) — `:id` + `:aria-labelledby="labelledby"`. Каждый добавил `id: props.id` в `inputLayout`-computed (явный `props.id` выигрывает над автогенерацией). Backward-compatible: внешние консьюмеры без `<template #default>` рендерятся как прежде.
-- **Тесты:** `InputLayout.test.ts` блок «label↔control association» (auto-id, props.id wins, `<Label>` `for`+`id`, slot `{id, labelledby}`, нет `labelledby` без label); `Input.test.ts`/`Aria.test.ts` (id всегда есть, `<label for>` === control id, явный id уважается); `Select.test.ts` (`role=combobox` + `aria-labelledby` + `aria-expanded` реактивен); `Calendar.test.ts` (aria-labelledby на триггере); `TextEditor.test.ts` source-scan (`#default` scope + `aria-labelledby` binding — mount Quill крашит jsdom rAF, см. Issue 1 todo); `Label.test.ts` (`id` fallthrough на `<label>`).
+- **Симптом:** `Label` уже умел `<label :for="forId">` ([Issue 1 label.md](./label.md) ✅ 2026-05-11), но InputLayout рендерил `<Label v-if="label" :title …>` **без `:forId`** → у `<label>` пустой `for`. Контролы (`<input>`/`<textarea>`/триггеры) принимали `id?` опционально и **без автогенерации**; `inputLayout`-computed потребителей даже не пробрасывал `id`. Итог: клик по метке не фокусировал контрол, screen-reader не озвучивал связку — во **всех** form-controls (Input/Textarea/Select/Calendar/TextEditor).
+- **Resolution (single source of truth = InputLayout):** добавлен `InputLayoutProps.id?` + автогенерация `useId()` (SSR-stable, зеркало Accordion/Split). Computed `fieldId = props.id ?? autoId`, `labelId = label ? `${fieldId}-label` : undefined` ([InputLayout.vue](../../lib/inputlayout/InputLayout.vue)). `<Label :id="labelId" :for-id="fieldId">`, дефолт-слот стал scoped — `<slot :id="fieldId" :labelledby="labelId" />`. Потребители забиндили scope: **Input/Textarea** (labelable нативные) — `:id="fieldId"` → `<label for>` срабатывает нативно; **Select** — `:id` + `role="combobox"` + `:aria-labelledby="labelledby"` + `:aria-expanded="isOpenList"`; **Calendar/TextEditor** (div-триггеры) — `:id` + `:aria-labelledby="labelledby"`. Каждый добавил `id: props.id` в `inputLayout`-computed (явный `props.id` выигрывает над автогенерацией). Backward-compatible: внешние консьюмеры без `<template #default>` рендерятся как прежде.
+- **Тесты:** `InputLayout.test.ts` блок «label↔control association» (auto-id, props.id wins, `<Label>` `for`+`id`, slot `{id, labelledby}`, нет `labelledby` без label); `Input.test.ts`/`Textarea.test.ts` (id всегда есть, `<label for>` === control id, явный id уважается); `Select.test.ts` (`role=combobox` + `aria-labelledby` + `aria-expanded` реактивен); `Calendar.test.ts` (aria-labelledby на триггере); `TextEditor.test.ts` source-scan (`#default` scope + `aria-labelledby` binding — mount Quill крашит jsdom rAF, см. Issue 1 todo); `Label.test.ts` (`id` fallthrough на `<label>`).
 - **Note (Switch):** Switch не использует InputLayout (собственный label-рендер) → вне scope этого fix.
 
 ## Issue 11: E29.7 — active-классы `<transition>` не гейтились `motion-safe:` ✅ resolved 2026-09-05

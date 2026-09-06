@@ -34,7 +34,7 @@ related-doc: ../components/input.md
 - **Категория:** L53
 - **Severity:** ~~high~~
 - **Где:** [Input.vue:62-64](../../lib/input/Input.vue#L62-L64)
-- **Resolution:** `mode` computed теперь содержит `?? Input.componentsStyle()` в fallback chain. Покрыто 2 тестами в [Input.test.ts](../../lib/input/Input.test.ts) (single-fallback + priority chain `props > options > componentsStyle > "outlined"`). Cross-cutting для Aria/Select/Calendar/TextEditor — отдельные строчки в Wave 3.2 ([issues/README.md](./README.md)).
+- **Resolution:** `mode` computed теперь содержит `?? Input.componentsStyle()` в fallback chain. Покрыто 2 тестами в [Input.test.ts](../../lib/input/Input.test.ts) (single-fallback + priority chain `props > options > componentsStyle > "outlined"`). Cross-cutting для Textarea/Select/Calendar/TextEditor — отдельные строчки в Wave 3.2 ([issues/README.md](./README.md)).
 
 ### Acceptance criteria
 
@@ -162,7 +162,7 @@ related-doc: ../components/input.md
   3. `focus(focusEvent)` — template handler (эмитит `"focus"`).
 
   В `InputExpose` ([Input.d.ts](../../lib/input/Input.d.ts)) сигнатура также обновлена. Паритет с `Button.focus()` ([done/button.md Issue 4](./button.md)). Покрыто 3 тестами (argless / FocusEvent / FocusOptions).
-- **Cross-cutting (deferred):** Aria/Select/TextEditor имеют ту же проблему — оставлены открытыми в [aria.md](./aria.md), [select.md](./select.md), [texteditor.md](./texteditor.md) (вне scope Input-ТЗ).
+- **Cross-cutting (deferred):** Textarea/Select/TextEditor имеют ту же проблему — оставлены открытыми в [aria.md](./aria.md), [select.md](./select.md), [texteditor.md](./texteditor.md) (вне scope Input-ТЗ).
 
 ### Acceptance criteria
 
@@ -202,7 +202,7 @@ related-doc: ../components/input.md
 - **Severity:** ~~low~~
 - **Где:** [Input.vue:89](../../lib/input/Input.vue#L89)
 - **Симптом:** на `input[data-input]` один кадр мелькала граница/outline — и при фокусе, и при mount/перезагрузке.
-- **Причина:** широкий `motion-safe:transition-all` в `classBaseInput`. Обёртка `InputLayout` гейтит свой `transition-all` через `isTick` (включается через `setTimeout 100ms` после mount — [InputLayout.vue:67-73](../../lib/inputlayout/InputLayout.vue#L67-L73), [:223](../../lib/inputlayout/InputLayout.vue#L223)), а у самого инпута такого гейта **не было**. Поэтому `transition-all` анимировал geometry/outline один кадр: (1) при mount — когда стили инжектятся в `onMounted` (`Component.__hooks()`), свойства анимируются из UA-дефолта в стилизованное состояние; (2) при фокусе — `outline-width` UA-initial → `focus:outline-0`. У `Aria.vue:67` тот же набор классов, но **без** `transition-all` — там дефекта нет.
+- **Причина:** широкий `motion-safe:transition-all` в `classBaseInput`. Обёртка `InputLayout` гейтит свой `transition-all` через `isTick` (включается через `setTimeout 100ms` после mount — [InputLayout.vue:67-73](../../lib/inputlayout/InputLayout.vue#L67-L73), [:223](../../lib/inputlayout/InputLayout.vue#L223)), а у самого инпута такого гейта **не было**. Поэтому `transition-all` анимировал geometry/outline один кадр: (1) при mount — когда стили инжектятся в `onMounted` (`Component.__hooks()`), свойства анимируются из UA-дефолта в стилизованное состояние; (2) при фокусе — `outline-width` UA-initial → `focus:outline-0`. У `Textarea.vue:67` тот же набор классов, но **без** `transition-all` — там дефекта нет.
 - **Resolution:** широкий `motion-safe:transition-all` → узкий `motion-safe:transition-colors` ([Input.vue:89](../../lib/input/Input.vue#L89)). `transition-colors` покрывает только `color/background-color/border-color/...` — **не** `outline` и не geometry → анимировать на mount/фокусе нечего (поле пустое, фон `bg-transparent`, `border-0`). Переход остаётся `motion-safe:`-gated → **E29.7 не нарушен** (см. Issue 9). `outline` возвращён к исходному `focus:outline-0` (без transition он применяется мгновенно, вспышки нет); видимый focus-индикатор обеспечивает `ring-2 ring-theme-600` обёртки `InputLayout` (a11y не затронут).
 - **Связь с Issue 9:** acceptance Issue 9 (motion-safe transitions) пересмотрен — тест `Issue 9 — motion-safe transitions` теперь требует `motion-safe:transition-colors` (узкий) и **запрещает** `transition-all`. Requirement E29.7 (reduced-motion) выполняется по-прежнему.
 - **Verified:** browser-preview — `getComputedStyle(input).transitionProperty` = color-список (не `all`), outline вне transition-набора; `pnpm typecheck` + Input suite (43) зелёные.

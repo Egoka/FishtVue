@@ -26,7 +26,7 @@
   } from "./Form"
   import Icons from "fishtvue/icons/Icons.vue"
   import Input from "fishtvue/input/Input.vue"
-  import Aria from "fishtvue/aria/Aria.vue"
+  import Textarea from "fishtvue/textarea/Textarea.vue"
   import Select from "fishtvue/select/Select.vue"
   import Calendar from "fishtvue/calendar/Calendar.vue"
   import TextEditor from "fishtvue/texteditor/TextEditor.vue"
@@ -65,16 +65,16 @@
     "afterIcon",
     "afterText"
   ]
-  const arrayFieldsValidate = ["Input", "Aria", "Select", "Calendar", "TextEditor"]
+  const arrayFieldsValidate = ["Input", "Textarea", "Select", "Calendar", "TextEditor"]
   const baseInputs = {
     Input,
-    Aria,
+    Textarea,
     Select,
     Calendar,
     TextEditor,
     Switch
   }
-  type BaseInputKey = "Input" | "Aria" | "Select" | "Calendar" | "TextEditor" | "Switch"
+  type BaseInputKey = "Input" | "Textarea" | "Select" | "Calendar" | "TextEditor" | "Switch"
   // ---ISSUE 3 — резолв компонента поля: встроенный тип > зарегистрированный custom-тип.
   // Если ни то, ни другое — рендерится Custom-slot (v-else в шаблоне).
   function resolveFieldComponent(typeComponent: string) {
@@ -369,7 +369,7 @@
             }
             if (
               resultField.typeComponent === "Input" ||
-              resultField.typeComponent === "Aria" ||
+              resultField.typeComponent === "Textarea" ||
               resultField.typeComponent === "Select" ||
               resultField.typeComponent === "Calendar" ||
               resultField.typeComponent === "TextEditor"

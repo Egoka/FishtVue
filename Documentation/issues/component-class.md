@@ -51,7 +51,7 @@ Sweep по 6 SFC × 7 occurrences:
 - ~~Separator.vue:127-129~~ — весь `onMounted(() => { Separator.initStyle() })` удалён, заменён comment-marker'ом.
 - ~~Table.vue:937~~ — `Table.initStyle()` удалён, comment-marker над `onMounted`; блок сохранён (tableObserver + sortColumns setup).
 
-После sweep'а: **14 SFC чистые** (Alert, Aria, Calendar, Input, Label, Select, Switch + Button, Icons, InputLayout, Menu, Separator, Table, FixWindow — последний sweep'нут 2026-05-16 в рамках fix(fixwindow) audit close-out), **7 SFC не используют initStyle** (Accordion, Badge, Dialog, Form, Pagination, Split, TextEditor), Dialog ✅ переведён в `./done/` ранее. Итого 21/21 чистых core SFC. _Correction (2026-05-16): FixWindow ошибочно числился в списке "не используют initStyle" — на самом деле использовал ручной `FixWindow.initStyle()` в `onMounted` SFC line 132; убран в рамках Wave 2.3._
+После sweep'а: **14 SFC чистые** (Alert, Textarea, Calendar, Input, Label, Select, Switch + Button, Icons, InputLayout, Menu, Separator, Table, FixWindow — последний sweep'нут 2026-05-16 в рамках fix(fixwindow) audit close-out), **7 SFC не используют initStyle** (Accordion, Badge, Dialog, Form, Pagination, Split, TextEditor), Dialog ✅ переведён в `./done/` ранее. Итого 21/21 чистых core SFC. _Correction (2026-05-16): FixWindow ошибочно числился в списке "не используют initStyle" — на самом деле использовал ручной `FixWindow.initStyle()` в `onMounted` SFC line 132; убран в рамках Wave 2.3._
 
 Acceptance criteria:
 

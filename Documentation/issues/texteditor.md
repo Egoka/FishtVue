@@ -264,7 +264,7 @@ Toolbar `[{ font: [] }]`, `[{ align: [] }]` — Quill default labels.
 
 ## ~~Issue 10: Native form integration отсутствует~~ ✅ resolved 2026-09-05
 
-> **Закрыто.** В `#default`-слот добавлен `<input type="hidden" data-text-editor-value :name="id" :value="modelValue ?? ''">` — канон зеркалит [Aria.vue:172](../../lib/aria/Aria.vue#L172), где `id` компонента служит и именем поля формы.
+> **Закрыто.** В `#default`-слот добавлен `<input type="hidden" data-text-editor-value :name="id" :value="modelValue ?? ''">` — канон зеркалит [Textarea.vue:172](../../lib/textarea/Textarea.vue#L172), где `id` компонента служит и именем поля формы.
 >
 > Два уточнения против исходного плана:
 >

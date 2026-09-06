@@ -7,7 +7,7 @@
   import DemoSelect from "@/components/demo/Select.vue"
   import DemoCalendar from "@/components/demo/Calendar.vue"
   import DemoSwitch from "@/components/demo/Switch.vue"
-  import DemoAria from "@/components/demo/Aria.vue"
+  import DemoAria from "@/components/demo/Textarea.vue"
   import DemoForm from "@/components/demo/Form.vue"
   import DemoButton from "@/components/demo/Button.vue"
   import DemoTable from "@/components/demo/Table.vue"
@@ -127,7 +127,7 @@
                 <DemoSwitch />
               </DocComponent>
               <DocComponent
-                title="Aria"
+                title="Textarea"
                 subtitle="Utility component to assist with ARIA attributes for form accessibility.  ">
                 <DemoAria />
               </DocComponent>

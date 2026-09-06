@@ -81,7 +81,7 @@ const MODULE_OPTIONS = ["global", "mode", "prefix", "autoImport", "disableGlobal
 const FISHT_VUE_COMPONENTS = [
   "Accordion",
   "Alert",
-  "Aria",
+  "Textarea",
   "Badge",
   "Button",
   "Calendar",

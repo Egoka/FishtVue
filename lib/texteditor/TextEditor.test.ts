@@ -329,7 +329,7 @@ describe("TextEditor Component", () => {
  * Native form integration (texteditor.md Issue 10 — M54-55).
  *
  * Quill рендерит контент в contenteditable-div'ах: при native submit значение не попадало в
- * FormData вообще. Скрытый input повторяет канон Aria.vue (`:name="id"`).
+ * FormData вообще. Скрытый input повторяет канон Textarea.vue (`:name="id"`).
  */
 describe("TextEditor — native form submit (Issue 10)", () => {
   it("отдаёт значение в FormData под именем id", async () => {

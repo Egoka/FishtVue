@@ -3,7 +3,7 @@ import { Rules } from "fishtvue/utils/rulesHandler"
 import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import { LabelMode } from "fishtvue/label"
 import { InputProps } from "fishtvue/input"
-import { AriaProps } from "fishtvue/aria"
+import { TextareaProps } from "fishtvue/textarea"
 import { SelectProps } from "fishtvue/select"
 import { CalendarProps } from "fishtvue/calendar"
 import { TextEditorProps } from "fishtvue/texteditor"
@@ -94,20 +94,20 @@ export type FieldInput = Field &
   }
 
 /**
- * Field configuration for Aria component
+ * Field configuration for Textarea component
  *
- * Inherits from InputLayoutProps (via AriaProps) which provides common properties like:
+ * Inherits from InputLayoutProps (via TextareaProps) which provides common properties like:
  * label, labelMode, mode, isInvalid, messageInvalid, required, loading, disabled, help, clear, etc.
  *
- * @property {typeComponent} typeComponent - Must be "Aria" to identify this field type
+ * @property {typeComponent} typeComponent - Must be "Textarea" to identify this field type
  */
 export type FieldAria = Field &
   FieldAdditional &
-  AriaProps & {
+  TextareaProps & {
     /**
-     * The type of component, must be "Aria"
+     * The type of component, must be "Textarea"
      */
-    typeComponent: "Aria"
+    typeComponent: "Textarea"
   }
 
 /**
@@ -247,7 +247,7 @@ export type FieldRegistered = Field &
  */
 export type FieldComponentType =
   | "Input"
-  | "Aria"
+  | "Textarea"
   | "Select"
   | "Calendar"
   | "TextEditor"
@@ -261,7 +261,7 @@ export type FieldComponentType =
  */
 export type FieldType<T extends FieldComponentType = FieldComponentType> = T extends "Input"
   ? FieldInput
-  : T extends "Aria"
+  : T extends "Textarea"
     ? FieldAria
     : T extends "Select"
       ? FieldSelect

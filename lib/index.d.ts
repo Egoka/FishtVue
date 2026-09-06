@@ -4,9 +4,9 @@ export { default as Accordion } from "fishtvue/accordion"
 // Alert
 export * from "fishtvue/alert"
 export { default as Alert } from "fishtvue/alert"
-// Aria
-export * from "fishtvue/aria"
-export { default as Aria } from "fishtvue/aria"
+// Textarea
+export * from "fishtvue/textarea"
+export { default as Textarea } from "fishtvue/textarea"
 // Badge
 export * from "fishtvue/badge"
 export { default as Badge } from "fishtvue/badge"

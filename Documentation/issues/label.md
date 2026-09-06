@@ -149,7 +149,7 @@ type.value === 'offsetDynamic' ? `peer-focus:-translate-y-[48px] peer-focus:tran
 - **Категория:** E29.7
 - **Severity:** ~~low~~
 - **Где (was):** ~~[Label.vue:27]~~ → теперь [Label.vue:36](../../lib/label/Label.vue#L36) — `motion-safe:transition-all motion-safe:duration-200`.
-- **Resolution:** `transition-all duration-200` заменено на `motion-safe:transition-all motion-safe:duration-200` (same pattern как [Input.vue, Button.vue, Aria.vue, Select.vue, Calendar.vue post-fix](../../lib/aria/Aria.vue)). Анимации label отключаются при `prefers-reduced-motion: reduce`. Тест: `applies motion-safe guard on transition classes`. Wave 10.1 progress 3/22 → 4/22.
+- **Resolution:** `transition-all duration-200` заменено на `motion-safe:transition-all motion-safe:duration-200` (same pattern как [Input.vue, Button.vue, Textarea.vue, Select.vue, Calendar.vue post-fix](../../lib/textarea/Textarea.vue)). Анимации label отключаются при `prefers-reduced-motion: reduce`. Тест: `applies motion-safe guard on transition classes`. Wave 10.1 progress 3/22 → 4/22.
 
 ## ~~Issue 9: RTL — `translate-x-4` и `after:ml-0.5` буквальны~~ ✅ resolved 2026-09-06
 

@@ -74,7 +74,7 @@
 
 ### A11y
 
-- [components/aria.md](./components/aria.md) — Aria (textarea-аналог) с InputLayout-обёрткой.
+- [components/textarea.md](./components/textarea.md) — Textarea (textarea-аналог) с InputLayout-обёрткой.
 
 ## Misc
 

@@ -31,7 +31,7 @@ Closed 2026-06-14: Issue 7 (F31/RTL — logical `start`/`end` + deprecated фи�
 
 **Что сделано (2026-05-11):**
 
-- `<div v-if="subtitle" v-html="subtitle" />` → text-interpolation + slot `#subtitle` (raw `v-html` устранён). Соответствовало cross-cutting паттерну (Select / Switch / Aria / Label).
+- `<div v-if="subtitle" v-html="subtitle" />` → text-interpolation + slot `#subtitle` (raw `v-html` устранён). Соответствовало cross-cutting паттерну (Select / Switch / Textarea / Label).
 - `AlertSlots` расширен `subtitle: () => VNode[]` ([Alert.d.ts](../../lib/alert/Alert.d.ts)).
 
 **Amendment 2026-06-14 — sanitized v-html (HTML-поддержка возвращена):**

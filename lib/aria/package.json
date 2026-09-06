@@ -1,5 +1,0 @@
-{
-  "main": "./aria.mjs",
-  "module": "./aria.mjs",
-  "types": "./Aria.d.ts"
-}

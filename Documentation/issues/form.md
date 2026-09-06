@@ -113,7 +113,7 @@ API был только schema-driven через `structure: FormStructure[]` �
 
 ### Known limitation
 
-FormData собирает только поля с native `name`-инпутом — сейчас это **Input** (Aria). Switch/Select/Calendar/TextEditor не рендерят hidden native input (их собственные issues — напр. [switch.md Issue 3](./switch.md), [texteditor.md Issue 10](./texteditor.md)); для них значения берутся через `v-model:form-fields`/`submit`-event, не через FormData. Form не правит другие компоненты.
+FormData собирает только поля с native `name`-инпутом — сейчас это **Input** (Textarea). Switch/Select/Calendar/TextEditor не рендерят hidden native input (их собственные issues — напр. [switch.md Issue 3](./switch.md), [texteditor.md Issue 10](./texteditor.md)); для них значения берутся через `v-model:form-fields`/`submit`-event, не через FormData. Form не правит другие компоненты.
 
 ## Issue 5: SSR styles + sideEffects/exports map + unstyled ✅ resolved 2026-06-13
 

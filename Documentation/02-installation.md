@@ -269,7 +269,7 @@ app.mount("#app")
 
 ### A11y
 
-Установка не вносит a11y-логики. Ответственность каждого компонента; компонент [Aria](./components/aria.md) предоставляет общие abstractions.
+Установка не вносит a11y-логики. Ответственность каждого компонента; компонент [Textarea](./components/textarea.md) предоставляет общие abstractions.
 
 ### Security
 

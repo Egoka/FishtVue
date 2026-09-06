@@ -67,7 +67,7 @@ related-doc: ../components/switch.md
 **Рекомендация — Опция A.** Slot — стандартный Vue-pattern, безопасный, гибкий, type-safe.
 
 3. Cross-cutting: проверить остальные компоненты на `v-html` через `grep -rn 'v-html' lib/`. Найти дополнительные сайты:
-   - Form, Aria, InputLayout, Alert, Dialog — могут иметь help/messageInvalid/content props через v-html.
+   - Form, Textarea, InputLayout, Alert, Dialog — могут иметь help/messageInvalid/content props через v-html.
 
 ### Acceptance criteria
 
@@ -333,7 +333,7 @@ switchingType: "checkbox" | "switch" | string
 - **Категория:** N59
 - **Severity:** ~~low~~
 - **Где:** [Switch.vue:66](../../lib/switch/Switch.vue#L66), [Switch.vue:84](../../lib/switch/Switch.vue#L84)
-- **Resolution:** Канон FishtVue **style-for-print** (зеркало Button/Input/Aria — стилизуем для печати, не прячем `display:none`). Корневой `classBaseSwitch` (обе ветки `switch`/`checkbox`) получил `print:border print:border-black print:bg-white print:text-black print:shadow-none` — Switch печатается монохромным и читаемым. Тест блока «Print styles» подтверждает `print:*`-присутствие + отсутствие `print:hidden`.
+- **Resolution:** Канон FishtVue **style-for-print** (зеркало Button/Input/Textarea — стилизуем для печати, не прячем `display:none`). Корневой `classBaseSwitch` (обе ветки `switch`/`checkbox`) получил `print:border print:border-black print:bg-white print:text-black print:shadow-none` — Switch печатается монохромным и читаемым. Тест блока «Print styles» подтверждает `print:*`-присутствие + отсутствие `print:hidden`.
 
 См. [button.md Issue 15](./button.md).
 

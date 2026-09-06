@@ -3,5 +3,5 @@
 </script>
 
 <template>
-  <Aria label="Message" v-model="value"></Aria>
+  <Textarea label="Message" v-model="value"></Textarea>
 </template>

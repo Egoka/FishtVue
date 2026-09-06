@@ -1,30 +1,30 @@
 ---
-title: Aria
+title: Textarea
 summary: Многострочный input (textarea-like) с InputLayout-обёрткой, validation, focus/blur events.
 updated: 2026-05-11
 stability: stable
 since: 0.2.11
 ---
 
-# Aria
+# Textarea
 
 ## 1. Overview
 
-`Aria` — компонент для многострочного ввода (textarea-семантика) с интеграцией [InputLayout](./input-layout.md). Поддерживает `wrap`-режимы, `rows`, `maxLength`, валидацию через [Form](./form.md) и [rulesHandler](../utilities/rulesHandler.md). Реализует v-model contract FishtVue.
+`Textarea` — компонент для многострочного ввода (textarea-семантика) с интеграцией [InputLayout](./input-layout.md). Поддерживает `wrap`-режимы, `rows`, `maxLength`, валидацию через [Form](./form.md) и [rulesHandler](../utilities/rulesHandler.md). Реализует v-model contract FishtVue.
 
-Наименование «Aria» восходит к семантике form-controls (как WAI-ARIA), но компонент — **не** общий a11y abstraction. Это конкретный textarea-аналог.
+Наименование «Textarea» восходит к семантике form-controls (как WAI-ARIA), но компонент — **не** общий a11y abstraction. Это конкретный textarea-аналог.
 
-Stability: `stable` — 9 кейсов, coverage `Aria.vue` 98.43%.
+Stability: `stable` — 9 кейсов, coverage `Textarea.vue` 98.43%.
 
-Source: [Source](../../lib/aria/Aria.vue), [Aria.d.ts](../../lib/aria/Aria.d.ts), [Aria.test.ts](../../lib/aria/Aria.test.ts).
+Source: [Source](../../lib/textarea/Textarea.vue), [Textarea.d.ts](../../lib/textarea/Textarea.d.ts), [Textarea.test.ts](../../lib/textarea/Textarea.test.ts).
 
 ## 2. How it's organized
 
 ```
-lib/aria/
-├── Aria.vue
-├── Aria.d.ts          # 255 строк
-├── Aria.test.ts       # 9 кейсов
+lib/textarea/
+├── Textarea.vue
+├── Textarea.d.ts          # 255 строк
+├── Textarea.test.ts       # 9 кейсов
 └── package.json
 ```
 
@@ -32,10 +32,10 @@ lib/aria/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) сам регистрирует `onServerPrefetch + vueOnMounted → initStyle()` в конструкторе — никакого `onMounted(() => Aria.initStyle())` в SFC.
+- **Lifecycle:** `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) сам регистрирует `onServerPrefetch + vueOnMounted → initStyle()` в конструкторе — никакого `onMounted(() => Textarea.initStyle())` в SFC.
 - **Поток данных:** `modelValue` ↔ внутренний `<textarea>` value через v-model contract (4 шага, как в [dev-patterns §4](../dev-patterns.md#4-sfc-pattern)).
-- **Стили:** `Aria.setStyle()` для контейнера и textarea.
-- **Конфиг:** `componentsOptions.Aria` — см. §10.
+- **Стили:** `Textarea.setStyle()` для контейнера и textarea.
+- **Конфиг:** `componentsOptions.Textarea` — см. §10.
 - **Локализация:** через [InputLayout](./input-layout.md).
 - **SSR:** SSR-safe.
 - **Animation:** только transitions из [InputLayout](./input-layout.md).
@@ -45,19 +45,19 @@ lib/aria/
 ```vue
 <script setup lang="ts">
 import { ref } from "vue"
-import Aria from "fishtvue/aria"
+import Textarea from "fishtvue/textarea"
 
 const text = ref("")
 </script>
 
 <template>
-  <Aria v-model="text" label="Comment" :rows="4" />
+  <Textarea v-model="text" label="Comment" :rows="4" />
 </template>
 ```
 
 ## 5. Props
 
-`AriaProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseAriaProps>` ([Aria.d.ts:55–72](../../lib/aria/Aria.d.ts#L55-L72)).
+`TextareaProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseAriaProps>` ([Textarea.d.ts:55–72](../../lib/textarea/Textarea.d.ts#L55-L72)).
 
 `BaseAriaProps`:
 
@@ -81,7 +81,7 @@ const text = ref("")
 
 ## 6. Events / Emits + v-model contract
 
-`AriaEmits` ([Aria.d.ts:102–142](../../lib/aria/Aria.d.ts#L102-L142)):
+`TextareaEmits` ([Textarea.d.ts:102–142](../../lib/textarea/Textarea.d.ts#L102-L142)):
 
 | Event | Payload | When fired |
 |---|---|---|
@@ -102,17 +102,17 @@ const text = ref("")
 | `after` | `{ isInvalid: boolean; isFocused: boolean; clear: () => void }` | Контент справа. Slot context добавлен 2026-05-11 — позволяет условно стилизовать содержимое и вызывать `clear()` изнутри slot-шаблона. |
 
 ```vue
-<Aria v-model="comment" :is-invalid="hasError" clear>
+<Textarea v-model="comment" :is-invalid="hasError" clear>
   <template #after="{ isInvalid, isFocused, clear }">
     <button v-if="isInvalid" type="button" @click="clear">сбросить</button>
     <span v-else-if="isFocused" class="text-xs text-gray-500">{{ comment.length }} / 500</span>
   </template>
-</Aria>
+</Textarea>
 ```
 
 ## 8. Exposed methods
 
-`AriaExpose`:
+`TextareaExpose`:
 
 | Name | Type | Description |
 |---|---|---|
@@ -128,7 +128,7 @@ const text = ref("")
 ### 9.1 Базовый
 
 ```vue
-<Aria v-model="comment" label="Comment" :rows="3" :max-length="500" />
+<Textarea v-model="comment" label="Comment" :rows="3" :max-length="500" />
 ```
 
 ### 9.2 С глобальной конфигурацией
@@ -136,7 +136,7 @@ const text = ref("")
 ```ts
 app.use(FishtVue, {
   componentsOptions: {
-    Aria: { mode: "outlined", rows: 4, wrap: "soft" }
+    Textarea: { mode: "outlined", rows: 4, wrap: "soft" }
   }
 })
 ```
@@ -146,19 +146,19 @@ app.use(FishtVue, {
 ```vue
 <Form :structure="[
   { fields: [
-    { name: 'feedback', typeField: 'Aria', label: 'Feedback', rows: 5, rules: [{ type: 'required' }] }
+    { name: 'feedback', typeField: 'Textarea', label: 'Feedback', rows: 5, rules: [{ type: 'required' }] }
   ]}
 ]" v-model:form-fields="values" />
 ```
 
-(Note: проверь, регистрирует ли Form тип `"Aria"` для своего FieldType union — может потребоваться custom field или Input.)
+(Note: проверь, регистрирует ли Form тип `"Textarea"` для своего FieldType union — может потребоваться custom field или Input.)
 
 ### 9.4 С Pinia
 
 ```vue
 <script setup lang="ts">
 import { storeToRefs } from "pinia"
-import Aria from "fishtvue/aria"
+import Textarea from "fishtvue/textarea"
 import { useDraftStore } from "@/stores/draft"
 
 const store = useDraftStore()
@@ -166,7 +166,7 @@ const { content } = storeToRefs(store)
 </script>
 
 <template>
-  <Aria
+  <Textarea
     v-model="content"
     label="Draft content"
     :rows="10"
@@ -178,9 +178,9 @@ const { content } = storeToRefs(store)
 
 ### 10.1 Global
 
-`AriaOption = Pick<AriaProps, "autocomplete" | "wrap" | "rows" | "maxLength" | "classInput" | keyof InputLayoutOption>`.
+`TextareaOption = Pick<TextareaProps, "autocomplete" | "wrap" | "rows" | "maxLength" | "classInput" | keyof InputLayoutOption>`.
 
-`mode` определяется через стандартный fallback chain — `props.mode ?? componentsOptions.Aria.mode ?? Aria.componentsStyle() ?? "outlined"` ([Aria.vue:49–51](../../lib/aria/Aria.vue#L49-L51)). Установка глобального `componentsStyle: "filled"` через `FishtVue` plugin автоматически меняет `mode` в Aria, если он не задан per-instance.
+`mode` определяется через стандартный fallback chain — `props.mode ?? componentsOptions.Textarea.mode ?? Textarea.componentsStyle() ?? "outlined"` ([Textarea.vue:49–51](../../lib/textarea/Textarea.vue#L49-L51)). Установка глобального `componentsStyle: "filled"` через `FishtVue` plugin автоматически меняет `mode` в Textarea, если он не задан per-instance.
 
 ### 10.2 Per-instance
 
@@ -207,8 +207,8 @@ Root класс — `fv fishtvue-aria`.
 - Корневой `<textarea>` — нативные семантика и keyboard.
 - `aria-describedby` для error — управляется [InputLayout](./input-layout.md).
 - `aria-required` через `required` prop.
-- `placeholder:transition-all` обёрнут в `motion-safe:` ([Aria.vue:65](../../lib/aria/Aria.vue#L65)) — Tailwind транспилирует это в `@media (prefers-reduced-motion: no-preference)`, поэтому пользователи с настройкой `reduce` не видят анимации placeholder'а. WCAG 2.3.3.
-- `print:*` классы ([Aria.vue:68](../../lib/aria/Aria.vue#L68)) гарантируют читаемое отображение textarea при печати (`bg-white text-black border-black`, без теней).
+- `placeholder:transition-all` обёрнут в `motion-safe:` ([Textarea.vue:65](../../lib/textarea/Textarea.vue#L65)) — Tailwind транспилирует это в `@media (prefers-reduced-motion: no-preference)`, поэтому пользователи с настройкой `reduce` не видят анимации placeholder'а. WCAG 2.3.3.
+- `print:*` классы ([Textarea.vue:68](../../lib/textarea/Textarea.vue#L68)) гарантируют читаемое отображение textarea при печати (`bg-white text-black border-black`, без теней).
 
 ### Security
 
@@ -232,11 +232,11 @@ const rules = [{ type: "length", max: 500 }]
 ## 13. TypeScript
 
 ```ts
-import type { AriaProps, AriaEmits, AriaExpose, BaseAriaProps } from "fishtvue/aria"
-import Aria from "fishtvue/aria"
+import type { TextareaProps, TextareaEmits, TextareaExpose, BaseAriaProps } from "fishtvue/textarea"
+import Textarea from "fishtvue/textarea"
 import { useTemplateRef } from "vue"
 
-const a = useTemplateRef<InstanceType<typeof Aria>>("a")
+const a = useTemplateRef<InstanceType<typeof Textarea>>("a")
 a.value?.focus(new FocusEvent("focus"))
 a.value?.clear()
 ```
@@ -254,11 +254,11 @@ a.value?.clear()
 import { mount } from "@vue/test-utils"
 import { describe, expect, it } from "vitest"
 import FishtVue from "fishtvue/config"
-import Aria from "fishtvue/aria/Aria.vue"
+import Textarea from "fishtvue/textarea/Textarea.vue"
 
-describe("Aria", () => {
+describe("Textarea", () => {
   it("emits update:modelValue", async () => {
-    const wrapper = mount(Aria, {
+    const wrapper = mount(Textarea, {
       global: { plugins: [[FishtVue, {}]] }
     })
     await wrapper.find("textarea").setValue("hello")
@@ -267,7 +267,7 @@ describe("Aria", () => {
 })
 ```
 
-Реальные тесты — [Aria.test.ts](../../lib/aria/Aria.test.ts) (9 кейсов).
+Реальные тесты — [Textarea.test.ts](../../lib/textarea/Textarea.test.ts) (9 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
@@ -276,7 +276,7 @@ describe("Aria", () => {
 | Высота не реагирует на rows | CSS-override родительского `height`. | Снять `height` или передавать `class` явно. |
 | `wrap: "off"` создаёт горизонтальный scroll | By design — soft-wrap отключён. | Используй `wrap: "soft"` для wrap при overflow. |
 | `maxLength` не enforce'ится при paste | Native поведение зависит от браузера. | Дополнительная проверка на input handler. |
-| Form не распознаёт `typeField: "Aria"` | Возможно тип не зарегистрирован. | Проверь FieldType в [Form.d.ts](../../lib/form/Form.d.ts). |
+| Form не распознаёт `typeField: "Textarea"` | Возможно тип не зарегистрирован. | Проверь FieldType в [Form.d.ts](../../lib/form/Form.d.ts). |
 
 ## 17. Related
 
@@ -288,7 +288,7 @@ describe("Aria", () => {
 
 ### TODO / FIXME / HACK / XXX
 
-На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [Aria.vue](../../lib/aria/Aria.vue) и [Aria.d.ts](../../lib/aria/Aria.d.ts) не зафиксировано.
+На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [Textarea.vue](../../lib/textarea/Textarea.vue) и [Textarea.d.ts](../../lib/textarea/Textarea.d.ts) не зафиксировано.
 
 ### Incomplete or stubbed behavior
 
@@ -300,14 +300,14 @@ describe("Aria", () => {
 
 ### API inconsistencies
 
-- Имя «Aria» вводит в заблуждение — компонент не общая a11y abstraction, а textarea-аналог. Tracked в [Documentation/issues/aria.md](../issues/aria.md) Issue 6 — переименование в `Textarea` отложено в отдельный breaking-change PR.
+- Имя «Textarea» вводит в заблуждение — компонент не общая a11y abstraction, а textarea-аналог. Tracked в [Documentation/issues/textarea.md](../issues/textarea.md) Issue 6 — переименование в `Textarea` отложено в отдельный breaking-change PR.
 
 ### Resolved 2026-05-11
 
-- ~~`change:modelValue(payload: boolean)` type bug~~ — исправлено: payload теперь `string` ([Aria.d.ts:125](../../lib/aria/Aria.d.ts#L125)). Cross-cutting fix также в TextEditor.
+- ~~`change:modelValue(payload: boolean)` type bug~~ — исправлено: payload теперь `string` ([Textarea.d.ts:125](../../lib/textarea/Textarea.d.ts#L125)). Cross-cutting fix также в TextEditor.
 - ~~`modelValue?: string | number | null | undefined`~~ — narrowed до `string | null | undefined`.
-- ~~Дубль `onMounted(() => Aria.initStyle())`~~ — удалён, остался только `Component.__hooks()`-канон.
-- ~~`mode` не учитывает `Aria.componentsStyle()`~~ — добавлен fallback chain.
+- ~~Дубль `onMounted(() => Textarea.initStyle())`~~ — удалён, остался только `Component.__hooks()`-канон.
+- ~~`mode` не учитывает `Textarea.componentsStyle()`~~ — добавлен fallback chain.
 - ~~Slots `before` / `after` без типизированного контекста~~ — добавлены `{ isInvalid, isFocused, clear }`.
 - ~~`placeholder:transition-all` без `motion-safe:`~~ — обёрнут в `motion-safe:`.
 - ~~Нет print styles~~ — добавлены `print:*` классы в classInput.

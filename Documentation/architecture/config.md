@@ -127,7 +127,7 @@ app.use<FishtVueConfiguration>(FishtVue, config)
 | `layers` | `string \| "fishtvue"` | — | Список дополнительных `@layer` через запятую. Применяется ДО `@layer fishtvue` — поздние layers побеждают. |
 | `isNotMinifyCSS` | `boolean` | `false` | Отключает `minifyCSS` для удобства отладки. |
 
-`ComponentsOptions` ([FishtVue.d.ts:166–189](../../lib/config/FishtVue.d.ts#L166-L189)) — `Partial<{ Form, Input, Aria, Switch, Select, Calendar, TextEditor, Label, InputLayout, Button, Icons, Loading, FixWindow, Dialog, Badge, Accordion, Alert, Separator, Menu, Pagination, Split, Table }>`. Тип каждого ключа — `XOption`, экспортируемый из соответствующего компонента (`fishtvue/{name}`).
+`ComponentsOptions` ([FishtVue.d.ts:166–189](../../lib/config/FishtVue.d.ts#L166-L189)) — `Partial<{ Form, Input, Textarea, Switch, Select, Calendar, TextEditor, Label, InputLayout, Button, Icons, Loading, FixWindow, Dialog, Badge, Accordion, Alert, Separator, Menu, Pagination, Split, Table }>`. Тип каждого ключа — `XOption`, экспортируемый из соответствующего компонента (`fishtvue/{name}`).
 
 ## 6. Events / Emits + v-model contract
 

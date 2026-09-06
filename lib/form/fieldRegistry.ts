@@ -2,7 +2,7 @@ import type { Component } from "vue"
 
 // ---ISSUE 3 — реестр пользовательских типов полей для Form.
 // Позволяет рендерить произвольный компонент по строковому `typeComponent`, не входящему
-// во встроенный набор (Input/Aria/Select/Calendar/TextEditor/Switch). Module-level singleton —
+// во встроенный набор (Input/Textarea/Select/Calendar/TextEditor/Switch). Module-level singleton —
 // регистрация один раз на приложение (идиома `Loading.componentsMap`). Встроенные типы
 // резолвятся раньше реестра, поэтому перекрыть их нельзя.
 const fieldTypeRegistry = new Map<string, Component>()

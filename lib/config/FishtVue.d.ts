@@ -12,7 +12,7 @@ import { LabelOption } from "fishtvue/label"
 import { InputLayoutOption } from "fishtvue/inputlayout"
 import { InputOption } from "fishtvue/input"
 import { SelectOption } from "fishtvue/select"
-import { AriaOption } from "fishtvue/aria"
+import { TextareaOption } from "fishtvue/textarea"
 import { SwitchOption } from "fishtvue/switch"
 import { CalendarOption } from "fishtvue/calendar"
 import { TextEditorOption } from "fishtvue/texteditor"
@@ -211,7 +211,7 @@ export type OptionsTheme = Partial<{
 export type ComponentsOptions = Partial<{
   Form: FormOption
   Input: InputOption
-  Aria: AriaOption
+  Textarea: TextareaOption
   Switch: SwitchOption
   Select: SelectOption
   Calendar: CalendarOption

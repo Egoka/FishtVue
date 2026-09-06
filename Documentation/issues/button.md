@@ -146,7 +146,7 @@ iconPosition?: "left" | "right"
 - **Категория:** G34 (Ref на корневой элемент)
 - **Severity:** ~~medium~~
 - **Где:** [Button.vue:344–366](../../lib/button/Button.vue#L344-L366)
-- **Resolution:** `buttonRef`, `focus(options?)`, `blur()` добавлены в `defineExpose`; `ButtonExpose` расширен с JSDoc; `focus()` принимает опциональный native `FocusOptions` (`{ preventScroll }`). Паритет с [Aria](../components/aria.md) и [Input](../components/input.md).
+- **Resolution:** `buttonRef`, `focus(options?)`, `blur()` добавлены в `defineExpose`; `ButtonExpose` расширен с JSDoc; `focus()` принимает опциональный native `FocusOptions` (`{ preventScroll }`). Паритет с [Textarea](../components/textarea.md) и [Input](../components/input.md).
 
 ### Что найдено
 

@@ -23,7 +23,7 @@ body:
         - General
         - Accordion
         - Alert
-        - Aria
+        - Textarea
         - Badge
         - Button
         - Calendar

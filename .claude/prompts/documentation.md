@@ -39,7 +39,7 @@ lib/<name>/
 - Layout: Form, InputLayout, Separator, Split, FixWindow
 - Disclosure: Accordion, Dialog, Menu, Alert
 - Feedback: Loading, Icons
-- A11y/infra: Aria, Component, Config
+- A11y/infra: Textarea, Component, Config
 
 # Источник истины
 
@@ -223,7 +223,7 @@ const ref = useTemplateRef<InstanceType<typeof {Target}>>("{target}Ref")
 ## 12. Accessibility & Security
 
 ### A11y
-- Используется ли Aria-компонент или ARIA-атрибуты (поиск `role=`, `aria-*` в `.vue`).
+- Используется ли Textarea-компонент или ARIA-атрибуты (поиск `role=`, `aria-*` в `.vue`).
 - Поведение клавиатуры (Tab, Enter, Escape, стрелки) — извлечь из `@keydown` обработчиков.
 - **Focus management:** для Dialog/Menu/Select — есть ли focus trap, восстанавливается ли focus на trigger при закрытии.
 - **Screen reader:** используются ли `aria-live` regions, `aria-describedby` для error messages.

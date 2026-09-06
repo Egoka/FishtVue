@@ -325,7 +325,7 @@
           classCol: "sm:col-span-6"
         },
         {
-          typeComponent: "Aria",
+          typeComponent: "Textarea",
           name: "bio",
           rules: {},
           label: "Описание",

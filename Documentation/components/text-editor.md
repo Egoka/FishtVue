@@ -12,7 +12,7 @@ since: 0.2.11
 
 `TextEditor` — обёртка над [Quill](https://quilljs.com/) (через [@vueup/vue-quill](https://vueup.github.io/vue-quill/)) внутри [Dialog](./dialog.md). Поддерживает темы `snow` (toolbar сверху) и `bubble` (toolbar появляется при выделении), кастомные toolbar-конфиги (`essential`/`minimal`/`full` или custom), reactive v-model.
 
-Stability: `experimental` — все 17 тестов пропущены ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)); coverage `TextEditor.vue` — 0%. Type-bug `change:modelValue(payload: boolean)` исправлен 2026-05-11 — payload теперь корректно типизирован как `string` (cross-cutting fix с [Aria](./aria.md)).
+Stability: `experimental` — все 17 тестов пропущены ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)); coverage `TextEditor.vue` — 0%. Type-bug `change:modelValue(payload: boolean)` исправлен 2026-05-11 — payload теперь корректно типизирован как `string` (cross-cutting fix с [Textarea](./aria.md)).
 
 Source: [Source](../../lib/texteditor/TextEditor.vue), [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts), [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts).
 
@@ -214,7 +214,7 @@ Quill рендерит контент в contenteditable-`div`'ах, поэто�
 <input type="hidden" data-text-editor-value :name="id" :value="modelValue ?? ''" />
 ```
 
-- **Имя поля — это `id`.** Канон общий с [Aria](./aria.md): `<TextEditor id="bio">` → `formData.get("bio")`.
+- **Имя поля — это `id`.** Канон общий с [Textarea](./aria.md): `<TextEditor id="bio">` → `formData.get("bio")`.
 - **Без `id` поле не рендерится** — безымянный input в `FormData` всё равно не попал бы.
 - Значение обновляется на каждый ввод, а не по `change:modelValue` (тот эмитится на blur) — submit в любой момент отдаёт актуальный HTML.
 
@@ -322,7 +322,7 @@ describe.skip("TextEditor smoke", () => {
 
 ### API inconsistencies
 
-- ~~**Type bug:** `change:modelValue(payload: boolean)`~~ ✅ resolved 2026-05-11 — payload теперь корректно типизирован как `string` ([TextEditor.d.ts:121](../../lib/texteditor/TextEditor.d.ts#L121)). Cross-cutting fix вместе с [aria.md Issue 1](../issues/aria.md).
+- ~~**Type bug:** `change:modelValue(payload: boolean)`~~ ✅ resolved 2026-05-11 — payload теперь корректно типизирован как `string` ([TextEditor.d.ts:121](../../lib/texteditor/TextEditor.d.ts#L121)). Cross-cutting fix вместе с [aria.md Issue 1](../issues/textarea.md).
 - `modelValue?: string | number | null` — `number` не имеет смысла для HTML-content.
 - `toolbar: "essential" \| "minimal" \| "full" \| string \| object \| Array<any>` — open union, narrow не работает.
 - `IDataTextEditor.options: any`, `globalOptions: any` — потеря типизации.

@@ -3,13 +3,13 @@ import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types
 import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 
 /**
- * ## Aria
+ * ## Textarea
  *
- * Aria - a component for managing accessible input fields with extended control options.
+ * Textarea - a component for managing accessible input fields with extended control options.
  *
  * Provides support for customizable input attributes, validation states, and event handling.
  */
-declare class Aria extends ClassComponent<AriaProps, AriaSlots, AriaEmits, AriaExpose> {}
+declare class Textarea extends ClassComponent<TextareaProps, TextareaSlots, TextareaEmits, TextareaExpose> {}
 
 export declare type BaseAriaProps = {
   /**
@@ -50,9 +50,9 @@ export declare type BaseAriaProps = {
 }
 
 /**
- * Props for the Aria component.
+ * Props for the Textarea component.
  */
-export interface AriaProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseAriaProps> {
+export interface TextareaProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseAriaProps> {
   /**
    * The unique identifier for the input element.
    * @type {string | undefined}
@@ -72,7 +72,7 @@ export interface AriaProps extends Omit<InputLayoutProps, "value" | "isValue">, 
 /**
  * Context provided to the `before` slot.
  */
-export declare type AriaBeforeSlotProps = {
+export declare type TextareaBeforeSlotProps = {
   /** Whether the textarea is currently in an invalid state. */
   isInvalid: boolean
   /** Whether the textarea currently has focus. */
@@ -82,7 +82,7 @@ export declare type AriaBeforeSlotProps = {
 /**
  * Context provided to the `after` slot.
  */
-export declare type AriaAfterSlotProps = {
+export declare type TextareaAfterSlotProps = {
   /** Whether the textarea is currently in an invalid state. */
   isInvalid: boolean
   /** Whether the textarea currently has focus. */
@@ -91,15 +91,15 @@ export declare type AriaAfterSlotProps = {
   clear: () => void
 }
 
-export declare type AriaSlots = {
+export declare type TextareaSlots = {
   default(): VNode[]
-  before(props: AriaBeforeSlotProps): VNode[]
-  after(props: AriaAfterSlotProps): VNode[]
+  before(props: TextareaBeforeSlotProps): VNode[]
+  after(props: TextareaAfterSlotProps): VNode[]
 }
 /**
- * Events emitted by the Aria component.
+ * Events emitted by the Textarea component.
  */
-export declare type AriaEmits = {
+export declare type TextareaEmits = {
   /**
    * Emitted when the `modelValue` prop is updated.
    * @param event
@@ -139,9 +139,9 @@ export declare type AriaEmits = {
   (event: "blur", env: FocusEvent): void
 }
 /**
- * Methods and states exposed via `ref` for the Aria component.
+ * Methods and states exposed via `ref` for the Textarea component.
  */
-export declare type AriaExpose = {
+export declare type TextareaExpose = {
   // ---STATE-------------------------
   /**
    * Layout reference for the input field.
@@ -158,45 +158,45 @@ export declare type AriaExpose = {
   // ---PROPS-------------------------
   /**
    * Current `id` value of the input field.
-   * @type {AriaProps["id"]}
+   * @type {TextareaProps["id"]}
    */
-  id: AriaProps["id"]
+  id: TextareaProps["id"]
 
   /**
    * Current `modelValue` of the input field.
-   * @type {AriaProps["modelValue"]}
+   * @type {TextareaProps["modelValue"]}
    */
-  modelValue: AriaProps["modelValue"]
+  modelValue: TextareaProps["modelValue"]
 
   /**
    * Current `placeholder` of the input field.
-   * @type {AriaProps["placeholder"]}
+   * @type {TextareaProps["placeholder"]}
    */
-  placeholder: AriaProps["placeholder"]
+  placeholder: TextareaProps["placeholder"]
 
   /**
    * Current autocomplete setting for the input field.
-   * @type {AriaProps["autocomplete"]}
+   * @type {TextareaProps["autocomplete"]}
    */
-  autocomplete: AriaProps["autocomplete"]
+  autocomplete: TextareaProps["autocomplete"]
 
   /**
    * Current wrapping behavior for the input field.
-   * @type {AriaProps["wrap"]}
+   * @type {TextareaProps["wrap"]}
    */
-  wrap: AriaProps["wrap"]
+  wrap: TextareaProps["wrap"]
 
   /**
    * Current number of rows for the input field.
-   * @type {AriaProps["rows"]}
+   * @type {TextareaProps["rows"]}
    */
-  rows: AriaProps["rows"]
+  rows: TextareaProps["rows"]
 
   /**
    * Current maximum length for the input field.
-   * @type {AriaProps["maxLength"]}
+   * @type {TextareaProps["maxLength"]}
    */
-  maxLength: AriaProps["maxLength"]
+  maxLength: TextareaProps["maxLength"]
 
   /**
    * Indicates whether the input has a value.
@@ -206,39 +206,39 @@ export declare type AriaExpose = {
 
   /**
    * Current mode of the input field.
-   * @type {AriaProps["mode"]}
+   * @type {TextareaProps["mode"]}
    */
-  mode: AriaProps["mode"]
+  mode: TextareaProps["mode"]
 
   /**
    * Indicates whether the input is disabled.
-   * @type {AriaProps["disabled"]}
+   * @type {TextareaProps["disabled"]}
    */
-  isDisabled: AriaProps["disabled"]
+  isDisabled: TextareaProps["disabled"]
 
   /**
    * Indicates whether the input is in a loading state.
-   * @type {AriaProps["loading"]}
+   * @type {TextareaProps["loading"]}
    */
-  isLoading: AriaProps["loading"]
+  isLoading: TextareaProps["loading"]
 
   /**
    * Indicates whether the input is invalid.
-   * @type {AriaProps["isInvalid"]}
+   * @type {TextareaProps["isInvalid"]}
    */
-  isInvalid: AriaProps["isInvalid"]
+  isInvalid: TextareaProps["isInvalid"]
 
   /**
    * The validation error message for the input field.
-   * @type {AriaProps["messageInvalid"]}
+   * @type {TextareaProps["messageInvalid"]}
    */
-  messageInvalid: AriaProps["messageInvalid"]
+  messageInvalid: TextareaProps["messageInvalid"]
 
   /**
    * CSS class for the input container.
-   * @type {AriaProps["class"]}
+   * @type {TextareaProps["class"]}
    */
-  classStyle: AriaProps["class"]
+  classStyle: TextareaProps["class"]
 
   // ---METHODS-----------------------
   /**
@@ -267,8 +267,8 @@ export declare type AriaExpose = {
    */
   blur(env: FocusEvent): void
 }
-export declare type AriaOption = Pick<
-  AriaProps,
+export declare type TextareaOption = Pick<
+  TextareaProps,
   "autocomplete" | "wrap" | "rows" | "maxLength" | "classInput" | keyof InputLayoutOption
 >
 
@@ -276,8 +276,8 @@ export declare type AriaOption = Pick<
 
 declare module "vue" {
   export interface GlobalComponents {
-    Aria: GlobalComponentConstructor<Aria>
+    Textarea: GlobalComponentConstructor<Textarea>
   }
 }
 
-export default Aria
+export default Textarea

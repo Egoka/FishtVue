@@ -224,7 +224,7 @@ Visual `*`-маркер для `required` — чисто косметическ�
 ### A11y
 
 - **Семантика:** Корневой узел — нативный `<label data-label>` ([Label.vue:71](../../lib/label/Label.vue#L76)). При заданном `for-id` атрибут `for` устанавливается и работает нативная браузерная связка: click на label фокусирует input, screen-reader озвучивает «{title}, edit text» при focus на input.
-- **Внутри InputLayout `for-id` проставляется автоматически** ([InputLayout.vue](../../lib/inputlayout/InputLayout.vue) генерит стабильный id через `useId()` и передаёт `:for-id` + `:id` метке) — все form-controls (Input/Aria/Select/Calendar/TextEditor) получают связь без ручной настройки. Standalone-Label вне InputLayout требует явного `for-id`. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
+- **Внутри InputLayout `for-id` проставляется автоматически** ([InputLayout.vue](../../lib/inputlayout/InputLayout.vue) генерит стабильный id через `useId()` и передаёт `:for-id` + `:id` метке) — все form-controls (Input/Textarea/Select/Calendar/TextEditor) получают связь без ручной настройки. Standalone-Label вне InputLayout требует явного `for-id`. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - **Required-индикатор:** `*` через CSS `after:content-['*']` — не озвучивается screen-reader'ом. Добавь `aria-required="true"` на input самостоятельно или используй InputLayout-обёртку.
 - **Focus management:** не применимо — сам Label не focusable.
 - **Reduced motion:** анимации помечены `motion-safe:` ([Label.vue:36](../../lib/label/Label.vue#L40)) — отключаются при `prefers-reduced-motion: reduce`.
