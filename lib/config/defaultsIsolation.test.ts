@@ -43,14 +43,17 @@ describe("install() не мутирует встроенные пресеты т
   it("не пишет пользовательский customThemeColor в Aurora", () => {
     install({ theme: { semantic: { customThemeColor: 210 } } })
 
-    expect((Aurora as any).semantic.customThemeColor).toBe(0)
+    expect((Aurora as any).semantic.customThemeColor).toBe("25deg")
   })
 
-  it("не протекает в соседние пресеты через общий defaultSemantic", () => {
+  it("не протекает в соседние пресеты", () => {
     install({ theme: { semantic: { customThemeColor: 210, customThemeColorContrast: 40 } } })
 
-    expect((Harmony as any).semantic.customThemeColor).toBe(0)
-    expect((Sapphire as any).semantic.customThemeColor).toBe(0)
+    // Каждая тема с 2026-09-06 держит собственный брендовый оттенок; общим по ссылке остаётся
+    // только `primitive`. Прежняя формулировка теста («протекает через общий defaultSemantic»)
+    // описывала состояние, когда все три делили один объект semantic.
+    expect((Harmony as any).semantic.customThemeColor).toBe("152deg")
+    expect((Sapphire as any).semantic.customThemeColor).toBe("217deg")
     expect(defaultSemantic.customThemeColor).toBe(0)
   })
 
@@ -65,7 +68,7 @@ describe("install() не мутирует встроенные пресеты т
     const second = install()
 
     const config = (second.config.globalProperties as any).$fishtVue.config
-    expect(config.theme?.semantic?.customThemeColor).toBe(0)
+    expect(config.theme?.semantic?.customThemeColor).toBe("25deg")
   })
 })
 

@@ -90,14 +90,22 @@ function isExistFishtVue<T>(func: (FishtVue: FishtVue) => T): T | undefined {
   return
 }
 
+/**
+ * Имя ФАКТИЧЕСКИ применяемой темы: зарегистрированная кастомная — как есть, известная встроенная —
+ * как есть, всё остальное (в том числе опечатка в `nameTheme`) — `"Aurora"`.
+ *
+ * Отдельная функция нужна, потому что после снятия поля `name` с пресетов (Theme D21) идентичность
+ * темы живёт только в `config.optionsTheme.nameTheme`, и это значение должно быть правдой, а не
+ * эхом пользовательского ввода.
+ */
+function resolveThemeName(nameTheme: OptionsTheme["nameTheme"] | string | undefined): string {
+  if (nameTheme && customThemes.has(nameTheme)) return nameTheme
+  return Object.values(NamesTheme).includes((nameTheme as any) ?? "") ? (nameTheme as string) : "Aurora"
+}
+
 function resolveTheme(nameTheme: OptionsTheme["nameTheme"] | string | undefined): Theme | undefined {
   if (nameTheme && customThemes.has(nameTheme)) return customThemes.get(nameTheme)
-  const validBuiltIn = Object.values(NamesTheme).includes((nameTheme as any) ?? "")
-    ? (nameTheme as keyof typeof NamesTheme)
-    : "Aurora"
-  switch (validBuiltIn) {
-    case "Aurora":
-      return Aurora
+  switch (resolveThemeName(nameTheme)) {
     case "Harmony":
       return Harmony
     case "Sapphire":
@@ -153,6 +161,13 @@ function install(app: App, rawOptions: FishtVueConfiguration): void {
   }
   if (FishtVue.config.locale)
     FishtVue.config.locale.activeLocale = FishtVue.config.locale?.activeLocale ?? FishtVue.config.locale?.defaultLocale
+  // Theme D21: единственный источник идентичности темы. Значение нормализуется до фактически
+  // применённой темы — опечатка в `nameTheme` не должна оставаться в конфиге как «активная тема»,
+  // раз пресет по ней всё равно не нашёлся и подставилась Aurora.
+  FishtVue.config.optionsTheme = {
+    ...FishtVue.config.optionsTheme,
+    nameTheme: resolveThemeName(options?.optionsTheme?.nameTheme) as NonNullable<OptionsTheme["nameTheme"]>
+  }
   FishtVue.config.theme = linksTheme(FishtVue.config.theme)
 
   if (isClient()) (window as any).FishtVue = FishtVue

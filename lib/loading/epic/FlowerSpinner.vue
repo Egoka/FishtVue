@@ -23,7 +23,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -165,7 +165,7 @@
   }
 
   .flower-spinner .small-dot {
-    background: #ff1d5e;
+    background: currentColor;
     height: 100%;
     width: 100%;
     border-radius: 50%;
@@ -173,7 +173,7 @@
   }
 
   .flower-spinner .big-dot {
-    background: #ff1d5e;
+    background: currentColor;
     height: 100%;
     width: 100%;
     padding: 10%;

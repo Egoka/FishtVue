@@ -24,7 +24,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -103,7 +103,7 @@
     top: calc(-10px * 2 / 3);
     margin-right: calc(10px / 3);
     margin-top: calc(10px / 3);
-    background: #ff1d5e;
+    background: currentColor;
     float: left;
     position: relative;
     opacity: 0;

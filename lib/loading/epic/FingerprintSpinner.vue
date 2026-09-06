@@ -19,7 +19,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -91,7 +91,7 @@
     position: absolute;
     border-radius: 50%;
     border: 2px solid transparent;
-    border-top-color: #ff1d5e;
+    border-top-color: currentColor;
     animation: fingerprint-spinner-animation 1500ms cubic-bezier(0.68, -0.75, 0.265, 1.75) infinite forwards;
     margin: auto;
     bottom: 0;

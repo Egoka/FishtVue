@@ -21,7 +21,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -96,7 +96,7 @@
     position: absolute;
     display: block;
     border-radius: 50%;
-    border: 3px solid #ff1d5e;
+    border: 3px solid currentColor;
     opacity: 1;
   }
 

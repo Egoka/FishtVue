@@ -23,7 +23,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -83,7 +83,7 @@
     width: 15px;
     height: 15px;
     margin: 0 calc(15px / 2);
-    border: calc(15px / 5) solid #ff1d5e;
+    border: calc(15px / 5) solid currentColor;
     border-radius: 50%;
     float: left;
     transform: scale(0);

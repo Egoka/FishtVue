@@ -20,7 +20,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -77,18 +77,18 @@
     top: 0;
     left: 0;
     border-radius: 50%;
-    border: calc(60px * 0.03) solid #ff1d5e;
+    border: calc(60px * 0.03) solid currentColor;
     animation: fulfilling-bouncing-circle-spinner-orbit-animation infinite 4000ms ease;
   }
 
   .fulfilling-bouncing-circle-spinner .circle {
     height: 60px;
     width: 60px;
-    color: #ff1d5e;
+    color: currentColor;
     display: block;
     border-radius: 50%;
     position: relative;
-    border: calc(60px * 0.1) solid #ff1d5e;
+    border: calc(60px * 0.1) solid currentColor;
     animation: fulfilling-bouncing-circle-spinner-circle-animation infinite 4000ms ease;
     transform: rotate(0deg) scale(1);
   }

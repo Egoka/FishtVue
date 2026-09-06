@@ -1,8 +1,8 @@
 ---
 title: Loading
 summary: Лоадер с типами Epic/SVG/simple, configurable size, color, animationDuration; ARIA status-регион, reduced-motion fallback.
-updated: 2026-06-14
-stability: beta
+updated: 2026-09-06
+stability: stable
 since: 0.2.11
 ---
 
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Loading` — индикатор загрузки. Поддерживает три категории типов: `EpicLoading` (анимированные многокомпонентные), `SvgLoading` (статичные SVG с CSS-анимацией), `"simple"` (минималистичный спиннер). Конфигурируется через `size`, `color`, `animationDuration`.
 
-Stability: `beta` — coverage `Loading.vue` ~98% statements / 100% lines, `loadingTypes.ts` 100% (добавлен [Loading.test.ts](../../lib/loading/Loading.test.ts), 145 кейсов, по тесту на каждую Epic/SVG вариацию). `beta` сохраняется до закрытия [Issue 7](../issues/loading.md) (hardcoded HEX в Epic/SVG, Wave 9).
+Stability: `stable` (с 2026-09-06) — coverage `Loading.vue` ~98% statements / 100% lines, `loadingTypes.ts` 100% ([Loading.test.ts](../../lib/loading/Loading.test.ts), 152 кейса, по тесту на каждую Epic/SVG вариацию). Последнее, что удерживало `beta`, — [Issue 7](../issues/loading.md) (hardcoded HEX в Epic/SVG); закрыто переводом всех спиннеров на `currentColor`.
 
 Source: [Source](../../lib/loading/Loading.vue), [Loading.d.ts](../../lib/loading/Loading.d.ts), [loadingTypes.ts](../../lib/loading/loadingTypes.ts), [Loading.test.ts](../../lib/loading/Loading.test.ts).
 
@@ -156,7 +156,7 @@ import Loading from "fishtvue/loading"
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `beta` — coverage `loadingTypes.ts` 100%; до `stable` остаётся [Issue 7](../issues/loading.md) (hardcoded HEX, Wave 9). Root exports map (A4-5, Wave 2.1) — ✅ resolved 2026-06-14 (см. [issues/loading.md Issue 5](../issues/loading.md)).
+- **Stability flag:** `stable` (2026-09-06) — coverage `loadingTypes.ts` 100%; [Issue 7](../issues/loading.md) (hardcoded HEX) закрыт. Root exports map (A4-5, Wave 2.1) — ✅ resolved 2026-06-14 (см. [issues/loading.md Issue 5](../issues/loading.md)).
 - **Breaking changes:** не зафиксировано.
 - **Deprecations:** нет.
 

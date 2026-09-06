@@ -1,7 +1,7 @@
 ---
 title: Issues — Theme system
 summary: Аудит theme. Issue 1 (runtime theme API usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt/palette) ✅ resolved 2026-07-02 через CSS-variable indirection — close Wave 3.3. B10 (surface-токен как 23-й именованный цвет + первый батч из 11 компонентов) ✅ resolved 2026-07-04 — theme-часть Wave 9 закрыта, residual (8 компонентов + Alert-эпик) трекается в issues/README.md. Остаются coverage themes/ (J46), tree-shaking primitive (K52), RTL tokens (F31).
-updated: 2026-07-04
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support
 source: lib/theme/
 related-doc: ../architecture/theme.md
@@ -15,7 +15,7 @@ related-doc: ../architecture/theme.md
 | -------- | ----- | ----------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                         |
 | high     | 0     | ~~J46 (themes coverage — Issue 2)~~ ✅ 2026-09-05, ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2 |
-| medium   | 2     | D21, F31; ~~K46 (uno.ts / semantic.ts — Issue 3)~~ ✅ 2026-09-05                           |
+| medium   | 1     | F31; ~~D21 (поле `name` в пресетах)~~ ✅ 2026-09-06, ~~K46 (uno.ts / semantic.ts — Issue 3)~~ ✅ 2026-09-05 |
 | low      | 2     | E29, N59                                                                                  |
 
 ~~B10~~ ✅ resolved 2026-07-04 — см. ниже, theme-часть Wave 9 закрыта (residual в issues/README.md).
@@ -185,20 +185,28 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 Все четыре корневых issue закрыты: [button.md Issue 1](./button.md) (SSR-инжекция) ✅ 2026-06-07, [Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map) ✅ 2026-06-11, [Issue 14](./button.md) (`unstyled`) ✅ 2026-05-11.
 
-## Issue 7: theme/primitive.ts 761 lines — gigantic palette monolith
+## ~~Issue 7: theme/primitive.ts 761 lines — gigantic palette monolith~~ ❌ wontfix 2026-09-06
 
 - **Категория:** K52, A1 (tree-shaking)
-- **Severity:** medium
+- **Severity:** ~~medium~~ → wontfix (решение R10)
 
 ### Что найдено
 
 [theme/primitive.ts](../../lib/theme/primitive.ts) — 761 строка с palette definitions для всех цветов (50-950 × 20+ цветов). Импорт тянет всё.
 
-### Что нужно сделать
+### Что предлагалось
 
 1. Разбить на per-color файлы: `lib/theme/primitives/blue.ts`, `red.ts`, etc.
 2. Re-export через index.ts с `sideEffects: false` (после fix [button.md Issue 8](./button.md)).
 3. Tree-shaker сможет удалить неиспользуемые палитры.
+
+### Почему wontfix (решение R10, 2026-09-06)
+
+Предпосылка «tree-shaker удалит неиспользуемые палитры» **не выполняется** в этой архитектуре. Движок собирает цветовые regex динамически — `Object.keys(colors).join("|")` в [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts). То есть объект `colors` целиком нужен в рантайме независимо от того, какие классы использует потребитель: имя цвета появляется в regex, а не в импорте. Разбиение на файлы дало бы 22 модуля, которые всё равно импортируются все до одного — потребовалось бы переделывать сам механизм резолва.
+
+Выигрыш при этом съедается сжатием: палитра — однородный текст из hex-литералов, gzip жмёт её в разы. Цена — 22 файла вместо одного и переписанный механизм ради килобайтов.
+
+Файл с тех пор ещё вырос: 2026-09-06 в него добавлены четыре semantic-слота интентов ([alert.md Issue 9](./alert.md)). Это подтверждает выбор с другой стороны — при per-color-разбиении каждый новый слот стоил бы отдельного файла и правки индекса, а сейчас это добавление ключа.
 
 ## Issue 8: RTL не учитывается в theme-tokens
 
@@ -209,6 +217,18 @@ Theme-токены типа `border-left-radius` хардкоден. Должн�
 ## Issue 9: prefers-reduced-motion / print
 
 См. cross-cutting.
+
+## ~~D21: поле `name` в пресетах не объявлено в типе темы~~ ✅ resolved 2026-09-06
+
+- **Категория:** D21 (типы расходятся с рантаймом)
+- **Severity:** ~~medium~~
+- **Где (was):** [themes/Aurora.ts](../../lib/theme/themes/Aurora.ts), Harmony, Sapphire
+
+Все три пресета несли поле `name`, которого нет в типе темы (`FishtVueConfiguration["theme"]` = `DeepPartial<{ primitive, semantic }>`), и проносили его через type assertion. Тип врал про содержимое объекта, а тесты, чтобы прочитать имя активной темы, лезли в `config.theme.name` — поле, которого по типам не существует.
+
+**Resolution (решение R28).** Поле снято с пресетов. Идентичность активной темы живёт в `config.optionsTheme.nameTheme`, где она типизирована как `keyof typeof NamesTheme`. `install()` **нормализует** это значение до фактически применённой темы: опечатка в `nameTheme` больше не остаётся в конфиге как «активная тема» при том, что подставилась Aurora. Резолв имени вынесен в отдельную функцию `resolveThemeName()`.
+
+Заодно закрыт второй, более заметный дефект: **все три темы выглядели одинаково**. Они делили один `defaultSemantic` с `customThemeColor: 0`, то есть брендовый слот у всех был серым — «три темы» различались строкой `name` и ничем больше. Теперь каждая задаёт собственный оттенок (Aurora `25deg`, Harmony `152deg`, Sapphire `217deg`), а вся остальная палитра остаётся общей по ссылке. Контракт «различаются ТОЛЬКО брендовым слотом, и оттенки не повторяются» зафиксирован в [themes.test.ts](../../lib/theme/themes/themes.test.ts).
 
 ## ~~Issue 10: B10 — компоненты не потребляют surface-токен~~ ✅ resolved 2026-07-04
 

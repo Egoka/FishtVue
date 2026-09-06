@@ -76,35 +76,40 @@
     } else classAnimate = "opacity-100"
     return Alert.setStyle(classAnimate)
   })
+  // ---Issue 9 / R11 — semantic-слоты интентов вместо примитивных шкал ---------------------
+  // `success` / `warning` / `info` / `error` — именованные цвета движка (см. theme/primitive.ts).
+  // Дефолты равны прежним green / yellow / blue / red, поэтому внешний вид не изменился; но
+  // теперь интент Alert перекрашивается темой (`updatePreset({ primitive: { error: … } })`),
+  // а не правкой этого файла — и при этом не отбирает у потребителя саму палитру red-*.
   const classesStyle = computed<Record<"body" | "icon" | "title" | "subtitle" | "button" | "buttonIcon", StyleClass>>(
     () => {
       switch (type.value) {
         case "warning":
           return {
-            body: "bg-yellow-50 dark:bg-yellow-950",
-            icon: "text-yellow-400 dark:text-yellow-600",
-            title: "text-yellow-800 dark:text-yellow-200",
-            subtitle: "text-yellow-700 dark:text-yellow-300",
-            button: "hover:bg-yellow-200 dark:hover:bg-yellow-800",
-            buttonIcon: "fill-yellow-500 dark:fill-yellow-500"
+            body: "bg-warning-50 dark:bg-warning-950",
+            icon: "text-warning-400 dark:text-warning-600",
+            title: "text-warning-800 dark:text-warning-200",
+            subtitle: "text-warning-700 dark:text-warning-300",
+            button: "hover:bg-warning-200 dark:hover:bg-warning-800",
+            buttonIcon: "fill-warning-500 dark:fill-warning-500"
           }
         case "info":
           return {
-            body: "bg-blue-50 dark:bg-blue-950",
-            icon: "text-blue-400 dark:text-blue-600",
-            title: "text-blue-800 dark:text-blue-200",
-            subtitle: "text-blue-700 dark:text-blue-300",
-            button: "hover:bg-blue-200 dark:hover:bg-blue-800",
-            buttonIcon: "fill-blue-500 dark:fill-blue-500"
+            body: "bg-info-50 dark:bg-info-950",
+            icon: "text-info-400 dark:text-info-600",
+            title: "text-info-800 dark:text-info-200",
+            subtitle: "text-info-700 dark:text-info-300",
+            button: "hover:bg-info-200 dark:hover:bg-info-800",
+            buttonIcon: "fill-info-500 dark:fill-info-500"
           }
         case "error":
           return {
-            body: "bg-red-50 dark:bg-red-950",
-            icon: "text-red-400 dark:text-red-600",
-            title: "text-red-800 dark:text-red-200",
-            subtitle: "text-red-700 dark:text-red-300",
-            button: "hover:bg-red-200 dark:hover:bg-red-800",
-            buttonIcon: "fill-red-500 dark:fill-red-500"
+            body: "bg-error-50 dark:bg-error-950",
+            icon: "text-error-400 dark:text-error-600",
+            title: "text-error-800 dark:text-error-200",
+            subtitle: "text-error-700 dark:text-error-300",
+            button: "hover:bg-error-200 dark:hover:bg-error-800",
+            buttonIcon: "fill-error-500 dark:fill-error-500"
           }
         case "neutral":
           return {
@@ -121,12 +126,12 @@
         case "success":
         default:
           return {
-            body: "bg-green-50 dark:bg-green-950",
-            icon: "text-green-400 dark:text-green-600",
-            title: "text-green-800 dark:text-green-200",
-            subtitle: "text-green-700 dark:text-green-300",
-            button: "hover:bg-green-200 dark:hover:bg-green-800",
-            buttonIcon: "fill-green-500 dark:fill-green-500"
+            body: "bg-success-50 dark:bg-success-950",
+            icon: "text-success-400 dark:text-success-600",
+            title: "text-success-800 dark:text-success-200",
+            subtitle: "text-success-700 dark:text-success-300",
+            button: "hover:bg-success-200 dark:hover:bg-success-800",
+            buttonIcon: "fill-success-500 dark:fill-success-500"
           }
       }
     }

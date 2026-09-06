@@ -112,13 +112,13 @@ describe("Alert Component", () => {
   describe("Alert Component - Extended Tests", () => {
     describe("Each test for type", () => {
       it.each([
-        { type: "success", expectClass: "bg-green-50 dark:bg-green-950" },
-        { type: "warning", expectClass: "bg-yellow-50 dark:bg-yellow-950" },
+        { type: "success", expectClass: "bg-success-50 dark:bg-success-950" },
+        { type: "warning", expectClass: "bg-warning-50 dark:bg-warning-950" },
         {
           type: "info",
-          expectClass: "bg-blue-50 dark:bg-blue-950"
+          expectClass: "bg-info-50 dark:bg-info-950"
         },
-        { type: "error", expectClass: "bg-red-50 dark:bg-red-950" },
+        { type: "error", expectClass: "bg-error-50 dark:bg-error-950" },
         { type: "neutral", expectClass: "bg-neutral-100 dark:bg-neutral-800" }
       ] as { type: AlertProps["type"]; expectClass: string }[])(
         "should render alert with type '%s'",
@@ -223,16 +223,16 @@ describe("Alert Component", () => {
 
   describe("Alert Component - Icon Rendering", () => {
     const iconMap = {
-      success: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-green-400 dark:text-green-600">
+      success: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-success-400 dark:text-success-600">
   <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"></path>
 </svg>`,
-      warning: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-yellow-400 dark:text-yellow-600">
+      warning: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-warning-400 dark:text-warning-600">
   <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"></path>
 </svg>`,
-      info: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-blue-400 dark:text-blue-600">
+      info: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-info-400 dark:text-info-600">
   <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clip-rule="evenodd"></path>
 </svg>`,
-      error: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-red-400 dark:text-red-600">
+      error: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-error-400 dark:text-error-600">
   <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd"></path>
 </svg>`,
       neutral: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-alert h-5 w-5 text-neutral-400 dark:text-neutral-600">
@@ -310,9 +310,9 @@ describe("Alert Component", () => {
       })
 
       expect(wrapper.vm.classesStyle).toBeDefined()
-      expect(wrapper.vm.classesStyle.body).toBe("bg-green-50 dark:bg-green-950")
-      expect(wrapper.vm.classesStyle.button).toBe("hover:bg-green-200 dark:hover:bg-green-800")
-      expect(wrapper.vm.classesStyle.buttonIcon).toBe("fill-green-500 dark:fill-green-500")
+      expect(wrapper.vm.classesStyle.body).toBe("bg-success-50 dark:bg-success-950")
+      expect(wrapper.vm.classesStyle.button).toBe("hover:bg-success-200 dark:hover:bg-success-800")
+      expect(wrapper.vm.classesStyle.buttonIcon).toBe("fill-success-500 dark:fill-success-500")
     })
 
     it("keeps every classesStyle consumer renderable for an out-of-union type", () => {
@@ -322,11 +322,11 @@ describe("Alert Component", () => {
       })
 
       // classBase (body), classIcon, classTitle, classSubtitle, classSlotDefault
-      expect(wrapper.find("[data-alert] > div").attributes("class")).toContain("bg-green-50")
-      expect(wrapper.find("[data-alert-icon] svg").attributes("class")).toContain("text-green-400")
-      expect(wrapper.find("[data-alert-title]").attributes("class")).toContain("text-green-800")
-      expect(wrapper.find("[data-alert-subtitle]").attributes("class")).toContain("text-green-700")
-      expect(wrapper.find("[data-alert-slot]").attributes("class")).toContain("text-green-700")
+      expect(wrapper.find("[data-alert] > div").attributes("class")).toContain("bg-success-50")
+      expect(wrapper.find("[data-alert-icon] svg").attributes("class")).toContain("text-success-400")
+      expect(wrapper.find("[data-alert-title]").attributes("class")).toContain("text-success-800")
+      expect(wrapper.find("[data-alert-subtitle]").attributes("class")).toContain("text-success-700")
+      expect(wrapper.find("[data-alert-slot]").attributes("class")).toContain("text-success-700")
     })
 
     it("still renders an icon (not an empty <component :is>) for an out-of-union type", () => {
@@ -384,7 +384,7 @@ describe("Alert Component", () => {
       const alertBody = document.querySelector("[data-alert] > div")
       expect(alertBody).not.toBeNull()
       // Фолбэк на default-тип "success" — стили отрисованы, undefined-классов нет.
-      expect(alertBody?.className).toContain("bg-green-50")
+      expect(alertBody?.className).toContain("bg-success-50")
       expect(alertBody?.className).not.toContain("undefined")
       expect(document.querySelector("[data-alert-icon] svg")).not.toBeNull()
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('type="invalid-type"'))
@@ -396,7 +396,7 @@ describe("Alert Component", () => {
       openAlert({ type: "error" })
 
       const alertBody = document.querySelector("[data-alert] > div")
-      expect(alertBody?.className).toContain("bg-red-50")
+      expect(alertBody?.className).toContain("bg-error-50")
       expect(warn).not.toHaveBeenCalled()
       warn.mockRestore()
     })

@@ -19,7 +19,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -89,8 +89,8 @@
     border-radius: 50%;
     position: absolute;
     border: calc(65px * 0.05) solid transparent;
-    border-top-color: #ff1d5e;
-    border-left-color: #ff1d5e;
+    border-top-color: currentColor;
+    border-left-color: currentColor;
     animation: semipolar-spinner-animation 2s infinite;
   }
 

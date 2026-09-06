@@ -19,7 +19,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       },
       circlesNum: {
         type: Number,
@@ -94,7 +94,7 @@
     margin-left: calc(15px * 1.125);
     transform: rotate(45deg);
     border-radius: 10%;
-    border: 3px solid #ff1d5e;
+    border: 3px solid currentColor;
     overflow: hidden;
     background: transparent;
     animation: circles-to-rhombuses-animation 1200ms linear infinite;

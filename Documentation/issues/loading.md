@@ -1,7 +1,7 @@
 ---
 title: Issues — Loading
 summary: Аудит Loading. Закрыто 2026-06-03 — coverage loadingTypes 3% → 100% (Issue 1), ARIA role="status"+aria-live+sr-only+локализованный aria-label (Issue 3), LoadingOption.type (Issue 4), снят dup initStyle + sideEffects (Issue 5), reduced-motion static fallback (Issue 6), print:hidden (Issue 8); lazy import (Issue 2) уже был. Закрыто 2026-06-14 — root exports map A4-5 (Issue 5, doc-sync inherited из buildRootExports()). Открыто — hardcoded HEX в Epic/SVG (Issue 7, deferred Wave 9). 2026-08-02 — DX-полировка вне numbered-issue: open-union типы props, снят редундантный `"simple"`, dev-warn для неизвестного color-токена и гейт существующего warn.
-updated: 2026-08-02
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/loading/
 related-doc: ../components/loading.md
@@ -17,7 +17,7 @@ stability: beta
 | critical | 0 | — |
 | high | 0 | — |
 | medium | 0 | — |
-| low | 1 | B10 (hardcoded HEX — deferred Wave 9) |
+| low | 0 | ~~B10 (hardcoded HEX)~~ ✅ resolved 2026-09-06 — все спиннеры на `currentColor` |
 
 > Закрыто 2026-06-03: Issue 1 (J46), Issue 2 (I44), Issue 3 (E29.1/E29.5/F30), Issue 4 (L53), Issue 5 частично — A2 (sideEffects) + C17 (dup initStyle) + #14 unstyled (cross-cutting), Issue 6 (E29.7), Issue 8 (N59). Закрыто 2026-06-14: Issue 5 финально — A4-5 (root exports map, doc-sync inherited). Остаётся только Issue 7 (B10).
 
@@ -154,14 +154,20 @@ Loading — animation-driven (vibrating, pulsing, rotating). Для пользо
    ```
 2. Альтернатива — render статичный icon (loader-circle outline) в reduced-motion mode.
 
-## Issue 7: Hardcoded HEX colors в SVG paths? — ⏳ deferred Wave 9
+## ~~Issue 7: Hardcoded HEX colors в SVG paths~~ ✅ resolved 2026-09-06
 
 - **Категория:** B10
 - **Severity:** low
 
 Проверить [loadingTypes.ts](../../lib/loading/loadingTypes.ts) на hardcoded fill/stroke цвета в SVG. Заменить на `currentColor` или CSS переменные.
 
-**Статус (2026-06-03):** подтверждено — hardcoded HEX (`#ff1d5e`, `#fff` и т.п.) присутствует в 20 из 20 `epic/*.vue` (props defaults + `<style>`) и 2 из 106 `svg/*.vue`. Inline `:style` уже перебивает CSS-цвет для элементов, получающих resolved `color`, но CSS-fallback'и остаются. **Отложено в Wave 9** (semantic tokens / colors→CSS-vars, cross-cutting) — не входит в текущий проход во избежание visual-regression на 22 файлах. До закрытия Issue 7 стабильность Loading остаётся `beta`.
+**Статус (2026-06-03):** подтверждено — hardcoded HEX (`#ff1d5e`, `#fff` и т.п.) присутствует в 20 из 20 `epic/*.vue` (props defaults + `<style>`) и 2 из 106 `svg/*.vue`.
+
+**Resolution (2026-09-06, решение R12).** Все 22 файла переведены на `currentColor`: дефолт prop'а `color` и CSS-фолбэки внутри спиннеров. Визуально ничего не изменилось на штатном пути — `Loading` резолвит цвет из палитры и прокидывает его инлайн-стилем, перебивая CSS. Изменилось поведение там, где инлайн-стиль не доезжает (SSR-снимок до гидратации; потребитель, рендерящий спиннер напрямую из `fishtvue/loading/epic/*`): раньше показывался розовый `#ff1d5e` или белый, теперь спиннер наследует цвет текста.
+
+Заведён guard [noHardcodedColors.test.ts](../../lib/loading/noHardcodedColors.test.ts): 22 файла легко разъезжаются обратно, а глазами такой дрейф не ловится. Он же проверяет, что дефолт prop'а `color` у каждого epic-спиннера остаётся `currentColor`.
+
+Стабильность Loading поднята до **`stable`** — Issue 7 был последним, что удерживало `beta`.
 
 ## ~~Issue 8: Print styles — Loading скрыть при print~~ ✅ resolved 2026-06-03
 
@@ -176,7 +182,7 @@ Loading — animation-driven (vibrating, pulsing, rotating). Для пользо
 | `componentsOptions.Loading` | ✅ | Issue 4 закрыт — `type` включён в `LoadingOption` |
 | `componentsStyle` global | N/A | Loading не имеет mode-enum |
 | `unstyled: true` | ✅ | cross-cutting через `Component.setStyle()` guard |
-| Theme tokens vs hardcode | ⚠️ | через `color` prop с CSS-vars OK; hardcoded HEX в Epic/SVG — Issue 7 (Wave 9) |
+| Theme tokens vs hardcode | ✅ | через `color` prop с CSS-vars; Epic/SVG — `currentColor` (Issue 7 ✅ 2026-09-06) |
 | `t()` для текста | ✅ | aria-label через `Loading.t("loading.label")` (Issue 3) |
 | Runtime locale switch | ✅ | `t()` fallback chain active→default→key (Issue 3) |
 

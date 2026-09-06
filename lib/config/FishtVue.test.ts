@@ -39,8 +39,8 @@ describe("Testing config", () => {
       expect(app.config.globalProperties.$fishtVue).toBeDefined()
 
       // Проверяем, что опции темы установлены правильно
-      expect((window as any).FishtVue.config.theme.name).toBe("Harmony")
-      expect(app.config.globalProperties.$fishtVue.config.theme.name).toBe("Harmony")
+      expect((window as any).FishtVue.config.optionsTheme.nameTheme).toBe("Harmony")
+      expect(app.config.globalProperties.$fishtVue.config.optionsTheme.nameTheme).toBe("Harmony")
     })
 
     it("should initialize and set global properties correctly", () => {
@@ -60,8 +60,8 @@ describe("Testing config", () => {
       expect(wrapper.text()).toBe(expectText)
       expect((window as any).FishtVue).toBeDefined()
       expect(app.config.globalProperties.$fishtVue).toBeDefined()
-      expect((window as any).FishtVue.config.theme.name).toBe("Harmony")
-      expect(app.config.globalProperties.$fishtVue.config.theme.name).toBe("Harmony")
+      expect((window as any).FishtVue.config.optionsTheme.nameTheme).toBe("Harmony")
+      expect(app.config.globalProperties.$fishtVue.config.optionsTheme.nameTheme).toBe("Harmony")
     })
 
     it("should access global properties through vm instance", () => {
@@ -82,7 +82,7 @@ describe("Testing config", () => {
       // @ts-ignore Проверяем доступность FishtVue через vm
       const fishtVueInstance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
       expect(fishtVueInstance).toBeDefined()
-      expect(fishtVueInstance.config.theme.name).toBe("Sapphire")
+      expect(fishtVueInstance.config.optionsTheme.nameTheme).toBe("Sapphire")
     })
 
     it("should default to Aurora theme when an invalid theme name is provided", () => {
@@ -103,7 +103,7 @@ describe("Testing config", () => {
       // @ts-ignore Проверяем, что установлена тема по умолчанию (Aurora)
       const fishtVueInstance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
       expect(fishtVueInstance).toBeDefined()
-      expect(fishtVueInstance.config.theme.name).toBe("Aurora")
+      expect(fishtVueInstance.config.optionsTheme.nameTheme).toBe("Aurora")
     })
   })
   describe("useFishtVue", () => {
@@ -149,7 +149,7 @@ describe("Testing config", () => {
       const fishtVueInstance = useFishtVue()
       expect(fishtVueInstance).toBeDefined()
       // @ts-ignore
-      expect(fishtVueInstance.config.theme.name).toBe("Aurora")
+      expect(fishtVueInstance.config.optionsTheme.nameTheme).toBe("Aurora")
     })
 
     it("should access useFishtVue function through global properties when plugin is installed", () => {
@@ -174,7 +174,7 @@ describe("Testing config", () => {
       // Вызов useFishtVue через глобальные свойства
       const fishtVueFromGlobal = fishtVueInstance.useFishtVue()
       expect(fishtVueFromGlobal).toBeDefined()
-      expect(fishtVueFromGlobal.config.theme.name).toBe("Harmony")
+      expect(fishtVueFromGlobal.config.optionsTheme.nameTheme).toBe("Harmony")
     })
 
     it("should warn and return undefined when FishtVue plugin is not installed", () => {
@@ -464,7 +464,7 @@ describe("Testing config", () => {
       })
       const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
       expect(instance).toBeDefined()
-      expect(instance.config.theme.name).toBe("Aurora")
+      expect(instance.config.optionsTheme.nameTheme).toBe("Aurora")
     })
 
     it("multi-app isolation: two apps with different configs do not cross-contaminate", () => {
@@ -482,8 +482,8 @@ describe("Testing config", () => {
       })
       const fvB = wrapperB.vm?.$?.appContext.config.globalProperties.$fishtVue
 
-      expect(fvA?.config.theme.name).toBe("Aurora")
-      expect(fvB?.config.theme.name).toBe("Sapphire")
+      expect(fvA?.config.optionsTheme.nameTheme).toBe("Aurora")
+      expect(fvB?.config.optionsTheme.nameTheme).toBe("Sapphire")
       // Independent reactive objects — mutating one does not affect the other.
       expect(fvA).not.toBe(fvB)
     })
@@ -565,7 +565,7 @@ describe("Testing config", () => {
         global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme: "MyTheme" } }]] }
       })
       const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
-      expect(instance?.config?.theme?.name).toBe("MyTheme")
+      expect(instance?.config?.optionsTheme?.nameTheme).toBe("MyTheme")
     })
   })
 
@@ -586,7 +586,7 @@ describe("Testing config", () => {
         global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme } }]] }
       })
       const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
-      expect(instance?.config?.theme?.name).toBe(expected)
+      expect(instance?.config?.optionsTheme?.nameTheme).toBe(expected)
     })
 
     it("falls back to Aurora for invalid theme name", () => {
@@ -598,7 +598,7 @@ describe("Testing config", () => {
         global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme: "NotARealTheme" } }]] }
       })
       const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
-      expect(instance?.config?.theme?.name).toBe("Aurora")
+      expect(instance?.config?.optionsTheme?.nameTheme).toBe("Aurora")
     })
   })
 })

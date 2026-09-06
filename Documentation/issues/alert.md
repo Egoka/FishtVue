@@ -1,7 +1,7 @@
 ---
 title: Issues — Alert
 summary: Все numbered issues закрыты, кроме B10 (theme tokens hardcode → Wave 9). 2026-06-14 закрыты Issue 7 (RTL/F31 — logical start/end + deprecated физ. алиасы), unstyled-support (L53, regression-тест к глобальному guard), mobile (mobile-first gutters). Ранее (2026-05-11): XSS subtitle slot, openAlert createApp + Vue-bound cleanup, role/aria-live, motion-safe, sideEffects, dup initStyle; 3 N/A (toast-pattern). 2026-08-02 — hardening `sanitizeHtml` (Issue 1 amendment): границы атрибутов, entity-декодирование с политикой «ровно один проход», tag-aware поиск атрибутов, устранение склейки в исполняемый тег; плюс defensive `default:` в `classesStyle`/`icon`, типизированный `styleBase`, allow-list `type` в `openAlert`, поведенческий RTL-тест. Открытым остаётся только Issue 9 theme-tokens (B10, semantic-intent эпик).
-updated: 2026-08-02
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/alert/
 related-doc: ../components/alert.md
@@ -16,7 +16,7 @@ related-doc: ../components/alert.md
 | critical | 0            | —                                           |
 | high     | 0            | —                                           |
 | medium   | 0            | —                                           |
-| low      | 1            | theme tokens hardcode (B10 → Wave 9)        |
+| low      | 0            | ~~theme tokens hardcode (B10)~~ ✅ resolved 2026-09-06 — semantic-слоты интентов |
 
 Closed 2026-06-14: Issue 7 (F31/RTL — logical `start`/`end` + deprecated физ. алиасы), Issue 4 unstyled-часть (L53 — regression-тест к глобальному `Component.setStyle` guard), Issue 9 mobile-часть (mobile-first gutters). Closed 2026-05-11: Issues 1 (XSS), 2 (openAlert refactor), 3 (ARIA), 4 partial (sideEffects + dup initStyle), 9 partial (motion-safe). N/A 2026-05-11: Issues 5, 6 (toast pattern не имеет Confirm/Cancel UI), 8 (нет form). Остаётся открытым только Issue 9 theme-tokens-часть (B10).
 
@@ -193,13 +193,17 @@ Alert — toast-notification, не Dialog. У текущего Alert API нет 
 
 Alert не содержит form-control. Для form-сценариев (confirmation-dialog с input) используй [Dialog](../components/dialog.md) + native `<form @submit>`.
 
-## Issue 9: prefers-reduced-motion / colors / mobile — ⚠️ partial (motion + mobile ✅; theme tokens → Wave 9)
+## ~~Issue 9: prefers-reduced-motion / colors / mobile~~ ✅ resolved 2026-09-06
 
 **Что сделано:**
 
 - ✅ **`prefers-reduced-motion`** (2026-05-11) — все transition-классы префиксованы `motion-safe:` ([Alert.vue:186, 276, 279](../../lib/alert/Alert.vue#L186); [openAlert.ts:80](../../lib/alert/openAlert.ts#L80)). Пользователи с OS-настройкой «Reduce motion» видят alert без анимации. Тест: `Alert.test.ts` > `Motion — prefers-reduced-motion`.
 - ✅ **Mobile** (2026-06-14) — добавлены явные mobile-first gutters: body `p-3 sm:p-4` ([Alert.vue:190](../../lib/alert/Alert.vue#L190)); `openAlert`-контейнер `gap-3 sm:gap-4` ([openAlert.ts:80](../../lib/alert/openAlert.ts#L80)) + offsets `pt-3 sm:pt-5`/`pb-3 sm:pb-5`/`ps-3 sm:ps-5`/`pe-3 sm:pe-5` ([openAlert.ts:37–46](../../lib/alert/openAlert.ts#L37-L46)). На мобиле компактнее, на desktop — прежние отступы; ширина ограничена `max-w-[89vw]`. Тесты: `Alert.test.ts` > `Mobile-first responsive gutters`. Канон mobile-first (без JS `innerWidth`).
-- ⚠️ **Theme tokens (B10)** — severity colors (`bg-green-50`, `text-red-400` и т.д.) пока хардкодены Tailwind-примитивами. Миграция на semantic theme-tokens отложена (cross-cutting Wave 9, отдельный pass для `lib/theme/`). **Остаётся открытым** — единственный open low.
+- ✅ **Theme tokens (B10)** (2026-09-06, решение R11) — интенты переведены с примитивных шкал на **semantic-слоты**: `success` / `warning` / `info` / `error` заведены в [primitive.ts](../../lib/theme/primitive.ts) как 24–27-й именованные цвета, зеркаля структурный `surface` (Wave 9). Дефолты — точные копии green / yellow / blue / red, поэтому визуально Alert не изменился.
+
+  **Почему это не косметика.** Раньше перекрасить «ошибку» в фирменный оттенок было нельзя, не переопределив всю палитру `red-*` — а её потребитель использует и в других местах. Теперь интент и палитра разведены: `updatePreset({ primitive: { error: … } })` меняет только Alert.
+
+  **Правок в движке не потребовалось** — цветовые regex `unoRules.ts` собираются через `Object.keys(colors)`, новое имя подхватывается само. Тот же механизм, что и у `surface`; контракт зафиксирован в [semanticSlots.test.ts](../../lib/theme/semanticSlots.test.ts).
 
 См. [done/button.md Issue 10](./button.md) — каноничный motion-safe pattern.
 
@@ -210,7 +214,7 @@ Alert не содержит form-control. Для form-сценариев (confir
 | `componentsOptions.Alert` | ✅          | через options                                                   |
 | `componentsStyle` global  | ❌          | Alert не использует mode (outlined/filled) — не пересекается    |
 | `unstyled: true`          | ✅          | `Component.setStyle()` guard (resolved 2026-06-14, см. Issue 4) |
-| Theme tokens vs hardcode  | ⚠️          | severity colors частично хардкоден (Issue 9 partial)            |
+| Theme tokens vs hardcode  | ✅          | severity colors — semantic-слоты `success`/`warning`/`info`/`error` (Issue 9 ✅ 2026-09-06) |
 | `t()` для текста          | ✅          | close-button `aria-label` через `Alert.t("alert.close")`        |
 | Runtime locale switch     | ✅          | подтверждено тестом `Close button — localized aria-label`       |
 
