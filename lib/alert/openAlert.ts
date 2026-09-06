@@ -15,23 +15,20 @@ const valuesPosition = [
   "bottom-start",
   "top-start",
   "bottom-end",
-  "top-end",
-  // deprecated физические алиасы — нормализуются в logical (left → start, right → end)
-  "left",
-  "right",
-  "bottom-left",
-  "top-left",
-  "bottom-right",
-  "top-right"
+  "top-end"
 ]
 
 const valuesType = ["success", "warning", "info", "error", "neutral"]
 
-// Issue 7 / F31 (RTL): валидация + нормализация позиции в logical (left → start, right → end).
+// Issue 7 / F31 (RTL): валидация позиции по allow-list. Физические алиасы ("left"/"top-right"/…)
+// сняты в major 2026-09-06 (решение R7) — они не были RTL-безопасны, а поддерживать два набора
+// значений одного prop'а пришлось бы до следующего breaking-релиза.
+//
+// Allow-list оставлен: `openAlert` вызывают в том числе из untyped JS, и неизвестная позиция должна
+// давать дефолтный тост, а не сломанную вёрстку. Старое `"left"` теперь попадает именно сюда.
 function toLogicalPosition(position?: BaseAlert["position"]): string {
-  let p = (position ?? "top") as string
-  if (!valuesPosition.includes(p)) p = "top"
-  return p.replace("left", "start").replace("right", "end")
+  const p = (position ?? "top") as string
+  return valuesPosition.includes(p) ? p : "top"
 }
 
 // Allow-list для `type` (зеркало `toLogicalPosition`): openAlert вызывают в том числе из untyped JS,
@@ -70,13 +67,7 @@ export function openAlert(optionsAlert: BaseAlert) {
 
   const alertId = `alert-${generateUUID()}`
   const options: BaseAlert = Object.assign({}, optionsAlert)
-  // Issue 7 / F31: dev-warn для deprecated физических позиций + нормализация в logical (RTL-safe).
-  if (process.env.NODE_ENV !== "production" && options.position && /left|right/.test(options.position)) {
-    console.warn(
-      `[FishtVue Alert] position="${options.position}" is deprecated; ` +
-        `use logical "${toLogicalPosition(options.position)}" (start/end) for RTL-safe positioning.`
-    )
-  }
+  // Issue 7 / F31: нормализация позиции по allow-list (физические алиасы сняты — решение R7).
   const pos = toLogicalPosition(options.position)
   options.position = pos as BaseAlert["position"]
   // `undefined` не трогаем: глобальные options компонента должны сохранить право подставить свой `type`.

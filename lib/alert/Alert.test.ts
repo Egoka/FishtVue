@@ -132,7 +132,7 @@ describe("Alert Component", () => {
     })
 
     describe("Each test for position", () => {
-      it.each(["top", "bottom", "left", "right", "center"] as AlertProps["position"][])(
+      it.each(["top", "bottom", "start", "end", "center"] as AlertProps["position"][])(
         "should render alert with position '%s'",
         (position) => {
           const wrapper = mount(Alert, {
@@ -545,23 +545,16 @@ describe("Alert Component", () => {
         })
       })
 
-      it.each([
-        { physical: "left", logical: "start" },
-        { physical: "right", logical: "end" },
-        { physical: "top-left", logical: "top-start" },
-        { physical: "top-right", logical: "top-end" },
-        { physical: "bottom-left", logical: "bottom-start" },
-        { physical: "bottom-right", logical: "bottom-end" }
-      ])(
-        "maps deprecated physical '$physical' → logical container '.alert-$logical' (+ dev-warn)",
-        ({ physical, logical }) => {
-          const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      // Физические алиасы сняты в major 2026-09-06 (решение R7). Allow-list оставлен: openAlert
+      // вызывают в том числе из untyped JS, и старое значение должно давать дефолтный тост,
+      // а не контейнер с несуществующим классом позиции.
+      it.each(["left", "right", "top-left", "bottom-right"])(
+        "снятая физическая позиция '%s' резолвится в дефолтный top-контейнер",
+        (physical) => {
           openAlert({ position: physical as AlertPosition })
 
-          expect(document.querySelector(`.alert-${logical}`)).not.toBeNull()
+          expect(document.querySelector(`.alert-top`)).not.toBeNull()
           expect(document.querySelector(`.alert-${physical}`)).toBeNull()
-          expect(warn).toHaveBeenCalled()
-          warn.mockRestore()
         }
       )
     })
@@ -1491,18 +1484,6 @@ describe("Alert Component", () => {
   })
 
   describe("RTL & logical position (Issue 7 / F31)", () => {
-    it.each([
-      { input: "left", logical: "start" },
-      { input: "right", logical: "end" }
-    ])("maps deprecated physical position '$input' → '$logical' (positionLogical)", ({ input, logical }) => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-      const wrapper = mount(Alert, {
-        props: { modelValue: true, position: input as AlertProps["position"] }
-      })
-      expect(wrapper.vm.positionLogical).toBe(logical)
-      warn.mockRestore()
-    })
-
     it.each(["top", "bottom", "center", "start", "end"] as AlertProps["position"][])(
       "passes through logical position '%s'",
       (position) => {
@@ -1537,13 +1518,6 @@ describe("Alert Component", () => {
       const wrapper = mount(Alert, { props: { modelValue: true, position: "end" } })
       expect(wrapper.vm.startEnterAndLeaveClass).toContain("translate-x-[200%]")
       expect(wrapper.vm.startEnterAndLeaveClass).toContain("rtl:-translate-x-[200%]")
-    })
-
-    it("warns in dev when deprecated physical position is used", () => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-      mount(Alert, { props: { modelValue: true, position: "left" } })
-      expect(warn).toHaveBeenCalled()
-      warn.mockRestore()
     })
 
     it("does not warn for logical position", () => {

@@ -179,7 +179,7 @@ Alert — toast-notification, не Dialog. У текущего Alert API нет 
 **Acceptance criteria:**
 
 - [x] `position="start"`/`"end"` зеркалятся при `dir="rtl"`. Тесты: `Alert.test.ts` > `RTL & logical position (Issue 7 / F31)`.
-- [x] Deprecated `left`/`right`/`top-left`/… маппятся на logical + эмитят dev-warn (Alert + openAlert).
+- [x] ~~Deprecated `left`/`right`/`top-left`/… маппятся на logical + эмитят dev-warn (Alert + openAlert).~~ → **алиасы сняты 2026-09-06 (решение R7)**: неизвестная позиция не проходит allow-list и резолвится в дефолтный `top`. См. [migration-guide.md §2](../migration-guide.md).
 - [x] Content/close-button используют logical margins (`ms-*`/`ps-*`), не физические `ml-*`/`pl-*`.
 - [x] `openAlert` контейнер: logical `start-0`/`end-0`/`ps-*`/`pe-*`, дедуп физ./лог. позиций.
 

@@ -5,7 +5,7 @@ import { ClassComponent, GlobalComponentConstructor, Size, StyleClass } from "..
  * Logical, RTL-safe position values for the alert.
  *
  * `start`/`end` — логические стороны (`start` = слева в LTR, справа в RTL).
- * Физические `left`/`right`/`top-left`/… — deprecated алиасы, мапятся на logical
+ * Физические `left`/`right`/`top-left`/… сняты в major 2026-09-06 (решение R7) — они не были
  * (`left → start`, `right → end`) с dev-warning. Используй logical-значения для RTL-корректности.
  */
 export declare type AlertPosition =
@@ -18,18 +18,6 @@ export declare type AlertPosition =
   | "top-end"
   | "bottom-start"
   | "bottom-end"
-  /** @deprecated физический алиас — используй logical `start` (RTL-safe) */
-  | "left"
-  /** @deprecated физический алиас — используй logical `end` (RTL-safe) */
-  | "right"
-  /** @deprecated физический алиас — используй logical `top-start` (RTL-safe) */
-  | "top-left"
-  /** @deprecated физический алиас — используй logical `top-end` (RTL-safe) */
-  | "top-right"
-  /** @deprecated физический алиас — используй logical `bottom-start` (RTL-safe) */
-  | "bottom-left"
-  /** @deprecated физический алиас — используй logical `bottom-end` (RTL-safe) */
-  | "bottom-right"
 
 /**
  * ## Alert
@@ -122,11 +110,11 @@ export interface AlertProps extends Omit<BaseAlert, "position" | "toTeleport"> {
   /**
    * Position of the alert on the screen (logical, RTL-safe).
    *
-   * Logical `start`/`end` зеркалятся в RTL. Физические `left`/`right` — deprecated алиасы
+   * Logical `start`/`end` зеркалятся в RTL. Физические `left`/`right` сняты (решение R7)
    * (`left → start`, `right → end`) с dev-warning.
-   * @type {"top" | "bottom" | "center" | "start" | "end" | "left" | "right" | undefined}
+   * @type {"top" | "bottom" | "center" | "start" | "end" | undefined}
    */
-  position?: "top" | "bottom" | "center" | "start" | "end" | "left" | "right"
+  position?: "top" | "bottom" | "center" | "start" | "end"
 }
 
 export declare type AlertSlots = {

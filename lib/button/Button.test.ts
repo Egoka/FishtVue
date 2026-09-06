@@ -41,7 +41,7 @@ describe("Button Component Tests", () => {
       const wrapper = mount(Button, {
         props: {
           icon: "check",
-          iconPosition: "left",
+          iconPosition: "start",
           disabled: true,
           loading: true,
           mode: "outline",
@@ -53,7 +53,7 @@ describe("Button Component Tests", () => {
 
       expect(wrapper.props()).toMatchObject({
         icon: "check",
-        iconPosition: "left",
+        iconPosition: "start",
         disabled: true,
         loading: true,
         mode: "outline",
@@ -412,7 +412,7 @@ describe("Button Component Tests", () => {
       const labelEl = wrapper.find(".lbl").element
       return Boolean(iconEl.compareDocumentPosition(labelEl) & Node.DOCUMENT_POSITION_FOLLOWING)
     }
-    const mountWithIcon = (iconPosition?: "start" | "end" | "left" | "right") =>
+    const mountWithIcon = (iconPosition?: "start" | "end") =>
       mount(Button, {
         props: { icon: "check", ...(iconPosition ? { iconPosition } : {}) },
         slots: { default: '<span class="lbl">L</span>' }
@@ -430,22 +430,14 @@ describe("Button Component Tests", () => {
       expect(iconBeforeLabel(mountWithIcon())).toBe(false)
     })
 
-    it('maps deprecated "left" → start (icon before content)', () => {
-      expect(iconBeforeLabel(mountWithIcon("left"))).toBe(true)
-    })
-
-    it('maps deprecated "right" → end (icon after content)', () => {
-      expect(iconBeforeLabel(mountWithIcon("right"))).toBe(false)
-    })
-
-    it("warns in dev when deprecated left/right iconPosition is used", () => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-      mountWithIcon("left")
-      mountWithIcon("right")
-      const messages = fishtVueButtonWarns(warn).map((call) => call[0])
-      expect(messages.some((m) => m.includes('iconPosition="left" is deprecated'))).toBe(true)
-      expect(messages.some((m) => m.includes('iconPosition="right" is deprecated'))).toBe(true)
-      warn.mockRestore()
+    it('физические "left"/"right" сняты — значение игнорируется, работает default', () => {
+      // Алиасы убраны в major 2026-09-06 (решение R7): у prop'а один набор значений.
+      // Неизвестное значение не роняет компонент и не мапится тайком — иконка встаёт по умолчанию.
+      const wrapper = mount(Button, {
+        props: { icon: "check", iconPosition: "left" as any },
+        slots: { default: '<span class="lbl">L</span>' }
+      })
+      expect(iconBeforeLabel(wrapper)).toBe(false)
     })
 
     it("does not warn for logical start/end iconPosition", () => {

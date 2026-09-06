@@ -17,14 +17,10 @@ export default <DefaultMessages>{
     copied: "Copied"
   },
   select: {
-    resultsCount: "=0 No results|one 1 result|other Results: {count}",
-    resultsCountOne: "1 result",
-    resultsCountNone: "No results"
+    resultsCount: "=0 No results|one 1 result|other Results: {count}"
   },
   table: {
-    resultsCount: "=0 No results|one 1 result|other Results: {count}",
-    resultsCountOne: "1 result",
-    resultsCountNone: "No results"
+    resultsCount: "=0 No results|one 1 result|other Results: {count}"
   },
   alert: {
     close: "Close"

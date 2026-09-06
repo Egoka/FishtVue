@@ -34,7 +34,7 @@ related-doc: ../components/select.md
 - `v-html="item?.marker"` (Select.vue:553) → scoped slot `#marker` с default-template, который рендерит `<mark>`-теги через `<template v-for>` + text-interpolation (без `v-html`). См. [Select.vue](../../lib/select/Select.vue) (slot `marker` в template, helper `splitByQuery` + `markerParts` в script).
 - `v-html="noData"` (Select.vue:562, 564) → объединено в `#empty` slot с default text-node `<div>{{ noData }}</div>`.
 - `dataList` computed больше **не** мутирует `item.marker` HTML-строкой — подсветка вычисляется на render-time через safe helper.
-- `IDataItem.marker?: string` помечен `@deprecated`; передача поля логируется через `console.warn` один раз на item (WeakSet guard).
+- ~~`IDataItem.marker?: string` помечен `@deprecated`; передача поля логируется через `console.warn` один раз на item (WeakSet guard).~~ → **поле снято из типа 2026-09-06 (решение R7)** вместе с предупреждением. Предупреждение, как выяснилось при снятии, не срабатывало никогда: `dataList` получает объекты, пересобранные computed'ом `dataSelect`, и поля `marker` в них нет по построению — код был мёртвым с момента появления маппинга. Данные не рендерятся как HTML ни при каких условиях, это и проверяет тест.
 - Slots `marker` и `empty` объявлены в `SelectSlots` ([Select.d.ts](../../lib/select/Select.d.ts)) с типизированными scoped-props.
 
 **Acceptance criteria:**

@@ -32,13 +32,13 @@ export declare type SeparatorProps = {
    * `"center"` — по центру (оба line-сегмента), `"full"` — контент во всю ширину (без сегментов).
    * Порядок сегментов зеркалится автоматически через flex main-axis при `dir="rtl"`.
    *
-   * `"left"`/`"right"` — **deprecated** физические алиасы (`left → start`, `right → end`),
+   * Физические алиасы `"left"`/`"right"` сняты в major 2026-09-06 (решение R7).
    * сохранены для backward compat; в dev-режиме предупреждают в консоль. Используй logical
    * `"start"`/`"end"` для RTL-safe поведения.
    *
-   * @type {"start" | "end" | "center" | "full" | "left" | "right" | undefined}
+   * @type {"start" | "end" | "center" | "full" | undefined}
    */
-  contentPosition?: "start" | "end" | "center" | "full" | "left" | "right"
+  contentPosition?: "start" | "end" | "center" | "full"
 
   /**
    * Gradient applied to the separator lines.
@@ -120,7 +120,7 @@ export declare type SeparatorExpose = {
 
   /**
    * Normalized (logical) alignment of the content within the separator.
-   * Deprecated `"left"`/`"right"` props приведены к `"start"`/`"end"`.
+   * Значение уже нормализовано: неизвестный ввод сведён к `"center"`.
    * @type {"start" | "end" | "center" | "full"}
    */
   content: "start" | "end" | "center" | "full"

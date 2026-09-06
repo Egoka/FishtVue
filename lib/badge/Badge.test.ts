@@ -100,7 +100,7 @@ describe("Badge Component Tests", () => {
 
       const button = wrapper.find("button")
       await button.trigger("click")
-      expect(wrapper.emitted("delete")).toBeTruthy()
+      expect(wrapper.emitted("close")).toBeTruthy()
     })
 
     it("renders slots correctly", () => {
@@ -206,7 +206,7 @@ describe("Badge Component Tests", () => {
 
       const button = wrapper.find("button")
       await button.trigger("click")
-      expect(wrapper.emitted("delete")).toBeTruthy()
+      expect(wrapper.emitted("close")).toBeTruthy()
     })
 
     describe("componentsStyle global fallback", () => {
@@ -258,8 +258,8 @@ describe("Badge Component Tests", () => {
         const button = wrapper.find("button")
         await button.trigger("click")
 
-        expect(wrapper.emitted("delete")).toBeTruthy()
-        expect(wrapper.emitted("delete")).toHaveLength(1)
+        expect(wrapper.emitted("close")).toBeTruthy()
+        expect(wrapper.emitted("close")).toHaveLength(1)
         expect(wrapper.emitted("close")).toBeTruthy()
         expect(wrapper.emitted("close")).toHaveLength(1)
       })
@@ -270,8 +270,8 @@ describe("Badge Component Tests", () => {
         wrapper.vm.deleteBadge()
         await wrapper.vm.$nextTick()
 
-        expect(wrapper.emitted("delete")).toBeTruthy()
-        expect(wrapper.emitted("delete")).toHaveLength(1)
+        expect(wrapper.emitted("close")).toBeTruthy()
+        expect(wrapper.emitted("close")).toHaveLength(1)
         expect(wrapper.emitted("close")).toBeTruthy()
         expect(wrapper.emitted("close")).toHaveLength(1)
       })

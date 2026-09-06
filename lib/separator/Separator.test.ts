@@ -24,7 +24,7 @@ describe("Separator Component", () => {
       }
     })
 
-    it.each(["left", "right", "center", "full"] as SeparatorProps["contentPosition"][])(
+    it.each(["start", "end", "center", "full"] as SeparatorProps["contentPosition"][])(
       "renders content position: %s",
       (content) => {
         const wrapper = mount(Separator, {
@@ -32,10 +32,10 @@ describe("Separator Component", () => {
         })
         const left = wrapper.find("[data-separator-left]")
         const right = wrapper.find("[data-separator-right]")
-        if (content === "left") {
+        if (content === "start") {
           expect(left.exists()).toBe(false)
           expect(right.exists()).toBe(true)
-        } else if (content === "right") {
+        } else if (content === "end") {
           expect(right.exists()).toBe(false)
           expect(left.exists()).toBe(true)
         } else if (content === "center" || content === "full") {
@@ -44,6 +44,15 @@ describe("Separator Component", () => {
         }
       }
     )
+
+    it('снятые физические "left"/"right" сводятся к дефолтному center, а не к пустой разметке', () => {
+      // Алиасы убраны в major 2026-09-06 (решение R7). Untyped JS-потребитель, оставшийся на
+      // старом значении, получает дефолт — обе линии на месте, а не разъехавшийся разделитель.
+      const wrapper = mount(Separator, { props: { contentPosition: "left" as any } })
+
+      expect(wrapper.find("[data-separator-left]").exists()).toBe(true)
+      expect(wrapper.find("[data-separator-right]").exists()).toBe(true)
+    })
 
     it.each([0, 5, 10, 20, 30, 40, 50] as SeparatorProps["gradient"][])("renders with gradient: %s", (gradient) => {
       const wrapper = mount(Separator, {
@@ -155,32 +164,23 @@ describe("Separator Component", () => {
       expect((wrapper.vm as any).content).toBe(position)
     })
 
-    it.each([
-      { deprecated: "left", logical: "start" },
-      { deprecated: "right", logical: "end" }
-    ] as const)("normalizes deprecated $deprecated → $logical (backward compat)", ({ deprecated, logical }) => {
-      const wrapper = mount(Separator, { props: { contentPosition: deprecated as any } })
-      // exposed value нормализован в logical
-      expect((wrapper.vm as any).content).toBe(logical)
-      // рендеринг идентичен logical-эквиваленту
-      const hidden = logical === "start" ? "left" : "right"
-      expect(wrapper.find(`[data-separator-${hidden}]`).exists()).toBe(false)
+    // Физические алиасы "left"/"right" сняты в major 2026-09-06 (решение R7) вместе с их
+    // dev-warn'ом. Остался один контракт: неизвестное значение сводится к дефолту.
+    it.each(["left", "right"] as const)("снятое физическое %s резолвится в center", (position) => {
+      const wrapper = mount(Separator, { props: { contentPosition: position as any } })
+
+      expect((wrapper.vm as any).content).toBe("center")
     })
 
-    it.each(["left", "right"] as const)("dev-warns on deprecated contentPosition=%s", (position) => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-      mount(Separator, { props: { contentPosition: position as any } })
-      expect(warn).toHaveBeenCalledTimes(1)
-      expect(warn.mock.calls[0][0]).toContain("[FishtVue Separator]")
-      warn.mockRestore()
-    })
-
-    it.each(["start", "end", "center", "full"] as const)("does not warn for logical contentPosition=%s", (position) => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-      mount(Separator, { props: { contentPosition: position } })
-      expect(warn).not.toHaveBeenCalled()
-      warn.mockRestore()
-    })
+    it.each(["left", "right", "start", "end", "center", "full"] as const)(
+      "не предупреждает ни для какого contentPosition=%s",
+      (position) => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+        mount(Separator, { props: { contentPosition: position as any } })
+        expect(warn).not.toHaveBeenCalled()
+        warn.mockRestore()
+      }
+    )
 
     it("mirrors horizontal gradient direction under RTL via rtl: variants", () => {
       const wrapper = mount(Separator, { props: { gradient: true, contentPosition: "center" } })

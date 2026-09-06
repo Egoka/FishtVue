@@ -1,7 +1,7 @@
 ---
 title: Issues — Button
 summary: Аудит критических и потенциальных проблем компонента Button — SSR-style инжекция, polymorphic `as`, packaging, `componentsStyle`, `unstyled`, print, dark-mode. Resolved 2026-05-10: aria-label (Issue 2), buttonRef expose (4), motion-safe (10), typed click emit (11), start/end slots (12). Resolved 2026-06-07: logical iconPosition start/end + RTL (Issue 3); cross-cutting — SSR-стили C17 (Issue 1 — через `onServerPrefetch`, поведение общее для 22 компонентов), sideEffects A2 (Issue 8 — root + per-component); Issue 9 ✅ (ESM-only `engines` + root `exports` map через `buildRootExports()`, 2026-06-11). Doc-sync 2026-06-12: матрица severity пересчитана к фактически открытым (Issues 5/6/7/13/14/15/16). Issue 16 (B11 — darkModeSelector) ✅ resolved 2026-06-12 — theme-движок уже транслировал config-селектор, добавлены regression-тесты ([theme.md Issue 5](./theme.md)). Зачёркнуты ниже с `✅ resolved`-маркерами. **Resolved 2026-06-14 (button.md doc-sync 2026-06-19):** Issue 7 (I45 — heroicons) — переведены на tree-shakeable const-реестр explicit named-импортов в Icons (`f11b23d`), regression закрыт вместе с bundle-weight; cross-cutting фикс в Icons.vue, см. [icons.md Issue 1](./icons.md).
-updated: 2026-06-19
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/button/
 related-doc: ../components/button.md
@@ -107,6 +107,8 @@ onMounted(() => {
 - **Severity:** ~~medium~~
 - **Где:** [Button.d.ts:63-74](../../lib/button/Button.d.ts#L63-L74), [Button.vue:299-308](../../lib/button/Button.vue#L299-L308), [Button.vue:407-411](../../lib/button/Button.vue#L407-L411)
 - **Resolution:** `iconPosition` принимает logical-значения `"start" | "end"` (default `end`); `"left" | "right"` сохранены как deprecated алиасы (`left → start`, `right → end`) через type-union + computed-нормализацию. RTL-корректность обеспечивается тем, что корневой `<button>` — `inline-flex`, и его main-axis следует document direction (`dir="rtl"` → start визуально справа), поэтому дополнительный CSS/`useDirectionality()` не нужен. `onMounted` dev-warning при использовании deprecated значений.
+
+> **Алиас снят 2026-09-06 (решение R7).** Обратно совместимый вход убран вместе с dev-warn'ом в рамках единого major: держать второй публичный путь к тому же поведению до следующего breaking-релиза значило бы поддерживать два контракта параллельно. Что делать потребителю — [migration-guide.md §2](../migration-guide.md).
 
 ### Что найдено
 

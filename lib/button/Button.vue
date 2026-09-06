@@ -306,16 +306,13 @@
   // ---PROPS-------------------------------
   const type = computed<ButtonProps["type"]>(() => props.type ?? "button")
   const icon = computed<ButtonProps["icon"]>(() => props.icon ?? "")
-  // Issue 3: logical start/end positioning. "left"/"right" — deprecated алиасы,
-  // мапятся на logical-значения (left → start, right → end). RTL-корректность
-  // обеспечивается тем, что корневой <button> — inline-flex, и его main-axis
-  // следует document direction; дополнительный CSS не нужен.
-  const iconPosition = computed<"start" | "end">(() => {
-    const raw = props.iconPosition ?? "end"
-    if (raw === "left") return "start"
-    if (raw === "right") return "end"
-    return raw
-  })
+  // Issue 3: logical start/end positioning. RTL-корректность обеспечивается тем, что корневой
+  // <button> — inline-flex, и его main-axis следует document direction; дополнительный CSS не нужен.
+  // Физические алиасы "left"/"right" сняты в major 2026-09-06 (решение R7). Резолв намеренно
+  // сводит к "end" всё, что не "start": untyped JS-потребитель, оставшийся на старом "left",
+  // получит иконку в дефолтной позиции, а не исчезнувшую иконку — шаблон рендерит её только
+  // для двух известных значений.
+  const iconPosition = computed<"start" | "end">(() => (props.iconPosition === "start" ? "start" : "end"))
   const isLoading = computed<ButtonProps["loading"]>(() => props.loading)
   const disabled = computed<ButtonProps["disabled"]>(() => props.disabled ?? false)
   // Issue 5: polymorphic root. По умолчанию <button>; `as` позволяет <a>/<NuxtLink>/….
@@ -428,13 +425,6 @@
       console.warn(
         "[FishtVue Button] icon-only button without aria-label or default slot is inaccessible. " +
           "Pass `:aria-label` or provide a default slot with descriptive content."
-      )
-    }
-    // Dev-warning: deprecated iconPosition значения "left"/"right" не RTL-safe.
-    if (process.env.NODE_ENV !== "production" && (props.iconPosition === "left" || props.iconPosition === "right")) {
-      console.warn(
-        `[FishtVue Button] iconPosition="${props.iconPosition}" is deprecated; ` +
-          `use "${props.iconPosition === "left" ? "start" : "end"}" for RTL-safe logical positioning.`
       )
     }
   })

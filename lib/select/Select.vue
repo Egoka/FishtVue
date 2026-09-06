@@ -230,32 +230,12 @@
     }
     return false
   }
-  // ---ISSUE 1 — deprecation warning for `marker` field (XSS surface removed) ---
-  const __markerWarnedItems = new WeakSet<object>()
-  function warnDeprecatedMarker(item: unknown): void {
-    if (!item || typeof item !== "object") return
-    const obj = item as Record<string, unknown>
-    if (!Object.prototype.hasOwnProperty.call(obj, "marker")) return
-    if (__markerWarnedItems.has(obj)) return
-    __markerWarnedItems.add(obj)
-
-    console.warn(
-      "[FishtVue Select] `IDataItem.marker` is deprecated since 2026-05-11 — the field is ignored to prevent XSS. " +
-        "Use the `#marker` scoped slot to customise substring highlighting."
-    )
-  }
   const dataList = computed<any[]>(() => {
     if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
       return LD.filter(dataSelect.value, (item) => {
-        if (typeof item === "object" && item) warnDeprecatedMarker(item)
         const raw = typeof item === "object" ? (item as IDataItem)[valueSelect.value as string] : item
         return matchesQuery(String(raw), query.value)
       }) as any[]
-    }
-    if (dataSelect.value?.length) {
-      for (const item of dataSelect.value) {
-        if (typeof item === "object" && item) warnDeprecatedMarker(item)
-      }
     }
     return (dataSelect.value ?? []) as any[]
   })
@@ -910,7 +890,7 @@
                     mode="neutral"
                     :close-button="closeButtonBadge"
                     class-content="fill-theme-500"
-                    @delete="select(item)"
+                    @close="select(item)"
                     class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500">
                     {{ valueSelect ? item[valueSelect] : item[keySelect] }}
                   </Badge>
@@ -923,7 +903,7 @@
                     :close-button="closeButtonBadge"
                     class="m-1 ps-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
                     class-content="fill-theme-500 flex items-center"
-                    @delete="select(null)">
+                    @close="select(null)">
                     <Icons type="Funnel" class="h-3 w-3 me-1 text-theme-400 dark:text-theme-600" />
                     {{ visibleValue.length }}
                   </Badge>

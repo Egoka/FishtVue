@@ -156,18 +156,10 @@ describe("Icons Component Tests", () => {
   })
 
   // -----------------------------------------------------------------------
-  // Variant + stileIcon deprecation — Issue 4 (icons.md)
+  // Variant — Issue 4 (icons.md). Алиас `stileIcon` снят в major 2026-09-06
+  // (решение R7): у prop'а остался один публичный вход.
   // -----------------------------------------------------------------------
-  describe("Variant prop + stileIcon soft-deprecation", () => {
-    let warnSpy: ReturnType<typeof vi.spyOn>
-
-    beforeEach(() => {
-      warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
-    })
-    afterEach(() => {
-      warnSpy.mockRestore()
-    })
-
+  describe("Variant prop", () => {
     it('variant="solid" renders solid HeroIcon (fill="currentColor" instead of stroke)', async () => {
       const wrapper = mount(Icons, { props: { type: "Check", variant: "solid" } })
       await flushHero()
@@ -185,30 +177,14 @@ describe("Icons Component Tests", () => {
       expect(svg.attributes("fill")).toBe("none")
     })
 
-    // Note: warnSpy ловит все `console.warn` — включая Vue injection-warning
-    // про `Symbol(FishtVue)`, который иногда фигурирует при mount без plugin'а
-    // (зависит от global window-state и предыдущих тестов). Поэтому проверяем
-    // ТОЛЬКО deprecation-сообщение через регулярку, игнорируя остальные warn'ы.
-    const deprecationCalls = (spy: ReturnType<typeof vi.spyOn>) =>
-      spy.mock.calls.filter((c: unknown[]) => /stileIcon.*deprecated.*variant/i.test(String(c[0])))
-
-    it('stileIcon="solid" (without variant) still works AND emits dev console.warn', async () => {
-      const wrapper = mount(Icons, { props: { type: "Check", stileIcon: "solid" } })
-      await flushHero()
-      const svg = wrapper.find("svg")
-      expect(svg.attributes("fill")).toBe("currentColor")
-      expect(deprecationCalls(warnSpy)).toHaveLength(1)
-    })
-
-    it("variant overrides stileIcon (no deprecation warn fired when variant present)", async () => {
-      const wrapper = mount(Icons, {
-        props: { type: "Check", variant: "outline", stileIcon: "solid" }
-      })
+    it("stileIcon больше не объявлен и не влияет на рендер", async () => {
+      // передан как обычный лишний атрибут — компонент его игнорирует,
+      // вариант резолвится дефолтом
+      const wrapper = mount(Icons, { props: { type: "Check", stileIcon: "solid" } as any })
       await flushHero()
       const svg = wrapper.find("svg")
       expect(svg.attributes("fill")).toBe("none")
       expect(svg.attributes("stroke-width")).toBe("1.5")
-      expect(deprecationCalls(warnSpy)).toHaveLength(0)
     })
   })
 

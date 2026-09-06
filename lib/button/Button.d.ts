@@ -66,12 +66,12 @@ type BaseButtonProps = ButtonStyle & {
    * - `"start"` — перед контентом (визуально слева в LTR, справа в RTL);
    * - `"end"` — после контента (default; визуально справа в LTR, слева в RTL).
    *
-   * Значения `"left"` / `"right"` — **deprecated** алиасы (`left → start`,
-   * `right → end`), сохранены для обратной совместимости и в dev-режиме
-   * выводят предупреждение. Используй logical-значения для корректного RTL.
-   * @type {"start" | "end" | "left" | "right" | undefined}
+   * Физические алиасы `"left"` / `"right"` сняты в major 2026-09-06 (решение R7):
+   * они не были RTL-безопасны, а второй набор значений для одного prop'а
+   * приходилось бы поддерживать до следующего breaking-релиза.
+   * @type {"start" | "end" | undefined}
    */
-  iconPosition?: "start" | "end" | "left" | "right"
+  iconPosition?: "start" | "end"
 
   /**
    * Disables the button.

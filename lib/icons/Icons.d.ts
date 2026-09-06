@@ -114,13 +114,6 @@ export declare type IconsProps = {
   label?: string
 
   /**
-   * @deprecated Use `variant` instead. `stileIcon` сохранён как обратно совместимый alias
-   * и будет удалён в 1.0. При использовании без `variant` компонент выведет dev-warning в консоль.
-   * @type {"outline" | "solid"}
-   */
-  stileIcon?: "outline" | "solid"
-
-  /**
    * Custom CSS class for the icon.
    * @type {"h-5 w-5 text-surface-900 dark:text-surface-100" | StyleClass | undefined}
    */
@@ -146,7 +139,7 @@ export declare type IconsExpose = {
   type: IconsProps["type"]
 
   /**
-   * The resolved style variant (`outline` или `solid`), уже с учётом `stileIcon`-fallback и options.
+   * The resolved style variant (`outline` или `solid`) с учётом options.
    * @type {NonNullable<IconsProps["variant"]>}
    */
   variant: NonNullable<IconsProps["variant"]>

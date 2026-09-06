@@ -18,15 +18,11 @@ export default <DefaultMessages>{
   },
   select: {
     resultsCount:
-      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата",
-    resultsCountOne: "1 результат",
-    resultsCountNone: "Результатов не найдено"
+      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата"
   },
   table: {
     resultsCount:
-      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата",
-    resultsCountOne: "1 результат",
-    resultsCountNone: "Результатов не найдено"
+      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата"
   },
   alert: {
     close: "Закрыть"

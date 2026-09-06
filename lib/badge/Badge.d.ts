@@ -52,12 +52,6 @@ export declare type BadgeSlots = {
  */
 export declare type BadgeEmits = {
   /**
-   * Emitted when the badge is deleted (via close button or action).
-   *
-   * @deprecated Use `close` instead. Will be removed in 1.0.
-   */
-  (event: "delete"): void
-  /**
    * Emitted when the badge is closed (via close button or action).
    */
   (event: "close"): void

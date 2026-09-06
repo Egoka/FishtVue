@@ -16,11 +16,6 @@ declare class Select extends ClassComponent<SelectProps, SelectSlots, SelectEmit
 // ---------------------------------------
 export type IDataItem = {
   [key: string]: any
-  /**
-   * @deprecated since 2026-05-11 — поле `marker` игнорируется компонентом для защиты от XSS.
-   * Для кастомного рендеринга подсветки используйте scoped slot `#marker` (см. SelectSlots).
-   */
-  marker?: string
 }
 export type BaseDataItem = string | number | IDataItem
 
@@ -131,7 +126,7 @@ export declare type SelectSlots = {
   /**
    * Scoped slot для безопасного рендера подсветки совпадения query внутри значения опции.
    * По умолчанию выводит текст значения + `<mark>` для участков, совпавших с `query`,
-   * через text-interpolation (без `v-html`). Заменяет deprecated `IDataItem.marker` поле.
+   * через text-interpolation (без `v-html`). Пришёл на смену полю `IDataItem.marker`, снятому 2026-09-06.
    */
   marker(args: { item: any; query: string; isQuery: boolean; valueKey: string | null }): VNode[]
   /**

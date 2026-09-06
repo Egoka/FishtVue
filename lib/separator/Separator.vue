@@ -13,15 +13,14 @@
   const slots = useSlots()
   // ---PROPS-------------------------------
   const vertical = computed<NonNullable<SeparatorProps["vertical"]>>(() => props.vertical)
-  // Issue 3 / F31: logical start/end. "left"/"right" — deprecated алиасы, мапятся на
-  // logical-значения (left → start, right → end). RTL-корректность порядка сегментов
-  // обеспечивается тем, что корень — flex, и его main-axis следует document direction;
-  // отдельный CSS/`useDirectionality()` не нужен (зеркало Button Issue 3).
+  // Issue 3 / F31: logical start/end. RTL-корректность порядка сегментов обеспечивается тем,
+  // что корень — flex, и его main-axis следует document direction; отдельный CSS или
+  // `useDirectionality()` не нужен (зеркало Button Issue 3).
+  // Физические алиасы "left"/"right" сняты в major 2026-09-06 (решение R7); неизвестное значение
+  // сводится к "center" — дефолту, а не к пустой разметке.
   const content = computed<"start" | "end" | "center" | "full">(() => {
     const raw = props.contentPosition ?? options?.contentPosition ?? "center"
-    if (raw === "left") return "start"
-    if (raw === "right") return "end"
-    return raw
+    return raw === "start" || raw === "end" || raw === "full" ? raw : "center"
   })
   const gradient = computed<number>(() => {
     let gradient = props?.gradient ?? options?.gradient
@@ -133,18 +132,8 @@
   // ---MOUNT-UNMOUNT-----------------------
   // `Separator.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
   // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
-  onMounted(() => {
-    // Dev-warning: deprecated физические "left"/"right" не RTL-safe (Issue 3 / F31).
-    if (
-      process.env.NODE_ENV !== "production" &&
-      (props.contentPosition === "left" || props.contentPosition === "right")
-    ) {
-      console.warn(
-        `[FishtVue Separator] contentPosition="${props.contentPosition}" is deprecated; ` +
-          `use "${props.contentPosition === "left" ? "start" : "end"}" for RTL-safe logical positioning.`
-      )
-    }
-  })
+  // Прежний пустой `onMounted` держал только dev-warn о снятых физических алиасах — удалён вместе
+  // с ними (решение R7).
 </script>
 
 <template>

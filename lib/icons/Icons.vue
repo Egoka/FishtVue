@@ -188,15 +188,11 @@
   const options = Icons.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = defineProps<IconsProps>()
-  // ---DEPRECATION-WARN--------------------
-  if (props.stileIcon !== undefined && props.variant === undefined) {
-    console.warn("[FishtVue] <Icons> 'stileIcon' is deprecated, use 'variant' instead. Will be removed in 1.0.")
-  }
   // ---REF-LINK----------------------------
   const isViewIcon = ref(false)
   // ---PROPS-------------------------------
   const type = computed(() => props.type)
-  const variant = computed<"outline" | "solid">(() => props.variant ?? props.stileIcon ?? options?.variant ?? "outline")
+  const variant = computed<"outline" | "solid">(() => props.variant ?? options?.variant ?? "outline")
   const label = computed<string | undefined>(() => (props.label ? props.label : undefined))
   const style = computed(() => props.style)
   const classIcon = computed(() =>

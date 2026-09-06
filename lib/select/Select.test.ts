@@ -279,7 +279,17 @@ describe("Select Component Tests", () => {
     })
 
     // ---ISSUE 1 — XSS guard ---------------------------------------
-    it("does not execute XSS payload from item.marker (legacy field is ignored)", async () => {
+    it("does not execute XSS payload from a legacy `marker` field", async () => {
+      // Поле `marker` игнорировалось с 2026-05-11 и снято из типа в major 2026-09-06 (решение R7).
+      // Проверяется главное: произвольный HTML из данных не попадает в разметку ни при каких
+      // условиях — ни в закрытом списке, ни после фильтрации.
+      //
+      // Прежняя редакция этого теста дополнительно требовала `expect(warnSpy).toHaveBeenCalled()`
+      // — якобы deprecation-предупреждения. На деле спай ловил совсем другое: warn'ы движка о
+      // дропнутых классах (`class "selectBody" was dropped`), которые дедуплицируются глобально,
+      // поэтому проверка зависела от порядка файлов. Само же предупреждение о `marker` не могло
+      // сработать никогда: `dataList` получает уже пересобранные `dataSelect`-объекты, в которых
+      // поля `marker` нет. Ассерт удалён вместе с мёртвым кодом, который он «проверял».
       const xssPayload = '<img src=x onerror="window.__xssTriggered=true">'
       ;(globalThis as any).__xssTriggered = false
       const wrapper = mount(Select, {
@@ -290,21 +300,16 @@ describe("Select Component Tests", () => {
       })
       await wrapper.find("[data-select]").trigger("click")
       await flushPromises()
-      // Force dataList computed evaluation — warnDeprecatedMarker fires only on access.
-      // Template open-path может не дойти до dataList в jsdom раньше assertion'а.
-      // Type in search box to flip isQuery + dataSelect filter branch (where warn fires).
       const search = wrapper.find("[data-select-search] input")
       if (search.exists()) {
         await search.setValue("a")
         await search.trigger("input")
         await flushPromises()
       }
-      void (wrapper.vm as any).dataList
       const html = wrapper.html()
       expect(html).not.toContain("onerror=")
       expect(html).not.toMatch(/<img[^>]*src=x/)
       expect((globalThis as any).__xssTriggered).toBe(false)
-      expect(warnSpy).toHaveBeenCalled()
       wrapper.unmount()
     })
 

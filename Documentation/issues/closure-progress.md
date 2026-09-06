@@ -52,7 +52,8 @@ updated: 2026-09-06
 | T16. Uno-движок: паритет с Tailwind v4 | uno-engine.md Issues 2, 4 | ✅ | `feat(theme)` |
 | T17. Токены: дифференциация тем, semantic-слоты интентов, спиннеры | R9 + R28 + R11 + R12 + R10 | ✅ | `feat(theme)` |
 | T18. Метаданные локалей, RTL Label, единый print-блок, Nuxt-префикс | R23 + R22 + R21 + Nuxt Issue 8 | ✅ | `feat(locale)` |
-| T19. Coverage-гейт, переименование `Aria` → `Textarea`, migration guide | R31 + R6 + R8 | ✅ | `feat!(textarea)` |
+| T19. Coverage-гейт, переименование `Aria` → `Textarea`, migration guide | R31 + R6 + R8 | ✅ | `feat(textarea)` |
+| T20. Снятие deprecated-алиасов | R7 | ✅ | `feat(components)` |
 
 Не входит в сессию (эпики и длинные волны): C1, C2, C5, C7, C9, B5–B11, B18, D1–D4. Причина — объём, см. [closure-assessment.md §7.1](./closure-assessment.md).
 
@@ -664,6 +665,45 @@ R8 давал approve на отдельный npm-пакет с `jscodeshift`/`t
 ### Публичный `docs/` осознанно отстаёт
 
 Решение R32 («публичный `docs/` не трогать — ведётся отдельно») и R6 (переименование) конфликтуют: сайт ссылается на `fishtvue/aria`. Конфликт разрешён в пользу R32 — канон в `lib/` переименован, сайт догоняет своим заходом. Это записано и в migration guide, чтобы расхождение не выглядело недосмотром.
+
+---
+
+## T20. Снятие deprecated-алиасов
+
+**Решение:** R7 — шесть алиасов уходят тем же major, что и переименование.
+
+| Что снято | Замена |
+| --------- | ------ |
+| `Icons.stileIcon` | `variant` |
+| `Button.iconPosition` `"left"` / `"right"` | `"start"` / `"end"` |
+| `Separator.contentPosition` `"left"` / `"right"` | `"start"` / `"end"` |
+| `Alert.position` физические (`left`, `top-right`, …) | логические (`start`, `top-end`, …) |
+| `Badge` emit `delete` | `close` |
+| `IDataItem.marker` у Select | scoped slot `#marker` |
+| Ключи локали `select.resultsCountOne` / `resultsCountNone` | `select.resultsCount` с CLDR-формами |
+
+**Результат.** Полная сюита **6014 passed, 73 файла**, coverage 91.14 / 80.21 / 94.28 / 95.30 — гейт проходит.
+
+### Резолв сводит неизвестное к дефолту, а не к пустоте
+
+Первая версия снятия `Button.iconPosition` просто убрала маппинг: `props.iconPosition ?? "end"`. Тест упал — и правильно. Шаблон рендерит иконку только для двух известных значений (`v-if="iconPosition === 'start'"` / `'end'`), поэтому оставшееся у потребителя `"left"` не мапилось никуда и **иконка исчезала совсем**.
+
+Это худший из возможных исходов для untyped JS-потребителя: не «иконка не с той стороны», а «иконки нет». Резолв переписан на явное сведение к дефолту (`=== "start" ? "start" : "end"`), и тот же принцип применён к Separator (неизвестное → `center`) и Alert (allow-list → `top`).
+
+Единственное исключение — `Badge` emit `delete`: событие нельзя «свести к дефолту», оно просто перестало эмититься. Это отмечено в migration guide как единственный пункт, который ломается молча.
+
+### Находка N18 — тест XSS проверял не то, что заявлял
+
+Снятие `IDataItem.marker` уронило тест «does not execute XSS payload from item.marker», причём на ассерте `expect(warnSpy).toHaveBeenCalled()` — якобы проверке deprecation-предупреждения.
+
+Разбор показал два наложенных дефекта:
+
+1. **Предупреждение о `marker` не могло сработать никогда.** `warnDeprecatedMarker` вызывался из `dataList`, а тот работает с объектами, пересобранными computed'ом `dataSelect` (`{[keySelect]: …, [valueSelect]: …}`) — поля `marker` в них нет по построению. Код был мёртвым с момента появления маппинга.
+2. **Спай ловил совсем другие warn'ы** — сообщения движка о дропнутых классах (`class "selectBody" was dropped: no matching rule`). Они дедуплицируются module-scope Set'ом, общим между файлами при `isolate: false`, поэтому ассерт проходил или падал в зависимости от того, какой файл первым отрендерил Select.
+
+То есть тест был зелёным по случайности и держал ложную уверенность в работающей деприкации. Ассерт удалён вместе с мёртвым кодом; осталась настоящая проверка — payload не попадает в разметку.
+
+Практический вывод шире этого случая: **`expect(spy).toHaveBeenCalled()` без проверки содержимого — почти не тест**, если spy повешен на глобальный `console.warn`, куда пишет ещё и библиотека.
 
 ---
 

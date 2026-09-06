@@ -1,7 +1,7 @@
 ---
 title: Issues — Icons
 summary: Аудит Icons — heroicons переведены на tree-shakeable const-реестр explicit named-импортов (2026-06-14, Issue 1): bundler оставляет только curated-набор (37 имён ≈ 11 KB gzip) вместо всех 648 (~94 KB); sync lookup сохранён → prod-Vite/SSR-корректность не теряется; имена вне набора → Iconify-fallback. Iconify CSP — docs-only (offline-prop declined, addCollection-mitigation в §12). API-уровень (variant, label, narrow IconType) закрыт в 0.2.x. B10 (semantic-token hardcode) resolved 2026-07-04 — все issues закрыты.
-updated: 2026-07-04
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/icons/
 related-doc: ../components/icons.md
@@ -134,6 +134,8 @@ related-doc: ../components/icons.md
 2. ✅ `stileIcon` soft-deprecated с JSDoc `@deprecated` и runtime dev `console.warn` при использовании без `variant` ([Icons.vue:28–30](../../lib/icons/Icons.vue#L28-L30)).
 3. ⏳ В `1.0` удалить — **deferred** (separate breaking-change PR).
 4. ⏳ Codemod для замены — **deferred** ([Wave 12](../README.md#-wave-12--migration--dx)).
+
+> **Алиас снят 2026-09-06 (решение R7).** Обратно совместимый вход убран вместе с dev-warn'ом в рамках единого major: держать второй публичный путь к тому же поведению до следующего breaking-релиза значило бы поддерживать два контракта параллельно. Что делать потребителю — [migration-guide.md §2](../migration-guide.md).
 
 ### Resolution chain (текущая семантика)
 

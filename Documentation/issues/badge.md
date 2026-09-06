@@ -1,7 +1,7 @@
 ---
 title: Issues — Badge
 summary: Аудит Badge — все issues закрыты (matrix 0/0/0/0). Packaging (A2/A4-5) + unstyled (L53) наследуют cross-cutting Wave 2.1/3.1; F31 (RTL logical padding) + B10 (forced-colors) сделаны в SFC 2026-06-13; B10 structural neutral-*→surface-* migration — 2026-07-05 (Wave 9 residual batch). Файл остаётся active как Wave 9 трекер.
-updated: 2026-07-05
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/badge/
 related-doc: ../components/badge.md
@@ -108,6 +108,8 @@ function deleteBadge() {
 ```
 
 `delete` помечен `@deprecated` в [Badge.d.ts:57](../../lib/badge/Badge.d.ts#L57) — IDE/Volar показывают предупреждение.
+
+> **Алиас снят 2026-09-06 (решение R7).** Обратно совместимый вход убран вместе с dev-warn'ом в рамках единого major: держать второй публичный путь к тому же поведению до следующего breaking-релиза значило бы поддерживать два контракта параллельно. Что делать потребителю — [migration-guide.md §2](../migration-guide.md).
 
 ### Что нужно сделать
 

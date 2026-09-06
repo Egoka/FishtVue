@@ -36,12 +36,15 @@
     () => props.closeButton ?? options?.closeButton ?? false
   )
   const position = computed<NonNullable<AlertProps["position"]>>(() => props.position ?? options?.position ?? "top")
-  // Issue 7 / F31 (RTL): logical start/end. Физические "left"/"right" — deprecated алиасы,
-  // нормализуются в logical (left → start, right → end). Tailwind logical-utilities (ms/ps/start/end)
-  // авто-зеркалятся при dir="rtl"; для не-логического translate анимации добавлен rtl:-флип.
-  const positionLogical = computed<string>(() =>
-    (position.value as string).replace("left", "start").replace("right", "end")
-  )
+  // Issue 7 / F31 (RTL): позиции логические (`start`/`end`/`top-start`/…). Tailwind logical-utilities
+  // (ms/ps/start/end) авто-зеркалятся при dir="rtl"; для не-логического translate анимации
+  // добавлен rtl:-флип.
+  //
+  // Физические алиасы ("left"/"right"/"top-left"/…) сняты в major 2026-09-06 (решение R7), поэтому
+  // нормализация больше не нужна. Computed сохранён: он входит в `AlertExpose` и читается
+  // анимационными ветками ниже — превращать его в прямое обращение к `position` значило бы
+  // менять публичный контракт ради одной строки.
+  const positionLogical = computed<string>(() => position.value as string)
   // ARIA mapping per type (Issue 3, audit 2026-05-11):
   // error/warning → assertive alert; success/info/neutral → polite status.
   const ariaRole = computed<"alert" | "status">(() =>
@@ -248,15 +251,7 @@
   // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84,
   // Documentation/dev-patterns.md §2 decision row 1).
   // ---MOUNT-------------------------------
-  onMounted(() => {
-    // Dev-warning: deprecated физические "left"/"right" не RTL-safe (Issue 7 / F31; зеркало Separator.vue).
-    if (process.env.NODE_ENV !== "production" && (props.position === "left" || props.position === "right")) {
-      console.warn(
-        `[FishtVue Alert] position="${props.position}" is deprecated; ` +
-          `use "${props.position === "left" ? "start" : "end"}" for RTL-safe logical positioning.`
-      )
-    }
-  })
+  onMounted(() => {})
   // ---WATCHERS----------------------------
   watch(
     () => props.modelValue,
