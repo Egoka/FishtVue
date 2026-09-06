@@ -9,6 +9,7 @@ import {
   attachmentBackground,
   baseBackdropFilter,
   baseFilter,
+  baseShadowChain,
   baseTransition,
   bgClip,
   bgOrigin,
@@ -20,22 +21,28 @@ import {
   borderSize,
   borderSpacing,
   boxShadow,
+  colorScheme,
   cursor,
   divideWidth,
   dropShadow,
   flex,
   floatAndClear,
   fontFamily,
+  fontStretch,
   fontWeights,
   gridAuto,
+  insetShadow,
   justifyContent,
   letterSpacing,
   lineHeight,
   order,
+  perspective,
+  perspectiveOrigin,
   placeContent,
   positionPaddingOrMargin,
   positionsBackground,
   resize,
+  rotate3d,
   scale,
   sizesBackground,
   skew,
@@ -44,6 +51,7 @@ import {
   spaceBetween,
   specialColor,
   specialValues,
+  textShadow,
   textSize,
   transitionFunction,
   transitionProperty,
@@ -52,6 +60,23 @@ import {
   wordBreak
 } from "./unoStatic"
 import { colors } from "fishtvue/theme/primitive"
+
+// Issue 4 (uno-engine.md): модификатор интерполяции v4-градиентов (`bg-linear-to-r/oklch`).
+// `longer`/`shorter`/`increasing`/`decreasing` — hue-методы, применимы только к полярным
+// пространствам; остальные значения трактуются как имя цветового пространства.
+// Alternation, в которой длинные имена проверяются первыми. Без сортировки `light` из
+// `colorScheme` перехватывает `light-dark`, а `bottom` — `bottom-left`: regex-alternation
+// возвращает ПЕРВОЕ подошедшее, а не самое длинное.
+function longestFirst(keys: string[]): string {
+  return [...keys].sort((a, b) => b.length - a.length).join("|")
+}
+
+const GRADIENT_HUE_METHODS = new Set(["longer", "shorter", "increasing", "decreasing"])
+function gradientInterpolation(value?: string): string {
+  if (!value) return ""
+  if (GRADIENT_HUE_METHODS.has(value)) return ` in oklch ${value} hue`
+  return ` in ${value}`
+}
 
 export default <Record<string, StyleType>>{
   m: {
@@ -128,6 +153,40 @@ export default <Record<string, StyleType>>{
         const value = custom(groups) ?? sizing(groups)
         if (!value) return
         return `width: ${value};\n  height: ${value};`
+      }
+    }
+  },
+  // Issue 4 (uno-engine.md): v4.1 text-shadow. Объявлено ДО `text` — иначе `text-shadow-lg`
+  // разобрался бы правилом размера текста.
+  "text-shadow": {
+    reg: {
+      size: new RegExp(`(?<style>text-shadow)-(?<special>${longestFirst(Object.keys(textShadow))})\\b`),
+      abstract: /(?<style>text-shadow)-(\[(?<abstract>.*?)])|(\((?<custom>.*?)\))/,
+      color: new RegExp(
+        `(?<style>text-shadow)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
+      ),
+      specialColor: new RegExp(
+        `(?<style>text-shadow)-(?<special>${Object.keys(specialColor).join("|")})\\b\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
+      )
+    },
+    getValue(classStyle) {
+      const reg = this.reg as Record<"size" | "abstract" | "color" | "specialColor", RegExp>
+      if (reg.color.test(classStyle)) {
+        const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-text-shadow-color: ${resolveColor(groups)};`
+      } else if (reg.specialColor.test(classStyle)) {
+        const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-text-shadow-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
+      } else if (reg.size.test(classStyle)) {
+        const groups = classStyle.match(reg.size)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `text-shadow: ${textShadow[groups.special]};`
+      } else if (reg.abstract.test(classStyle)) {
+        const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
+        if (!groups?.abstract && !groups?.custom) return
+        return `text-shadow: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
       }
     }
   },
@@ -238,6 +297,19 @@ export default <Record<string, StyleType>>{
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       return `text-underline-offset: ${custom(groups) ?? (isNaN(+groups.special) ? groups.special : `${groups.special}px`)};`
+    }
+  },
+  // Issue 4 (uno-engine.md): v4.1 font-stretch. Объявлено ДО `font` (семейство/вес).
+  "font-stretch": {
+    reg: new RegExp(
+      `(?<style>font-stretch)-((?<special>${longestFirst(Object.keys(fontStretch))})\\b|(?<percent>\\d+%)|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (groups?.abstract || groups?.custom) return `font-stretch: ${custom(groups) ?? ""};`
+      if (groups?.percent) return `font-stretch: ${groups.percent};`
+      if (!groups?.special) return
+      return `font-stretch: ${fontStretch[groups.special]};`
     }
   },
   font: {
@@ -419,6 +491,77 @@ export default <Record<string, StyleType>>{
         if (groups?.right) to += " right"
         return `background-image: linear-gradient(to${to}, var(--fv-gradient-stops));`
       }
+    }
+  },
+  // Issue 4 (uno-engine.md): v4 gradient API. Ключи объявлены ДО `bg` — alternation в RegStyles
+  // разбирается по порядку, и более длинное имя должно проверяться первым.
+  // Модификатор интерполяции (`/oklch`, `/srgb`, `/longer`) — суффикс через `/`, как opacity у цветов.
+  "bg-linear-to": {
+    reg: /(?<style>bg-linear-to)-(?<top>t)?(?<bottom>b)?(?<left>l)?(?<right>r)?(\/(?<interpolation>[\w-]+))?/,
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups) return
+      let to = ""
+      if (groups?.top) to += " top"
+      if (groups?.bottom) to += " bottom"
+      if (groups?.left) to += " left"
+      if (groups?.right) to += " right"
+      if (!to) return
+      return `background-image: linear-gradient(to${to}${gradientInterpolation(groups.interpolation)}, var(--fv-gradient-stops));`
+    }
+  },
+  "bg-linear": {
+    reg: /(?<negative>-)?(?<style>bg-linear)-((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))(\/(?<interpolation>[\w-]+))?/,
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups) return
+      if (groups.abstract || groups.custom)
+        return `background-image: linear-gradient(${custom(groups)?.replace(/_/g, " ") ?? ""});`
+      if (!groups.special) return
+      const angle = negative(groups, `${groups.special}deg`) ?? ""
+      return `background-image: linear-gradient(${angle}${gradientInterpolation(groups.interpolation)}, var(--fv-gradient-stops));`
+    }
+  },
+  "bg-radial": {
+    reg: /(?<style>bg-radial)-((\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))(\/(?<interpolation>[\w-]+))?/,
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.abstract && !groups?.custom) return
+      return `background-image: radial-gradient(${custom(groups)?.replace(/_/g, " ") ?? ""}${gradientInterpolation(groups.interpolation)}, var(--fv-gradient-stops));`
+    }
+  },
+  "bg-conic": {
+    reg: /(?<negative>-)?(?<style>bg-conic)-((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))(\/(?<interpolation>[\w-]+))?/,
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups) return
+      if (groups.abstract || groups.custom)
+        return `background-image: conic-gradient(${custom(groups)?.replace(/_/g, " ") ?? ""}${gradientInterpolation(groups.interpolation)}, var(--fv-gradient-stops));`
+      if (!groups.special) return
+      const angle = negative(groups, `${groups.special}deg`) ?? ""
+      return `background-image: conic-gradient(from ${angle}${gradientInterpolation(groups.interpolation)}, var(--fv-gradient-stops));`
+    }
+  },
+  "bg-size": {
+    reg: new RegExp(
+      `(?<style>bg-size)-((?<special>${Object.keys(sizesBackground).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (groups?.abstract || groups?.custom) return `background-size: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
+      if (!groups?.special) return
+      return `background-size: ${groups.special};`
+    }
+  },
+  "bg-position": {
+    reg: new RegExp(
+      `(?<style>bg-position)-((?<special>${Object.keys(positionsBackground).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (groups?.abstract || groups?.custom) return `background-position: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
+      if (!groups?.special) return
+      return `background-position: ${groups.special.replace("-", " ")};`
     }
   },
   "bg-blend": {
@@ -779,6 +922,67 @@ export default <Record<string, StyleType>>{
       }
     }
   },
+  // Issue 4 (uno-engine.md): v4 inset-shadow / inset-ring. Объявлены ДО `inset`, `ring` и `shadow`.
+  "inset-shadow": {
+    reg: {
+      size: new RegExp(`(?<style>inset-shadow)-(?<special>${longestFirst(Object.keys(insetShadow))})\\b`),
+      abstract: /(?<style>inset-shadow)-(\[(?<abstract>.*?)])|(\((?<custom>.*?)\))/,
+      color: new RegExp(
+        `(?<style>inset-shadow)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
+      ),
+      specialColor: new RegExp(
+        `(?<style>inset-shadow)-(?<special>${Object.keys(specialColor).join("|")})\\b\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
+      )
+    },
+    getValue(classStyle) {
+      const reg = this.reg as Record<"size" | "abstract" | "color" | "specialColor", RegExp>
+      if (reg.color.test(classStyle)) {
+        const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-inset-shadow-color: ${resolveColor(groups)};`
+      } else if (reg.specialColor.test(classStyle)) {
+        const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-inset-shadow-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
+      } else if (reg.size.test(classStyle)) {
+        const groups = classStyle.match(reg.size)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-inset-shadow: ${insetShadow[groups.special]};\n  ${baseShadowChain}`
+      } else if (reg.abstract.test(classStyle)) {
+        const groups = classStyle.match(reg.abstract)?.groups as GroupsRegExp
+        if (!groups?.abstract && !groups?.custom) return
+        return `--fv-inset-shadow: inset ${custom(groups)?.replace(/_/g, " ") ?? ""};\n  ${baseShadowChain}`
+      }
+    }
+  },
+  "inset-ring": {
+    reg: {
+      width: /(?<style>inset-ring)-((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+      color: new RegExp(
+        `(?<style>inset-ring)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
+      ),
+      specialColor: new RegExp(
+        `(?<style>inset-ring)-(?<special>${Object.keys(specialColor).join("|")})\\b\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
+      )
+    },
+    getValue(classStyle) {
+      const reg = this.reg as Record<"width" | "color" | "specialColor", RegExp>
+      if (reg.color.test(classStyle)) {
+        const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-inset-ring-color: ${resolveColor(groups)};`
+      } else if (reg.specialColor.test(classStyle)) {
+        const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-inset-ring-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
+      } else if (reg.width.test(classStyle)) {
+        const groups = classStyle.match(reg.width)?.groups as GroupsRegExp
+        const width = custom(groups) ?? (groups?.special ? `${groups.special}px` : "")
+        if (!width) return
+        return `--fv-inset-ring-shadow: inset 0 0 0 ${width} var(--fv-inset-ring-color, currentcolor);\n  ${baseShadowChain}`
+      }
+    }
+  },
   ring: {
     reg: {
       abstract: new RegExp(
@@ -937,11 +1141,32 @@ export default <Record<string, StyleType>>{
     }
   },
   "drop-shadow": {
-    reg: new RegExp(
-      `(?<style>drop-shadow)-((?<special>${Object.keys(dropShadow).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
-    ),
+    reg: {
+      // Issue 4 (uno-engine.md): v4.1 цветной drop-shadow — проверяется первым, иначе `red` из
+      // `drop-shadow-red-500` не отличить от имени размера.
+      color: new RegExp(
+        `(?<style>drop-shadow)-(?<special>${Object.keys(colors).join("|")})\\b-(?<tone>\\d+)\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
+      ),
+      specialColor: new RegExp(
+        `(?<style>drop-shadow)-(?<special>${Object.keys(specialColor).join("|")})\\b\\/?((?<opacity>\\d+)\\b|(\\[(?<abstractOpacity>.*?)]))?`
+      ),
+      size: new RegExp(
+        `(?<style>drop-shadow)-((?<special>${Object.keys(dropShadow).join("|")})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+      )
+    },
     getValue(classStyle) {
-      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      const reg = this.reg as Record<"color" | "specialColor" | "size", RegExp>
+      if (reg.color.test(classStyle)) {
+        const groups = classStyle.match(reg.color)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-drop-shadow-color: ${resolveColor(groups)};`
+      } else if (reg.specialColor.test(classStyle)) {
+        const groups = classStyle.match(reg.specialColor)?.groups as GroupsRegExp
+        if (!groups?.special) return
+        return `--fv-drop-shadow-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
+      }
+      const groups = classStyle.match(reg.size)?.groups as GroupsRegExp
+      if (!groups) return
       return groups?.abstract || groups?.custom
         ? `--fv-drop-shadow: drop-shadow(${custom(groups)?.replace(/_/g, " ") ?? ""});\n  ${baseFilter}`
         : `${dropShadow[groups.special] ?? ""}\n  ${baseFilter}`
@@ -1090,7 +1315,7 @@ export default <Record<string, StyleType>>{
   scale: {
     // Issue 3 (uno-engine.md): negative-группа (минус терялся: -scale-100 → 1) + \b после \d+
     // (scale-3d матчился как 0.03). Обработка минуса — negative(), зеркало sizing().
-    reg: /(?<negative>-)?(?<style>scale)-(?<axis>[xy])?-?((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    reg: /(?<negative>-)?(?<style>scale)-(?<axis>[xyz])?-?((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (!groups) return
@@ -1102,15 +1327,44 @@ export default <Record<string, StyleType>>{
   rotate: {
     // Issue 6 (uno-engine.md): modern CSS property rotate: (v4) — вне transform:-цепочки,
     // комбинация с translate-*/scale-* больше не даёт двойного сдвига.
-    reg: /(?<negative>-)?(?<style>rotate)-((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    // Issue 4 (uno-engine.md): осевые формы v4 (`rotate-x-45`) идут в transform-цепочку —
+    // у rotateX/Y/Z нет отдельного modern property.
+    reg: /(?<negative>-)?(?<style>rotate)-(?<axis>[xyz]-)?((?<special>\d+)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (!groups) return
-      return `rotate: ${custom(groups) ?? (groups.special ? (negative(groups, `${groups.special}deg`) ?? "") : "")};`
+      const value = custom(groups) ?? (groups.special ? (negative(groups, `${groups.special}deg`) ?? "") : "")
+      if (!value) return
+      if (groups.axis) return rotate3d[groups.axis.replace("-", "")](value)
+      return `rotate: ${value};`
+    }
+  },
+  // Issue 4 (uno-engine.md): v4 3D-перспектива. Объявлено ДО `perspective` — иначе именованный
+  // origin разобрался бы правилом длины.
+  "perspective-origin": {
+    reg: new RegExp(
+      `(?<style>perspective-origin)-((?<special>${longestFirst(Object.keys(perspectiveOrigin))})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (groups?.abstract || groups?.custom) return `perspective-origin: ${custom(groups)?.replace(/_/g, " ") ?? ""};`
+      if (!groups?.special) return
+      return `perspective-origin: ${perspectiveOrigin[groups.special]};`
+    }
+  },
+  perspective: {
+    reg: new RegExp(
+      `(?<style>perspective)-((?<special>${longestFirst(Object.keys(perspective))})\\b|(\\[(?<abstract>.*?)])|(\\((?<custom>.*?)\\)))`
+    ),
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (groups?.abstract || groups?.custom) return `perspective: ${custom(groups) ?? ""};`
+      if (!groups?.special) return
+      return `perspective: ${perspective[groups.special]};`
     }
   },
   translate: {
-    reg: /(?<negative>-)?(?<style>translate)-(?<axis>[xy])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
+    reg: /(?<negative>-)?(?<style>translate)-(?<axis>[xyz])?-?((?<special>\d+(\.\d+)?(\/\d+)?|px|full)\b|(\[(?<abstract>.*?)])|(\((?<custom>.*?)\)))/,
     getValue(classStyle) {
       const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
       if (!groups) return
@@ -1170,6 +1424,15 @@ export default <Record<string, StyleType>>{
         if (!groups?.special) return
         return `accent-color: ${addAlphaToHex(specialColor[groups.special], groups.abstractOpacity ? +groups.abstractOpacity : groups.opacity ? +groups.opacity / 100 : undefined)};`
       }
+    }
+  },
+  // Issue 4 (uno-engine.md): v4 color-scheme.
+  scheme: {
+    reg: new RegExp(`(?<style>scheme)-(?<special>${longestFirst(Object.keys(colorScheme))})\\b`),
+    getValue(classStyle) {
+      const groups = classStyle.match(this.reg as RegExp)?.groups as GroupsRegExp
+      if (!groups?.special) return
+      return `color-scheme: ${colorScheme[groups.special]};`
     }
   },
   appearance: {

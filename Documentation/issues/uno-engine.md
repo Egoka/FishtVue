@@ -1,7 +1,7 @@
 ---
 title: Issues — Uno engine (tailwind())
-summary: Аудит покрытия Tailwind v4 собственным движком tailwind() (lib/theme/unoStyle). Эмпирический прогон ~360 классов (2026-07-02). Волна 1 — Issues 1, 3, 7 (fail-closed + dev-warn) ✅. Волна 2 (2026-07-02) — Issue 5 (диалект-контракт + v4-имена) и Issue 6 (modern transform properties) ✅; в Issues 2/4 закрыты дешёвые пункты (arbitrary properties, space-*, font smoothing, v4-варианты словарей). Открыты остаточные пробелы Issue 2 (функциональные варианты, container queries) и Issue 4 (P2/P3-семейства).
-updated: 2026-07-02
+summary: Аудит покрытия Tailwind v4 собственным движком tailwind() (lib/theme/unoStyle). Эмпирический прогон ~360 классов (2026-07-02). Волна 1 — Issues 1, 3, 7 (fail-closed + dev-warn) ✅. Волна 2 (2026-07-02) — Issue 5 и Issue 6 ✅ плюс дешёвые пункты Issues 2/4. Волна 3 (2026-09-06) — Issues 2 и 4 закрыты: container queries, not-/in-/nth-/**-варианты, композиции group×aria/data, important-модификатор, 3D-трансформы, v4 gradient API, text-shadow/inset-shadow/inset-ring и остальные P2-семейства. Вне диалекта осознанно остаётся одно семейство — mask-*.
+updated: 2026-09-06
 audit-checklist: покрытие Tailwind v4 (utilities + variants) — целевой аудит вне 60-пунктового чек-листа
 source: lib/theme/unoStyle/
 related-doc: ../architecture/theme.md
@@ -17,8 +17,10 @@ related-doc: ../architecture/theme.md
 | -------- | ----- | ------------------------------------------------------------------------------------------------------------------------ |
 | critical | 0     | —                                                                                                                       |
 | high     | 0     | ~~silent degradation, false positives~~ — Issues 1, 3 ✅ resolved 2026-07-02                                            |
-| medium   | 2     | Issue 2 (остаток: функциональные варианты, container queries), Issue 4 (остаток: P2/P3-семейства); Issues 5, 6 ✅ волна 2 |
+| medium   | 0     | ~~Issue 2 (варианты), Issue 4 (утилиты)~~ ✅ resolved 2026-09-06 (волна 3); Issues 5, 6 ✅ волна 2                        |
 | low      | 0     | ~~stale TODO~~ — Issue 7 ✅ resolved 2026-07-02                                                                         |
+
+> ✅ **Открытых позиций нет** (2026-09-06). Единственное семейство вне диалекта — `mask-*`; это приоритет 3 из собственного плана Issue 4, закрытый как «осознанно объявить вне диалекта», а не как долг. Обоснование — в [architecture/theme.md §3.1](../architecture/theme.md).
 
 Что при этом **работает корректно** (проверено выводом): все базовые interaction/form/structural states (`hover:`…`autofill:`), pseudo-elements (`before:`/`after:` через `--fv-content`, `placeholder:`, `file:`, `marker:`, `selection:`, `backdrop:`…), `group`/`peer` включая именованные (`group-hover/edit:`) и arbitrary-формы (`group-[.is-published]:`, `peer-[.is-dirty]:`, `group-has-[a]:`), `has-[...]:`, `aria-*` (статические и `aria-[sort=ascending]:`), `data-[state=open]:`, `dark:` (media + selector-режим), breakpoints `sm:`…`2xl:` + `max-*:` + `min-[600px]:`, `motion-safe/reduce:`, `print:`, `rtl:/ltr:` (через ":where([dir])"), `*:`, stacked-варианты (`dark:md:hover:`), arbitrary variants — в т.ч. `[&>[data-active]+span]:text-blue-600`, `[&_p]:mt-4`, `[&::-webkit-inner-spin-button]:`, opacity-модификаторы (`bg-red-500/75`, `bg-black/[.06]`), v4 var-shorthand (`w-(--w)`, `p-(--sp)`, `top-(--my-top)`), `text-sm/6`, fractions/negatives для spacing/inset, `subgrid`, `dvh/svh/lvh` (в `w-`/`h-`), `content-['...']`, `animate-*` (keyframes — [baseStyle.ts:671-699](../../lib/config/baseStyle.ts#L671)), `divide-*` + `divide-x-reverse`, logical properties (`ps-`/`pe-`/`ms-`/`me-`/`start-`/`end-`/`rounded-ss-`/`border-s-`). **С волны 2 (2026-07-02) также:** arbitrary properties `[prop:value]`/`[--var:value]`, `space-x/y-*` (+negative/reverse/arbitrary), `antialiased`/`subpixel-antialiased`, boolean `data-<name>:`, именованные `has-<state>:`/`group-has-<state>:`, `optional:`/`user-valid:`/`user-invalid:`/`inert:`/`details-content:`, media `pointer-*`/`any-pointer-*`/`inverted-colors:`/`noscript:`, v4-имена `shadow-2xs`/`shadow-xs`/`drop-shadow-xs`/`outline-hidden`; transforms — modern properties (`translate:`/`rotate:`/`scale:`, skew — в `transform:`).
 
@@ -58,10 +60,10 @@ related-doc: ../architecture/theme.md
 3. ~~Для режима 3 — валидация: если в классе остался нераспознанный `<something>:`-префикс после разбора, не генерировать правило вовсе (fail-closed вместо fail-open) + warn.~~ ✅
 4. ~~Тесты: по одному кейсу на каждый режим (RED сейчас — GREEN после фикса).~~ ✅ [failClosed.test.ts](../../lib/theme/unoStyle/failClosed.test.ts)
 
-## Issue 2: Пробелы в вариантах Tailwind v4 (states, relational, container queries)
+## ~~Issue 2: Пробелы в вариантах Tailwind v4 (states, relational, container queries)~~ ✅ resolved 2026-09-06
 
 - **Категория:** coverage (variants)
-- **Severity:** ~~high~~ → **medium** (2026-07-02: вредная часть — режим 3 Issue 1 — устранена fail-closed'ом; остался чистый coverage gap)
+- **Severity:** ~~high~~ → ~~medium~~ → resolved (2026-09-06, волна 3)
 - **Где:** [unoStatic.ts](../../lib/theme/unoStyle/unoStatic.ts) (словари модификаторов), [tailwind.ts `getModifier`](../../lib/theme/unoStyle/tailwind.ts#L218)
 
 > **Примечание (2026-07-02, после закрытия Issue 1):** все перечисленные ниже варианты теперь **дропаются с dev-warn**, а не генерируют правило без условия. `@sm:` больше не эмитит viewport-`@media` (ловушка закрыта fail-closed), `**:` не эмитит `> *`, `[@media(…)]:` не эмитит мусорный селектор. Открытым остаётся именно покрытие: реализовать варианты либо явно объявить их вне диалекта (Issue 5, док диалекта).
@@ -123,8 +125,32 @@ related-doc: ../architecture/theme.md
 2. Функциональные варианты: `nth-*` (динамический паттерн как `aria`/`data` в `selectorsDynamic`); ~~boolean `data-<name>` fallback → `[data-name]`~~ ✅ волна 2 (aria-boolean не входит — в v4 его нет).
 3. `not-*:` — рекурсивная обёртка над существующими словарями (`:not(<resolved>)` / `@media not <resolved>`).
 4. Композиции `group-/peer- × aria-/data-` — расширить state-ветку `getModifier`; ~~× has-<name>~~ ✅ волна 2.
-5. Container queries: `@container`-утилита + разбор `@<bp>:` в `@container`-media (+именованные контейнеры) — ~~либо осознанно объявить «не поддерживается» в доке диалекта и закрыть fail-closed (Issue 1.3)~~ fail-closed достигнут 2026-07-02; полноценная реализация — открыта.
-6. `**:` → ` *`; important-суффикс/префикс → `!important` в декларации; ~~`starting:`/`[@media(…)]:`-at-rule формы — fail-closed до реализации~~ ✅ fail-closed 2026-07-02.
+5. ~~Container queries: `@container`-утилита + разбор `@<bp>:` в `@container`-media (+именованные контейнеры)~~ ✅ волна 3.
+6. ~~`**:` → ` *`; important-суффикс/префикс → `!important` в декларации; `starting:`/`[@media(…)]:`-at-rule формы~~ ✅ волна 3.
+
+### Волна 3 (2026-09-06) — что сделано
+
+Реализованы все шесть пунктов плана. Тесты — [v4Variants.test.ts](../../lib/theme/unoStyle/v4Variants.test.ts) (36 кейсов).
+
+| Форма | Вывод |
+| ----- | ----- |
+| `not-hover:` / `not-first:` | `:not(:hover)` / `:not(:first-child)` |
+| `not-dark:` / `not-print:` | `@media not all and (prefers-color-scheme: dark)` / `@media not print` |
+| `not-supports-[display:grid]:` | `@supports not (display:grid)` |
+| `in-focus:` | `:where(*:focus) &` |
+| `nth-3:` / `nth-last-2:` / `nth-of-type-2:` / `nth-[3n+1]:` | соответствующий функциональный псевдо-класс |
+| `group-aria-checked:` / `group-data-[loading]:` / `peer-aria-expanded:` | условие сохраняется **на группе**, а не на самом элементе |
+| `@container`, `@container-normal`, `@container/main` | `container-type` (+ `container-name`) |
+| `@sm:` / `@max-md:` / `@min-[475px]:` / `@sm/main:` | `@container (min-width: …)` / `@container (width < …)` |
+| `**:` | ` *` (все потомки) — раньше давал `> *`, то есть то же, что `*:` |
+| `!mt-4` и `mt-4!` | `margin-top: 1rem !important` |
+| `supports-backdrop-filter:` | `@supports (backdrop-filter: var(--fv-supports))` |
+| `starting:` | `@starting-style { … }` |
+| `[@media(hover:hover)]:` | одноимённый at-rule вместо прежнего мусорного селектора |
+
+**Что стоило отдельного внимания.** Ветка `in-*:` конфликтует с псевдо-классами, чьё имя начинается на `in-`: без защиты `in-range:` разобрался бы как «предок в состоянии range» и перестал бы работать. Список конфликтов выводится из самих словарей, а не хардкодится, — новый такой псевдо-класс не придётся вспоминать. Регрессия закрыта отдельным кейсом.
+
+Порядок альтернатив в `modifierTokenSource` стал частью контракта: regex-alternation возвращает **первую** подошедшую ветку, поэтому `not-`/`in-`/`nth-`/container-формы стоят раньше словарных, а `**:` — раньше `*:`.
 
 ## Issue 3: False positives — валидный на вид, но неверный CSS ✅ resolved 2026-07-02
 
@@ -174,10 +200,10 @@ related-doc: ../architecture/theme.md
 3. ~~Дозаполнить шкалы: `rounded` (xs, 4xl), `blur` (xs, 2xs), container-scale для `basis-`/`min-w-`, viewport-юниты для `min-h`/`max-h`, двухсловные позиции `top-left`-семейства, `items-baseline-last`.~~ ✅
 4. Решить семантику bare var-shorthand для color-утилит (`text-(--x)`/`bg-(--x)`/`border-(--x)` → color, как в v4) — это breaking для текущего поведения, зафиксировать в доке диалекта → **перенесено в Issue 5** (там уже трекается той же строкой).
 
-## Issue 4: Недостающие utility-семейства (Tailwind v4.1)
+## ~~Issue 4: Недостающие utility-семейства (Tailwind v4.1)~~ ✅ resolved 2026-09-06
 
 - **Категория:** coverage (utilities)
-- **Severity:** medium (P1 закрыт волной 2, открыты P2/P3)
+- **Severity:** ~~medium~~ → resolved (2026-09-06, волна 3; P3 `mask-*` — осознанно вне диалекта)
 - **Где:** [unoRules.ts](../../lib/theme/unoStyle/unoRules.ts), [unoStatic.ts `singleStyles`](../../lib/theme/unoStyle/unoStatic.ts)
 
 > **Волна 2 (2026-07-02) — приоритет 1 закрыт:** arbitrary properties `[prop:value]`/`[--var:value]` — новая ветка в `tailwind()` ([arbitraryPropertyReg, tailwind.ts:70](../../lib/theme/unoStyle/tailwind.ts#L70), ветка — [tailwind.ts:203](../../lib/theme/unoStyle/tailwind.ts#L203); value с `{`/`}`/`;` дропается fail-closed — инъекция за пределы декларации невозможна; `_`→пробел как в arbitrary values); канон-баг `[appearance:textfield]` ([Input.vue:88](../../lib/input/Input.vue#L88), [Aria.vue:66](../../lib/aria/Aria.vue#L66)) закрыт — правило появилось в head. `space-x/y-*` (+negative, +reverse, +arbitrary) — правило `space` ([unoRules.ts:672](../../lib/theme/unoStyle/unoRules.ts#L672)) + [spaceBetween, unoStatic.ts:465](../../lib/theme/unoStyle/unoStatic.ts#L465), селектор — зеркало `divide`. `antialiased`/`subpixel-antialiased` — singleStyles ([unoStatic.ts:23](../../lib/theme/unoStyle/unoStatic.ts#L23)). Тесты — [v4Extensions.test.ts](../../lib/theme/unoStyle/v4Extensions.test.ts).
@@ -206,9 +232,38 @@ related-doc: ../architecture/theme.md
 ### Что нужно сделать
 
 1. ~~Приоритет 1 (используется/близко к канону): arbitrary properties, `space-*`, `antialiased`, `transition-discrete`-заглушка (fail-closed).~~ ✅ волна 2
-2. Приоритет 2 (v4-паритет по запросу потребителей): 3D transforms, v4 gradient API, `text-shadow`, `inset-shadow`/`inset-ring`, `field-sizing`, `scheme`. Modern transform properties (Issue 6 ✅) — готовая база для 3D-форм.
-3. Приоритет 3 (осознанно объявить вне диалекта): `mask-*` — большая семья; fail-closed уже стоит (Issue 3 ✅), границы зафиксированы в доке диалекта (Issue 5 ✅).
+2. ~~Приоритет 2 (v4-паритет по запросу потребителей): 3D transforms, v4 gradient API, `text-shadow`, `inset-shadow`/`inset-ring`, `field-sizing`, `scheme`.~~ ✅ волна 3.
+3. Приоритет 3 (осознанно объявить вне диалекта): `mask-*` — большая семья; fail-closed уже стоит (Issue 3 ✅), границы зафиксированы в доке диалекта (Issue 5 ✅). **Подтверждено 2026-09-06** — см. ниже.
 4. Каждый пункт — tests-first в [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts)-стиле.
+
+### Волна 3 (2026-09-06) — что сделано
+
+Приоритет 2 закрыт целиком. Тесты — [v4Utilities.test.ts](../../lib/theme/unoStyle/v4Utilities.test.ts) (52 кейса).
+
+- **Typography:** `wrap-anywhere` / `wrap-break-word` / `wrap-normal`, `font-stretch-*` (именованные, проценты, arbitrary).
+- **Gradient API:** `bg-linear-to-*`, `bg-linear-<angle>` (в т.ч. отрицательный), `bg-radial`, `bg-radial-[…]`, `bg-conic`, `bg-conic-<angle>`, `bg-size-*`, `bg-position-*` + модификатор интерполяции (`/oklch` → `in oklch`, `/longer` → `in oklch longer hue`).
+- **Effects:** `text-shadow-*` (+ цвет), `inset-shadow-*` (+ цвет), `inset-ring-<width>` (+ цвет).
+- **Filters:** `filter-none`, `backdrop-filter-none`, цветной `drop-shadow-<color>` (v4.1).
+- **3D transforms:** `rotate-x/y/z-*`, `translate-z-*`, `scale-z-*`, унифицированный `skew-<n>`, `perspective-*`, `perspective-origin-*`, `transform-3d/flat/gpu/cpu/none`, `backface-*`.
+- **Interactivity / a11y / transitions:** `scheme-*`, `field-sizing-*`, `forced-color-adjust-*`, `transition-discrete`/`transition-normal`.
+
+**Два скрытых бага, вскрытых реализацией:**
+
+- `skew-3` (унифицированная форма v4, без оси) **роняла движок**: в словаре `skew` не было ключа для «оси нет», и вызов падал ещё до fail-closed-проверок. Теперь это рабочая форма.
+- `perspective-*` числилось «чужим семейством» и дропалось fail-closed'ом — но причина была не в отсутствии правила, а в том, что `perspective-origin-top` уводил разбор в правило `origin` (`transform-origin`). Семейство снято из списка вместе с реализацией.
+
+**Два решения, влияющих на композицию классов:**
+
+- Цвет теней вынесен в `--fv-drop-shadow-color` / `--fv-text-shadow-color` с fallback'ом на прежний литерал. Внешний вид без класса цвета не изменился, но `drop-shadow-lg drop-shadow-red-500` теперь работает **в любом порядке** — классы пишут разные свойства.
+- `inset-shadow-*` / `inset-ring-*` используют пятислотовую цепочку `box-shadow`, тогда как прежние `shadow-*` / `ring-*` сохраняют трёхслотовую. Переписывать вторую значило бы изменить вывод у всех существующих классов, поэтому при комбинации inset-класс должен идти в строке **после** `shadow-*`/`ring-*`. Ограничение зафиксировано в [architecture/theme.md §3.1](../architecture/theme.md).
+
+### Почему `mask-*` осознанно оставлен вне диалекта
+
+Причина не в объёме словаря. Статические части (`mask-clip-*`, `mask-origin-*`, `mask-size-*`, `mask-type-*`) — тривиальное отображение «класс → свойство», их можно было бы добавить за минуты. Но основная ценность семейства в v4 — **маски-градиенты** (`mask-t-from-50%`, `mask-radial-from-*`, `mask-linear-<angle>`), а это не отображение, а подсистема: два десятка связанных custom properties (`--tw-mask-linear`, посторонние `--tw-mask-{side}-{from,to}-{color,position}`), композиция через `mask-composite: intersect` и собственные дефолты в базовом слое.
+
+Воспроизвести её по памяти означало бы зашить в движок правдоподобную, но непроверяемую модель — тесты подтверждали бы реконструкцию, а не поведение Tailwind. Частичная поддержка (статика есть, градиенты нет) была бы хуже обоих вариантов: граница диалекта перестала бы читаться одним правилом «`mask-*` не поддерживается».
+
+Текущее состояние: `mask-*` дропается fail-closed с dev-warn, граница описана в доке диалекта. Полная реализация — самостоятельная задача, а не остаток этой.
 
 ## Issue 5: Semantic drift — v4 renames и сдвиг шкал ✅ resolved 2026-07-02 (волна 2)
 

@@ -12,7 +12,10 @@ import { tailwind } from "./tailwind"
 
 const TRANSLATE = "translate: var(--fv-translate-x) var(--fv-translate-y);"
 const SCALE = "scale: var(--fv-scale-x) var(--fv-scale-y);"
-const SKEW = "transform: skewX(var(--fv-skew-x)) skewY(var(--fv-skew-y));"
+// Волна 3 (Issue 4, 3D-трансформы): в transform:-цепочку добавлены rotateX/Y/Z — у них, в отличие
+// от `rotate`, нет modern property, а без общей цепочки `skew-x-3 rotate-x-45` затирали бы друг друга.
+const SKEW =
+  "transform: rotateX(var(--fv-rotate-x, 0)) rotateY(var(--fv-rotate-y, 0)) rotateZ(var(--fv-rotate-z, 0)) skewX(var(--fv-skew-x, 0)) skewY(var(--fv-skew-y, 0));"
 const FILTER =
   "filter: var(--fv-blur) var(--fv-brightness) var(--fv-contrast) var(--fv-grayscale) var(--fv-hue-rotate) var(--fv-invert) var(--fv-saturate) var(--fv-sepia) var(--fv-drop-shadow);"
 
@@ -198,7 +201,7 @@ describe("Issue 5 — дозаполнение v4-имён (шкалы оста�
     ["shadow-xs", ".shadow-xs {\n  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);\n}"],
     [
       "drop-shadow-xs",
-      `.drop-shadow-xs {\n  --fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));\n  ${FILTER}\n}`
+      `.drop-shadow-xs {\n  --fv-drop-shadow: drop-shadow(0 1px 1px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.05)));\n  ${FILTER}\n}`
     ],
     ["outline-hidden", ".outline-hidden {\n  outline: 2px solid transparent;\n  outline-offset: 2px;\n}"]
   ])("%s", (classValue, expected) => {
@@ -217,7 +220,7 @@ describe("Issue 5 — дозаполнение v4-имён (шкалы оста�
     expect(tailwind("rounded")).toBe(".rounded {\n  border-radius: 0.25rem;\n}")
     expect(tailwind("rounded-sm")).toBe(".rounded-sm {\n  border-radius: 0.125rem;\n}")
     expect(tailwind("drop-shadow-sm")).toBe(
-      `.drop-shadow-sm {\n  --fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));\n  ${FILTER}\n}`
+      `.drop-shadow-sm {\n  --fv-drop-shadow: drop-shadow(0 1px 1px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.05)));\n  ${FILTER}\n}`
     )
   })
 })

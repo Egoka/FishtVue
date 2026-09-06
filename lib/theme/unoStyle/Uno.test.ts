@@ -3761,27 +3761,27 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "drop-shadow-sm",
-          expected: `.drop-shadow-sm {\n  --fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-sm {\n  --fv-drop-shadow: drop-shadow(0 1px 1px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.05)));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow",
-          expected: `.drop-shadow {\n  --fv-drop-shadow: drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow {\n  --fv-drop-shadow: drop-shadow(0 1px 2px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.1))) drop-shadow(0 1px 1px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.06)));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-md",
-          expected: `.drop-shadow-md {\n  --fv-drop-shadow: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-md {\n  --fv-drop-shadow: drop-shadow(0 4px 3px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.07))) drop-shadow(0 2px 2px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.06)));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-lg",
-          expected: `.drop-shadow-lg {\n  --fv-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-lg {\n  --fv-drop-shadow: drop-shadow(0 10px 8px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.04))) drop-shadow(0 4px 3px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.1)));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-xl",
-          expected: `.drop-shadow-xl {\n  --fv-drop-shadow: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-xl {\n  --fv-drop-shadow: drop-shadow(0 20px 13px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.03))) drop-shadow(0 8px 5px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.08)));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-2xl",
-          expected: `.drop-shadow-2xl {\n  --fv-drop-shadow: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-2xl {\n  --fv-drop-shadow: drop-shadow(0 25px 25px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.15)));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-none",

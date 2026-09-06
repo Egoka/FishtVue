@@ -64,8 +64,9 @@ describe("Issue 1 — fail-closed + dev-диагностика", () => {
 
   describe("режим 2: пустое значение / литерал undefined не попадает в CSS", () => {
     // shadow-3xs (не существует ни в v3, ни в v4): матчится правилом shadow, но значение пустое.
-    // shadow-xs из исходного аудита реализован в волне 2 (Issue 5) — см. v4Extensions.test.ts.
-    it.each(["transition-discrete", "shadow-3xs", "content-none"])("%s → undefined + warn", (classValue) => {
+    // shadow-xs из исходного аудита реализован в волне 2 (Issue 5) — см. v4Extensions.test.ts,
+    // transition-discrete — в волне 3 (Issue 4), см. v4Utilities.test.ts.
+    it.each(["shadow-3xs", "content-none"])("%s → undefined + warn", (classValue) => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
       expect(tailwind(classValue)).toBeUndefined()
       expect(warn).toHaveBeenCalledTimes(1)
@@ -89,16 +90,17 @@ describe("Issue 1 — fail-closed + dev-диагностика", () => {
   })
 
   describe("режим 3: нераспознанный вариант — fail-closed (раньше: правило без условия)", () => {
+    // Девять форм из исходного аудита (not-*, group-aria-*, @sm/@max-md, **:, [@media(…)]:,
+    // in-*, nth-*, starting:) реализованы в волне 3 — см. v4Variants.test.ts. Здесь остаётся
+    // то, что остаётся неизвестным движку: несуществующие имена внутри известных форм и
+    // варианты, которых нет ни в одном словаре.
     it.each([
-      "not-hover:opacity-75",
-      "group-aria-checked:underline",
-      "@sm:flex",
-      "@max-md:grid",
-      "**:text-red-500",
-      "[@media(hover:hover)]:underline",
-      "in-focus:opacity-100",
-      "nth-3:underline",
-      "starting:opacity-0"
+      "hocus:opacity-75",
+      "not-hocus:opacity-75",
+      "in-hocus:opacity-100",
+      "has-hocus:underline",
+      "@enormous:flex",
+      "nth-of-kind-3:underline"
     ])("%s → undefined + warn", (classValue) => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
       expect(tailwind(classValue)).toBeUndefined()
@@ -109,7 +111,9 @@ describe("Issue 1 — fail-closed + dev-диагностика", () => {
 
 describe("Issue 3 — false positives", () => {
   describe("чужие семейства больше не матчатся соседними правилами", () => {
-    it.each(["mask-t-from-50%", "mask-b-to-90%", "mask-radial-from-75%", "perspective-origin-top", "scale-3d"])(
+    // perspective-origin-top уводило разбор в правило `origin`; в волне 3 семейство реализовано
+    // целиком и снято из fail-closed-списка — см. v4Utilities.test.ts.
+    it.each(["mask-t-from-50%", "mask-b-to-90%", "mask-radial-from-75%", "scale-3d"])(
       "%s → undefined + warn",
       (classValue) => {
         const warn = vi.spyOn(console, "warn").mockImplementation(() => {})

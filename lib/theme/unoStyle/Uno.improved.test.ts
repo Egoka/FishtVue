@@ -2591,7 +2591,7 @@ describe("unoStyle", () => {
       it.each<{ classValue: string; expected: string }>([
         {
           classValue: "drop-shadow-sm",
-          expected: `.drop-shadow-sm {\n  --fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));\n  ${baseFilter}\n}`
+          expected: `.drop-shadow-sm {\n  --fv-drop-shadow: drop-shadow(0 1px 1px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.05)));\n  ${baseFilter}\n}`
         },
         {
           classValue: "drop-shadow-none",
