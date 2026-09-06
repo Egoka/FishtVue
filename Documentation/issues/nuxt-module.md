@@ -1,7 +1,7 @@
 ---
 title: Issues — Nuxt module + plugins
 summary: Аудит lib/module + lib/plugins. Issue 4 (peer range @nuxt/kit) закрыт 2026-06-19 (Wave 2.1); Issues 1 (частично), 2, 5 закрыты 2026-09-05 — заведён nuxt.test.ts (lib/module 0% → 100% stmts), удалено мёртвое version-detection через require, реализован disableGlobalStyles. Остаются hardcoded FISHT_VUE_COMPONENTS, lib/plugins 0%, prefer-component-naming.
-updated: 2026-09-05
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support
 source: lib/module/, lib/plugins/
 related-doc: ../architecture/nuxt-module.md
@@ -15,8 +15,10 @@ related-doc: ../architecture/nuxt-module.md
 |---|---|---|
 | critical | 0 | — |
 | high | 0 | ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2, ~~C18~~ ✅, ~~J46 (module 0%)~~ ✅, ~~L53 (disableGlobalStyles)~~ ✅ 2026-09-05 |
-| medium | 1 | F30; ~~D21 (Issue 3 — hardcoded списки)~~ ✅ 2026-09-05, ~~K46 (Issue 7)~~ ✅ 2026-09-05, ~~K52~~ ✅ 2026-09-05 |
-| low | 2 | E29, B10 |
+| medium | 0 | ~~D25 (Issue 8 — prefix)~~ ✅ 2026-09-06, ~~F30~~ ✅ фантом, ~~D21 (Issue 3 — hardcoded списки)~~ ✅ 2026-09-05, ~~K46 (Issue 7)~~ ✅ 2026-09-05, ~~K52~~ ✅ 2026-09-05 |
+| low | 0 | ~~E29, B10~~ ✅ N/A — см. врезку |
+
+> **Три категории неприменимы к build-модулю.** `F30` (i18n), `E29` (a11y) и `B10` (theme tokens) достались `nuxt-module.md` от общего 60-пунктового чек-листа, рассчитанного на компоненты. `lib/module/nuxt.ts` не рендерит разметку, не показывает текст пользователю и не имеет цветов: он регистрирует компоненты и плагин на этапе сборки. Ни одной секции этим категориям в файле не соответствует — тот же класс фантомов, что снят в T11 у Button и Table.
 
 ## ~~Issue 1: lib/module/nuxt.ts coverage 0% — нет тестов~~ ✅ resolved 2026-09-05 (частично — `lib/plugins` остаётся, см. Issue 7)
 
@@ -182,11 +184,16 @@ Plugins.ts 6 lines, nuxt.ts 22 lines — coverage 0%. Server plugin критич
 1. Тест: server plugin собирает styles из всех Component-инстанций при SSR-render.
 2. ~~Тест: `disableGlobalStyles` skip server plugin loading~~ ✅ 2026-09-05 — покрыт со стороны модуля ([nuxt.test.ts](../../lib/module/nuxt.test.ts)); сам `lib/plugins/nuxt.ts` по-прежнему 0%, п. 1 открыт.
 
-## Issue 8: prefer-component-naming не задокументирован
+## ~~Issue 8: prefer-component-naming не задокументирован~~ ✅ resolved 2026-09-06
 
 - **Категория:** D25
+- **Severity:** ~~medium~~
 
-`prefix: ""` default — компоненты regist'ятся как `<Button>`. С prefix `"Fv"` — `<FvButton>`. Документировать чётко.
+`prefix: ""` default — компоненты регистрируются как `<Button>`. С prefix `"Fv"` — `<FvButton>`.
+
+**Resolution.** Раздел [architecture/nuxt-module.md §9.3](../architecture/nuxt-module.md) расширен с примера до контракта: как выбирать значение (PascalCase, подставляется буквально, без разделителя), **когда префикс нужен** и что он не затрагивает.
+
+Практически важен второй пункт. Дефолтные имена `<Button>` / `<Input>` / `<Table>` — самые вероятные для коллизии: собственный `components/Button.vue`, вторая UI-библиотека, `@nuxt/ui`. Nuxt в такой ситуации не падает — выигрывает зарегистрированный последним, и расхождение проявляется как «кнопка выглядит не так», а не как ошибка сборки. Такое отлаживают часами, поэтому рекомендация задавать префикс при наличии любой второй библиотеки вынесена в текст явно.
 
 ## Cross-cutting: Configuration support
 

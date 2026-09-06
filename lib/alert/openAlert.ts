@@ -94,6 +94,10 @@ export function openAlert(optionsAlert: BaseAlert) {
       return
     }
     const newContainer = document.createElement("div")
+    // N59 (print, решение R21): контейнер тостов адресуется data-атрибутом, а не классом позиции —
+    // единый `@media print` в baseStyle прячет именно его. Инлайновый `<Alert>` при этом печатается:
+    // он описывает документ, а всплывающий тост — состояние сеанса.
+    newContainer.setAttribute("data-alert-container", pos)
     newContainer.className = AlertComponent.setStyle(
       `alert-${pos} ${optionsAlert?.toTeleport ? "absolute" : "fixed"} z-[100] flex gap-3 sm:gap-4 overflow-auto max-h-screen pointer-events-none motion-safe:transition-all motion-safe:duration-500 ${
         pos.includes("bottom") ? "flex-col-reverse" : "flex-col"

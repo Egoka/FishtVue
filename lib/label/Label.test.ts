@@ -61,7 +61,9 @@ describe("Label Component Tests", () => {
         }
       })
 
-      expect(wrapper.find("[data-label]").attributes("style")).toContain("--fv-translate-x: 20px;")
+      expect(wrapper.find("[data-label]").attributes("style")).toContain(
+        "--fv-translate-x: calc(20px * var(--fv-label-dir, 1));"
+      )
     })
 
     it("computes correct maxWidth style", () => {
@@ -80,15 +82,15 @@ describe("Label Component Tests", () => {
       it.each([
         [
           "outlined",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 rtl:[--fv-label-dir:-1] peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]"
         ],
         [
           "underlined",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 rtl:[--fv-label-dir:-1] peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]"
         ],
         [
           "filled",
-          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
+          "fv fishtvue-label absolute top-[48px] bg-inherit dark:bg-inherit flex pointer-events-none select-none h-2.5 motion-safe:transition-all motion-safe:duration-200 px-1 rtl:[--fv-label-dir:-1] peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]"
         ]
       ])('applies correct background style for mode "%s"', (mode, expectedBackground) => {
         const wrapper = mount(Label, {
@@ -109,16 +111,22 @@ describe("Label Component Tests", () => {
       it.each([
         [
           "dynamic",
-          "peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
+          "peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]"
         ],
         [
           "offsetDynamic",
-          "peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]"
+          "peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]"
         ],
-        ["offsetStatic", "-translate-y-[var(--fv-label-translate-y-offset,48px)] translate-x-4"],
-        ["static", "-translate-y-[var(--fv-label-translate-y,60px)] translate-x-4"],
+        [
+          "offsetStatic",
+          "-translate-y-[var(--fv-label-translate-y-offset,48px)] translate-x-[calc(16px*var(--fv-label-dir,1))]"
+        ],
+        ["static", "-translate-y-[var(--fv-label-translate-y,60px)] translate-x-[calc(16px*var(--fv-label-dir,1))]"],
         ["vanishing", "-translate-y-[var(--fv-label-translate-y-rest,28px)]"],
-        ["none", "opacity-0 -translate-y-[var(--fv-label-translate-y-rest,28px)] translate-x-8"]
+        [
+          "none",
+          "opacity-0 -translate-y-[var(--fv-label-translate-y-rest,28px)] translate-x-[calc(32px*var(--fv-label-dir,1))]"
+        ]
       ])('applies correct class for type "%s"', (type, expectedClass) => {
         const wrapper = mount(Label, {
           props: {
@@ -309,7 +317,9 @@ describe("Label Component Tests", () => {
         props: { title: "Rem translate", translateX: "1rem" }
       })
 
-      expect(wrapper.find("[data-label]").attributes("style")).toContain("--fv-translate-x: 1rem;")
+      expect(wrapper.find("[data-label]").attributes("style")).toContain(
+        "--fv-translate-x: calc(1rem * var(--fv-label-dir, 1));"
+      )
     })
 
     it("accepts translateX as percentage string", () => {
@@ -317,7 +327,9 @@ describe("Label Component Tests", () => {
         props: { title: "Pct translate", translateX: "50%" }
       })
 
-      expect(wrapper.find("[data-label]").attributes("style")).toContain("--fv-translate-x: 50%;")
+      expect(wrapper.find("[data-label]").attributes("style")).toContain(
+        "--fv-translate-x: calc(50% * var(--fv-label-dir, 1));"
+      )
     })
 
     it("accepts maxWidth as string with calc fallback", () => {

@@ -15,8 +15,8 @@ related-doc: ../architecture/theme.md
 | -------- | ----- | ----------------------------------------------------------------------------------------- |
 | critical | 0     | —                                                                                         |
 | high     | 0     | ~~J46 (themes coverage — Issue 2)~~ ✅ 2026-09-05, ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2 |
-| medium   | 1     | F31; ~~D21 (поле `name` в пресетах)~~ ✅ 2026-09-06, ~~K46 (uno.ts / semantic.ts — Issue 3)~~ ✅ 2026-09-05 |
-| low      | 2     | E29, N59                                                                                  |
+| medium   | 0     | ~~F31 (Issue 8)~~ ✅ фантом 2026-09-06, ~~D21 (поле `name` в пресетах)~~ ✅ 2026-09-06, ~~K46 (uno.ts / semantic.ts — Issue 3)~~ ✅ 2026-09-05 |
+| low      | 0     | ~~N59 (print)~~ ✅ 2026-09-06 — единый `@media print` в `baseStyle`, ~~E29 (motion)~~ ✅ 2026-09-05 — cross-cutting guard `motionSafe.test.ts` |
 
 ~~B10~~ ✅ resolved 2026-07-04 — см. ниже, theme-часть Wave 9 закрыта (residual в issues/README.md).
 
@@ -208,15 +208,28 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 Файл с тех пор ещё вырос: 2026-09-06 в него добавлены четыре semantic-слота интентов ([alert.md Issue 9](./alert.md)). Это подтверждает выбор с другой стороны — при per-color-разбиении каждый новый слот стоил бы отдельного файла и правки индекса, а сейчас это добавление ключа.
 
-## Issue 8: RTL не учитывается в theme-tokens
+## ~~Issue 8: RTL не учитывается в theme-tokens~~ ✅ фантом, снят 2026-09-06
 
 - **Категория:** F31
+- **Severity:** ~~medium~~
 
-Theme-токены типа `border-left-radius` хардкоден. Должны быть logical (`border-inline-start-radius`).
+Формулировка: «Theme-токены типа `border-left-radius` хардкоден. Должны быть logical (`border-inline-start-radius`)».
 
-## Issue 9: prefers-reduced-motion / print
+**Проверка показала, что таких токенов нет.** В [primitive.ts](../../lib/theme/primitive.ts) `rounded` — это направление-нейтральная шкала скаляров (`xs: "2px"`, `lg: "8px"`), а не набор `border-*-radius`. Ключи `ml`/`mr`/`pl`/`pr` в шкалах `m`/`p` — имена словаря длин, а не CSS-свойства; при этом сами шкалы движком **не потребляются**: [tokensCss.ts](../../lib/theme/helpers/tokensCss.ts) эмитит в tokens-тег только палитру, а margin/padding резолвятся правилами `unoRules.ts` из `specialValues`.
 
-См. cross-cutting.
+Направление живёт не в токенах, а в **именах утилит** движка (`rounded-ss-`, `border-s-`, `ps-`/`pe-`, `ms-`/`me-`), и логические формы там поддержаны — зафиксировано в [uno-engine.md](./uno-engine.md) (раздел «что работает корректно»). Гейтить в теме нечего.
+
+Тот же класс, что три фантомные позиции, снятые в T11 (Button, Table, `E29.7` у Calendar/TextEditor): счётчик считал категорию, за которой не стоит секции.
+
+## ~~Issue 9: prefers-reduced-motion / print~~ ✅ resolved
+
+- **Категория:** E29, N59
+- **Severity:** ~~low~~
+
+Обе половины закрыты cross-cutting-заходами, а не правками темы:
+
+- **E29 (motion)** — 2026-09-05 построчный аудит нашёл два негейтнутых перехода (InputLayout, Switch) и закрыл их, а guard [motionSafe.test.ts](../../lib/motionSafe.test.ts) валит сборку на любом новом. Ручная сверка больше не нужна.
+- **N59 (print)** — 2026-09-06 заведён единый `@media print` в [baseStyle.ts](../../lib/config/baseStyle.ts) (решение R21) вместо покомпонентных `print:`-классов. Подробности — в [nuxt-module.md](./nuxt-module.md) не входят; разбор причины см. [printStyles.test.ts](../../lib/config/printStyles.test.ts).
 
 ## ~~D21: поле `name` в пресетах не объявлено в типе темы~~ ✅ resolved 2026-09-06
 

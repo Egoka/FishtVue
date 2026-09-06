@@ -1,7 +1,7 @@
 ---
 title: Label
 summary: Label с пятью режимами (dynamic/static/offset*/vanishing/none), required-маркером, нативной for-связкой с input, default-слотом для кастомного контента и prop `animate` (mount-tick gate против «переезда» позиции). §10.3 — вертикальные смещения через CSS custom properties (2026-09-05).
-updated: 2026-09-05
+updated: 2026-09-06
 stability: stable
 since: 0.2.11
 ---
@@ -32,7 +32,7 @@ lib/label/
 
 - **Lifecycle:** автоматическая инжекция стилей через `Component.__hooks()` (`onServerPrefetch + vueOnMounted -> initStyle`). SFC не дублирует вызов — см. [dev-patterns §2](../dev-patterns.md) decision row 1.
 - **Поток данных:** props + `Label.getOptions()` → computed `mode`/`type`/`translateX`/`maxWidth` → `classBase` (через `Label.setStyle`) и `classContent`. Resolve: `props ?? options ?? Label.componentsStyle() ?? "outlined"`.
-- **Стили:** transform-классы зависят от `type`. Для `dynamic`: `peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]` ([Label.vue:50-51](../../lib/label/Label.vue#L50-L51)). Required-маркер `*` через `after:content-['*']` ([Label.vue:60-62](../../lib/label/Label.vue#L60-L62)).
+- **Стили:** transform-классы зависят от `type`. Для `dynamic`: `peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]`. Вертикальные смещения параметризованы CSS-переменными (§10.3), горизонтальные умножаются на `--fv-label-dir` — множитель направления письма (`1` в LTR, `-1` в RTL). Required-маркер `*` через `after:content-['*'] after:ms-0.5` — логический отступ, чтобы звёздочка вставала слева в RTL.
 - **For-id association:** при заданном `forId` корневой `<label>` получает нативный `for="<id>"` ([Label.vue:71](../../lib/label/Label.vue#L76)) — браузер автоматически связывает label и input, click фокусирует input, screen-reader озвучивает связку.
 - **Конфиг:** `componentsOptions.Label` ключи — `mode`, `type`, `translateX`, `maxWidth`, `class`, `classBody`.
 - **Локализация:** не использует.
@@ -314,6 +314,8 @@ describe("Label", () => {
 - Если input оборачивается в дополнительный контейнер — `peer` теряет связь с label. Используй `peer/group`-класс для именованных peer'ов.
 - Required-маркер цвет (`text-red-500`) не зависит от темы — для customisation override через `props.classBody`.
 - `for-id` указывает на `id` целевого input — на стороне потребителя нужно гарантировать уникальность id (например, через `useId()` Vue 3.5+).
+- **RTL (2026-09-06).** Направление вынесено в множитель `--fv-label-dir`: `1` в LTR, `-1` в RTL (переключается классом `rtl:[--fv-label-dir:-1]`). Горизонтальные смещения записаны как `translate-x-[calc(16px*var(--fv-label-dir,1))]`, поэтому в RTL лейбл уезжает к началу строки, а не к её концу. Величины не изменились — в LTR рендер прежний. Звёздочка обязательного поля использует логический `after:ms-0.5`.
+- **Классы `peer-focus:translate-x-*` не действуют.** Горизонтальный сдвиг типов `dynamic` / `offsetDynamic` / `offsetStatic` / `static` управляется **только** prop'ом `translateX` (по умолчанию `0`): компонент пишет `--fv-translate-x` инлайн-стилем, а инлайн побеждает класс. Это не изменено намеренно — «оживление» классов сдвинуло бы каждый динамический лейбл при фокусе, то есть изменило бы внешний вид без запроса. Нужен сдвиг — задавай `translateX`.
 
 ### Bug report format
 

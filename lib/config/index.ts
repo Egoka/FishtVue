@@ -5,8 +5,8 @@ import { injectTokens, linksTheme, NamesTheme } from "fishtvue/theme"
 import { isClient } from "fishtvue/utils/domHandler"
 import { deepCopyObject, deepFreeze, deepMerge } from "fishtvue/utils/objectHandler"
 import Component from "fishtvue/component"
-import type { NameLocale } from "fishtvue/locale"
-import Locales from "fishtvue/locale"
+import type { LocaleMetadata, NameLocale } from "fishtvue/locale"
+import Locales, { localeDirection, resolveLocaleMetadata } from "fishtvue/locale"
 import Aurora from "fishtvue/theme/themes/Aurora"
 import Harmony from "fishtvue/theme/themes/Harmony"
 import Sapphire from "fishtvue/theme/themes/Sapphire"
@@ -46,11 +46,46 @@ export function getOptions<T extends keyof ComponentsOptions>(
   }) as keyof ComponentsOptions extends T ? Readonly<ComponentsOptions> : Readonly<ComponentsOptions[T]>
 }
 
+/**
+ * Синхронизирует `<html dir>` с направлением письма активной локали
+ * ([locale.md Issue 4](../../Documentation/issues/locale.md), решение R23).
+ *
+ * Атрибут ставится на корневой элемент документа, а не на контейнер приложения: логические
+ * CSS-свойства (`ps-`/`pe-`/`start-`/`end-`) и `rtl:`-варианты движка читают направление
+ * от ближайшего предка с `dir`, и для портальных узлов (Dialog, FixWindow, Alert) им является
+ * именно `<html>` — они рендерятся в `body`, вне дерева приложения.
+ *
+ * Уже выставленный вручную `dir` **не перетирается**: если потребитель управляет направлением
+ * сам (мультиязычная страница, где FishtVue — лишь часть), библиотека не должна с ним спорить.
+ *
+ * Признак «это выставили мы» хранится в самом DOM — атрибуте `data-fv-dir`, а не в модульной
+ * переменной. Модульное состояние здесь врало бы в трёх сценариях сразу: два приложения на одной
+ * странице, HMR-перезагрузка модуля и SSR-гидратация, где разметка пришла с сервера, а состояние
+ * модуля в браузере пустое. Атрибут переживает всё три и виден в DevTools.
+ */
+export function applyDocumentDirection(activeLocale: NameLocale | undefined): "ltr" | "rtl" | undefined {
+  if (!isClient()) return
+  const root = document.documentElement
+  if (!root) return
+  const direction = localeDirection(activeLocale)
+  const current = root.getAttribute("dir")
+  if (current && current !== root.getAttribute("data-fv-dir")) return current as "ltr" | "rtl"
+  root.setAttribute("dir", direction)
+  root.setAttribute("data-fv-dir", direction)
+  return direction
+}
+
+/** Метаданные локали: направление письма и строки для `Intl` / `date-fns`. */
+export function getLocaleMetadata(code?: NameLocale): LocaleMetadata {
+  return resolveLocaleMetadata(code ?? getActiveLocale())
+}
+
 export function setActiveLocale(activeLocale: NameLocale): string | boolean | undefined {
   return isExistFishtVue((FishtVue) => {
     const locale = FishtVue?.config?.locale
     if (locale && locale.activeLocale) {
       locale.activeLocale = activeLocale
+      applyDocumentDirection(activeLocale)
       return locale.activeLocale
     }
     console.warn("The locale has not been changed")
@@ -159,8 +194,12 @@ function install(app: App, rawOptions: FishtVueConfiguration): void {
     setActiveLocale,
     getDefaultLocale
   }
-  if (FishtVue.config.locale)
+  if (FishtVue.config.locale) {
     FishtVue.config.locale.activeLocale = FishtVue.config.locale?.activeLocale ?? FishtVue.config.locale?.defaultLocale
+    // R23: направление письма выставляется сразу на install, а не только при последующей смене
+    // локали — иначе RTL-приложение стартовало бы в LTR и «прыгало» после первого setActiveLocale.
+    applyDocumentDirection(FishtVue.config.locale.activeLocale)
+  }
   // Theme D21: единственный источник идентичности темы. Значение нормализуется до фактически
   // применённой темы — опечатка в `nameTheme` не должна оставаться в конфиге как «активная тема»,
   // раз пресет по ней всё равно не нашёлся и подставилась Aurora.

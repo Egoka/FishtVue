@@ -110,6 +110,22 @@ export declare function getActiveLocale(): string | undefined
 export declare function getDefaultLocale(): string | undefined
 
 /**
+ * Метаданные локали — направление письма и строки для `Intl` / `date-fns`
+ * ([locale.md Issues 4, 6](../../Documentation/issues/locale.md), решение R23).
+ * @param {NameLocale} [code] Код локали; по умолчанию — активная.
+ */
+export declare function getLocaleMetadata(code?: NameLocale): import("fishtvue/locale").LocaleMetadata
+
+/**
+ * Синхронизирует `<html dir>` с направлением письма локали. Вызывается автоматически на
+ * `install()` и на `setActiveLocale()`; отдельно нужен, только если направление меняется в обход
+ * FishtVue. Уже выставленный вручную `dir` не перетирается — возвращается текущее значение.
+ * @param {NameLocale} activeLocale Код локали.
+ * @returns {"ltr" | "rtl" | undefined} Применённое (или сохранённое) направление; `undefined` в SSR.
+ */
+export declare function applyDocumentDirection(activeLocale: NameLocale | undefined): "ltr" | "rtl" | undefined
+
+/**
  * Middleware-функция, мутирующая FishtVueConfiguration перед merge с defaults.
  * Либо мутирует параметр in-place (возвращает void), либо возвращает новый объект.
  */

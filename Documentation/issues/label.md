@@ -1,7 +1,7 @@
 ---
 title: Issues — Label
 summary: Аудит Label — 9 из 11 issues ✅ resolved (for-id, dup initStyle, translateX/maxWidth typing, type-via-options, unstyled cross-cutting, motion-safe, default slot, B10 semantic-token, translate через CSS custom properties). Остаются Issues 3 (packaging, cross-cutting закрыт волной 2) и 9 (RTL).
-updated: 2026-09-05
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/label/
 related-doc: ../components/label.md
@@ -15,7 +15,7 @@ related-doc: ../components/label.md
 | -------- | ----- | ---------- |
 | critical | 0     | —          |
 | high     | 0     | ~~A2, A4-5~~ ✅ — cross-cutting packaging закрыт волной 2 (см. [button.md](./button.md) Issues 8, 9) |
-| medium   | 1     | F31 (RTL — Issue 9); ~~B11~~ ✅ resolved 2026-09-05 |
+| medium   | 0     | ~~F31 (RTL — Issue 9)~~ ✅ resolved 2026-09-06; ~~B11~~ ✅ resolved 2026-09-05 |
 | low      | 0     | ~~B10~~ ✅ resolved 2026-07-04 |
 
 **Закрыто 2026-05-11 (7 of 10):** Issues 1 (E29.1 — `<label for>`), 2 (C17 — dup initStyle), 4 (D25 — translateX/maxWidth typing), 6 (L53 — type via componentsOptions, de facto уже было), 7 (L53 — unstyled cross-cutting через `Component.setStyle` guard), 8 (E29.7 — motion-safe), 10 (G37 — default slot). Нумерация исходная — cross-references из соседних issue-доков сохраняются.
@@ -151,11 +151,11 @@ type.value === 'offsetDynamic' ? `peer-focus:-translate-y-[48px] peer-focus:tran
 - **Где (was):** ~~[Label.vue:27]~~ → теперь [Label.vue:36](../../lib/label/Label.vue#L36) — `motion-safe:transition-all motion-safe:duration-200`.
 - **Resolution:** `transition-all duration-200` заменено на `motion-safe:transition-all motion-safe:duration-200` (same pattern как [Input.vue, Button.vue, Aria.vue, Select.vue, Calendar.vue post-fix](../../lib/aria/Aria.vue)). Анимации label отключаются при `prefers-reduced-motion: reduce`. Тест: `applies motion-safe guard on transition classes`. Wave 10.1 progress 3/22 → 4/22.
 
-## Issue 9: RTL — `translate-x-4` и `after:ml-0.5` буквальны
+## ~~Issue 9: RTL — `translate-x-4` и `after:ml-0.5` буквальны~~ ✅ resolved 2026-09-06
 
 - **Категория:** F31
-- **Severity:** medium
-- **Где:** [Label.vue:37-42](../../lib/label/Label.vue#L37-L42), [Label.vue:44](../../lib/label/Label.vue#L44)
+- **Severity:** ~~medium~~
+- **Где (was):** [Label.vue](../../lib/label/Label.vue) — `classBase` и `translateXStyle`
 
 ### Что найдено
 
@@ -167,7 +167,24 @@ type.value === 'offsetDynamic' ? `peer-focus:-translate-y-[48px] peer-focus:tran
 2. `ml-0.5` → `ms-0.5`.
 3. Проверить, что после смены направления `peer-focus:translate-x-4` тоже корректно зеркалится.
 
-**Deferred to dedicated RTL wave** — cross-cutting (Button Issue 3 тоже не закрыт). Одиночный label-fix без InputLayout/Input создаст несогласованность.
+~~**Deferred to dedicated RTL wave**~~ — предпосылка снята: [button.md Issue 3](./button.md) закрыт ещё 2026-06-07, а Input/InputLayout получили логические свойства в июньских заходах. Одиночным этот фикс больше не был.
+
+### Что сделано (2026-09-06, решение R22)
+
+Пункт 2 плана выполнен буквально: `after:ml-0.5` → `after:ms-0.5` — звёздочка обязательного поля встаёт слева в RTL.
+
+Пункты 1 и 3 решены **иначе, чем предлагалось**, и это важнее самой правки. План предлагал `translate-x-4` → `ms-4` или `rtl:-translate-x-4`. Ни то, ни другое не годится:
+
+- `ms-4` — не эквивалент: `translate` не занимает места в потоке, а `margin` занимает. Замена сдвинула бы соседние элементы;
+- `rtl:-translate-x-4` работает, но требует дублировать **каждое** из шести смещений в двух вариантах и держать их синхронными вручную.
+
+Вместо этого направление вынесено в множитель: `--fv-label-dir` равен `1` в LTR и `-1` в RTL (переключается одним классом `rtl:[--fv-label-dir:-1]`), а смещения записаны как `translate-x-[calc(16px*var(--fv-label-dir,1))]`. Величины не изменились, поэтому **в LTR вывод побайтово прежний**. JS-детекта направления нет — вся арифметика в CSS, как и требует решение R22.
+
+Тот же множитель применён к инлайновому `translateX`-prop'у: пользовательское смещение тоже обязано зеркалиться, иначе RTL чинился бы только для дефолтов.
+
+**Попутное наблюдение, которое стоит знать.** Классы `peer-focus:translate-x-*` у типов `dynamic`/`offsetDynamic`/`offsetStatic`/`static` **не действуют**: `translateXStyle` пишет `--fv-translate-x` инлайном (по умолчанию `0`), а инлайн-стиль побеждает класс. Горизонтальный сдвиг этих типов управляется только prop'ом `translateX`. Это не тронуто намеренно — «оживление» классов изменило бы вид каждого динамического лейбла при фокусе, а Issue 9 про RTL, а не про поведение. Зафиксировано в [components/label.md §18](../components/label.md#18-known-issues--limitations).
+
+Тесты — [LabelRtl.test.ts](../../lib/label/LabelRtl.test.ts): движок разбирает `calc`+`var` внутри arbitrary value и arbitrary property под `rtl:` (самая хрупкая часть), переключатель присутствует при всех шести типах, звёздочка логическая.
 
 ## ~~Issue 10: Нет `default` slot — title только через prop~~ ✅ resolved 2026-05-11
 

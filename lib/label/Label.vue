@@ -23,10 +23,14 @@
   const maxWidth = computed<NonNullable<LabelProps["maxWidth"]>>(
     () => (props?.maxWidth as LabelProps["maxWidth"]) ?? options?.maxWidth ?? 0
   )
+  // Issue 9 (F31, RTL): величина горизонтального смещения умножается на направление письма.
+  // `--fv-label-dir` равен 1 в LTR и -1 в RTL (переключается CSS-вариантом `rtl:` в classBase),
+  // поэтому в LTR вывод побайтово прежний, а в RTL лейбл уезжает в правильную сторону.
+  // JS-детекта направления нет и не нужно: это чистая CSS-арифметика (решение R22).
   const translateXStyle = computed(() => {
     if (type.value === "none") return ""
     const v = translateX.value
-    return `--fv-translate-x: ${typeof v === "number" ? `${v}px` : v};`
+    return `--fv-translate-x: calc(${typeof v === "number" ? `${v}px` : v} * var(--fv-label-dir, 1));`
   })
   const maxWidthStyle = computed(() => {
     const v = maxWidth.value
@@ -45,20 +49,29 @@
       // Переопределяется на любом предке без правки JS:
       //   .my-form { --fv-label-translate-y: 68px }
       // Fallback'и в var() равны прежним литералам, поэтому поведение по умолчанию не изменилось.
-      // Горизонтальные `translate-x-*` намеренно не тронуты — их починка это RTL-задача (Issue 9),
-      // там нужна смена знака, а не параметризация величины.
+      // Issue 9 (F31, RTL): горизонтальные смещения умножаются на `--fv-label-dir` — 1 в LTR,
+      // -1 в RTL. Величины не изменились, поэтому в LTR рендер прежний; в RTL лейбл смещается
+      // к началу строки, а не к её концу. Направление переключается CSS-вариантом ниже, без JS.
+      "rtl:[--fv-label-dir:-1]",
       type.value === "dynamic"
-        ? `peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]`
+        ? `peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]`
         : "",
       type.value === "offsetDynamic"
-        ? `peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-4 -translate-y-[var(--fv-label-translate-y-rest,28px)]`
+        ? `peer-focus:-translate-y-[var(--fv-label-translate-y-offset,48px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]`
         : "",
-      type.value === "offsetStatic" ? `-translate-y-[var(--fv-label-translate-y-offset,48px)] translate-x-4` : "",
-      type.value === "static" ? "-translate-y-[var(--fv-label-translate-y,60px)] translate-x-4" : "",
+      type.value === "offsetStatic"
+        ? `-translate-y-[var(--fv-label-translate-y-offset,48px)] translate-x-[calc(16px*var(--fv-label-dir,1))]`
+        : "",
+      type.value === "static"
+        ? "-translate-y-[var(--fv-label-translate-y,60px)] translate-x-[calc(16px*var(--fv-label-dir,1))]"
+        : "",
       type.value === "vanishing" ? `-translate-y-[var(--fv-label-translate-y-rest,28px)]` : "",
-      type.value === "none" ? "opacity-0 -translate-y-[var(--fv-label-translate-y-rest,28px)] translate-x-8" : "",
+      type.value === "none"
+        ? "opacity-0 -translate-y-[var(--fv-label-translate-y-rest,28px)] translate-x-[calc(32px*var(--fv-label-dir,1))]"
+        : "",
+      // Красная звёздочка обязательного поля: логический отступ, чтобы в RTL она стояла слева.
       props.isRequired
-        ? `after:content-['*'] after:relative after:-top-[10px] after:text-red-500 after:dark:text-red-800 after:ml-0.5`
+        ? `after:content-['*'] after:relative after:-top-[10px] after:text-red-500 after:dark:text-red-800 after:ms-0.5`
         : "",
       options?.classBody ?? "",
       props.classBody ?? ""
