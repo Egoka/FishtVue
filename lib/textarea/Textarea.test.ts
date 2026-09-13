@@ -230,7 +230,7 @@ describe("Textarea Component Tests", () => {
       const wrapper = mount(Textarea, { global: { plugins: [app] } })
       const textarea = wrapper.find("textarea")
       // setStyle returns "" under unstyled: true, so the textarea class is empty.
-      expect(textarea.attributes("class") ?? "").toBe("")
+      expect(textarea.attributes("class") ?? "").toBe("fv")
     })
 
     // ---ISSUE 7 — modelValue narrowed to string|null|undefined -----------

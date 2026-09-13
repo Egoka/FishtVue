@@ -382,7 +382,7 @@ describe("Pagination Component Tests", () => {
         global: { plugins: [app] },
         props: { total: 50, sizePage: 10 }
       })
-      expect(wrapper.find("[data-pagination]").classes()).toHaveLength(0)
+      expect(wrapper.find("[data-pagination]").classes()).toEqual(["fv"])
     })
 
     it("renders styled root class when unstyled is not set", () => {

@@ -161,6 +161,10 @@ since: <версия fishtvue, в которой появилось>
 - Type — точно как в `.d.ts` (включая union, literal types).
 - Default — из `withDefaults()` в `.vue` ИЛИ из `getOptions()` (отметь "from global config").
 - Description — на основе JSDoc; если их нет, выведи из использования в `.vue`, но НЕ выдумывай.
+- `class` — всегда корень (`data-{kebab-name}`); внутренние элементы — только через `classes` (dev-patterns §2 A–B).
+
+### 5.1 Classes keys
+Таблица `| Key | Element (data-*) | Kind | Default |` по `{Target}ClassKey` из `.d.ts` — verbatim, плюс строка `root`. Kind — `element` (аддитивный: база → `componentsOptions.{Target}.classes.<key>` → `props.classes.<key>`, twMerge) или `aspect` (заменяющий: `props ?? options ?? default`, `""` отключает). Default — только для aspect-ключей (литерал из `pick(key, default)` в `.vue`). Источник селекторов — манифест `lib/classesContract.test.ts`.
 
 ## 6. Events / Emits + v-model contract
 Таблица: `| Event | Payload | When fired |`. Источник — `{Target}Emits` + `defineEmits` в `.vue`.
@@ -192,7 +196,7 @@ const ref = useTemplateRef<InstanceType<typeof {Target}>>("{target}Ref")
 ## 10. Configuration & Customization
 
 ### 10.1 Global (через `app.use`)
-Поля доступные в `componentsOptions.{Target}` (источник — `{Target}Option` + `lib/config/FishtVue.d.ts`). Полный пример с типами и значениями.
+Поля доступные в `componentsOptions.{Target}` (источник — `{Target}Option` + `lib/config/FishtVue.d.ts`). Полный пример с типами и значениями, включая `class` и `classes` (слияние с per-instance — по ключу, dev-patterns §2 C).
 
 ### 10.2 Per-instance (через props)
 Те же значения переопределяются point-of-use. Приоритет: `props` > `global config` > `defaults`.

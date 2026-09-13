@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import Component, { cssComponents } from "fishtvue/component"
 import type { App } from "vue"
-import { createApp, defineComponent, getCurrentInstance } from "vue"
+import { computed, createApp, defineComponent, getCurrentInstance, reactive } from "vue"
 import type { FishtVueConfiguration } from "fishtvue/config"
 import FishtVue from "fishtvue/config"
 
@@ -462,6 +462,154 @@ describe("Testing class Component", () => {
       expect(hook).not.toHaveBeenCalled()
       vi.mocked(hook).mock.calls.forEach((call) => {
         expect(call[0]).toMatchObject({ name: "FixWindow", prefix: "fishtvue" })
+      })
+    })
+  })
+
+  describe("setStyle: consumer-сегмент и unstyled (props 1.0, канон §2 D/E)", () => {
+    // Классы потребителя (`class`/`classes.*`) передаются в setStyle отдельным сегментом `consumer`:
+    // они всегда последние в twMerge (перебивают базу/mode/state) и, в отличие от базы,
+    // переживают `unstyled` — иначе флаг «без темы» ломал бы и стилизацию самим потребителем.
+    // Реальный Vue + FishtVue plugin (паттерн из t()-тестов): под `isolate:false` модуль
+    // fishtvue/component уже захватил настоящий getCurrentInstance, и mock-инстанс сюда не доезжает.
+    // Имена probe-компонентов уникальны: `listOfStyledComponents`/`cssComponents` — module-singleton,
+    // и дедуп токенов утечёт из соседнего теста.
+    const buildComponent = (
+      cfg: FishtVueConfiguration,
+      name = "FixWindow",
+      options?: Record<string, unknown>
+    ): Component<"FixWindow"> => {
+      let captured: Component<"FixWindow"> | undefined
+      const Probe = defineComponent({
+        name,
+        setup() {
+          captured = new Component<"FixWindow">(name as "FixWindow")
+          return () => null
+        }
+      })
+      mount(Probe, {
+        global: {
+          plugins: [
+            [
+              FishtVue as any,
+              {
+                optionsTheme: { prefix: "test-prefix" },
+                ...cfg,
+                componentsOptions: options ? { [name]: options } : undefined
+              }
+            ]
+          ]
+        }
+      })
+      // @ts-ignore — captured is set synchronously inside setup before mount returns.
+      return captured
+    }
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("под unstyled возвращает `fv` + классы потребителя вместо пустой строки", () => {
+      const c = buildComponent({ unstyled: true })
+      expect(c.setStyle(["inline-flex p-2"], { consumer: ["p-4", "probe"] })).toBe("fv p-4 probe")
+    })
+
+    it('под unstyled без consumer возвращает голый `fv` (снимает `|| "fv"`-патчи)', () => {
+      const c = buildComponent({ unstyled: true })
+      expect(c.setStyle("inline-flex p-2")).toBe("fv")
+      expect(c.setStyle(["inline-flex", false, undefined])).toBe("fv")
+    })
+
+    it("consumer идёт последним: выигрывает twMerge-конфликт у базы и компилируется в CSS", () => {
+      const name = "ConsumerProbeZero"
+      cssComponents.delete(name as any)
+      const c = buildComponent({}, name)
+      c.initStyle()
+      const out = c.setStyle(["p-2 inline-flex"], { consumer: ["p-4"] })
+      expect(out).toBe("fv test-prefix-consumer-probe-zero inline-flex p-4")
+      expect(cssComponents.get(name as any) ?? "").toContain("p-4")
+    })
+
+    it("вызов без options байт-в-байт прежний (обратная совместимость внутри lib)", () => {
+      const c = buildComponent({})
+      expect(c.setStyle(["relative", false, "p-2"])).toBe("fv test-prefix-fix-window relative p-2")
+    })
+
+    describe("resolveClasses(props)", () => {
+      const build = (options?: Record<string, unknown>, config: FishtVueConfiguration = {}) =>
+        buildComponent(config, "FixWindow", options)
+
+      it("cls('root'): base → options.classes.root → props.classes.root → options.class → props.class", () => {
+        const c = build({ class: "opt-class", classes: { root: "opt-root" } })
+        const { cls } = c.resolveClasses<"title">({ class: "prop-class", classes: { root: "prop-root" } })
+        expect(cls("root", "base")).toBe("fv test-prefix-fix-window base opt-root prop-root opt-class prop-class")
+      })
+
+      it("cls(<element>) не включает prop `class` — он только для корня", () => {
+        const c = build({ classes: { title: "opt-title" } })
+        const { cls } = c.resolveClasses<"title">({ class: "prop-class", classes: { title: "prop-title" } })
+        const out = cls("title", "text-sm")
+        expect(out).toBe("fv test-prefix-fix-window text-sm opt-title prop-title")
+        expect(out).not.toContain("prop-class")
+      })
+
+      it("cls: локальный ключ перебивает глобальный и базу в twMerge-конфликте, остальное складывается", () => {
+        const c = build({ classes: { root: "p-3 opt-only" } })
+        const { cls } = c.resolveClasses<never>({ classes: { root: "p-4" } })
+        const out = cls("root", "p-2 inline-flex")
+        expect(out).toContain("p-4")
+        expect(out).toContain("opt-only")
+        expect(out).toContain("inline-flex")
+        expect(out).not.toMatch(/\bp-2\b|\bp-3\b/)
+      })
+
+      it("cls принимает falsy-сегменты базы (state-классы по условию)", () => {
+        const c = build()
+        const { cls } = c.resolveClasses<never>({})
+        expect(cls("root", "base", false, undefined, "" as string)).toBe("fv test-prefix-fix-window base")
+      })
+
+      it("raw(key): только сегменты потребителя, без setStyle-префикса — для hand-off ребёнку", () => {
+        const c = build({ class: "opt-class", classes: { icon: "opt-icon p-2" } })
+        const { raw } = c.resolveClasses<"icon">({ class: "prop-class", classes: { icon: "p-4" } })
+        expect(raw("icon")).toBe("opt-icon p-4")
+        expect(raw("root")).toBe("opt-class prop-class")
+      })
+
+      it("raw(key) под unstyled тоже отдаёт классы потребителя", () => {
+        const c = build({ classes: { icon: "opt-icon" } }, { unstyled: true })
+        const { raw } = c.resolveClasses<"icon">({ classes: { icon: "prop-icon" } })
+        expect(raw("icon")).toBe("opt-icon prop-icon")
+      })
+
+      it("pick(key, fallback): props ?? options ?? fallback; пустая строка в props отключает и options, и default", () => {
+        const c = build({ classes: { mark: "opt-mark" } })
+        const { pick } = c.resolveClasses<"mark">({ classes: { mark: "" } })
+        expect(pick("mark", "default-mark")).toBe("")
+        const { pick: pickFromOptions } = c.resolveClasses<"mark">({})
+        expect(pickFromOptions("mark", "default-mark")).toBe("opt-mark")
+        const { pick: pickDefault } = build().resolveClasses<"mark">({})
+        expect(pickDefault("mark", "default-mark")).toBe("default-mark")
+        expect(pickDefault("mark")).toBe("")
+      })
+
+      it("cls читается реактивно: замена props.classes пересчитывает computed", () => {
+        const c = build()
+        const props = reactive<{ class?: string; classes?: Record<string, string> }>({ classes: { root: "first" } })
+        const { cls } = c.resolveClasses<never>(props)
+        const out = computed(() => cls("root", "base"))
+        expect(out.value).toContain("first")
+        props.classes = { root: "second" }
+        expect(out.value).toContain("second")
+        expect(out.value).not.toContain("first")
+        props.class = "late-class"
+        expect(out.value).toContain("late-class")
+      })
+
+      it("массивы StyleClass в options/props сплющиваются", () => {
+        const c = build({ classes: { root: ["opt-a", "opt-b"] } })
+        const { cls, raw } = c.resolveClasses<never>({ class: ["prop-a", "prop-b"] })
+        expect(raw("root")).toBe("opt-a opt-b prop-a prop-b")
+        expect(cls("root")).toBe("fv test-prefix-fix-window opt-a opt-b prop-a prop-b")
       })
     })
   })

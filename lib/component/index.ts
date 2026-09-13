@@ -16,7 +16,14 @@ import { fieldsPick, get } from "fishtvue/utils/objectHandler"
 import { isClient, minifyCSS } from "fishtvue/utils/domHandler"
 import { DefaultMessages, Locales } from "fishtvue/locale"
 import type { ComponentsOptions, FishtVue, OptionsTheme } from "fishtvue/config"
-import type { NamesComponents, PublicFields, setStyleOptions, StylesComponent } from "./TypeComponent"
+import type {
+  ClassesProps,
+  ClassesResolver,
+  NamesComponents,
+  PublicFields,
+  SetStyleOptions,
+  StylesComponent
+} from "./TypeComponent"
 import { UniqueKeySetCollection } from "fishtvue/utils/uniqueCollection"
 import { StyleClass, StyleMode } from "fishtvue/types"
 
@@ -49,6 +56,8 @@ export const cssComponents = new Map<NamesComponents, string>()
  * - `getOptions()`: A method that returns the options for the component.
  * - `getPrefix()`: A method that returns the prefix for the component.
  * - `initStyle(stylesComp)`: A method that initializes the style for the component.
+ * - `setStyle(stylesComp, options?)`: компилирует tw-классы в CSS и возвращает `"fv {prefix}-{kebab-name} …"`; `options.consumer` — сегменты потребителя (последние в twMerge, переживают `unstyled`).
+ * - `resolveClasses(props)`: резолвер `class`/`classes` — `cls(key, …base)`, `raw(key)`, `pick(key, fallback)` (dev-patterns §2 B–D).
  */
 export default class Component<T extends keyof ComponentsOptions> {
   private readonly __instance: ComponentInternalInstance | null
@@ -131,22 +140,28 @@ export default class Component<T extends keyof ComponentsOptions> {
     if (this.__stylesComp) this.__setStyle(this.__stylesComp)
   }
 
+  /**
+   * `setStyle(stylesComp, options?)`: компилирует tw-классы в CSS под `.{prefix}-{kebab-name}` и возвращает
+   * `"fv {prefix}-{kebab-name} …"`. `options.consumer` — сегменты потребителя (`class`/`classes.*`,
+   * dev-patterns §2 D/E): они всегда последние в twMerge и переживают `unstyled` — флаг означает
+   * «без темы», а не «без стилизации самим потребителем». Под `unstyled` база не компилируется и маркер
+   * `{prefix}-{kebab-name}` не выдаётся; `fv` остаётся — на него завязан UA-preflight из baseStyle,
+   * который инжектится независимо от `unstyled` (config/index.ts → BaseStylesComponent.initStyle).
+   */
   public setStyle = <T extends StyleClass | boolean | undefined>(
     stylesComp: T | T[],
-    options?: setStyleOptions
+    options?: SetStyleOptions
   ): string => {
-    if (this.__globalConfig?.config?.unstyled) return ""
+    const consumer = cn(options?.consumer ?? [])
+    if (this.__globalConfig?.config?.unstyled) return cn("fv", consumer)
     const specialClass = `${this.prefix}-${toKebabCase(this.name)}`
-    const styles = cn(stylesComp)
-    const isBaseClasses = options?.isBaseClasses ? "" : " "
-    const newClasses = styles
-      .split(" ")
-      .filter((item) => !listOfStyledComponents.hasValue(this.name, `${isBaseClasses}${item}`))
+    const styles = cn(stylesComp, consumer)
+    const newClasses = styles.split(" ").filter((item) => !listOfStyledComponents.hasValue(this.name, ` ${item}`))
     if (newClasses?.length) {
       newClasses.forEach((item) => {
-        listOfStyledComponents.add(this.name, [`${isBaseClasses}${item}`])
+        listOfStyledComponents.add(this.name, [` ${item}`])
         const css = tailwind(item, {
-          selector: options?.selector ? `${options.selector}${isBaseClasses}` : `.${specialClass}`,
+          selector: options?.selector ? `${options.selector} ` : `.${specialClass}`,
           darkSelector: this.__globalOptionsTheme?.darkModeSelector ?? ""
         })
         if (css) listOfCssComponents.add(this.name, [css])
@@ -154,6 +169,28 @@ export default class Component<T extends keyof ComponentsOptions> {
       if (this.__stylesComp) this.__setStyle(this.__stylesComp)
     }
     return `fv ${specialClass} ${styles}`
+  }
+
+  /**
+   * `resolveClasses(props)`: резолвер `class`/`classes` компонента (dev-patterns §2 B–D).
+   * `cls(key, ...base)` — класс собственного элемента через `setStyle`, порядок
+   * `base → options.classes[key] → props.classes[key] → (root) options.class → props.class`;
+   * `raw(key)` — только сегменты потребителя для hand-off ребёнку; `pick(key, fallback)` — aspect-ключ
+   * с заменяющей семантикой (`""` в props отключает). `props` читается лениво — внутри `computed`
+   * результат реактивен; опции — снимок на инстанс, как и `getOptions()`.
+   */
+  public resolveClasses = <K extends string>(props: ClassesProps<K>): ClassesResolver<K> => {
+    const opt = this.__options as ClassesProps<K> | undefined
+    const consumer = (key: K | "root"): Array<StyleClass | undefined> => [
+      opt?.classes?.[key],
+      props.classes?.[key],
+      ...(key === "root" ? [opt?.class, props.class] : [])
+    ]
+    return {
+      cls: (key, ...base) => this.setStyle(base, { consumer: consumer(key) }),
+      raw: (key) => cn(consumer(key)),
+      pick: (key, fallback = "") => props.classes?.[key] ?? opt?.classes?.[key] ?? fallback
+    }
   }
 
   private __stylesBase: StylesComponent = (layers, css = "") =>

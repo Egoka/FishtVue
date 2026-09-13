@@ -464,15 +464,16 @@ describe("Button Component Tests", () => {
       delete (window as any).FishtVue
     })
 
-    it("strips all classes from the root when global unstyled: true", () => {
+    it("strips theme classes from the root when global unstyled: true, keeping the bare `fv`", () => {
       const wrapper = mount(Button, {
         global: { plugins: [appWithConfig({ unstyled: true })] },
         slots: { default: "X" }
       })
-      // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
-      // ни `fv {prefix}-button`-префикса на корне.
+      // Component.setStyle() под unstyled режет базу/mode/`{prefix}-button`, но оставляет `fv`:
+      // на него завязан UA-preflight из baseStyle (`button.fv` — transparent background, font: inherit),
+      // а сам baseStyle инжектится независимо от `unstyled` (config/index.ts → BaseStylesComponent).
       const cls = (wrapper.find("[data-button]").attributes("class") ?? "").trim()
-      expect(cls).toBe("")
+      expect(cls).toBe("fv")
     })
 
     it("keeps base classes when unstyled is false (contrast)", () => {

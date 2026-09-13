@@ -43,4 +43,18 @@ import type { ClassValue } from "clsx"
 
  In this example, the `cn` function is called with three class values: `class1`, `class2`, and `class3`. It merges the class names using `clsx` and `twMerge`, resulting in the string `"text-red-500 bg-blue-500 font-bold"`.
  */
-export declare function cn(classes: ClassValue[]): string
+export declare function cn(...classes: ClassValue[]): string
+
+/**
+ * По-ключевое слияние карт `classes` (dev-patterns §2 C): для каждого ключа — `cn(...values)`,
+ * позднее побеждает в twMerge-конфликте, остальное складывается. Ключи без значения опускаются,
+ * `undefined`-карты пропускаются, входные объекты не мутируются.
+ *
+ * ```ts
+ * mergeClasses({ root: "p-2 rounded" }, { root: "p-4" }) // { root: "rounded p-4" }
+ * ```
+ * @template K - union ключей карты
+ */
+export declare function mergeClasses<K extends string>(
+  ...maps: Array<Partial<Record<K, string | string[] | undefined>> | undefined>
+): Partial<Record<K, string>>

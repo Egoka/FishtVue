@@ -924,7 +924,7 @@ describe("FixWindow Component Tests", () => {
       const wrapper = mount(FixWindow, { global: { plugins: [app()] } })
       const root = wrapper.find("[data-fix-window]")
       // When unstyled: true → Component.setStyle returns "" → classBase is empty.
-      expect(root.attributes("class") ?? "").toBe("")
+      expect(root.attributes("class") ?? "").toBe("fv")
       wrapper.unmount()
     })
 

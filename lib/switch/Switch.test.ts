@@ -503,7 +503,7 @@ describe("Switch Component Tests", () => {
       // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
       // ни `fv {prefix}-switch`-префикса на корне.
       const cls = (wrapper.find("[data-switch]").attributes("class") ?? "").trim()
-      expect(cls).toBe("")
+      expect(cls).toBe("fv")
     })
 
     it("keeps base classes when unstyled is false (contrast)", () => {
@@ -550,21 +550,21 @@ describe("Switch Component Tests", () => {
 
     // L2: UA-reset-зацепка `fv` живёт только в template-only binding (`classSwitchElement`).
     // Публичный expose `classSwitch` обязан остаться тем же, чем был до фикса.
-    it("keeps the exposed `classSwitch` empty under unstyled: true while the DOM keeps `fv` (switch)", () => {
+    it("keeps the exposed `classSwitch` equal to the rendered bare `fv` under unstyled: true (switch)", () => {
       const wrapper = mount(Switch, {
         global: { plugins: [appWithConfig({ unstyled: true })] },
         props: { switchingType: "switch" }
       })
-      expect((wrapper.vm as any).classSwitch).toBe("")
+      expect((wrapper.vm as any).classSwitch).toBe("fv")
       expect((wrapper.find("[data-input-switch]").attributes("class") ?? "").trim()).toBe("fv")
     })
 
-    it("keeps the exposed `classSwitch` empty under unstyled: true while the DOM keeps `fv` (checkbox)", () => {
+    it("keeps the exposed `classSwitch` equal to the rendered bare `fv` under unstyled: true (checkbox)", () => {
       const wrapper = mount(Switch, {
         global: { plugins: [appWithConfig({ unstyled: true })] },
         props: { switchingType: "checkbox" }
       })
-      expect((wrapper.vm as any).classSwitch).toBe("")
+      expect((wrapper.vm as any).classSwitch).toBe("fv")
       expect((wrapper.find("[data-input-checkbox]").attributes("class") ?? "").trim()).toBe("fv")
     })
 

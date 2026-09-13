@@ -514,7 +514,7 @@ describe("Split Component", () => {
           ]
         }
       })
-      expect((wrapper.vm as any).classBase).toBe("")
+      expect((wrapper.vm as any).classBase).toBe("fv")
     })
 
     it("wraps root transition in motion-safe:", () => {

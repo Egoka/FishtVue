@@ -803,7 +803,7 @@ describe("InputLayout Component", () => {
       })
       // InputLayout.setStyle() возвращает "" при unstyled → ни базовых классов, ни fv-префикса на корне
       const cls = (wrapper.find("[data-input-layout]").attributes("class") ?? "").trim()
-      expect(cls).toBe("")
+      expect(cls).toBe("fv")
     })
 
     it("keeps base classes when unstyled is false (contrast)", () => {

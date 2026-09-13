@@ -699,7 +699,7 @@ describe("Accordion Component Tests", () => {
         props: { dataSource }
       })
       const cls = (wrapper.find("[data-accordion]").attributes("class") ?? "").trim()
-      expect(cls).toBe("")
+      expect(cls).toBe("fv")
     })
 
     // L2: preflight из baseStyle (`button.fv`) инжектится независимо от `unstyled`,

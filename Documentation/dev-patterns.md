@@ -1,7 +1,7 @@
 ---
 title: Development patterns & documentation regulations
 summary: Конституция разработки внутри lib/ и регламенты внутренней документации.
-updated: 2026-06-13
+updated: 2026-09-13
 stability: stable
 since: 0.2.11
 ---
@@ -26,6 +26,16 @@ since: 0.2.11
 | Pattern для resolve опций: `props ?? options ?? default`           | Везде встречается в варианте `(props?.x as T) ?? options?.x ?? <default>`.                                                                                                                                                                                                                                       | Канон — **fallback chain `props → componentsOptions → defaults`** через `??`, default — литерал, не вычисляемое выражение.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Предсказуемый порядок, работает с `undefined` без сюрпризов.                                                                                                                                                                                                                                                                                                                                                   | Сохранить.                                                                                                                                                                                          |
 | Compound child API (`<Menu><MenuItem>`, `<Table><Column>`)         | [Menu.vue:199–284](../lib/menu/Menu.vue#L199) (MenuItem/MenuGroup), [Table.vue](../lib/table/Table.vue) (Column/ColumnGroup) — дети renderless.                                                                                                                                                                  | Канон — **VNode-walk `slots.default()`**, НЕ provide/inject. Дети: renderless SFC (`<slot v-if="false"/>`, `defineOptions({ name, inheritAttrs: false })`, без `new Component()`); родитель сопоставляет по `vn.type.name`/`__name` (Fragment-flatten для `v-for`/`v-if`) и **НЕ импортирует child `.vue` в свой SFC** — это ломает type-resolver `@vue/compiler-sfc` на re-export `declare class extends ClassComponent`. Schema-driven prop (`:groups`/`:columns`) при наличии **выигрывает** (backward compat). Subcomponent — named-экспорт родительского модуля (entry = `index.ts`, бандлит детей в `{name}.mjs`) + Nuxt `addComponent({ filePath, export })`. | Меньше boilerplate чем provide/inject; нет registration-lifecycle и ordering-проблем; реактивность — через ре-рендер родителя. raw `.vue`-экспорт детей **не** публикуется в npm (нет в `files`-whitelist) — поэтому бандлить в `.mjs` через `index.ts`-entry. Table (Issue 3), Menu (Issue 5c-a, 2026-06-11) и Form (Issue 2, 2026-06-13 — `FormField`/`FormSection`) переведены; verified `npm pack`+install: `fishtvue/{table,menu,form}/{name}.mjs` отдаёт named детей. | Зеркалить Menu/Table/Form при добавлении compound к новым collection-компонентам.                                                                                                                        |
 | RTL + reduced-motion через variant-классы (НЕ правки theme-движка) | Движок `tailwind()` уже знает media `motion-safe`/`print`/`forced-colors` и `specialStates` `rtl`/`ltr` ([unoStatic.ts:555,560](../lib/theme/unoStyle/unoStatic.ts#L555)) + логические `start`/`end`/`pe`/`ps` ([unoRules.ts:1502](../lib/theme/unoStyle/unoRules.ts#L1502)).                                    | Канон — **анимации только `motion-safe:*`** (Button/Menu/Select/Table); **RTL — логические props `pe`/`ps`/`start`/`end`** (авто-флип, работают без `dir`-атрибута: `direction` дефолтит в ltr). **Negative-логический inset (`-end-3`) НЕ поддержан** (regex `start`/`end` без `negative`-группы) → физический default + `rtl:`-override (`rtl:right-auto rtl:-left-3`). JS-направление — `getComputedStyle(el).direction === "rtl"`. Inline-`<transition>`/child-классы шаблона не идут через computed → их варианты регистрировать **явно** `X.setStyle("motion-safe:transition …")`.                                                                             | Нулевая стоимость (движок уже умеет), без рантайм-Tailwind у потребителя; единый идиом по компонентам.                                                                                                                                                                                                                                                                                                         | Зеркалить Table при RTL/motion для остальных (Wave 8.1 / 10.1).                                                                                                                                     |
+| `class` как объект для внутренних элементов (props 1.0, A) | Идея «один prop `class` = строка или карта элементов». Vue нормализует `class` в строку в `_createVNode` для **любого** vnode (`@vue/runtime-core` 3.5, `normalizeClass`): объект → строка truthy-ключей, `Ref` → мусор. | **`class` — только корень** (`data-{kebab-name}`), объявляется prop'ом типа `StyleClass`; SFC кладёт его на корень и никуда больше. | Иначе невозможно: значение приходит уже строкой. Единая семантика с Vue-fallthrough. | Guard [classesContract.test.ts](../lib/classesContract.test.ts): `class` только на `[data-x]`. |
+| Внутренние class-хуки: плоские `classX`, bag `styles`, суффиксные `*Class` (B) | Три несовместимые формы: `classBody`/`classIcon`/… (большинство), `styles.class.*` (Table/Menu/Split), `passwordToggleClass`/`structureClass`/`colFilterClass`. | **Единственный хук — `classes?: ClassesMap<XClassKey>`** ([types.d.ts](../lib/types.d.ts)): карта «семантический ключ элемента → `StyleClass`», ключ `root` = корень. Ключи двух видов: **element** (аддитивные, twMerge) и **aspect** (заменяющие: `mark`, `rowActive`, `animation`, `border*` — `""` отключает default). Ключи логические (`start`/`end`), совпадают с суффиксами `data-{name}-{key}`. | Один prop вместо 60; глобальная настройка per-key; имена не утекают из реализации (C13). | Guard [propsNaming.test.ts](../lib/propsNaming.test.ts): запрет `class[A-Z]*`, `styles`, `*Class`. |
+| Слияние `classes` global + local (C) | `styles`-bag'и мержились `deepMergeSoft` целиком; плоские хуки — `options?.x ?? "", props?.x ?? ""` руками ~80 раз. | **По ключу**: `XOption = Pick<XProps, … \| "class" \| "classes">`; element-ключи — `cn(base, options.classes[k], props.classes[k])`, aspect — `props ?? options ?? default`. Helper [`Component.resolveClasses(props)`](../lib/component/index.ts) → `cls`/`raw`/`pick`; [`mergeClasses`](../lib/utils/tailwindHandler.ts) для hand-off'ов. | Никакого рукописного резолва в SFC; порядок склейки один на библиотеку. | Все SFC — через `resolveClasses` (волны W1–W5). |
+| Порядок склейки классов (D) | В ~12 компонентах структурные классы шли **после** `props.class` — twMerge не давал потребителю их перебить. | **`base → mode → state → options.classes[k] → props.classes[k] → (root) options.class → props.class`.** База всегда до сегментов потребителя; `cls()` не позволяет иначе. | Потребитель всегда может перебить утилиту библиотеки. | Тест per-key «`p-4` потребителя побеждает `p-2` базы» в каждом `<Name>.test.ts`. |
+| `unstyled` резал и классы потребителя (E) | `setStyle` возвращал `""` для всего; три патча `\|\| "fv"` (Accordion/Switch/Table) спасали UA-preflight. | **`setStyle(base, { consumer })`**: под `unstyled` → `"fv " + consumer` (база/mode не выдаются и не компилируются, маркер `{prefix}-{name}` не ставится); в styled-режиме consumer — последний сегмент. Патчи сняты. | `unstyled` = «без темы», а не «без стилизации потребителем»; `fv` держит preflight из baseStyle, который инжектится всегда. | [Component.test.ts](../lib/component/Component.test.ts) «setStyle: consumer-сегмент и unstyled». |
+| Булевы props: `is*`/`not*`/`without*`/`no*`/`show*`/`use*` и cast в `false` (F) | Четыре стиля имён; Vue кастует отсутствующий Boolean в `false`, если у prop'а нет собственного `default` (`resolvePropValue`) — цепочка `props ?? options ?? default` молча теряет слой `componentsOptions`. | **Имя — bare-positive** (`animated`, `closeOnBackdrop`, `searchable`); **каждый optional boolean объявляется в `withDefaults(…, { x: undefined })`**, литеральный default — только в резолвере. Негативы инвертируются с переворотом default (`notAnimate` → `animated: true`). | Один стиль; слой опций достижим и для default `true`. | Guard [booleanProps.test.ts](../lib/booleanProps.test.ts): own `default` у каждого Boolean-prop + запрет префиксов. |
+| `MaybeRef` в типах props (решение 3) | 15 props в 6 компонентах, разворачивались `unref`; `VirtualScroller.items`/`Split.styles` — без `MaybeRef`. | **Только data/schema-props**, куда ref реально приходит через `v-bind` схем Form/Column: `items` (Accordion), `structure`/`formFields` (Form), `groups` (Menu), `options` (Select), `panels` (Split), `dataSource`/`columns`/`summary`/`toolbar`/`sort`/`filter`/`grouping`/`pagination` (Table). Внутри — `toValue()`, не `unref`. Всё остальное (в т.ч. `classes`, `xProps`) — plain. | Шаблоны и так распаковывают top-level ref; в типах — только то, что нужно схемам. | Allowlist в `propsNaming.test.ts`; `rg 'unref\(' lib --glob '*.vue'` → пусто. |
+| Bag-props `params*` (G) | `paramsFixWindow`, `paramsDatePicker`, `paramsDialog`, `paramsTextEditor`, `paramsWindowMenu`, `paramsFilter`, `editorOptions` — с разными формами типа. | **`{inner}Props`**: `fixWindowProps`, `datePickerProps`, `dialogProps`, `editorProps`, `filterProps`; тип — `Partial<InnerProps>` / `Omit<…>` по необходимости. Внутренние `class`/`classes` bag'а идут на корень/карту ребёнка. | Имя говорит, куда уходят поля; `params` — не термин Vue. | Guard `propsNaming.test.ts`: запрет `params[A-Z]*`. |
+| Имена событий (H) | kebab (Split/Table/VS), camelCase (`getCalendar`, `isActive`, Menu `onClick`), bare-глаголы; §7 говорил «kebab-case», а примеры — `update:modelValue`. | **Events — kebab-case**; v-model-канал `update:<prop>` / `change:<prop>` с camelCase-именем prop'а (требование Vue). `on*`/`is*`/`get*` запрещены. Menu: `item-click`/`item-active`/`item-inactive`. | `@on-click` на компоненте ≠ `onClick` в `defineEmits`; `isActive` — состояние, не событие. | Guard [emitsNaming.test.ts](../lib/emitsNaming.test.ts). |
+| `data-*` атрибуты (I) | Корень не всегда `data-{name}` (`data-input` на контроле, `data-table-component`), физические `data-separator-left/right`. | **Корень — `data-{name}`, внутренние — `data-{name}-{key}`**, где `key` = ключ `classes`; логические имена (`start`/`end`). | Селекторы для CSS/тестов = ключи карты: одна номенклатура. | Манифест `classesContract.test.ts` — единственный источник селекторов. |
 
 ## 3. File structure of a component
 
@@ -48,7 +58,7 @@ lib/<name>/
 ```vue
 <script setup lang="ts">
   import { computed } from "vue"
-  import type { XProps } from "./X"
+  import type { XClassKey, XProps } from "./X"
   import Component from "fishtvue/component"
 
   // ---BASE-COMPONENT----------------------
@@ -57,9 +67,12 @@ lib/<name>/
 
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<XProps>(), {
-    // только те, чьи defaults не зависят от global config
+    // все optional boolean — `undefined` (иначе Vue кастует отсутствующий в false, §2 F);
+    // прочие defaults — только те, что не зависят от global config
+    disabled: undefined
   })
   const emit = defineEmits<XEmits>() // если есть emits
+  const { cls, raw, pick } = X.resolveClasses<XClassKey>(props)
 
   // ---STATE-------------------------------
   // const ... = ref(...)
@@ -68,11 +81,13 @@ lib/<name>/
   const mode = computed<NonNullable<XProps["mode"]>>(
     () => (props?.mode as XProps["mode"]) ?? options?.mode ?? "primary"
   )
-  const classBase = computed(() =>
-    X.setStyle([
-      /* tw-классы */
-    ])
-  )
+  const disabled = computed<boolean>(() => props.disabled ?? options?.disabled ?? false)
+  // Корень: база → mode → state → options.classes.root → props.classes.root → options.class → props.class
+  const classBase = computed(() => cls("root", "inline-flex …", modeDict[mode.value], disabled.value && "opacity-50"))
+  // Внутренний элемент — свой ключ карты; prop `class` сюда не попадает
+  const classTitle = computed(() => cls("title", "text-sm font-medium"))
+  // Aspect-ключ (заменяющая семантика): props ?? options ?? default, "" отключает
+  const classMark = computed(() => pick("mark", "font-bold text-theme-700"))
 
   // ---EXPOSE------------------------------
   defineExpose({
@@ -82,6 +97,9 @@ lib/<name>/
 
 <template>
   <div data-x :class="classBase">
+    <span data-x-title :class="classTitle"><slot name="title" /></span>
+    <!-- hand-off ребёнку: :class — его корень, :classes — его карта; raw() без setStyle-префикса -->
+    <Icons :class="[iconBase, raw('icon')]" />
     <slot />
   </div>
 </template>
@@ -90,9 +108,11 @@ lib/<name>/
 Правила:
 
 - `<script setup lang="ts">` обязательно.
+- `class` → только корень (`data-x`); внутренние элементы — `classes.<key>` через `cls(key, …base)`; ключи `XClassKey` = суффиксы `data-x-<key>`. База всегда до сегментов потребителя (§2 D). Никаких `options?.x ?? "", props?.x ?? ""` в SFC — только `resolveClasses`.
+- Каждый optional boolean — `undefined` в `withDefaults` (§2 F); имена bare-positive.
 - `<style>` блока в SFC **нет** — стили идут через `X.setStyle(...)` и инжектятся в `@layer fishtvue`.
 - Lifecycle для инициализации стилей не нужен — `Component.__hooks()` в конструкторе сам регистрирует `vueOnMounted` и `onServerPrefetch` для `initStyle()`. Не дублируй вручную (см. §12).
-- Резолв опций — fallback chain `props → componentsOptions → default`.
+- Резолв опций — fallback chain `props → componentsOptions → default`. Для `classes` — по ключу (§2 C), для aspect-ключей — `pick(key, default)`.
 - Корневой DOM-узел — `data-{kebab-name}` для тестов и `:class="classBase"` для setStyle-вывода.
 - Локализация — `X.t("path.to.key")`. Без явных строк "ru/en" внутри SFC.
 - `defineExpose` — публичные computed (`mode`, `size`, `classBase`, …) и методы. Никаких internal `ref`s наружу.
@@ -128,8 +148,10 @@ export default X
 Правила:
 
 - JSDoc у каждого props-поля. Описание + `@type`.
+- `export type XClassKey = "title" | "icon" | …` — ключи карты `classes` (без `root`, он добавляется `ClassesMap`); `XProps` содержит `class?: StyleClass` и `classes?: ClassesMap<XClassKey>`. Семейство InputLayout наследует `InputLayoutClassKey`.
 - `XEmits = null` для компонентов без emits — не пропускай поле.
-- `XOption` — всегда `Pick<XProps, ...>` подмножества полей, доступных через `componentsOptions.X`.
+- `XOption` — всегда `Pick<XProps, ...>` подмножества полей, доступных через `componentsOptions.X`; **всегда включает `"class" | "classes"`**.
+- `MaybeRef<…>` — только у data/schema-props из allowlist §2; bag-props — `{inner}Props`; булевы — bare-positive.
 - `declare module "vue" { GlobalComponents }` — обязательная augmentation для template-IntelliSense.
 - `default export` — класс-обёртка, не SFC.
 
@@ -193,7 +215,8 @@ describe("X Component Tests", () => {
 | `.d.ts` (по компоненту)    | PascalCase                 | `Button.d.ts`, `Input.d.ts`              |
 | `.test.ts`                 | PascalCase                 | `Button.test.ts`                         |
 | Props                      | camelCase                  | `iconPosition`, `modelValue`             |
-| Events                     | kebab-case                 | `update:modelValue`, `change:modelValue` |
+| Events                     | kebab-case; v-model-канал `update:<prop>` / `change:<prop>` с camelCase-именем prop'а | `item-click`, `update:modelValue`, `change:modelValue` |
+| Ключи `classes` / `data-*` | camelCase-ключ = kebab-суффикс: корень `data-{name}`, элемент `data-{name}-{key}` | `classes.itemEndIcon` ↔ `data-menu-item-end-icon` |
 | CSS root class             | `fv {prefix}-{kebab-name}` | `fv fishtvue-button`                     |
 | Markdown файл документации | kebab-case                 | `text-editor.md`, `input-layout.md`      |
 | Type alias / interface     | PascalCase                 | `ButtonProps`, `XExpose`                 |
@@ -204,8 +227,8 @@ describe("X Component Tests", () => {
 
 1. Создать `lib/<name>/` с файлами `<Name>.vue`, `<Name>.d.ts`, `<Name>.test.ts`, `package.json` (main/types/exports — копия с соседнего компонента).
 2. Заполнить `<Name>.vue` по §4.
-3. Заполнить `<Name>.d.ts` по §5.
-4. Написать тесты (минимум 5 кейсов) по §6.
+3. Заполнить `<Name>.d.ts` по §5 (включая `XClassKey` и `"class" | "classes"` в `XOption`).
+4. Написать тесты (минимум 5 кейсов) по §6; добавить компонент в манифест [lib/classesContract.test.ts](../lib/classesContract.test.ts) (корень + ключи → селекторы); убедиться, что [booleanProps.test.ts](../lib/booleanProps.test.ts) и [propsNaming.test.ts](../lib/propsNaming.test.ts) зелёные.
 5. Добавить экспорт в [lib/index.ts](../lib/index.ts) и [lib/index.d.ts](../lib/index.d.ts).
 6. Зарегистрировать в [lib/rollup.config.js](../lib/rollup.config.js) (entries + `EXTERNAL_CORE_DEPENDENCIES`).
 7. Добавить опции в [lib/config/FishtVue.d.ts](../lib/config/FishtVue.d.ts) (`ComponentsOptions`).

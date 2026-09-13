@@ -499,7 +499,7 @@ describe("Input Component Tests", () => {
         const wrapper = mount(Input, { global: { plugins: [app] } })
         // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
         // ни `fv {prefix}-input`-префикса на корне.
-        expect(String((wrapper.vm as any).classBaseInput ?? "")).toBe("")
+        expect(String((wrapper.vm as any).classBaseInput ?? "")).toBe("fv")
         const cls = wrapper.find("input[data-input]").attributes("class") ?? ""
         expect(cls).not.toContain("caret-theme-500")
         expect(cls).not.toContain("fishtvue-input")

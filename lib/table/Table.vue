@@ -889,22 +889,15 @@
       "text-left text-surface-400 dark:text-surface-500",
       column.class?.colText
     ])
-  const classIsSort = (column: IColumnPrivate) => {
-    const classes = Table.setStyle([
+  // Под `unstyled` setStyle сам оставляет `fv` (UA-preflight `button.fv` из baseStyle) — отдельный
+  // fallback не нужен (component/index.ts, dev-patterns §2 E).
+  const classIsSort = (column: IColumnPrivate) =>
+    Table.setStyle([
       "flex items-center motion-safe:transition-opacity motion-safe:duration-500 pr-1 cursor-pointer",
       // T2: триггер сортировки доступен с клавиатуры, поэтому у несортированной колонки он обязан
       // проявляться не только по hover, но и по focus-visible — иначе фокус «пропадает» (opacity-0).
       !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "opacity-100"
     ])
-    // T2 (unstyled): при `config.unstyled` Component.setStyle возвращает "" (component/index.ts),
-    // поэтому на <button> не попадает и класс `fv` — а именно на него завязан preflight из baseStyle
-    // (`button.fv` → background-color: transparent, padding/margin: 0, font: inherit; `.fv` → border-width: 0).
-    // Без него браузер рисует нативный chrome кнопки (рамка, серый фон) в каждой сортируемой ячейке.
-    // Сам baseStyle инжектится независимо от `unstyled` (config/index.ts → BaseStylesComponent.initStyle),
-    // поэтому достаточно вернуть голый `fv`: `unstyled` означает «без темы», а не «сломанный UA-хром».
-    // В styled-режиме setStyle уже возвращает строку, начинающуюся с `fv` — вывод байт-в-байт прежний.
-    return classes || "fv"
-  }
   const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-surface-400 dark:text-surface-600"))
   // T2 (a11y): aria-sort отражает live-состояние sortColumns — параллельного state нет.
   // `undefined` убирает атрибут целиком: несортируемая колонка не должна объявляться sortable.

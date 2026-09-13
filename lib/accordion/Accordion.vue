@@ -134,17 +134,11 @@
     ])
   )
   // B10: forced-colors:outline сохраняет header-кнопку различимой в Windows high-contrast (bg-*/border-* там сбрасываются)
-  // L2 (unstyled): при `config.unstyled` Component.setStyle возвращает "" (component/index.ts),
-  // поэтому на <button> не попадает и класс `fv` — а именно на него завязан preflight из baseStyle
-  // (`button.fv` → background-color: transparent, padding/margin: 0, font: inherit; `.fv` → border-width: 0).
-  // Без него браузер рисует нативный chrome кнопки (рамка, серый фон) у каждого header'а accordion'а.
-  // Сам baseStyle инжектится независимо от `unstyled` (config/index.ts → BaseStylesComponent.initStyle),
-  // поэтому достаточно вернуть голый `fv`: `unstyled` означает «без темы», а не «сломанный UA-хром».
-  // В styled-режиме setStyle уже возвращает строку, начинающуюся с `fv` — вывод байт-в-байт прежний.
-  const classButtonStyles = Accordion.setStyle(
+  // L2 (unstyled): setStyle сам оставляет `fv` под `unstyled` (UA-preflight `button.fv` из baseStyle) —
+  // отдельный fallback не нужен (component/index.ts, dev-patterns §2 E).
+  const classButton = Accordion.setStyle(
     "flex items-center justify-between w-full text-start font-semibold py-2 forced-colors:outline"
   )
-  const classButton = classButtonStyles || "fv"
   const styleIcon = Accordion.setStyle(
     "h-5 w-5 shrink-0 ms-8 text-surface-400 dark:text-surface-500 group-hover/item:text-surface-500 group-hover/item:dark:text-surface-400 motion-safe:transition-all duration-200 ease-out"
   )

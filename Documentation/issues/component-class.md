@@ -1,7 +1,7 @@
 ---
 title: Issues — Component class (`Component<T>`)
 summary: Issues 1-6 закрыты + B11 doc-sync. Issue 3 (HMR teardown) ✅ — механизм дедупа `<style>` через `data-fishtvue-style-id` уже в `useStyle.ts`, verified regression-тестом. Issue 4 (generic narrowing D21) ✅ — контракт `keyof ComponentsOptions` задокументирован в architecture §3/§13. Issue 5 (coverage K46) ✅ — добавлены HMR-dedup + default-`__stylesBase` тесты, стабилизирован flaky `getOptions`. E29.7/N59 (motion/print) закрыты как N/A by design (базовый класс не рендерит DOM, motion/print = per-SFC concern) — **matrix 0/0/0/0**.
-updated: 2026-06-14
+updated: 2026-09-13
 last-changes: 2026-06-14 — Issues 3/4/5 закрыты (test+doc only, без правок source). **Issue 3** (C17/HMR) — рекомендация fix #2 («replace content existing element») уже реализована в [useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45) через переиспользование `style[data-fishtvue-style-id="${name}"]`; добавлен regression-кейс в [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` (3× инжекция с одним name → один `<style>`, контент заменён). **Issue 4** (D21) — generic уже `keyof ComponentsOptions` (auto-derive не нужен); контракт «новый компонент → ключ в ComponentsOptions» задокументирован в [architecture/component-class.md](../architecture/component-class.md) §3/§13. **Issue 5** (K46) — HMR-test ✅ (Theme.test.ts), default-`__stylesBase` тест ✅ + flaky `should return the correct options with getOptions` стабилизирован (явный name вместо order-dependent undefined-резолва под isolate:false); Component.test.ts 25 → 26. **B11** (darkModeSelector) — doc-sync: закрыт глобально 2026-06-12 ([component/index.ts:150](../../lib/component/index.ts#L150)), снят из open-счёта. **E29.7/N59** (motion/print, low) закрыты как N/A by design — базовый класс не рендерит DOM (architecture §3/§12), motion/print = per-SFC concern. Severity matrix 0/2/3/2 → **0/0/0/0**; файл переведён в «Завершённые», остаётся в `active/` как трекер watcher-leak limitation (Issue 3).
 audit-checklist: 60-point + Configuration support
 source: lib/component/
@@ -144,7 +144,9 @@ Generic уже выводится из `ComponentsOptions` (`T extends keyof Com
 
 **Что сделано (2026-05-11):**
 
-`Component.setStyle()` ([component/index.ts:134-157](../../lib/component/index.ts#L134-L157)) теперь проверяет `this.__globalConfig?.config?.unstyled` первой строкой (line 138) и возвращает `""` если флаг включен — это отключает рендер Tailwind-классов **во всех 22 компонентах**, использующих базовый класс. Cross-cutting fix через одну точку (Wave 3.1 → done).
+> **Семантика изменена 2026-09-13 (props 1.0, dev-patterns §2 E).** Под `unstyled` `setStyle` больше не возвращает `""`: результат — `"fv " + сегмент потребителя` (`options.consumer` — `class`/`classes.*`), база/mode и маркер `{prefix}-{name}` не выдаются и не компилируются ([component/index.ts:151-172](../../lib/component/index.ts#L151-L172), guard на line 156). Три патча `|| "fv"` (Accordion/Switch/Table) сняты; `unstyled` означает «без темы», а не «без стилизации потребителем». Тесты — [Component.test.ts](../../lib/component/Component.test.ts) «setStyle: consumer-сегмент и unstyled»; во всех `<Name>.test.ts` ассерты `unstyled → ""` переведены на `"fv"`.
+
+`Component.setStyle()` ([component/index.ts:134-157](../../lib/component/index.ts#L134-L157) на момент 2026-05-11) проверял `this.__globalConfig?.config?.unstyled` первой строкой (line 138) и возвращает `""` если флаг включен — это отключает рендер Tailwind-классов **во всех 22 компонентах**, использующих базовый класс. Cross-cutting fix через одну точку (Wave 3.1 → done).
 
 ```ts
 public setStyle = (...) => {

@@ -1,7 +1,7 @@
 ---
 title: Component class
 summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20 + опциональный params для interpolation/CLDR-pluralization (Wave 3.5) с 2026-06-19. Generic narrowing contract (D21) + HMR style-dedup задокументированы 2026-06-14.
-updated: 2026-06-21
+updated: 2026-09-13
 stability: stable
 since: 0.2.11
 ---
@@ -21,8 +21,8 @@ Source: [lib/component/index.ts](../../lib/component/index.ts), [lib/component/T
 ```
 lib/component/
 ├── index.ts            # реализация Component<T>
-├── TypeComponent.d.ts  # внешние типы: Component, NamesComponents, PublicFields, StylesComponent, setStyleOptions
-├── Component.test.ts   # 26 кейсов (Vitest)
+├── TypeComponent.d.ts  # внешние типы: Component, NamesComponents, PublicFields, StylesComponent, SetStyleOptions, ClassesProps, ClassesResolver
+├── Component.test.ts   # 39 кейсов (Vitest)
 └── package.json        # main "./component.mjs", types "./TypeComponent.d.ts"
 ```
 
@@ -55,8 +55,8 @@ lib/component/
 
 Шаги стилизации:
 
-1. Внутри computed/SFC: `Button.setStyle([tw-классы])`.
-2. `cn(stylesComp)` (из `tailwindHandler`) сливает массив через `clsx + tailwind-merge`.
+1. Внутри computed/SFC: `Button.setStyle([tw-классы], { consumer })` — как правило через `const { cls, raw, pick } = Button.resolveClasses(props)`: `cls(key, …base)` сам собирает `consumer` из `componentsOptions.Button.classes[key]`, `props.classes[key]` и (для `root`) `options.class`/`props.class` ([component/index.ts:182](../../lib/component/index.ts#L182), dev-patterns §2 B–D).
+2. `cn(stylesComp, consumer)` (из `tailwindHandler`) сливает массив через `clsx + tailwind-merge`; сегмент потребителя всегда последний — twMerge отдаёт ему конфликт. Под `config.unstyled` шаги 3–6 пропускаются: возвращается `"fv " + consumer` ([component/index.ts:156](../../lib/component/index.ts#L156)) — UA-preflight `fv` и классы потребителя живут, тема нет.
 3. Каждый класс конвертится в CSS через `tailwind(item, { selector: ".fv-{name}", darkSelector })`.
 4. Уникальный CSS добавляется в `listOfCssComponents` (per-component реестр).
 5. `__setStyle()` собирает массив CSS, сортирует @media в конец, минифицирует через `minifyCSS` (если не выставлен `isNotMinifyCSS`), и вызывает `useStyle(css, { name })` для инжекции.
@@ -125,11 +125,12 @@ Note: тип-параметр `T extends keyof ComponentsOptions` — обяза
 | `getOptions()` | `() => ComponentsOptions[T] \| undefined` | Frozen-копия `componentsOptions[name]`. |
 | `getPrefix()` | `() => string \| undefined` | Возвращает `prefix`. |
 | `initStyle(stylesComp?)` | `(stylesComp?: StylesComponent) => void` | Применяет накопленный CSS через `useStyle`. Авто-вызывается из `__hooks()` на mount/SSR-prefetch. |
-| `setStyle<T>(stylesComp, options?)` | `(stylesComp: T \| T[], options?: setStyleOptions) => string` | Главный API: преобразует tw-классы в CSS, добавляет в реестр и возвращает `"fv {prefix}-{kebab-name} {merged-classes}"` для `:class=`. |
+| `setStyle<T>(stylesComp, options?)` | `(stylesComp: T \| T[], options?: SetStyleOptions) => string` | Главный API: преобразует tw-классы в CSS, добавляет в реестр и возвращает `"fv {prefix}-{kebab-name} {merged-classes}"` для `:class=`. |
 | `t(key, params?)` | `(key: keyof DefaultMessages \| string, params?: Record<string, string \| number>) => string` | Локализация с fallback chain `messages[active][key] → messages[default][key] → key`. Поддерживает dot-path. Опциональный `params` — interpolation (`{name}`) + pluralization (`params.count` + `\|`-формы через CLDR `Intl.PluralRules`); без `params` поведение прежнее. См. [locale.md §3](./locale.md#3-how-it-works). |
 | `componentsStyle()` | `() => StyleMode \| undefined` | Возвращает `componentsStyle` из global config: `"filled" \| "outlined" \| "underlined"`. |
+| `resolveClasses<K>(props)` | `(props: ClassesProps<K>) => ClassesResolver<K>` | Резолвер `class`/`classes` (dev-patterns §2 B–D): `cls(key, …base)` — класс собственного элемента через `setStyle` (порядок `base → options.classes[key] → props.classes[key] → (root) options.class → props.class`); `raw(key)` — только сегменты потребителя для hand-off ребёнку; `pick(key, fallback)` — aspect-ключ, `""` в props отключает. Реактивен внутри `computed`. |
 
-`PublicFields` ([TypeComponent.d.ts:89–100](../../lib/component/TypeComponent.d.ts#L89-L100)) — список ключей, доступных в lifecycle-хуке: `name`, `prefix`, `onBefore*`, `on*`, `getOptions`, `getPrefix`, `initStyle`. `setStyle` и `t` через хук не пробрасываются.
+`PublicFields` ([TypeComponent.d.ts:139–150](../../lib/component/TypeComponent.d.ts#L139-L150)) — список ключей, доступных в lifecycle-хуке: `name`, `prefix`, `onBefore*`, `on*`, `getOptions`, `getPrefix`, `initStyle`. `setStyle` и `t` через хук не пробрасываются.
 
 ## 9. Examples
 
@@ -247,7 +248,7 @@ layers && layers.length
 
 ```ts
 import Component from "fishtvue/component"
-import type { PublicFields, StylesComponent, setStyleOptions } from "fishtvue/component"
+import type { ClassesProps, ClassesResolver, PublicFields, SetStyleOptions, StylesComponent } from "fishtvue/component"
 
 // Типизированный класс
 const X = new Component<"Button">()
@@ -258,8 +259,14 @@ X.onMounted((instance) => {
   instance.getOptions()
 })
 
-// setStyle с options
-X.setStyle(["px-2", "py-1"], { selector: ".my-scope ", isBaseClasses: true })
+// setStyle с options: consumer — сегменты потребителя (переживают unstyled, последние в twMerge)
+X.setStyle(["px-2", "py-1"], { consumer: [props.class], selector: ".my-scope" })
+
+// resolveClasses — канонический путь в SFC
+type ButtonClassKey = "icon" | "loading"
+const { cls, raw, pick } = X.resolveClasses<ButtonClassKey>(props)
+const classBase = computed(() => cls("root", "inline-flex items-center"))
+const classIconHandOff = computed(() => raw("icon")) // → <Icons :class="[iconBase, classIconHandOff]" />
 ```
 
 `NamesComponents = keyof ComponentsOptions | "BaseComponent"` ([TypeComponent.d.ts:5](../../lib/component/TypeComponent.d.ts#L5)).
@@ -350,7 +357,7 @@ describe("Component class", () => {
 
 ### API inconsistencies
 
-- `setStyle` и `t` не входят в `PublicFields` ([TypeComponent.d.ts:89–100](../../lib/component/TypeComponent.d.ts#L89-L100)) — внутри lifecycle-хука их вызвать через `instance` нельзя. Это может удивить, если консумер ожидает доступ к `setStyle` из `onMounted(hook)`-callback'а.
+- `setStyle`, `resolveClasses` и `t` не входят в `PublicFields` ([TypeComponent.d.ts:139–150](../../lib/component/TypeComponent.d.ts#L139-L150)) — внутри lifecycle-хука их вызвать через `instance` нельзя. Это может удивить, если консумер ожидает доступ к `setStyle` из `onMounted(hook)`-callback'а.
 - `name` в `TypeComponent.d.ts` — `T extends keyof ComponentsOptions`, но реализация принимает `name?: T` опционально и резолвит из `__instance.type.__name`. Если SFC имеет `defineOptions({ name: "Custom" })` с именем вне `ComponentsOptions`, тип `name` будет `undefined`.
 
 ### Behavioral caveats

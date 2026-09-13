@@ -243,7 +243,7 @@ describe("Separator Component", () => {
       const wrapper = mount(Separator, {
         global: { plugins: [app] }
       })
-      expect(wrapper.find("[data-separator]").classes()).toEqual([])
+      expect(wrapper.find("[data-separator]").classes()).toEqual(["fv"])
     })
   })
 })

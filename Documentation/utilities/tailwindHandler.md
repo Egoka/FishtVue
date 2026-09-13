@@ -1,7 +1,7 @@
 ---
 title: utils/tailwindHandler
-summary: cn() — слияние Tailwind-классов через clsx + tailwind-merge.
-updated: 2026-05-09
+summary: cn() — слияние Tailwind-классов через clsx + tailwind-merge; mergeClasses() — по-ключевое слияние карт classes.
+updated: 2026-09-13
 stability: stable
 since: 0.2.11
 ---
@@ -10,7 +10,7 @@ since: 0.2.11
 
 ## 1. Overview
 
-Один helper — `cn(...classes)`. Принимает любую комбинацию форматов `clsx` (строка, массив, объект, falsy) и возвращает строку Tailwind-классов с резолвом конфликтующих утилит через `tailwind-merge`. Используется в [Component.setStyle](../../lib/component/index.ts) и многих SFC.
+Два helper'а. `cn(...classes)`. Принимает любую комбинацию форматов `clsx` (строка, массив, объект, falsy) и возвращает строку Tailwind-классов с резолвом конфликтующих утилит через `tailwind-merge`. Используется в [Component.setStyle](../../lib/component/index.ts) и многих SFC.
 
 Stability: `stable`. Описание соответствует версии 0.2.11.
 
@@ -21,7 +21,7 @@ Source: [lib/utils/tailwindHandler.ts](../../lib/utils/tailwindHandler.ts), [lib
 ```
 lib/utils/tailwindHandler.ts
 lib/utils/tailwindHandler.d.ts
-lib/utils/tailwindHandler.test.ts   # 7 кейсов
+lib/utils/tailwindHandler.test.ts   # 12 кейсов
 ```
 
 Зависимости — `clsx ^2.1.x`, `tailwind-merge ^3.4.0` ([lib/package.json:48, 54](../../lib/package.json#L48)).
@@ -30,7 +30,9 @@ lib/utils/tailwindHandler.test.ts   # 7 кейсов
 
 `cn(...inputs)` ≡ `twMerge(clsx(...inputs))`. Сначала `clsx` собирает строку из любых вариантов (массивы, объекты, false/undefined фильтруются). Затем `twMerge` дедуплицирует и резолвит Tailwind-конфликты — например, `"px-2 px-4"` → `"px-4"`.
 
-SSR/hydration: чистая функция.
+`mergeClasses(...maps)` — по-ключевое слияние карт `classes` (dev-patterns §2 C): для каждого ключа `cn(...values)`, позднее побеждает в twMerge-конфликте, остальное складывается; ключи без значения опускаются, `undefined`-карты пропускаются, входные объекты не мутируются. Нужен там, где родитель складывает свои дефолты с `xProps.classes` потребителя перед hand-off дочернему компоненту (Table → filter-Input, Form → Field, InputLayout-семья → InputLayout).
+
+SSR/hydration: чистые функции.
 
 ## 4. Quick Start
 
@@ -43,6 +45,12 @@ cn("px-2", "py-1", false, ["text-white", { "bg-red-500": true }])
 cn("px-2 px-4")         // "px-4"  — конфликт резолвлен
 cn("px-2", "px-4")      // "px-4"
 cn("text-red-500", null, undefined, "text-blue-500") // "text-blue-500"
+
+import { mergeClasses } from "fishtvue/utils/tailwindHandler"
+
+mergeClasses({ root: "p-2 rounded", base: "border" }, { root: "p-4" })
+// { root: "rounded p-4", base: "border" }
+mergeClasses(undefined, { base: ["a", "b"] }, { base: "c" }) // { base: "a b c" }
 ```
 
 ## 5. Props
@@ -68,6 +76,7 @@ Returns: `string`.
 | Name | Type | Description |
 |---|---|---|
 | `cn(...inputs)` | `(...inputs: ClassValue[]) => string` | Merge + dedup Tailwind-классов. |
+| `mergeClasses(...maps)` | `<K extends string>(...maps: Array<Partial<Record<K, string \| string[] \| undefined>> \| undefined>) => Partial<Record<K, string>>` | По-ключевой `cn` для карт `classes`; позднее побеждает. |
 
 ## 9. Examples
 
@@ -105,6 +114,12 @@ import type { ClassValue } from "clsx"
 
 const arr: ClassValue[] = ["px-2", { "bg-red-500": true }]
 const cls: string = cn(...arr)
+
+import { mergeClasses } from "fishtvue/utils/tailwindHandler"
+import type { ClassesMap } from "fishtvue/types"
+
+type Key = "root" | "base"
+const merged: Partial<Record<Key, string>> = mergeClasses<Key>({ base: "border" } satisfies ClassesMap<"base">, { base: "border-2" })
 ```
 
 ## 14. Compatibility & Stability
@@ -126,7 +141,7 @@ describe("cn", () => {
 })
 ```
 
-Реальные тесты — [tailwindHandler.test.ts](../../lib/utils/tailwindHandler.test.ts) (7 кейсов).
+Реальные тесты — [tailwindHandler.test.ts](../../lib/utils/tailwindHandler.test.ts) (12 кейсов: 7 `cn` + 5 `mergeClasses`).
 
 ## 16. Troubleshooting / FAQ
 
@@ -138,7 +153,7 @@ describe("cn", () => {
 
 ## 17. Related
 
-- [architecture/component-class.md](../architecture/component-class.md) — `Component.setStyle()` использует `cn` внутри.
+- [architecture/component-class.md](../architecture/component-class.md) — `Component.setStyle()` и `resolveClasses()` используют `cn` внутри; `mergeClasses` — для hand-off'ов между компонентами.
 - [architecture/theme.md](../architecture/theme.md) — uno-engine после `cn`.
 
 ## 18. Known issues & limitations

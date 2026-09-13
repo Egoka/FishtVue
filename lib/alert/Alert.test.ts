@@ -1473,7 +1473,7 @@ describe("Alert Component", () => {
       })
 
       const styled = wrapper.find("[data-alert] > div")
-      expect((styled.attributes("class") ?? "").trim()).toBe("")
+      expect((styled.attributes("class") ?? "").trim()).toBe("fv")
     })
 
     it("keeps classes when unstyled is not set (contrast)", () => {

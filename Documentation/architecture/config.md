@@ -1,7 +1,7 @@
 ---
 title: Config (FishtVue plugin)
 summary: Vue plugin, FishtVueConfiguration, useFishtVue, getOptions, setActiveLocale, extensibility API (use/registerComponent/extendTheme). Install инжектит tokens-тег FishtVueTokens для runtime theme API (Wave 3.3).
-updated: 2026-07-02
+updated: 2026-09-13
 stability: stable
 since: 0.2.11
 ---
@@ -110,7 +110,7 @@ app.use<FishtVueConfiguration>(FishtVue, config)
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `componentsStyle` | `"filled" \| "outlined" \| "underlined"` | — | Глобальный визуальный режим для form-controls. |
-| `unstyled` | `boolean` | `false` | Отключает инжекцию `@layer fishtvue`. |
+| `unstyled` | `boolean` | `false` | «Без темы»: `Component.setStyle` не выдаёт и не компилирует базовые/mode-классы и маркер `{prefix}-{name}`; классы потребителя (`class`/`classes.*`) и UA-preflight `fv` остаются (dev-patterns §2 E). |
 | `locale` | `Locales` | `{ defaultLocale: "en", messages: { en, ru } }` | См. [Locale](./locale.md). |
 | `theme` | `Theme` | Aurora | См. [Theme](./theme.md). |
 | `optionsTheme` | `Partial<OptionsTheme>` | `{}` | Theme-meta — см. ниже. |
@@ -414,7 +414,7 @@ describe("FishtVue plugin", () => {
 
 ### Incomplete or stubbed behavior
 
-- `unstyled: boolean` объявлен в `FishtVueConfiguration` ([FishtVue.d.ts:130](../../lib/config/FishtVue.d.ts#L130)), enforce'ится через `Component.setStyle()` guard ([component/index.ts:138](../../lib/component/index.ts#L138)) — cross-cutting, применяется ко всем компонентам.
+- `unstyled: boolean` объявлен в `FishtVueConfiguration` ([FishtVue.d.ts:130](../../lib/config/FishtVue.d.ts#L130)), enforce'ится через `Component.setStyle()` ([component/index.ts:156](../../lib/component/index.ts#L156)): под флагом возвращается `"fv " + классы потребителя` — cross-cutting, применяется ко всем компонентам.
 - `componentsStyle` ([FishtVue.d.ts:128](../../lib/config/FishtVue.d.ts#L128)) — читается компонентами через `Component.componentsStyle()`, не enforced на уровне install.
 
 ### Skipped tests

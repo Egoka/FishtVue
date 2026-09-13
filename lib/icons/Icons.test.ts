@@ -331,7 +331,7 @@ describe("Icons Component Tests", () => {
         props: { type: "Check" },
         global: { plugins: [appWith({ unstyled: true })] }
       })
-      expect((wrapper.vm as any).classIcon).toBe("")
+      expect((wrapper.vm as any).classIcon).toBe("fv")
     })
 
     it("classIcon keeps the default class when unstyled:false", () => {

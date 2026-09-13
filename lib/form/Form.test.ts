@@ -1227,7 +1227,7 @@ describe("Form Component Tests", () => {
         global: { plugins: [createAppConfig({ unstyled: true })] }
       })
       const cls = wrapper.find("form[data-form]").attributes("class")
-      expect(cls === undefined || cls === "").toBe(true)
+      expect((cls ?? "").trim()).toBe("fv")
     })
 
     it("keeps the form root class when not unstyled (Issue 5 contrast)", () => {

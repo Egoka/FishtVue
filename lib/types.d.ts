@@ -105,6 +105,26 @@ export declare type ReadRef<T = any> = Readonly<Ref<UnwrapRef<T>>>
 export declare type StyleClass = string | Array<string>
 
 /**
+ * Карта «семантический ключ внутреннего элемента → StyleClass» для prop'а `classes` (dev-patterns §2 B).
+ * Ключ `root` разрешён всегда и указывает на тот же элемент, что и prop `class` (корень с `data-{kebab-name}`).
+ * Element-ключи аддитивны: `base → componentsOptions.X.classes[k] → props.classes[k]` через twMerge,
+ * потребитель побеждает в конфликтах. Aspect-ключи (`mark`, `rowActive`, `animation`, `border*`, …)
+ * заменяющие: `props ?? options ?? default`, пустая строка `""` отключает дефолт.
+ * @template K - union ключей элементов компонента (`{Name}ClassKey`)
+ */
+export declare type ClassesMap<K extends string = never> = Partial<Record<K | "root", StyleClass>>
+
+/**
+ * Цель `<Teleport>`: CSS-селектор, элемент или `false` — рендер на месте, без телепорта.
+ */
+export declare type TeleportTarget = string | HTMLElement | false
+
+/**
+ * Ключ элемента коллекции (идентификатор строки/пункта). Заменяет `_key`.
+ */
+export declare type ItemKey = string
+
+/**
  * Type for element width
  */
 export declare type TWidth = number | string | "500px" | "50rem" | "50em" | "50vw"

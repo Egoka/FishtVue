@@ -375,9 +375,9 @@ describe("Label Component Tests", () => {
         }
       })
 
-      expect(wrapper.find("[data-label]").classes()).toEqual([])
+      expect(wrapper.find("[data-label]").classes()).toEqual(["fv"])
       const span = wrapper.find("span")
-      expect(span.classes()).toEqual([])
+      expect(span.classes()).toEqual(["fv"])
     })
   })
 

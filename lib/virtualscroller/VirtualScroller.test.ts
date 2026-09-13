@@ -257,7 +257,7 @@ describe("VirtualScroller — configuration support (unstyled)", () => {
   it("classBase is empty when unstyled", () => {
     const app = createAppWithFishtVue({}, { unstyled: true })
     const wrapper = mount(VirtualScroller, { props: { items: makeItems(5) }, global: { plugins: [app as any] } })
-    expect((wrapper.vm as unknown as VirtualScrollerExpose).classBase).toBe("")
+    expect((wrapper.vm as unknown as VirtualScrollerExpose).classBase).toBe("fv")
   })
 
   it("classBase carries component class when styled", () => {
