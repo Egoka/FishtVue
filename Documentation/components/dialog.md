@@ -1,7 +1,7 @@
 ---
 title: Dialog
 summary: Модальный диалог с Teleport, focus trap, role="dialog"/aria-modal, reference-counted body scroll lock, motion-safe анимациями, размерами xs–7xl.
-updated: 2026-05-12
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -10,9 +10,9 @@ since: 0.2.11
 
 ## 1. Overview
 
-`Dialog` — модальное окно. Поддерживает Teleport (рендер в указанный селектор), 11 размеров (`xs`–`7xl`), позиции (center/top/bottom/left/right + комбо), close-кнопку, отключение closeOnBackground, отключение анимации.
+`Dialog` — модальное окно. Поддерживает Teleport (рендер в указанный селектор), 11 размеров (`xs`–`7xl`), позиции (center/top/bottom/left/right + комбо), close-кнопку, `closeOnBackdrop` и `animated`.
 
-Stability: `stable` — 30 кейсов, coverage 94.25%.
+Stability: `stable` — 68 кейсов, coverage 94.25%.
 
 Source: [Source](../../lib/dialog/Dialog.vue), [Dialog.d.ts](../../lib/dialog/Dialog.d.ts), [Dialog.test.ts](../../lib/dialog/Dialog.test.ts).
 
@@ -21,8 +21,8 @@ Source: [Source](../../lib/dialog/Dialog.vue), [Dialog.d.ts](../../lib/dialog/Di
 ```
 lib/dialog/
 ├── Dialog.vue
-├── Dialog.d.ts        # 193 строки
-├── Dialog.test.ts     # 30 кейсов
+├── Dialog.d.ts        # DialogProps, DialogClassKey, DialogSlots, DialogEmits, DialogExpose, DialogOption
+├── Dialog.test.ts     # 68 кейсов
 └── package.json
 ```
 
@@ -31,10 +31,10 @@ lib/dialog/
 ## 3. How it works
 
 - **Lifecycle:** `Component.__hooks()` инжектит стили автоматически (никаких `onMounted(() => Dialog.initStyle())` в SFC — Wave 2.3 ✅). Escape-listener и focus-trap управляются через `watch(isOpen, ..., { immediate: true, flush: "post" })`; `onBeforeUnmount` гарантированно снимает listener и освобождает scroll lock при unmount-while-open.
-- **Поток данных:** `modelValue` ↔ внутренний `isOpen` через `update:modelValue`. Escape closes (если не `notCloseBackground`).
-- **Стили:** через `Dialog.setStyle()` — несколько computed для `classBase`, `classDialog`, `classBodyDialog`, `classPosition`. Все `transition` / `transition-opacity` обёрнуты в `motion-safe:` префикс (Tailwind транспилирует в `@media (prefers-reduced-motion: no-preference)`).
-- **Teleport:** при `toTeleport` контент монтируется в указанный селектор. По умолчанию — body.
-- **Animation:** Vue `<transition>` с динамическими enter/leave-классами в зависимости от `position`. CSS `motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500`. При `notAnimate: true` — без transition. При `prefers-reduced-motion: reduce` все transitions автоматически no-op.
+- **Поток данных:** `modelValue` ↔ внутренний `isOpen` через `update:modelValue`. Escape closes.
+- **Стили:** через `Dialog.resolveClasses<DialogClassKey>(props)` — `classBase` (корень), `classContent` (карточка), `classBackgroundBase` (подложка), `classPosition`. Порядок склейки — база → state → `options.classes[k]` → `props.classes[k]` → `options.class` → `props.class` (dev-patterns §2 D), поэтому структурный `absolute` карточки теперь перебивается классами потребителя. Все `transition` / `transition-opacity` обёрнуты в `motion-safe:` префикс.
+- **Teleport:** `teleport` принимает CSS-селектор, `HTMLElement` или `false` (inline-render без телепорта). По умолчанию — `"body"`.
+- **Animation:** Vue `<transition>` с динамическими enter/leave-классами в зависимости от `position`. CSS `motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500`. При `animated: false` — без directional-transition. При `prefers-reduced-motion: reduce` все transitions автоматически no-op.
 - **Body scroll lock:** через [`lib/utils/scrollLockHandler.ts`](../../lib/utils/scrollLockHandler.ts) — reference-counted singleton. При nested-Dialog или Toast+Dialog body остаётся заблокированным до момента, пока counter не вернётся в 0; оригинальные `body.style.overflow` и `body.style.paddingRight` сохраняются и восстанавливаются.
 - **Focus management:** при open сохраняется `document.activeElement` как trigger. Фокус автоматически переходит на `initialFocus` selector или первый focusable элемент внутри dialog. Tab/Shift+Tab циклит внутри dialog (native focus trap, без deps). При close — focus возвращается на trigger (управляется prop `returnFocus`, default `true`).
 - **A11y:** корневой узел получает `role="dialog"`, `aria-modal="true"`, опционально `aria-label`/`aria-labelledby`/`aria-describedby` через одноимённые props. Внутри dialog рендерится `<div data-dialog-live class="sr-only" aria-live="polite" aria-atomic="true">` — пустой по default, потребитель может через scoped slot обновлять status text для screen reader.
@@ -69,20 +69,34 @@ const open = ref(false)
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `modelValue` | `boolean` | — | v-model видимость. |
+| `modelValue` | `boolean` | — | v-model видимость (required). |
 | `size` | `Size` (`xs \| sm \| md \| lg \| xl \| 2xl \| ... \| 7xl`) | — | Ширина диалога. |
 | `position` | `PositionShort` | `"center"` | Позиция на экране. |
-| `notAnimate` | `boolean` | `false` | Отключить анимацию. |
-| `closeButton` | `boolean` | — | Показать `×`-кнопку. |
-| `withoutMargin` | `boolean` | — | Убрать padding. |
-| `notCloseBackground` | `boolean` | — | Запретить закрытие по клику на background. |
-| `toTeleport` | `string` | — | CSS-селектор target'а Teleport. |
-| `class`, `classBody` | `StyleClass` | — | CSS классы. |
+| `animated` | `boolean` | `true` | Directional-анимация появления. Positive-инверсия снятого `notAnimate`. |
+| `closeButton` | `boolean` | `false` | Показать `×`-кнопку. |
+| `margin` | `boolean` | `true` | Отступ карточки от края экрана в off-center позициях. Инверсия снятого `withoutMargin`. |
+| `closeOnBackdrop` | `boolean` | `true` | Закрывать по клику на подложку. Инверсия снятого `notCloseBackground`. |
+| `teleport` | `TeleportTarget` (`string \| HTMLElement \| false`) | `"body"` | Target Teleport'а; `false` — inline-render. Бывший `toTeleport`. |
+| `class` | `StyleClass` | — | Классы **только корня** `[data-dialog]` (dev-patterns §2 A). Бывший `classBody`. |
+| `classes` | `ClassesMap<DialogClassKey>` | — | Карта внутренних элементов. См. §5.1. |
 | `ariaLabel` | `string` | — | `aria-label` для корневого `<div role="dialog">`. Не комбинируется с `ariaLabelledby` — `aria-labelledby` имеет приоритет. |
 | `ariaLabelledby` | `string` | — | ID элемента-заголовка внутри slot для связки через `aria-labelledby`. |
 | `ariaDescribedby` | `string` | — | ID элемента-описания внутри slot для связки через `aria-describedby`. |
 | `initialFocus` | `string` | first focusable | CSS-селектор внутри dialog для autofocus при open. По умолчанию — первый focusable элемент. |
 | `returnFocus` | `boolean` | `true` | Возвращать ли focus на trigger element при close. Установи `false` для programmatic flow. |
+
+### 5.1 Classes keys
+
+`DialogClassKey = "content" | "backdrop" | "close"` ([Dialog.d.ts:27](../../lib/dialog/Dialog.d.ts#L27)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-dialog]` (`role="dialog"`) | element | `fixed inset-0 z-[200] w-full overflow-y-auto h-screen` (бывший `classBody`) |
+| `content` | `[data-dialog-content]` | element | `absolute p-6 w-full max-w-xs rounded-md bg-white dark:bg-surface-950` + size + position (бывший инвертированный `class`) |
+| `backdrop` | `[data-dialog-background]` | element | `fixed inset-0 z-[199]` |
+| `close` | `[data-dialog-close]` (корень [Button](./button.md)) | element | `absolute top-2 end-2 px-[5px] m-1 h-9 w-9` |
+
+До 1.0.0 у Dialog была инверсия: `classBody` адресовал корень, а `class` — карточку. Теперь `class` — всегда корень (единое правило §2 A), карточка живёт под ключом `content`.
 
 ## 6. Events / Emits + v-model contract
 
@@ -106,10 +120,10 @@ v-model: стандартный `v-model="open"`.
 | Name | Type | Description |
 |---|---|---|
 | `isOpen` | `boolean` | Текущее состояние. |
-| `toTeleport` | `string` | Текущий target. |
+| `teleport` | `TeleportTarget` | Текущий target. |
 | `size`, `position` | `string \| PositionShort` | Computed. |
-| `isCloseButton`, `notCloseBackground`, `withoutMargin` | `boolean` | Флаги. |
-| `classBodyDialog`, `classPosition`, `classBase`, `classDialog` | `StyleClass` | CSS. |
+| `isCloseButton`, `isCloseOnBackdrop`, `isMargin` | `boolean` | Флаги (два последних — positive-инверсии). |
+| `classPosition`, `classBase`, `classContent` | `StyleClass` | CSS корня, позиции и карточки. |
 | `triggerEl` | `HTMLElement \| null` | Trigger, который был активен до open. Сохраняется автоматически для focus return. |
 | `dialogContentRef` | `HTMLElement \| null` | Reference на корневой `<div role="dialog">` (для тестов и axe-core). |
 | `closeDialog()` | function | Программное закрытие. |
@@ -130,7 +144,7 @@ app.use(FishtVue, {
 ### 9.2 Bottom drawer
 
 ```vue
-<Dialog v-model="open" position="bottom" size="full" without-margin>
+<Dialog v-model="open" position="bottom" size="full" :margin="false">
   <template #default><DrawerContent /></template>
 </Dialog>
 ```
@@ -138,7 +152,7 @@ app.use(FishtVue, {
 ### 9.3 Без animation
 
 ```vue
-<Dialog v-model="open" :not-animate="true" not-close-background>
+<Dialog v-model="open" :animated="false" :close-on-backdrop="false">
   <p>Required action</p>
 </Dialog>
 ```
@@ -146,7 +160,7 @@ app.use(FishtVue, {
 ### 9.4 С Teleport target
 
 ```vue
-<Dialog v-model="open" to-teleport="#modal-root">
+<Dialog v-model="open" teleport="#modal-root">
   <template #default>...</template>
 </Dialog>
 ```
@@ -155,7 +169,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`DialogOption = Pick<DialogProps, "class" | "classBody" | "size" | "position" | "notAnimate" | "closeButton" | "withoutMargin" | "notCloseBackground" | "toTeleport" | "ariaLabel" | "ariaLabelledby" | "ariaDescribedby" | "initialFocus" | "returnFocus">`.
+`DialogOption = Pick<DialogProps, "class" | "classes" | "size" | "position" | "animated" | "closeButton" | "margin" | "closeOnBackdrop" | "teleport" | "ariaLabel" | "ariaLabelledby" | "ariaDescribedby" | "initialFocus" | "returnFocus">` ([Dialog.d.ts:245–258](../../lib/dialog/Dialog.d.ts#L245-L258)). Карта `classes` сливается с props **по ключу** (dev-patterns §2 C).
 
 ### 10.2 Per-instance
 
@@ -205,9 +219,15 @@ d.value?.closeDialog()
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 52 кейса (2026-05-12: +22 audit close-out), пересчитать coverage.
-- **Breaking changes:** не зафиксировано. Добавление новых props `ariaLabel`/`ariaLabelledby`/`ariaDescribedby`/`initialFocus`/`returnFocus` — additive.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 68 кейсов, coverage 94.25%.
+- **Breaking changes (1.0.0, редизайн props):**
+  - `classBody` → `class` (адресует корень), прежний `class` → `classes.content`; добавлены ключи `backdrop` и `close`.
+  - булевы: `notAnimate` → `animated` (default `true`), `withoutMargin` → `margin` (default `true`), `notCloseBackground` → `closeOnBackdrop` (default `true`) — смысл инвертирован.
+  - `toTeleport: string` → `teleport: TeleportTarget` (принимает `HTMLElement` и `false`).
+  - expose: `toTeleport` → `teleport`, `notCloseBackground` → `isCloseOnBackdrop`, `withoutMargin` → `isMargin`, `classDialog` → `classContent`, `classBodyDialog` удалён.
+  - структурный `absolute` карточки переехал в базу — классы потребителя теперь перебивают его.
+  - Ранее (0.2.x): props `ariaLabel`/`ariaLabelledby`/`ariaDescribedby`/`initialFocus`/`returnFocus` — additive.
+- **Deprecations:** нет — старые имена сняты без алиасов (решение R6).
 
 ## 15. Testing recipes
 

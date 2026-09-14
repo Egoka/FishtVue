@@ -5,7 +5,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import FishtVue from "fishtvue/config"
 import Dialog from "fishtvue/dialog/Dialog.vue"
-import { DialogProps } from "fishtvue/dialog/Dialog"
+import { DialogClassKey, DialogProps } from "fishtvue/dialog/Dialog"
 import { __resetScrollLockForTests, getScrollLockCount } from "fishtvue/utils/scrollLockHandler"
 
 describe("Dialog Component Tests", () => {
@@ -34,7 +34,7 @@ describe("Dialog Component Tests", () => {
       const wrapper = mount(Dialog, {
         props: {
           modelValue: true,
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -47,7 +47,7 @@ describe("Dialog Component Tests", () => {
       const wrapper = mount(Dialog, {
         props: {
           modelValue: true,
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -61,7 +61,7 @@ describe("Dialog Component Tests", () => {
         props: {
           modelValue: true,
           closeButton: true,
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -73,7 +73,7 @@ describe("Dialog Component Tests", () => {
       mount(Dialog, {
         props: {
           modelValue: true,
-          toTeleport: "#modal"
+          teleport: "#modal"
         },
         slots: {
           default: '<div class="slot-content">Default Slot</div>',
@@ -96,7 +96,7 @@ describe("Dialog Component Tests", () => {
           modelValue: true,
           size: "lg",
           position: "top-right",
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -125,7 +125,7 @@ describe("Dialog Component Tests", () => {
         props: {
           modelValue: true,
           size,
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -150,7 +150,7 @@ describe("Dialog Component Tests", () => {
         props: {
           modelValue: true,
           position,
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -160,11 +160,11 @@ describe("Dialog Component Tests", () => {
       })
     })
 
-    it('teleports content to body when toTeleport is "body"', () => {
+    it('teleports content to body when teleport is "body"', () => {
       mount(Dialog, {
         props: {
           modelValue: true,
-          toTeleport: "body"
+          teleport: "body"
         }
       })
 
@@ -176,7 +176,7 @@ describe("Dialog Component Tests", () => {
       const wrapper = mount(Dialog, {
         props: {
           modelValue: false,
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -221,7 +221,7 @@ describe("Dialog Component Tests", () => {
         },
         props: {
           modelValue: true,
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -245,7 +245,7 @@ describe("Dialog Component Tests", () => {
           modelValue: true,
           size: "sm",
           position: "top-right",
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -264,7 +264,7 @@ describe("Dialog Component Tests", () => {
         },
         props: {
           modelValue: true,
-          toTeleport: "#modal"
+          teleport: "#modal"
         }
       })
 
@@ -281,7 +281,7 @@ describe("Dialog Component Tests", () => {
     it("removes keydown listener and unlocks scroll when unmounted while open", async () => {
       const removeSpy = vi.spyOn(document, "removeEventListener")
       const wrapper = mount(Dialog, {
-        props: { modelValue: true, toTeleport: "#modal" }
+        props: { modelValue: true, teleport: "#modal" }
       })
 
       expect(getScrollLockCount()).toBe(1)
@@ -300,7 +300,7 @@ describe("Dialog Component Tests", () => {
 
     it("closes via Escape keydown when open", async () => {
       const wrapper = mount(Dialog, {
-        props: { modelValue: true, toTeleport: "#modal" }
+        props: { modelValue: true, teleport: "#modal" }
       })
       await nextTick()
 
@@ -314,10 +314,10 @@ describe("Dialog Component Tests", () => {
   describe("B. Reference-counted scroll lock (Issue 3)", () => {
     it("nested Dialogs maintain lock until both close", async () => {
       const wrapperA = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal" }
+        props: { modelValue: false, teleport: "#modal" }
       })
       const wrapperB = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal" }
+        props: { modelValue: false, teleport: "#modal" }
       })
 
       await wrapperA.setProps({ modelValue: true })
@@ -343,7 +343,7 @@ describe("Dialog Component Tests", () => {
     it("preserves original body.style.overflow on close", async () => {
       document.body.style.overflow = "scroll"
       const wrapper = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal" }
+        props: { modelValue: false, teleport: "#modal" }
       })
 
       await wrapper.setProps({ modelValue: true })
@@ -357,7 +357,7 @@ describe("Dialog Component Tests", () => {
   describe("C. Aria attributes (Issue 4)", () => {
     it('root element has role="dialog" and aria-modal="true"', () => {
       mount(Dialog, {
-        props: { modelValue: true, toTeleport: "#modal" }
+        props: { modelValue: true, teleport: "#modal" }
       })
       const dialog = document.querySelector("#modal [data-dialog]")
       expect(dialog?.getAttribute("role")).toBe("dialog")
@@ -368,7 +368,7 @@ describe("Dialog Component Tests", () => {
       mount(Dialog, {
         props: {
           modelValue: true,
-          toTeleport: "#modal",
+          teleport: "#modal",
           ariaLabel: "Confirmation"
         }
       })
@@ -380,7 +380,7 @@ describe("Dialog Component Tests", () => {
       mount(Dialog, {
         props: {
           modelValue: true,
-          toTeleport: "#modal",
+          teleport: "#modal",
           ariaLabelledby: "title-id"
         }
       })
@@ -392,7 +392,7 @@ describe("Dialog Component Tests", () => {
       mount(Dialog, {
         props: {
           modelValue: true,
-          toTeleport: "#modal",
+          teleport: "#modal",
           ariaDescribedby: "desc-id"
         }
       })
@@ -404,7 +404,7 @@ describe("Dialog Component Tests", () => {
   describe("D. Focus management (Issues 1 + 5)", () => {
     it("focuses first focusable element on open", async () => {
       const wrapper = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal" },
+        props: { modelValue: false, teleport: "#modal" },
         slots: {
           default: '<button class="confirm">Confirm</button><button class="cancel">Cancel</button>'
         }
@@ -420,7 +420,7 @@ describe("Dialog Component Tests", () => {
 
     it("focuses element matching initialFocus selector when provided", async () => {
       const wrapper = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal", initialFocus: ".cancel" },
+        props: { modelValue: false, teleport: "#modal", initialFocus: ".cancel" },
         slots: {
           default: '<button class="confirm">Confirm</button><button class="cancel">Cancel</button>'
         }
@@ -443,7 +443,7 @@ describe("Dialog Component Tests", () => {
       expect(document.activeElement).toBe(trigger)
 
       const wrapper = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal" },
+        props: { modelValue: false, teleport: "#modal" },
         slots: { default: '<button class="inside">Inside</button>' }
       })
 
@@ -468,7 +468,7 @@ describe("Dialog Component Tests", () => {
       trigger.focus()
 
       const wrapper = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal", returnFocus: false },
+        props: { modelValue: false, teleport: "#modal", returnFocus: false },
         slots: { default: '<button class="inside2">Inside</button>' }
       })
 
@@ -486,7 +486,7 @@ describe("Dialog Component Tests", () => {
 
     it("Tab from last focusable cycles to first (focus trap)", async () => {
       const wrapper = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal" },
+        props: { modelValue: false, teleport: "#modal" },
         slots: {
           default: '<button class="first">First</button><button class="last">Last</button>'
         }
@@ -511,7 +511,7 @@ describe("Dialog Component Tests", () => {
 
     it("Shift+Tab from first focusable cycles to last", async () => {
       const wrapper = mount(Dialog, {
-        props: { modelValue: false, toTeleport: "#modal" },
+        props: { modelValue: false, teleport: "#modal" },
         slots: {
           default: '<button class="first2">First</button><button class="last2">Last</button>'
         }
@@ -550,7 +550,7 @@ describe("Dialog Component Tests", () => {
   describe("F. RTL close button (Issue 8)", () => {
     it("close button uses logical inline-end positioning (RTL-safe)", () => {
       mount(Dialog, {
-        props: { modelValue: true, closeButton: true, toTeleport: "#modal" }
+        props: { modelValue: true, closeButton: true, teleport: "#modal" }
       })
       const closeBtn = document.querySelector("#modal [data-dialog-close]") as HTMLElement | null
       expect(closeBtn).not.toBeNull()
@@ -564,7 +564,7 @@ describe("Dialog Component Tests", () => {
   describe("G. Aria-live region (Issue 7)", () => {
     it("renders sr-only aria-live polite region inside dialog root", () => {
       mount(Dialog, {
-        props: { modelValue: true, toTeleport: "#modal" }
+        props: { modelValue: true, teleport: "#modal" }
       })
       const live = document.querySelector("#modal [data-dialog] [data-dialog-live]")
       expect(live).not.toBeNull()
@@ -595,7 +595,7 @@ describe("Dialog Component Tests", () => {
       app.use(FishtVue, { unstyled: true })
       mount(Dialog, {
         global: { plugins: [app] },
-        props: { modelValue: true, toTeleport: "#modal" }
+        props: { modelValue: true, teleport: "#modal" }
       })
       const dialog = document.querySelector("#modal [data-dialog]") as HTMLElement
       expect(dialog).not.toBeNull()
@@ -624,7 +624,7 @@ describe("Dialog Component Tests", () => {
     it("applies ariaLabel from componentsOptions", () => {
       mount(Dialog, {
         global: { plugins: [createAppWithFishtVue({ ariaLabel: "Global label" })] },
-        props: { modelValue: true, toTeleport: "#modal" }
+        props: { modelValue: true, teleport: "#modal" }
       })
       const dialog = document.querySelector("#modal [data-dialog]")
       expect(dialog?.getAttribute("aria-label")).toBe("Global label")
@@ -633,7 +633,7 @@ describe("Dialog Component Tests", () => {
     it("per-instance ariaLabel overrides componentsOptions", () => {
       mount(Dialog, {
         global: { plugins: [createAppWithFishtVue({ ariaLabel: "Global label" })] },
-        props: { modelValue: true, toTeleport: "#modal", ariaLabel: "Local" }
+        props: { modelValue: true, teleport: "#modal", ariaLabel: "Local" }
       })
       const dialog = document.querySelector("#modal [data-dialog]")
       expect(dialog?.getAttribute("aria-label")).toBe("Local")
@@ -647,7 +647,7 @@ describe("Dialog Component Tests", () => {
 
       const wrapper = mount(Dialog, {
         global: { plugins: [createAppWithFishtVue({ returnFocus: false })] },
-        props: { modelValue: false, toTeleport: "#modal" },
+        props: { modelValue: false, teleport: "#modal" },
         slots: { default: '<button class="inside-opt">Inside</button>' }
       })
       await wrapper.setProps({ modelValue: true })
@@ -669,7 +669,7 @@ describe("Dialog Component Tests", () => {
 
     it("overlay background uses surface-family (not neutral-500/900)", () => {
       mount(Dialog, {
-        props: { modelValue: true, toTeleport: "#modal" }
+        props: { modelValue: true, teleport: "#modal" }
       })
       const bg = document.querySelector("#modal [data-dialog-background] > div") as HTMLElement | null
       expect(bg).not.toBeNull()
@@ -681,7 +681,7 @@ describe("Dialog Component Tests", () => {
 
     it("dialog panel keeps bg-white and uses surface-950 in dark mode (not neutral-950)", () => {
       mount(Dialog, {
-        props: { modelValue: true, toTeleport: "#modal" }
+        props: { modelValue: true, teleport: "#modal" }
       })
       const panel = document.querySelector("#modal [data-dialog-content]") as HTMLElement | null
       expect(panel).not.toBeNull()
@@ -693,7 +693,7 @@ describe("Dialog Component Tests", () => {
 
     it("close icon uses surface-family fill (not neutral-500)", () => {
       mount(Dialog, {
-        props: { modelValue: true, closeButton: true, toTeleport: "#modal" }
+        props: { modelValue: true, closeButton: true, teleport: "#modal" }
       })
       const icon = document.querySelector("#modal [data-dialog-close] [data-icon]") as HTMLElement | null
       expect(icon).not.toBeNull()
@@ -702,5 +702,139 @@ describe("Dialog Component Tests", () => {
       expect(cls).toContain("dark:fill-surface-500")
       expect(cls).not.toMatch(legacyNeutralFamily)
     })
+  })
+})
+
+// Контракт props 1.0.0 (dev-patterns §2 A–D, F): инверсия `class`/`classBody` снята,
+// три негативных булева переведены в positive с перевёрнутым default.
+describe("Dialog — контракт props 1.0.0", () => {
+  // Teleport-target создаём сами: этот describe — сосед основного, его beforeEach сюда не достаёт.
+  beforeEach(() => {
+    const el = document.createElement("div")
+    el.id = "modal"
+    document.body.appendChild(el)
+  })
+  afterEach(() => {
+    document.getElementById("modal")?.remove()
+    delete (window as any).FishtVue
+  })
+
+  const withOptions = (options: any = {}, extra: any = {}) => ({
+    install(app: any) {
+      app.use(FishtVue, { componentsOptions: { Dialog: options }, ...extra })
+    }
+  })
+  const OPEN = { modelValue: true, teleport: "#modal" as const }
+  const q = (selector: string) => document.querySelector(`#modal ${selector}`)
+  const classesOf = (el: Element | null) => (el?.getAttribute("class") ?? "").split(/\s+/).filter(Boolean)
+
+  it("отсутствующие булевы приходят `undefined`, а не скастованными в false", () => {
+    const wrapper = mount(Dialog, { props: OPEN })
+
+    expect(wrapper.props("animated")).toBeUndefined()
+    expect(wrapper.props("margin")).toBeUndefined()
+    expect(wrapper.props("closeOnBackdrop")).toBeUndefined()
+    expect(wrapper.props("closeButton")).toBeUndefined()
+  })
+
+  it("`class` ложится на корень `[data-dialog]`, а не на карточку", () => {
+    mount(Dialog, { props: { ...OPEN, class: "probe-root" }, slots: { default: "x" } })
+
+    expect(classesOf(q("[data-dialog]"))).toContain("probe-root")
+    expect(classesOf(q("[data-dialog-content]"))).not.toContain("probe-root")
+  })
+
+  it.each([
+    ["content", "[data-dialog-content]"],
+    ["backdrop", "[data-dialog-background]"],
+    ["close", "[data-dialog-close]"]
+  ] as Array<[DialogClassKey, string]>)("classes.%s доезжает до своего элемента", (key, selector) => {
+    mount(Dialog, {
+      props: { ...OPEN, closeButton: true, classes: { [key]: "probe-key" } },
+      slots: { default: "x" }
+    })
+
+    expect(classesOf(q(selector))).toContain("probe-key")
+    expect(classesOf(q("[data-dialog]"))).not.toContain("probe-key")
+  })
+
+  it("классы потребителя перебивают структурный `absolute` карточки (хвост больше не выигрывает)", () => {
+    mount(Dialog, { props: { ...OPEN, classes: { content: "relative" } }, slots: { default: "x" } })
+    const classes = classesOf(q("[data-dialog-content]"))
+
+    expect(classes).toContain("relative")
+    expect(classes).not.toContain("absolute")
+  })
+
+  it("props.classes перебивает options.classes, неконфликтный класс options остаётся", () => {
+    mount(Dialog, {
+      props: { ...OPEN, classes: { content: "p-8" } },
+      slots: { default: "x" },
+      global: { plugins: [withOptions({ classes: { content: "p-2 italic" } })] }
+    })
+    const classes = classesOf(q("[data-dialog-content]"))
+
+    expect(classes).toContain("p-8")
+    expect(classes).not.toContain("p-2")
+    expect(classes).toContain("italic")
+  })
+
+  it("`closeOnBackdrop` — positive-инверсия: по умолчанию подложка кликабельна", async () => {
+    const byDefault = mount(Dialog, { props: OPEN, slots: { default: "x" } })
+    expect((byDefault.vm as any).isCloseOnBackdrop).toBe(true)
+
+    const off = mount(Dialog, { props: { ...OPEN, closeOnBackdrop: false }, slots: { default: "x" } })
+    expect((off.vm as any).isCloseOnBackdrop).toBe(false)
+  })
+
+  it("`margin` — positive-инверсия: default true даёт отступ в off-center позиции", () => {
+    const withMargin = mount(Dialog, { props: { ...OPEN, position: "bottom" }, slots: { default: "x" } })
+    expect(String((withMargin.vm as any).classPosition)).toContain("mb-5")
+
+    const without = mount(Dialog, {
+      props: { ...OPEN, position: "bottom", margin: false },
+      slots: { default: "x" }
+    })
+    expect(String((without.vm as any).classPosition)).not.toContain("mb-5")
+  })
+
+  it("`animated` — positive-инверсия: default true даёт directional-анимацию", () => {
+    const animated = mount(Dialog, { props: { ...OPEN, position: "left" }, slots: { default: "x" } })
+    expect((animated.vm as any).enterAndLeaveClass ?? "").toBe("-translate-x-full")
+
+    const plain = mount(Dialog, {
+      props: { ...OPEN, position: "left", animated: false },
+      slots: { default: "x" }
+    })
+    expect((plain.vm as any).enterAndLeaveClass ?? "").toBe("translate-x-0 opacity-0")
+  })
+
+  it("`teleport: false` рендерит inline, без выноса в target", () => {
+    const wrapper = mount(Dialog, { props: { modelValue: true, teleport: false }, slots: { default: "x" } })
+
+    expect(q("[data-dialog]")).toBeNull()
+    expect(wrapper.find("[data-dialog]").exists()).toBe(true)
+  })
+
+  it("снятый `classBody` больше не адресует корень — падает fallthrough-атрибутом", () => {
+    mount(Dialog, { props: { ...OPEN, classBody: "probe-legacy" } as any, slots: { default: "x" } })
+
+    expect(classesOf(q("[data-dialog]"))).not.toContain("probe-legacy")
+  })
+
+  it("unstyled сохраняет классы потребителя и режет тему", () => {
+    mount(Dialog, {
+      props: { ...OPEN, class: "probe-root", classes: { content: "probe-content" } },
+      slots: { default: "x" },
+      global: { plugins: [withOptions({}, { unstyled: true })] }
+    })
+
+    // На корне дополнительно живут transition-классы (`<transition appear>` вешает enter-*),
+    // поэтому сверяем не полный список, а наличие сегментов потребителя и отсутствие темы.
+    const root = classesOf(q("[data-dialog]"))
+    expect(root).toContain("fv")
+    expect(root).toContain("probe-root")
+    expect(root.some((c) => c.startsWith("fishtvue-"))).toBe(false)
+    expect(classesOf(q("[data-dialog-content]"))).toEqual(["fv", "probe-content"])
   })
 })

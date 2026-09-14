@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
-  import type { AlertEmits, AlertProps } from "./Alert"
+  import type { AlertClassKey, AlertEmits, AlertProps } from "./Alert"
   import {
     ChatBubbleOvalLeftIcon,
     CheckCircleIcon,
@@ -17,21 +17,25 @@
   const options = Alert.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<AlertProps>(), {
-    notAnimate: undefined,
-    closeButton: undefined
+    modelValue: undefined,
+    animated: undefined,
+    closeButton: undefined,
+    // `TeleportTarget` включает `false` — без own default Vue скастовал бы отсутствующий prop
+    // в `false` и слой `componentsOptions.Alert.teleport` стал бы недостижим (dev-patterns §2 F).
+    teleport: undefined
   })
   const emit = defineEmits<AlertEmits>()
+  const { cls } = Alert.resolveClasses<AlertClassKey>(props)
   const slots = useSlots()
   // ---STATE-------------------------------
-  const isVisible = ref<boolean>(props.modelValue)
+  const isVisible = ref<boolean>(props.modelValue ?? false)
   // ---PROPS-------------------------------
   const type = computed<NonNullable<AlertProps["type"]>>(() => props.type ?? options?.type ?? "success")
   const title = computed<NonNullable<AlertProps["title"]>>(() => props.title ?? "")
   const subtitle = computed<NonNullable<AlertProps["subtitle"]>>(() => props.subtitle ?? "")
   const displayTime = computed<number>(() => +(props.displayTime ?? options?.displayTime ?? 0))
-  const notAnimate = computed<NonNullable<AlertProps["notAnimate"]>>(
-    () => props.notAnimate ?? options?.notAnimate ?? false
-  )
+  // Positive-инверсия снятого `notAnimate` (dev-patterns §2 F): default перевёрнут в `true`.
+  const isAnimated = computed<NonNullable<AlertProps["animated"]>>(() => props.animated ?? options?.animated ?? true)
   const isCloseButton = computed<NonNullable<AlertProps["closeButton"]>>(
     () => props.closeButton ?? options?.closeButton ?? false
   )
@@ -57,7 +61,7 @@
   const closeLabel = computed<string>(() => Alert.t("alert.close") ?? "Close")
   const startEnterAndLeaveClass = computed<string>(() => {
     let classAnimate
-    if (!notAnimate.value) {
+    if (isAnimated.value) {
       // start → off-screen в logical-начало (LTR: влево, RTL: вправо) — rtl: флипает translate.
       if (positionLogical.value.includes("start")) classAnimate = "-translate-x-[200%] rtl:translate-x-[200%] opacity-0"
       else if (positionLogical.value.includes("end"))
@@ -70,7 +74,7 @@
   })
   const endEnterAndLeaveClass = computed<string>(() => {
     let classAnimate
-    if (!notAnimate.value) {
+    if (isAnimated.value) {
       if (positionLogical.value.includes("start")) classAnimate = "translate-x-0 opacity-100"
       else if (positionLogical.value.includes("end")) classAnimate = "translate-x-0 opacity-100"
       else if (positionLogical.value.includes("top")) classAnimate = "translate-y-0 opacity-100"
@@ -199,25 +203,27 @@
   })
   // Issue 9 (audit 2026-05-11): respect prefers-reduced-motion via Tailwind `motion-safe:` prefix.
   Alert.setStyle(`motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500`)
-  const classBase = computed<StyleClass>(() =>
-    Alert.setStyle([
+  // Корень — `class`/`classes.root`; карточка — `classes.body` (до 1.0.0 `class` адресовал карточку,
+  // причём `props.class` шёл ПЕРЕД `options.class` — инверсия precedence, снятая helper'ом §2 D).
+  const classBase = computed<StyleClass>(() => cls("root"))
+  const classBody = computed<StyleClass>(() =>
+    cls(
+      "body",
       // mobile-first: компактный padding на телефоне, sm: на desktop; max-w-[89vw] держит safe-gutters.
       "alert-body p-3 sm:p-4 w-auto max-w-[89vw] rounded-md",
       classesStyle.value.body,
-      props?.class ?? "",
-      options?.class ?? "",
       size.value
-    ])
+    )
   )
   // `AlertProps["style"]` = `CSSProperties | undefined` (Alert.d.ts) — `as any` тут не нужен.
   const styleBase = computed<AlertProps["style"]>(() => props.style ?? options?.style)
-  const classBody = computed(() => Alert.setStyle("flex"))
-  const classDivIcon = computed(() => Alert.setStyle("shrink-0"))
+  const classFlex = computed(() => Alert.setStyle("flex"))
+  const classDivIcon = computed(() => cls("icon", "shrink-0"))
   const classIcon = computed(() => Alert.setStyle(["h-5 w-5", classesStyle.value.icon]))
-  const classContent = computed(() => Alert.setStyle("ms-3 mt-0.5"))
-  const classTitle = computed(() => Alert.setStyle(["text-sm font-medium", classesStyle.value.title]))
+  const classContent = computed(() => cls("content", "ms-3 mt-0.5"))
+  const classTitle = computed(() => cls("title", "text-sm font-medium", classesStyle.value.title))
   const classSubtitle = computed(() =>
-    Alert.setStyle(["text-sm", title.value?.length ? "mt-2" : "", classesStyle.value.subtitle])
+    cls("subtitle", "text-sm", title.value?.length ? "mt-2" : "", classesStyle.value.subtitle)
   )
   // `subtitle` поддерживает HTML-разметку, но проходит через best-effort sanitizer
   // (вырезает <script>/<style>/<iframe>/…, on*-обработчики, javascript:/vbscript: протоколы).
@@ -226,7 +232,7 @@
   const classSlotDefault = computed(() =>
     Alert.setStyle(["text-sm", title.value?.length ? "mt-2" : "", classesStyle.value.subtitle])
   )
-  const classDivCloseButton = ref(Alert.setStyle("relative bottom-[2px] ms-auto ps-3"))
+  const classDivCloseButton = computed(() => cls("close", "relative bottom-[2px] ms-auto ps-3"))
   // ---EXPOSE------------------------------
   defineExpose({
     // ---STATE-------------------------
@@ -244,6 +250,7 @@
     classesStyle,
     size,
     classBase,
+    classBody,
     // ---METHODS-----------------------
     close
   })
@@ -256,7 +263,7 @@
   watch(
     () => props.modelValue,
     (value) => {
-      isVisible.value = value
+      isVisible.value = value ?? false
       if (displayTime.value >= 100 && value) {
         setTimeout(() => {
           isVisible.value = false
@@ -287,9 +294,9 @@
     enter-active-class="motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500"
     :enter-from-class="startEnterAndLeaveClass"
     :enter-to-class="endEnterAndLeaveClass">
-    <div v-if="isVisible" data-alert :role="ariaRole" :aria-live="ariaLive" aria-atomic="true">
-      <div :class="classBase" :style="styleBase">
-        <div :class="classBody">
+    <div v-if="isVisible" data-alert :class="classBase" :role="ariaRole" :aria-live="ariaLive" aria-atomic="true">
+      <div data-alert-body :class="classBody" :style="styleBase">
+        <div :class="classFlex">
           <div data-alert-icon :class="classDivIcon">
             <component :is="icon" aria-hidden="true" :class="classIcon" />
           </div>

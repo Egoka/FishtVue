@@ -16,8 +16,6 @@ import { describe, expect, it } from "vitest"
  * `PENDING` — компоненты, ещё не переведённые на 1.0; обнуляется в W7.
  */
 const PENDING: string[] = [
-  "alert/Alert.vue",
-  "dialog/Dialog.vue",
   "form/Form.vue",
   "form/FormField.vue",
   "form/FormSection.vue",
@@ -72,6 +70,9 @@ describe("Cross-cutting guard — boolean props (dev-patterns §2 F)", () => {
       if (PENDING.includes(rel) || RENDERLESS.has(rel)) continue
       for (const [name, def] of Object.entries(props)) {
         if (!typesOf(def).includes(Boolean)) continue
+        // Обязательный prop потребитель не может опустить, поэтому cast отсутствующего в `false`
+        // его не касается; и в `XOption` такие props не попадают (нет слоя, который стал бы недостижим).
+        if ((def as { required?: boolean } | null)?.required) continue
         if (!Object.prototype.hasOwnProperty.call(def, "default")) offenders.push(`${rel}: ${name}`)
       }
     }

@@ -1,7 +1,7 @@
 ---
 title: FixWindow
 summary: Плавающее окно (popover/tooltip), позиционирование через собственный dependency-free движок с auto-flip/auto-shift, опциональный Teleport в body, focus trap, ARIA-семантика, motion-safe transitions, RTL-aware logical placement.
-updated: 2026-07-05
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -67,13 +67,14 @@ lib/fixwindow/
 | `modelValue`          | `boolean`                                              | —                                             | v-model видимость.                                                                                                                                                                                                                                             |
 | `el`                  | `RefLink` (`string` selector \| `HTMLElement`)         | parent component                              | Целевой элемент trigger'а. Если не задан — родитель компонента.                                                                                                                                                                                                |
 | `scrollableEl`        | `RefLink`                                              | —                                             | Скролл-контейнер (для absolute-positioning).                                                                                                                                                                                                                   |
-| `typePosition`        | `"absolute" \| "fixed"`                                | `"absolute"` if `scrollableEl` else `"fixed"` | Floating UI strategy.                                                                                                                                                                                                                                          |
+| `strategy`            | `"absolute" \| "fixed"`                                | `"absolute"` if `scrollableEl` else `"fixed"` | CSS-стратегия позиционирования (Floating UI `strategy`). Бывший `typePosition`.                                                                                                                                                                               |
 | `position`            | `Position` (13 опций)                                  | `"top"` / `"center-bottom"` (byCursor)        | Позиция относительно trigger'а: `top`, `top-left`, `top-right`, `bottom`, `bottom-left`, `bottom-right`, `left`, `left-top`, `left-bottom`, `right`, `right-top`, `right-bottom`, `center`. Мапится в Floating UI logical `start`/`end` placement — RTL-aware. |
-| `class` / `classBody` | `StyleClass`                                           | —                                             | Контейнер / тело.                                                                                                                                                                                                                                              |
+| `class`               | `StyleClass`                                           | —                                             | Классы **только корня** `[data-fix-window]` (dev-patterns §2 A). Бывший `classBody`.                                                                                                                                                                          |
+| `classes`             | `ClassesMap<FixWindowClassKey>`                        | —                                             | Карта внутренних элементов: `content`, `close`. См. §5.1.                                                                                                                                                                                                     |
 | `mode`                | `StyleMode` (`"filled" \| "outlined" \| "underlined"`) | —                                             | Стиль; fallback на `FixWindow.componentsStyle()`.                                                                                                                                                                                                              |
 | `eventOpen`           | `FixWindowEvent`                                       | `"hover"`                                     | `hover \| click \| mousedown \| mouseup \| dblclick \| contextmenu \| none`. Для `"hover"` дополнительно регистрируется `touchstart` (touch fallback).                                                                                                         |
 | `eventClose`          | `FixWindowEvent`                                       | auto (см. `defaultCloseEvent`)                | Аналогично. Click-based close через собственный `useClickOutside` — Teleport-aware (`composedPath()`).                                                                                                                                                        |
-| `delay`               | `number \| 100 \| 500 \| 1000 \| 1500 \| 2000`         | `0`                                           | Задержка открытия (ms).                                                                                                                                                                                                                                        |
+| `openDelay`           | `number \| 100 \| 500 \| 1000 \| 1500 \| 2000`         | `0`                                           | Задержка открытия (ms). Бывший `delay`.                                                                                                                                                                                                                        |
 | `marginPx`            | `number \| 2 \| 5 \| 10`                               | `10`                                          | Видимый зазор между popover и trigger — задаётся прозрачным `border` (он же hover-bridge: курсор не покидает окно при переходе trigger → window). НЕ через Floating UI `offset` (иначе зазор удвоился бы + появился dead-zone). border-box-кромка окна остаётся вплотную к триггеру.                                                                                                                                                                                                         |
 | `translatePx`         | `number \| 2 \| 5 \| 10`                               | `0`                                           | Тонкая подстройка смещения по главной оси — единственное, что идёт в Floating UI `offset` (с `marginPx` **не** суммируется).                                                                                                                                                                                                      |
 | `paddingWindow`       | `number \| 2 \| 5 \| 10`                               | `0`                                           | Padding от viewport (Floating UI `flip` + `shift` middleware).                                                                                                                                                                                                 |
@@ -88,6 +89,18 @@ lib/fixwindow/
 | `ariaDescribedby`     | `string`                                               | —                                             | ID элемента-описания.                                                                                                                                                                                                                                          |
 | `initialFocus`        | `string`                                               | —                                             | CSS-селектор внутри popover для автофокуса при open (с `focusTrap: true`). По умолчанию — первый focusable.                                                                                                                                                    |
 | `returnFocus`         | `boolean`                                              | `true`                                        | Возвращать focus на trigger при close (с `focusTrap: true`).                                                                                                                                                                                                   |
+
+### 5.1 Classes keys
+
+`FixWindowClassKey = "content" | "close"` ([FixWindow.d.ts:34](../../lib/fixwindow/FixWindow.d.ts#L34)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-fix-window]` | element | `text-surface-800 dark:text-surface-300 text-sm z-5` + `strategy` (бывший `classBody`) |
+| `content` | `[data-fix-window-content]` | element | классы `mode` (бывший инвертированный `class`) |
+| `close` | `[data-fix-window-close]` (корень [Button](./button.md)) | element | `absolute top-2 end-2 px-[5px] m-0.5 h-9 w-9` |
+
+До 1.0.0 у FixWindow была инверсия: `classBody` адресовал корень, а `class` — внутренний блок. Теперь `class` — всегда корень (единое правило §2 A).
 
 ## 6. Events / Emits + v-model contract
 
@@ -126,7 +139,7 @@ v-model: `v-model="visible"` стандартный.
 
 ```vue
 <button ref="btn">Info</button>
-<FixWindow :el="btn" event-open="hover" :delay="500">Helpful tip</FixWindow>
+<FixWindow :el="btn" event-open="hover" :open-delay="500">Helpful tip</FixWindow>
 ```
 
 ### 9.2 Context menu
@@ -208,14 +221,14 @@ v-model: `v-model="visible"` стандартный.
 ```ts
 FixWindowOption = Pick<
   FixWindowProps,
-  | "typePosition"
+  | "strategy"
   | "position"
   | "class"
-  | "classBody"
+  | "classes"
   | "mode"
   | "eventOpen"
   | "eventClose"
-  | "delay"
+  | "openDelay"
   | "marginPx"
   | "translatePx"
   | "paddingWindow"
@@ -307,9 +320,14 @@ fw.value?.focusFirst()
 
 - **Vue:** `^3.5.x`.
 - **Browser:** evergreen. Использует собственный dependency-free `useFloating`/`autoUpdate`-эквивалент ([lib/fixwindow/useFloating.ts](../../lib/fixwindow/useFloating.ts)); нативные API `addEventListener`, `KeyboardEvent`, `ResizeObserver`.
-- **Stability flag:** `stable` — 82 кейса, coverage 88.4% statements / 83.8% branch (Wave 1 close-out 2026-05-16).
-- **Breaking changes:** не зафиксировано на уровне публичного API. Pre-Floating UI tests, проверявшие точные пиксельные координаты `x`/`y`, релаксированы — Floating UI считает иначе чем manual algorithm, но shape API (string CSS units, `isOpen`, `updatePosition()`) сохранён.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 95 кейсов, coverage 88.4% statements / 83.8% branch.
+- **Breaking changes (1.0.0, редизайн props):**
+  - `classBody` → `class` (адресует корень `[data-fix-window]`), прежний `class` → `classes.content`; добавлен ключ `close` с маркером `data-fix-window-close`.
+  - `typePosition` → `strategy`, `delay` → `openDelay`; expose `delay` → `openDelay`.
+  - тип `FixWindowTeleport` снят в пользу общего `TeleportTarget` из `types.d.ts` (значения те же).
+  - `modelValue` получил own default `undefined` — отсутствующий prop больше не кастуется в `false`.
+  - Ранее (0.2.x): pre-Floating UI тесты на точные пиксельные координаты релаксированы; shape API (string CSS units, `isOpen`, `updatePosition()`) сохранён.
+- **Deprecations:** нет — старые имена сняты без алиасов (решение R6).
 
 ## 15. Testing recipes
 

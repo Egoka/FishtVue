@@ -3,21 +3,27 @@
   import { isClient } from "fishtvue/utils/domHandler"
   import { lockBodyScroll, unlockBodyScroll } from "fishtvue/utils/scrollLockHandler"
   import type { Size, StyleClass } from "fishtvue/types"
-  import type { DialogEmits, DialogProps } from "./Dialog"
+  import type { DialogClassKey, DialogEmits, DialogProps } from "./Dialog"
   import Button from "fishtvue/button/Button.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
+  import { cn } from "fishtvue/utils/tailwindHandler"
   // ---BASE-COMPONENT----------------------
   const Dialog = new Component<"Dialog">()
   const options = Dialog.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<DialogProps>(), {
     closeButton: undefined,
-    withoutMargin: undefined,
-    notCloseBackground: undefined,
-    returnFocus: undefined
+    animated: undefined,
+    margin: undefined,
+    closeOnBackdrop: undefined,
+    returnFocus: undefined,
+    // `TeleportTarget` включает `false`, поэтому Vue видит тут Boolean и скастовал бы
+    // отсутствующий prop в `false` — слой `componentsOptions.Dialog.teleport` стал бы недостижим.
+    teleport: undefined
   })
   const emit = defineEmits<DialogEmits>()
+  const { cls, raw } = Dialog.resolveClasses<DialogClassKey>(props)
   // ---STATE-------------------------------
   const isOpen = ref<boolean>(props.modelValue ?? false)
   const dialogContentRef = ref<HTMLElement | null>(null)
@@ -43,17 +49,17 @@
     "7xl": "sm:max-w-7xl"
   }
   // ---PROPS-------------------------------
-  const toTeleport = computed<DialogProps["toTeleport"]>(() => props.toTeleport ?? options?.toTeleport ?? "body")
+  const teleport = computed<DialogProps["teleport"]>(() => props.teleport ?? options?.teleport ?? "body")
   const size = computed<string>(() => sizes[props?.size ?? options?.size ?? "2xl"])
   const isCloseButton = computed<NonNullable<DialogProps["closeButton"]>>(
     () => props.closeButton ?? options?.closeButton ?? false
   )
-  const notCloseBackground = computed<NonNullable<DialogProps["notCloseBackground"]>>(
-    () => props.notCloseBackground ?? options?.notCloseBackground ?? false
+  // Positive-инверсии снятых `notCloseBackground` / `withoutMargin` (dev-patterns §2 F):
+  // default перевёрнут в `true`, поэтому отсутствие prop'а = «закрываем по клику» и «отступ есть».
+  const isCloseOnBackdrop = computed<NonNullable<DialogProps["closeOnBackdrop"]>>(
+    () => props.closeOnBackdrop ?? options?.closeOnBackdrop ?? true
   )
-  const withoutMargin = computed<NonNullable<DialogProps["withoutMargin"]>>(
-    () => props.withoutMargin ?? options?.withoutMargin ?? false
-  )
+  const isMargin = computed<NonNullable<DialogProps["margin"]>>(() => props.margin ?? options?.margin ?? true)
   const position = computed<NonNullable<DialogProps["position"]>>(() => props.position ?? options?.position ?? "center")
   const ariaLabel = computed<string | undefined>(() => props.ariaLabel ?? options?.ariaLabel ?? undefined)
   const ariaLabelledby = computed<string | undefined>(
@@ -67,13 +73,10 @@
   // aria-label не должен дублировать labelledby — браузеры игнорируют label при наличии labelledby,
   // но пустим только один атрибут чтобы axe-core не жаловался.
   const resolvedAriaLabel = computed<string | undefined>(() => (ariaLabelledby.value ? undefined : ariaLabel.value))
-  const classBodyDialog = computed<DialogProps["class"]>(() =>
-    Dialog.setStyle([options?.class ?? "", props?.class ?? ""])
-  )
   const enterAndLeaveClass = computed<string>(() => {
     let returnClass
-    const isNotAnimate = props?.notAnimate ?? options?.notAnimate ?? false
-    if (!isNotAnimate) {
+    const isAnimated = props?.animated ?? options?.animated ?? true
+    if (isAnimated) {
       if ((position.value as string).includes("left")) {
         returnClass = "-translate-x-full"
       } else if ((position.value as string).includes("right")) {
@@ -93,16 +96,16 @@
       arrayDialog.push("top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2")
     }
     if ((position.value as string).includes("bottom")) {
-      arrayDialog.push(`bottom-0 ${withoutMargin.value ? "" : "mb-5"}`)
+      arrayDialog.push(`bottom-0 ${!isMargin.value ? "" : "mb-5"}`)
     } else if ((position.value as string).includes("top")) {
-      arrayDialog.push(`top-0 ${withoutMargin.value ? "" : "mt-5"}`)
+      arrayDialog.push(`top-0 ${!isMargin.value ? "" : "mt-5"}`)
     } else {
       arrayDialog.push("top-1/2 -translate-y-1/2")
     }
     if ((position.value as string).includes("right")) {
-      arrayDialog.push(`right-0 ${withoutMargin.value ? "" : "mr-5"}`)
+      arrayDialog.push(`right-0 ${!isMargin.value ? "" : "mr-5"}`)
     } else if ((position.value as string).includes("left")) {
-      arrayDialog.push(`left-0 ${withoutMargin.value ? "" : "ml-5"}`)
+      arrayDialog.push(`left-0 ${!isMargin.value ? "" : "ml-5"}`)
     } else {
       arrayDialog.push("left-1/2 -translate-x-1/2")
     }
@@ -115,29 +118,32 @@
   Dialog.setStyle(
     `motion-safe:transition-opacity motion-safe:ease-in-out motion-safe:duration-500 opacity-100 opacity-0`
   )
+  // Корень — `class`/`classes.root`; карточка — `classes.content` (до 1.0.0 было наоборот:
+  // `classBody` адресовал корень, а `class` — карточку). Структурный `absolute` теперь в базе,
+  // поэтому классы потребителя идут последними и перебивают его (dev-patterns §2 D).
   const classBase = computed<StyleClass>(() =>
-    Dialog.setStyle([
-      "fixed top-0 left-0 right-0 bottom-0 z-[200] w-full overflow-x-hidden overflow-y-auto inset-0 h-screen max-h-full",
-      options?.classBody ?? "",
-      props?.classBody ?? ""
-    ])
+    cls(
+      "root",
+      "fixed top-0 left-0 right-0 bottom-0 z-[200] w-full overflow-x-hidden overflow-y-auto inset-0 h-screen max-h-full"
+    )
   )
-  const classBackground = ref<StyleClass>(Dialog.setStyle("fixed inset-0"))
-  const classBackgroundBase = ref<StyleClass>(Dialog.setStyle("fixed inset-0 z-[199]"))
-  const classBackgroundBaseColor = ref<StyleClass>(
+  const classBackground = computed<StyleClass>(() => Dialog.setStyle("fixed inset-0"))
+  const classBackgroundBase = computed<StyleClass>(() => cls("backdrop", "fixed inset-0 z-[199]"))
+  const classBackgroundBaseColor = computed<StyleClass>(() =>
     Dialog.setStyle(
       "fixed inset-0 bg-surface-500/10 dark:bg-surface-900/10 backdrop-blur-[3px] motion-safe:transition-all motion-safe:duration-200"
     )
   )
-  const classDialog = computed<StyleClass>(() =>
-    Dialog.setStyle([
-      "p-6 w-full max-w-xs max-h-full rounded-md bg-white dark:bg-surface-950",
+  const classContent = computed<StyleClass>(() =>
+    cls(
+      "content",
+      "p-6 w-full max-w-xs max-h-full rounded-md bg-white dark:bg-surface-950 absolute",
       size.value ?? "",
-      classPosition.value ?? "",
-      classBodyDialog.value ?? "",
-      "absolute"
-    ])
+      classPosition.value ?? ""
+    )
   )
+  // Hand-off в корень `Button` закрытия — без setStyle-префикса Dialog.
+  const classClose = computed<StyleClass>(() => cn("absolute top-2 end-2 px-[5px] m-1 h-9 w-9", raw("close")))
   // ---FOCUS-TRAP--------------------------
   const FOCUSABLE_SELECTOR = [
     "a[href]",
@@ -200,17 +206,16 @@
   // ---EXPOSE------------------------------
   defineExpose({
     // ---PROPS-------------------------
-    toTeleport,
+    teleport,
     isOpen,
     size,
     isCloseButton,
-    notCloseBackground,
-    withoutMargin,
+    isCloseOnBackdrop,
+    isMargin,
     position,
-    classBodyDialog,
     classPosition,
     classBase,
-    classDialog,
+    classContent,
     triggerEl,
     dialogContentRef,
     // ---METHODS-----------------------
@@ -274,7 +279,7 @@
 </script>
 
 <template>
-  <Teleport :to="String(toTeleport)">
+  <Teleport :to="teleport === false ? 'body' : teleport" :disabled="teleport === false">
     <transition
       appear
       leave-active-class="motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500"
@@ -295,14 +300,14 @@
         :aria-describedby="ariaDescribedby"
         tabindex="-1"
         @keydown="onDialogKeydown">
-        <div v-if="!notCloseBackground" :class="classBackground" @click="closeDialog" />
-        <div data-dialog-content :class="classDialog">
+        <div v-if="isCloseOnBackdrop" :class="classBackground" @click="closeDialog" />
+        <div data-dialog-content :class="classContent">
           <slot :closeDialog="closeDialog"></slot>
           <Button
             v-if="isCloseButton"
             data-dialog-close
             variant="ghost"
-            class="absolute top-2 end-2 px-[5px] m-1 h-9 w-9"
+            :class="classClose"
             :aria-label="Dialog.t('dialog.close') ?? 'Close dialog'"
             @click="closeDialog">
             <Icons type="XMark" class="fill-surface-500 dark:fill-surface-500" />

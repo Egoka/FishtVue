@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import type { Component } from "vue"
 import FishtVue from "fishtvue/config"
@@ -15,7 +15,7 @@ import FishtVue from "fishtvue/config"
  * Per-component нюансы (aspect-ключи, hand-off'ы, слоты) живут в `<Name>.test.ts`; здесь — инвариант.
  * `PENDING` — компоненты до своей волны; обнуляется в W7, после чего `skipIf` удаляется.
  */
-const PENDING: string[] = ["Alert", "Dialog", "Form", "Menu", "Split", "Table"]
+const PENDING: string[] = ["Form", "Menu", "Split", "Table"]
 
 type Entry = {
   name: string
@@ -292,15 +292,22 @@ const classesOf = (el: Element) => (el.getAttribute("class") ?? "").split(/\s+/)
  * от него ничего не находит. Все entry монтируются с `attachTo: document.body`, так что fallback
  * на `document.body` покрывает и телепорт, и inline-render.
  */
-const scopeOf = (wrapper: { element: unknown }): Element =>
-  (wrapper.element as Element)?.querySelectorAll ? (wrapper.element as Element) : document.body
+/**
+ * Каждый mount получает собственный контейнер в `document.body`: у телепортируемых/фрагментных
+ * корней (`<Teleport>`, `<transition>`) `wrapper.element` в VTU — якорь, а не DOM-узел, и поиск от
+ * него ничего не находит. Искать от всего `document.body` тоже нельзя — под `isolate:false` там
+ * лежат узлы соседних файлов, и проверка «каждое совпадение несёт probe» падала бы на чужих.
+ */
+const queryAll = (host: HTMLElement, selector: string): Element[] => Array.from(host.querySelectorAll(selector))
 
 /**
  * Ленивые дети (`Loading`/`FixWindow` под `defineAsyncComponent`) резолвятся за несколько
  * macrotask-тиков. На холодном графе модулей селектор ключа не найдётся сразу, поэтому
  * прокручиваем очередь до готовности — иначе результат зависит от порядка файлов (`isolate:false`).
+ * Бюджет тиков щедрый: на холодном графе Vite трансформирует цепочку динамических импортов
+ * за неопределённое число макрозадач, а лишние итерации стоят копейки (условие проверяется первым).
  */
-const flushLazy = async (isReady: () => boolean, maxTicks = 50): Promise<void> => {
+const flushLazy = async (isReady: () => boolean, maxTicks = 300): Promise<void> => {
   for (let tick = 0; tick < maxTicks; tick++) {
     if (isReady()) return
     await flushPromises()
@@ -326,13 +333,20 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
   for (const entry of CONTRACT) {
     const skip = PENDING.includes(entry.name)
     describe(entry.name, () => {
+      let host: HTMLElement
+      beforeEach(() => {
+        host = document.createElement("div")
+        document.body.appendChild(host)
+      })
+      afterEach(() => host.remove())
+
       const render = async (extra: Record<string, unknown>, plugins: unknown[] = []) => {
         const { default: component } = await entry.load()
         return mount(component, {
           props: { ...(entry.props ?? {}), ...extra },
           slots: entry.slots,
           global: { plugins: plugins as any },
-          attachTo: document.body
+          attachTo: host
         })
       }
 
@@ -350,8 +364,8 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
         it.skipIf(skip)(`classes.${key} → ${selector}`, async () => {
           const probe = `probe-${key.toLowerCase()}`
           const wrapper = await render({ classes: { [key]: probe } })
-          await flushLazy(() => scopeOf(wrapper).querySelector(selector) !== null)
-          const targets = Array.from(scopeOf(wrapper).querySelectorAll(selector))
+          await flushLazy(() => queryAll(host, selector).length > 0)
+          const targets = queryAll(host, selector)
           expect(targets.length, `элемент ${selector} не найден`).toBeGreaterThan(0)
           for (const el of targets) expect(classesOf(el), `${selector} без ${probe}`).toContain(probe)
           wrapper.unmount()
@@ -363,12 +377,12 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
         const wrapper = await render({ class: "probe-root", classes: firstKey ? { [firstKey]: "probe-inner" } : {} }, [
           unstyledPlugin
         ])
-        if (firstKey) await flushLazy(() => scopeOf(wrapper).querySelector(entry.keys[firstKey]) !== null)
+        if (firstKey) await flushLazy(() => queryAll(host, entry.keys[firstKey]).length > 0)
         const root = wrapper.find(entry.root)
         expect(classesOf(root.element)).toContain("probe-root")
         expect(classesOf(root.element).some((c) => c.startsWith("fishtvue-"))).toBe(false)
         if (firstKey) {
-          const el = scopeOf(wrapper).querySelector(entry.keys[firstKey])
+          const el = queryAll(host, entry.keys[firstKey])[0] ?? null
           expect(el && classesOf(el)).toContain("probe-inner")
         }
         wrapper.unmount()

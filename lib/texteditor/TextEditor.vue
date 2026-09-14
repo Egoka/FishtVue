@@ -277,7 +277,7 @@
         v-model="open"
         v-bind="dialogProps"
         @update:modelValue="theme = 'bubble'"
-        :class="['p-0 max-w-screen-sm sm:max-w-5xl sm:m-3 sm:w-[90%] max-h-screen']">
+        :classes="{ content: 'p-0 max-w-screen-sm sm:max-w-5xl sm:m-3 sm:w-[90%] max-h-screen' }">
         <div :class="['editor', isDisabled ? 'editor-disabled' : '', classDialogEditor]" :style="quillVars">
           <component
             :is="QuillEditor"

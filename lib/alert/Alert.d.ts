@@ -1,5 +1,5 @@
 import { CSSProperties, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, Size, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, Size, StyleClass, TeleportTarget } from "../types"
 
 /**
  * Logical, RTL-safe position values for the alert.
@@ -27,6 +27,16 @@ export declare type AlertPosition =
  * Provides support for various alert types, customizable styles, and flexible display configurations.
  */
 declare class Alert extends ClassComponent<AlertProps, AlertSlots, AlertEmits, AlertExpose> {}
+
+/**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-alert>` (добавляется `ClassesMap`).
+ * - `body` — карточка алерта `[data-alert-body]` (бывший инвертированный `class`).
+ * - `icon` — контейнер иконки типа `[data-alert-icon]`.
+ * - `content` — колонка текста `[data-alert-content]`.
+ * - `title` / `subtitle` — `[data-alert-title]` / `[data-alert-subtitle]`.
+ * - `close` — обёртка close-кнопки `[data-alert-button]`.
+ */
+export declare type AlertClassKey = "body" | "icon" | "content" | "title" | "subtitle" | "close"
 
 // ---------------------------------------
 export declare type BaseAlert = {
@@ -67,16 +77,24 @@ export declare type BaseAlert = {
   subtitle?: string
 
   /**
-   * Selector for teleporting the alert to a specific container.
-   * @type {string | undefined}
+   * Контейнер, в который `openAlert` монтирует стек алертов. `false` — `document.body`.
+   * @type {TeleportTarget | undefined}
    */
-  toTeleport?: string
+  teleport?: TeleportTarget
 
   /**
-   * Custom CSS class for the alert.
+   * CSS-классы корня `<div data-alert>` (dev-patterns §2 A). До 1.0.0 адресовал карточку —
+   * теперь она доступна через `classes.body`.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Карта классов внутренних элементов: `body`, `icon`, `content`, `title`, `subtitle`, `close`;
+   * `root` ≡ `class`. См. `AlertClassKey`.
+   * @type {ClassesMap<AlertClassKey> | undefined}
+   */
+  classes?: ClassesMap<AlertClassKey>
 
   /**
    * Custom inline styles for the alert.
@@ -91,10 +109,11 @@ export declare type BaseAlert = {
   displayTime?: string | number | 1000 | 2000 | 3000 | 4000 | 5000
 
   /**
-   * Disables animations for the alert.
+   * Анимировать появление/скрытие. Bare-positive инверсия снятого `notAnimate`
+   * (dev-patterns §2 F): default перевёрнут в `true`.
    * @type {boolean | undefined}
    */
-  notAnimate?: boolean
+  animated?: boolean
 
   /**
    * Enables the close button for the alert.
@@ -106,7 +125,7 @@ export declare type BaseAlert = {
 /**
  * Props for the Alert component.
  */
-export interface AlertProps extends Omit<BaseAlert, "position" | "toTeleport"> {
+export interface AlertProps extends Omit<BaseAlert, "position"> {
   /**
    * Position of the alert on the screen (logical, RTL-safe).
    *
@@ -217,10 +236,16 @@ export declare type AlertExpose = {
   size: StyleClass
 
   /**
-   * Base CSS class for the alert.
+   * Итоговый класс корня `<div data-alert>` (база + `class`/`classes.root`).
    * @type {StyleClass}
    */
   classBase: StyleClass
+
+  /**
+   * Итоговый класс карточки `[data-alert-body]` (база + type + size + `classes.body`).
+   * @type {StyleClass}
+   */
+  classBody: StyleClass
 
   // ---METHODS-----------------------
   /**
@@ -229,8 +254,8 @@ export declare type AlertExpose = {
   close(): void
 }
 export declare type AlertOption = Pick<
-  AlertProps & { toTeleport?: string },
-  "type" | "position" | "size" | "class" | "style" | "displayTime" | "notAnimate" | "toTeleport" | "closeButton"
+  AlertProps,
+  "type" | "position" | "size" | "class" | "classes" | "style" | "displayTime" | "animated" | "teleport" | "closeButton"
 >
 
 // ---------------------------------------

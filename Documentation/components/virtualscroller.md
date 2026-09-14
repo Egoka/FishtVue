@@ -1,7 +1,7 @@
 ---
 title: VirtualScroller
 summary: Низкоуровневый windowing-примитив (variable-height, lazy, grid) + headless composable useVirtualScroll + enhanced-native macOS-скроллбар.
-updated: 2026-06-13
+updated: 2026-09-14
 stability: stable
 since: 0.2.12
 ---
@@ -36,7 +36,7 @@ since: 0.2.12
 - **Поток данных:** `props` → resolved computeds (`props ?? options ?? defaults`) → composable `useVirtualScroll` считает `range`/`topPad`/`bottomPad` → `visibleItems` → scoped-slot. Scroll-обработчик ([VirtualScroller.vue:227](../../lib/virtualscroller/VirtualScroller.vue#L227)) пишет `scrollTop`/`scrollLeft`/измеренный viewport в `ref`, остальное реактивно. `watch` на `range` эмитит `scroll-index-change`; `watch` на `items.length` сбрасывает lazy-гейт.
 - **Окно:** O(log n) binary search по prefix-sum `offsets` на каждый scroll; тяжёлая O(n) перестройка `offsets` живёт в computed и **не** триггерится скроллом ([useVirtualScroll.ts:117](../../lib/virtualscroller/useVirtualScroll.ts#L117)).
 - **Стили:** базовый класс — `VirtualScroller.setStyle(["relative"])` → `@layer fishtvue`. Скроллбар — raw CSS через `useStyle()` (см. §12), не через `setStyle` (псевдоэлементы не выразимы Tailwind-утилитами).
-- **Конфиг (`getOptions`):** `itemSize`, `estimatedItemSize`, `orientation`, `overscan`, `threshold`, `delay`, `scrollbar`, `class`, `classContent`.
+- **Конфиг (`getOptions`):** `itemSize`, `estimatedItemSize`, `orientation`, `overscan`, `threshold`, `throttle`, `scrollbar`, `class`, `classes`.
 - **Локализация:** `VirtualScroller.t("virtualScroller.loading")` ([VirtualScroller.vue:177](../../lib/virtualscroller/VirtualScroller.vue#L177)) — aria-label loader'а (en `Loading…` / ru `Загрузка…`).
 - **SSR / hydration:** компонент SSR-совместим. На сервере viewport неизвестен → первый кадр рендерит slice `[0, min(n, threshold)]` без window-обрезки; реальное окно считается после mount (`mounted` + измеренный `clientHeight`/`clientWidth`). `useStyle` — no-op без `document`. Hydration-mismatch исключён: серверный и первый клиентский кадр одинаковы (оба до измерения), окно появляется уже после hydration.
 - **Animation / transitions:** только CSS-transition fade/толщины скроллбара, обёрнут в `@media (prefers-reduced-motion: no-preference)`. JS-анимаций нет.
@@ -71,14 +71,27 @@ since: 0.2.12
 | `scrollWidth` | `string \| number` | — | ширина viewport (число → px) |
 | `overscan` | `number` | `6` | буфер элементов вне viewport с каждой стороны |
 | `threshold` | `number` | `100` | при `items.length <= threshold` виртуализация выключена (рендер всех) |
-| `delay` | `number` | `0` | throttle эмита scroll-события, мс (`0` — синхронно) |
+| `throttle` | `number` | `0` | throttle эмита scroll-события, мс (`0` — синхронно). Бывший `delay`. |
 | `lazy` | `boolean` | `false` | infinite-scroll: догрузка по событию `lazy-load` |
 | `appendOnly` | `boolean` | `false` | для `lazy`: `start` фиксируется на 0 (лента только растёт) |
 | `loading` | `boolean` | `false` | внешний флаг загрузки (гейтит повторный `lazy-load`) |
-| `showLoader` | `boolean` | `false` | показывать встроенный loader при `loading` |
+| `loader` | `boolean` | `false` | показывать встроенный loader при `loading`. Бывший `showLoader`. |
 | `scrollbar` | `"macos" \| "thin" \| "native" \| "hidden"` | `"macos"` | стиль полосы прокрутки (см. §10.3) |
-| `class` | `StyleClass` | — | классы корневого контейнера |
-| `classContent` | `StyleClass` | — | классы окна с элементами |
+| `class` | `StyleClass` | — | классы корня `[data-virtual-scroller]` (dev-patterns §2 A) |
+| `classes` | `ClassesMap<VirtualScrollerClassKey>` | — | карта внутренних элементов, см. §5.1 |
+
+### 5.1 Classes keys
+
+`VirtualScrollerClassKey = "viewport" | "content" | "loader"` ([VirtualScroller.d.ts:46](../../lib/virtualscroller/VirtualScroller.d.ts#L46)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-virtual-scroller]` | element | `relative` |
+| `viewport` | `[data-vs-viewport]` (скролл-контейнер) | element | — (размеры и `overflow` идут inline-стилем) |
+| `content` | `[data-vs-content]` (окно с элементами) | element | — (бывший `classContent`) |
+| `loader` | `[data-vs-loader]` | element | — |
+
+До 1.0.0 `class` и `classContent` клались в DOM напрямую, минуя `setStyle`: ни `componentsOptions.VirtualScroller`, ни `unstyled` на них не действовали. Теперь оба идут через `cls(key, …)`.
 
 Резолв по канону: `props ?? componentsOptions.VirtualScroller ?? default` через `??`. `itemSize` без явного значения резолвится в `"auto"` (замер через `ResizeObserver`) — мягче, чем required в PrimeVue.
 
@@ -86,7 +99,7 @@ since: 0.2.12
 
 | Event | Payload | When fired |
 |---|---|---|
-| `scroll` | `{ scrollTop: number; scrollLeft: number; direction: "up" \| "down" \| "left" \| "right" }` | на каждый (throttled при `delay > 0`) scroll |
+| `scroll` | `{ scrollTop: number; scrollLeft: number; direction: "up" \| "down" \| "left" \| "right" }` | на каждый (throttled при `throttle > 0`) scroll |
 | `scroll-index-change` | `{ first: number; last: number }` | при смене видимого диапазона |
 | `lazy-load` | `{ first: number; last: number }` | хвост достигнут и `lazy = true` (не повторяется, пока `loading = true` либо длина данных не изменилась) |
 
@@ -109,7 +122,7 @@ since: 0.2.12
 | `isVirtual` | `boolean` | включена ли виртуализация (`items.length > threshold`) |
 | `orientation` | `VirtualScrollerOrientation` | resolved ось |
 | `scrollbar` | `VirtualScrollerScrollbar` | resolved режим скроллбара |
-| `overscan` / `threshold` / `delay` / `estimatedItemSize` | `number` | resolved опции |
+| `overscan` / `threshold` / `throttle` / `estimatedItemSize` | `number` | resolved опции |
 | `classBase` | `StyleClass` | класс корня (`""` при `unstyled`) |
 | `viewportRef` | `Ref<HTMLElement \| undefined>` | template-ref на скролл-контейнер |
 | `scrollTo` | `(options: ScrollToOptions) => void` | нативный scroll контейнера |
@@ -221,10 +234,10 @@ app.use(FishtVue, {
       orientation: "vertical",
       overscan: 6,
       threshold: 100,
-      delay: 0,
+      throttle: 0,
       scrollbar: "macos",
       class: "rounded-lg border",
-      classContent: ""
+      classes: { content: "" }
     }
   }
 })
@@ -303,9 +316,12 @@ function goTo(i: number) {
 - **Минимальные версии:** Vue 3.5+, TypeScript 5.9+, Node 18+.
 - **Nuxt:** 3.x поддерживается (авто-импорт через `FISHT_VUE_COMPONENTS`, [module/nuxt.ts](../../lib/module/nuxt.ts)); Nuxt 4 — экспериментально.
 - **Браузеры:** evergreen. Полный двухрежимный скроллбар — WebKit/Blink; Firefox — упрощённо (thin); прочие движки игнорируют стилизацию (скролл работает).
-- **Stability flag:** `stable` — публичный API типизирован без `any` в сигнатурах, ≥30 тестов, нет TODO/FIXME.
-- **Breaking changes:** нет (новый компонент).
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — публичный API типизирован без `any` в сигнатурах, 75 тестов, нет TODO/FIXME.
+- **Breaking changes (1.0.0, редизайн props):**
+  - `classContent` → `classes.content`; добавлены ключи `viewport` и `loader`; `class` адресует корень через `setStyle`.
+  - `delay` → `throttle`, `showLoader` → `loader`; expose `delay` → `throttle`, добавлен `classContent`.
+  - до 1.0.0 `class`/`classContent` попадали в DOM **мимо** `setStyle`, поэтому `componentsOptions.VirtualScroller` и `unstyled` на них не действовали — теперь действуют.
+- **Deprecations:** нет — старые имена сняты без алиасов (решение R6).
 
 ## 15. Testing recipes
 
@@ -352,7 +368,7 @@ const wrapper = mount(VirtualScroller, {
 - **`"auto"`-режим:** до первого замера `total` оценивается по `estimatedItemSize`; нативная полоса может слегка «дрожать» при коррекции (митигируется anti-jump, [VirtualScroller.vue:270](../../lib/virtualscroller/VirtualScroller.vue#L270)).
 - **Смена `itemSize` на лету** требует `refresh()` — кэш измеренных размеров не сбрасывается автоматически.
 - **`orientation="both"` (grid):** только сеточные раскладки с равными ячейками; для grid `itemSize` должен быть числом (иначе fallback на `estimatedItemSize`); по горизонтали виртуализации нет (все колонки строки рендерятся). Masonry — вне scope.
-- **`delay`:** при `delay = 0` обработчик scroll работает синхронно (без `requestAnimationFrame`); внутренние scroll-`ref`'ы всегда обновляются сразу, throttle (`delay > 0`) откладывает только эмит события `scroll`.
+- **`throttle`:** при `throttle = 0` обработчик scroll работает синхронно (без `requestAnimationFrame`); внутренние scroll-`ref`'ы всегда обновляются сразу, throttle (`throttle > 0`) откладывает только эмит события `scroll`.
 
 ### API / CSP
 

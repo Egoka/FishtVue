@@ -5,7 +5,7 @@ import { createApp } from "vue"
 import Alert from "fishtvue/alert/Alert.vue"
 import { openAlert } from "fishtvue/alert/openAlert"
 import { sanitizeHtml } from "fishtvue/alert/sanitizeHtml"
-import { AlertPosition, AlertProps } from "fishtvue/alert/Alert"
+import { AlertClassKey, AlertPosition, AlertProps } from "fishtvue/alert/Alert"
 
 describe("Alert Component", () => {
   describe("Without Library Initialization", () => {
@@ -201,13 +201,15 @@ describe("Alert Component", () => {
     })
 
     describe("class and style props", () => {
-      it("should apply custom class to alert", () => {
+      it("should apply custom class to alert root (1.0.0: `class` — корень, карточка — classes.body)", () => {
         const customClass = "custom-alert-class"
         const wrapper = mount(Alert, {
-          props: { class: customClass, modelValue: true }
+          props: { class: customClass, classes: { body: "custom-body-class" }, modelValue: true }
         })
 
-        expect(wrapper.find("[data-alert] > div").attributes("class")).toContain(customClass)
+        expect(wrapper.find("[data-alert]").attributes("class")).toContain(customClass)
+        expect(wrapper.find("[data-alert-body]").attributes("class")).toContain("custom-body-class")
+        expect(wrapper.find("[data-alert-body]").attributes("class")).not.toContain(customClass)
       })
 
       it("should apply custom style to alert", () => {
@@ -442,7 +444,7 @@ describe("Alert Component", () => {
       teleportTarget.id = "custom-teleport"
       document.body.appendChild(teleportTarget)
 
-      openAlert({ toTeleport: "#custom-teleport" })
+      openAlert({ teleport: "#custom-teleport" })
 
       const alertElement = teleportTarget.querySelector(`[data-alert]`)
       expect(alertElement).not.toBeNull()
@@ -451,7 +453,7 @@ describe("Alert Component", () => {
     it("should log a warning if teleport target is not found", () => {
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-      openAlert({ toTeleport: "#non-existent" })
+      openAlert({ teleport: "#non-existent" })
 
       expect(consoleSpy).toHaveBeenCalledWith("The element for mounting the Alert component was not found")
 
@@ -1620,5 +1622,113 @@ describe("Alert Component", () => {
       expect(container?.className).toContain("pt-3")
       expect(container?.className).toContain("sm:pt-5")
     })
+  })
+})
+
+// Контракт props 1.0.0 (dev-patterns §2 A–D, F): `class` переехал с карточки на корень,
+// карточка адресуется `classes.body`; precedence props/options выправлен helper'ом.
+describe("Alert — контракт props 1.0.0", () => {
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
+  const withOptions = (options: any = {}, extra: any = {}) => ({
+    install(app: any) {
+      app.use(FishtVue, { componentsOptions: { Alert: options }, ...extra })
+    }
+  })
+  const OPEN = { modelValue: true, title: "T", subtitle: "S" }
+
+  it("отсутствующие булевы приходят `undefined`, а не скастованными в false", () => {
+    const wrapper = mount(Alert, { props: OPEN })
+
+    expect(wrapper.props("animated")).toBeUndefined()
+    expect(wrapper.props("closeButton")).toBeUndefined()
+    expect(wrapper.props("teleport")).toBeUndefined()
+  })
+
+  it("`class` уходит только на корень и не протекает во внутренние элементы", () => {
+    const wrapper = mount(Alert, { props: { ...OPEN, class: "probe-root", closeButton: true } })
+    const root = wrapper.find("[data-alert]")
+
+    expect(root.classes()).toContain("probe-root")
+    expect(root.element.querySelectorAll("[class~='probe-root']")).toHaveLength(0)
+  })
+
+  it.each([
+    ["body", "[data-alert-body]"],
+    ["icon", "[data-alert-icon]"],
+    ["content", "[data-alert-content]"],
+    ["title", "[data-alert-title]"],
+    ["subtitle", "[data-alert-subtitle]"],
+    ["close", "[data-alert-button]"]
+  ] as Array<[AlertClassKey, string]>)("classes.%s доезжает до своего элемента", (key, selector) => {
+    const wrapper = mount(Alert, {
+      props: { ...OPEN, closeButton: true, classes: { [key]: "probe-key" } }
+    })
+
+    expect(wrapper.find(selector).classes()).toContain("probe-key")
+    expect(wrapper.find("[data-alert]").classes()).not.toContain("probe-key")
+  })
+
+  it("props.class перебивает options.class (до 1.0.0 precedence была инвертирована)", () => {
+    const wrapper = mount(Alert, {
+      props: { ...OPEN, class: "p-8" },
+      global: { plugins: [withOptions({ class: "p-2 opt-only" })] }
+    })
+    const classes = wrapper.find("[data-alert]").classes()
+
+    expect(classes).toContain("p-8")
+    expect(classes).toContain("opt-only")
+    expect(classes).not.toContain("p-2")
+  })
+
+  it("props.classes перебивает options.classes, неконфликтный класс options остаётся", () => {
+    const wrapper = mount(Alert, {
+      props: { ...OPEN, classes: { title: "p-8" } },
+      global: { plugins: [withOptions({ classes: { title: "p-2 italic" } })] }
+    })
+    const classes = wrapper.find("[data-alert-title]").classes()
+
+    expect(classes).toContain("p-8")
+    expect(classes).not.toContain("p-2")
+    expect(classes).toContain("italic")
+  })
+
+  it("`animated` — positive-инверсия: default true даёт directional transition-класс", () => {
+    const animated = mount(Alert, { props: { ...OPEN, position: "top" } })
+    expect(String((animated.vm as any).startEnterAndLeaveClass)).toContain("-translate-y-[200%]")
+
+    const plain = mount(Alert, { props: { ...OPEN, position: "top", animated: false } })
+    expect(String((plain.vm as any).startEnterAndLeaveClass)).toContain("opacity-0")
+    expect(String((plain.vm as any).startEnterAndLeaveClass)).not.toContain("translate")
+  })
+
+  it("снятый `notAnimate` больше не влияет — падает fallthrough-атрибутом", () => {
+    const wrapper = mount(Alert, { props: { ...OPEN, position: "top", notAnimate: true } as any })
+
+    expect(String((wrapper.vm as any).startEnterAndLeaveClass)).toContain("-translate-y-[200%]")
+  })
+
+  it("unstyled сохраняет классы потребителя и режет тему", () => {
+    const wrapper = mount(Alert, {
+      props: { ...OPEN, class: "probe-root", classes: { body: "probe-body" } },
+      global: { plugins: [withOptions({}, { unstyled: true })] }
+    })
+
+    // На корне дополнительно живут transition-классы (`<transition appear>` вешает enter-*).
+    const root = wrapper.find("[data-alert]").classes()
+    expect(root).toContain("fv")
+    expect(root).toContain("probe-root")
+    expect(root.some((c) => c.startsWith("fishtvue-"))).toBe(false)
+    expect(wrapper.find("[data-alert-body]").classes()).toEqual(["fv", "probe-body"])
+  })
+
+  it("expose отдаёт classBase (корень) и classBody (карточка)", () => {
+    const wrapper = mount(Alert, { props: OPEN })
+    const vm = wrapper.vm as any
+
+    expect(typeof vm.classBase).toBe("string")
+    expect(String(vm.classBody)).toContain("alert-body")
   })
 })

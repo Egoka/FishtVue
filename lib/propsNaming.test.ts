@@ -20,8 +20,6 @@ import { join, resolve } from "node:path"
 const LIB = resolve(process.cwd(), "lib")
 
 const PENDING: string[] = [
-  "alert/Alert.d.ts",
-  "dialog/Dialog.d.ts",
   "form/Form.d.ts",
   "menu/Menu.d.ts",
   "menu/MenuGroup.d.ts",

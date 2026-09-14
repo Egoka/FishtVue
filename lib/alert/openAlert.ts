@@ -79,7 +79,10 @@ export function openAlert(optionsAlert: BaseAlert) {
   // Step 1 — resolve / create shared position container (preserves stacking).
   let alertBody = document.querySelector(`.alert-${pos}`)
   if (!alertBody) {
-    const toMount = document.querySelector(optionsAlert?.toTeleport ?? globalOptions?.toTeleport ?? "body")
+    // `TeleportTarget`: строка — CSS-селектор, `HTMLElement` — сразу контейнер, `false` — body.
+    const target = optionsAlert?.teleport ?? globalOptions?.teleport ?? "body"
+    const toMount =
+      target instanceof HTMLElement ? target : document.querySelector(typeof target === "string" ? target : "body")
     if (!toMount) {
       console.warn("The element for mounting the Alert component was not found")
       return
@@ -90,7 +93,7 @@ export function openAlert(optionsAlert: BaseAlert) {
     // он описывает документ, а всплывающий тост — состояние сеанса.
     newContainer.setAttribute("data-alert-container", pos)
     newContainer.className = AlertComponent.setStyle(
-      `alert-${pos} ${optionsAlert?.toTeleport ? "absolute" : "fixed"} z-[100] flex gap-3 sm:gap-4 overflow-auto max-h-screen pointer-events-none motion-safe:transition-all motion-safe:duration-500 ${
+      `alert-${pos} ${optionsAlert?.teleport ? "absolute" : "fixed"} z-[100] flex gap-3 sm:gap-4 overflow-auto max-h-screen pointer-events-none motion-safe:transition-all motion-safe:duration-500 ${
         pos.includes("bottom") ? "flex-col-reverse" : "flex-col"
       } ${pos.includes("start") ? "items-start" : pos.includes("end") ? "items-end" : "items-center"} ${alertClassPosition(pos).join(" ")}`
     )

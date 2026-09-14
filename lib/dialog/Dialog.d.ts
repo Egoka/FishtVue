@@ -1,5 +1,13 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, PositionShort, Size, StyleClass } from "../types"
+import {
+  ClassComponent,
+  ClassesMap,
+  GlobalComponentConstructor,
+  PositionShort,
+  Size,
+  StyleClass,
+  TeleportTarget
+} from "../types"
 
 /**
  * ## Dialog
@@ -9,6 +17,14 @@ import { ClassComponent, GlobalComponentConstructor, PositionShort, Size, StyleC
  * Supports flexible positioning, animations, and options for closing the dialog.
  */
 declare class Dialog extends ClassComponent<DialogProps, DialogSlots, DialogEmits, DialogExpose> {}
+
+/**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-dialog>` (добавляется `ClassesMap`).
+ * - `content` — карточка диалога `[data-dialog-content]` (бывший инвертированный `class`).
+ * - `backdrop` — подложка `[data-dialog-background]`.
+ * - `close` — корень `Button` закрытия `[data-dialog-close]`.
+ */
+export declare type DialogClassKey = "content" | "backdrop" | "close"
 
 /**
  * Props for the Dialog component.
@@ -33,10 +49,11 @@ export declare type DialogProps = {
   position?: PositionShort
 
   /**
-   * Disables animations for the dialog.
+   * Анимировать открытие/закрытие. Bare-positive инверсия снятого `notAnimate`
+   * (dev-patterns §2 F): default перевёрнут в `true`.
    * @type {boolean | undefined}
    */
-  notAnimate?: boolean
+  animated?: boolean
 
   /**
    * Enables a close button inside the dialog.
@@ -45,34 +62,37 @@ export declare type DialogProps = {
   closeButton?: boolean
 
   /**
-   * Removes the default margin inside the dialog.
+   * Отступ карточки от края экрана в off-center позициях. Bare-positive инверсия снятого
+   * `withoutMargin`: default перевёрнут в `true`.
    * @type {boolean | undefined}
    */
-  withoutMargin?: boolean
+  margin?: boolean
 
   /**
-   * Prevents closing the dialog when clicking the background.
+   * Закрывать диалог по клику на подложку. Bare-positive инверсия снятого
+   * `notCloseBackground`: default перевёрнут в `true`.
    * @type {boolean | undefined}
    */
-  notCloseBackground?: boolean
+  closeOnBackdrop?: boolean
 
   /**
-   * Specifies the target element to teleport the dialog.
-   * @type {string | undefined}
+   * Target для `<Teleport>`. `false` — inline-render без телепорта.
+   * @type {TeleportTarget | undefined}
    */
-  toTeleport?: string
+  teleport?: TeleportTarget
 
   /**
-   * Custom CSS class for the dialog container.
+   * CSS-классы корня `<div data-dialog>` (dev-patterns §2 A). Бывший `classBody`.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom CSS class for the dialog body.
-   * @type {StyleClass | undefined}
+   * Карта классов внутренних элементов: `content`, `backdrop`, `close`; `root` ≡ `class`.
+   * См. `DialogClassKey`.
+   * @type {ClassesMap<DialogClassKey> | undefined}
    */
-  classBody?: StyleClass
+  classes?: ClassesMap<DialogClassKey>
 
   /**
    * Accessible label для корневого элемента dialog. Используется, когда нет
@@ -137,9 +157,9 @@ export declare type DialogExpose = {
   // ---PROPS-------------------------
   /**
    * The teleport target for the dialog.
-   * @type {DialogProps["toTeleport"]}
+   * @type {DialogProps["teleport"]}
    */
-  toTeleport: DialogProps["toTeleport"]
+  teleport: DialogProps["teleport"]
 
   /**
    * Indicates whether the dialog is open.
@@ -160,16 +180,16 @@ export declare type DialogExpose = {
   isCloseButton: DialogProps["closeButton"]
 
   /**
-   * Indicates whether the background click closes the dialog.
-   * @type {DialogProps["notCloseBackground"]}
+   * Закрывается ли диалог по клику на подложку (`closeOnBackdrop`, default `true`).
+   * @type {DialogProps["closeOnBackdrop"]}
    */
-  notCloseBackground: DialogProps["notCloseBackground"]
+  isCloseOnBackdrop: DialogProps["closeOnBackdrop"]
 
   /**
-   * Indicates whether the dialog has margins removed.
-   * @type {DialogProps["withoutMargin"]}
+   * Есть ли у карточки отступ от края экрана (`margin`, default `true`).
+   * @type {DialogProps["margin"]}
    */
-  withoutMargin: DialogProps["withoutMargin"]
+  isMargin: DialogProps["margin"]
 
   /**
    * Current position of the dialog.
@@ -178,28 +198,22 @@ export declare type DialogExpose = {
   position: NonNullable<DialogProps["position"]>
 
   /**
-   * CSS class for the body of the dialog.
-   * @type {DialogProps["class"]}
-   */
-  classBodyDialog: DialogProps["class"]
-
-  /**
    * CSS class for the dialog's position styling.
    * @type {StyleClass}
    */
   classPosition: StyleClass
 
   /**
-   * Base CSS class for the dialog container.
+   * Итоговый класс корня `<div data-dialog>` (база + `class`/`classes.root`).
    * @type {StyleClass}
    */
   classBase: StyleClass
 
   /**
-   * CSS class for the dialog itself.
+   * Итоговый класс карточки `[data-dialog-content]` (база + size + position + `classes.content`).
    * @type {StyleClass}
    */
-  classDialog: StyleClass
+  classContent: StyleClass
 
   /**
    * Trigger element, который был активен до open. Сохраняется автоматически
@@ -231,14 +245,14 @@ export declare type DialogExpose = {
 export declare type DialogOption = Pick<
   DialogProps,
   | "class"
-  | "classBody"
+  | "classes"
   | "size"
   | "position"
-  | "notAnimate"
+  | "animated"
   | "closeButton"
-  | "withoutMargin"
-  | "notCloseBackground"
-  | "toTeleport"
+  | "margin"
+  | "closeOnBackdrop"
+  | "teleport"
   | "ariaLabel"
   | "ariaLabelledby"
   | "ariaDescribedby"

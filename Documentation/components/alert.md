@@ -1,7 +1,7 @@
 ---
 title: Alert
 summary: Уведомления (success/warning/info/error/neutral) + programmatic openAlert. RTL-safe logical position (start/end), mobile-first gutters, unstyled.
-updated: 2026-06-14
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -43,7 +43,7 @@ lib/alert/
 - **Конфиг:** `componentsOptions.Alert` — см. §10.
 - **Локализация:** `Alert.t("alert.close")` → `aria-label` close-кнопки (en: `"Close"`, ru: `"Закрыть"`).
 - **SSR:** Alert template SSR-safe; `openAlert` — только клиент (returns без падения, если `document` отсутствует).
-- **Animation:** Vue `<transition>` с динамическими классами (translate + opacity), `motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500` — уважает `prefers-reduced-motion: reduce`. При `notAnimate: true` — без transition. Для logical `start`/`end` направление slide-in флипается в RTL через `rtl:`-вариант translate ([Alert.vue:55–67](../../lib/alert/Alert.vue#L55-L67)).
+- **Animation:** Vue `<transition>` с динамическими классами (translate + opacity), `motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500` — уважает `prefers-reduced-motion: reduce`. При `animated: false` — без directional-transition. Для logical `start`/`end` направление slide-in флипается в RTL через `rtl:`-вариант translate ([Alert.vue:55–67](../../lib/alert/Alert.vue#L55-L67)).
 - **RTL / responsive:** позиции RTL-safe — logical-utilities (`ms`/`ps`/`start`/`end`) авто-зеркалятся при `dir="rtl"`; физические `left`/`right` — deprecated алиасы. Gutters mobile-first (`p-3 sm:p-4`, `pt-3 sm:pt-5`, `gap-3 sm:gap-4`) — см. §12 и §14.
 
 ## 4. Quick Start
@@ -90,12 +90,29 @@ openAlert({
 | `size` | `Size` (`xs..7xl`) | — | Размер. |
 | `title` | `string` | — | Заголовок (text-bound, без `v-html`). |
 | `subtitle` | `string` | — | Описание; рендерится как **sanitized HTML** (best-effort: вырезаются `<script>`/`on*`/`javascript:` и т.п.). Безопасные теги (`<span>`, `<b>`, `<img>`) рендерятся. Для недоверенного ввода — slot `#subtitle` + свой sanitizer. |
-| `toTeleport` | `string` | — | Селектор Teleport (для openAlert). |
-| `class` | `StyleClass` | — | Класс. |
+| `teleport` | `TeleportTarget` (`string \| HTMLElement \| false`) | `"body"` | Контейнер стека для `openAlert`. Бывший `toTeleport`. |
+| `class` | `StyleClass` | — | Классы **только корня** `[data-alert]` (dev-patterns §2 A). До 1.0.0 адресовал карточку. |
+| `classes` | `ClassesMap<AlertClassKey>` | — | Карта внутренних элементов. См. §5.1. |
 | `style` | `CSSProperties` | — | Inline стиль. |
 | `displayTime` | `1000 \| 2000 \| 3000 \| 4000 \| 5000 \| number` | — | Auto-close (ms). 0/undefined — не закрывать. |
-| `notAnimate` | `boolean` | — | Отключить animation. |
-| `closeButton` | `boolean` | — | Показать `×`-кнопку. |
+| `animated` | `boolean` | `true` | Directional-анимация появления. Positive-инверсия снятого `notAnimate`. |
+| `closeButton` | `boolean` | `false` | Показать `×`-кнопку. |
+
+### 5.1 Classes keys
+
+`AlertClassKey = "body" | "icon" | "content" | "title" | "subtitle" | "close"` ([Alert.d.ts:39](../../lib/alert/Alert.d.ts#L39)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-alert]` (`role`/`aria-live`) | element | — |
+| `body` | `[data-alert-body]` (карточка) | element | `alert-body p-3 sm:p-4 w-auto max-w-[89vw] rounded-md` + цвета типа + size (бывший инвертированный `class`) |
+| `icon` | `[data-alert-icon]` | element | `shrink-0` |
+| `content` | `[data-alert-content]` | element | `ms-3 mt-0.5` |
+| `title` | `[data-alert-title]` | element | `text-sm font-medium` + цвет типа |
+| `subtitle` | `[data-alert-subtitle]` | element | `text-sm` (+ `mt-2` при наличии title) |
+| `close` | `[data-alert-button]` (обёртка кнопки) | element | `relative bottom-[2px] ms-auto ps-3` |
+
+`class` и `classes` принимает и `openAlert({ … })` — тип `BaseAlert` их содержит.
 
 ## 6. Events / Emits + v-model contract
 
@@ -121,7 +138,9 @@ openAlert({
 | `positionLogical` | `string` | Logical (RTL-safe) позиция: `left`/`right` нормализованы в `start`/`end`. |
 | `startEnterAndLeaveClass`, `endEnterAndLeaveClass` | `string` | Transition-классы (off-screen / on-screen); для `start`/`end` содержат `rtl:`-флип. |
 | `classesStyle` | `Record<"body" \| "icon" \| "title" \| "subtitle" \| "button" \| "buttonIcon", StyleClass>` | Цветовая схема по `type`. |
-| `size`, `classBase` | derived | CSS computed. |
+| `size` | derived | CSS computed. |
+| `classBase` | `StyleClass` | Итоговый класс корня `[data-alert]`. |
+| `classBody` | `StyleClass` | Итоговый класс карточки `[data-alert-body]`. |
 | `close()` | function | Программное закрытие. |
 
 ## 9. Examples
@@ -172,7 +191,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`AlertOption = Pick<AlertProps & { toTeleport? }, "type" | "position" | "size" | "class" | "style" | "displayTime" | "notAnimate" | "toTeleport" | "closeButton">`.
+`AlertOption = Pick<AlertProps, "type" | "position" | "size" | "class" | "classes" | "style" | "displayTime" | "animated" | "teleport" | "closeButton">` ([Alert.d.ts:256–268](../../lib/alert/Alert.d.ts#L256-L268)). Карта `classes` сливается с props **по ключу** (dev-patterns §2 C).
 
 ### 10.2 Per-instance
 
@@ -235,8 +254,14 @@ openAlert({ type: "success", title: "Done" } satisfies BaseAlert)
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 97 кейсов (`Alert.test.ts`).
-- **Breaking changes:** не зафиксировано — расширение `position`-union additive; миграция физических Tailwind-классов на logical (`ml-3 → ms-3`, `left-0 → start-0`) — internal CSS, не меняет публичный API.
+- **Stability flag:** `stable` — 106 кейсов (`Alert.test.ts`).
+- **Breaking changes (1.0.0, редизайн props):**
+  - `class` переехал с карточки на корень `[data-alert]`; карточка адресуется `classes.body` (+ маркер `data-alert-body`); добавлены ключи `icon`/`content`/`title`/`subtitle`/`close`.
+  - `notAnimate` → `animated` (default `true`, смысл инвертирован).
+  - `toTeleport: string` → `teleport: TeleportTarget`; prop теперь объявлен и в `AlertProps`, а не только в `BaseAlert`.
+  - `props.class` больше не идёт **перед** `options.class` — precedence выправлена helper'ом (§2 D).
+  - expose: добавлен `classBody`; `classBase` теперь класс корня, а не карточки.
+  - Ранее (0.2.x): расширение `position`-union и миграция на logical CSS — additive.
 - **Deprecations:** физические `position`-значения `left`/`right` (+ `top-left`/`top-right`/`bottom-left`/`bottom-right` в `openAlert`) — deprecated алиасы logical `start`/`end`/`top-start`/… Эмитят dev-warning (только non-production), продолжают работать (нормализуются в logical). Используй logical-значения для RTL-корректности.
 - **Responsive:** mobile-first gutters — на мобиле компактнее (`p-3`, `pt-3`, `gap-3`), на desktop `sm:`-варианты (`sm:p-4`, `sm:pt-5`, `sm:gap-4`); ширина ограничена `max-w-[89vw]`.
 
@@ -269,7 +294,7 @@ describe("Alert", () => {
 | `openAlert` не появляется | SSR (`isClient()` блокирует). | Вызывай только на клиенте (Vue setup или `onMounted`). |
 | Несколько Alert'ов перекрывают друг друга | `.alert-{position}` контейнер — один на позицию. | По дизайну — Alert'ы стэкаются вертикально. |
 | `displayTime: 0` не работает | 0 интерпретируется как «не закрывать». | Используй явное `undefined` для отсутствия timer'а. |
-| Custom `toTeleport` теряется | Селектор не существует в DOM. | Создай `<div id="my-alerts">` в App.vue. |
+| Custom `teleport` теряется | Селектор не существует в DOM. | Создай `<div id="my-alerts">` в App.vue или передай сам `HTMLElement`. |
 | Alert не закрывается на кнопку | `closeButton: false`. | Установи `:close-button="true"`. |
 
 ## 17. Related

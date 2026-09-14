@@ -1,7 +1,7 @@
 ---
 title: Pagination
 summary: Пейджер с size-selector, info-text, кастомизируемым числом видимых страниц.
-updated: 2026-06-13
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -31,8 +31,8 @@ lib/pagination/
 ## 3. How it works
 
 - **Lifecycle:** автоматическая инжекция стилей через `Component.__hooks()` (конструктор `Component`) — без ручного `initStyle()` в SFC.
-- **Поток данных:** `total` + `sizePage` → расчёт количества страниц → массив `pages` для отображения. `modelValue` — текущая активная страница.
-- **v-model contract:** стандартный для `update:modelValue` + `update:sizePage`.
+- **Поток данных:** `total` + `pageSize` → расчёт количества страниц → массив `pages` для отображения. `modelValue` — текущая активная страница.
+- **v-model contract:** стандартный для `update:modelValue` + `update:pageSize`.
 - **Стили:** через `Pagination.setStyle()` (учитывает `unstyled: true`).
 - **Конфиг:** `componentsOptions.Pagination` — ключи см. §10.
 - **Локализация:** через `t("of")`, `t("items")`, `t("show")`, `t("previous")`, `t("next")`, `t("pagination.label")`, `t("pagination.page")`.
@@ -61,23 +61,26 @@ const page = ref(1)
 |---|---|---|---|
 | `modelValue` | `number` | — | Активная страница (1-indexed). |
 | `mode` | `StyleMode` | — | Визуальный режим. |
-| `sizePage` | `number \| 5 \| 15 \| 20 \| 50 \| 100 \| 150` | — | Размер страницы. |
-| `sizesSelector` | `[5,15,20,50,100,150] \| Array<number>` | — | Список доступных размеров. |
-| `visibleNumberPages` | `5 \| 6 \| 7 \| 8 \| 9 \| 10 \| 11` | — | Сколько номеров страниц отображать. |
+| `pageSize` | `number \| 5 \| 15 \| 20 \| 50 \| 100 \| 150` | `5` | Размер страницы. Бывший `sizePage`. |
+| `pageSizes` | `[5,15,20,50,100,150] \| Array<number>` | — | Список доступных размеров. Бывший `sizesSelector`. |
+| `visiblePages` | `5 \| 6 \| 7 \| 8 \| 9 \| 10 \| 11` | `5` | Сколько номеров страниц отображать. Бывший `visibleNumberPages`. |
 | `total` | `number` | — | Общее количество элементов. |
-| `isInfoText` | `boolean` | — | Показывать «X of Y items». |
-| `isPageSizeSelector` | `boolean` | — | Показывать select размера. |
-| `isHiddenNavigationButtons` | `boolean` | — | Скрыть Previous/Next. |
-| `class` | `StyleClass` | — | Класс контейнера. |
+| `infoText` | `boolean` | `false` | Показывать «X of Y items». Бывший `isInfoText`. |
+| `pageSizeSelector` | `boolean` | `false` | Показывать select размера. Бывший `isPageSizeSelector`. |
+| `navigationButtons` | `boolean` | `true` | Показывать Previous/Next. Positive-инверсия снятого `isHiddenNavigationButtons`. |
+| `class` | `StyleClass` | — | Классы корня `<nav data-pagination>` (dev-patterns §2 A). |
+| `selectProps` | `PaginationSelectProps` | — | Props селектора размера страницы (dev-patterns §2 G). Раньше было expose-only `paramsSelect`. |
+
+Ключей `classes` у Pagination нет — единственный стилизуемый узел это корень, поэтому карта не заводилась (Table передаёт свой сегмент через `class`).
 
 ## 6. Events / Emits + v-model contract
 
 | Event | Payload | When fired |
 |---|---|---|
 | `update:modelValue` | `number` | На клик по странице или Previous/Next. |
-| `update:sizePage` | `number` | На смену размера страницы через select. |
+| `update:pageSize` | `number` | На смену размера страницы через select. Бывший `update:sizePage` — **silent break**: старые обработчики просто перестают вызываться. |
 
-v-model: стандартный `v-model:modelValue`. Для size-page — `v-model:sizePage`.
+v-model: стандартный `v-model:modelValue`. Для размера страницы — `v-model:pageSize`.
 
 ## 7. Slots
 
@@ -93,10 +96,10 @@ v-model: стандартный `v-model:modelValue`. Для size-page — `v-mo
 |---|---|---|
 | `paginationRef` | `Readonly<Ref<HTMLElement \| undefined>>` | Ref на корневой `<nav>`. Для programmatic `.focus()` / `.scrollIntoView()`. |
 | `selectPageSize` | `SelectExpose \| undefined` | Ссылка на встроенный Select. |
-| `sizePage` | `number \| undefined` | Текущий размер. |
-| `visibleNumberPages`, `total`, `isInfoText`, `isPageSizeSelector`, `isNavigationButtons`, `arraySizesSelector`, `pages`, `activePage`, `mode`, `modeStyleSelect`, `paramsSelect` | Derived/computed. |
+| `pageSize` | `number \| undefined` | Текущий размер. |
+| `visiblePages`, `total`, `isInfoText`, `isPageSizeSelector`, `isNavigationButtons`, `arrayPageSizes`, `pages`, `activePage`, `mode`, `modeStyleSelect`, `selectProps`, `classBase` | Derived/computed. |
 | `switchPage(value)` | `(value: number \| Array<number>) => void` | Программное переключение страницы. |
-| `switchSizePage(value)` | `(value: number) => void` | Программная смена size. |
+| `switchPageSize(value)` | `(value: number) => void` | Программная смена размера страницы. |
 | `focus(options?)` | `(options?: FocusOptions) => void` | Фокусирует корневой `<nav>`. |
 
 ## 9. Examples
@@ -125,9 +128,9 @@ v-model: стандартный `v-model:modelValue`. Для size-page — `v-mo
 app.use(FishtVue, {
   componentsOptions: {
     Pagination: {
-      visibleNumberPages: 7,
-      isInfoText: true,
-      isPageSizeSelector: true
+      visiblePages: 7,
+      infoText: true,
+      pageSizeSelector: true
     }
   }
 })
@@ -158,7 +161,7 @@ const { page, total, pageSize } = storeToRefs(store)
 
 ### 10.1 Global
 
-`PaginationOption = Pick<PaginationProps, "mode" | "sizePage" | "sizesSelector" | "visibleNumberPages" | "total" | "isInfoText" | "isPageSizeSelector" | "isHiddenNavigationButtons" | "class">`.
+`PaginationOption = Pick<PaginationProps, "mode" | "pageSize" | "pageSizes" | "visiblePages" | "total" | "infoText" | "pageSizeSelector" | "navigationButtons" | "class" | "selectProps">`.
 
 ### 10.2 Per-instance
 
@@ -207,9 +210,16 @@ p.value?.switchPage(1)
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 40 кейсов, coverage 98.42%.
-- **Breaking changes:** 2026-06-13 — корневой DOM-узел `<div data-pagination>` → `<nav data-pagination>` (navigation landmark, a11y). `data-pagination` и публичный API (`Props`/`Emits`/`Slots`) без изменений; внутренний `<nav data-pagination-nav>` понижен до `<div>`.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 71 кейс, coverage 98.42%.
+- **Breaking changes (1.0.0, редизайн props):**
+  - `sizePage` → `pageSize`, `sizesSelector` → `pageSizes`, `visibleNumberPages` → `visiblePages`.
+  - булевы: `isInfoText` → `infoText`, `isPageSizeSelector` → `pageSizeSelector`, `isHiddenNavigationButtons` → `navigationButtons` (смысл инвертирован, default `true`).
+  - событие `update:sizePage` → `update:pageSize` — **silent break**: старые обработчики перестают вызываться.
+  - expose-only `paramsSelect` стал prop'ом `selectProps` (тип `PaginationSelectProps`); expose `arraySizesSelector` → `arrayPageSizes`, `switchSizePage` → `switchPageSize`, `sizePage` → `pageSize`, `visibleNumberPages` → `visiblePages`, добавлен `classBase`.
+  - корень стал реактивным (был нереактивный `ref(setStyle(...))`) — смена `class`/`mode` после mount теперь пересчитывается.
+  - `pageSizes` из `componentsOptions` больше не сортируется на месте (frozen-снимок давал `TypeError`).
+  - Ранее (2026-06-13): корневой DOM-узел `<div data-pagination>` → `<nav data-pagination>` (navigation landmark).
+- **Deprecations:** нет — старые имена сняты без алиасов (решение R6).
 
 ## 15. Testing recipes
 
@@ -222,7 +232,7 @@ import Pagination from "fishtvue/pagination/Pagination.vue"
 describe("Pagination", () => {
   it("emits update:modelValue", async () => {
     const wrapper = mount(Pagination, {
-      props: { modelValue: 1, total: 50, sizePage: 10 },
+      props: { modelValue: 1, total: 50, pageSize: 10 },
       global: { plugins: [[FishtVue, {}]] }
     })
     // ... interaction + emit assert
@@ -237,9 +247,9 @@ describe("Pagination", () => {
 
 | Проблема | Причина | Решение |
 |---|---|---|
-| Pagination отображает только одну страницу | `total` ≤ `sizePage`. | Передай реальный `total`. |
-| Selector size не показывается | `isPageSizeSelector: false`. | Установи `true`. |
-| Number of pages не растёт | Проверь `visibleNumberPages` (5–11). | Установи большее значение. |
+| Pagination отображает только одну страницу | `total` ≤ `pageSize`. | Передай реальный `total`. |
+| Selector size не показывается | `pageSizeSelector: false`. | Установи `true`. |
+| Number of pages не растёт | Проверь `visiblePages` (5–11). | Установи большее значение. |
 | `modelValue: 0` отображается странно | 1-indexed. | Используй `1` как первую страницу. |
 | Locale-keys не локализованы | `setActiveLocale` не вызван. | См. [Locale](../architecture/locale.md). |
 
@@ -266,16 +276,16 @@ describe("Pagination", () => {
 
 ### API inconsistencies
 
-- `sizePage?: number | 5 | 15 | 20 | 50 | 100 | 150` — open union с literal-вариантами; narrow не работает.
-- `sizesSelector?: [5,15,20,50,100,150] | Array<number>` — кортеж + open array; обычно используется как `Array<number>`.
-- `visibleNumberPages?: 5 | 6 | 7 | 8 | 9 | 10 | 11` — strict union (без `number` open) — единственное narrow-поле.
-- `update:sizePage` payload — `PaginationProps["modelValue"]` (т.е. `number | undefined`) — но фактически всегда `number`. Type шире необходимого.
-- `PaginationExpose.isNavigationButtons` соответствует props `isHiddenNavigationButtons` — инвертировано без явной маркировки.
+- `pageSize?: number | 5 | 15 | 20 | 50 | 100 | 150` — open union с literal-вариантами; narrow не работает.
+- `pageSizes?: [5,15,20,50,100,150] | Array<number>` — кортеж + open array; обычно используется как `Array<number>`.
+- `visiblePages?: 5 | 6 | 7 | 8 | 9 | 10 | 11` — strict union (без `number` open) — единственное narrow-поле.
+- `update:pageSize` payload — `PaginationProps["modelValue"]` (т.е. `number | undefined`) — но фактически всегда `number`. Type шире необходимого.
+- ~~`PaginationExpose.isNavigationButtons` соответствует props `isHiddenNavigationButtons` — инвертировано без явной маркировки.~~ ✅ resolved (1.0.0): prop называется `navigationButtons` и имеет ту же полярность, что и expose.
 
 ### Behavioral caveats
 
-- При смене `sizePage` — текущая `modelValue` не сбрасывается. Если новая `total / sizePage < modelValue` — может быть «несуществующая страница». Сбрасывай в parent через `@update:size-page`.
-- `arraySizesSelector` ([Pagination.d.ts:160–164](../../lib/pagination/Pagination.d.ts#L160-L164)) формирует `{ key, value }` объекты для Select — кастомизация лимитирована.
+- При смене `pageSize` — текущая `modelValue` не сбрасывается. Если новая `total / pageSize < modelValue` — может быть «несуществующая страница». Сбрасывай в parent через `@update:page-size`.
+- `arrayPageSizes` формирует `{ key, value }` объекты для Select — кастомизация лимитирована (но сам Select теперь настраивается через `selectProps`).
 
 ### Bug report format
 
