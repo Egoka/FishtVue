@@ -1,2 +1,10 @@
-onlyBuiltDependencies:
-  - esbuild
+# Разрешённые postinstall-скрипты. Поле называется `allowBuilds` — именно так его читает
+# pnpm 11; `onlyBuiltDependencies` это имя поля в package.json, и в workspace.yaml оно
+# игнорируется (тот же разбор — в комментарии к шагу CI в .github/workflows/pull_request.yml).
+#
+# Без этого списка pnpm 11 падает с ERR_PNPM_IGNORED_BUILDS. Песочница — отдельный
+# install-root, поэтому корневой pnpm-workspace.yaml (его CI генерирует на лету) её не
+# покрывает, и список нужен свой.
+allowBuilds:
+  "@tailwindcss/oxide": true
+  esbuild: true
