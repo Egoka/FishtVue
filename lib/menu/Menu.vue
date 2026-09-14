@@ -597,7 +597,7 @@
           v-if="group?.separator?.icon?.length ?? iconSeparator?.length"
           v-bind="fieldsOmit(group?.separator ?? baseSeparator, ['isVisible', 'icon']) as SeparatorProps"
           :class="classSeparator"
-          :vertical="horizontal"
+          :orientation="horizontal ? 'vertical' : 'horizontal'"
           role="separator"
           :aria-orientation="horizontal ? 'vertical' : 'horizontal'">
           <Icons :type="group.separator?.icon ?? iconSeparator ?? ''" :class="classSeparatorIcon" />
@@ -606,7 +606,7 @@
           v-else
           v-bind="fieldsOmit(group?.separator ?? baseSeparator, ['isVisible', 'icon']) as SeparatorProps"
           :class="classSeparator"
-          :vertical="horizontal"
+          :orientation="horizontal ? 'vertical' : 'horizontal'"
           role="separator"
           :aria-orientation="horizontal ? 'vertical' : 'horizontal'" />
       </template>

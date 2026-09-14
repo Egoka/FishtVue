@@ -16,18 +16,13 @@ import FishtVue from "fishtvue/config"
  * `PENDING` — компоненты до своей волны; обнуляется в W7, после чего `skipIf` удаляется.
  */
 const PENDING: string[] = [
-  "Accordion",
   "Alert",
-  "Badge",
-  "Button",
   "Dialog",
   "FixWindow",
   "Form",
   "Menu",
   "Pagination",
-  "Separator",
   "Split",
-  "Switch",
   "Table",
   "VirtualScroller"
 ]
@@ -84,7 +79,9 @@ const CONTRACT: Entry[] = [
     root: "[data-button]",
     props: { icon: "check", loading: true },
     slots: { default: "x" },
-    keys: { icon: "[data-icon]", loading: "[data-loading]" }
+    // Собственные маркеры hand-off'ов: `[data-loading]` — корень `Loading`, но такой же
+    // state-атрибут `:data-loading` висит на корне самого Button (§2 I).
+    keys: { icon: "[data-button-icon]", loading: "[data-button-loading]" }
   },
   {
     name: "Calendar",

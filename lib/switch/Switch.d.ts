@@ -1,5 +1,5 @@
 import { Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import { IconsProps } from "fishtvue/icons"
 
 /**
@@ -13,6 +13,15 @@ declare class Switch extends ClassComponent<SwitchProps, SwitchSlots, SwitchEmit
 
 // ---------------------------------------
 type SwitchMode = StyleMode | "none"
+
+/**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-switch>` (добавляется `ClassesMap`).
+ * - `control` — native-контрол `[data-switch-control]`: `<button role="switch">` либо `<input type="checkbox">`
+ *   (в зависимости от `switchingType`).
+ * - `label` — `<div data-switch-label>` с текстом `label`.
+ * - `help` — `<div data-switch-help>`: иконка подсказки с tooltip.
+ */
+export declare type SwitchClassKey = "control" | "label" | "help"
 /**
  * Base props for the Switch component.
  */
@@ -89,10 +98,17 @@ export interface SwitchProps extends Partial<BaseSwitchProps> {
   required?: boolean
 
   /**
-   * Custom CSS class for the switch container.
+   * CSS-классы корня `<div data-switch>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Карта классов внутренних элементов: `control`, `label`, `help`; `root` ≡ `class`.
+   * См. `SwitchClassKey`.
+   * @type {ClassesMap<SwitchClassKey> | undefined}
+   */
+  classes?: ClassesMap<SwitchClassKey>
 }
 
 export declare type SwitchSlots = {
@@ -194,16 +210,16 @@ export declare type SwitchExpose = {
   switchingType: SwitchProps["switchingType"]
 
   /**
-   * Custom CSS class for the base switch container.
+   * Итоговый класс корня `<div data-switch>` (база + mode + state + `class`/`classes.root`).
    * @type {StyleClass}
    */
-  classBaseSwitch: StyleClass
+  classBase: StyleClass
 
   /**
-   * Custom CSS class for the switch element.
+   * Итоговый класс native-контрола `[data-switch-control]` (база + `classes.control`).
    * @type {StyleClass}
    */
-  classSwitch: StyleClass
+  classControl: StyleClass
 
   // ---REFS--------------------------------
   /**
@@ -236,7 +252,7 @@ export declare type SwitchExpose = {
 
 export declare type SwitchOption = Pick<
   SwitchProps,
-  "mode" | "rounded" | "iconActive" | "iconInactive" | "switchingType" | "class"
+  "mode" | "rounded" | "iconActive" | "iconInactive" | "switchingType" | "class" | "classes"
 >
 
 // ---------------------------------------

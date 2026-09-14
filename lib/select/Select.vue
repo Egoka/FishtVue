@@ -905,9 +905,9 @@
                   :key="valueSelect ? valueSelect : keySelect"
                   :delete-select="select">
                   <Badge
-                    mode="neutral"
+                    variant="neutral"
                     :close-button="badgeCloseButton"
-                    class-content="fill-theme-500"
+                    :classes="{ content: 'fill-theme-500' }"
                     @close="select(item)"
                     class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500">
                     {{ valueSelect ? item[valueSelect] : item[keySelect] }}
@@ -917,10 +917,10 @@
               <div v-if="typeof maxVisible === 'number' && visibleValue.length > maxVisible" :class="classSelectItem">
                 <slot name="values" :selected="visibleValue.length" :delete-select="select">
                   <Badge
-                    mode="neutral"
+                    variant="neutral"
                     :close-button="badgeCloseButton"
                     class="m-1 ps-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
-                    class-content="fill-theme-500 flex items-center"
+                    :classes="{ content: 'fill-theme-500 flex items-center' }"
                     @close="select(null)">
                     <Icons type="Funnel" class="h-3 w-3 me-1 text-theme-400 dark:text-theme-600" />
                     {{ visibleValue.length }}

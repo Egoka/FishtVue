@@ -306,10 +306,10 @@
             <Button
               type="icon"
               icon="XMark"
-              mode="ghost"
+              variant="ghost"
               :aria-label="closeLabel"
               :class="['-mx-1.5 -my-2', classesStyle.button as string]"
-              :class-icon="classesStyle.buttonIcon"
+              :classes="{ icon: classesStyle.buttonIcon }"
               @click="close" />
           </div>
         </div>

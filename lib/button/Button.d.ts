@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass } from "../types"
 import { Component, Ref, VNode } from "vue"
 
 /**
@@ -11,14 +11,23 @@ import { Component, Ref, VNode } from "vue"
 declare class Button extends ClassComponent<ButtonProps, ButtonSlots, ButtonEmits, ButtonExpose> {}
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — сам `<button data-button>` (добавляется `ClassesMap`).
+ * - `icon` — корень `Icons` (`[data-icon]`), бывший `classIcon`.
+ * - `loading` — корень `Loading` (`[data-loading]`), появляется при `loading: true`.
+ */
+export declare type ButtonClassKey = "icon" | "loading"
+
+/**
  * Styling options for the Button component.
  */
 type ButtonStyle = {
   /**
-   * The visual mode of the button.
+   * Визуальный вариант кнопки (бывший `mode`; значения не изменились). Единое имя с [Badge](./badge.md):
+   * `mode` во всей библиотеке означает `StyleMode` (`filled`/`outlined`/`underlined`), а здесь набор свой.
+   * Глобальный `componentsStyle` маппится сюда: `filled → primary`, `outlined → outline`, `underlined → ghost`.
    * @type {"primary" | "outline" | "ghost" | undefined}
    */
-  mode?: "primary" | "outline" | "ghost"
+  variant?: "primary" | "outline" | "ghost"
 
   /**
    * Size of the button.
@@ -39,16 +48,17 @@ type ButtonStyle = {
   color?: "theme" | "neutral" | "creative" | "destructive"
 
   /**
-   * Custom CSS class for the button.
+   * CSS-классы корня `<button data-button>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom CSS class for the button's icon.
-   * @type {StyleClass | undefined}
+   * Карта классов внутренних элементов: `icon` — корень `Icons`, `loading` — корень `Loading`;
+   * `root` ≡ `class`. См. `ButtonClassKey`.
+   * @type {ClassesMap<ButtonClassKey> | undefined}
    */
-  classIcon?: StyleClass
+  classes?: ClassesMap<ButtonClassKey>
 }
 /**
  * Base props shared between simple and icon buttons.
@@ -175,10 +185,10 @@ export declare type ButtonExpose = {
 
   // ---PROPS-------------------------
   /**
-   * Current visual mode of the button.
-   * @type {ButtonProps["mode"]}
+   * Current visual variant of the button.
+   * @type {ButtonProps["variant"]}
    */
-  mode: ButtonProps["mode"]
+  variant: ButtonProps["variant"]
 
   /**
    * Current size of the button.
@@ -199,16 +209,16 @@ export declare type ButtonExpose = {
   color: ButtonProps["color"]
 
   /**
-   * Current CSS class for the button container.
-   * @type {ButtonProps["class"]}
+   * Итоговый класс корня `<button data-button>` (база + variant + size + `class`/`classes.root`).
+   * @type {StyleClass}
    */
-  classBase: ButtonProps["class"]
+  classBase: StyleClass
 
   /**
-   * Current CSS class for the button's icon.
-   * @type {ButtonProps["classIcon"]}
+   * Итоговый класс иконки — hand-off в корень `Icons` (база + `classes.icon`).
+   * @type {StyleClass}
    */
-  classIcon: ButtonProps["classIcon"]
+  classIcon: StyleClass
 
   // ---METHODS-----------------------
   /**
@@ -222,7 +232,7 @@ export declare type ButtonExpose = {
    */
   blur(): void
 }
-export declare type ButtonOption = Pick<ButtonProps, "mode" | "size" | "rounded" | "color" | "class" | "classIcon">
+export declare type ButtonOption = Pick<ButtonProps, "variant" | "size" | "rounded" | "color" | "class" | "classes">
 
 // ---------------------------------------
 

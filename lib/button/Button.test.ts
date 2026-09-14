@@ -28,12 +28,12 @@ describe("Button Component Tests", () => {
         iconPosition: undefined,
         disabled: undefined,
         loading: undefined,
-        mode: undefined,
+        variant: undefined,
         size: undefined,
         rounded: undefined,
         color: undefined,
         class: undefined,
-        classIcon: undefined
+        classes: undefined
       })
     })
 
@@ -44,7 +44,7 @@ describe("Button Component Tests", () => {
           iconPosition: "start",
           disabled: true,
           loading: true,
-          mode: "outline",
+          variant: "outline",
           size: "lg",
           rounded: "full",
           color: "destructive"
@@ -56,7 +56,7 @@ describe("Button Component Tests", () => {
         iconPosition: "start",
         disabled: true,
         loading: true,
-        mode: "outline",
+        variant: "outline",
         size: "lg",
         rounded: "full",
         color: "destructive"
@@ -99,7 +99,7 @@ describe("Button Component Tests", () => {
     it("exposes properties correctly via ref", () => {
       const wrapper = mount(Button, {
         props: {
-          mode: "ghost",
+          variant: "ghost",
           size: "sm",
           rounded: "lg",
           color: "creative"
@@ -107,7 +107,7 @@ describe("Button Component Tests", () => {
       })
 
       const buttonRef = wrapper.vm
-      expect(buttonRef.mode).toBe("ghost")
+      expect(buttonRef.variant).toBe("ghost")
       expect(buttonRef.size).toBe("sm")
       expect(buttonRef.rounded).toBe("lg")
       expect(buttonRef.color).toBe("creative")
@@ -205,7 +205,7 @@ describe("Button Component Tests", () => {
 
     it("applies global options correctly", () => {
       const app = createAppWithFishtVue({
-        mode: "primary",
+        variant: "primary",
         size: "xl",
         rounded: "full",
         color: "theme"
@@ -217,7 +217,7 @@ describe("Button Component Tests", () => {
         }
       })
 
-      expect((wrapper.vm as unknown as ButtonExpose).mode).toBe("primary")
+      expect((wrapper.vm as unknown as ButtonExpose).variant).toBe("primary")
       expect((wrapper.vm as unknown as ButtonExpose).size).toBe("xl")
       expect((wrapper.vm as unknown as ButtonExpose).rounded).toBe("full")
       expect((wrapper.vm as unknown as ButtonExpose).color).toBe("theme")
@@ -225,7 +225,7 @@ describe("Button Component Tests", () => {
 
     it("overrides global options with local props", () => {
       const app = createAppWithFishtVue({
-        mode: "neutral",
+        variant: "neutral",
         size: "md",
         rounded: "lg",
         color: "destructive"
@@ -236,14 +236,14 @@ describe("Button Component Tests", () => {
           plugins: [app as any]
         },
         props: {
-          mode: "outline",
+          variant: "outline",
           size: "sm",
           rounded: "none",
           color: "creative"
         }
       })
 
-      expect((wrapper.vm as unknown as ButtonExpose).mode).toBe("outline")
+      expect((wrapper.vm as unknown as ButtonExpose).variant).toBe("outline")
       expect((wrapper.vm as unknown as ButtonExpose).size).toBe("sm")
       expect((wrapper.vm as unknown as ButtonExpose).rounded).toBe("none")
       expect((wrapper.vm as unknown as ButtonExpose).color).toBe("creative")
@@ -486,54 +486,54 @@ describe("Button Component Tests", () => {
     })
 
     // ---Issue 13: global componentsStyle fallback (filled/outlined/underlined)----
-    const modeOf = (wrapper: ReturnType<typeof mount>) => (wrapper.vm as unknown as ButtonExpose).mode
+    const variantOf = (wrapper: ReturnType<typeof mount>) => (wrapper.vm as unknown as ButtonExpose).variant
 
-    it("maps global componentsStyle 'filled' -> mode 'primary'", () => {
+    it("maps global componentsStyle 'filled' -> variant 'primary'", () => {
       const wrapper = mount(Button, {
         global: { plugins: [appWithConfig({ componentsStyle: "filled" })] },
         slots: { default: "X" }
       })
-      expect(modeOf(wrapper)).toBe("primary")
+      expect(variantOf(wrapper)).toBe("primary")
     })
 
-    it("maps global componentsStyle 'outlined' -> mode 'outline'", () => {
+    it("maps global componentsStyle 'outlined' -> variant 'outline'", () => {
       const wrapper = mount(Button, {
         global: { plugins: [appWithConfig({ componentsStyle: "outlined" })] },
         slots: { default: "X" }
       })
-      expect(modeOf(wrapper)).toBe("outline")
+      expect(variantOf(wrapper)).toBe("outline")
     })
 
-    it("maps global componentsStyle 'underlined' -> mode 'ghost'", () => {
+    it("maps global componentsStyle 'underlined' -> variant 'ghost'", () => {
       const wrapper = mount(Button, {
         global: { plugins: [appWithConfig({ componentsStyle: "underlined" })] },
         slots: { default: "X" }
       })
-      expect(modeOf(wrapper)).toBe("ghost")
+      expect(variantOf(wrapper)).toBe("ghost")
     })
 
-    it("per-instance mode prop overrides global componentsStyle", () => {
+    it("per-instance variant prop overrides global componentsStyle", () => {
       const wrapper = mount(Button, {
         global: { plugins: [appWithConfig({ componentsStyle: "outlined" })] },
-        props: { mode: "primary" },
+        props: { variant: "primary" },
         slots: { default: "X" }
       })
-      expect(modeOf(wrapper)).toBe("primary")
+      expect(variantOf(wrapper)).toBe("primary")
     })
 
-    it("componentsOptions.Button.mode overrides global componentsStyle", () => {
+    it("componentsOptions.Button.variant overrides global componentsStyle", () => {
       const wrapper = mount(Button, {
         global: {
-          plugins: [appWithConfig({ componentsStyle: "outlined", componentsOptions: { Button: { mode: "ghost" } } })]
+          plugins: [appWithConfig({ componentsStyle: "outlined", componentsOptions: { Button: { variant: "ghost" } } })]
         },
         slots: { default: "X" }
       })
-      expect(modeOf(wrapper)).toBe("ghost")
+      expect(variantOf(wrapper)).toBe("ghost")
     })
 
-    it("defaults to primary when neither componentsStyle nor mode is set", () => {
+    it("defaults to primary when neither componentsStyle nor variant is set", () => {
       const wrapper = mount(Button, { slots: { default: "X" } })
-      expect(modeOf(wrapper)).toBe("primary")
+      expect(variantOf(wrapper)).toBe("primary")
     })
   })
 
@@ -609,6 +609,112 @@ describe("Button Component Tests", () => {
       const el = wrapper.find("[data-button]")
       expect(el.attributes("aria-disabled")).toBe("true")
       expect(el.attributes("tabindex")).toBe("-1")
+    })
+  })
+
+  // Контракт props 1.0.0 (dev-patterns §2 A–D): `class` — только корень `[data-button]`,
+  // `classes` — карта hand-off'ов в дочерние Icons/Loading.
+  describe("Props contract 1.0.0", () => {
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    const createAppWithFishtVue = (options: any = {}) => ({
+      install(app: any) {
+        app.use(FishtVue, { componentsOptions: { Button: options } })
+      }
+    })
+    const createUnstyledApp = () => ({
+      install(app: any) {
+        app.use(FishtVue, { unstyled: true })
+      }
+    })
+
+    it("`class` уходит только на корень и не протекает в Icons/Loading", () => {
+      const wrapper = mount(Button, {
+        props: { class: "probe-root", icon: "Check", loading: true },
+        slots: { default: "X" }
+      })
+      const root = wrapper.find("[data-button]")
+
+      expect(root.classes()).toContain("probe-root")
+      expect(root.element.querySelectorAll("[class~='probe-root']")).toHaveLength(0)
+    })
+
+    it("classes.icon доезжает до корня Icons `[data-button-icon]`, а не до svg и не до кнопки", () => {
+      const wrapper = mount(Button, {
+        props: { icon: "Check", classes: { icon: "probe-icon" } },
+        slots: { default: "X" }
+      })
+
+      expect(wrapper.find("[data-button-icon]").classes()).toContain("probe-icon")
+      expect(wrapper.find("[data-button]").classes()).not.toContain("probe-icon")
+    })
+
+    it("classes.loading доезжает до корня Loading `[data-button-loading]`", () => {
+      const wrapper = mount(Button, {
+        props: { loading: true, classes: { loading: "probe-loading" } },
+        slots: { default: "X" }
+      })
+
+      expect(wrapper.find("[data-button-loading]").classes()).toContain("probe-loading")
+      expect(wrapper.find("[data-button]").classes()).not.toContain("probe-loading")
+    })
+
+    it("classes.icon работает и в icon-режиме (type=icon)", () => {
+      const wrapper = mount(Button, {
+        props: { type: "icon", icon: "Check", ariaLabel: "a", classes: { icon: "probe-icon" } }
+      })
+
+      expect(wrapper.find("[data-button-icon]").classes()).toContain("probe-icon")
+    })
+
+    it("props.classes перебивает options.classes, неконфликтный класс options остаётся", () => {
+      const app = createAppWithFishtVue({ classes: { icon: "p-2 italic" } })
+      const wrapper = mount(Button, {
+        props: { icon: "Check", classes: { icon: "p-8" } },
+        slots: { default: "X" },
+        global: { plugins: [app] }
+      })
+      const classes = wrapper.find("[data-button-icon]").classes()
+
+      expect(classes).toContain("p-8")
+      expect(classes).not.toContain("p-2")
+      expect(classes).toContain("italic")
+    })
+
+    it("options.class на корне, props.class перебивает его последним сегментом", () => {
+      const app = createAppWithFishtVue({ class: "p-2 opt-only" })
+      const wrapper = mount(Button, {
+        props: { class: "p-8" },
+        slots: { default: "X" },
+        global: { plugins: [app] }
+      })
+      const classes = wrapper.find("[data-button]").classes()
+
+      expect(classes).toContain("p-8")
+      expect(classes).toContain("opt-only")
+      expect(classes).not.toContain("p-2")
+    })
+
+    it("unstyled сохраняет классы потребителя на корне и в hand-off'е иконки", () => {
+      const wrapper = mount(Button, {
+        global: { plugins: [createUnstyledApp()] },
+        props: { class: "probe-root", icon: "Check", classes: { icon: "probe-icon" } },
+        slots: { default: "X" }
+      })
+
+      expect(wrapper.find("[data-button]").classes()).toEqual(["fv", "probe-root"])
+      expect(wrapper.find("[data-button-icon]").classes()).toContain("probe-icon")
+      expect(wrapper.find("[data-button-icon]").classes()).not.toContain("fishtvue-button")
+    })
+
+    it("expose отдаёт variant вместо снятого mode", () => {
+      const wrapper = mount(Button, { props: { variant: "ghost" }, slots: { default: "X" } })
+      const vm = wrapper.vm as any
+
+      expect(vm.variant).toBe("ghost")
+      expect(vm.mode).toBeUndefined()
     })
   })
 })

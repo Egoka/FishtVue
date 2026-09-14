@@ -16,11 +16,7 @@ import { describe, expect, it } from "vitest"
  * `PENDING` — компоненты, ещё не переведённые на 1.0; обнуляется в W7.
  */
 const PENDING: string[] = [
-  "accordion/Accordion.vue",
-  "accordion/AccordionItem.vue",
   "alert/Alert.vue",
-  "badge/Badge.vue",
-  "button/Button.vue",
   "dialog/Dialog.vue",
   "fixwindow/FixWindow.vue",
   "form/Form.vue",
@@ -30,9 +26,7 @@ const PENDING: string[] = [
   "menu/MenuGroup.vue",
   "menu/MenuItem.vue",
   "pagination/Pagination.vue",
-  "separator/Separator.vue",
   "split/Split.vue",
-  "switch/Switch.vue",
   "table/Column.vue",
   "table/ColumnGroup.vue",
   "table/Table.vue",
@@ -45,7 +39,7 @@ const PENDING: string[] = [
  * `resolvePropValue`. Vue-кастинг отсутствующего Boolean в `false` их не касается, поэтому правило
  * «own default» к ним не применяется (dev-patterns §2 F).
  */
-const RENDERLESS = new Set(["select/SelectItem.vue"])
+const RENDERLESS = new Set(["select/SelectItem.vue", "accordion/AccordionItem.vue"])
 
 const FORBIDDEN_PREFIX = /^(?:is|not|without|no|show|use)[A-Z]/
 

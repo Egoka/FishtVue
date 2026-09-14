@@ -20,11 +20,7 @@ import { join, resolve } from "node:path"
 const LIB = resolve(process.cwd(), "lib")
 
 const PENDING: string[] = [
-  "accordion/Accordion.d.ts",
-  "accordion/AccordionItem.d.ts",
   "alert/Alert.d.ts",
-  "badge/Badge.d.ts",
-  "button/Button.d.ts",
   "dialog/Dialog.d.ts",
   "fixwindow/FixWindow.d.ts",
   "form/Form.d.ts",
@@ -32,9 +28,7 @@ const PENDING: string[] = [
   "menu/MenuGroup.d.ts",
   "menu/MenuItem.d.ts",
   "pagination/Pagination.d.ts",
-  "separator/Separator.d.ts",
   "split/Split.d.ts",
-  "switch/Switch.d.ts",
   "table/Table.d.ts",
   "virtualscroller/VirtualScroller.d.ts",
   // T5 / W7: `_key` → `ItemKey`, `namesColors` → `ColorName`.

@@ -1,7 +1,7 @@
 ---
 title: Button
-summary: Универсальная кнопка с modes (primary/outline/ghost), color, size, rounded, icon, loading.
-updated: 2026-06-12
+summary: Универсальная кнопка с variants (primary/outline/ghost), color, size, rounded, icon, loading.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -10,7 +10,7 @@ since: 0.2.11
 
 ## 1. Overview
 
-`Button` — стандартная кнопка с тремя визуальными режимами (`primary | outline | ghost`), четырьмя цветовыми темами (`theme | neutral | creative | destructive`), пятью размерами (`xs | sm | md | lg | xl`), четырьмя вариантами рамки (`none | md | lg | full`), поддержкой иконки (через [Icons](./icons.md)), loading-индикатора и icon-only режима с tooltip через [FixWindow](./fix-window.md).
+`Button` — стандартная кнопка с тремя визуальными вариантами (`variant: primary | outline | ghost`), четырьмя цветовыми темами (`theme | neutral | creative | destructive`), пятью размерами (`xs | sm | md | lg | xl`), четырьмя вариантами рамки (`none | md | lg | full`), поддержкой иконки (через [Icons](./icons.md)), loading-индикатора и icon-only режима с tooltip через [FixWindow](./fix-window.md).
 
 Stability: `stable` (есть тесты — 13 кейсов; покрытие Button.vue 100%).
 
@@ -21,7 +21,7 @@ Source: [Source](../../lib/button/Button.vue), [Button.d.ts](../../lib/button/Bu
 ```
 lib/button/
 ├── Button.vue          # SFC, ~380 строк
-├── Button.d.ts         # ButtonProps (Simple|Icon), ButtonSlots, ButtonEmits=null, ButtonExpose, ButtonOption
+├── Button.d.ts         # ButtonProps (Simple|Icon), ButtonClassKey, ButtonSlots, ButtonEmits=null, ButtonExpose, ButtonOption
 ├── Button.test.ts      # 13 кейсов
 └── package.json
 ```
@@ -34,14 +34,14 @@ Tree-shaking & bundle: `import Button from "fishtvue/button"` импортиру
 
 ## 3. How it works
 
-- **Lifecycle:** базовая инжекция стилей через `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) автоматически. Дополнительно `onMounted(() => Button.initStyle())` ([Button.vue:368–379](../../lib/button/Button.vue#L368-L379)) — дублирующий вызов (см. [dev-patterns §12](../dev-patterns.md#12-known-deviations-from-this-pattern)); тот же `onMounted` несёт dev-warning для unlabeled icon-кнопок.
-- **Поток данных:** props + `Button.getOptions()` → computed (`type`, `icon`, `iconPosition`, `isLoading`, `disabled`, `resolvedAriaLabel`, `mode`, `size`, `rounded`, `color`) → `classBase` (через `Button.setStyle`) и `classIcon`. Resolve порядок: `props ?? options ?? default`. `resolvedAriaLabel` — `props.ariaLabel ?? (type === 'icon' ? icon : undefined)`.
-- **Стили:** `Button.setStyle(...)` вычисляется в computed `classBase` ([Button.vue:321–332](../../lib/button/Button.vue#L321-L332)), пересчитывается на изменение mode/size/rounded/color/disabled. Классы инжектятся в `@layer fishtvue`.
-- **Конфиг:** читает `componentsOptions.Button` (поля: `mode`, `size`, `rounded`, `color`, `class`, `classIcon`) + глобальный `componentsStyle` как fallback для `mode` (`filled→primary` / `outlined→outline` / `underlined→ghost`).
+- **Lifecycle:** базовая инжекция стилей через `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) автоматически. Дополнительно `onMounted(() => Button.initStyle())` ([Button.vue:425–436](../../lib/button/Button.vue#L425-L436)) — дублирующий вызов (см. [dev-patterns §12](../dev-patterns.md#12-known-deviations-from-this-pattern)); тот же `onMounted` несёт dev-warning для unlabeled icon-кнопок.
+- **Поток данных:** props + `Button.getOptions()` → computed (`type`, `icon`, `iconPosition`, `isLoading`, `disabled`, `resolvedAriaLabel`, `variant`, `size`, `rounded`, `color`) → `classBase` (через `cls("root", …)`) и hand-off'ы `classIcon`/`classLoading` (через `raw(key)`, без setStyle-префикса — их компилирует ребёнок). Resolve порядок: `props ?? options ?? default`. `resolvedAriaLabel` — `props.ariaLabel ?? (type === 'icon' ? icon : undefined)`.
+- **Стили:** `classBase` = `cls("root", …)` ([Button.vue:375](../../lib/button/Button.vue#L375)), пересчитывается на изменение variant/size/rounded/color/disabled. Порядок склейки — база → variant → state → `options.classes.root` → `props.classes.root` → `options.class` → `props.class` (dev-patterns §2 D). Классы инжектятся в `@layer fishtvue`.
+- **Конфиг:** читает `componentsOptions.Button` (поля: `variant`, `size`, `rounded`, `color`, `class`, `classes`) + глобальный `componentsStyle` как fallback для `variant` (`filled→primary` / `outlined→outline` / `underlined→ghost`).
 - **Bundle:** `Loading` и `FixWindow` подключены через `defineAsyncComponent` — текстовая `<Button>` (без `loading` и без icon-tooltip) не тянет их в синхронный chunk (Issue 6).
 - **Локализация:** не использует `t()`.
 - **SSR / hydration:** SSR-safe — нет прямых `document`/`window`. `Component.__hooks()` инжектит CSS через `onServerPrefetch` + `onMounted`.
-- **Animation:** `motion-safe:transition-colors motion-safe:duration-200` ([Button.vue:26](../../lib/button/Button.vue#L26)) — `prefers-reduced-motion: reduce` отключает переходы автоматически.
+- **Animation:** `motion-safe:transition-colors motion-safe:duration-200` ([Button.vue:37](../../lib/button/Button.vue#L37)) — `prefers-reduced-motion: reduce` отключает переходы автоматически.
 
 ## 4. Quick Start
 
@@ -51,35 +51,47 @@ Tree-shaking & bundle: `import Button from "fishtvue/button"` импортиру
 </script>
 
 <template>
-  <Button mode="primary" color="theme" size="md">Submit</Button>
+  <Button variant="primary" color="theme" size="md">Submit</Button>
 </template>
 ```
 
 ## 5. Props
 
-`ButtonProps = SimpleButtonProps | IconButtonProps` ([Button.d.ts:117](../../lib/button/Button.d.ts#L117)). Общий базис `BaseButtonProps + ButtonStyle`.
+`ButtonProps = SimpleButtonProps | IconButtonProps` ([Button.d.ts:144](../../lib/button/Button.d.ts#L144)). Общий базис `BaseButtonProps + ButtonStyle`.
 
 | Prop           | Type                                                  | Default                            | Description                                                                                                                                                        |
 | -------------- | ----------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `type`         | `"button" \| "reset" \| "submit" \| "icon"`           | `"button"`                         | `"icon"` — icon-only кнопка с FixWindow tooltip.                                                                                                                   |
 | `icon`         | `string`                                              | `""`                               | Имя иконки (см. [Icons](./icons.md)).                                                                                                                              |
-| `iconPosition` | `"start" \| "end" \| "left" \| "right"`               | `"end"`                            | Logical-позиция иконки в обычном режиме (`start` — перед контентом, `end` — после; RTL-safe). `"left"`/`"right"` — deprecated алиасы (`left → start`, `right → end`) с dev-warning. См. §12. |
+| `iconPosition` | `"start" \| "end"`                                    | `"end"`                            | Logical-позиция иконки (`start` — перед контентом, `end` — после; RTL-safe). Физические `"left"`/`"right"` сняты в major 2026-09-06. См. §12. |
 | `disabled`     | `boolean`                                             | `false`                            | Стандартный disabled.                                                                                                                                              |
 | `loading`      | `boolean`                                             | `undefined`                        | Показывает [Loading](./loading.md) внутри кнопки.                                                                                                                  |
 | `ariaLabel`    | `string`                                              | `undefined`                        | Accessible name для screen-reader. Особенно важен для `type="icon"` без default-slot. Если опущен и `type="icon"` — fallback на имя иконки (`icon` prop). См. §12. |
-| `mode`         | `"primary" \| "outline" \| "ghost"`                   | `"primary"` (или из global config) | Визуальный режим.                                                                                                                                                  |
+| `variant`      | `"primary" \| "outline" \| "ghost"`                   | `"primary"` (или из global config) | Визуальный вариант (бывший `mode`, значения те же).                                                                                                                |
 | `size`         | `"xs" \| "sm" \| "md" \| "lg" \| "xl"`                | `"md"` (или из global config)      | Размер.                                                                                                                                                            |
 | `rounded`      | `"none" \| "md" \| "lg" \| "full"`                    | `"md"` (или из global config)      | Радиус скругления.                                                                                                                                                 |
 | `color`        | `"theme" \| "neutral" \| "creative" \| "destructive"` | `"neutral"` (или из global config) | Цветовая тема.                                                                                                                                                     |
-| `class`        | `StyleClass`                                          | —                                  | Дополнительные классы для контейнера.                                                                                                                              |
-| `classIcon`    | `StyleClass`                                          | —                                  | Классы для иконки.                                                                                                                                                 |
+| `class`        | `StyleClass`                                          | —                                  | Классы **только корня** `[data-button]` (dev-patterns §2 A).                                                                                                        |
+| `classes`      | `ClassesMap<ButtonClassKey>`                          | —                                  | Карта внутренних элементов: `icon`, `loading`; `root` ≡ `class`. См. §5.1.                                                                                          |
 | `as`           | `string \| Component`                                 | `"button"`                         | Polymorphic корневой тег/компонент (`<a>` / `<RouterLink>` / `<NuxtLink>`). Для не-button/не-`<a>` — авто `role="button"` + `tabindex`; нативный `type` только на `<button>`; `href`/`to`/`target` пробрасываются. См. §10.5. |
 
-Defaults для `disabled` и `loading` — `undefined` через `withDefaults` ([Button.vue:13–17](../../lib/button/Button.vue#L13-L17)) — это намеренно: без значения работает auto-detect.
+Defaults для `disabled` и `loading` — `undefined` через `withDefaults` ([Button.vue:22–25](../../lib/button/Button.vue#L22-L25)) — это намеренно: без значения работает auto-detect.
+
+### 5.1 Classes keys
+
+`ButtonClassKey = "icon" | "loading"` ([Button.d.ts:18](../../lib/button/Button.d.ts#L18)). Оба ключа — hand-off'ы в корни дочерних компонентов: `:class` ребёнка = его корень, поэтому сегменты потребителя уходят туда через `raw(key)` без `setStyle`-префикса Button (компилирует их сам ребёнок).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-button]` | element | база + `variant`/`color`/`size`/`rounded` + `disabled:opacity-50` |
+| `icon` | `[data-button-icon]` (= корень [Icons](./icons.md) `[data-icon]`) | element | `inline-flex items-center` + text-цвет варианта (бывший `classIcon`) |
+| `loading` | `[data-button-loading]` (= корень [Loading](./loading.md) `[data-loading]`) | element | — (позиционирование `absolute` / `-me-2` даёт сам Button) |
+
+Собственные маркеры `data-button-icon` / `data-button-loading` нужны потому, что state-атрибут `:data-loading` висит на корне самой кнопки — селектор `[data-loading]` без них попадал бы в оба узла.
 
 ## 6. Events / Emits + v-model contract
 
-`ButtonEmits` ([Button.d.ts:137–144](../../lib/button/Button.d.ts#L137-L144)):
+`ButtonEmits` ([Button.d.ts:165–174](../../lib/button/Button.d.ts#L165-L174)):
 
 | Event   | Payload      | When fired                                                                                                                                |
 | ------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,7 +103,7 @@ v-model contract — не применимо.
 
 ## 7. Slots
 
-`ButtonSlots` ([Button.d.ts:118–136](../../lib/button/Button.d.ts#L118-L136)).
+`ButtonSlots` ([Button.d.ts:145–163](../../lib/button/Button.d.ts#L145-L163)).
 
 | Slot      | Slot props | Description                                                                                                                                                                 |
 | --------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -101,17 +113,17 @@ v-model contract — не применимо.
 
 ## 8. Exposed methods
 
-`ButtonExpose` ([Button.d.ts:148–205](../../lib/button/Button.d.ts#L148-L205)):
+`ButtonExpose` ([Button.d.ts:176–233](../../lib/button/Button.d.ts#L176-L233)):
 
 | Name              | Type                                            | Description                                                                                                           |
 | ----------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `buttonRef`       | `Readonly<Ref<HTMLElement \| undefined>>`       | Ref на корневой элемент (`<button>` по умолчанию; при polymorphic `as` — соответствующий тег). Доступ к native DOM.    |
-| `mode`            | `ButtonProps["mode"]`                           | Текущий mode (computed).                                                                                              |
+| `variant`         | `ButtonProps["variant"]`                        | Текущий variant (computed).                                                                                           |
 | `size`            | `ButtonProps["size"]`                           | Текущий size.                                                                                                         |
 | `rounded`         | `ButtonProps["rounded"]`                        | Текущий rounded.                                                                                                      |
 | `color`           | `ButtonProps["color"]`                          | Текущий color.                                                                                                        |
 | `classBase`       | `ButtonProps["class"]`                          | Финальный CSS-класс корневого `<button>`.                                                                             |
-| `classIcon`       | `ButtonProps["classIcon"]`                      | Финальный класс иконки.                                                                                               |
+| `classIcon`       | `StyleClass`                                    | Финальный класс, уходящий в корень `Icons`.                                                                           |
 | `focus(options?)` | `(options?: FocusOptions) => void`              | Делает `buttonRef.focus(options)`. Опционально принимает native `FocusOptions` (например, `{ preventScroll: true }`). |
 | `blur()`          | `() => void`                                    | Делает `buttonRef.blur()`.                                                                                            |
 
@@ -120,7 +132,7 @@ import { useTemplateRef } from "vue"
 import type Button from "fishtvue/button"
 
 const btnRef = useTemplateRef<InstanceType<typeof Button>>("btn")
-console.log(btnRef.value?.mode)
+console.log(btnRef.value?.variant)
 btnRef.value?.focus() // programmatic focus
 btnRef.value?.buttonRef // корневой HTMLElement (по умолчанию <button>)
 ```
@@ -140,7 +152,7 @@ btnRef.value?.buttonRef // корневой HTMLElement (по умолчанию
 ```ts
 app.use(FishtVue, {
   componentsOptions: {
-    Button: { mode: "outline", color: "theme", size: "lg" }
+    Button: { variant: "outline", color: "theme", size: "lg" }
   }
 })
 ```
@@ -175,7 +187,7 @@ app.use(FishtVue, {
     </template>
     Save
     <template #end>
-      <Badge mode="point" color="creative">12</Badge>
+      <Badge point variant="secondary">12</Badge>
     </template>
   </Button>
 </template>
@@ -226,27 +238,27 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`ButtonOption = Pick<ButtonProps, "mode" | "size" | "rounded" | "color" | "class" | "classIcon">` ([Button.d.ts:151](../../lib/button/Button.d.ts#L151)).
+`ButtonOption = Pick<ButtonProps, "variant" | "size" | "rounded" | "color" | "class" | "classes">` ([Button.d.ts:235](../../lib/button/Button.d.ts#L235)). Карта `classes` сливается с props **по ключу** (dev-patterns §2 C).
 
 ```ts
 app.use<FishtVueConfiguration>(FishtVue, {
   componentsOptions: {
     Button: {
-      mode: "primary",
+      variant: "primary",
       size: "md",
       rounded: "md",
       color: "theme",
       class: "shadow-sm",
-      classIcon: "size-4"
+      classes: { icon: "size-4" }
     }
   }
 })
 ```
 
-**Global `componentsStyle`.** Помимо `componentsOptions.Button.mode`, Button реагирует на глобальный `componentsStyle` (`"filled" | "outlined" | "underlined"`): он маппится в `mode` через computed `componentsStyleMode` ([Button.vue](../../lib/button/Button.vue)) — `filled → primary`, `outlined → outline`, `underlined → ghost`. Приоритет резолва: `props.mode` → `componentsOptions.Button.mode` → `componentsStyle`-mapping → `"primary"`.
+**Global `componentsStyle`.** Помимо `componentsOptions.Button.variant`, Button реагирует на глобальный `componentsStyle` (`"filled" | "outlined" | "underlined"`): он маппится в `variant` через computed `componentsStyleVariant` ([Button.vue](../../lib/button/Button.vue)) — `filled → primary`, `outlined → outline`, `underlined → ghost`. Приоритет резолва: `props.variant` → `componentsOptions.Button.variant` → `componentsStyle`-mapping → `"primary"`.
 
 ```ts
-app.use(FishtVue, { componentsStyle: "outlined" }) // <Button> по умолчанию рендерится как mode="outline"
+app.use(FishtVue, { componentsStyle: "outlined" }) // <Button> по умолчанию рендерится как variant="outline"
 ```
 
 ### 10.2 Per-instance
@@ -256,7 +268,7 @@ app.use(FishtVue, { componentsStyle: "outlined" }) // <Button> по умолча
 ### 10.3 Theming
 
 - Цветовые токены: `theme.*`, `neutral.*`, `green.*`, `red.*` (для `creative`/`destructive`). См. [Theme](../architecture/theme.md).
-- Dark mode классы (`dark:*`) включены в каждой ветке `mode/color`.
+- Dark mode классы (`dark:*`) включены в каждой ветке `variant/color`.
 - Кастомные токены через `theme.semantic.customThemeColor` влияют на `bg-theme-*`/`text-theme-*`.
 - **Print:** `baseClasses` содержит `print:*` варианты (`print:border print:bg-white print:text-black print:shadow-none`) — при печати кнопка рендерится монохромно и читаемо, а не скрывается (канон Input/Loading/Table).
 
@@ -285,7 +297,7 @@ CSS root-класс — `fv fishtvue-button`. Override:
 <Button as="a" href="/docs" color="theme">Docs</Button>
 
 <!-- Nuxt-навигация -->
-<Button :as="NuxtLink" to="/profile" mode="outline">Profile</Button>
+<Button :as="NuxtLink" to="/profile" variant="outline">Profile</Button>
 ```
 
 Поведение:
@@ -306,12 +318,12 @@ CSS root-класс — `fv fishtvue-button`. Override:
 - Корневой элемент — `<button>`, имеет нативный focus/Enter/Space behavior.
 - При `type="icon"` корневой `<button>` имеет `type="button"` ([Button.vue:385](../../lib/button/Button.vue#L385)) — не отправляет form по умолчанию.
 - `disabled` — нативный атрибут, screen-reader озвучивает.
-- `aria-label` — поддерживается через prop `ariaLabel` ([Button.d.ts:78–89](../../lib/button/Button.d.ts#L78-L89), [Button.vue:388](../../lib/button/Button.vue#L388)). Для `type="icon"` без `ariaLabel` и без default-slot fallback'имся на имя иконки (`icon` prop) — это хоть какой-то accessible name. Рекомендуется задавать явный человекочитаемый `aria-label`. Если ничего не задано — на mount Button пишет `console.warn` в DEV ([Button.vue:368–379](../../lib/button/Button.vue#L368-L379)).
+- `aria-label` — поддерживается через prop `ariaLabel` ([Button.d.ts:99–108](../../lib/button/Button.d.ts#L99-L108), [Button.vue:388](../../lib/button/Button.vue#L388)). Для `type="icon"` без `ariaLabel` и без default-slot fallback'имся на имя иконки (`icon` prop) — это хоть какой-то accessible name. Рекомендуется задавать явный человекочитаемый `aria-label`. Если ничего не задано — на mount Button пишет `console.warn` в DEV ([Button.vue:425–436](../../lib/button/Button.vue#L425-L436)).
 - `aria-pressed` для toggle-режима не реализовано (Button не is-state-component).
 - Keyboard: Tab/Enter/Space — нативное поведение. Стрелки не обрабатываются.
 - Focus management — нативный, `focus:outline-none focus-visible:ring-1` ([Button.vue:23](../../lib/button/Button.vue#L23)). Programmatic `focus()` / `blur()` — через exposed методы (см. §8).
-- `prefers-reduced-motion` учитывается: transition'ы применяются через `motion-safe:` вариант ([Button.vue:26](../../lib/button/Button.vue#L26)) — `@media (prefers-reduced-motion: reduce)` отключает их автоматически.
-- RTL: `iconPosition` использует logical-значения `"start"`/`"end"`. Так как корневой `<button>` — `inline-flex`, его main-axis следует document direction, поэтому при `dir="rtl"` иконка `start` визуально оказывается справа без дополнительного CSS. `"left"`/`"right"` остаются как deprecated алиасы (`left → start`, `right → end`) с DEV-warning ([Button.vue:299–308](../../lib/button/Button.vue#L299-L308)). Loading-индикатор использует logical-отступ `-me-2` (а не физический `-mr-2`), поэтому тоже корректен в RTL.
+- `prefers-reduced-motion` учитывается: transition'ы применяются через `motion-safe:` вариант ([Button.vue:37](../../lib/button/Button.vue#L37)) — `@media (prefers-reduced-motion: reduce)` отключает их автоматически.
+- RTL: `iconPosition` использует logical-значения `"start"`/`"end"`. Так как корневой `<button>` — `inline-flex`, его main-axis следует document direction, поэтому при `dir="rtl"` иконка `start` визуально оказывается справа без дополнительного CSS. Физические `"left"`/`"right"` сняты — неизвестное значение сводится к дефолту `"end"` ([Button.vue:317](../../lib/button/Button.vue#L317)). Loading-индикатор использует logical-отступ `-me-2` (а не физический `-mr-2`), поэтому тоже корректен в RTL.
 
 ### Security
 
@@ -342,8 +354,14 @@ btnRef.value?.classBase
 - **Vue:** `^3.5.x`.
 - **Browser:** evergreen.
 - **Stability flag:** `stable` — 100% покрытие тестами Button.vue, нет TODO/FIXME, типы без `any` в публичной части.
-- **Breaking changes:** на момент ревизии (2026-05-10) не зафиксировано. `ButtonEmits` сменился с `null` на typed `{ click: MouseEvent }` — это additive change: подписчики `@click` продолжают работать, новые получают корректный type-hint.
-- **Deprecations:** не зафиксировано.
+- **Breaking changes (1.0.0, редизайн props):**
+  - `mode` → `variant` (значения те же); `componentsOptions.Button.mode` → `.variant`; глобальный `componentsStyle` маппится в `variant`.
+  - `classIcon` → `classes.icon`; добавлен ключ `classes.loading`; `class` теперь адресует **только** корень.
+  - `ButtonOption` — `Pick<…, "variant" | "size" | "rounded" | "color" | "class" | "classes">`.
+  - expose: `mode` → `variant`.
+  - DOM: hand-off'ы получили собственные маркеры `data-button-icon` / `data-button-loading`.
+  - Ранее (0.2.x): `ButtonEmits` сменился с `null` на typed `{ click: MouseEvent }` — additive change.
+- **Deprecations:** нет — старые имена сняты без алиасов (решение R6).
 
 ## 15. Testing recipes
 
@@ -358,10 +376,10 @@ describe("Button", () => {
   it("applies global options", () => {
     const wrapper = mount(Button, {
       global: {
-        plugins: [[FishtVue, { componentsOptions: { Button: { mode: "primary" } } }]]
+        plugins: [[FishtVue, { componentsOptions: { Button: { variant: "primary" } } }]]
       }
     })
-    expect((wrapper.vm as unknown as ButtonExpose).mode).toBe("primary")
+    expect((wrapper.vm as unknown as ButtonExpose).variant).toBe("primary")
   })
 })
 ```
@@ -392,8 +410,8 @@ describe("Button", () => {
 
 ### Incomplete or stubbed behavior
 
-- В [Button.vue:368–379](../../lib/button/Button.vue#L368-L379) дублирующий вызов `Button.initStyle()` через `onMounted` — `Component.__hooks()` уже регистрирует `vueOnMounted(() => initStyle())`. Лишняя работа.
-- Словари классов (`baseClasses`, `modesClasses`, `textColorsPrimaryClasses`, …) хранятся в `ref(...)` ([Button.vue:21–294](../../lib/button/Button.vue#L21-L294)) — реактивность не нужна, должно быть `const`.
+- В [Button.vue:425–436](../../lib/button/Button.vue#L425-L436) дублирующий вызов `Button.initStyle()` через `onMounted` — `Component.__hooks()` уже регистрирует `vueOnMounted(() => initStyle())`. Лишняя работа.
+- Словари классов (`baseClasses`, `variantsClasses`, `textColorsPrimaryClasses`, …) хранятся в `ref(...)` ([Button.vue:32–310](../../lib/button/Button.vue#L32-L310)) — реактивность не нужна, должно быть `const`.
 
 ### Skipped tests
 
@@ -402,7 +420,7 @@ describe("Button", () => {
 ### API inconsistencies
 
 - `BaseButtonProps.icon: string` — пустая строка `""` принимается как «нет иконки», но typesystem не отличает «не задано» от «пусто». Default из `withDefaults` отсутствует — неявный `undefined`.
-- `ButtonOption` ([Button.d.ts:206](../../lib/button/Button.d.ts#L206)) **не включает** `disabled`, `loading`, `icon`, `iconPosition`, `type`, `ariaLabel` — эти props нельзя задать глобально через `componentsOptions.Button`. Это может удивить.
+- `ButtonOption` ([Button.d.ts:235](../../lib/button/Button.d.ts#L235)) **не включает** `disabled`, `loading`, `icon`, `iconPosition`, `type`, `ariaLabel` — эти props нельзя задать глобально через `componentsOptions.Button`. Это может удивить.
 
 ### Behavioral caveats
 

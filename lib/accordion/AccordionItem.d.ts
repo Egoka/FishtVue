@@ -71,8 +71,6 @@ export declare type AccordionItemEmits = null
  */
 export declare type AccordionItemExpose = NonNullable<unknown>
 
-export declare type AccordionItemOption = Pick<AccordionItemProps, "open">
-
 // ---------------------------------------
 
 declare module "vue" {

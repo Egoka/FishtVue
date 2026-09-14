@@ -301,7 +301,7 @@
           <Button
             v-if="isCloseButton"
             data-dialog-close
-            mode="ghost"
+            variant="ghost"
             class="absolute top-2 end-2 px-[5px] m-1 h-9 w-9"
             :aria-label="Dialog.t('dialog.close') ?? 'Close dialog'"
             @click="closeDialog">

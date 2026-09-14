@@ -181,11 +181,14 @@ export default class Component<T extends keyof ComponentsOptions> {
    */
   public resolveClasses = <K extends string>(props: ClassesProps<K>): ClassesResolver<K> => {
     const opt = this.__options as ClassesProps<K> | undefined
-    const consumer = (key: K | "root"): Array<StyleClass | undefined> => [
-      opt?.classes?.[key],
-      props.classes?.[key],
-      ...(key === "root" ? [opt?.class, props.class] : [])
-    ]
+    // Массив ключей = «общий → частный» (Separator `segment` + `segmentStart`): сегменты
+    // разворачиваются в объявленном порядке, поэтому частный ключ выигрывает twMerge-конфликт.
+    const consumer = (key: K | "root" | Array<K | "root">): Array<StyleClass | undefined> =>
+      (Array.isArray(key) ? key : [key]).flatMap((k) => [
+        opt?.classes?.[k],
+        props.classes?.[k],
+        ...(k === "root" ? [opt?.class, props.class] : [])
+      ])
     return {
       cls: (key, ...base) => this.setStyle(base, { consumer: consumer(key) }),
       raw: (key) => cn(consumer(key)),

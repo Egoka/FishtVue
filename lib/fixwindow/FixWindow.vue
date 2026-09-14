@@ -684,7 +684,7 @@
         </div>
         <Button
           v-if="isCloseButton"
-          mode="ghost"
+          variant="ghost"
           class="absolute top-2 end-2 px-[5px] m-0.5 h-9 w-9"
           :aria-label="FixWindow.t('fixwindow.close') ?? 'Close'"
           @click="onCloseButton">

@@ -289,9 +289,11 @@
             <Button
               type="icon"
               size="xs"
-              mode="ghost"
+              variant="ghost"
               icon="ArrowsPointingIn"
-              class-icon="text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400">
+              :classes="{
+                icon: 'text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400'
+              }">
             </Button>
           </div>
         </div>
@@ -306,10 +308,12 @@
         <Button
           type="icon"
           size="xs"
-          mode="ghost"
+          variant="ghost"
           icon="ArrowsPointingOut"
           data-switch-size
-          class-icon="text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400">
+          :classes="{
+            icon: 'text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400'
+          }">
           {{ TextEditor.t("increase") ?? "Increase" }}
         </Button>
       </div>

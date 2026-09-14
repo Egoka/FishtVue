@@ -331,7 +331,7 @@ describe("Form Component Tests", () => {
       const emailInput = wrapper.find('input[id="email"]')
       await emailInput.setValue("jane.doe@example.com")
 
-      const switchInput = wrapper.find("[data-input-checkbox]")
+      const switchInput = wrapper.find("[data-switch-checkbox]")
       await switchInput.trigger("click")
 
       expect(wrapper.emitted("update:formFields")).toBeTruthy()

@@ -1123,8 +1123,7 @@ describe("Select — props 1.0 (Wave 13, W2)", () => {
       props: { options: [{ id: 1, value: "a" }], modelValue: [1], multiple: true, badgeCloseButton: true }
     })
     await nextTick()
-    // close-кнопка Badge (её собственный data-атрибут появится в W3a) — сейчас это вложенный Button
-    expect(wrapper.find("[data-select-item] [data-badge] [data-button]").exists()).toBe(true)
+    expect(wrapper.find("[data-select-item] [data-badge-close]").exists()).toBe(true)
   })
 
   it("fixWindowProps заменяет paramsFixWindow (resolved через expose)", async () => {

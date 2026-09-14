@@ -533,13 +533,13 @@ describe("Testing config", () => {
     it("FishtVue.use(middleware) mutates config before install", () => {
       const fv = FishtVue as any
       fv.use((cfg: FishtVueConfiguration) => {
-        cfg.componentsOptions = { ...(cfg.componentsOptions ?? {}), Button: { mode: "outline" } }
+        cfg.componentsOptions = { ...(cfg.componentsOptions ?? {}), Button: { variant: "outline" } }
       })
       const app = createApp(App)
       app.use(FishtVue, {})
       const wrapper = mount(App, { global: { plugins: [[FishtVue as any, {}]] } })
       const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
-      expect(instance?.config?.componentsOptions?.Button?.mode).toBe("outline")
+      expect(instance?.config?.componentsOptions?.Button?.variant).toBe("outline")
     })
 
     it("FishtVue.registerComponent(name, component) globally registers via app.component", () => {

@@ -13,6 +13,13 @@ export const cssComponents: Map<NamesComponents, string>
 export type ClassesProps<K extends string> = { class?: StyleClass; classes?: ClassesMap<K> }
 
 /**
+ * Адрес сегментов потребителя для `cls`/`raw`: один ключ элемента (`root` — корень)
+ * либо массив ключей в порядке «общий → частный».
+ * @template K - union ключей элементов компонента
+ */
+export type ClassesKey<K extends string> = K | "root" | Array<K | "root">
+
+/**
  * Резолвер классов компонента — результат `Component.resolveClasses(props)`.
  * Один helper вместо рукописных `options?.x ?? "", props?.x ?? ""` в каждом computed.
  * @template K - union ключей элементов компонента
@@ -22,13 +29,16 @@ export interface ClassesResolver<K extends string> {
    * Класс собственного DOM-элемента через `setStyle`:
    * `base… → options.classes[key] → props.classes[key] → (только root) options.class → props.class`.
    * База всегда до сегментов потребителя — twMerge отдаёт конфликт потребителю.
+   * Массив ключей раскрывается слева направо («общий → частный»): `cls(["segment", "segmentStart"])`
+   * даёт `options.segment → props.segment → options.segmentStart → props.segmentStart`.
    */
-  cls(key: K | "root", ...base: Array<StyleClass | boolean | undefined>): string
+  cls(key: ClassesKey<K>, ...base: Array<StyleClass | boolean | undefined>): string
   /**
    * Только сегменты потребителя (`options.classes[key]` + `props.classes[key]`, для `root` — ещё и `class`),
    * без `setStyle`/префикса — для hand-off дочернему компоненту через его `:class` / `:classes`.
+   * Массив ключей — как в `cls`.
    */
-  raw(key: K | "root"): string
+  raw(key: ClassesKey<K>): string
   /**
    * Aspect-ключ (заменяющая семантика): `props.classes[key] ?? options.classes[key] ?? fallback`.
    * Пустая строка в props отключает и options, и fallback.

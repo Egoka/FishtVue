@@ -21,7 +21,7 @@ Source: [lib/component/index.ts](../../lib/component/index.ts), [lib/component/T
 ```
 lib/component/
 ├── index.ts            # реализация Component<T>
-├── TypeComponent.d.ts  # внешние типы: Component, NamesComponents, PublicFields, StylesComponent, SetStyleOptions, ClassesProps, ClassesResolver
+├── TypeComponent.d.ts  # внешние типы: Component, NamesComponents, PublicFields, StylesComponent, SetStyleOptions, ClassesProps, ClassesKey, ClassesResolver
 ├── Component.test.ts   # 39 кейсов (Vitest)
 └── package.json        # main "./component.mjs", types "./TypeComponent.d.ts"
 ```
@@ -128,7 +128,7 @@ Note: тип-параметр `T extends keyof ComponentsOptions` — обяза
 | `setStyle<T>(stylesComp, options?)` | `(stylesComp: T \| T[], options?: SetStyleOptions) => string` | Главный API: преобразует tw-классы в CSS, добавляет в реестр и возвращает `"fv {prefix}-{kebab-name} {merged-classes}"` для `:class=`. |
 | `t(key, params?)` | `(key: keyof DefaultMessages \| string, params?: Record<string, string \| number>) => string` | Локализация с fallback chain `messages[active][key] → messages[default][key] → key`. Поддерживает dot-path. Опциональный `params` — interpolation (`{name}`) + pluralization (`params.count` + `\|`-формы через CLDR `Intl.PluralRules`); без `params` поведение прежнее. См. [locale.md §3](./locale.md#3-how-it-works). |
 | `componentsStyle()` | `() => StyleMode \| undefined` | Возвращает `componentsStyle` из global config: `"filled" \| "outlined" \| "underlined"`. |
-| `resolveClasses<K>(props)` | `(props: ClassesProps<K>) => ClassesResolver<K>` | Резолвер `class`/`classes` (dev-patterns §2 B–D): `cls(key, …base)` — класс собственного элемента через `setStyle` (порядок `base → options.classes[key] → props.classes[key] → (root) options.class → props.class`); `raw(key)` — только сегменты потребителя для hand-off ребёнку; `pick(key, fallback)` — aspect-ключ, `""` в props отключает. Реактивен внутри `computed`. |
+| `resolveClasses<K>(props)` | `(props: ClassesProps<K>) => ClassesResolver<K>` | Резолвер `class`/`classes` (dev-patterns §2 B–D): `cls(key, …base)` — класс собственного элемента через `setStyle` (порядок `base → options.classes[key] → props.classes[key] → (root) options.class → props.class`); `raw(key)` — только сегменты потребителя для hand-off ребёнку; `pick(key, fallback)` — aspect-ключ, `""` в props отключает. `cls`/`raw` принимают и **массив ключей** (`ClassesKey<K>`): `cls(["segment", "segmentStart"], …)` разворачивает сегменты «общий → частный», поэтому частный ключ выигрывает twMerge. Реактивен внутри `computed`. |
 
 `PublicFields` ([TypeComponent.d.ts:139–150](../../lib/component/TypeComponent.d.ts#L139-L150)) — список ключей, доступных в lifecycle-хуке: `name`, `prefix`, `onBefore*`, `on*`, `getOptions`, `getPrefix`, `initStyle`. `setStyle` и `t` через хук не пробрасываются.
 
@@ -248,7 +248,7 @@ layers && layers.length
 
 ```ts
 import Component from "fishtvue/component"
-import type { ClassesProps, ClassesResolver, PublicFields, SetStyleOptions, StylesComponent } from "fishtvue/component"
+import type { ClassesKey, ClassesProps, ClassesResolver, PublicFields, SetStyleOptions, StylesComponent } from "fishtvue/component"
 
 // Типизированный класс
 const X = new Component<"Button">()

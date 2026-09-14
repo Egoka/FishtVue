@@ -126,7 +126,7 @@ export interface GroupMenuPrivate extends Omit<GroupMenu, "items"> {
 /**
  * Defines a separator for the Menu component, with optional icon and visibility settings.
  */
-export interface MenuSeparator extends Omit<SeparatorProps, "vertical"> {
+export interface MenuSeparator extends Omit<SeparatorProps, "orientation"> {
   /**
    * The icon displayed within the separator.
    * @type {string | undefined}

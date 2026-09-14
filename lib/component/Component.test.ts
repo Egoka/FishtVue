@@ -605,6 +605,30 @@ describe("Testing class Component", () => {
         expect(out.value).toContain("late-class")
       })
 
+      it("cls([общий, частный]): сегменты разворачиваются по порядку, частный выигрывает twMerge", () => {
+        const c = build({ classes: { segment: "p-3 opt-only" } })
+        const { cls } = c.resolveClasses<"segment" | "segmentStart">({
+          classes: { segment: "p-2 shared", segmentStart: "p-8" }
+        })
+        const out = cls(["segment", "segmentStart"], "p-1 inline-flex")
+
+        expect(out).toBe("fv test-prefix-fix-window inline-flex opt-only shared p-8")
+      })
+
+      it("raw([общий, частный]) отдаёт оба сегмента потребителя в том же порядке", () => {
+        const c = build({ classes: { line: "opt-line" } })
+        const { raw } = c.resolveClasses<"line" | "lineEnd">({ classes: { line: "prop-line", lineEnd: "prop-end" } })
+
+        expect(raw(["line", "lineEnd"])).toBe("opt-line prop-line prop-end")
+      })
+
+      it("cls([root, ключ]) добавляет `class` ровно один раз — на позиции root", () => {
+        const c = build({ class: "opt-class" })
+        const { cls } = c.resolveClasses<"panel">({ class: "prop-class", classes: { panel: "panel-probe" } })
+
+        expect(cls(["root", "panel"], "base")).toBe("fv test-prefix-fix-window base opt-class prop-class panel-probe")
+      })
+
       it("массивы StyleClass в options/props сплющиваются", () => {
         const c = build({ classes: { root: ["opt-a", "opt-b"] } })
         const { cls, raw } = c.resolveClasses<never>({ class: ["prop-a", "prop-b"] })

@@ -10,9 +10,10 @@
 
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots } from "vue"
-  import { ButtonEmits, ButtonProps } from "./Button"
+  import { ButtonClassKey, ButtonEmits, ButtonProps } from "./Button"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
+  import { cn } from "fishtvue/utils/tailwindHandler"
   import { StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
   const Button = new Component<"Button">()
@@ -24,6 +25,7 @@
   })
   const emit = defineEmits<ButtonEmits>()
   const slots = useSlots()
+  const { cls, raw } = Button.resolveClasses<ButtonClassKey>(props)
   // ---STATE-------------------------------
   const buttonRef = ref<HTMLElement>()
   // ---STATE-------------------------------
@@ -36,7 +38,7 @@
       // Issue 15: стилизуем кнопку для печати (канон Input/Loading/Table), не прячем display:none.
       "print:border print:border-black print:bg-white print:text-black print:shadow-none"
   )
-  const modesClasses = ref({
+  const variantsClasses = ref({
     outline: ["border", "disabled:hover:bg-transparent"],
     ghost: ["disabled:bg-transparent", "disabled:hover:bg-transparent"]
   })
@@ -244,7 +246,7 @@
     ]
   })
   // prettier-ignore
-  const modeClasses = ref({
+  const variantClasses = ref({
     primary: {
       theme: [
         ...textColorsPrimaryClasses.value.theme,
@@ -268,16 +270,16 @@
       ]
     },
     outline: {
-      theme: [...modesClasses.value.outline, ...colorClasses.value.theme, "border-theme-200", "dark:border-theme-700"],
-      neutral: [...modesClasses.value.outline, ...colorClasses.value.neutral, "border-neutral-200", "dark:border-neutral-700"],
-      creative: [...modesClasses.value.outline, ...colorClasses.value.creative, "border-green-200", "dark:border-green-700"],
-      destructive: [...modesClasses.value.outline, ...colorClasses.value.destructive, "border-red-200", "dark:border-red-700"]
+      theme: [...variantsClasses.value.outline, ...colorClasses.value.theme, "border-theme-200", "dark:border-theme-700"],
+      neutral: [...variantsClasses.value.outline, ...colorClasses.value.neutral, "border-neutral-200", "dark:border-neutral-700"],
+      creative: [...variantsClasses.value.outline, ...colorClasses.value.creative, "border-green-200", "dark:border-green-700"],
+      destructive: [...variantsClasses.value.outline, ...colorClasses.value.destructive, "border-red-200", "dark:border-red-700"]
     },
     ghost: {
-      theme: [...modesClasses.value.ghost, ...colorClasses.value.theme],
-      neutral: [...modesClasses.value.ghost, ...colorClasses.value.neutral],
-      creative: [...modesClasses.value.ghost, ...colorClasses.value.creative],
-      destructive: [...modesClasses.value.ghost, ...colorClasses.value.destructive]
+      theme: [...variantsClasses.value.ghost, ...colorClasses.value.theme],
+      neutral: [...variantsClasses.value.ghost, ...colorClasses.value.neutral],
+      creative: [...variantsClasses.value.ghost, ...colorClasses.value.creative],
+      destructive: [...variantsClasses.value.ghost, ...colorClasses.value.destructive]
     }
   })
   const sizesClasses = ref({
@@ -349,15 +351,15 @@
     if (type.value === "icon" && icon.value) return icon.value
     return undefined
   })
-  // Issue 13: глобальный `componentsStyle` ("filled"|"outlined"|"underlined") → Button.mode.
+  // Issue 13: глобальный `componentsStyle` ("filled"|"outlined"|"underlined") → Button.variant.
   // Маппинг filled→primary, outlined→outline, underlined→ghost. В fallback chain стоит ниже
   // props/componentsOptions, но выше литерального default — как у Badge/Input/Select/Calendar.
-  const componentsStyleMode = computed<ButtonProps["mode"] | undefined>(() => {
+  const componentsStyleVariant = computed<ButtonProps["variant"] | undefined>(() => {
     const cs = Button.componentsStyle()
     return cs === "filled" ? "primary" : cs === "outlined" ? "outline" : cs === "underlined" ? "ghost" : undefined
   })
-  const mode = computed<NonNullable<ButtonProps["mode"]>>(
-    () => (props?.mode as ButtonProps["mode"]) ?? options?.mode ?? componentsStyleMode.value ?? "primary"
+  const variant = computed<NonNullable<ButtonProps["variant"]>>(
+    () => (props?.variant as ButtonProps["variant"]) ?? options?.variant ?? componentsStyleVariant.value ?? "primary"
   )
   const size = computed<NonNullable<ButtonProps["size"]>>(
     () => (props?.size as ButtonProps["size"]) ?? options?.size ?? "md"
@@ -368,29 +370,30 @@
   const color = computed<NonNullable<ButtonProps["color"]>>(
     () => (props?.color as ButtonProps["color"]) ?? options?.color ?? "neutral"
   )
-  const classBase = computed<StyleClass>(() => {
-    const classes = [
+  // Корень: база → variant → size → rounded → state → options.classes.root → props.classes.root →
+  // options.class → props.class (dev-patterns §2 D) — сегменты потребителя всегда последние.
+  const classBase = computed<StyleClass>(() =>
+    cls(
+      "root",
       baseClasses.value,
-      modeClasses.value?.[mode.value]?.[color.value],
+      variantClasses.value?.[variant.value]?.[color.value],
       sizeClasses.value[type.value === "icon" ? "icon" : "button"][size.value],
       roundedClasses.value[rounded.value],
-      options?.class ?? "",
-      props?.class ?? "",
-      disabled.value ? "opacity-50 cursor-not-allowed" : ""
-    ]
-    return Button.setStyle(classes.filter(Boolean))
-  })
-
-  const classIcon = computed<ButtonProps["classIcon"]>(() =>
-    [
-      "inline-flex items-center",
-      mode.value === "primary" ? textColorsPrimaryClasses.value[color.value] : textColorsClasses.value[color.value],
-      options?.classIcon ?? "",
-      props?.classIcon ?? ""
-    ]
-      .flat()
-      .join(" ")
+      disabled.value && "opacity-50 cursor-not-allowed"
+    )
   )
+  // Hand-off в корень `Icons` (`:class` ребёнка = его корень): `raw` отдаёт классы потребителя
+  // без setStyle-префикса — компилирует их сам Icons (dev-patterns §4).
+  const classIcon = computed<StyleClass>(() =>
+    cn(
+      "inline-flex items-center",
+      variant.value === "primary" ? textColorsPrimaryClasses.value[color.value] : textColorsClasses.value[color.value],
+      raw("icon")
+    )
+  )
+  // Hand-off в корень `Loading`. Тип — `string` (а не `StyleClass`), иначе `['absolute', classLoading]`
+  // в шаблоне схлопывается во вложенный массив, которого `class` ребёнка не принимает.
+  const classLoading = computed<string>(() => raw("loading"))
   // ---METHODS-----------------------------
   function focus(options?: FocusOptions) {
     buttonRef.value?.focus(options)
@@ -404,7 +407,7 @@
     // ---STATE-------------------------
     buttonRef,
     // ---PROPS-------------------------
-    mode,
+    variant,
     size,
     rounded,
     color,
@@ -444,8 +447,8 @@
     :aria-disabled="resolvedAriaDisabled"
     @click="(e: MouseEvent) => emit('click', e)">
     <template v-if="type === 'icon'">
-      <Icons v-if="icon" :type="icon" :class="classIcon" />
-      <Loading v-if="isLoading" type="simple" :size="25" class="absolute" />
+      <Icons v-if="icon" data-button-icon :type="icon" :class="classIcon" />
+      <Loading v-if="isLoading" data-button-loading type="simple" :size="25" :class="['absolute', classLoading]" />
       <FixWindow
         v-if="slots.default"
         type-position="absolute"
@@ -458,10 +461,10 @@
     </template>
     <template v-else>
       <slot v-if="slots.start" name="start" />
-      <Icons v-if="icon && iconPosition === 'start'" :type="icon" :class="classIcon" />
+      <Icons v-if="icon && iconPosition === 'start'" data-button-icon :type="icon" :class="classIcon" />
       <slot name="default" />
-      <Icons v-if="icon && iconPosition === 'end'" :type="icon" :class="classIcon" />
-      <Loading v-if="isLoading" type="simple" :class="['-me-2']" />
+      <Icons v-if="icon && iconPosition === 'end'" data-button-icon :type="icon" :class="classIcon" />
+      <Loading v-if="isLoading" data-button-loading type="simple" :class="['-me-2', classLoading]" />
       <slot v-if="slots.end" name="end" />
     </template>
   </component>

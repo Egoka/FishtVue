@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { computed, ref, watch } from "vue"
-  import type { SwitchEmits, SwitchProps } from "./Switch"
+  import type { SwitchClassKey, SwitchEmits, SwitchProps } from "./Switch"
   import type { StyleClass, StyleMode } from "fishtvue/types"
   import Icons from "fishtvue/icons/Icons.vue"
   import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
@@ -10,10 +10,12 @@
   const options = Switch.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<SwitchProps>(), {
+    modelValue: undefined,
     disabled: undefined,
     required: undefined
   })
   const emit = defineEmits<SwitchEmits>()
+  const { cls } = Switch.resolveClasses<SwitchClassKey>(props)
   // ---STATE-------------------------------
   const modelValue = ref<SwitchProps["modelValue"]>()
   watch(
@@ -43,54 +45,48 @@
   const iconInactive = computed<SwitchProps["iconInactive"]>(
     () => (props?.iconInactive as SwitchProps["iconInactive"]) ?? options?.iconInactive ?? ""
   )
-  const classBaseSwitch = computed<StyleClass>(() =>
+  // Корень: база → mode → state → options.classes.root → props.classes.root → options.class → props.class
+  // (dev-patterns §2 D) — сегменты потребителя всегда последние, focus-ring и печать идут в базе.
+  const classBase = computed<StyleClass>(() =>
     switchingType.value === "switch"
-      ? Switch.setStyle([
+      ? cls(
+          "root",
           "min-w-20 my-4 py-[6px] px-2 rounded-md",
-          mode.value === "outlined"
-            ? `border border-surface-300 dark:border-surface-600 bg-white dark:bg-black ${isDisabled.value ? "bg-surface-50 dark:bg-surface-950 border-dashed" : ""}`
-            : "",
-          mode.value === "underlined"
-            ? `rounded-none border-0 border-surface-300 dark:border-surface-700 border-b shadow-none bg-surface-50 dark:bg-surface-950 ${isDisabled.value ? "border-dashed" : ""}`
-            : "",
-          mode.value === "filled"
-            ? `bg-surface-100 dark:bg-surface-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`
-            : "",
-          options?.class ?? "",
-          props?.class ?? "",
-          isActiveSwitch.value && mode.value !== "none"
-            ? "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
-            : "",
+          mode.value === "outlined" &&
+            `border border-surface-300 dark:border-surface-600 bg-white dark:bg-black ${isDisabled.value ? "bg-surface-50 dark:bg-surface-950 border-dashed" : ""}`,
+          mode.value === "underlined" &&
+            `rounded-none border-0 border-surface-300 dark:border-surface-700 border-b shadow-none bg-surface-50 dark:bg-surface-950 ${isDisabled.value ? "border-dashed" : ""}`,
+          mode.value === "filled" &&
+            `bg-surface-100 dark:bg-surface-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`,
+          isActiveSwitch.value &&
+            mode.value !== "none" &&
+            "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700",
           "relative flex gap-x-3 motion-safe:transition-all",
           // Issue 14: стилизуем для печати (канон Button/Input), не прячем display:none.
           "print:border print:border-black print:bg-white print:text-black print:shadow-none"
-        ])
+        )
       : switchingType.value === "checkbox"
-        ? Switch.setStyle([
+        ? cls(
+            "root",
             "min-w-20 gap-x-3 my-4 py-[6px] px-2 rounded-md",
-            mode.value === "outlined"
-              ? `border border-surface-300 dark:border-surface-600 bg-white dark:bg-black ${isDisabled.value ? "bg-surface-50 dark:bg-surface-950 border-dashed" : ""}`
-              : "",
-            mode.value === "underlined"
-              ? `rounded-none border-0 border-surface-300 dark:border-surface-700 border-b shadow-none bg-surface-50 dark:bg-surface-950 ${isDisabled.value ? "border-dashed" : ""}`
-              : "",
-            mode.value === "filled"
-              ? ` bg-surface-100 dark:bg-surface-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`
-              : "",
-            options?.class ?? "",
-            props.class ?? "",
+            mode.value === "outlined" &&
+              `border border-surface-300 dark:border-surface-600 bg-white dark:bg-black ${isDisabled.value ? "bg-surface-50 dark:bg-surface-950 border-dashed" : ""}`,
+            mode.value === "underlined" &&
+              `rounded-none border-0 border-surface-300 dark:border-surface-700 border-b shadow-none bg-surface-50 dark:bg-surface-950 ${isDisabled.value ? "border-dashed" : ""}`,
+            mode.value === "filled" &&
+              ` bg-surface-100 dark:bg-surface-900 ${isDisabled.value ? "border-2 border-dotted" : ""}`,
             "relative flex",
             // Issue 14: style-for-print (канон Button/Input).
             "print:border print:border-black print:bg-white print:text-black print:shadow-none"
-          ])
+          )
         : ""
   )
   const classInputDiv = ref(Switch.setStyle("flex h-6 items-center"))
-  // `classSwitch` — часть публичного expose: под `unstyled` setStyle отдаёт `fv` (UA-preflight из baseStyle),
+  // `classControl` — часть публичного expose: под `unstyled` setStyle отдаёт `fv` (UA-preflight из baseStyle),
   // в остальных случаях — тему; отдельного template-only binding больше нет (dev-patterns §2 E).
-  const classSwitch = computed<StyleClass>(() =>
+  const classControl = computed<StyleClass>(() =>
     switchingType.value === "switch"
-      ? Switch.setStyle([
+      ? cls("control", [
           isDisabled.value
             ? `pointer-events-none border-dotted border-2 border-transparent w-9 ${modelValue.value ? "bg-surface-600 dark:bg-surface-400" : "bg-surface-200 dark:bg-surface-800"}`
             : "",
@@ -100,7 +96,7 @@
           "flex w-8 flex-none cursor-pointer p-px ring-2 ring-inset ring-surface-900/5 dark:ring-surface-900/5 motion-safe:transition-colors motion-safe:duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-theme-600 forced-colors:outline"
         ])
       : switchingType.value === "checkbox"
-        ? Switch.setStyle([
+        ? cls("control", [
             "h-4 w-4 bg-surface-50 dark:bg-surface-950",
             "border border-surface-300 dark:border-surface-700",
             "text-theme-500 dark:text-theme-700 checked:bg-theme-600 checked:dark:bg-theme-400",
@@ -112,13 +108,13 @@
   )
   const classLabel = computed(() =>
     switchingType.value === "switch"
-      ? Switch.setStyle([
+      ? cls("label", [
           "font-medium text-sm leading-6 text-surface-900 dark:text-surface-100 cursor-pointer",
           isDisabled.value ? "pointer-events-none text-surface-800 dark:text-surface-200" : "",
           isRequired.value ? `after:content-['*'] after:text-red-500 after:ml-1` : ""
         ])
       : switchingType.value === "checkbox"
-        ? Switch.setStyle([
+        ? cls("label", [
             "font-medium text-sm leading-6 text-surface-600 dark:text-surface-400 cursor-pointer",
             isDisabled.value ? "text-surface-800 dark:text-surface-200" : "",
             isRequired.value ? `after:content-['*'] after:text-red-500 after:dark:text-red-800 after:ml-1` : ""
@@ -126,7 +122,7 @@
         : ""
   )
   const classAfterInput = ref(Switch.setStyle("relative inset-y-0 end-0 flex items-center"))
-  const classIconBody = ref(Switch.setStyle("relative h-5 w-5 me-2"))
+  const classHelp = computed(() => cls("help", "relative h-5 w-5 me-2"))
   const classIconContent = ref(
     Switch.setStyle(
       "p-3 rounded-md shadow-lg " +
@@ -175,8 +171,8 @@
     iconActive,
     iconInactive,
     switchingType,
-    classBaseSwitch,
-    classSwitch,
+    classBase,
+    classControl,
     // ---METHODS-----------------------------
     inputEvent,
     focus,
@@ -209,7 +205,7 @@
 </script>
 
 <template>
-  <div data-switch :class="classBaseSwitch">
+  <div data-switch :class="classBase">
     <div :class="classInputDiv">
       <!--
         Switch mode: visible <button role="switch"> участвует в a11y/UX, а скрытый
@@ -221,7 +217,7 @@
         v-if="switchingType === 'switch'"
         data-switch-form-bridge
         :name="id"
-        :checked="modelValue as boolean"
+        :checked="!!modelValue"
         :disabled="isDisabled"
         type="checkbox"
         tabindex="-1"
@@ -231,14 +227,15 @@
         v-if="switchingType === 'switch'"
         ref="inputRef"
         :id="id"
-        data-input-switch
+        data-switch-control
+        data-switch-button
         role="switch"
         type="button"
         tabindex="0"
         :disabled="isDisabled as any"
-        :aria-checked="modelValue as boolean | 'mixed' | undefined"
+        :aria-checked="!!modelValue"
         :data-headlessui-state="modelValue ? 'checked' : ''"
-        :class="classSwitch"
+        :class="classControl"
         :style="`border-radius: ${rounded}px`"
         @focus="isActiveSwitch = true"
         @blur="isActiveSwitch = false"
@@ -254,14 +251,15 @@
       <input
         v-else-if="switchingType === 'checkbox'"
         ref="inputRef"
-        data-input-checkbox
+        data-switch-control
+        data-switch-checkbox
         :id="id as string"
         :name="id"
         tabindex="0"
-        :checked="modelValue as any[] | boolean | Set<any> | undefined"
+        :checked="!!modelValue"
         :disabled="isDisabled"
         type="checkbox"
-        :class="classSwitch"
+        :class="classControl"
         :style="`border-radius: ${rounded - 1}px`"
         @keydown.stop.enter="inputEvent(!modelValue)"
         @focus="isActiveSwitch = true"
@@ -274,7 +272,7 @@
     </div>
     <slot />
     <span data-switch-after ref="afterInput" :class="classAfterInput">
-      <div data-switch-help v-if="help?.length || $slots.help" :class="classIconBody">
+      <div data-switch-help v-if="help?.length || $slots.help" :class="classHelp">
         <Icons
           type="QuestionMarkCircle"
           class="text-surface-500 dark:text-surface-400 hover:text-yellow-500 motion-safe:transition cursor-help" />

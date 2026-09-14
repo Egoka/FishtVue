@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import { Comment, Fragment, computed, ref, unref, useId, useSlots, watch } from "vue"
+  import { Comment, Fragment, computed, ref, toValue, useId, useSlots, watch } from "vue"
   import type { FunctionalComponent, PropType, VNodeChild } from "vue"
   import { ArrowDownCircleIcon, ChevronDownIcon } from "@heroicons/vue/20/solid"
-  import { AccordionEmits, AccordionExpose, AccordionItem, AccordionProps } from "./Accordion"
+  import { AccordionClassKey, AccordionEmits, AccordionExpose, AccordionItemData, AccordionProps } from "./Accordion"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
   import { fieldsOmit } from "fishtvue/utils/objectHandler"
@@ -14,16 +14,18 @@
     multiple: undefined
   })
   const emit = defineEmits<AccordionEmits>()
+  const { cls } = Accordion.resolveClasses<AccordionClassKey>(props)
   // ---STATE-------------------------------
   const slots = useSlots()
-  const dataItems = ref<AccordionItem[]>(unref(props.dataSource) ?? [])
+  // `toValue` (а не `unref`) — единый канон чтения MaybeRef-props (dev-patterns §2, решение 3).
+  const dataItems = ref<AccordionItemData[]>(toValue(props.items) ?? [])
   const focusedIndex = ref(0)
   const headerRefs = ref<HTMLButtonElement[]>([])
   const rootRef = ref<HTMLElement | null>(null)
   const uid = useId() ?? "fv-accordion"
   // ---COMPOUND-API (VNode-walk) ----------
-  // Считываем декларативные <AccordionItem> из default slot и синтезируем AccordionItem[].
-  // Schema-driven `dataSource` prop при наличии выигрывает (backward compat). Сопоставление —
+  // Считываем декларативные <AccordionItem> из default slot и синтезируем AccordionItemData[].
+  // Schema-driven `items` prop при наличии выигрывает. Сопоставление —
   // по имени компонента (defineOptions name / __name), без импорта SFC: импорт AccordionItem.vue
   // в этот SFC ломает type-resolver @vue/compiler-sfc (re-export `declare class ... extends
   // ClassComponent`). Зеркало lib/menu/Menu.vue.
@@ -49,30 +51,30 @@
     const def = vn?.children?.default
     return typeof def === "function" ? normalizeChildren(def()) : []
   }
-  function extractItemFromVNode(vn: any): AccordionItem {
+  function extractItemFromVNode(vn: any): AccordionItemData {
     const vnodeProps = vn?.props ?? {}
-    const item: AccordionItem = { ...vnodeProps, title: vnodeProps.title ?? "" }
+    const item: AccordionItemData = { ...vnodeProps, title: vnodeProps.title ?? "" }
     if (vnodeProps.open !== undefined) item.open = vnodeProps.open === "" ? true : !!vnodeProps.open
     const children = flattenVNodes(vnodeChildren(vn))
     if (children.length) item._content = () => vnodeChildren(vn)
     return item
   }
-  function extractItemsFromVNodes(nodes: Array<any>): AccordionItem[] {
+  function extractItemsFromVNodes(nodes: Array<any>): AccordionItemData[] {
     return flattenVNodes(nodes)
       .filter((vn) => isAccordionItemVNode(vn))
       .map((vn) => extractItemFromVNode(vn))
   }
-  const compoundItems = computed<AccordionItem[]>(() => {
+  const compoundItems = computed<AccordionItemData[]>(() => {
     const raw = typeof slots.default === "function" ? slots.default() : undefined
     return raw ? extractItemsFromVNodes(normalizeChildren(raw)) : []
   })
   const usingCompound = computed<boolean>(() => {
-    const ds = unref(props.dataSource)
-    return !(ds && ds.length)
+    const schema = toValue(props.items)
+    return !(schema && schema.length)
   })
-  const sourceItems = computed<AccordionItem[]>(() => {
-    const ds = unref(props.dataSource)
-    return ds && ds.length ? ds : compoundItems.value
+  const sourceItems = computed<AccordionItemData[]>(() => {
+    const schema = toValue(props.items)
+    return schema && schema.length ? schema : compoundItems.value
   })
   // renderless-обёртка: рендерит захваченные VNode'ы default-slot'а соответствующего
   // <AccordionItem> внутри панели секции (compound-контент).
@@ -112,39 +114,29 @@
   Accordion.setStyle("rotate-360")
   Accordion.setStyle("grid-rows-[1fr] opacity-100")
   Accordion.setStyle("grid-rows-[0fr] opacity-0")
-  const classBody = computed(() =>
-    Accordion.setStyle([
-      "divide-y divide-surface-200 dark:divide-surface-800",
-      options?.class ?? "",
-      props?.class ?? ""
-    ])
-  )
-  const classItem = computed(() =>
-    Accordion.setStyle(["py-2", options?.classItem ?? "", props.classItem ?? "", "group/item"])
-  )
-  const classTitle = computed(() =>
-    Accordion.setStyle(["text-surface-800 dark:text-surface-300", options?.classTitle ?? "", props.classTitle ?? ""])
-  )
-  const classSubtitle = computed(() =>
-    Accordion.setStyle([
+  // Корень: база → options.classes.root → props.classes.root → options.class → props.class (dev-patterns §2 D).
+  const classBase = computed(() => cls("root", "divide-y divide-surface-200 dark:divide-surface-800"))
+  const classItem = computed(() => cls("item", "py-2", "group/item"))
+  const classTitle = computed(() => cls("title", "text-surface-800 dark:text-surface-300"))
+  const classPanel = computed(() =>
+    cls(
+      "panel",
       "text-sm text-surface-600 dark:text-surface-400 motion-safe:transition-all ease-in-out",
-      options?.classSubtitle ?? "",
-      props.classSubtitle ?? "",
       "grid overflow-hidden"
-    ])
+    )
   )
   // B10: forced-colors:outline сохраняет header-кнопку различимой в Windows high-contrast (bg-*/border-* там сбрасываются)
   // L2 (unstyled): setStyle сам оставляет `fv` под `unstyled` (UA-preflight `button.fv` из baseStyle) —
   // отдельный fallback не нужен (component/index.ts, dev-patterns §2 E).
-  const classButton = Accordion.setStyle(
-    "flex items-center justify-between w-full text-start font-semibold py-2 forced-colors:outline"
+  const classHeader = computed(() =>
+    cls("header", "flex items-center justify-between w-full text-start font-semibold py-2 forced-colors:outline")
   )
   const styleIcon = Accordion.setStyle(
     "h-5 w-5 shrink-0 ms-8 text-surface-400 dark:text-surface-500 group-hover/item:text-surface-500 group-hover/item:dark:text-surface-400 motion-safe:transition-all duration-200 ease-out"
   )
   const classPlus = Accordion.setStyle("fill-surface-600 dark:fill-surface-500 shrink-0 ms-8")
   const classRect = Accordion.setStyle("transform origin-center motion-safe:transition duration-200 ease-out")
-  const classTemplate = Accordion.setStyle("overflow-hidden")
+  const classContent = computed(() => cls("content", "overflow-hidden"))
   const classNotTemplate = Accordion.setStyle("pb-3")
   // ---IDS-FOR-ARIA-----------------------
   const headerId = (i: number | string) => `${uid}-h-${i}`
@@ -157,10 +149,10 @@
     multiple,
     animationDuration,
     icon,
-    classBody,
+    classBase,
     classItem,
     classTitle,
-    classSubtitle,
+    classPanel,
     // ---ELEMENTS----------------------
     rootRef,
     // ---METHODS-----------------------
@@ -218,16 +210,18 @@
     if (dataItems.value && dataItems.value[index]) {
       if (!multiple.value && !dataItems.value[index].open) dataItems.value.forEach((item) => (item.open = false))
       dataItems.value[index].open = !dataItems.value[index].open
-      emit("toggle", dataItems.value)
+      // Payload 1.0.0: какая секция переключилась и в какое состояние — прежний «просто массив»
+      // не позволял это понять, приходилось диффить снаружи.
+      emit("toggle", { key: index, open: !!dataItems.value[index].open, items: dataItems.value })
     }
   }
 </script>
 
 <template>
   <Transition :css="false" @leave="onRootLeave">
-    <div v-if="dataItems?.length" ref="rootRef" :class="classBody" data-accordion @keydown="onKeydown">
+    <div v-if="dataItems?.length" ref="rootRef" :class="classBase" data-accordion @keydown="onKeydown">
       <div
-        v-for="(item, key) in dataItems as AccordionItem[]"
+        v-for="(item, key) in dataItems as AccordionItemData[]"
         :key="key"
         :class="classItem"
         role="group"
@@ -237,7 +231,7 @@
             :id="headerId(key)"
             :ref="(el) => setButtonRef(el, key)"
             type="button"
-            :class="classButton"
+            :class="classHeader"
             :aria-expanded="!!item.open"
             :aria-controls="panelId(key)"
             :tabindex="key === focusedIndex ? 0 : -1"
@@ -245,7 +239,7 @@
             @click="toggle(key)"
             @focus="focusedIndex = key">
             <slot name="title" :title="item.title">
-              <span :class="classTitle">{{ item.title }}</span>
+              <span data-accordion-title :class="classTitle">{{ item.title }}</span>
               <svg
                 v-if="icon === 'Plus'"
                 class="PlusIcon"
@@ -280,11 +274,12 @@
         </h2>
         <div
           :id="panelId(key)"
+          data-accordion-panel
           role="region"
           :aria-labelledby="headerId(key)"
-          :class="[classSubtitle, item.open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0']"
+          :class="[classPanel, item.open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0']"
           :style="`transition-duration: ${animationDuration}ms;`">
-          <div data-accordion-content :class="classTemplate">
+          <div data-accordion-content :class="classContent">
             <AccordionContent v-if="item._content" :render="item._content" />
             <slot
               v-else-if="item.template"
