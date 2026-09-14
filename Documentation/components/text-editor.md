@@ -114,8 +114,14 @@ Note: компонент рендерит trigger-кнопку, которая �
 | Event | Payload | When fired |
 |---|---|---|
 | `update:modelValue` | `string` (HTML) | На каждый change в Quill. |
-| `update:invalid` | `boolean` (всегда `false`) | Ввод — reset-сигнал (`v-model:invalid`). |
 | `change:modelValue` | `string` (HTML) | На blur / programmatic save. Fixed 2026-05-11 (раньше тип был ошибочно `boolean`). |
+| `update:invalid` | `boolean` (всегда `false`) | Ввод — reset-сигнал (`v-model:invalid`). |
+
+**v-model contract** (form-control): стандартный `v-model` идёт через `update:modelValue`,
+парный `change:modelValue` — «значение устоялось». У TextEditor момент устаканивания — blur
+редактора либо programmatic save, а не каждое нажатие в Quill. `update:modelValue` подписывай
+для непрерывного отслеживания, `change:modelValue` — для тяжёлых операций (автосохранение
+черновика, отправка HTML на бекенд). Валидность — отдельный канал `v-model:invalid`.
 
 ## 7. Slots
 
@@ -349,6 +355,7 @@ describe.skip("TextEditor smoke", () => {
 - `modelValue?: string | number | null` — `number` не имеет смысла для HTML-content.
 - `toolbar: "essential" \| "minimal" \| "full" \| string \| object \| Array<any>` — open union, narrow не работает.
 - `TextEditorQuillConfig.options: any`, `globalOptions: any` — потеря типизации.
+- Нет событий `focus` / `blur` (и `active` — тоже: у TextEditor его нет, в отличие от [Input](./input.md), [Select](./select.md) и [Calendar](./calendar.md)). Асимметрия осознанная: major 1.0.0 переименовывал события, но новых не добавлял (dev-patterns §7). Фокус-состояние читается из expose `isActiveTextEditor` либо напрямую из Quill через `quillEditorLink`.
 
 ### Behavioral caveats
 

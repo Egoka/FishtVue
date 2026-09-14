@@ -88,7 +88,10 @@ import Separator from "fishtvue/separator"
 
 ## 6. Events / Emits + v-model contract
 
-Не применимо — Separator не эмитит.
+`SeparatorEmits = null` — Separator не эмитит.
+
+**v-model contract** — не применимо для этого компонента: у Separator нет собственного
+значения, это чисто презентационный разделитель.
 
 ## 7. Slots
 

@@ -75,7 +75,7 @@ const groups = [
 </script>
 
 <template>
-  <Menu :groups="groups" @on-click="(_, item) => router.push(item._key)" />
+  <Menu :groups="groups" @item-click="(_, item) => router.push(item._key)" />
 </template>
 ```
 

@@ -104,7 +104,10 @@ const open = ref(false)
 |---|---|---|
 | `update:modelValue` | `boolean` | На открытие/закрытие. |
 
-v-model: стандартный `v-model="open"`.
+**v-model contract:** видимость — стандартный `v-model="open"`.
+`change:modelValue` **не заводится**: Dialog не form-control, а канал несёт булеву
+видимость — у него нет момента «значение устоялось», отличного от самого обновления
+(dev-patterns §2 H). Момент закрытия ловится событием `close`, если оно нужно отдельно.
 
 ## 7. Slots
 

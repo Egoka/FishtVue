@@ -110,7 +110,10 @@ lib/fixwindow/
 | `open`              | `MouseEvent \| undefined` | Окно открыто.         |
 | `close`             | `MouseEvent \| undefined` | Окно закрыто.         |
 
-v-model: `v-model="visible"` стандартный.
+**v-model contract:** видимость — стандартный `v-model="visible"`.
+`change:modelValue` **не заводится**: FixWindow не form-control, а канал несёт булеву
+видимость — у него нет момента «значение устоялось», отличного от самого обновления
+(dev-patterns §2 H). Для реакции на конкретный переход есть `open` / `close`.
 
 ## 7. Slots
 

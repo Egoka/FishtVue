@@ -120,6 +120,8 @@ openAlert({
 |---|---|---|
 | `update:modelValue` | `boolean` | На close (timeout, кнопка). |
 
+**v-model contract:** видимость — стандартный `v-model="open"`. `change:modelValue` **не заводится**: Alert не form-control, а канал несёт булеву видимость — у него нет момента «значение устоялось», отличного от самого обновления (dev-patterns §2 H).
+
 ## 7. Slots
 
 | Slot | Slot props | Description |

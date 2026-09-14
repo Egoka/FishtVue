@@ -100,14 +100,15 @@ lib/switch/
 | Event               | Payload   | When fired                                                             |
 | ------------------- | --------- | ---------------------------------------------------------------------- |
 | `update:modelValue` | `boolean` | На каждом toggle (после реактивного обновления внутреннего состояния). |
-| `change:modelValue` | `boolean` | После reactivity flush; для тяжёлых side-effect'ов.                    |
+| `change:modelValue` | `boolean` | На native `change` у `<input>` — после `update:modelValue`.            |
 
 **v-model contract** (стандарт FishtVue):
 
-1. native click/change на `<input>`,
-2. `update:modelValue` (синхронизация v-model),
-3. parent watcher'ы отрабатывают,
-4. `change:modelValue` (значение действительно изменилось).
+1. native `input` на `<input>` → `update:modelValue` (синхронизация v-model),
+2. parent watcher'ы отрабатывают,
+3. native `change` → `change:modelValue` («значение устоялось»).
+
+Порядок гарантирован браузером: `change` у чекбокса всегда идёт после `input`.
 
 `update:modelValue` подписывай для непрерывного слежения; `change:modelValue` — для операций, которые не нужны при каждом toggle (запись в analytics, server sync).
 

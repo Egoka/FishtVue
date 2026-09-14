@@ -144,11 +144,15 @@ const countries = [
 | Event | Payload | When fired |
 |---|---|---|
 | `update:modelValue` | `(selectValue, selectItem?: Array<any>)` | На каждом select. `selectItem` — полный объект из `options` (для удобства). |
-| `change:modelValue` | то же | После flush — для server sync. |
+| `change:modelValue` | то же | На закрытии дропдауна (`closeSelect`) — момент «выбор завершён». |
 | `update:invalid` | `boolean` (всегда `false`) | Выбор значения — reset-сигнал (`v-model:invalid`). |
 | `active` | `boolean` | Открытие/закрытие списка (бывший `isActive`). |
 
-**v-model contract**: `update:modelValue` для realtime, `change:modelValue` для side-effects.
+**v-model contract** (form-control): стандартный `v-model` идёт через `update:modelValue` —
+на каждый выбор; парный `change:modelValue` — «значение устоялось», у Select это закрытие
+списка, а не blur. В multiple-режиме поэтому приходит один `change:` на всю серию кликов.
+`update:modelValue` подписывай для realtime, `change:modelValue` — для тяжёлых side-effect'ов
+(server sync). Валидность — отдельный канал `v-model:invalid`.
 
 ## 7. Slots
 
@@ -413,6 +417,7 @@ describe("Select", () => {
 - `modelValue` в multiple-режиме — `Array<number | string | null>`. `null` в массиве — странность.
 - `classSelect: StyleClass | "justify-end"` — литерал `"justify-end"` среди свободных классов — странный narrow.
 - Slot `values` payload `{ selected, key?, deleteSelect? }` — все три опциональны, что усложняет типизацию.
+- Нет событий `focus` / `blur` — они есть только у [Input](./input.md) и [Textarea](./textarea.md). Асимметрия осознанная: major 1.0.0 переименовывал события, но новых не добавлял (dev-patterns §7). Фокус-состояние доступно через `active`.
 
 ### Behavioral caveats
 

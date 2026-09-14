@@ -215,13 +215,27 @@ describe("X Component Tests", () => {
 | `.d.ts` (по компоненту)    | PascalCase                 | `Button.d.ts`, `Input.d.ts`              |
 | `.test.ts`                 | PascalCase                 | `Button.test.ts`                         |
 | Props                      | camelCase                  | `iconPosition`, `modelValue`             |
-| Events                     | kebab-case; v-model-канал `update:<prop>` / `change:<prop>` с camelCase-именем prop'а | `item-click`, `update:modelValue`, `change:modelValue` |
+| Events                     | kebab-case; v-model-канал `update:<prop>` / `change:<prop>` с camelCase-именем prop'а. Префиксы `on*` / `is*` / `get*` запрещены | `item-click`, `update:modelValue`, `update:pageSize` |
+| Канал `change:<prop>`      | Только у form-control'ов — Input, Textarea, Select, Calendar, TextEditor, Switch (= `baseInputs` из `Form.vue`). Остальным достаточно `update:` | `change:modelValue` есть у Switch, нет у Dialog |
 | Ключи `classes` / `data-*` | camelCase-ключ = kebab-суффикс: корень `data-{name}`, элемент `data-{name}-{key}` | `classes.itemEndIcon` ↔ `data-menu-item-end-icon` |
 | CSS root class             | `fv {prefix}-{kebab-name}` | `fv fishtvue-button`                     |
 | Markdown файл документации | kebab-case                 | `text-editor.md`, `input-layout.md`      |
 | Type alias / interface     | PascalCase                 | `ButtonProps`, `XExpose`                 |
 
 \* Реальный каталог — `lib/texteditor/` (без дефиса). Это историческое отклонение, см. §12.
+
+**Контракт `update:` / `change:`.** Единым для библиотеки является *порядок* и *семантика*,
+а не механизм: `update:<prop>` идёт первым и синхронизирует `v-model` на каждое изменение;
+`change:<prop>` идёт после и означает «значение устоялось». Момент устаканивания у каждого
+контрола свой и должен быть назван в §6 его документа: native `change` (Input, Textarea, Switch),
+закрытие дропдауна (Select), смена/очистка даты (Calendar), blur или programmatic save
+(TextEditor). Компонентам вне form-control'ов парный канал не заводится: у булевой видимости
+(Alert, Dialog, FixWindow) или номера страницы (Pagination) нет момента, отличного от самого
+обновления.
+
+Оба правила — имена и контракт канала — проверяет [`emitsNaming.test.ts`](../lib/emitsNaming.test.ts).
+Guard разбирает тело `*Emits`-блока целиком, поэтому видит и многострочные сигнатуры
+(`Table.click-cell`), и держит точный счётчик объявленных событий: потеря видимости роняет тест.
 
 ## 8. Adding a new component (checklist)
 

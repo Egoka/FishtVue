@@ -169,13 +169,18 @@ since: <версия fishtvue, в которой появилось>
 ## 6. Events / Emits + v-model contract
 Таблица: `| Event | Payload | When fired |`. Источник — `{Target}Emits` + `defineEmits` в `.vue`.
 
-**v-model contract** (обязательный подраздел для form-controls). Стандарт FishtVue:
-1. native `input` (внутренний DOM-обработчик),
-2. `update:modelValue` (синхронизация v-model),
-3. внутренние `watch` parent'а отрабатывают,
-4. `change:modelValue` (только когда значение действительно изменилось, после reactivity flush).
+**v-model contract** — подраздел обязателен во **всех** документах (§11.5): либо контракт, либо явное «не применимо для этого компонента» с причиной.
+
+Для form-control'ов стандарт FishtVue задаёт *порядок* и *семантику*, а не механизм:
+1. `update:modelValue` — первым, синхронизирует `v-model` на каждое изменение;
+2. `watch`'и parent'а отрабатывают;
+3. `change:modelValue` — после, означает «значение устоялось».
+
+**Момент устаканивания у каждого контрола свой — назови его явно, не копируй формулировку соседа:** native `change` (Input, Textarea, Switch), закрытие дропдауна (Select), смена/очистка даты (Calendar), blur либо programmatic save (TextEditor).
 
 Указать, когда какое событие подписывать: `update:modelValue` для непрерывного отслеживания, `change:modelValue` для тяжёлых операций.
+
+Компонентам вне form-control'ов парный канал не заводится (dev-patterns §2 H) — если у компонента есть `update:modelValue`, но нет `change:modelValue`, это надо объяснить: у булевой видимости или номера страницы нет момента, отличного от самого обновления.
 
 ## 7. Slots
 Таблица: `| Slot | Slot props | Description |`. Источник — `{Target}Slots` + `<slot>` в `.vue`. Указать default content, если есть.

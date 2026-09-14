@@ -118,6 +118,13 @@ const date = ref<Date | null>(null)
 | `ready` | `CalendarPicker` | После init — даёт ссылку на v-calendar API (бывший `getCalendar`). |
 | `active` | `boolean` | Открытие/закрытие popover (бывший `isActive`). |
 
+**v-model contract** (form-control): стандартный `v-model` идёт через `update:modelValue`,
+парный `change:modelValue` — «значение устоялось». У Calendar момент устаканивания — смена
+или очистка даты (`changeDate`/`clearDataPicker`), а не blur: popover закрывается уже после.
+`update:modelValue` подписывай для непрерывного отслеживания, `change:modelValue` — для
+тяжёлых операций (server sync, пересчёт диапазонов). Валидность — отдельный канал
+`v-model:invalid`.
+
 ## 7. Slots
 
 | Slot | Slot props | Description |
@@ -324,6 +331,7 @@ describe("Calendar", () => {
 - `DatePickerProps` ([Calendar.d.ts:260-291](../../lib/calendar/Calendar.d.ts#L260-L291)) содержит ~30 полей через `Partial`, многие из которых — re-export типов v-calendar (`v-calendar/dist/types`, `v-calendar/src/utils`). При апгрейде v-calendar пути могут сменить — fragile.
 - `DatePickerModel` — широкий union; narrow для `range` vs single — на стороне потребителя.
 - `CalendarPicker` (expose v-calendar API) — содержит `any` поля.
+- Нет событий `focus` / `blur` — они есть только у [Input](./input.md) и [Textarea](./textarea.md). Асимметрия осознанная: major 1.0.0 переименовывал события, но новых не добавлял (dev-patterns §7). Фокус-состояние доступно через `active`.
 
 ### Behavioral caveats
 
