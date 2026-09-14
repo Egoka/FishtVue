@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.0.1](https://github.com/Egoka/FishtVue/compare/v1.0.0...v1.0.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* **release:** npm version ронял релиз на совпадении версий ([283052f](https://github.com/Egoka/FishtVue/commit/283052f32c3834eddd13addf1760d8dabc2cc9d9))
+* **sandbox:** pnpm 11 падал на проигнорированных build-скриптах ([c383e18](https://github.com/Egoka/FishtVue/commit/c383e1845ae65630debdaba85bd20d3b6ad10c0a))
+
 ## [0.2.12](https://github.com/Egoka/FishtVue/compare/v0.2.11...v0.2.12) (2026-05-10)
 
 
