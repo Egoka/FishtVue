@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { computed, onMounted, onUnmounted, reactive, ref, unref, useId, watch } from "vue"
+  import { computed, onMounted, onUnmounted, reactive, ref, toValue, useId, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import type { StyleClass } from "fishtvue/types"
   import type { CursorType, Panel, SplitClassKey, SplitEmits, SplitProps } from "./Split"
@@ -35,7 +35,7 @@
   // ---PROPS-------------------------------
   const units = computed<SplitProps["units"]>(() => props.units ?? "percentages")
   const panels = computed<Panel[]>(() => {
-    const panelsValue = unref(props.panels) ?? []
+    const panelsValue = toValue(props.panels) ?? []
     return (
       panelsValue
         ?.filter((item) => !item?.hidden)
@@ -186,7 +186,7 @@
 
   // ---WATCHERS----------------------------
   watch(
-    () => unref(props.panels),
+    () => toValue(props.panels),
     (array) => {
       const defaultSize = getDefaultSize(panels.value)
       Object.assign(

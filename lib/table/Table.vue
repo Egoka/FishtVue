@@ -11,7 +11,7 @@
     reactive,
     ref,
     toRaw,
-    unref,
+    toValue,
     useSlots,
     watch
   } from "vue"
@@ -215,19 +215,19 @@
   const mode = computed<NonNullable<TableProps["mode"]>>(
     () => (props?.mode as TableProps["mode"]) ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
   )
-  const toolbar = computed<TableToolbar | boolean>(() => deepMerge(options?.toolbar, unref(props?.toolbar)) ?? false)
-  const sort = computed<TableSort | boolean>(() => deepMerge(options?.sort, unref(props?.sort)) ?? false)
-  const filter = computed<TableFilter | boolean>(() => deepMerge(options?.filter, unref(props?.filter)) ?? false)
-  const grouping = computed<TableGrouping | string>(() => deepMerge(options?.grouping, unref(props?.grouping)))
+  const toolbar = computed<TableToolbar | boolean>(() => deepMerge(options?.toolbar, toValue(props?.toolbar)) ?? false)
+  const sort = computed<TableSort | boolean>(() => deepMerge(options?.sort, toValue(props?.sort)) ?? false)
+  const filter = computed<TableFilter | boolean>(() => deepMerge(options?.filter, toValue(props?.filter)) ?? false)
+  const grouping = computed<TableGrouping | string>(() => deepMerge(options?.grouping, toValue(props?.grouping)))
   const pagination = computed<TablePagination | boolean>(() => {
     // Явный `:pagination` (object/false) выигрывает над compound `<Pagination>`-child.
-    const explicit = unref(props?.pagination)
+    const explicit = toValue(props?.pagination)
     if (explicit !== undefined && explicit !== null) return deepMerge(options?.pagination, explicit) ?? false
     return (deepMerge(options?.pagination, compoundPaginationConfig.value) as TablePagination | boolean) ?? false
   })
   const columns = computed<boolean | Array<TableColumn>>(() => {
     // Schema `:columns` (массив ИЛИ false) выигрывает; иначе — compound `<Column>`-дети.
-    const schema = unref(props?.columns)
+    const schema = toValue(props?.columns)
     if (schema !== undefined && schema !== null) return schema as boolean | Array<TableColumn>
     return compoundColumns.value.length ? compoundColumns.value : false
   })
@@ -247,7 +247,7 @@
     typeof columns.value === "boolean" ? columns.value : Array.isArray(columns.value)
   )
   const isSummary = computed<boolean>(() => {
-    const summaryValue = unref(props.summary)
+    const summaryValue = toValue(props.summary)
     return typeof summaryValue === "boolean" ? summaryValue : Array.isArray(summaryValue)
   })
   const loadingThreshold = computed<NonNullable<TableProps["loadingThreshold"]>>(
@@ -667,7 +667,7 @@
   })
   const dataSummary = computed<Array<TableSummaryPrivate>>(() => {
     if (!isSummary.value) return []
-    const summaryValue = unref(props.summary)
+    const summaryValue = toValue(props.summary)
     if (Array.isArray(summaryValue) && summaryValue?.length) {
       return <Array<TableSummaryPrivate>>summaryValue.map((summary, index) => {
         const column = getColumn(summary.dataField, index)
@@ -1248,7 +1248,7 @@
   watch(
     () => props.dataSource,
     () => {
-      const dataSourceValue = unref(props.dataSource)
+      const dataSourceValue = toValue(props.dataSource)
       allData.value = dataSourceValue?.length ? dataSourceValue?.map((item) => ({ ...item, _key: generateUUID() })) : []
       updateDataSource()
     },

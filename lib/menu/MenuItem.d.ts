@@ -1,6 +1,6 @@
 import { VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
-import { ItemMenuPrivate } from "./Menu"
+import { MenuItemDataPrivate } from "./Menu"
 
 /**
  * ## MenuItem
@@ -76,33 +76,31 @@ export declare type MenuItemEmits = {
    * Emitted when the menu item is clicked.
    * @param event
    * @param {MouseEvent | TouchEvent} nativeEvent - The triggering event.
-   * @param {ItemMenuPrivate} item - The resolved menu item.
+   * @param {MenuItemDataPrivate} item - The resolved menu item.
    */
-  (event: "click", nativeEvent: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  (event: "click", nativeEvent: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 
   /**
    * Emitted when the menu item becomes active (hover/touch in).
    * @param event
    * @param {MouseEvent | TouchEvent} nativeEvent - The triggering event.
-   * @param {ItemMenuPrivate} item - The resolved menu item.
+   * @param {MenuItemDataPrivate} item - The resolved menu item.
    */
-  (event: "active", nativeEvent: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  (event: "active", nativeEvent: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 
   /**
    * Emitted when the menu item becomes inactive (hover/touch out).
    * @param event
    * @param {MouseEvent | TouchEvent} nativeEvent - The triggering event.
-   * @param {ItemMenuPrivate} item - The resolved menu item.
+   * @param {MenuItemDataPrivate} item - The resolved menu item.
    */
-  (event: "inactive", nativeEvent: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  (event: "inactive", nativeEvent: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 }
 
 /**
  * MenuItem is a renderless descriptor — никаких публичных методов/состояния не экспонирует.
  */
 export declare type MenuItemExpose = NonNullable<unknown>
-
-export declare type MenuItemOption = Pick<MenuItemProps, "icon" | "disabled" | "class">
 
 // ---------------------------------------
 

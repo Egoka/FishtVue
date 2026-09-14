@@ -20,10 +20,6 @@ import { join, resolve } from "node:path"
 const LIB = resolve(process.cwd(), "lib")
 
 const PENDING: string[] = [
-  "form/Form.d.ts",
-  "menu/Menu.d.ts",
-  "menu/MenuGroup.d.ts",
-  "menu/MenuItem.d.ts",
   // T5 / W7: `_key` → `ItemKey`, `namesColors` → `ColorName`.
   "types.d.ts",
   "theme/Theme.d.ts"

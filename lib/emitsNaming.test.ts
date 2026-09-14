@@ -15,7 +15,7 @@ import { join, resolve } from "node:path"
  */
 const LIB = resolve(process.cwd(), "lib")
 
-const PENDING: string[] = ["menu/Menu.d.ts"]
+const PENDING: string[] = []
 
 const EVENT_NAME = /^(?:update:|change:)[a-zA-Z]+$|^[a-z]+(?:-[a-z]+)*$/
 const FORBIDDEN = /^(?:on|is|get)[A-Z]/

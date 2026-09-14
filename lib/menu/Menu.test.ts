@@ -6,7 +6,7 @@ import Menu from "fishtvue/menu/Menu.vue"
 import MenuItem from "fishtvue/menu/MenuItem.vue"
 import MenuGroup from "fishtvue/menu/MenuGroup.vue"
 import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
-import { GroupMenu, ItemMenuPrivate, MenuOption, MenuProps } from "fishtvue/menu/Menu"
+import { MenuGroupData, MenuItemDataPrivate, MenuOption, MenuProps } from "fishtvue/menu/Menu"
 import { StyleMode } from "fishtvue/types"
 
 // Issue 7: heroicons (item / separator SVG) теперь резолвятся async — ждём microtasks + macrotask.
@@ -19,7 +19,7 @@ const flushHero = async () => {
 describe("Menu Component", () => {
   // Глобальные componentsOptions (через app.use(FishtVue, …)) пишутся в window.FishtVue и
   // протекают между тестами (см. MEMORY: i18n & test isolation). Чистим до/после каждого теста,
-  // чтобы plain-mount тесты не подхватывали leaked options (напр. horizontal: true).
+  // чтобы plain-mount тесты не подхватывали leaked options (напр. orientation: "horizontal").
   beforeEach(() => {
     delete (window as any).FishtVue
   })
@@ -134,7 +134,7 @@ describe("Menu Component", () => {
       const wrapper = mount(Menu, {
         props: {
           groups: mockGroups(),
-          horizontal: true
+          orientation: "horizontal"
         }
       })
       await nextTick()
@@ -186,21 +186,21 @@ describe("Menu Component", () => {
     })
 
     describe("Menu Component - Methods overItem and leaveItem", () => {
-      it("emits 'onActive', 'onInactive' and 'onClick' event on menu item", async () => {
+      it("emits 'item-active', 'item-inactive' and 'item-click' event on menu item", async () => {
         const consoleMock = vi.spyOn(console, "log")
-        const mockGroups: Array<GroupMenu> = [
+        const mockGroups: Array<MenuGroupData> = [
           {
             title: "Group 1",
             items: [
               {
                 title: "Profile",
-                onActive(event: PointerEvent, item: ItemMenuPrivate) {
+                onActive(event: PointerEvent, item: MenuItemDataPrivate) {
                   console.log("onActive Profile", event, item)
                 },
-                onInactive(event: PointerEvent, item: ItemMenuPrivate) {
+                onInactive(event: PointerEvent, item: MenuItemDataPrivate) {
                   console.log("onInactive Profile", event, item)
                 },
-                onClick(event: PointerEvent, item: ItemMenuPrivate) {
+                onClick(event: PointerEvent, item: MenuItemDataPrivate) {
                   console.log("onClick Profile", event, item)
                 }
               },
@@ -222,13 +222,13 @@ describe("Menu Component", () => {
         // Наведение на элемент
         await menuItem.trigger("pointerenter")
         expect(consoleMock.mock.lastCall?.[0]).toBe("onActive Profile")
-        expect((wrapper.emitted("onActive")?.[0]?.[1] as any).title).toBe("Profile")
+        expect((wrapper.emitted("item-active")?.[0]?.[1] as any).title).toBe("Profile")
         await menuItem.trigger("pointerleave")
         expect(consoleMock.mock.lastCall?.[0]).toBe("onInactive Profile")
-        expect((wrapper.emitted("onActive")?.[0]?.[1] as any).title).toBe("Profile")
+        expect((wrapper.emitted("item-active")?.[0]?.[1] as any).title).toBe("Profile")
         await menuItem.trigger("click")
         expect(consoleMock.mock.lastCall?.[0]).toBe("onClick Profile")
-        expect((wrapper.emitted("onActive")?.[0]?.[1] as any).title).toBe("Profile")
+        expect((wrapper.emitted("item-active")?.[0]?.[1] as any).title).toBe("Profile")
       })
     })
 
@@ -273,17 +273,17 @@ describe("Menu Component", () => {
       expect(wrapper.vm.modeStyle).toBe("")
     })
 
-    describe("Menu Component - styles prop", () => {
+    describe("Menu Component - aspect-ключи itemActive / itemSelected", () => {
       const customStyles = {
-        activeRows: "active-rows-class",
-        selectedRows: "selected-rows-class"
+        itemActive: "active-rows-class",
+        itemSelected: "selected-rows-class"
       }
 
-      it("should apply the custom activeRows style class", async () => {
+      it("should apply the custom itemActive class", async () => {
         const wrapper = mount(Menu, {
           props: {
             groups: mockGroups(),
-            styles: customStyles
+            classes: customStyles
           } as MenuProps
         })
         await nextTick()
@@ -292,16 +292,16 @@ describe("Menu Component", () => {
         const menuElement = wrapper.find("[data-menu-item]")
         await menuElement.trigger("pointerenter")
 
-        // Проверяем, что применяется класс activeRows
+        // Проверяем, что применяется класс itemActive
         expect(menuElement.classes().join(" ")).toContain("active-rows-class")
       })
 
-      it("should apply the custom selectedRows style class", async () => {
+      it("should apply the custom itemSelected class", async () => {
         const wrapper = mount(Menu, {
           props: {
             selected: true,
             groups: mockGroups(),
-            styles: customStyles
+            classes: customStyles
           } as MenuProps
         })
         await nextTick()
@@ -310,11 +310,11 @@ describe("Menu Component", () => {
         const menuElement = wrapper.find("[data-menu-item]")
         await menuElement.trigger("click")
 
-        // Проверяем, что применяется класс selectedRows
+        // Проверяем, что применяется класс itemSelected
         expect(menuElement.classes().join(" ")).toContain("selected-rows-class")
       })
 
-      it("should not apply custom styles if styles prop is not provided", async () => {
+      it("should not apply custom classes if classes prop is not provided", async () => {
         const wrapper = mount(Menu, {
           props: {
             groups: mockGroups()
@@ -322,7 +322,7 @@ describe("Menu Component", () => {
         })
         await nextTick()
 
-        // Проверяем, что классы activeRows и selectedRows не применяются по умолчанию
+        // Проверяем, что классы itemActive и itemSelected не применяются по умолчанию
         const menuElement = wrapper.find("[data-menu-item]")
         expect(menuElement.classes().join(" ")).not.toContain("active-rows-class")
         expect(menuElement.classes().join(" ")).not.toContain("selected-rows-class")
@@ -342,9 +342,7 @@ describe("Menu Component", () => {
     })
     it("renders menu with global options", async () => {
       const app: any = createAppWithFishtVue({
-        styles: {
-          class: { body: "custom-body-class" }
-        }
+        classes: { root: "custom-body-class" }
       })
 
       const wrapper = mount(Menu, {
@@ -367,9 +365,7 @@ describe("Menu Component", () => {
 
     it("overrides global options with props", async () => {
       const app: any = createAppWithFishtVue({
-        styles: {
-          class: { body: "global-body-class", title: "global-title-class" }
-        }
+        classes: { root: "global-body-class", title: "global-title-class" }
       })
 
       const wrapper = mount(Menu, {
@@ -382,9 +378,7 @@ describe("Menu Component", () => {
               items: [{ title: "Profile" }]
             }
           ],
-          styles: {
-            class: { body: "prop-body-class" }
-          }
+          classes: { root: "prop-body-class" }
         } as MenuProps
       })
       await nextTick()
@@ -430,7 +424,7 @@ describe("Menu Component", () => {
 
     it("supports separators based on global options", async () => {
       const app: any = createAppWithFishtVue({
-        styles: { class: { separatorIcon: "chevron-right" } },
+        classes: { separatorIcon: "chevron-right" },
         separator: { icon: "chevron-right" }
       })
 
@@ -460,7 +454,7 @@ describe("Menu Component", () => {
 
     it("renders nested menus with global options", async () => {
       const app: any = createAppWithFishtVue({
-        horizontal: true
+        orientation: "horizontal"
       })
 
       const wrapper = mount(Menu, {
@@ -555,7 +549,7 @@ describe("Menu Component", () => {
       await nextTick()
       expect(v.find("[data-menu]").attributes("aria-orientation")).toBe("vertical")
 
-      const hr = mount(Menu, { props: { horizontal: true, groups: [{ items: [{ title: "A" }] }] } })
+      const hr = mount(Menu, { props: { orientation: "horizontal", groups: [{ items: [{ title: "A" }] }] } })
       await nextTick()
       expect(hr.find("[data-menu]").attributes("aria-orientation")).toBe("horizontal")
     })
@@ -654,19 +648,19 @@ describe("Menu Component", () => {
       expect(v.findAll("[data-menu-item]")[0].attributes("tabindex")).toBe("0")
     })
 
-    it("Enter activates the focused item (emits onClick)", async () => {
+    it("Enter activates the focused item (emits item-click)", async () => {
       const v = mount(Menu, { props: { groups: kbGroups() } })
       await nextTick()
       await v.find("[data-menu]").trigger("keydown", { key: "Enter" })
-      expect(v.emitted("onClick")).toBeTruthy()
-      expect((v.emitted("onClick")![0][1] as any).title).toBe("Apple")
+      expect(v.emitted("item-click")).toBeTruthy()
+      expect((v.emitted("item-click")![0][1] as any).title).toBe("Apple")
     })
 
-    it("Space activates the focused item (emits onClick)", async () => {
+    it("Space activates the focused item (emits item-click)", async () => {
       const v = mount(Menu, { props: { groups: kbGroups() } })
       await nextTick()
       await v.find("[data-menu]").trigger("keydown", { key: " " })
-      expect(v.emitted("onClick")).toBeTruthy()
+      expect(v.emitted("item-click")).toBeTruthy()
     })
 
     it("typeahead focuses item by first letter", async () => {
@@ -678,7 +672,7 @@ describe("Menu Component", () => {
     })
 
     it("horizontal: ArrowRight/ArrowLeft navigate items", async () => {
-      const v = mount(Menu, { props: { horizontal: true, groups: kbGroups() } })
+      const v = mount(Menu, { props: { orientation: "horizontal", groups: kbGroups() } })
       await nextTick()
       await v.find("[data-menu]").trigger("keydown", { key: "ArrowRight" })
       await nextTick()
@@ -857,7 +851,7 @@ describe("Menu Component", () => {
 
     it("horizontal item uses logical me-0.5 (not mr-0.5)", async () => {
       const wrapper = mount(Menu, {
-        props: { horizontal: true, groups: [{ items: [{ title: "A" }, { title: "B" }] }] }
+        props: { orientation: "horizontal", groups: [{ items: [{ title: "A" }, { title: "B" }] }] }
       })
       await nextTick()
       const cls = wrapper.find("[data-menu-item]").classes()
@@ -881,7 +875,7 @@ describe("Menu Component", () => {
         props: { groups: [{ items: [{ title: "P", menu: { groups: [{ items: [{ title: "S" }] }] } }] }] }
       })
       await nextTick()
-      expect((wrapper.vm as any).classItemRightIcon).toContain("rtl:-scale-x-100")
+      expect((wrapper.vm as any).classItemEndIcon).toContain("rtl:-scale-x-100")
     })
   })
 
@@ -940,6 +934,275 @@ describe("Menu Component", () => {
       await nextTick()
       const fw = wrapper.findComponent(FixWindow)
       expect(fw.props("position")).toBe("left")
+    })
+  })
+
+  // ---1.0.0 — контракт props ---------------------------------------------------------------------
+  describe("Menu Component - Props contract 1.0.0", () => {
+    const groups = () => [{ title: "G", items: [{ title: "I", icon: "check", info: "i", menu: { groups: [] } }] }]
+
+    const withOptions = (options: MenuOption = {}) => ({
+      install(app: any) {
+        app.use(FishtVue, { componentsOptions: { Menu: options } })
+      }
+    })
+
+    it("объявляет ровно новый набор props (снятые — отсутствуют)", async () => {
+      const wrapper = mount(Menu, { props: { groups: groups() } })
+      await nextTick()
+      expect(wrapper.props()).toEqual({
+        mode: undefined,
+        selected: undefined,
+        orientation: undefined,
+        firstLetter: undefined,
+        onlyIcons: undefined,
+        width: undefined,
+        height: undefined,
+        class: undefined,
+        classes: undefined,
+        title: undefined,
+        separator: undefined,
+        fixWindowProps: undefined,
+        groups: groups()
+      })
+    })
+
+    it("`class` садится только на корень `[data-menu]`", async () => {
+      const wrapper = mount(Menu, { props: { title: "T", groups: groups(), class: "probe-root" } })
+      await nextTick()
+      expect(wrapper.find("[data-menu]").attributes("class")).toContain("probe-root")
+      for (const selector of ["[data-menu-title]", "[data-menu-group]", "[data-menu-item]"]) {
+        expect(wrapper.find(selector).attributes("class") ?? "").not.toContain("probe-root")
+      }
+    })
+
+    it.each([
+      ["root", "[data-menu]"],
+      ["title", "[data-menu-title]"],
+      ["group", "[data-menu-group]"],
+      ["groupTitle", "[data-menu-group-title]"],
+      ["item", "[data-menu-item]"],
+      ["itemIcon", "[data-menu-item-icon]"],
+      ["itemTitle", "[data-menu-item-title]"],
+      ["itemInfo", "[data-menu-item-info]"],
+      ["itemEndIcon", "[data-menu-item-end-icon]"]
+    ])("classes.%s → %s", async (key, selector) => {
+      const wrapper = mount(Menu, {
+        props: { title: "T", groups: groups(), classes: { [key]: "probe-key" } as any }
+      })
+      await nextTick()
+      await flushHero()
+      expect(wrapper.find(selector).attributes("class")).toContain("probe-key")
+    })
+
+    it("`classes.separator` ложится на корень <Separator>, `separatorIcon` — на иконку внутри", async () => {
+      const wrapper = mount(Menu, {
+        props: {
+          classes: { separator: "probe-sep", separatorIcon: "probe-sep-icon" },
+          groups: [
+            { title: "G1", items: [{ title: "A" }] },
+            { title: "G2", separator: { icon: "chevron-right" }, items: [{ title: "B" }] }
+          ]
+        }
+      })
+      await nextTick()
+      await flushHero()
+      expect(wrapper.find("[data-separator]").attributes("class")).toContain("probe-sep")
+      expect(wrapper.find("[data-separator] [data-icon]").attributes("class")).toContain("probe-sep-icon")
+    })
+
+    it("props.classes перебивает options.classes по twMerge, неконфликтный класс options остаётся", async () => {
+      const wrapper = mount(Menu, {
+        global: { plugins: [withOptions({ classes: { item: "p-2 italic" } }) as any] },
+        props: { groups: groups(), classes: { item: "p-4" } }
+      })
+      await nextTick()
+      const cls = wrapper.find("[data-menu-item]").attributes("class") ?? ""
+      expect(cls).toContain("p-4")
+      expect(cls).not.toContain("p-2")
+      expect(cls).toContain("italic")
+    })
+
+    it("`item.class` — самый частный потребитель, выигрывает у `classes.item`", async () => {
+      const wrapper = mount(Menu, {
+        props: {
+          groups: [{ items: [{ title: "A", class: "p-8" }] }],
+          classes: { item: "p-2" }
+        }
+      })
+      await nextTick()
+      const cls = wrapper.find("[data-menu-item]").attributes("class") ?? ""
+      expect(cls).toContain("p-8")
+      expect(cls).not.toContain("p-2")
+    })
+
+    it("потребитель идёт после базы — `classes.root` перебивает хвостовой `overflow-auto`", async () => {
+      const wrapper = mount(Menu, { props: { groups: groups(), classes: { root: "overflow-visible" } } })
+      await nextTick()
+      const cls = wrapper.vm.classBase as string
+      expect(cls).toContain("overflow-visible")
+      expect(cls).not.toContain("overflow-auto")
+    })
+
+    it("`class` побеждает `classes.root`, а тот — `options.class`", async () => {
+      const wrapper = mount(Menu, {
+        global: { plugins: [withOptions({ class: "p-1", classes: { root: "p-2" } }) as any] },
+        props: { groups: groups(), classes: { root: "p-3" }, class: "p-4" }
+      })
+      await nextTick()
+      const cls = wrapper.vm.classBase as string
+      expect(cls).toContain("p-4")
+      for (const loser of ["p-1", "p-2", "p-3"]) expect(cls).not.toContain(loser)
+    })
+
+    it("подменю наследует `classes.root`, но не `class` верхнего меню", async () => {
+      const wrapper = mount(Menu, {
+        attachTo: document.body,
+        props: {
+          class: "probe-top-only",
+          classes: { root: "probe-inherited" },
+          groups: [{ items: [{ title: "A", menu: { groups: [{ items: [{ title: "B" }] }] } }] }]
+        }
+      })
+      await nextTick()
+      await flushHero()
+      const menus = document.querySelectorAll("[data-menu]")
+      expect(menus.length).toBe(2)
+      const submenu = menus[1] as HTMLElement
+      expect(submenu.className).toContain("probe-inherited")
+      expect(submenu.className).not.toContain("probe-top-only")
+      wrapper.unmount()
+    })
+
+    it("unstyled сохраняет `class`/`classes`, но режет базу и `fishtvue-menu`", async () => {
+      const wrapper = mount(Menu, {
+        global: {
+          plugins: [
+            {
+              install(app: any) {
+                app.use(FishtVue, { unstyled: true })
+              }
+            } as any
+          ]
+        },
+        props: { groups: groups(), class: "probe-root", classes: { item: "probe-item" } }
+      })
+      await nextTick()
+      const root = wrapper.find("[data-menu]").attributes("class") ?? ""
+      const item = wrapper.find("[data-menu-item]").attributes("class") ?? ""
+      expect(root).toContain("probe-root")
+      expect(root).not.toContain("fishtvue-")
+      expect(root).not.toContain("shadow-md")
+      expect(item).toContain("probe-item")
+      expect(item).not.toContain("cursor-pointer")
+    })
+
+    // ---aspect-ключи ----------------------------------------------------
+    it.each([
+      ["animation", "motion-safe:duration-500", "[data-menu]"],
+      ["itemActive", "bg-surface-200/50", "[data-menu-item]"],
+      ["itemSelected", "bg-surface-200", "[data-menu-item]"]
+    ])('aspect `%s`: default на месте, `""` его отключает', async (key, fallback, selector) => {
+      const base = mount(Menu, { props: { selected: true, groups: groups() } })
+      await nextTick()
+      if (key !== "animation") {
+        await base.find("[data-menu-item]").trigger(key === "itemActive" ? "pointerenter" : "click")
+      }
+      expect(base.find(selector).attributes("class")).toContain(fallback)
+
+      const off = mount(Menu, { props: { selected: true, groups: groups(), classes: { [key]: "" } as any } })
+      await nextTick()
+      if (key !== "animation") {
+        await off.find("[data-menu-item]").trigger(key === "itemActive" ? "pointerenter" : "click")
+      }
+      expect(off.find(selector).attributes("class") ?? "").not.toContain(fallback)
+    })
+
+    // ---T2 — имена концептов --------------------------------------------
+    it("`orientation` заменил булев `horizontal`; снятое имя уходит fallthrough-атрибутом", async () => {
+      const wrapper = mount(Menu, { props: { groups: groups(), horizontal: true } as any })
+      await nextTick()
+      const root = wrapper.find("[data-menu]")
+      expect(root.attributes("horizontal")).toBe("true")
+      expect(root.attributes("aria-orientation")).toBe("vertical")
+      expect(root.attributes("data-orientation")).toBe("vertical")
+
+      const horizontal = mount(Menu, { props: { groups: groups(), orientation: "horizontal" } })
+      await nextTick()
+      expect(horizontal.find("[data-menu]").attributes("aria-orientation")).toBe("horizontal")
+      expect(horizontal.find("[data-menu]").attributes("data-orientation")).toBe("horizontal")
+    })
+
+    it("`width`/`height` — top-level props (бывшие `styles.width`/`styles.height`)", async () => {
+      const wrapper = mount(Menu, { props: { groups: groups(), width: 200, height: "10rem" } })
+      await nextTick()
+      const style = wrapper.find("[data-menu]").attributes("style") ?? ""
+      expect(style).toContain("width: 200px")
+      expect(style).toContain("height: 10rem")
+    })
+
+    it("`fixWindowProps` заменил `paramsWindowMenu`", async () => {
+      const wrapper = mount(Menu, {
+        props: { groups: groups(), fixWindowProps: { openDelay: 777 } }
+      })
+      await nextTick()
+      expect((wrapper.vm as any).fixWindowProps.openDelay).toBe(777)
+    })
+
+    // ---T3 — булевы ------------------------------------------------------
+    it("`firstLetter`: absent → undefined в props(), default false, слой options достижим", async () => {
+      const bare = mount(Menu, { props: { groups: [{ items: [{ title: "Apple" }] }] } })
+      await nextTick()
+      expect(bare.props().firstLetter).toBeUndefined()
+      expect(bare.vm.firstLetter).toBe(false)
+      expect(bare.find("[data-menu-item-icon]").exists()).toBe(false)
+
+      const fromOptions = mount(Menu, {
+        global: { plugins: [withOptions({ firstLetter: true }) as any] },
+        props: { groups: [{ items: [{ title: "Apple" }] }] }
+      })
+      await nextTick()
+      expect(fromOptions.vm.firstLetter).toBe(true)
+      expect(fromOptions.find("[data-menu-item-icon]").text()).toBe("A")
+
+      const fromProps = mount(Menu, {
+        global: { plugins: [withOptions({ firstLetter: true }) as any] },
+        props: { groups: [{ items: [{ title: "Apple" }] }], firstLetter: false }
+      })
+      await nextTick()
+      expect(fromProps.vm.firstLetter).toBe(false)
+    })
+
+    it("`separator.visible` заменил `isVisible` (default true, false прячет разделитель)", async () => {
+      const two = () => [
+        { title: "G1", items: [{ title: "A" }] },
+        { title: "G2", items: [{ title: "B" }] }
+      ]
+      const shown = mount(Menu, { props: { groups: two() } })
+      await nextTick()
+      expect(shown.find("[data-separator]").exists()).toBe(true)
+
+      const hidden = mount(Menu, { props: { groups: two(), separator: { visible: false } } })
+      await nextTick()
+      expect(hidden.find("[data-separator]").exists()).toBe(false)
+    })
+
+    // ---T4 — emits -------------------------------------------------------
+    it("события — `item-click`/`item-active`/`item-inactive`; старые camelCase не эмитятся", async () => {
+      const wrapper = mount(Menu, { props: { groups: groups() } })
+      await nextTick()
+      const item = wrapper.find("[data-menu-item]")
+      await item.trigger("pointerenter")
+      await item.trigger("pointerleave")
+      await item.trigger("click")
+
+      expect(wrapper.emitted("item-active")).toBeTruthy()
+      expect(wrapper.emitted("item-inactive")).toBeTruthy()
+      expect(wrapper.emitted("item-click")).toBeTruthy()
+      expect((wrapper.emitted("item-click")![0][1] as any).title).toBe("I")
+      for (const legacy of ["onActive", "onInactive", "onClick"]) {
+        expect(wrapper.emitted(legacy)).toBeUndefined()
+      }
     })
   })
 

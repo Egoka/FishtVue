@@ -1,6 +1,6 @@
 import { Component, MaybeRef, VNode } from "vue"
 import { Rules } from "fishtvue/utils/rulesHandler"
-import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import { LabelMode } from "fishtvue/label"
 import { InputProps } from "fishtvue/input"
 import { TextareaProps } from "fishtvue/textarea"
@@ -19,7 +19,15 @@ import { SwitchProps } from "fishtvue/switch"
 declare class Form extends ClassComponent<FormProps, FormSlots, FormEmits, FormExpose> {}
 
 // ---------------------------------------
-type classCol = "col-span-full" | "sm:col-span-3" | "sm:col-span-4" | "sm:col-span-5" | "sm:col-span-6" | string
+/**
+ * Ключи карты `classes` (dev-patterns §2 B). Все — element-вида (аддитивные, twMerge).
+ * `root` — `<form data-form>` (добавляется `ClassesMap`).
+ * - `section` — секция `[data-form-item]` (бывший `structureClass` / `FormStructure.class`).
+ * - `grid` — grid-раскладка полей `[data-form-group]` (бывший `structureClassGrid` / `classGrid`).
+ * - `field` — колонка поля `[data-form-field]` (бывший `classCol`).
+ * - `footer` — подвал с submit-кнопкой `[data-form-footer]`.
+ */
+export declare type FormClassKey = "section" | "grid" | "field" | "footer"
 export type FormValues = { [key: string]: unknown }
 /**
  * Represents a base field configuration within the form structure.
@@ -32,16 +40,17 @@ export type Field = {
   name: string
 
   /**
-   * Custom CSS class for the column layout of the field.
-   * @type {classCol | undefined}
+   * Карта классов поля. Ключ `field` — колонка `[data-form-field]` (бывший `classCol`);
+   * остальные ключи уходят в контрол поля как его собственный `classes`.
+   * @type {ClassesMap<FormClassKey> | undefined}
    */
-  classCol?: classCol
+  classes?: ClassesMap<FormClassKey> & Record<string, StyleClass>
 
   /**
-   * Indicates whether the field is hidden.
+   * Скрыть поле. Bare-positive имя снятого `isHidden` (dev-patterns §2 F).
    * @type {boolean | undefined}
    */
-  isHidden?: boolean | undefined
+  hidden?: boolean
 
   /**
    * Validation rules applied to the field.
@@ -101,7 +110,7 @@ export type FieldInput = Field &
  *
  * @property {typeComponent} typeComponent - Must be "Textarea" to identify this field type
  */
-export type FieldAria = Field &
+export type FieldTextarea = Field &
   FieldAdditional &
   TextareaProps & {
     /**
@@ -201,10 +210,11 @@ export type FieldCustom = Field & {
   modelValue?: any
 
   /**
-   * Indicates whether the field has a value.
+   * Есть ли у поля значение. Единое имя с семейством [InputLayout](./inputlayout.md)
+   * (там `isValue` → `hasValue` снят в W2).
    * @type {boolean | undefined}
    */
-  isValue?: boolean
+  hasValue?: boolean
 
   /**
    * Additional custom properties for the field.
@@ -262,7 +272,7 @@ export type FieldComponentType =
 export type FieldType<T extends FieldComponentType = FieldComponentType> = T extends "Input"
   ? FieldInput
   : T extends "Textarea"
-    ? FieldAria
+    ? FieldTextarea
     : T extends "Select"
       ? FieldSelect
       : T extends "Calendar"
@@ -274,7 +284,7 @@ export type FieldType<T extends FieldComponentType = FieldComponentType> = T ext
             : T extends "Custom"
               ? FieldCustom
               : FieldRegistered
-// : FieldInput | FieldAria | FieldSelect | FieldCalendar | FieldTextEditor | FieldSwitch | FieldCustom
+// : FieldInput | FieldTextarea | FieldSelect | FieldCalendar | FieldTextEditor | FieldSwitch | FieldCustom
 
 // ---ISSUE 3 — публичный API реестра пользовательских типов полей (runtime — ./fieldRegistry).
 /**
@@ -305,14 +315,14 @@ export declare function hasFieldType(name: string): boolean
  *
  * Includes only field types that inherit from InputLayoutProps:
  * - FieldInput
- * - FieldAria
+ * - FieldTextarea
  * - FieldSelect
  * - FieldCalendar
  * - FieldTextEditor
  *
  * Excludes FieldSwitch (does not use InputLayout) and FieldCustom (custom implementation)
  */
-export type FieldUseInputLayout = FieldInput | FieldAria | FieldSelect | FieldCalendar | FieldTextEditor
+export type FieldUseInputLayout = FieldInput | FieldTextarea | FieldSelect | FieldCalendar | FieldTextEditor
 
 /**
  * Structure for defining a section in the form.
@@ -325,22 +335,24 @@ export interface FormStructure {
   fields: Array<FieldType>
 
   /**
-   * Indicates whether the section is hidden.
+   * Скрыть секцию. Bare-positive имя снятого `isHidden`.
    * @type {boolean | undefined}
    */
-  isHidden?: boolean
+  hidden?: boolean
 
   /**
-   * Custom CSS class for the section.
+   * Классы контейнера секции `[data-form-item]` — самый частный сегмент, идёт после
+   * `classes.section` самой формы.
    * @type {string | undefined}
    */
   class?: "border-b border-gray-900/10 pb-12" | string
 
   /**
-   * CSS class for the grid layout of the section.
-   * @type {string | undefined}
+   * Карта классов секции; ключ `grid` — её grid-раскладка `[data-form-group]`
+   * (бывший `classGrid`).
+   * @type {ClassesMap<FormClassKey> | undefined}
    */
-  classGrid?: "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10" | string
+  classes?: ClassesMap<FormClassKey>
 
   /**
    * Additional custom properties for the section.
@@ -375,22 +387,30 @@ export interface FormProps {
   formFields?: MaybeRef<FormValues>
 
   /**
-   * Custom CSS class for the form container.
+   * CSS-классы корня `<form data-form>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * The styling mode for the form.
-   * @type {StyleMode | undefined}
+   * Карта классов внутренних элементов: `section`, `grid`, `field`, `footer`;
+   * `root` ≡ `class`. См. `FormClassKey`.
+   * @type {ClassesMap<FormClassKey> | undefined}
    */
-  modeStyle?: StyleMode
+  classes?: ClassesMap<FormClassKey>
 
   /**
-   * The label mode for the form.
+   * Визуальный режим, который форма проставляет полям по умолчанию. Бывший `modeStyle`.
+   * @type {StyleMode | undefined}
+   */
+  mode?: StyleMode
+
+  /**
+   * Режим лейбла, который форма проставляет полям по умолчанию. Единое имя с семейством
+   * [InputLayout](./inputlayout.md). Бывший `modeLabel`.
    * @type {LabelMode | undefined}
    */
-  modeLabel?: LabelMode
+  labelMode?: LabelMode
 
   /**
    * The validation mode for the form fields.
@@ -403,18 +423,6 @@ export interface FormProps {
    * @type {string | "Save" | undefined}
    */
   submitButton?: string | "Save"
-
-  /**
-   * CSS class for the form structure section.
-   * @type {string | undefined}
-   */
-  structureClass?: "border-b border-gray-900/10 pb-12" | string
-
-  /**
-   * CSS class for the grid layout in the form structure.
-   * @type {string | undefined}
-   */
-  structureClassGrid?: "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10" | string
 
   /**
    * Disables the entire form.
@@ -490,6 +498,18 @@ export declare type FormEmits = {
  */
 export declare type FormExpose = {
   // ---PROPS-------------------------------
+  /**
+   * Визуальный режим, который форма проставляет полям. Бывший `modeStyle`.
+   * @type {FormProps["mode"]}
+   */
+  mode: FormProps["mode"]
+
+  /**
+   * Режим лейбла, который форма проставляет полям. Бывший `modeLabel`.
+   * @type {FormProps["labelMode"]}
+   */
+  labelMode: FormProps["labelMode"]
+
   /**
    * Ref to the root `<form>` element (G34) — for native `requestSubmit()`, scrolling, focus, etc.
    * @type {HTMLFormElement | undefined}
@@ -570,14 +590,7 @@ export declare type FormExpose = {
 }
 export declare type FormOption = Pick<
   FormProps,
-  | "class"
-  | "modeStyle"
-  | "modeLabel"
-  | "modeValidate"
-  | "submitButton"
-  | "structureClass"
-  | "structureClassGrid"
-  | "autocomplete"
+  "class" | "classes" | "mode" | "labelMode" | "modeValidate" | "submitButton" | "autocomplete"
 >
 
 // ---------------------------------------
@@ -598,13 +611,8 @@ export type FormFieldProps = {
   name: string
 
   /**
-   * Field type (maps to `typeComponent`). Built-in or registered via `registerFieldType`.
-   * @type {FieldComponentType | undefined}
-   */
-  type?: FieldComponentType
-
-  /**
-   * Explicit `typeComponent` (alias of `type`; takes priority when both are set).
+   * Тип поля — единственный дискриминатор схемы. Built-in либо зарегистрированный через
+   * `registerFieldType`. Снятый алиас `type` конфликтовал с `InputProps.type`.
    * @type {FieldComponentType | undefined}
    */
   typeComponent?: FieldComponentType
@@ -634,16 +642,16 @@ export type FormFieldProps = {
   nameTemplate?: string
 
   /**
-   * Custom CSS class for the column layout of the field.
-   * @type {string | undefined}
+   * Карта классов поля; ключ `field` — его колонка `[data-form-field]` (бывший `classCol`).
+   * @type {ClassesMap<FormClassKey> | undefined}
    */
-  classCol?: string
+  classes?: ClassesMap<FormClassKey> & Record<string, StyleClass>
 
   /**
-   * Hides the field.
+   * Скрыть поле. Bare-positive имя снятого `isHidden`.
    * @type {boolean | undefined}
    */
-  isHidden?: boolean
+  hidden?: boolean
 
   /**
    * Passthrough props forwarded to the resolved field control (e.g. `dataSelect`, `mask`).
@@ -700,16 +708,17 @@ export type FormSectionProps = {
   class?: StyleClass
 
   /**
-   * CSS class for the grid layout of the section.
-   * @type {string | undefined}
+   * Карта классов секции; ключ `grid` — её grid-раскладка `[data-form-group]`
+   * (бывший `classGrid`).
+   * @type {ClassesMap<FormClassKey> | undefined}
    */
-  classGrid?: string
+  classes?: ClassesMap<FormClassKey>
 
   /**
-   * Hides the section.
+   * Скрыть секцию. Bare-positive имя снятого `isHidden`.
    * @type {boolean | undefined}
    */
-  isHidden?: boolean
+  hidden?: boolean
 }
 
 /**

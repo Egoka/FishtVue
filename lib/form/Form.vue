@@ -9,7 +9,7 @@
     onMounted,
     reactive,
     ref,
-    unref,
+    toValue,
     useSlots,
     watch
   } from "vue"
@@ -19,11 +19,13 @@
     FieldInput,
     FieldType,
     FieldUseInputLayout,
+    FormClassKey,
     FormEmits,
     FormProps,
     FormStructure,
     FormValues
   } from "./Form"
+  import type { ClassesMap } from "fishtvue/types"
   import Icons from "fishtvue/icons/Icons.vue"
   import Input from "fishtvue/input/Input.vue"
   import Textarea from "fishtvue/textarea/Textarea.vue"
@@ -45,7 +47,8 @@
   const options = Form.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<FormProps>(), {
-    disabled: undefined
+    disabled: undefined,
+    nativeSubmit: undefined
   })
   const emit = defineEmits<FormEmits>()
   // ---REF-LINK----------------------------
@@ -53,9 +56,11 @@
   // ---G34 — ref на корневой <form> element (наружу через defineExpose).
   const formElement = ref<HTMLFormElement>()
   // ---STATE-------------------------------
-  const calculatedFieldsInput = <Array<keyof FieldType>>[
+  // `classes.field` — единственный ключ карты, который остаётся у Form (колонка поля);
+  // остальные (`base`, `label`, `control`, …) проходят в контрол как его собственный `classes`.
+  const calculatedFieldsInput = <Array<keyof FieldType | string>>[
     "typeComponent",
-    "classCol",
+    "classes.field",
     "modelValue",
     "invalid",
     "name",
@@ -109,20 +114,20 @@
     const def = vn?.children?.default
     return typeof def === "function" ? compoundNormalize(def()) : []
   }
-  // Извлекаем поле из <FormField>-vnode: props (+ `type`→`typeComponent`) + захваченный default-slot
+  // Извлекаем поле из <FormField>-vnode: props + захваченный default-slot
   // (custom-контрол). Slot-функции хранятся отдельно (slotsAcc по имени поля) — не в данных поля,
   // чтобы пережить deepCopy в getStructure().
   function extractField(vn: any, slotsAcc: Record<string, any>): FieldType {
     const p = (vn?.props ?? {}) as Record<string, any>
     const childSlots = (vn?.children && typeof vn.children === "object" ? vn.children : {}) as Record<string, any>
     const defaultSlot = typeof childSlots.default === "function" ? childSlots.default : undefined
-    const { type, typeComponent, ...rest } = p
+    const { typeComponent, ...rest } = p
     const nameField = (rest.name ?? "") as string
     if (defaultSlot) {
       slotsAcc[nameField] = defaultSlot
       return { ...rest, typeComponent: "Custom", nameTemplate: rest.nameTemplate ?? nameField } as unknown as FieldType
     }
-    return { ...rest, typeComponent: (typeComponent ?? type ?? "Input") as FieldComponentType } as unknown as FieldType
+    return { ...rest, typeComponent: (typeComponent ?? "Input") as FieldComponentType } as unknown as FieldType
   }
   const compoundParsed = computed<{ structure: Array<FormStructure>; slots: Record<string, any> }>(() => {
     const raw = typeof slots.default === "function" ? slots.default() : undefined
@@ -142,9 +147,9 @@
         const sp = (vn?.props ?? {}) as Record<string, any>
         const section: FormStructure = {
           fields: [],
-          isHidden: sp.isHidden,
+          hidden: sp.hidden,
           class: sp.class,
-          classGrid: sp.classGrid,
+          classes: sp.classes,
           title: sp.title,
           description: sp.description
         }
@@ -166,9 +171,9 @@
   })
   // ---PROPS-------------------------------
   const name = computed<FormProps["name"]>(() => props.name ?? "")
-  const modeStyle = computed<FormProps["modeStyle"]>(() => props.modeStyle ?? options?.modeStyle)
-  const modeLabel = computed<NonNullable<FormProps["modeLabel"]>>(
-    () => props.modeLabel ?? options?.modeLabel ?? "offsetDynamic"
+  const mode = computed<FormProps["mode"]>(() => props.mode ?? options?.mode)
+  const labelMode = computed<NonNullable<FormProps["labelMode"]>>(
+    () => props.labelMode ?? options?.labelMode ?? "offsetDynamic"
   )
   const isDisabled = computed<NonNullable<FormProps["disabled"]>>(() => props.disabled ?? false)
   const autocomplete = computed<NonNullable<FormProps["autocomplete"]>>(
@@ -188,7 +193,7 @@
   // Schema `:structure` (если задан, в т.ч. пустой массив) выигрывает; иначе — compound `<FormField>`/
   // `<FormSection>`-дети (Issue 2).
   const structure = computed<Array<FormStructure>>(() => {
-    const schema = unref(props.structure)
+    const schema = toValue(props.structure)
     if (schema !== undefined && schema !== null) return schema
     return compoundStructure.value
   })
@@ -197,29 +202,30 @@
   )
   // ---------------------------------------
   Form.setStyle("motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500 opacity-100 opacity-0")
-  const classBase = computed(() => Form.setStyle([options?.class ?? "", props.class ?? ""]))
+  const { cls, raw } = Form.resolveClasses<FormClassKey>(props)
+  const classBase = computed(() => cls("root"))
   const classStructure = computed(() =>
-    Form.setStyle([
-      "border-b border-surface-900/10 dark:border-surface-100/10 pb-6 print:border-black",
-      options?.structureClass ?? "",
-      props?.structureClass ?? ""
-    ])
+    cls("section", "border-b border-surface-900/10 dark:border-surface-100/10 pb-6 print:border-black")
   )
-  const classStructureGrid = computed(() =>
-    Form.setStyle([
-      "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10",
-      options?.structureClassGrid ?? "",
-      props?.structureClassGrid ?? ""
-    ])
-  )
-  const classItemGrid = ref(Form.setStyle("grid motion-safe:transition"))
-  const classBeforeSlot = ref(Form.setStyle("flex select-none items-center text-surface-500 sm:text-sm"))
+  // Grid и колонка поля считаются на рендере: их собственные сегменты живут в схеме
+  // (`FormStructure.classes.grid`, `Field.classes.field`) и меняются вместе с ней.
+  const classStructureGrid = (structure: FormStructure) =>
+    Form.setStyle(["grid motion-safe:transition grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10"], {
+      consumer: [raw("grid"), structure?.classes?.grid]
+    })
+  const classFieldColumn = (field: FieldType) =>
+    Form.setStyle(["col-span-full"], {
+      consumer: [raw("field"), (field?.classes as ClassesMap<FormClassKey> | undefined)?.field]
+    })
+  const classBeforeSlot = computed(() => Form.setStyle("flex select-none items-center text-surface-500 sm:text-sm"))
   // RTL: логические margins (ms/me) вместо физических ml/mr — авто-флип при dir="rtl" (Issue 9 / F31)
-  const classAfterSlot = ref(Form.setStyle("ms-1 me-3 text-surface-400 dark:text-surface-600 select-none"))
-  const classFooter = ref(Form.setStyle("mt-3 flex items-center justify-end gap-x-6"))
+  const classAfterSlot = computed(() => Form.setStyle("ms-1 me-3 text-surface-400 dark:text-surface-600 select-none"))
+  const classFooter = computed(() => cls("footer", "mt-3 flex items-center justify-end gap-x-6"))
   // ---EXPOSE------------------------------
   defineExpose({
     // ---PROPS-------------------------------
+    mode,
+    labelMode,
     formElement,
     formFields,
     formInvalidFields,
@@ -237,7 +243,7 @@
   onMounted(() => {
     structure.value?.forEach((item) =>
       item.fields?.forEach((field) => {
-        const formFieldsValue = unref(props.formFields)
+        const formFieldsValue = toValue(props.formFields)
         formFields[field.name] = formFieldsValue?.[field.name] ?? field.modelValue
       })
     )
@@ -274,7 +280,7 @@
   watch(
     () => props.formFields,
     (newFormFields) => {
-      const formFieldsValue = unref(newFormFields)
+      const formFieldsValue = toValue(newFormFields)
       if (formFieldsValue) {
         structure.value?.forEach((item) =>
           item.fields?.forEach((field) => {
@@ -289,18 +295,10 @@
   )
 
   watch(
-    () => [
-      structure.value,
-      classStructure.value,
-      classStructureGrid.value,
-      modeStyle.value,
-      modeLabel.value,
-      autocomplete.value,
-      isDisabled.value
-    ],
+    () => [structure.value, classStructure.value, mode.value, labelMode.value, autocomplete.value, isDisabled.value],
     () => {
       formStructure.value = getStructure()
-      const formFieldsValue = unref(props.formFields)
+      const formFieldsValue = toValue(props.formFields)
       if (formFieldsValue) {
         structure.value?.forEach((item) =>
           item.fields?.forEach((field) => {
@@ -358,8 +356,11 @@
     return (
       structure.value?.map((structureItem) => {
         let resultStructure: FormStructure = deepCopy(structureItem)
-        resultStructure.class = Form.setStyle([classStructure.value, resultStructure.class])
-        resultStructure.classGrid = Form.setStyle([classStructureGrid.value, resultStructure.classGrid])
+        // Секция: база формы → её `classes.section` → собственный `class` секции (самый частный)
+        resultStructure.class = Form.setStyle(
+          ["border-b border-surface-900/10 dark:border-surface-100/10 pb-6 print:border-black"],
+          { consumer: [raw("section"), resultStructure.classes?.section, resultStructure.class] }
+        )
         if (resultStructure.fields) {
           resultStructure.fields = resultStructure.fields.map((field) => {
             let resultField = deepCopy(field)
@@ -386,7 +387,7 @@
               } else if (resultField?.required) {
                 resultField.rules = { required: Form.t("requiredField") ?? "Required field" }
               }
-              resultField.labelMode ??= modeLabel.value
+              resultField.labelMode ??= labelMode.value
               if (
                 resultField.typeComponent !== "TextEditor" &&
                 resultField.typeComponent !== "Calendar" &&
@@ -397,8 +398,7 @@
             }
             if (resultField.typeComponent === "Select")
               resultField.badgeCloseButton = resultField.badgeCloseButton ?? true
-            resultField.classCol = Form.setStyle(["col-span-full", resultField.classCol])
-            if (modeStyle.value) resultField.mode = resultField.mode ?? modeStyle.value
+            if (mode.value) resultField.mode = resultField.mode ?? mode.value
             resultField.disabled = resultField.disabled ?? isDisabled.value
             return resultField
           })
@@ -494,10 +494,16 @@
           enter-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-show="!structure.isHidden" data-form-item :class="structure.class">
-            <slot name="itemTitle" :structure="fieldsOmit(structure, ['class', 'classGrid', 'fields']) as any" />
-            <div data-form-group :class="[structure.classGrid, classItemGrid]">
-              <div v-for="(field, itemKey) in structure.fields" :key="itemKey" :class="field.classCol">
+          <div v-show="!structure.hidden" data-form-item :class="structure.class">
+            <slot
+              name="itemTitle"
+              :structure="fieldsOmit(structure, ['class', 'classes', 'classGrid', 'fields']) as any" />
+            <div data-form-group :class="classStructureGrid(structure)">
+              <div
+                v-for="(field, itemKey) in structure.fields"
+                :key="itemKey"
+                data-form-field
+                :class="classFieldColumn(field)">
                 <transition
                   leave-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500"
                   leave-from-class="opacity-100"
@@ -505,7 +511,7 @@
                   enter-active-class="motion-safe:transition motion-safe:ease-in-out motion-safe:duration-500"
                   enter-from-class="opacity-0"
                   enter-to-class="opacity-100">
-                  <div v-show="!field.isHidden" data-form-group-item>
+                  <div v-show="!field.hidden" data-form-group-item>
                     <component
                       v-if="resolveFieldComponent(field.typeComponent)"
                       :is="resolveFieldComponent(field.typeComponent)"

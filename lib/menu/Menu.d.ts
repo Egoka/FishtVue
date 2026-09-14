@@ -1,5 +1,14 @@
 import { MaybeRef, Ref, VNode } from "vue"
-import { _key, ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode, THeight, TWidth } from "../types"
+import {
+  _key,
+  ClassComponent,
+  ClassesMap,
+  GlobalComponentConstructor,
+  StyleClass,
+  StyleMode,
+  THeight,
+  TWidth
+} from "../types"
 import { FixWindowProps } from "fishtvue/fixwindow"
 import { SeparatorProps } from "fishtvue/separator"
 
@@ -18,7 +27,7 @@ declare class Menu extends ClassComponent<MenuProps, MenuSlots, MenuEmits, MenuE
  * Represents a menu item with customizable properties and event handlers.
  * Provides options for styling, nested menus, and event-based interactions.
  */
-export interface ItemMenu {
+export interface MenuItemData {
   /**
    * The title of the menu item.
    * @type {string | undefined}
@@ -46,23 +55,23 @@ export interface ItemMenu {
   /**
    * Event triggered when the menu item becomes active (e.g., hovered).
    * @param {MouseEvent | TouchEvent} event - The event object.
-   * @param {ItemMenuPrivate} item - The menu item instance.
+   * @param {MenuItemDataPrivate} item - The menu item instance.
    */
-  onActive?(event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  onActive?(event: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 
   /**
    * Event triggered when the menu item becomes inactive (e.g., unhovered).
    * @param {MouseEvent | TouchEvent} event - The event object.
-   * @param {ItemMenuPrivate} item - The menu item instance.
+   * @param {MenuItemDataPrivate} item - The menu item instance.
    */
-  onInactive?(event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  onInactive?(event: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 
   /**
    * Event triggered when the menu item is clicked.
    * @param {MouseEvent | TouchEvent} event - The event object.
-   * @param {ItemMenuPrivate} item - The menu item instance.
+   * @param {MenuItemDataPrivate} item - The menu item instance.
    */
-  onClick?(event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  onClick?(event: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 
   /**
    * Custom CSS class for the menu item.
@@ -72,9 +81,9 @@ export interface ItemMenu {
 
   /**
    * Nested menu associated with the menu item.
-   * @type {MenuItem | null | undefined}
+   * @type {MenuData | null | undefined}
    */
-  menu?: MenuItem | null
+  menu?: MenuData | null
 
   /**
    * Additional custom properties that can be added to the menu item.
@@ -83,7 +92,7 @@ export interface ItemMenu {
   [key: string]: any
 }
 
-export interface ItemMenuPrivate extends ItemMenu {
+export interface MenuItemDataPrivate extends MenuItemData {
   _key: _key
 }
 
@@ -92,7 +101,7 @@ export interface ItemMenuPrivate extends ItemMenu {
  *
  * A group can include a title, a list of items, styling, and an optional separator.
  */
-export type GroupMenu = {
+export type MenuGroupData = {
   /**
    * The title of the group.
    * @type {string | undefined}
@@ -101,9 +110,9 @@ export type GroupMenu = {
 
   /**
    * The list of items within the group.
-   * @type {Array<ItemMenu> | undefined}
+   * @type {Array<MenuItemData> | undefined}
    */
-  items?: Array<ItemMenu>
+  items?: Array<MenuItemData>
 
   /**
    * Custom CSS class for the group container.
@@ -118,8 +127,8 @@ export type GroupMenu = {
   separator?: MenuSeparator
 }
 
-export interface GroupMenuPrivate extends Omit<GroupMenu, "items"> {
-  items?: Array<ItemMenuPrivate>
+export interface MenuGroupDataPrivate extends Omit<MenuGroupData, "items"> {
+  items?: Array<MenuItemDataPrivate>
 }
 
 // ---------------------------------------
@@ -134,16 +143,16 @@ export interface MenuSeparator extends Omit<SeparatorProps, "orientation"> {
   icon?: string
 
   /**
-   * Indicates whether the separator is visible.
+   * Показывать разделитель. Bare-positive имя снятого `isVisible` (dev-patterns §2 F).
    * @type {boolean | undefined}
    */
-  isVisible?: boolean
+  visible?: boolean
 }
 
 /**
  * Defines a fixWindow for the Menu component, with optional icon and visibility settings.
  */
-export type MenuFixWindow = Pick<
+export type MenuFixWindowProps = Pick<
   FixWindowProps,
   "eventOpen" | "eventClose" | "mode" | "openDelay" | "class" | "classes" | "marginPx" | "translatePx" | "paddingWindow"
 >
@@ -151,7 +160,7 @@ export type MenuFixWindow = Pick<
 /**
  * Represents a single item in the Menu component.
  */
-export type MenuItem = {
+export type MenuData = {
   /**
    * The title of the menu item.
    * @type {string | undefined}
@@ -165,134 +174,59 @@ export type MenuItem = {
   separator?: MenuSeparator
 
   /**
-   * Configuration options for the fixed window menu.
-   * @type {MenuFixWindow | undefined}
+   * Props подменю-окна `<FixWindow>`. Бывший `paramsWindowMenu` (dev-patterns §2 G).
+   * @type {MenuFixWindowProps | undefined}
    */
-  paramsWindowMenu?: MenuFixWindow
+  fixWindowProps?: MenuFixWindowProps
 
   /**
    * Nested groups associated with the menu item.
-   * @type {Array<GroupMenu> | undefined}
+   * @type {Array<MenuGroupData> | undefined}
    */
-  groups?: Array<GroupMenu>
+  groups?: Array<MenuGroupData>
 }
 
-export interface MenuItemPrivate extends Omit<MenuItem, "groups"> {
-  groups?: Array<GroupMenuPrivate>
+export interface MenuDataPrivate extends Omit<MenuData, "groups"> {
+  groups?: Array<MenuGroupDataPrivate>
 }
 
 // ---------------------------------------
 /**
- * Defines the styles and customization options for the Menu component.
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-menu>` (добавляется `ClassesMap`);
+ * наследуется подменю, в отличие от prop `class`, который остаётся на верхнем меню.
+ *
+ * **element** (аддитивные, конфликт решает twMerge):
+ * - `title` — заголовок меню `[data-menu-title]` (бывший `styles.class.title`).
+ * - `separator` — корень `<Separator>` между группами (бывший `styles.class.separator`).
+ * - `separatorIcon` — иконка внутри разделителя (бывший `styles.class.separatorIcon`).
+ * - `group` — контейнер группы `[data-menu-group]` (бывший `styles.class.group`).
+ * - `groupTitle` — заголовок группы `[data-menu-group-title]` (бывший `styles.class.groupTitle`).
+ * - `item` — пункт `[data-menu-item]` (бывший `styles.class.item`).
+ * - `itemIcon` — иконка пункта `[data-menu-item-icon]` (бывший `styles.class.itemIcon`).
+ * - `itemTitle` — заголовок пункта `[data-menu-item-title]` (бывший `styles.class.itemTitle`).
+ * - `itemInfo` — подпись справа `[data-menu-item-info]` (бывший `styles.class.itemInfo`).
+ * - `itemEndIcon` — стрелка подменю `[data-menu-item-end-icon]` (бывший `styles.class.itemRightIcon`).
+ *
+ * **aspect** (заменяющие: `props ?? options ?? default`, `""` отключает):
+ * - `animation` — transition корня и пункта (бывший `styles.animation`).
+ * - `itemActive` — подсветка пункта под курсором (бывший `styles.activeRows`).
+ * - `itemSelected` — подсветка выбранного пункта (бывший `styles.selectedRows`).
  */
-export type MenuStyles = {
-  /**
-   * Custom CSS classes for various parts of the menu.
-   */
-  class?: {
-    /**
-     * CSS class for the menu body container.
-     * @type {StyleClass | undefined}
-     */
-    body?: StyleClass
+export declare type MenuClassKey =
+  | "title"
+  | "separator"
+  | "separatorIcon"
+  | "group"
+  | "groupTitle"
+  | "item"
+  | "itemIcon"
+  | "itemTitle"
+  | "itemInfo"
+  | "itemEndIcon"
+  | "animation"
+  | "itemActive"
+  | "itemSelected"
 
-    /**
-     * CSS class for the menu title.
-     * @type {StyleClass | undefined}
-     */
-    title?: StyleClass
-
-    /**
-     * CSS class for the menu separator.
-     * @type {StyleClass | undefined}
-     */
-    separator?: StyleClass
-
-    /**
-     * CSS class for the separator icon.
-     * @type {StyleClass | undefined}
-     */
-    separatorIcon?: StyleClass
-
-    /**
-     * CSS class for menu groups.
-     * @type {StyleClass | undefined}
-     */
-    group?: StyleClass
-
-    /**
-     * CSS class for group titles.
-     * @type {StyleClass | undefined}
-     */
-    groupTitle?: StyleClass
-
-    /**
-     * CSS class for menu items.
-     * @type {StyleClass | undefined}
-     */
-    item?: StyleClass
-
-    /**
-     * CSS class for item icons.
-     * @type {StyleClass | undefined}
-     */
-    itemIcon?: StyleClass
-
-    /**
-     * CSS class for item titles.
-     * @type {StyleClass | undefined}
-     */
-    itemTitle?: StyleClass
-
-    /**
-     * CSS class for item information text.
-     * @type {StyleClass | undefined}
-     */
-    itemInfo?: StyleClass
-
-    /**
-     * CSS class for right-aligned item icons.
-     * @type {StyleClass | undefined}
-     */
-    itemRightIcon?: StyleClass
-  }
-
-  /**
-   * The width of the menu.
-   * @type {TWidth | undefined}
-   */
-  width?: TWidth
-
-  /**
-   * The height of the menu.
-   * @type {THeight | undefined}
-   */
-  height?: THeight
-
-  /**
-   * The animation style for menu transitions. По умолчанию `motion-safe:`-вариант
-   * (уважает `prefers-reduced-motion`).
-   * @type {StyleClass | "motion-safe:transition-all motion-safe:duration-500" | "transition-none" | undefined}
-   */
-  animation?: StyleClass | "motion-safe:transition-all motion-safe:duration-500" | "transition-none"
-
-  /**
-   * Styles or behavior for active menu rows.
-   * @type {StyleClass | boolean | "bg-neutral-200/50 dark:bg-neutral-700/50" | undefined}
-   */
-  activeRows?: StyleClass | boolean | "bg-neutral-200/50 dark:bg-neutral-700/50"
-
-  /**
-   * Styles or behavior for selected menu rows.
-   * @type {StyleClass | boolean | "bg-neutral-300 dark:bg-neutral-700" | undefined}
-   */
-  selectedRows?: StyleClass | boolean | "bg-neutral-300 dark:bg-neutral-700"
-}
-
-export type MenuStylesPrivate = Omit<MenuStyles, "activeRows" | "selectedRows"> & {
-  activeRows?: StyleClass
-  selectedRows?: StyleClass
-}
 // ---------------------------------------
 
 /**
@@ -312,18 +246,18 @@ export declare type MenuProps = {
   selected?: boolean
 
   /**
-   * Renders the menu items in a horizontal layout.
-   * @type {boolean | undefined}
+   * Ориентация раскладки пунктов. Единое имя с [Separator](./separator.md) и [Split](./split.md).
+   * Бывший булев `horizontal` (`true` ≡ `"horizontal"`).
+   * @type {"horizontal" | "vertical" | undefined}
    */
-  horizontal?: boolean
+  orientation?: "horizontal" | "vertical"
 
   /**
-   * Controls whether the first letter of the menu item's title is displayed when no icon is provided.
-   * If set to `true`, the first letter of the title will be shown with a styled appearance.
-   * If set to `false`, no placeholder will be displayed for items without icons.
+   * Показывать первую букву `title` вместо иконки, если у пункта нет `icon`.
+   * Bare-positive имя снятого `useFirstLetter` (dev-patterns §2 F).
    * @type {boolean | undefined}
    */
-  useFirstLetter?: boolean
+  firstLetter?: boolean
   /**
    * Displays only icons for the menu items.
    * @type {boolean | undefined}
@@ -331,30 +265,43 @@ export declare type MenuProps = {
   onlyIcons?: boolean
 
   /**
-   * Custom styles for the menu and its components.
-   * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<MenuStyles> | undefined}
+   * Ширина меню. Число трактуется как `px`. Бывший `styles.width`.
+   * @type {TWidth | undefined}
    */
-  styles?: MaybeRef<MenuStyles>
+  width?: TWidth
 
   /**
-   * Custom CSS class for the menu container.
+   * Высота меню. Число трактуется как `px`. Бывший `styles.height`.
+   * @type {THeight | undefined}
+   */
+  height?: THeight
+
+  /**
+   * CSS-классы корня `<div data-menu>` (dev-patterns §2 A). На подменю не наследуется —
+   * для этого есть `classes.root`.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
-} & Omit<MenuItem, "groups"> & {
+
+  /**
+   * Карта классов внутренних элементов; `root` ≡ `class`, но наследуется подменю.
+   * См. `MenuClassKey`.
+   * @type {ClassesMap<MenuClassKey> | undefined}
+   */
+  classes?: ClassesMap<MenuClassKey>
+} & Omit<MenuData, "groups"> & {
     /**
      * Nested groups associated with the menu item.
      * Can be passed as a constant value or as a ref.
-     * @type {MaybeRef<Array<GroupMenu>> | undefined}
+     * @type {MaybeRef<Array<MenuGroupData>> | undefined}
      */
-    groups?: MaybeRef<Array<GroupMenu>>
+    groups?: MaybeRef<Array<MenuGroupData>>
   }
 
 export declare type MenuSlots = {
   title(args: { title: string }): VNode[]
   item(args: {
-    data: Omit<ItemMenu, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive"> & {
+    data: Omit<MenuItemData, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive"> & {
       isActive: boolean
       isSelected: boolean
     }
@@ -365,7 +312,7 @@ export declare type MenuSlots = {
    * за безопасность контента на потребителе.
    */
   "item-info"(args: {
-    item: Omit<ItemMenu, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive">
+    item: Omit<MenuItemData, "menu" | "class" | "disabled" | "onClick" | "onActive" | "onInactive">
     info: string | undefined
   }): VNode[]
   footer(): VNode[]
@@ -379,25 +326,25 @@ export declare type MenuEmits = {
    * Emitted when a menu item becomes active.
    * @param e
    * @param {MouseEvent | TouchEvent} event - The event that triggered the activation.
-   * @param {ItemMenuPrivate} item - The activated menu item.
+   * @param {MenuItemDataPrivate} item - The activated menu item.
    */
-  (e: "onActive", event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  (e: "item-active", event: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 
   /**
    * Emitted when a menu item becomes inactive.
    * @param e
    * @param {MouseEvent | TouchEvent} event - The event that triggered the deactivation.
-   * @param {ItemMenuPrivate} item - The deactivated menu item.
+   * @param {MenuItemDataPrivate} item - The deactivated menu item.
    */
-  (e: "onInactive", event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  (e: "item-inactive", event: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 
   /**
    * Emitted when a menu item is clicked.
    * @param e
    * @param {MouseEvent | TouchEvent} event - The event that triggered the click.
-   * @param {ItemMenuPrivate} item - The clicked menu item.
+   * @param {MenuItemDataPrivate} item - The clicked menu item.
    */
-  (e: "onClick", event: MouseEvent | TouchEvent, item: ItemMenuPrivate): void
+  (e: "item-click", event: MouseEvent | TouchEvent, item: MenuItemDataPrivate): void
 }
 
 /**
@@ -431,17 +378,17 @@ export declare type MenuExpose = {
   selected: MenuProps["selected"]
 
   /**
-   * Indicates whether the menu is in horizontal layout.
-   * @type {MenuProps["horizontal"]}
+   * Ориентация раскладки пунктов.
+   * @type {MenuProps["orientation"]}
    */
-  horizontal: MenuProps["horizontal"]
+  orientation: MenuProps["orientation"]
 
   /**
    * Determines whether the first letter of a menu item's title is displayed in the absence of an icon.
    * When enabled, the first letter will be styled and shown as a placeholder.
-   * @type {MenuProps["useFirstLetter"]}
+   * @type {MenuProps["firstLetter"]}
    */
-  useFirstLetter: MenuProps["useFirstLetter"]
+  firstLetter: MenuProps["firstLetter"]
 
   /**
    * Indicates whether the menu displays only icons.
@@ -463,21 +410,21 @@ export declare type MenuExpose = {
 
   /**
    * Indicates whether the separator is visible.
-   * @type {MenuSeparator["isVisible"]}
+   * @type {MenuSeparator["visible"]}
    */
-  isSeparator: MenuSeparator["isVisible"]
+  isSeparator: MenuSeparator["visible"]
 
   /**
    * List of groups within the menu.
-   * @type {Array<GroupMenuPrivate>}
+   * @type {Array<MenuGroupDataPrivate>}
    */
-  listGroups: Array<GroupMenuPrivate>
+  listGroups: Array<MenuGroupDataPrivate>
 
   /**
-   * Parameters for the menu window behavior.
-   * @type {MenuProps["paramsWindowMenu"]}
+   * Props подменю-окна `<FixWindow>`.
+   * @type {MenuProps["fixWindowProps"]}
    */
-  paramsWindowMenu: MenuProps["paramsWindowMenu"]
+  fixWindowProps: MenuProps["fixWindowProps"]
 
   /**
    * Base settings for the separator.
@@ -486,22 +433,16 @@ export declare type MenuExpose = {
   baseSeparator: MenuSeparator
 
   /**
-   * Custom styles for the menu.
-   * @type {MenuStylesPrivate}
-   */
-  styles: MenuStylesPrivate
-
-  /**
    * Mode-specific styles for the menu.
    * @type {StyleClass}
    */
   modeStyle: StyleClass
 
   /**
-   * Custom CSS class for the menu container.
+   * Классы корня `[data-menu]`. Бывший `classMenu`.
    * @type {StyleClass}
    */
-  classMenu: StyleClass
+  classBase: StyleClass
 
   /**
    * Custom CSS class for the separator.
@@ -558,10 +499,10 @@ export declare type MenuExpose = {
   classItemInfoFixWindow: StyleClass
 
   /**
-   * Custom CSS class for right-aligned item icons.
+   * Классы стрелки подменю. Бывший `classItemRightIcon`.
    * @type {StyleClass}
    */
-  classItemRightIcon: StyleClass
+  classItemEndIcon: StyleClass
 
   // ---ELEMENTS----------------------
   /**
@@ -587,24 +528,26 @@ export declare type MenuExpose = {
 
   /**
    * Populates the menu items.
-   * @param {MenuItemPrivate} menu - The menu configuration.
+   * @param {MenuDataPrivate} menu - The menu configuration.
    * @param {number} depth - The depth of the menu.
-   * @returns {NonNullable<MenuItemPrivate>} - The updated menu items.
+   * @returns {NonNullable<MenuDataPrivate>} - The updated menu items.
    */
-  setItems(menu: MenuItemPrivate, depth: number): NonNullable<MenuItemPrivate>
+  setItems(menu: MenuDataPrivate, depth: number): NonNullable<MenuDataPrivate>
 }
 export declare type MenuOption = Pick<
   MenuProps,
   | "mode"
   | "selected"
-  | "horizontal"
-  | "useFirstLetter"
+  | "orientation"
+  | "firstLetter"
   | "onlyIcons"
-  | "styles"
+  | "width"
+  | "height"
   | "class"
+  | "classes"
   | "title"
   | "separator"
-  | "paramsWindowMenu"
+  | "fixWindowProps"
 >
 
 // ---------------------------------------

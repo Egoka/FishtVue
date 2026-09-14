@@ -64,8 +64,6 @@ export declare type MenuGroupEmits = null
  */
 export declare type MenuGroupExpose = NonNullable<unknown>
 
-export declare type MenuGroupOption = Pick<MenuGroupProps, "class">
-
 // ---------------------------------------
 
 declare module "vue" {

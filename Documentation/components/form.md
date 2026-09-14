@@ -1,7 +1,7 @@
 ---
 title: Form
 summary: Динамическая форма из FormStructure ИЛИ compound `<Form><FormSection><FormField>`. Валидация в трёх режимах, поля Input/Select/Calendar/TextEditor/Switch/Custom + произвольные через `registerFieldType`. Native submit + FormData. Validation messages локализуются через активную локаль.
-updated: 2026-07-04
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -59,8 +59,8 @@ const structure: FormStructure[] = [
   {
     title: "Profile",
     fields: [
-      { name: "name", typeField: "Input", label: "Name", rules: [{ type: "required" }] },
-      { name: "email", typeField: "Input", type: "email", label: "Email" }
+      { name: "name", typeComponent: "Input", label: "Name", rules: [{ type: "required" }] },
+      { name: "email", typeComponent: "Input", type: "email", label: "Email" }
     ]
   }
 ]
@@ -83,13 +83,12 @@ const structure: FormStructure[] = [
 | `structure` | `MaybeRef<FormStructure[]>` | — | Декларация секций и полей. Optional — при отсутствии Form строит структуру из compound `<FormSection>`/`<FormField>` детей (§10.5). Schema выигрывает, если задан. |
 | `formFields` | `MaybeRef<FormValues>` | `{}` | Текущие значения. v-model. |
 | `name` | `string` | — | Имя формы. |
-| `class` | `StyleClass` | — | Класс контейнера. |
-| `modeStyle` | `StyleMode` | — | Стиль для полей внутри формы. |
-| `modeLabel` | `LabelMode` | — | Режим label. |
-| `modeValidate` | `"onSubmit" \| "onChange" \| "onInput"` | `"onSubmit"` | Когда валидировать. |
+| `class` | `StyleClass` | — | Классы **корня** `<form data-form>` (dev-patterns §2 A). |
+| `classes` | `ClassesMap<FormClassKey>` | — | Карта классов внутренних элементов — см. §5.1. |
+| `mode` | `StyleMode` | — | Визуальный режим, который форма проставляет полям. Бывший `modeStyle`. |
+| `labelMode` | `LabelMode` | `"offsetDynamic"` | Режим label полей. Бывший `modeLabel`. |
+| `modeValidate` | `"onSubmit" \| "onChange" \| "onInput"` | `"onChange"` | Когда валидировать. |
 | `submitButton` | `string \| "Save"` | `"Save"` (или `Form.t("save")`) | Текст submit-кнопки. |
-| `structureClass` | `string` | (preset) | Класс каждой секции. |
-| `structureClassGrid` | `string` | (preset grid 1/6 cols) | Класс grid внутри секции. |
 | `disabled` | `boolean` | — | Отключить всю форму. |
 | `autocomplete` | `"on" \| "off"` | — | Native autocomplete. |
 | `action` | `string` | — | Native `action` URL. Валидная отправка идёт native-сабмитом (§10.7). |
@@ -97,17 +96,44 @@ const structure: FormStructure[] = [
 | `enctype` | `string` | — | Native form enctype (например `multipart/form-data`). |
 | `nativeSubmit` | `boolean` | `false` | Opt-in native browser submit для валидной формы без `action`. |
 
-`FormStructure` (фрагмент): `{ title?, description?, fields: FieldType[] }`.
+`FormStructure` (фрагмент): `{ title?, description?, fields: FieldType[], hidden?, class?, classes? }`.
 
-`FieldType` — discriminated union по `typeField`:
-- `FieldInput` — `typeField: "Input"`, поля Input + rules.
-- `FieldSelect` — `typeField: "Select"`, поля Select.
-- `FieldCalendar` — `typeField: "Calendar"`.
-- `FieldTextEditor` — `typeField: "TextEditor"`.
-- `FieldSwitch` — `typeField: "Switch"`.
-- `FieldCustom` — `typeField: "Custom"`, рендерится через slot `[nameTemplate]`.
+`FieldType` — discriminated union по `typeComponent`:
+- `FieldInput` — `typeComponent: "Input"`, поля Input + rules.
+- `FieldTextarea` — `typeComponent: "Textarea"` (бывший `FieldAria`).
+- `FieldSelect` — `typeComponent: "Select"`, поля Select.
+- `FieldCalendar` — `typeComponent: "Calendar"`.
+- `FieldTextEditor` — `typeComponent: "TextEditor"`.
+- `FieldSwitch` — `typeComponent: "Switch"`.
+- `FieldCustom` — `typeComponent: "Custom"`, рендерится через slot `[nameTemplate]`.
+- `FieldRegistered` — открытый `typeComponent`, зарегистрированный через `registerFieldType` (§10.6).
+
+Общая база `Field`: `{ name, classes?, hidden?, rules? }`.
 
 См. полные типы в [Form.d.ts](../../lib/form/Form.d.ts).
+
+### 5.1 Classes keys
+
+`FormClassKey` ([Form.d.ts:30](../../lib/form/Form.d.ts#L30)) — все ключи element-вида (аддитивные, twMerge):
+
+| Key | Element (`data-*`) | Kind | Default |
+|---|---|---|---|
+| `root` | `[data-form]` (≡ prop `class`) | element | — |
+| `section` | `[data-form-item]` | element | `border-b border-surface-900/10 dark:border-surface-100/10 pb-6 print:border-black` |
+| `grid` | `[data-form-group]` | element | `grid motion-safe:transition grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 mt-10` |
+| `field` | `[data-form-field]` (колонка поля) | element | `col-span-full` |
+| `footer` | `[data-form-footer]` | element | `mt-3 flex items-center justify-end gap-x-6` |
+
+Те же ключи адресуются из схемы, точечно:
+
+| Где | Ключ | Что перекрывает |
+|---|---|---|
+| `FormStructure.classes.grid` / `FormSectionProps.classes.grid` | `grid` | grid конкретной секции |
+| `FormStructure.class` / `FormSectionProps.class` | — | контейнер конкретной секции (идёт **после** `classes.section` формы) |
+| `Field.classes.field` / `FormFieldProps.classes.field` | `field` | колонку конкретного поля |
+
+Остальные ключи `Field.classes` (`base`, `label`, `control`, …) Form **не** трогает — они уходят
+в контрол поля как его собственный `classes` (§5.1 соответствующего компонента).
 
 ## 6. Events / Emits + v-model contract
 
@@ -150,7 +176,7 @@ v-model: `v-model:form-fields="..."` — стандартный pattern для s
 ```vue
 <Form :structure="[
   { fields: [
-    { name: 'login', typeField: 'Input', label: 'Login', rules: [{ type: 'required' }] }
+    { name: 'login', typeComponent: 'Input', label: 'Login', rules: [{ type: 'required' }] }
   ] }
 ]" v-model:form-fields="values" />
 ```
@@ -161,8 +187,8 @@ v-model: `v-model:form-fields="..."` — стандартный pattern для s
 app.use(FishtVue, {
   componentsOptions: {
     Form: {
-      modeStyle: "outlined",
-      modeLabel: "dynamic",
+      mode: "outlined",
+      labelMode: "dynamic",
       modeValidate: "onChange",
       submitButton: "Send"
     }
@@ -177,7 +203,7 @@ app.use(FishtVue, {
 import Form from "fishtvue/form"
 const structure = [
   { fields: [
-    { name: "rating", typeField: "Custom", nameTemplate: "rating", label: "Rating" }
+    { name: "rating", typeComponent: "Custom", nameTemplate: "rating", label: "Rating" }
   ]}
 ]
 </script>
@@ -219,7 +245,8 @@ async function onSubmit(values: any) {
 
 ### 10.1 Global
 
-`FormOption = Pick<FormProps, "class" | "modeStyle" | "modeLabel" | "modeValidate" | "submitButton" | "structureClass" | "structureClassGrid" | "autocomplete">`.
+`FormOption = Pick<FormProps, "class" | "classes" | "mode" | "labelMode" | "modeValidate" | "submitButton" | "autocomplete">`
+([Form.d.ts:591](../../lib/form/Form.d.ts#L591)). Слияние global + local — **по ключу** карты.
 
 ### 10.2 Per-instance
 
@@ -231,7 +258,8 @@ async function onSubmit(values: any) {
 
 ### 10.4 CSS layer override
 
-Root класс — `fv fishtvue-form`.
+Root класс — `fv fishtvue-form`. Селекторы внутренних элементов — `[data-form-item]`,
+`[data-form-group]`, `[data-form-field]`, `[data-form-group-item]`, `[data-form-footer]`.
 
 ### 10.5 Compound API
 
@@ -249,8 +277,8 @@ const roles = [{ id: 1, value: "Admin" }]
 <template>
   <Form v-model:form-fields="values" @submit="(v) => console.log(v)">
     <FormSection title="User">
-      <FormField name="email" type="Input" label="Email" :rules="{ required: true, email: true }" />
-      <FormField name="role" type="Select" :data-select="roles" />
+      <FormField name="email" type-component="Input" label="Email" :rules="{ required: true, email: true }" />
+      <FormField name="role" type-component="Select" :options="roles" />
     </FormSection>
     <!-- custom-контрол через default-slot FormField -->
     <FormField name="rating">
@@ -262,7 +290,7 @@ const roles = [{ id: 1, value: "Admin" }]
 </template>
 ```
 
-`<FormField>` props: `name` (required), `type` / `typeComponent`, `label`, `rules`, `modelValue`, плюс passthrough. `<FormSection>` props: `title`, `description`, `class`, `classGrid`, `isHidden`. В Nuxt оба авто-импортируются.
+`<FormField>` props: `name` (required), `typeComponent`, `label`, `rules`, `modelValue`, `classes`, `hidden`, плюс passthrough. `<FormSection>` props: `title`, `description`, `class`, `classes`, `hidden`. В Nuxt оба авто-импортируются.
 
 ### 10.6 Custom field types
 
@@ -277,7 +305,7 @@ registerFieldType("MyDatePicker", MyDatePicker)
 
 ```vue
 <Form :structure="[{ fields: [{ name: 'date', typeComponent: 'MyDatePicker' }] }]" v-model:form-fields="values" />
-<!-- или compound: <FormField name="date" type="MyDatePicker" /> -->
+<!-- или compound: <FormField name="date" type-component="MyDatePicker" /> -->
 ```
 
 Зарегистрированный компонент получает `v-model:model-value` (auto-binding на `formFields[name]`) и passthrough props. Резолв: встроенный тип > registry > Custom-slot. Custom/registered-поле с `rules` валидируется.
@@ -324,7 +352,8 @@ import Form, { FormField, FormSection, registerFieldType } from "fishtvue/form"
 import type {
   FormProps, FormEmits, FormSlots, FormExpose,
   FormStructure, FormValues, FieldType,
-  FieldInput, FieldSelect, FieldCalendar, FieldTextEditor, FieldSwitch, FieldCustom,
+  FormClassKey, Field,
+  FieldInput, FieldTextarea, FieldSelect, FieldCalendar, FieldTextEditor, FieldSwitch, FieldCustom,
   FieldRegistered, FormFieldProps, FormSectionProps
 } from "fishtvue/form"
 import { useTemplateRef } from "vue"
@@ -337,8 +366,25 @@ f.value?.formElement?.requestSubmit()
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 58 кейсов, coverage 91.41%.
-- **Breaking changes:** не зафиксировано.
+- **Stability flag:** `stable` — 79 кейсов.
+- **Breaking changes (1.0.0):**
+  - `structureClass` → `classes.section`, `structureClassGrid` → `classes.grid`;
+    `class` теперь строго корень `[data-form]` (ключ карты — `root`).
+  - `Field.classCol` / `FormFieldProps.classCol` → `classes.field`; колонка поля получила
+    маркер `[data-form-field]`.
+  - `FormStructure.classGrid` / `FormSectionProps.classGrid` → `classes.grid`
+    (`class` секции остаётся и идёт после `classes.section` формы).
+  - `modeStyle` → `mode`, `modeLabel` → `labelMode`.
+  - `isHidden` → `hidden` — во всех четырёх местах: `Field`, `FormStructure`,
+    `FormFieldProps`, `FormSectionProps`.
+  - `FieldCustom.isValue` → `hasValue` (единое имя с семейством InputLayout).
+  - `<FormField type="…">` снят — остаётся только `typeComponent` (`type` конфликтовал
+    с `InputProps.type`). Старый `type` больше не выбирает компонент: поле упадёт в `"Input"`.
+  - Тип `FieldAria` → `FieldTextarea`; внутренний алиас `classCol` удалён.
+  - `unstyled: true` больше не съедает `class` потребителя: корень отдаёт `fv <class>`
+    (dev-patterns §2 E).
+  - Expose пополнился `mode`/`labelMode`.
+  - Алиасов нет: снятые props уедут fallthrough-атрибутами на корень `<form>`.
 - **Deprecations:** нет.
 
 ## 15. Testing recipes
@@ -352,7 +398,7 @@ import Form from "fishtvue/form/Form.vue"
 describe("Form", () => {
   it("emits submit", async () => {
     const wrapper = mount(Form, {
-      props: { structure: [{ fields: [{ name: "x", typeField: "Input" }] }] },
+      props: { structure: [{ fields: [{ name: "x", typeComponent: "Input" }] }] },
       global: { plugins: [[FishtVue, {}]] }
     })
     expect(wrapper.exists()).toBe(true)
@@ -360,7 +406,7 @@ describe("Form", () => {
 })
 ```
 
-Реальные тесты — [Form.test.ts](../../lib/form/Form.test.ts) (58 кейсов).
+Реальные тесты — [Form.test.ts](../../lib/form/Form.test.ts) (79 кейсов).
 
 ## 16. Troubleshooting / FAQ
 
@@ -386,7 +432,7 @@ describe("Form", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage `Form.vue` 95.73% statements / **80.6% branch** (было 78.91% — поднято 2026-06-03 в [issues/form.md Issue 8](../issues/form.md)). Непокрытые ветви — [Form.vue:159–164](../../lib/form/Form.vue#L159) (sync-watch при reassign внешнего `props.formFields`).
+- Coverage `Form.vue` 95.73% statements / **80.6% branch** (было 78.91% — поднято 2026-06-03 в [issues/form.md Issue 8](../issues/form.md)). Непокрытые ветви — [Form.vue:280–295](../../lib/form/Form.vue#L280-L295) (sync-watch при reassign внешнего `props.formFields`).
 - Validation messages локализуются глобально через `setDefaultRuleMessages` (global module state) — при нескольких Form с разными локалями последний mount выигрывает. Custom validator с `{ key, params }` interpolation не поддержан (нужен `t(key, params)` — Wave 3.5). См. [issues/form.md Issue 6](../issues/form.md).
 - В `FieldSelect`/`FieldCalendar`/`FieldTextEditor` rules-поле закомментировано в `.d.ts` (планируется).
 - **B10 (colors), resolved 2026-07-04:** структурные `gray-*` классы (section-divider border, `insert.before/afterText` slot-цвет, `insert.before/afterIcon`) мигрированы на семантический design-token `surface` — тот же numeric tone, family rename без изменения визуала (см. [theme.md §3.1](../architecture/theme.md), [issues/form.md Issue 9](../issues/form.md)). Это Form-инстанс миграции в рамках первого batch из 11 компонентов; библиотечная **Wave 9** в целом не завершена (ещё 8 компонентов + отдельный Alert-эпик, cross-cutting трекинг — [issues/README.md](../issues/README.md)), поэтому `issues/form.md` остаётся active.
@@ -399,7 +445,7 @@ describe("Form", () => {
 ### API inconsistencies
 
 - `FieldCustom.modelValue: any` — потеря типизации для custom-полей.
-- `FieldType<T>` использует условные типы по `typeField`, но fallback path возвращает `any`.
+- `FieldType<T>` использует условные типы по `typeComponent`, но fallback path возвращает `any`.
 - `formFields: MaybeRef<FormValues>` — `FormValues = Record<string, any>` — нет per-field типа.
 - `setFieldValue(fieldName: string, value: any): unknown` — возвращает `unknown`.
 

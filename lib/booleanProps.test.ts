@@ -15,14 +15,7 @@ import { describe, expect, it } from "vitest"
  * `lib/<name>/<Name>.vue` (компоненты + renderless-дескрипторы; `lib/loading/svg|epic` не входят).
  * `PENDING` — компоненты, ещё не переведённые на 1.0; обнуляется в W7.
  */
-const PENDING: string[] = [
-  "form/Form.vue",
-  "form/FormField.vue",
-  "form/FormSection.vue",
-  "menu/Menu.vue",
-  "menu/MenuGroup.vue",
-  "menu/MenuItem.vue"
-]
+const PENDING: string[] = []
 
 /**
  * Renderless-дескрипторы compound-API (`<SelectItem>`, `<FormField>`, `<Column>`, …): собственного DOM
@@ -34,7 +27,11 @@ const RENDERLESS = new Set([
   "select/SelectItem.vue",
   "accordion/AccordionItem.vue",
   "table/Column.vue",
-  "table/ColumnGroup.vue"
+  "table/ColumnGroup.vue",
+  "menu/MenuGroup.vue",
+  "menu/MenuItem.vue",
+  "form/FormField.vue",
+  "form/FormSection.vue"
 ])
 
 const FORBIDDEN_PREFIX = /^(?:is|not|without|no|show|use)[A-Z]/

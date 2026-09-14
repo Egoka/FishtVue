@@ -15,7 +15,7 @@ import FishtVue from "fishtvue/config"
  * Per-component нюансы (aspect-ключи, hand-off'ы, слоты) живут в `<Name>.test.ts`; здесь — инвариант.
  * `PENDING` — компоненты до своей волны; обнуляется в W7, после чего `skipIf` удаляется.
  */
-const PENDING: string[] = ["Form", "Menu"]
+const PENDING: string[] = []
 
 type Entry = {
   name: string
@@ -160,13 +160,18 @@ const CONTRACT: Entry[] = [
     name: "Menu",
     load: () => import("fishtvue/menu/Menu.vue"),
     root: "[data-menu]",
+    // Разделитель рендерится только МЕЖДУ группами (`listGroups.length !== 1`) — нужно две.
     props: {
       title: "T",
-      groups: [{ title: "G", items: [{ title: "I", icon: "check", info: "i", menu: { groups: [] } }], separator: {} }]
+      groups: [
+        { title: "G", items: [{ title: "I", icon: "check", info: "i", menu: { groups: [] } }] },
+        { title: "G2", separator: { icon: "chevron-right" }, items: [{ title: "I2" }] }
+      ]
     },
     keys: {
       title: "[data-menu-title]",
       separator: "[data-separator]",
+      separatorIcon: "[data-separator] [data-icon]",
       group: "[data-menu-group]",
       groupTitle: "[data-menu-group-title]",
       item: "[data-menu-item]",
