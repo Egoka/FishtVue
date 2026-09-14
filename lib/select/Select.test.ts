@@ -1,9 +1,9 @@
 import { mount, flushPromises } from "@vue/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { h, nextTick } from "vue"
+import { h, nextTick, ref } from "vue"
 import FishtVue from "fishtvue/config"
 import Select from "fishtvue/select/Select.vue"
-import SelectOption from "fishtvue/select/SelectOption.vue"
+import SelectItem from "fishtvue/select/SelectItem.vue"
 import SelectGroup from "fishtvue/select/SelectGroup.vue"
 import { SelectProps } from "fishtvue/select/Select"
 
@@ -13,7 +13,7 @@ describe("Select Component Tests", () => {
     it("renders correctly with default props", () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: ["Option 1", "Option 2", "Option 3"],
+          options: ["Option 1", "Option 2", "Option 3"],
           modelValue: null
         }
       })
@@ -25,7 +25,7 @@ describe("Select Component Tests", () => {
     it("renders multiple select mode", () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: ["Option 1", "Option 2"],
+          options: ["Option 1", "Option 2"],
           multiple: true
         }
       })
@@ -33,10 +33,10 @@ describe("Select Component Tests", () => {
       expect(wrapper.findAll("[data-select-item]").length).toBe(0)
     })
 
-    it("sets default keySelect and valueSelect when dataSelect is empty", () => {
+    it("sets default keySelect and valueSelect when options is empty", () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: []
+          options: []
         }
       })
 
@@ -47,15 +47,15 @@ describe("Select Component Tests", () => {
       expect(valueSelect).toBe(null)
     })
 
-    it("uses provided keySelect and valueSelect when they exist in dataSelect", () => {
-      const dataSelect = [
+    it("uses provided keySelect and valueSelect when they exist in options", () => {
+      const options = [
         { id: 1, value: "Option 1" },
         { id: 2, value: "Option 2" }
       ]
 
       const wrapper = mount(Select, {
         props: {
-          dataSelect,
+          options,
           keySelect: "id",
           valueSelect: "value"
         }
@@ -68,17 +68,17 @@ describe("Select Component Tests", () => {
       expect(valueSelect).toBe("value")
     })
 
-    it("falls back to defaults when keySelect and valueSelect do not exist in dataSelect", () => {
-      const dataSelect = [
+    it("falls back to defaults when keySelect and valueSelect do not exist in options", () => {
+      const options = [
         { name: "Option 1", description: "First option" },
         { name: "Option 2", description: "Second option" }
       ]
 
       const wrapper = mount(Select, {
         props: {
-          dataSelect,
-          keySelect: "id", // Doesn't exist in dataSelect
-          valueSelect: "value" // Doesn't exist in dataSelect
+          options,
+          keySelect: "id", // Doesn't exist in options
+          valueSelect: "value" // Doesn't exist in options
         }
       })
 
@@ -86,14 +86,14 @@ describe("Select Component Tests", () => {
       const valueSelect = wrapper.vm.valueSelect
 
       // Check fallback behavior
-      expect(keySelect).toBe("name") // Default to the first key in the dataSelect object
-      expect(valueSelect).toBe("description") // Default to the second key in the dataSelect object
+      expect(keySelect).toBe("name") // Default to the first key in the options object
+      expect(valueSelect).toBe("description") // Default to the second key in the options object
     })
 
     it("opens the dropdown automatically when autoFocus is true", async () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: ["Option 1", "Option 2", "Option 3"],
+          options: ["Option 1", "Option 2", "Option 3"],
           autoFocus: true
         },
         attachTo: document.body // Ensure events like focus are handled properly
@@ -148,15 +148,15 @@ describe("Select Component Tests", () => {
     it("applies default options from library", () => {
       const app = createAppWithFishtVue({
         multiple: true,
-        closeButtonBadge: true,
-        noData: "No data",
+        badgeCloseButton: true,
+        emptyText: "No data",
         maxVisible: 2
       })
 
       const wrapper = mount(Select, {
         global: { plugins: [app] },
         props: {
-          dataSelect: ["Option 1", "Option 2", "Option 3"],
+          options: ["Option 1", "Option 2", "Option 3"],
           modelValue: ["Option 1", "Option 2"]
         }
       })
@@ -174,10 +174,10 @@ describe("Select Component Tests", () => {
 
       const wrapper = mount(Select, {
         props: {
-          dataSelect: ["Apple", "Banana", "Cherry"],
+          options: ["Apple", "Banana", "Cherry"],
           modelValue: null,
           multiple: true,
-          paramsFixWindow: {
+          fixWindowProps: {
             el: "[data-v-app]",
             eventClose: "click"
           }
@@ -187,7 +187,7 @@ describe("Select Component Tests", () => {
 
       // Open the select dropdown
       expect(wrapper.find("[data-fix-window]").isVisible()).toBe(false)
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       const componentFixWindow = wrapper.findComponent({ name: "FixWindow" })
       expect(componentFixWindow.vm.isOpen).toBe(true)
@@ -221,7 +221,7 @@ describe("Select Component Tests", () => {
       expect(wrapper.vm.isOpenList).toBe(false)
 
       // Open the select dropdown
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       expect(componentFixWindow.vm.isOpen).toBe(true)
 
@@ -238,7 +238,7 @@ describe("Select Component Tests", () => {
 
       expect(wrapper.emitted("change:modelValue")?.[0][0]).toEqual(["Banana"])
       // Issue 1 (2026-05-11): `item.marker` HTML-сборка убрана как XSS surface — substring highlight теперь рендерится через
-      // безопасный template helper, а не мутирует data. selectItem payload — оригинальный объект из dataSelect.
+      // безопасный template helper, а не мутирует data. selectItem payload — оригинальный объект из options.
       const selectItem = (wrapper.emitted("change:modelValue")?.[0][1] as any)[0]
       expect(selectItem.marker).toBeUndefined()
       wrapper.unmount()
@@ -294,11 +294,11 @@ describe("Select Component Tests", () => {
       ;(globalThis as any).__xssTriggered = false
       const wrapper = mount(Select, {
         props: {
-          dataSelect: [{ id: 1, value: "alpha", marker: xssPayload }],
+          options: [{ id: 1, value: "alpha", marker: xssPayload }],
           modelValue: null
         }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       const search = wrapper.find("[data-select-search] input")
       if (search.exists()) {
@@ -313,15 +313,15 @@ describe("Select Component Tests", () => {
       wrapper.unmount()
     })
 
-    it("does not execute XSS payload from noData prop", async () => {
+    it("does not execute XSS payload from emptyText prop", async () => {
       const xssPayload = "<img src=x onerror=alert(1)><script>alert(2)</script>"
       const wrapper = mount(Select, {
         props: {
-          dataSelect: [],
-          noData: xssPayload
+          options: [],
+          emptyText: xssPayload
         }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       const html = wrapper.html()
       // Raw `<img>` или `<script>` теги (как DOM-узлы) не должны быть в выводе — только escaped text.
@@ -336,7 +336,7 @@ describe("Select Component Tests", () => {
     it("renders custom #marker scoped slot when provided", async () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: [{ id: 1, value: "Apple" }],
+          options: [{ id: 1, value: "Apple" }],
           modelValue: null
         },
         slots: {
@@ -345,7 +345,7 @@ describe("Select Component Tests", () => {
           </template>`
         }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       expect(wrapper.find("[data-custom-marker]").exists()).toBe(true)
       expect(wrapper.find("[data-custom-marker]").text()).toContain("Apple")
@@ -355,10 +355,10 @@ describe("Select Component Tests", () => {
     // ---ISSUE 2 — memory leak cleanup -----------------------------
     it("removes keydown listeners on unmount-while-focused", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["a", "b"], modelValue: null },
+        props: { options: ["a", "b"], modelValue: null },
         attachTo: document.body
       })
-      await wrapper.find("[data-select]").trigger("focusin")
+      await wrapper.find("[data-select-control]").trigger("focusin")
       await nextTick()
       removeListenerSpy.mockClear()
       wrapper.unmount()
@@ -368,7 +368,7 @@ describe("Select Component Tests", () => {
 
     it("disconnects ResizeObserver on unmount", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["a"], modelValue: null },
+        props: { options: ["a"], modelValue: null },
         attachTo: document.body
       })
       await nextTick()
@@ -386,7 +386,7 @@ describe("Select Component Tests", () => {
       }
       const wrapper = mount(Select, {
         global: { plugins: [app as any] },
-        props: { dataSelect: ["a"] }
+        props: { options: ["a"] }
       })
       expect(wrapper.vm.mode).toBe("filled")
     })
@@ -399,7 +399,7 @@ describe("Select Component Tests", () => {
       }
       const wrapper = mount(Select, {
         global: { plugins: [app as any] },
-        props: { dataSelect: ["a"], mode: "outlined" }
+        props: { options: ["a"], mode: "outlined" }
       })
       expect(wrapper.vm.mode).toBe("outlined")
     })
@@ -413,12 +413,12 @@ describe("Select Component Tests", () => {
       }
       const wrapper = mount(Select, {
         global: { plugins: [app as any] },
-        props: { dataSelect: ["a"] }
+        props: { options: ["a"] }
       })
-      const root = wrapper.find("[data-select]")
-      const classAttr = root.attributes("class") ?? ""
+      const control = wrapper.find("[data-select-control]")
+      const classAttr = control.attributes("class") ?? ""
       expect(classAttr).not.toContain("fishtvue-select")
-      expect(classAttr).not.toContain("selectBody")
+      expect(classAttr).not.toContain("w-46")
     })
 
     // ---ISSUE 8 — aria-live -------------------------------------
@@ -426,11 +426,11 @@ describe("Select Component Tests", () => {
       // Issue 3 (2026-05-20): Component.t() возвращает key как last resort без плагина.
       // Чтобы %d template из en messages применился, подключаем FishtVue plugin.
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Apple", "Banana", "Bandana"], modelValue: null },
+        props: { options: ["Apple", "Banana", "Bandana"], modelValue: null },
         attachTo: document.body,
         global: { plugins: [[FishtVue as any, {}]] }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       const search = wrapper.find("[data-select-search] input")
       await search.setValue("an")
@@ -446,11 +446,11 @@ describe("Select Component Tests", () => {
 
     it("localizes the results count via Russian pluralization (Wave 3.5)", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Apple", "Banana", "Bandana"], modelValue: null },
+        props: { options: ["Apple", "Banana", "Bandana"], modelValue: null },
         attachTo: document.body,
         global: { plugins: [[FishtVue as any, { locale: { defaultLocale: "ru" } }]] }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       const search = wrapper.find("[data-select-search] input")
       await search.setValue("an")
@@ -465,7 +465,7 @@ describe("Select Component Tests", () => {
     it("filters dataList through Intl.Collator (diacritic-insensitive)", async () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: [
+          options: [
             { id: 1, value: "Müller" },
             { id: 2, value: "Smith" }
           ],
@@ -473,7 +473,7 @@ describe("Select Component Tests", () => {
         },
         attachTo: document.body
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       const search = wrapper.find("[data-select-search] input")
       await search.setValue("muller")
@@ -487,10 +487,10 @@ describe("Select Component Tests", () => {
     // ---ISSUE 11 — motion-safe prefix -----------------------------
     it("uses motion-safe: prefix on transition classes", () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["a"] }
+        props: { options: ["a"] }
       })
       // Корневой контейнер должен иметь print:* классы, что зеркалит Input pattern.
-      const root = wrapper.find("[data-select]")
+      const root = wrapper.find("[data-select-control]")
       const html = wrapper.html()
       // motion-safe: появляется хотя бы один раз в style sheet корневых классов
       expect(html).toMatch(/motion-safe:/)
@@ -503,12 +503,12 @@ describe("Select Component Tests", () => {
 // =====================================================================================================================
 // Audit fixes 2026-06-13 — Issue 3 (compound API) + Issue 9 (RTL)
 // =====================================================================================================================
-describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => {
+describe("Select — Issue 3: compound <SelectItem>/<SelectGroup> API", () => {
   // ---HAPPY PATH ------------------------------------------------------------
-  it("renders options from compound <SelectOption> children", async () => {
+  it("renders options from compound <SelectItem> children", async () => {
     const wrapper = mount(Select, {
       slots: {
-        default: () => [h(SelectOption, { value: "a" }, () => "Apple"), h(SelectOption, { value: "b" }, () => "Banana")]
+        default: () => [h(SelectItem, { value: "a" }, () => "Apple"), h(SelectItem, { value: "b" }, () => "Banana")]
       }
     })
     await nextTick()
@@ -520,17 +520,17 @@ describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => 
 
   it("uses `label` prop as display text when provided", async () => {
     const wrapper = mount(Select, {
-      slots: { default: () => [h(SelectOption, { value: "a", label: "Custom Label" }, () => "ignored")] }
+      slots: { default: () => [h(SelectItem, { value: "a", label: "Custom Label" }, () => "ignored")] }
     })
     await nextTick()
     expect(wrapper.text()).toContain("Custom Label")
   })
 
   // ---SCHEMA WINS ----------------------------------------------------------
-  it("schema-driven dataSelect wins over compound children", async () => {
+  it("schema-driven options wins over compound children", async () => {
     const wrapper = mount(Select, {
-      props: { dataSelect: ["Schema 1", "Schema 2", "Schema 3"] },
-      slots: { default: () => [h(SelectOption, { value: "a" }, () => "Compound A")] }
+      props: { options: ["Schema 1", "Schema 2", "Schema 3"] },
+      slots: { default: () => [h(SelectItem, { value: "a" }, () => "Compound A")] }
     })
     await nextTick()
     const options = wrapper.findAll("[data-select-list-item]")
@@ -543,7 +543,7 @@ describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => 
   it("selecting a compound option emits its `value` as modelValue", async () => {
     const wrapper = mount(Select, {
       slots: {
-        default: () => [h(SelectOption, { value: "a" }, () => "Apple"), h(SelectOption, { value: "b" }, () => "Banana")]
+        default: () => [h(SelectItem, { value: "a" }, () => "Apple"), h(SelectItem, { value: "b" }, () => "Banana")]
       }
     })
     await nextTick()
@@ -555,7 +555,7 @@ describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => 
 
   it("infers value type — numeric `value` round-trips through modelValue", async () => {
     const wrapper = mount(Select, {
-      slots: { default: () => [h(SelectOption, { value: 42 }, () => "Answer")] }
+      slots: { default: () => [h(SelectItem, { value: 42 }, () => "Answer")] }
     })
     await nextTick()
     await wrapper.findAll("[data-select-list-item]")[0].trigger("click")
@@ -568,8 +568,8 @@ describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => 
     const wrapper = mount(Select, {
       slots: {
         default: () => [
-          h(SelectOption, { value: "a", disabled: true }, () => "Locked"),
-          h(SelectOption, { value: "b" }, () => "Free")
+          h(SelectItem, { value: "a", disabled: true }, () => "Locked"),
+          h(SelectItem, { value: "b" }, () => "Free")
         ]
       }
     })
@@ -589,8 +589,8 @@ describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => 
       slots: {
         default: () => [
           h(SelectGroup, { label: "Fruits" }, () => [
-            h(SelectOption, { value: "a" }, () => "Apple"),
-            h(SelectOption, { value: "b" }, () => "Banana")
+            h(SelectItem, { value: "a" }, () => "Apple"),
+            h(SelectItem, { value: "b" }, () => "Banana")
           ])
         ]
       }
@@ -603,7 +603,7 @@ describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => 
   })
 
   // ---BOUNDARY -------------------------------------------------------------
-  it("falls back to empty state when no children and no dataSelect", async () => {
+  it("falls back to empty state when no children and no options", async () => {
     const wrapper = mount(Select)
     await nextTick()
     expect(wrapper.findAll("[data-select-list-item]").length).toBe(0)
@@ -612,7 +612,7 @@ describe("Select — Issue 3: compound <SelectOption>/<SelectGroup> API", () => 
 
 describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
   it("option row uses logical padding (ps-/pe-), not physical (pl-/pr-)", async () => {
-    const wrapper = mount(Select, { props: { dataSelect: ["a", "b"] } })
+    const wrapper = mount(Select, { props: { options: ["a", "b"] } })
     await nextTick()
     const li = wrapper.find("[data-select-list-item]")
     const cls = li.attributes("class") ?? ""
@@ -623,14 +623,14 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
   })
 
   it("item value uses rtl:text-right override for alignment", async () => {
-    const wrapper = mount(Select, { props: { dataSelect: ["a"] } })
+    const wrapper = mount(Select, { props: { options: ["a"] } })
     await nextTick()
     expect(wrapper.html()).toMatch(/rtl:text-right/)
   })
 
   it("check icon uses logical start-0 / ps-2 (not left-0 / pl-2)", async () => {
     const wrapper = mount(Select, {
-      props: { dataSelect: ["a"], modelValue: "a", keySelect: "id", valueSelect: "value" }
+      props: { options: ["a"], modelValue: "a", keySelect: "id", valueSelect: "value" }
     })
     await nextTick()
     await flushPromises()
@@ -646,8 +646,8 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
   })
 
   it("dropdown offset uses logical margin ms-[...] (not physical ml-[...])", async () => {
-    const wrapper = mount(Select, { props: { dataSelect: ["a"] }, attachTo: document.body })
-    await wrapper.find("[data-select]").trigger("click")
+    const wrapper = mount(Select, { props: { options: ["a"] }, attachTo: document.body })
+    await wrapper.find("[data-select-control]").trigger("click")
     await flushPromises()
     const html = wrapper.html()
     expect(html).toMatch(/ms-\[/)
@@ -657,15 +657,15 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
 
   describe("Accessibility — combobox role & label association (Wave 4)", () => {
     it("marks the trigger as role=combobox with aria-expanded reflecting the closed state", () => {
-      const wrapper = mount(Select, { props: { dataSelect: [], label: "Country" } })
-      const trigger = wrapper.find("[data-select]")
+      const wrapper = mount(Select, { props: { options: [], label: "Country" } })
+      const trigger = wrapper.find("[data-select-control]")
       expect(trigger.attributes("role")).toBe("combobox")
       expect(trigger.attributes("aria-expanded")).toBe("false")
     })
 
     it("links the trigger to the label via aria-labelledby and a shared id", () => {
-      const wrapper = mount(Select, { props: { dataSelect: [], label: "Country", id: "country" } })
-      const trigger = wrapper.find("[data-select]")
+      const wrapper = mount(Select, { props: { options: [], label: "Country", id: "country" } })
+      const trigger = wrapper.find("[data-select-control]")
       expect(trigger.attributes("id")).toBe("country")
       expect(trigger.attributes("aria-labelledby")).toBe("country-label")
       // Select's dropdown carries its own search <Input> (with an auto-id label),
@@ -674,10 +674,10 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
     })
 
     it("toggles aria-expanded to true when the dropdown opens", async () => {
-      const wrapper = mount(Select, { props: { dataSelect: ["a"], label: "Country" }, attachTo: document.body })
-      await wrapper.find("[data-select]").trigger("click")
+      const wrapper = mount(Select, { props: { options: ["a"], label: "Country" }, attachTo: document.body })
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
-      expect(wrapper.find("[data-select]").attributes("aria-expanded")).toBe("true")
+      expect(wrapper.find("[data-select-control]").attributes("aria-expanded")).toBe("true")
       wrapper.unmount()
     })
   })
@@ -706,10 +706,10 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
 
     it("still renders dropdown items when opened (animation = progressive enhancement)", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1", "Option 2", "Option 3"], modelValue: null },
+        props: { options: ["Option 1", "Option 2", "Option 3"], modelValue: null },
         attachTo: document.body
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       expect(wrapper.vm.isOpenList).toBe(true)
@@ -722,7 +722,7 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
   describe("Select Component - Keyboard Home/End/typeahead (Wave 4.3)", () => {
     async function openList(props: Record<string, unknown>) {
       const wrapper = mount(Select, { props, attachTo: document.body })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       expect(wrapper.vm.isOpenList).toBe(true)
@@ -730,7 +730,7 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
     }
 
     it("End focuses the last list item, Home focuses the first", async () => {
-      const wrapper = await openList({ dataSelect: ["Apple", "Banana", "Cherry"], modelValue: null })
+      const wrapper = await openList({ options: ["Apple", "Banana", "Cherry"], modelValue: null })
 
       await wrapper.trigger("keydown", { key: "End" })
       await nextTick()
@@ -747,14 +747,14 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       wrapper.unmount()
     })
 
-    it("noQuery: true renders no search input (typeahead branch reachable)", async () => {
-      const wrapper = await openList({ dataSelect: ["Apple", "Banana"], modelValue: null, noQuery: true })
+    it("searchable: false renders no search input (typeahead branch reachable)", async () => {
+      const wrapper = await openList({ options: ["Apple", "Banana"], modelValue: null, searchable: false })
       expect(wrapper.find("[data-select-search]").exists()).toBe(false)
       wrapper.unmount()
     })
 
-    it("typeahead (noQuery) focuses first item starting with the typed character", async () => {
-      const wrapper = await openList({ dataSelect: ["Apple", "Banana", "Cherry"], modelValue: null, noQuery: true })
+    it("typeahead (searchable: false) focuses first item starting with the typed character", async () => {
+      const wrapper = await openList({ options: ["Apple", "Banana", "Cherry"], modelValue: null, searchable: false })
 
       await wrapper.trigger("keydown", { key: "b" })
       await nextTick()
@@ -766,8 +766,8 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       wrapper.unmount()
     })
 
-    it("typeahead (noQuery) cycles through items sharing the first character on repeat", async () => {
-      const wrapper = await openList({ dataSelect: ["Apple", "Avocado", "Banana"], modelValue: null, noQuery: true })
+    it("typeahead (searchable: false) cycles through items sharing the first character on repeat", async () => {
+      const wrapper = await openList({ options: ["Apple", "Avocado", "Banana"], modelValue: null, searchable: false })
 
       await wrapper.trigger("keydown", { key: "a" })
       await nextTick()
@@ -787,7 +787,7 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
   describe("FixWindow class-body — guard ms-[…px] (uno-engine fail-closed regression)", () => {
     it("не рендерит ms-[undefinedpx] до готовности layout.beforeWidth", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null }
+        props: { options: ["Option 1"], modelValue: null }
       })
       // Первый рендер — template ref `layout` ещё не привязан (beforeWidth undefined);
       // без guard'а класс интерполируется как ms-[undefinedpx] и дропается движком с warn.
@@ -808,9 +808,9 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       { mode: "underlined", expected: "border-surface-300 dark:border-surface-700" }
     ])("mode: $mode dropdown border uses surface-family (not gray)", async ({ mode, expected }) => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+        props: { options: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       const cls = wrapper.find("[data-select-list]").classes().join(" ")
@@ -823,9 +823,9 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       { mode: "filled", expected: "bg-surface-100 dark:bg-surface-900" }
     ])("mode: $mode dropdown background uses surface-family (not stone)", async ({ mode, expected }) => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+        props: { options: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       const cls = wrapper.find("[data-select-list]").classes().join(" ")
@@ -835,9 +835,9 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
 
     it("option item text uses surface-family (not gray)", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null }
+        props: { options: ["Option 1"], modelValue: null }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       const cls = wrapper.find("[data-select-list-item]").classes().join(" ")
@@ -848,9 +848,9 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
 
     it("option sublabel (item value) uses surface-family (not gray)", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null }
+        props: { options: ["Option 1"], modelValue: null }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       const html = wrapper.find("[data-select-list-item]").html()
@@ -862,10 +862,10 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
     it("group header text uses surface-family (not gray)", async () => {
       const wrapper = mount(Select, {
         slots: {
-          default: () => [h(SelectGroup, { label: "Fruits" }, () => [h(SelectOption, { value: "a" }, () => "Apple")])]
+          default: () => [h(SelectGroup, { label: "Fruits" }, () => [h(SelectItem, { value: "a" }, () => "Apple")])]
         }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       const cls = wrapper.find("[data-select-group]").classes().join(" ")
@@ -874,8 +874,8 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
     })
 
     it("no-data text uses surface-family (not gray)", async () => {
-      const wrapper = mount(Select, { props: { dataSelect: [], modelValue: null } })
-      await wrapper.find("[data-select]").trigger("click")
+      const wrapper = mount(Select, { props: { options: [], modelValue: null } })
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       // classNoData рендерится внутри [data-select-list-items] (hasData: false ветка #empty slot),
@@ -887,9 +887,9 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
 
     it("search icon uses surface-family (not gray)", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null }
+        props: { options: ["Option 1"], modelValue: null }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       const icon = wrapper.find("[data-select-search] [data-icon]")
@@ -906,9 +906,9 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       { mode: "filled", expected: "ring-surface-100 dark:ring-surface-900" }
     ])("mode: $mode search-input ring uses surface-family (not stone)", async ({ mode, expected }) => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+        props: { options: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       // Класс ring-surface-* Select'а мержится Vue class-fallthrough в тот же class-attribute,
@@ -920,9 +920,9 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
 
     it("outlined mode search-input ring keeps literal dark:ring-black untouched", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null, mode: "outlined" as SelectProps["mode"] }
+        props: { options: ["Option 1"], modelValue: null, mode: "outlined" as SelectProps["mode"] }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       const cls = wrapper.find("[data-select-search]").classes().join(" ")
@@ -931,9 +931,9 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
 
     it("underlined/filled gradient overlay uses surface-family (not stone)", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: ["Option 1"], modelValue: null, mode: "underlined" as SelectProps["mode"] }
+        props: { options: ["Option 1"], modelValue: null, mode: "underlined" as SelectProps["mode"] }
       })
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       await nextTick()
       // Скоуп строго на два sticky gradient-wrapper внутри [data-select-list] (top-0 / top-[220px] —
@@ -949,5 +949,243 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       expect(cls).toContain("dark:via-surface-950")
       expect(cls).not.toMatch(legacyGrayFamily)
     })
+  })
+})
+
+// =====================================================================================================================
+// Wave 13 / W2 — контракт props 1.0: `class` → корень `[data-select]`, `classes` → карта
+// (семейные + `control`/`list`/`option`/aspect `mark`), `options`/`searchable`/`emptyText`/`badgeCloseButton`/
+// `fixWindowProps`, emits `active`/`update:invalid`.
+// =====================================================================================================================
+describe("Select — props 1.0 (Wave 13, W2)", () => {
+  const withOptions = (options: Record<string, unknown>) => ({
+    install(app: any) {
+      app.use(FishtVue, { componentsOptions: { Select: options } })
+    }
+  })
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
+  it("публичный набор props — контракт 1.0 (dataSelect/noQuery/noData/classSelect* сняты)", () => {
+    const wrapper = mount(Select)
+    expect(wrapper.props()).toEqual({
+      id: undefined,
+      modelValue: undefined,
+      classes: undefined,
+      mode: undefined,
+      label: undefined,
+      labelMode: undefined,
+      invalid: undefined,
+      messageInvalid: undefined,
+      required: undefined,
+      loading: undefined,
+      disabled: undefined,
+      help: undefined,
+      clearable: undefined,
+      width: undefined,
+      height: undefined,
+      class: undefined,
+      offsetTop: undefined,
+      options: undefined,
+      autoFocus: undefined,
+      keySelect: undefined,
+      valueSelect: undefined,
+      multiple: undefined,
+      maxVisible: undefined,
+      badgeCloseButton: undefined,
+      emptyText: undefined,
+      searchable: undefined,
+      fixWindowProps: undefined
+    })
+  })
+
+  it("legacy-имена (dataSelect/noQuery/noData) больше не работают — опции не рендерятся", async () => {
+    const wrapper = mount(Select, {
+      props: { dataSelect: ["a", "b"], noQuery: true, noData: "нет" } as any
+    })
+    await nextTick()
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(0)
+    // `noQuery` больше не отключает поиск — поле фильтра на месте
+    expect(wrapper.find("[data-select-search]").exists()).toBe(true)
+    expect(wrapper.find("[data-select]").attributes("nodata")).toBe("нет")
+  })
+
+  it("корень Select — корень InputLayout с data-select; триггер получил data-select-control", () => {
+    const wrapper = mount(Select, { props: { options: ["a"], label: "L", class: "probe-root" } })
+    const root = wrapper.find("[data-select]")
+    expect(root.attributes("data-input-layout")).toBeDefined()
+    expect(root.classes()).toContain("probe-root")
+    expect(root.element.querySelectorAll("[class~='probe-root']").length).toBe(0)
+    const control = wrapper.find("[data-select-control]")
+    expect(control.exists()).toBe(true)
+    expect(control.attributes("role")).toBe("combobox")
+  })
+
+  it.each([
+    ["base", "[data-input-layout-base]"],
+    ["label", "[data-select] > [data-label]"],
+    ["control", "[data-select-control]"],
+    ["list", "[data-select-list]"],
+    ["option", "[data-select-list-item]"]
+  ])("classes.%s → %s", async (key, selector) => {
+    const wrapper = mount(Select, { props: { options: ["a"], label: "L", classes: { [key]: "probe-key" } } })
+    await nextTick()
+    expect(wrapper.find(selector).classes()).toContain("probe-key")
+    expect(wrapper.find("[data-select]").classes()).not.toContain("probe-key")
+  })
+
+  it("aspect-ключ mark: замена дефолта и отключение пустой строкой", async () => {
+    const openWithMark = async (mark: string) => {
+      const wrapper = mount(Select, {
+        props: { options: ["Apple", "Banana"], classes: { mark } },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      await search.setValue("an")
+      await search.trigger("input")
+      await flushPromises()
+      return wrapper
+    }
+    const custom = await openWithMark("italic underline")
+    const markEl = custom.find("[data-select-list-item] mark")
+    expect(markEl.exists()).toBe(true)
+    expect(markEl.classes()).toContain("italic")
+    expect(markEl.classes()).not.toContain("font-bold")
+    custom.unmount()
+    const off = await openWithMark("")
+    const offMark = off.find("[data-select-list-item] mark")
+    expect(offMark.exists()).toBe(true)
+    expect(offMark.classes()).toEqual([])
+    off.unmount()
+  })
+
+  it("componentsOptions.Select.classes сливается по ключу под props.classes", async () => {
+    const wrapper = mount(Select, {
+      global: { plugins: [withOptions({ class: "opt-root", classes: { control: "p-2 opt-ctl", list: "opt-list" } })] },
+      props: { options: ["a"], class: "prop-root", classes: { control: "p-4" } }
+    })
+    await nextTick()
+    const control = wrapper.find("[data-select-control]").classes()
+    expect(control).toContain("p-4")
+    expect(control).toContain("opt-ctl")
+    expect(control).not.toContain("p-2")
+    expect(wrapper.find("[data-select-list]").classes()).toContain("opt-list")
+    expect(wrapper.find("[data-select]").classes()).toEqual(expect.arrayContaining(["opt-root", "prop-root"]))
+  })
+
+  it("searchable: default true, `false` убирает поле поиска, componentsOptions достижим", async () => {
+    const def = mount(Select, { props: { options: ["a"] } })
+    await nextTick()
+    expect(def.props("searchable")).toBeUndefined()
+    expect(def.find("[data-select-search]").exists()).toBe(true)
+    const off = mount(Select, { props: { options: ["a"], searchable: false } })
+    await nextTick()
+    expect(off.find("[data-select-search]").exists()).toBe(false)
+    const byOption = mount(Select, {
+      global: { plugins: [withOptions({ searchable: false })] },
+      props: { options: ["a"] }
+    })
+    await nextTick()
+    expect(byOption.find("[data-select-search]").exists()).toBe(false)
+    delete (window as any).FishtVue
+    const propWins = mount(Select, {
+      global: { plugins: [withOptions({ searchable: false })] },
+      props: { options: ["a"], searchable: true }
+    })
+    await nextTick()
+    expect(propWins.find("[data-select-search]").exists()).toBe(true)
+  })
+
+  it("emptyText заменяет noData, попадает в #empty slot-scope", async () => {
+    const wrapper = mount(Select, { props: { options: [], emptyText: "Пусто" } })
+    await nextTick()
+    expect(wrapper.text()).toContain("Пусто")
+    let scope: any
+    const withSlot = mount(Select, {
+      props: { options: [] },
+      slots: {
+        empty: (args: any) => {
+          scope = args
+          return "slot"
+        }
+      }
+    })
+    await nextTick()
+    expect(Object.keys(scope)).toEqual(expect.arrayContaining(["emptyText", "query", "hasData"]))
+    withSlot.unmount()
+  })
+
+  it("badgeCloseButton заменяет closeButtonBadge", async () => {
+    const wrapper = mount(Select, {
+      props: { options: [{ id: 1, value: "a" }], modelValue: [1], multiple: true, badgeCloseButton: true }
+    })
+    await nextTick()
+    // close-кнопка Badge (её собственный data-атрибут появится в W3a) — сейчас это вложенный Button
+    expect(wrapper.find("[data-select-item] [data-badge] [data-button]").exists()).toBe(true)
+  })
+
+  it("fixWindowProps заменяет paramsFixWindow (resolved через expose)", async () => {
+    const wrapper = mount(Select, { props: { options: ["a"], fixWindowProps: { position: "top-right" } } })
+    await nextTick()
+    expect((wrapper.vm as any).fixWindowProps.position).toBe("top-right")
+    expect(wrapper.findComponent({ name: "FixWindow" }).props("position")).toBe("top-right")
+  })
+
+  it("emits active / update:invalid вместо isActive / update:isInvalid", async () => {
+    const wrapper = mount(Select, { props: { options: ["a"] }, attachTo: document.body })
+    await wrapper.find("[data-select-control]").trigger("click")
+    await flushPromises()
+    expect(wrapper.emitted("active")?.[0]).toEqual([true])
+    expect(wrapper.emitted("isActive")).toBeUndefined()
+    await wrapper.findAll("[data-select-list-item]")[0].trigger("click")
+    expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
+    expect(wrapper.emitted("update:isInvalid")).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it("focus-ring триггера живёт в classes.base у InputLayout и уступает рамке ошибки", async () => {
+    const wrapper = mount(Select, { props: { options: ["a"] }, attachTo: document.body })
+    const base = () => wrapper.find("[data-input-layout-base]").classes()
+    await wrapper.find("[data-select-control]").trigger("focusin")
+    expect(base()).toContain("ring-theme-600")
+    await wrapper.setProps({ invalid: true })
+    expect(base()).toContain("ring-red-500")
+    expect(base()).not.toContain("ring-theme-600")
+    wrapper.unmount()
+  })
+
+  it("clearable достижим через componentsOptions", async () => {
+    const wrapper = mount(Select, {
+      global: { plugins: [withOptions({ clearable: true })] },
+      props: { options: [{ id: 1, value: "a" }], modelValue: 1 }
+    })
+    await nextTick()
+    expect(wrapper.find("[data-input-layout-clear]").exists()).toBe(true)
+  })
+
+  it("unstyled: классы потребителя остаются на корне, control и list, темы нет", async () => {
+    const wrapper = mount(Select, {
+      global: { plugins: [{ install: (app: any) => app.use(FishtVue, { unstyled: true }) }] },
+      props: { options: ["a"], class: "probe-root", classes: { control: "probe-ctl", list: "probe-list" } }
+    })
+    await nextTick()
+    expect(wrapper.find("[data-select]").classes()).toEqual(["fv", "probe-root"])
+    expect(wrapper.find("[data-select-control]").classes()).toEqual(["fv", "probe-ctl"])
+    const list = wrapper.find("[data-select-list]").classes()
+    expect(list).toContain("probe-list")
+    expect(list.some((c) => c.startsWith("fishtvue-"))).toBe(false)
+  })
+
+  it("options принимает ref (MaybeRef) и реагирует на его изменение", async () => {
+    const source = ref<Array<string>>(["a"])
+    const wrapper = mount(Select, { props: { options: source } })
+    await nextTick()
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(1)
+    source.value = ["a", "b", "c"]
+    await nextTick()
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(3)
   })
 })

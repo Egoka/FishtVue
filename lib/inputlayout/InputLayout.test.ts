@@ -47,17 +47,17 @@ describe("InputLayout Component", () => {
       {
         mode: "outlined",
         expected:
-          "fv fishtvue-input-layout classLayout rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border border-surface-300 dark:border-surface-600 flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border border-surface-300 dark:border-surface-600 flex items-center peer overflow-auto"
       },
       {
         mode: "underlined",
         expected:
-          "fv fishtvue-input-layout classLayout w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 rounded-none border-0 border-surface-300 dark:border-surface-700 border-b flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 rounded-none border-0 border-surface-300 dark:border-surface-700 border-b flex items-center peer overflow-auto"
       },
       {
         mode: "filled",
         expected:
-          "fv fishtvue-input-layout classLayout rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border-0 border-transparent flex items-center peer overflow-auto"
+          "fv fishtvue-input-layout rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0 max-h-20 border-0 border-transparent flex items-center peer overflow-auto"
       }
     ] as { mode: InputProps["mode"]; expected: string }[])("applies mode: %s", ({ mode, expected }) => {
       const wrapper = mount(InputLayout, {
@@ -84,9 +84,9 @@ describe("InputLayout Component", () => {
       expect(loadingSpinner.exists()).toBe(true)
     })
 
-    it("renders clear button when clear prop is true", () => {
+    it("renders clear button when clearable prop is true", () => {
       const wrapper = mount(InputLayout, {
-        props: { value: "test", clear: true }
+        props: { value: "test", clearable: true }
       })
       const clearButton = wrapper.find("[data-input-layout-clear]")
       expect(clearButton.exists()).toBe(true)
@@ -94,7 +94,7 @@ describe("InputLayout Component", () => {
 
     it("emits clear event when clear button is clicked", async () => {
       const wrapper = mount(InputLayout, {
-        props: { value: "test", clear: true }
+        props: { value: "test", clearable: true }
       })
       await flushHero()
       const clearButton = wrapper.find("[data-input-layout-clear] svg")
@@ -156,7 +156,7 @@ describe("InputLayout Component", () => {
       writeTextMock.mockRestore()
       consoleErrorMock.mockRestore()
     })
-    describe("InputLayout - labelMode behavior when isValue is true", () => {
+    describe("InputLayout - labelMode behavior when hasValue is true", () => {
       const testCases: { labelMode: InputProps["labelMode"]; expected: string }[] = [
         { labelMode: "offsetDynamic", expected: "offsetStatic" },
         { labelMode: "offsetStatic", expected: "offsetStatic" },
@@ -166,13 +166,13 @@ describe("InputLayout Component", () => {
       ]
 
       it.each(testCases)(
-        "returns correct label type for isValue: true and labelMode: $labelMode",
+        "returns correct label type for hasValue: true and labelMode: $labelMode",
         ({ labelMode, expected }) => {
           // Монтируем компонент
           const wrapper = mount(InputLayout, {
             props: {
               value: "Test value", // Устанавливаем значение
-              isValue: true,
+              hasValue: true,
               label: "Test Label",
               labelMode
             }
@@ -186,13 +186,13 @@ describe("InputLayout Component", () => {
         }
       )
     })
-    describe("InputLayout - isInvalid behavior", () => {
-      it("applies the correct styles and displays the error message when isInvalid is true", () => {
+    describe("InputLayout - invalid behavior", () => {
+      it("applies the correct styles and displays the error message when invalid is true", () => {
         const messageInvalid = "This field is required"
         const wrapper = mount(InputLayout, {
           props: {
             value: "",
-            isInvalid: true,
+            invalid: true,
             messageInvalid
           }
         })
@@ -207,11 +207,11 @@ describe("InputLayout Component", () => {
         expect(wrapper.find(".ring-red-500").exists()).toBe(true) // Класс для красного выделения
       })
 
-      it("does not display the error message when isInvalid is false", () => {
+      it("does not display the error message when invalid is false", () => {
         const wrapper = mount(InputLayout, {
           props: {
             value: "Valid input",
-            isInvalid: false
+            invalid: false
           }
         })
 
@@ -221,11 +221,11 @@ describe("InputLayout Component", () => {
         expect(errorMessage.classes()).toContain("invisible") // Но он скрыт
       })
 
-      it("does not apply invalid styles when isInvalid is false", () => {
+      it("does not apply invalid styles when invalid is false", () => {
         const wrapper = mount(InputLayout, {
           props: {
             value: "Valid input",
-            isInvalid: false
+            invalid: false
           }
         })
 
@@ -304,7 +304,7 @@ describe("InputLayout Component", () => {
 
     it("renders fallback text for messageInvalid prop without slot", () => {
       const wrapper = mount(InputLayout, {
-        props: { value: "", isInvalid: true, messageInvalid: "Plain error" }
+        props: { value: "", invalid: true, messageInvalid: "Plain error" }
       })
       const errorRegion = wrapper.find("[data-input-layout-message-invalid-text]")
       expect(errorRegion.exists()).toBe(true)
@@ -326,7 +326,7 @@ describe("InputLayout Component", () => {
 
     it("renders user-provided messageInvalid slot instead of prop fallback", () => {
       const wrapper = mount(InputLayout, {
-        props: { value: "", isInvalid: true, messageInvalid: "fallback" },
+        props: { value: "", invalid: true, messageInvalid: "fallback" },
         slots: {
           messageInvalid: "<strong data-custom-error>Custom <em>error</em></strong>"
         }
@@ -356,7 +356,7 @@ describe("InputLayout Component", () => {
     it("does NOT execute script payload passed via messageInvalid prop", () => {
       const xssPayload = '<img src=x onerror="(globalThis as any).__inputLayoutErrorXSS=1">'
       const wrapper = mount(InputLayout, {
-        props: { value: "", isInvalid: true, messageInvalid: xssPayload }
+        props: { value: "", invalid: true, messageInvalid: xssPayload }
       })
       const errorRegion = wrapper.find("[data-input-layout-message-invalid-text]")
       expect(errorRegion.exists()).toBe(true)
@@ -369,7 +369,7 @@ describe("InputLayout Component", () => {
   describe("Accessibility — aria-live on error region", () => {
     it("annotates messageInvalid region with aria-live='assertive' and aria-atomic='true'", () => {
       const wrapper = mount(InputLayout, {
-        props: { value: "", isInvalid: true, messageInvalid: "Required" }
+        props: { value: "", invalid: true, messageInvalid: "Required" }
       })
       const region = wrapper.find("[data-input-layout-message-invalid]")
       expect(region.exists()).toBe(true)
@@ -379,7 +379,7 @@ describe("InputLayout Component", () => {
 
     it("preserves aria-live attributes even when not currently invalid (region is hidden but announces become visible)", () => {
       const wrapper = mount(InputLayout, {
-        props: { value: "", isInvalid: false }
+        props: { value: "", invalid: false }
       })
       const region = wrapper.find("[data-input-layout-message-invalid]")
       expect(region.attributes("aria-live")).toBe("assertive")
@@ -668,7 +668,7 @@ describe("InputLayout Component", () => {
         forbidden: /(?:^|\s)bg-stone-100(?:\s|$)|dark:bg-stone-900/
       }
     ] as { mode: InputProps["mode"]; expectClass: string; forbidden: RegExp }[])(
-      "classBody background for mode: %s uses surface-*, not hardcoded gray-family",
+      "root background for mode: %s uses surface-*, not hardcoded gray-family",
       ({ mode, expectClass, forbidden }) => {
         const wrapper = mount(InputLayout, { props: { value: "", mode } })
         const cls = wrapper.find("[data-input-layout]").attributes("class") ?? ""
@@ -677,7 +677,7 @@ describe("InputLayout Component", () => {
       }
     )
 
-    it("classBase main field text uses surface-*, not hardcoded gray-*", () => {
+    it("classLayout main field text uses surface-*, not hardcoded gray-*", () => {
       const wrapper = mount(InputLayout, { props: { value: "" } })
       const cls = wrapper.find("[data-input-layout-base]").attributes("class") ?? ""
       expect(cls).toContain("text-surface-900")
@@ -755,7 +755,7 @@ describe("InputLayout Component", () => {
     })
 
     it("clear icon uses surface-* base color, keeps semantic red hover untouched", async () => {
-      const wrapper = mount(InputLayout, { props: { value: "test", clear: true } })
+      const wrapper = mount(InputLayout, { props: { value: "test", clearable: true } })
       await flushHero()
       const cls = wrapper.find("[data-input-layout-clear] [data-icon]")?.attributes("class") ?? ""
       expect(cls).toContain("text-surface-400")
@@ -801,9 +801,10 @@ describe("InputLayout Component", () => {
         global: { plugins: [appWithConfig({ unstyled: true })] },
         props: { value: "" }
       })
-      // InputLayout.setStyle() возвращает "" при unstyled → ни базовых классов, ни fv-префикса на корне
+      // Под unstyled setStyle отдаёт только `fv` + классы потребителя (§2 E); потребителя тут нет
       const cls = (wrapper.find("[data-input-layout]").attributes("class") ?? "").trim()
       expect(cls).toBe("fv")
+      expect((wrapper.find("[data-input-layout-base]").attributes("class") ?? "").trim()).toBe("fv")
     })
 
     it("keeps base classes when unstyled is false (contrast)", () => {
@@ -813,6 +814,173 @@ describe("InputLayout Component", () => {
       })
       const cls = wrapper.find("[data-input-layout]").attributes("class") ?? ""
       expect(cls).toContain("rounded-md")
+    })
+  })
+
+  // Wave 13 / W2 — контракт props 1.0 (dev-patterns §2 A–F): `class` → корень, `classes` → карта,
+  // positive-булевы (`hasValue`/`invalid`/`clearable`), aspect-ключ `animation`.
+  describe("Props 1.0 — class / classes / positive-булевы (Wave 13, W2)", () => {
+    const withOptions = (options: Record<string, unknown>) => ({
+      install(app: any) {
+        app.use(FishtVue, { componentsOptions: { InputLayout: options } })
+      }
+    })
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("публичный набор props — ровно контракт 1.0 (старые isValue/isInvalid/clear/classBody/animation сняты)", () => {
+      const wrapper = mount(InputLayout, { props: { value: "" } })
+      expect(wrapper.props()).toEqual({
+        value: "",
+        hasValue: undefined,
+        mode: undefined,
+        id: undefined,
+        label: undefined,
+        labelMode: undefined,
+        invalid: undefined,
+        messageInvalid: undefined,
+        required: undefined,
+        loading: undefined,
+        disabled: undefined,
+        help: undefined,
+        clearable: undefined,
+        width: undefined,
+        height: undefined,
+        class: undefined,
+        classes: undefined,
+        offsetTop: undefined
+      })
+    })
+
+    it("legacy-имена (isValue/isInvalid/clear/classBody/animation) падают атрибутами на корень и ничего не меняют", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "x", isValue: true, isInvalid: true, clear: true, classBody: "old-body", animation: "x" } as any
+      })
+      const root = wrapper.find("[data-input-layout]")
+      expect(root.attributes("classbody")).toBe("old-body")
+      expect(root.classes()).not.toContain("old-body")
+      expect(root.classes()).not.toContain("is-invalid")
+      expect(wrapper.find("[data-input-layout-clear]").exists()).toBe(false)
+      expect(wrapper.vm.isValue).toBe(false)
+    })
+
+    it("prop `class` ложится только на корень [data-input-layout]", () => {
+      const wrapper = mount(InputLayout, {
+        props: { value: "", label: "L", help: "H", class: "probe-root" },
+        slots: { before: "b", after: "a", default: "<input />" }
+      })
+      expect(wrapper.find("[data-input-layout]").classes()).toContain("probe-root")
+      expect(wrapper.element.querySelectorAll("[class~='probe-root']").length).toBe(0)
+    })
+
+    it.each([
+      ["base", "[data-input-layout-base]"],
+      ["label", "[data-label]"],
+      ["help", "[data-input-layout-help]"],
+      ["message", "[data-input-layout-message-invalid]"],
+      ["before", "[data-input-layout-before]"],
+      ["after", "[data-input-layout-after]"]
+    ])("classes.%s → %s (и не на корень)", (key, selector) => {
+      const wrapper = mount(InputLayout, {
+        props: {
+          value: "",
+          label: "L",
+          help: "H",
+          invalid: true,
+          messageInvalid: "M",
+          classes: { [key]: "probe-key" }
+        },
+        slots: { before: "b", after: "a", default: "<input />" }
+      })
+      expect(wrapper.find(selector).classes()).toContain("probe-key")
+      expect(wrapper.find("[data-input-layout]").classes()).not.toContain("probe-key")
+    })
+
+    it("classes.root ≡ class: оба на корне, classes.root до class", () => {
+      const wrapper = mount(InputLayout, { props: { value: "", class: "p-4", classes: { root: "p-2 probe-r" } } })
+      const classes = wrapper.find("[data-input-layout]").classes()
+      expect(classes).toContain("probe-r")
+      expect(classes).toContain("p-4")
+      expect(classes).not.toContain("p-2")
+    })
+
+    it("aspect-ключ animation: замена дефолта и отключение пустой строкой", async () => {
+      vi.useFakeTimers()
+      try {
+        const custom = mount(InputLayout, { props: { value: "", classes: { animation: "transition-none" } } })
+        const off = mount(InputLayout, { props: { value: "", classes: { animation: "" } } })
+        vi.advanceTimersByTime(150)
+        await nextTick()
+        const customCls = custom.find("[data-input-layout]").classes()
+        expect(customCls).toContain("transition-none")
+        expect(customCls).not.toContain("motion-safe:transition-all")
+        expect(custom.find("[data-input-layout-base]").classes()).toContain("transition-none")
+        const offCls = off.find("[data-input-layout]").attributes("class") ?? ""
+        expect(offCls).not.toContain("motion-safe:transition-all")
+        expect(offCls).not.toContain("motion-safe:duration-550")
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("componentsOptions.InputLayout.classes сливается по ключу под props.classes (twMerge: prop выигрывает конфликт)", () => {
+      const wrapper = mount(InputLayout, {
+        global: { plugins: [withOptions({ class: "opt-root", classes: { base: "p-2 opt-base", root: "opt-r" } })] },
+        props: { value: "", class: "prop-root", classes: { base: "p-4" } }
+      })
+      const base = wrapper.find("[data-input-layout-base]").classes()
+      expect(base).toContain("p-4")
+      expect(base).toContain("opt-base")
+      expect(base).not.toContain("p-2")
+      const root = wrapper.find("[data-input-layout]").classes()
+      expect(root).toEqual(expect.arrayContaining(["opt-r", "opt-root", "prop-root"]))
+    })
+
+    it("unstyled: классы потребителя остаются на корне и в base, темы нет", () => {
+      const wrapper = mount(InputLayout, {
+        global: { plugins: [{ install: (app: any) => app.use(FishtVue, { unstyled: true }) }] },
+        props: { value: "", class: "probe-root", classes: { base: "probe-base" } }
+      })
+      expect(wrapper.find("[data-input-layout]").classes()).toEqual(["fv", "probe-root"])
+      const base = wrapper.find("[data-input-layout-base]").classes()
+      expect(base).toContain("probe-base")
+      expect(base.some((c) => c.startsWith("fishtvue-"))).toBe(false)
+    })
+
+    it("clearable: отсутствующий prop — undefined, слой componentsOptions достижим, prop перебивает option", async () => {
+      const opt = mount(InputLayout, { global: { plugins: [withOptions({ clearable: true })] }, props: { value: "v" } })
+      expect(opt.props("clearable")).toBeUndefined()
+      expect(opt.vm.isClearable).toBe(true)
+      expect(opt.find("[data-input-layout-clear]").exists()).toBe(true)
+      delete (window as any).FishtVue
+      const prop = mount(InputLayout, {
+        global: { plugins: [withOptions({ clearable: true })] },
+        props: { value: "v", clearable: false }
+      })
+      expect(prop.vm.isClearable).toBe(false)
+      expect(prop.find("[data-input-layout-clear]").exists()).toBe(false)
+    })
+
+    it("invalid игнорируется при disabled, hasValue управляет labelType", () => {
+      const wrapper = mount(InputLayout, { props: { value: "v", invalid: true, disabled: true, label: "L" } })
+      expect(wrapper.vm.isInvalid).toBe(false)
+      expect(wrapper.find("[data-input-layout]").classes()).not.toContain("is-invalid")
+      const withValue = mount(InputLayout, { props: { value: "v", hasValue: true, label: "L" } })
+      expect(withValue.vm.labelType).toBe("offsetStatic")
+    })
+
+    it("componentsOptions.InputLayout.width достижим (раньше читался options.height)", () => {
+      const wrapper = mount(InputLayout, { global: { plugins: [withOptions({ width: 200 })] }, props: { value: "" } })
+      expect(wrapper.find("[data-input-layout]").attributes("style")).toContain("width: 200px")
+      expect(wrapper.vm.width).toBe("200px")
+    })
+
+    it("expose: classBase — корень, classLayout — рамка поля", () => {
+      const wrapper = mount(InputLayout, { props: { value: "", class: "probe-root", classes: { base: "probe-base" } } })
+      expect(wrapper.vm.classBase).toContain("probe-root")
+      expect(wrapper.vm.classLayout).toContain("probe-base")
+      expect(wrapper.vm.classLayout).not.toContain("probe-root")
     })
   })
 })

@@ -25,23 +25,17 @@ const PENDING: string[] = [
   "alert/Alert.d.ts",
   "badge/Badge.d.ts",
   "button/Button.d.ts",
-  "calendar/Calendar.d.ts",
   "dialog/Dialog.d.ts",
   "fixwindow/FixWindow.d.ts",
   "form/Form.d.ts",
-  "input/Input.d.ts",
-  "inputlayout/InputLayout.d.ts",
   "menu/Menu.d.ts",
   "menu/MenuGroup.d.ts",
   "menu/MenuItem.d.ts",
   "pagination/Pagination.d.ts",
-  "select/Select.d.ts",
   "separator/Separator.d.ts",
   "split/Split.d.ts",
   "switch/Switch.d.ts",
   "table/Table.d.ts",
-  "textarea/Textarea.d.ts",
-  "texteditor/TextEditor.d.ts",
   "virtualscroller/VirtualScroller.d.ts",
   // T5 / W7: `_key` → `ItemKey`, `namesColors` → `ColorName`.
   "types.d.ts",
@@ -75,6 +69,18 @@ const SKIPPED_BLOCK = /(Expose|Emits|Slots)$/
  * `isInvalid` в rulesHandler). Правила типов (Hungarian, PascalCase) действуют везде.
  */
 const INFRA_DIRS = new Set(["component", "config", "locale", "module", "plugins", "theme", "utils"])
+
+/**
+ * Блоки-зеркала API сторонних библиотек (решения R30/R33): `DatePickerProps`, `CalendarPicker`, `PopoverConfig`
+ * и `Highlight` повторяют имена v-calendar (`isDark`, `isRequired`, `is24hr`, `wrapperClass`…) — переименовать
+ * их значит сломать passthrough в `<DatePicker>`. Правила именования на такие блоки не распространяются.
+ */
+const THIRD_PARTY_BLOCKS = new Set([
+  "calendar/Calendar.d.ts:DatePickerProps",
+  "calendar/Calendar.d.ts:CalendarPicker",
+  "calendar/Calendar.d.ts:PopoverConfig",
+  "calendar/Calendar.d.ts:Highlight"
+])
 
 const RULES: Array<{ id: string; test: RegExp; componentsOnly?: boolean }> = [
   { id: "flat class*-prop → classes.<key>", test: /^\s+class[A-Z]\w*\??:/ },
@@ -130,7 +136,7 @@ function scan(file: string): { hits: Hit[]; maybeRefs: Array<{ key: string; line
         const decl = line.match(/^(?:export\s+)?(?:declare\s+)?(?:interface|type|class)\s+(\w+)/)
         block = decl?.[1] ?? ""
       }
-      const skipped = SKIPPED_BLOCK.test(block)
+      const skipped = SKIPPED_BLOCK.test(block) || THIRD_PARTY_BLOCKS.has(`${rel}:${block}`)
       if (!skipped) {
         for (const rule of RULES) {
           if (rule.componentsOnly && !isComponentFile) continue

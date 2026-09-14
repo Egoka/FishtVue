@@ -1,6 +1,6 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
-import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor } from "../types"
+import { InputLayoutClassKey, InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 import type { PhoneFormat } from "fishtvue/utils/numberHandler"
 
 export type { PhoneFormat } from "fishtvue/utils/numberHandler"
@@ -82,6 +82,15 @@ export declare type InputAutocomplete =
 declare class Input extends ClassComponent<InputProps, InputSlots, InputEmits, InputExpose> {}
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B): семейные `InputLayoutClassKey` (`base`, `label`, `help`, `message`,
+ * `before`, `after`, aspect-ключ `animation`) плюс собственные. `root` — корень `<InputLayout data-input>`.
+ * - `control` — `<input data-input-control>` (бывший `classInput`).
+ * - `passwordToggle` — иконки Eye/EyeSlash `[data-input-password-toggle]` при `type="password"`
+ *   (бывший `passwordToggleClass`).
+ */
+export declare type InputClassKey = InputLayoutClassKey | "control" | "passwordToggle"
+
+/**
  * Base props for the Input component.
  */
 export declare type BaseInputProps = {
@@ -137,24 +146,6 @@ export declare type BaseInputProps = {
   lengthDecimal: number
 
   /**
-   * Custom CSS class for the input element.
-   * @type {StyleClass}
-   */
-  classInput: StyleClass
-
-  /**
-   * Custom CSS class for the password visibility toggle icon (Eye/EyeSlash).
-   *
-   * Применяется к иконкам в `<template #after>` при `type="password"`.
-   * Default-классы (`text-gray-400 dark:text-gray-600 hover:text-theme-500 ...`)
-   * остаются — это override.
-   *
-   * Также может быть задан глобально через `componentsOptions.Input.passwordToggleClass`.
-   * @type {StyleClass}
-   */
-  passwordToggleClass: StyleClass
-
-  /**
    * Кастомные phone-форматы для `maskInput: "phone"`.
    *
    * Прокидывается в `convertToPhone(value, { phoneFormats })` и `toPhone(e, { phoneFormats })`.
@@ -170,7 +161,7 @@ export declare type BaseInputProps = {
 /**
  * Props for the Input component.
  */
-export interface InputProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseInputProps> {
+export interface InputProps extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseInputProps> {
   /**
    * Unique identifier for the input element.
    * @type {string | undefined}
@@ -182,6 +173,13 @@ export interface InputProps extends Omit<InputLayoutProps, "value" | "isValue">,
    * @type {string | number | null | undefined}
    */
   modelValue?: string | number | null | undefined
+
+  /**
+   * Карта классов внутренних элементов: семейные ключи уходят в `InputLayout`, `control` — на `<input>`,
+   * `passwordToggle` — на иконки переключения видимости пароля; `root` ≡ `class`. См. `InputClassKey`.
+   * @type {ClassesMap<InputClassKey> | undefined}
+   */
+  classes?: ClassesMap<InputClassKey>
 }
 
 export declare type InputSlots = {
@@ -230,18 +228,19 @@ export declare type InputEmits = {
   (event: "change:modelValue", payload: string): void
 
   /**
-   * Emitted when the invalid state of the input is updated.
+   * v-model-канал prop'а `invalid`: любой ввод сбрасывает ошибку — payload всегда `false`
+   * (`v-model:invalid` в Form). См. Documentation/components/input.md §6.2.
    * @param event
    * @param {boolean} payload - Indicates whether the input is invalid.
    */
-  (event: "update:isInvalid", payload: boolean): void
+  (event: "update:invalid", payload: boolean): void
 
   /**
-   * Emitted when the input becomes active.
+   * Смена focus-состояния контрола: `true` на focus, `false` на blur (бывший `isActive`).
    * @param event
    * @param {boolean} payload - Indicates the active state of the input.
    */
-  (event: "isActive", payload: boolean): void
+  (event: "active", payload: boolean): void
 }
 
 /**
@@ -262,10 +261,11 @@ export declare type InputExpose = {
   isActiveInput: boolean
 
   /**
-   * Custom CSS class for the input layout.
-   * @type {InputProps["class"]}
+   * Props, переданные во внутренний `InputLayout` (включая `class` корня и семейную карту `classes`
+   * с focus-ring в `base`). Заменяет прежний `classLayout`.
+   * @type {Omit<InputLayoutProps, "value">}
    */
-  classLayout: InputProps["class"]
+  inputLayout: Omit<InputLayoutProps, "value">
 
   // ---PROPS-------------------------------
   /**
@@ -323,10 +323,10 @@ export declare type InputExpose = {
   lengthDecimal: InputProps["lengthDecimal"]
 
   /**
-   * Indicates whether the input has a value.
-   * @type {InputLayoutProps["isValue"]}
+   * Indicates whether the input has a value (передаётся в `InputLayout` как `hasValue`).
+   * @type {boolean}
    */
-  isValue: InputLayoutProps["isValue"]
+  isValue: boolean
 
   /**
    * Current mode of the input.
@@ -347,10 +347,16 @@ export declare type InputExpose = {
   isLoading: InputProps["loading"]
 
   /**
-   * Indicates whether the input is invalid.
-   * @type {InputProps["isInvalid"]}
+   * Indicates whether the input is invalid (resolved `invalid`, `false` при `disabled`).
+   * @type {boolean}
    */
-  isInvalid: InputProps["isInvalid"]
+  isInvalid: boolean
+
+  /**
+   * Показывается ли кнопка очистки (resolved `clearable`: props → options → `false`).
+   * @type {boolean}
+   */
+  isClearable: boolean
 
   /**
    * Validation error message for the input field.
@@ -359,10 +365,16 @@ export declare type InputExpose = {
   messageInvalid: InputProps["messageInvalid"]
 
   /**
-   * CSS class for the input base container.
-   * @type {InputProps["class"]}
+   * Итоговый класс `<input data-input-control>` (база + `classes.control`).
+   * @type {string}
    */
-  classBaseInput: InputProps["class"]
+  classControl: string
+
+  /**
+   * Класс иконок Eye/EyeSlash (база + `classes.passwordToggle`), hand-off в корень `Icons`.
+   * @type {string}
+   */
+  classPasswordToggle: string
 
   // ---METHODS-----------------------------
   /**
@@ -415,7 +427,7 @@ export declare type InputExpose = {
 }
 export declare type InputOption = Pick<
   InputProps,
-  "classInput" | "passwordToggleClass" | "phoneFormats" | "autocomplete" | keyof InputLayoutOption
+  "phoneFormats" | "autocomplete" | "class" | "classes" | keyof InputLayoutOption
 >
 
 // ---------------------------------------

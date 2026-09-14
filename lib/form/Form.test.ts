@@ -969,7 +969,7 @@ describe("Form Component Tests", () => {
             name: "role",
             typeComponent: "Select",
             label: "Role",
-            dataSelect: [{ id: 1, value: payload }]
+            options: [{ id: 1, value: payload }]
           } as FieldType<"Select">
         ]
       }
@@ -985,7 +985,7 @@ describe("Form Component Tests", () => {
       })
 
       // Открываем inline-rendered Select dropdown.
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
 
       const html = wrapper.html() + document.body.innerHTML
@@ -1001,13 +1001,13 @@ describe("Form Component Tests", () => {
       delete (window as any).__formXss
     })
 
-    it("renders a Select field and defaults closeButtonBadge", () => {
+    it("renders a Select field and defaults badgeCloseButton", () => {
       const wrapper = mount(Form, {
         props: { structure: selectStructure("alpha"), formFields: {} }
       })
-      expect(wrapper.find("[data-select]").exists()).toBe(true)
+      expect(wrapper.find("[data-select-control]").exists()).toBe(true)
       const field = wrapper.vm.getField<"Select">("role")
-      expect(field?.closeButtonBadge).toBe(true)
+      expect(field?.badgeCloseButton).toBe(true)
     })
   })
 
@@ -1249,8 +1249,8 @@ describe("Form Component Tests", () => {
       await flushPromises()
       const cal = wrapper.findComponent(Calendar)
       expect(cal.exists()).toBe(true)
-      // Form must not inject a paramsDatePicker.locale override — Calendar self-localizes.
-      expect((cal.props("paramsDatePicker") as any)?.locale).toBeUndefined()
+      // Form must not inject a datePickerProps.locale override — Calendar self-localizes.
+      expect((cal.props("datePickerProps") as any)?.locale).toBeUndefined()
       // The active locale Calendar resolves to is "ru" in this plugin context.
       expect(getActiveLocale()).toBe("ru")
     })

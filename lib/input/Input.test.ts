@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import Input from "fishtvue/input/Input.vue"
 import FishtVue from "fishtvue/config"
 import { createApp } from "vue"
@@ -33,7 +33,7 @@ describe("Input Component Tests", () => {
         }
       })
 
-      const input = wrapper.find("input[data-input]")
+      const input = wrapper.find("input[data-input-control]")
       expect(input.attributes("id")).toBe("input-id")
       expect(input.attributes("type")).toBe("email")
       expect(input.attributes("placeholder")).toBe("Enter email")
@@ -42,7 +42,7 @@ describe("Input Component Tests", () => {
 
     it("handles focus and blur events", async () => {
       const wrapper = mount(Input)
-      const input = wrapper.find("input[data-input]")
+      const input = wrapper.find("input[data-input-control]")
 
       await input.trigger("focus")
       expect(wrapper.emitted("focus")).toBeTruthy()
@@ -56,11 +56,11 @@ describe("Input Component Tests", () => {
         props: { modelValue: "" }
       })
 
-      const input = wrapper.find("input[data-input]")
+      const input = wrapper.find("input[data-input-control]")
       await input.setValue("New value")
 
       expect(wrapper.emitted("update:modelValue")?.[0]).toEqual(["New value"])
-      expect(wrapper.emitted("update:isInvalid")?.[0]).toEqual([false])
+      expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
     })
 
     it("applies maskInput: 'number' correctly", async () => {
@@ -68,7 +68,7 @@ describe("Input Component Tests", () => {
         props: { maskInput: "number", lengthInteger: 3, lengthDecimal: 2 }
       })
 
-      const input = wrapper.find("input[data-input]")
+      const input = wrapper.find("input[data-input-control]")
       await input.setValue("123.45")
 
       expect(wrapper.emitted("update:modelValue")?.[0]).toEqual(["123.45"])
@@ -79,25 +79,25 @@ describe("Input Component Tests", () => {
         props: { type: "password" }
       })
 
-      let input = wrapper.find("input[data-input]")
+      let input = wrapper.find("input[data-input-control]")
       expect(input.attributes("type")).toBe("password")
 
       const toggleButton = wrapper.find("[data-eye-slash]")
       await toggleButton.trigger("click")
 
-      input = wrapper.find("input[data-input]")
+      input = wrapper.find("input[data-input-control]")
       expect(input.attributes("type")).toBe("text")
 
       const toggleButtonAgain = wrapper.find("[data-eye]")
       await toggleButtonAgain.trigger("click")
 
-      input = wrapper.find("input[data-input]")
+      input = wrapper.find("input[data-input-control]")
       expect(input.attributes("type")).toBe("password")
     })
 
     it("clears the input when clear button is clicked", async () => {
       const wrapper = mount(Input, {
-        props: { modelValue: "Test value", clear: true }
+        props: { modelValue: "Test value", clearable: true }
       })
 
       const clearButton = wrapper.find("[data-input-layout-clear] i")
@@ -136,7 +136,7 @@ describe("Input Component Tests", () => {
         props: { modelValue: "" }
       })
 
-      const inputElement = wrapper.find("input[data-input]")
+      const inputElement = wrapper.find("input[data-input-control]")
 
       // Набор текста
       await inputElement.setValue("Test Input")
@@ -145,7 +145,7 @@ describe("Input Component Tests", () => {
       expect((inputElement.element as any).value).toBe("Test Input")
 
       // Удаление текста через кнопку очистки
-      await wrapper.setProps({ clear: true })
+      await wrapper.setProps({ clearable: true })
       await flushHero()
       const clearButton = wrapper.find("[data-input-layout-clear] .cursor-pointer")
       expect(clearButton.exists()).toBe(true)
@@ -171,7 +171,7 @@ describe("Input Component Tests", () => {
           props: { maskInput: mask, modelValue: "" }
         })
 
-        const inputElement = wrapper.find("input[data-input]")
+        const inputElement = wrapper.find("input[data-input-control]")
 
         await inputElement.setValue(input)
 
@@ -188,7 +188,7 @@ describe("Input Component Tests", () => {
           props: { maskInput: "unknown", modelValue: "" }
         })
 
-        const inputElement = wrapper.find("input[data-input]")
+        const inputElement = wrapper.find("input[data-input-control]")
 
         await inputElement.setValue("RandomInput")
         expect(wrapper.emitted("update:modelValue")).toBeTruthy()
@@ -222,7 +222,7 @@ describe("Input Component Tests", () => {
         }
       })
 
-      const input = wrapper.find("input[data-input]")
+      const input = wrapper.find("input[data-input-control]")
       expect(input.attributes("placeholder")).toBe("Local Placeholder")
       expect(input.attributes("type")).toBe("number")
     })
@@ -233,7 +233,7 @@ describe("Input Component Tests", () => {
       const wrapper = mount(Input, {
         global: { plugins: [app] },
         props: {
-          clear: true,
+          clearable: true,
           modelValue: "Test value"
         }
       })
@@ -251,10 +251,10 @@ describe("Input Component Tests", () => {
   // ---------------------------------------
   describe("Audit issues 2026-05-11", () => {
     describe("Issue 1 — initStyle deduplication (Component.__hooks owns lifecycle)", () => {
-      it("renders correctly after onMounted dedup — classBaseInput is computed", () => {
+      it("renders correctly after onMounted dedup — classControl is computed", () => {
         const wrapper = mount(Input)
         expect(wrapper.exists()).toBe(true)
-        expect((wrapper.vm as any).classBaseInput).toBeTruthy()
+        expect((wrapper.vm as any).classControl).toBeTruthy()
       })
 
       it("autoFocus still works when initStyle is moved to Component.__hooks()", () => {
@@ -318,26 +318,24 @@ describe("Input Component Tests", () => {
       })
     })
 
-    describe("Issue 5 — passwordToggleClass override", () => {
-      // Icons.vue консумит `class` как prop и применяет его на внутренний SVG
-      // (см. lib/icons/Icons.vue:37, 94), а не на root `<i data-eye-slash>`,
-      // поэтому проверка через `.html()` — единственный надёжный способ
-      // подтвердить, что override-класс пробросился до DOM.
-      it("applies passwordToggleClass prop to eye-icon", async () => {
+    describe("Issue 5 — classes.passwordToggle override (W2 переименование)", () => {
+      // Hand-off в корень Icons: класс лежит на `<i data-icon data-input-password-toggle>`.
+      it("applies classes.passwordToggle to the eye-icon root", async () => {
         const wrapper = mount(Input, {
-          props: { type: "password", passwordToggleClass: "text-blue-500" }
+          props: { type: "password", classes: { passwordToggle: "text-blue-500" } }
         })
         const eyeSlash = wrapper.find("[data-eye-slash]")
         expect(eyeSlash.exists()).toBe(true)
         await flushHero()
-        expect(eyeSlash.html()).toContain("text-blue-500")
+        expect(eyeSlash.classes()).toContain("text-blue-500")
+        expect(eyeSlash.attributes("data-input-password-toggle")).toBeDefined()
       })
 
-      it("applies componentsOptions.Input.passwordToggleClass globally", async () => {
+      it("applies componentsOptions.Input.classes.passwordToggle globally", async () => {
         delete (window as any).FishtVue
         const app: any = createApp({})
         app.use(FishtVue, {
-          componentsOptions: { Input: { passwordToggleClass: "text-red-500" } }
+          componentsOptions: { Input: { classes: { passwordToggle: "text-red-500" } } }
         })
         const wrapper = mount(Input, {
           global: { plugins: [app] },
@@ -345,14 +343,14 @@ describe("Input Component Tests", () => {
         })
         const eyeSlash = wrapper.find("[data-eye-slash]")
         await flushHero()
-        expect(eyeSlash.html()).toContain("text-red-500")
+        expect(eyeSlash.classes()).toContain("text-red-500")
       })
     })
 
     describe("Issue 6 — extended input types (tel/url/search)", () => {
       it.each(["tel" as const, "url" as const, "search" as const])("renders <input type='%s'>", (type) => {
         const wrapper = mount(Input, { props: { type } })
-        expect(wrapper.find("input[data-input]").attributes("type")).toBe(type)
+        expect(wrapper.find("input[data-input-control]").attributes("type")).toBe(type)
       })
 
       it("falls back to 'text' for unknown type (regression)", () => {
@@ -360,7 +358,7 @@ describe("Input Component Tests", () => {
           // @ts-expect-error — intentionally invalid for fallback regression
           props: { type: "invalid-type" }
         })
-        expect(wrapper.find("input[data-input]").attributes("type")).toBe("text")
+        expect(wrapper.find("input[data-input-control]").attributes("type")).toBe("text")
       })
     })
 
@@ -373,7 +371,7 @@ describe("Input Component Tests", () => {
             modelValue: ""
           }
         })
-        const input = wrapper.find("input[data-input]")
+        const input = wrapper.find("input[data-input-control]")
         await input.setValue("441234567890")
         const emitted = wrapper.emitted("update:modelValue") as Array<[string]> | undefined
         expect(emitted?.[0]?.[0]).toContain("+44")
@@ -390,7 +388,7 @@ describe("Input Component Tests", () => {
           global: { plugins: [app] },
           props: { maskInput: "phone", modelValue: "" }
         })
-        const input = wrapper.find("input[data-input]")
+        const input = wrapper.find("input[data-input-control]")
         await input.setValue("441234567890")
         const emitted = wrapper.emitted("update:modelValue") as Array<[string]> | undefined
         expect(emitted?.[0]?.[0]).toContain("+44")
@@ -406,7 +404,7 @@ describe("Input Component Tests", () => {
         ["text", "on"]
       ] as const)("auto-suggests autocomplete for type='%s'", (type, expected) => {
         const wrapper = mount(Input, { props: { type } })
-        const input = wrapper.find("input[data-input]")
+        const input = wrapper.find("input[data-input-control]")
         expect(input.attributes("autocomplete")).toBe(expected)
       })
 
@@ -414,14 +412,14 @@ describe("Input Component Tests", () => {
         const wrapper = mount(Input, {
           props: { type: "password", autocomplete: "new-password" }
         })
-        expect(wrapper.find("input[data-input]").attributes("autocomplete")).toBe("new-password")
+        expect(wrapper.find("input[data-input-control]").attributes("autocomplete")).toBe("new-password")
       })
     })
 
     describe("Issue 9 — motion-safe transitions", () => {
-      it("classBaseInput uses narrow motion-safe:transition-colors (no transition-all flash on mount/focus)", () => {
+      it("classControl uses narrow motion-safe:transition-colors (no transition-all flash on mount/focus)", () => {
         const wrapper = mount(Input)
-        const cls = String((wrapper.vm as any).classBaseInput ?? "")
+        const cls = String((wrapper.vm as any).classControl ?? "")
         // E29.7: переход motion-safe-gated (reduced-motion уважается).
         expect(cls).toContain("motion-safe:transition-colors")
         // Issue 14: широкий transition-all анимировал geometry/outline → вспышка один кадр
@@ -459,9 +457,9 @@ describe("Input Component Tests", () => {
     })
 
     describe("Issue 11 — print styles", () => {
-      it("classBaseInput contains print: variant classes", () => {
+      it("classControl contains print: variant classes", () => {
         const wrapper = mount(Input)
-        const cls = String((wrapper.vm as any).classBaseInput ?? "")
+        const cls = String((wrapper.vm as any).classControl ?? "")
         expect(cls).toMatch(/(?:^|\s)print:/)
       })
     })
@@ -477,7 +475,7 @@ describe("Input Component Tests", () => {
           const eyeSlash = wrapper.find("[data-eye-slash]")
           expect(eyeSlash.exists()).toBe(true)
           await eyeSlash.trigger("click")
-          expect(wrapper.find("input[data-input]").attributes("type")).toBe("text")
+          expect(wrapper.find("input[data-input-control]").attributes("type")).toBe("text")
         } finally {
           document.body.dir = ""
           wrapper.unmount()
@@ -492,15 +490,15 @@ describe("Input Component Tests", () => {
         delete (window as any).FishtVue
       }
 
-      it("strips classBaseInput to '' and removes base classes from root input when unstyled: true", () => {
+      it("strips classControl to 'fv' and removes base classes from the control when unstyled: true", () => {
         resetGlobalFishtVue()
         const app: any = createApp({})
         app.use(FishtVue, { unstyled: true })
         const wrapper = mount(Input, { global: { plugins: [app] } })
-        // Component.setStyle() возвращает "" при unstyled → ни базовых классов,
-        // ни `fv {prefix}-input`-префикса на корне.
-        expect(String((wrapper.vm as any).classBaseInput ?? "")).toBe("fv")
-        const cls = wrapper.find("input[data-input]").attributes("class") ?? ""
+        // Под unstyled setStyle отдаёт только `fv` + классы потребителя (§2 E) — ни базы,
+        // ни `fv {prefix}-input`-префикса.
+        expect(String((wrapper.vm as any).classControl ?? "")).toBe("fv")
+        const cls = wrapper.find("input[data-input-control]").attributes("class") ?? ""
         expect(cls).not.toContain("caret-theme-500")
         expect(cls).not.toContain("fishtvue-input")
         resetGlobalFishtVue()
@@ -511,7 +509,7 @@ describe("Input Component Tests", () => {
         const app: any = createApp({})
         app.use(FishtVue, { unstyled: false })
         const wrapper = mount(Input, { global: { plugins: [app] } })
-        const cls = String((wrapper.vm as any).classBaseInput ?? "")
+        const cls = String((wrapper.vm as any).classControl ?? "")
         expect(cls).toContain("caret-theme-500")
         resetGlobalFishtVue()
       })
@@ -521,7 +519,7 @@ describe("Input Component Tests", () => {
   describe("Accessibility — label/for association (Wave 4)", () => {
     it("auto-generates an id on the input and links the label via `for`", () => {
       const wrapper = mount(Input, { props: { label: "Email" } })
-      const input = wrapper.find("input[data-input]")
+      const input = wrapper.find("input[data-input-control]")
       const id = input.attributes("id")
       expect(id).toBeTruthy()
       expect(wrapper.find("label[data-label]").attributes("for")).toBe(id)
@@ -529,7 +527,7 @@ describe("Input Component Tests", () => {
 
     it("respects an explicit `id` prop for both input and label `for`", () => {
       const wrapper = mount(Input, { props: { label: "Email", id: "my-input" } })
-      expect(wrapper.find("input[data-input]").attributes("id")).toBe("my-input")
+      expect(wrapper.find("input[data-input-control]").attributes("id")).toBe("my-input")
       expect(wrapper.find("label[data-label]").attributes("for")).toBe("my-input")
     })
   })
@@ -538,18 +536,18 @@ describe("Input Component Tests", () => {
   // Audit issue — Documentation/issues/input.md Issue 15 (2026-07-04)
   // ---------------------------------------
   describe("Issue 15 — B10 hardcode: gray-* → surface-* (design-token migration)", () => {
-    it("classBaseInput uses surface-* for input text color, not hardcoded gray-*", () => {
+    it("classControl uses surface-* for input text color, not hardcoded gray-*", () => {
       const wrapper = mount(Input)
-      const cls = String((wrapper.vm as any).classBaseInput ?? "")
+      const cls = String((wrapper.vm as any).classControl ?? "")
       expect(cls).toContain("text-surface-900")
       expect(cls).toContain("dark:text-surface-100")
       expect(cls).not.toMatch(/(?:^|\s)text-gray-900(?:\s|$)/)
       expect(cls).not.toMatch(/(?:^|\s)dark:text-gray-100(?:\s|$)/)
     })
 
-    it("classBaseInput uses surface-* for focus placeholder color, not hardcoded gray-*", () => {
+    it("classControl uses surface-* for focus placeholder color, not hardcoded gray-*", () => {
       const wrapper = mount(Input)
-      const cls = String((wrapper.vm as any).classBaseInput ?? "")
+      const cls = String((wrapper.vm as any).classControl ?? "")
       expect(cls).toContain("focus:placeholder:text-surface-400")
       expect(cls).toContain("focus:placeholder:dark:text-surface-500")
       expect(cls).not.toMatch(/(?:^|\s)focus:placeholder:text-gray-400(?:\s|$)/)
@@ -567,6 +565,162 @@ describe("Input Component Tests", () => {
       // Preset-aware hover — уже theme-token, НЕ трогаем (Issue 5, 2026-05-11)
       expect(cls).toContain("hover:text-theme-500")
       expect(cls).toContain("hover:dark:text-theme-700")
+    })
+  })
+
+  // Wave 13 / W2 — контракт props 1.0 (dev-patterns §2 A–H): `class` → корень `[data-input]`, `classes` → карта
+  // (семейные ключи + `control`/`passwordToggle`), positive-булевы, emits `active`/`update:invalid`.
+  describe("Props 1.0 — class / classes / булевы / emits (Wave 13, W2)", () => {
+    const withOptions = (options: Record<string, unknown>): any => {
+      const app = createApp({})
+      app.use(FishtVue, { componentsOptions: { Input: options } })
+      return app
+    }
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("публичный набор props — контракт 1.0 (classInput/passwordToggleClass/isInvalid/clear/classBody сняты)", () => {
+      const wrapper = mount(Input)
+      expect(wrapper.props()).toEqual({
+        id: undefined,
+        modelValue: undefined,
+        classes: undefined,
+        mode: undefined,
+        label: undefined,
+        labelMode: undefined,
+        invalid: undefined,
+        messageInvalid: undefined,
+        required: undefined,
+        loading: undefined,
+        disabled: undefined,
+        help: undefined,
+        clearable: undefined,
+        width: undefined,
+        height: undefined,
+        class: undefined,
+        offsetTop: undefined,
+        type: undefined,
+        autoFocus: undefined,
+        placeholder: undefined,
+        autocomplete: undefined,
+        maskInput: undefined,
+        lengthInteger: undefined,
+        lengthDecimal: undefined,
+        phoneFormats: undefined
+      })
+    })
+
+    it("legacy-имена (classInput/passwordToggleClass/isInvalid/clear) падают атрибутами на корень и ничего не меняют", () => {
+      const wrapper = mount(Input, {
+        props: { modelValue: "v", classInput: "old-ctl", isInvalid: true, clear: true, classBody: "old-body" } as any
+      })
+      const root = wrapper.find("[data-input]")
+      expect(root.attributes("classinput")).toBe("old-ctl")
+      expect(wrapper.find("[data-input-control]").classes()).not.toContain("old-ctl")
+      expect(root.classes()).not.toContain("is-invalid")
+      expect(wrapper.find("[data-input-layout-clear]").exists()).toBe(false)
+    })
+
+    it("корень Input — корень InputLayout с data-input; prop `class` ложится только на него", () => {
+      const wrapper = mount(Input, { props: { label: "L", help: "H", type: "password", class: "probe-root" } })
+      const root = wrapper.find("[data-input]")
+      expect(root.attributes("data-input-layout")).toBeDefined()
+      expect(root.classes()).toContain("probe-root")
+      // `wrapper.element` у компонента с компонентным корнем — контейнер mount'а, поэтому
+      // «не утёк внутрь» проверяем от самого корня.
+      expect(root.element.querySelectorAll("[class~='probe-root']").length).toBe(0)
+    })
+
+    it.each([
+      ["base", "[data-input-layout-base]"],
+      ["label", "[data-label]"],
+      ["help", "[data-input-layout-help]"],
+      ["message", "[data-input-layout-message-invalid]"],
+      ["control", "[data-input-control]"],
+      ["passwordToggle", "[data-input-password-toggle]"]
+    ])("classes.%s → %s", async (key, selector) => {
+      const wrapper = mount(Input, {
+        props: {
+          label: "L",
+          help: "H",
+          type: "password",
+          invalid: true,
+          messageInvalid: "M",
+          classes: { [key]: "probe-key" }
+        }
+      })
+      await flushHero()
+      expect(wrapper.find(selector).classes()).toContain("probe-key")
+      expect(wrapper.find("[data-input]").classes()).not.toContain("probe-key")
+    })
+
+    it("componentsOptions.Input.classes сливается по ключу под props.classes (control + семейный base)", () => {
+      const wrapper = mount(Input, {
+        global: {
+          plugins: [withOptions({ class: "opt-root", classes: { control: "p-2 opt-ctl", base: "opt-base" } })]
+        },
+        props: { class: "prop-root", classes: { control: "p-4" } }
+      })
+      const control = wrapper.find("[data-input-control]").classes()
+      expect(control).toContain("p-4")
+      expect(control).toContain("opt-ctl")
+      expect(control).not.toContain("p-2")
+      expect(wrapper.find("[data-input-layout-base]").classes()).toContain("opt-base")
+      expect(wrapper.find("[data-input]").classes()).toEqual(expect.arrayContaining(["opt-root", "prop-root"]))
+    })
+
+    it("focus-ring живёт в classes.base и уступает красной рамке ошибки", async () => {
+      const wrapper = mount(Input, { attachTo: document.body })
+      const base = () => wrapper.find("[data-input-layout-base]").classes()
+      expect(base()).not.toContain("ring-theme-600")
+      await wrapper.find("input").trigger("focus")
+      expect(base()).toContain("ring-theme-600")
+      expect(wrapper.emitted("active")?.[0]).toEqual([true])
+      await wrapper.setProps({ invalid: true })
+      expect(base()).toContain("ring-red-500")
+      expect(base()).not.toContain("ring-theme-600")
+      await wrapper.find("input").trigger("blur")
+      expect(wrapper.emitted("active")?.[1]).toEqual([false])
+      wrapper.unmount()
+    })
+
+    it("expose.inputLayout — resolved hand-off в InputLayout (hasValue/invalid/clearable/class/classes)", () => {
+      const wrapper = mount(Input, {
+        global: { plugins: [withOptions({ clearable: true })] },
+        props: { modelValue: "v", invalid: true, class: "probe-root", classes: { base: "probe-base", control: "c" } }
+      })
+      const layout = (wrapper.vm as any).inputLayout
+      expect(layout.hasValue).toBe(true)
+      expect(layout.invalid).toBe(true)
+      expect(layout.clearable).toBe(true)
+      expect(layout.class).toContain("probe-root")
+      expect(layout.classes.base).toContain("probe-base")
+      expect(wrapper.find("[data-input-layout-clear]").exists()).toBe(true)
+    })
+
+    it("старые emits (isActive/update:isInvalid) больше не эмитятся", async () => {
+      const wrapper = mount(Input)
+      await wrapper.find("input").setValue("x")
+      await wrapper.find("input").trigger("focus")
+      expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
+      expect(wrapper.emitted("update:isInvalid")).toBeUndefined()
+      expect(wrapper.emitted("isActive")).toBeUndefined()
+    })
+
+    it("unstyled: классы потребителя остаются на корне, control и passwordToggle, темы нет", async () => {
+      const app: any = createApp({})
+      app.use(FishtVue, { unstyled: true })
+      const wrapper = mount(Input, {
+        global: { plugins: [app] },
+        props: { type: "password", class: "probe-root", classes: { control: "probe-ctl", passwordToggle: "probe-pt" } }
+      })
+      await flushHero()
+      expect(wrapper.find("[data-input]").classes()).toEqual(["fv", "probe-root"])
+      expect(wrapper.find("[data-input-control]").classes()).toEqual(["fv", "probe-ctl"])
+      const toggle = wrapper.find("[data-input-password-toggle]").classes()
+      expect(toggle).toContain("probe-pt")
+      expect(toggle.some((c) => c.startsWith("fishtvue-"))).toBe(false)
     })
   })
 })

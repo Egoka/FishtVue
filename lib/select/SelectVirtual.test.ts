@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import { h } from "vue"
 import Select from "fishtvue/select/Select.vue"
-import SelectOption from "fishtvue/select/SelectOption.vue"
+import SelectItem from "fishtvue/select/SelectItem.vue"
 import SelectGroup from "fishtvue/select/SelectGroup.vue"
 
 /**
@@ -46,7 +46,7 @@ function makeScrollable(el: HTMLElement, value = 0) {
 }
 
 async function openDropdown(wrapper: any) {
-  await wrapper.find("[data-select]").trigger("click")
+  await wrapper.find("[data-select-control]").trigger("click")
   await flushPromises()
   await flushPromises()
 }
@@ -60,7 +60,7 @@ describe("Select — Issue 7: виртуализация списка опций
     it("рендерит все опции и не добавляет spacer'ов", async () => {
       stubViewportHeight(VIEWPORT)
       const wrapper = mount(Select, {
-        props: { dataSelect: bigData(30), modelValue: null },
+        props: { options: bigData(30), modelValue: null },
         attachTo: document.body
       })
       await openDropdown(wrapper)
@@ -75,7 +75,7 @@ describe("Select — Issue 7: виртуализация списка опций
     it("рендерит только окно и компенсирует остальное spacer'ами", async () => {
       stubViewportHeight(VIEWPORT)
       const wrapper = mount(Select, {
-        props: { dataSelect: bigData(500), modelValue: null },
+        props: { options: bigData(500), modelValue: null },
         attachTo: document.body
       })
       await openDropdown(wrapper)
@@ -99,7 +99,7 @@ describe("Select — Issue 7: виртуализация списка опций
     it("сдвигает окно при прокрутке контейнера", async () => {
       stubViewportHeight(VIEWPORT)
       const wrapper = mount(Select, {
-        props: { dataSelect: bigData(500), modelValue: null },
+        props: { options: bigData(500), modelValue: null },
         attachTo: document.body
       })
       await openDropdown(wrapper)
@@ -123,7 +123,7 @@ describe("Select — Issue 7: виртуализация списка опций
     it("не анимирует появление строк окна (R18 — GSAP-stagger только для коротких списков)", async () => {
       stubViewportHeight(VIEWPORT)
       const wrapper = mount(Select, {
-        props: { dataSelect: bigData(500), modelValue: null },
+        props: { options: bigData(500), modelValue: null },
         attachTo: document.body
       })
       await openDropdown(wrapper)
@@ -143,7 +143,7 @@ describe("Select — Issue 7: виртуализация списка опций
     it("End прыгает на последнюю опцию, даже если она не была отрисована (R17 — index-math)", async () => {
       stubViewportHeight(VIEWPORT)
       const wrapper = mount(Select, {
-        props: { dataSelect: bigData(500), modelValue: null },
+        props: { options: bigData(500), modelValue: null },
         attachTo: document.body
       })
       await openDropdown(wrapper)
@@ -176,7 +176,7 @@ describe("Select — Issue 7: виртуализация списка опций
             h(
               SelectGroup,
               { label: "Numbers" },
-              { default: () => bigData(150).map((o) => h(SelectOption, { value: o.id, label: o.value })) }
+              { default: () => bigData(150).map((o) => h(SelectItem, { value: o.id, label: o.value })) }
             )
           ]
         },
@@ -194,7 +194,7 @@ describe("Select — Issue 7: виртуализация списка опций
     it("объявляет реальный размер списка, а не размер окна", async () => {
       stubViewportHeight(VIEWPORT)
       const wrapper = mount(Select, {
-        props: { dataSelect: bigData(500), modelValue: null },
+        props: { options: bigData(500), modelValue: null },
         attachTo: document.body
       })
       await openDropdown(wrapper)
@@ -215,7 +215,7 @@ describe("Select — Issue 7: виртуализация списка опций
 
     it("отражает выбранную опцию через aria-selected", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: bigData(5), modelValue: 2 },
+        props: { options: bigData(5), modelValue: 2 },
         attachTo: document.body
       })
       await openDropdown(wrapper)
@@ -228,7 +228,7 @@ describe("Select — Issue 7: виртуализация списка опций
 
     it("multiple-режим помечает listbox как aria-multiselectable", async () => {
       const wrapper = mount(Select, {
-        props: { dataSelect: bigData(5), modelValue: null, multiple: true },
+        props: { options: bigData(5), modelValue: null, multiple: true },
         attachTo: document.body
       })
       await openDropdown(wrapper)

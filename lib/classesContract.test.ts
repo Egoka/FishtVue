@@ -20,21 +20,15 @@ const PENDING: string[] = [
   "Alert",
   "Badge",
   "Button",
-  "Calendar",
   "Dialog",
   "FixWindow",
   "Form",
-  "Input",
-  "InputLayout",
   "Menu",
   "Pagination",
-  "Select",
   "Separator",
   "Split",
   "Switch",
   "Table",
-  "Textarea",
-  "TextEditor",
   "VirtualScroller"
 ]
 
@@ -207,7 +201,15 @@ const CONTRACT: Entry[] = [
     load: () => import("fishtvue/select/Select.vue"),
     root: "[data-select]",
     props: { options: [{ id: 1, value: "a" }], label: "L" },
-    keys: { base: "[data-input-layout-base]", label: "[data-label]", control: "[data-select-control]" }
+    // Внутри дропдауна живёт собственный поисковый `Input` со своим layout'ом и лейблом — семейные
+    // ключи скоупим на корень Select, иначе проверка требовала бы probe и на чужих элементах.
+    keys: {
+      base: "[data-select] > [data-input-layout-base]",
+      label: "[data-select] > [data-label]",
+      control: "[data-select-control]",
+      list: "[data-select-list]",
+      option: "[data-select-list-item]"
+    }
   },
   {
     name: "Separator",

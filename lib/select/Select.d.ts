@@ -1,8 +1,8 @@
 import { MaybeRef, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass } from "../types"
 import { BadgeProps } from "fishtvue/badge"
 import { FixWindowExpose, FixWindowProps } from "fishtvue/fixwindow"
-import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
+import { InputLayoutClassKey, InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 
 /**
  * ## Select
@@ -14,21 +14,32 @@ import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue
 declare class Select extends ClassComponent<SelectProps, SelectSlots, SelectEmits, SelectExpose> {}
 
 // ---------------------------------------
-export type IDataItem = {
+export type SelectDataItem = {
   [key: string]: any
 }
-export type BaseDataItem = string | number | IDataItem
+export type BaseDataItem = string | number | SelectDataItem
+
+/**
+ * Ключи карты `classes` (dev-patterns §2 B): семейные `InputLayoutClassKey` плюс собственные.
+ * `root` — корень `<InputLayout data-select>`.
+ * - `control` — триггер `<div data-select-control role="combobox">` (бывший `classSelect`).
+ * - `list` — контейнер дропдауна `[data-select-list]` (бывший `classSelectList`).
+ * - `option` — строка опции `[data-select-list-item]`.
+ * - `mark` — aspect-ключ: `<mark>` подсветки совпадения query (бывший `classMaskQuery`);
+ *   `props ?? options ?? "font-bold text-theme-700 dark:text-theme-300"`, `""` отключает.
+ */
+export declare type SelectClassKey = InputLayoutClassKey | "control" | "list" | "option" | "mark"
 
 /**
  * Base props for the Select component.
  */
 export declare type BaseSelectProps = {
   /**
-   * The data items available for selection.
+   * The data items available for selection (schema-driven API; выигрывает над compound `<SelectItem>`).
    * Can be passed as a constant value or as a ref.
    * @type {MaybeRef<Array<BaseDataItem>>}
    */
-  dataSelect: MaybeRef<Array<BaseDataItem>>
+  options: MaybeRef<Array<BaseDataItem>>
 
   /**
    * Automatically focuses the select input on mount.
@@ -64,49 +75,33 @@ export declare type BaseSelectProps = {
    * Enables a close button for badges in multiple selection mode.
    * @type {BadgeProps["closeButton"]}
    */
-  closeButtonBadge: BadgeProps["closeButton"]
+  badgeCloseButton: BadgeProps["closeButton"]
 
   /**
    * Text displayed when there are no items in the list.
    * @type {string}
    */
-  noData: string
+  emptyText: string
 
   /**
-   * Disables the query-based filtering of items.
+   * Поиск по списку: `true` (default) рендерит поле фильтра в дропдауне, `false` — чистый listbox
+   * с first-char typeahead. Резолвится `props ?? componentsOptions.Select.searchable ?? true`.
    * @type {boolean}
    */
-  noQuery: boolean
+  searchable: boolean
 
   /**
-   * Custom CSS class for the select container.
-   * @type {StyleClass | "justify-end"}
-   */
-  classSelect: StyleClass | "justify-end"
-
-  /**
-   * Custom CSS class for the dropdown list container.
-   * @type {StyleClass}
-   */
-  classSelectList: StyleClass
-
-  /**
-   * Custom CSS class for the query text mask.
-   * @type {"font-bold text-theme-700 dark:text-theme-300" | string}
-   */
-  classMaskQuery: "font-bold text-theme-700 dark:text-theme-300" | string
-
-  /**
-   * Configuration for the dropdown's positioning behavior.
+   * Configuration for the dropdown's positioning behavior (`FixWindow`).
    * @type {Omit<FixWindowProps, "modelValue">}
    */
-  paramsFixWindow: Omit<FixWindowProps, "modelValue">
+  fixWindowProps: Omit<FixWindowProps, "modelValue">
 }
 
 /**
  * Props for the Select component.
  */
-export interface SelectProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseSelectProps> {
+export interface SelectProps
+  extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseSelectProps> {
   /**
    * Unique identifier for the select component.
    * @type {string | undefined}
@@ -118,6 +113,14 @@ export interface SelectProps extends Omit<InputLayoutProps, "value" | "isValue">
    * @type {number | string | NonNullable<unknown> | null | Array<number | string | null> | undefined}
    */
   modelValue?: number | string | NonNullable<unknown> | null | Array<number | string | null>
+
+  /**
+   * Карта классов внутренних элементов: семейные ключи уходят в `InputLayout`, `control`/`list`/`option` —
+   * триггер, дропдаун и строка опции, aspect-ключ `mark` — подсветка совпадения; `root` ≡ `class`.
+   * См. `SelectClassKey`.
+   * @type {ClassesMap<SelectClassKey> | undefined}
+   */
+  classes?: ClassesMap<SelectClassKey>
 }
 
 export declare type SelectSlots = {
@@ -126,14 +129,14 @@ export declare type SelectSlots = {
   /**
    * Scoped slot для безопасного рендера подсветки совпадения query внутри значения опции.
    * По умолчанию выводит текст значения + `<mark>` для участков, совпавших с `query`,
-   * через text-interpolation (без `v-html`). Пришёл на смену полю `IDataItem.marker`, снятому 2026-09-06.
+   * через text-interpolation (без `v-html`). Пришёл на смену полю `SelectDataItem.marker`, снятому 2026-09-06.
    */
   marker(args: { item: any; query: string; isQuery: boolean; valueKey: string | null }): VNode[]
   /**
-   * Slot для пустой выдачи (либо весь `dataSelect` пустой, либо фильтр без совпадений).
-   * По умолчанию рендерит `noData` как text-node. Заменяет небезопасный `v-html="noData"`.
+   * Slot для пустой выдачи (либо весь `options` пустой, либо фильтр без совпадений).
+   * По умолчанию рендерит `emptyText` как text-node. Заменяет небезопасный `v-html`.
    */
-  empty(args: { noData: string; query: string; hasData: boolean }): VNode[]
+  empty(args: { emptyText: string; query: string; hasData: boolean }): VNode[]
   default(): VNode[]
   before(): VNode[]
   after(): VNode[]
@@ -144,11 +147,11 @@ export declare type SelectSlots = {
  */
 export declare type SelectEmits = {
   /**
-   * Emitted when the invalid state is updated.
+   * v-model-канал prop'а `invalid`: выбор значения сбрасывает ошибку — payload всегда `false`.
    * @param event
-   * @param {SelectProps["isInvalid"]} payload - The updated invalid state.
+   * @param {boolean} payload - The updated invalid state.
    */
-  (event: "update:isInvalid", payload: SelectProps["isInvalid"]): void
+  (event: "update:invalid", payload: boolean): void
 
   /**
    * Emitted when the selected value is updated.
@@ -167,11 +170,11 @@ export declare type SelectEmits = {
   (event: "change:modelValue", selectValue: SelectProps["modelValue"] | null, selectItem?: Array<any>): void
 
   /**
-   * Emitted when the select component becomes active or inactive.
+   * Открыт ли дропдаун (бывший `isActive`).
    * @param event
    * @param {boolean} payload - Indicates whether the select is active.
    */
-  (event: "isActive", payload: boolean): void
+  (event: "active", payload: boolean): void
 }
 
 /**
@@ -234,10 +237,11 @@ export declare type SelectExpose = {
   isOpenList: boolean
 
   /**
-   * Custom CSS class for the layout.
-   * @type {SelectProps["class"]}
+   * Props, переданные во внутренний `InputLayout` (включая `class` корня и семейную карту `classes`
+   * с focus-ring в `base`). Заменяет прежний `classLayout`.
+   * @type {Omit<InputLayoutProps, "value">}
    */
-  classLayout: SelectProps["class"]
+  inputLayout: Omit<InputLayoutProps, "value">
 
   /**
    * The current value of the select field.
@@ -271,10 +275,10 @@ export declare type SelectExpose = {
   valueSelect: SelectProps["valueSelect"] | null
 
   /**
-   * The list of available items.
-   * @type {SelectProps["dataSelect"]}
+   * Нормализованный список опций (schema-driven `options` или compound `<SelectItem>`).
+   * @type {Array<BaseDataItem>}
    */
-  dataSelect: SelectProps["dataSelect"]
+  dataSelect: Array<BaseDataItem>
 
   /**
    * Indicates whether autofocus is enabled.
@@ -301,10 +305,16 @@ export declare type SelectExpose = {
   isLoading: SelectProps["loading"]
 
   /**
-   * Indicates whether the select is invalid.
-   * @type {SelectProps["isInvalid"]}
+   * Indicates whether the select is invalid (resolved `invalid`, `false` при `disabled`).
+   * @type {boolean}
    */
-  isInvalid: SelectProps["isInvalid"]
+  isInvalid: boolean
+
+  /**
+   * Показывается ли кнопка очистки (resolved `clearable`: props → options → `false`).
+   * @type {boolean}
+   */
+  isClearable: boolean
 
   /**
    * The validation message for the select component.
@@ -331,22 +341,22 @@ export declare type SelectExpose = {
   maxVisible: SelectProps["maxVisible"] | undefined
 
   /**
-   * The text displayed when no items are available.
-   * @type {SelectProps["noData"]}
+   * The text displayed when no items are available (resolved `emptyText`).
+   * @type {NonNullable<SelectProps["emptyText"]>}
    */
-  noData: SelectProps["noData"]
+  emptyText: NonNullable<SelectProps["emptyText"]>
 
   /**
-   * Indicates whether query-based filtering is disabled.
-   * @type {SelectProps["noQuery"]}
+   * Включён ли поиск по списку (resolved `searchable`).
+   * @type {boolean}
    */
-  isQuery: SelectProps["noQuery"]
+  isSearchable: boolean
 
   /**
-   * Custom CSS class for the query text mask.
-   * @type {SelectProps["classMaskQuery"]}
+   * Класс `<mark>` подсветки совпадения (aspect-ключ `classes.mark`).
+   * @type {StyleClass}
    */
-  classMaskQuery: SelectProps["classMaskQuery"]
+  classMark: StyleClass
 
   /**
    * The processed list of data items for rendering.
@@ -355,22 +365,22 @@ export declare type SelectExpose = {
   dataList: Array<any>
 
   /**
-   * Configuration for the dropdown's positioning behavior.
-   * @type {SelectProps["paramsFixWindow"]}
+   * Resolved configuration for the dropdown's positioning behavior.
+   * @type {NonNullable<SelectProps["fixWindowProps"]>}
    */
-  paramsFixWindow: SelectProps["paramsFixWindow"]
+  fixWindowProps: NonNullable<SelectProps["fixWindowProps"]>
 
   /**
-   * Custom CSS class for the select base container.
-   * @type {SelectProps["classSelect"]}
+   * Итоговый класс триггера `[data-select-control]` (база + `classes.control`).
+   * @type {string}
    */
-  classBase: SelectProps["classSelect"]
+  classControl: string
 
   /**
-   * Custom CSS class for the dropdown list container.
-   * @type {SelectProps["classSelectList"]}
+   * Итоговый класс дропдауна `[data-select-list]` (база + mode + `classes.list`).
+   * @type {string}
    */
-  classSelectList: SelectProps["classSelectList"]
+  classList: string
 
   // ---METHODS-----------------------
   /**
@@ -402,29 +412,28 @@ export declare type SelectOption = Pick<
   | "autoFocus"
   | "multiple"
   | "maxVisible"
-  | "closeButtonBadge"
-  | "noData"
-  | "noQuery"
-  | "classSelect"
-  | "classSelectList"
-  | "classMaskQuery"
-  | "paramsFixWindow"
+  | "badgeCloseButton"
+  | "emptyText"
+  | "searchable"
+  | "fixWindowProps"
+  | "class"
+  | "classes"
   | keyof InputLayoutOption
 >
 
 // ---COMPOUND API (Issue 3) --------------------------------------------------------------------------------
-// Параллельный декларативный API `<Select><SelectOption>` поверх schema-driven `:data-select` (schema
-// выигрывает при наличии). Имя value-компонента `SelectOption` сосуществует с options-типом `SelectOption`
-// выше в разных namespace TS (тип — выше, value — `export declare const` ниже).
+// Параллельный декларативный API `<Select><SelectItem>` поверх schema-driven `:options` (schema
+// выигрывает при наличии). Компонент называется `SelectItem` — имя `SelectOption` занято options-типом
+// (конвенция `XOption` для `componentsOptions.Select`), см. решение 8 редизайна props 1.0.
 
 /**
- * Props for the `<SelectOption>` descriptor (compound API). Declares a single option; `<Select>` reads
+ * Props for the `<SelectItem>` descriptor (compound API). Declares a single option; `<Select>` reads
  * these via VNode-walk and renders the matching list item. `value` is both the model value (`keySelect`)
  * and the display fallback; `label` (or default-slot text) is the display text.
  *
  * Note: `key` is NOT a prop — it is Vue's reserved VNode key. Use `value` as the option identity.
  */
-export declare type SelectOptionProps = {
+export declare type SelectItemProps = {
   /**
    * Option value — becomes `modelValue` when selected and the identity key in the list.
    * @type {string | number | boolean | object | null}
@@ -445,15 +454,15 @@ export declare type SelectOptionProps = {
 }
 
 /**
- * Slots of `<SelectOption>`. The default slot provides the plain-text display label (rich content is not
- * rendered per-option in the list — use the `#item` slot or schema-driven `:data-select` for that).
+ * Slots of `<SelectItem>`. The default slot provides the plain-text display label (rich content is not
+ * rendered per-option in the list — use the `#item` slot or schema-driven `:options` for that).
  */
-export declare type SelectOptionSlots = {
+export declare type SelectItemSlots = {
   default(): VNode[]
 }
 
 /**
- * Props for the `<SelectGroup>` descriptor (compound API) — groups `<SelectOption>` children under a
+ * Props for the `<SelectGroup>` descriptor (compound API) — groups `<SelectItem>` children under a
  * non-selectable label header.
  */
 export declare type SelectGroupProps = {
@@ -471,25 +480,25 @@ export declare type SelectGroupProps = {
 }
 
 /**
- * Slots of `<SelectGroup>` — nested `<SelectOption>` descriptors.
+ * Slots of `<SelectGroup>` — nested `<SelectItem>` descriptors.
  */
 export declare type SelectGroupSlots = {
   default(): VNode[]
 }
 
 /**
- * `<SelectOption>` — renderless option descriptor for the compound `<Select>` API.
+ * `<SelectItem>` — renderless option descriptor for the compound `<Select>` API.
  *
  * ```vue
  * <Select v-model="x">
- *   <SelectOption value="a">Apple</SelectOption>
- *   <SelectOption value="b" disabled>Banana</SelectOption>
+ *   <SelectItem value="a">Apple</SelectItem>
+ *   <SelectItem value="b" disabled>Banana</SelectItem>
  * </Select>
  * ```
  */
-declare class SelectOptionComponent extends ClassComponent<
-  SelectOptionProps,
-  SelectOptionSlots,
+declare class SelectItemComponent extends ClassComponent<
+  SelectItemProps,
+  SelectItemSlots,
   null,
   NonNullable<unknown>
 > {}
@@ -500,7 +509,7 @@ declare class SelectOptionComponent extends ClassComponent<
  * ```vue
  * <Select v-model="x">
  *   <SelectGroup label="Fruits">
- *     <SelectOption value="a">Apple</SelectOption>
+ *     <SelectItem value="a">Apple</SelectItem>
  *   </SelectGroup>
  * </Select>
  * ```
@@ -517,15 +526,13 @@ declare class SelectGroupComponent extends ClassComponent<
 declare module "vue" {
   export interface GlobalComponents {
     Select: GlobalComponentConstructor<Select>
-    SelectOption: GlobalComponentConstructor<SelectOptionComponent>
+    SelectItem: GlobalComponentConstructor<SelectItemComponent>
     SelectGroup: GlobalComponentConstructor<SelectGroupComponent>
   }
 }
 
 export default Select
-// value-экспорты compound-детей (для explicit-import: `import { SelectOption } from "fishtvue/select"`).
-// `SelectOption` объявлен как `const` (value-space) — не конфликтует с одноимённым options-типом (type-space):
-// TS допускает type+value под одним именем (companion pattern), а базовый ESLint no-redeclare этого не знает.
-// eslint-disable-next-line no-redeclare
-export declare const SelectOption: GlobalComponentConstructor<SelectOptionComponent>
+// value-экспорты compound-детей (для explicit-import: `import { SelectItem } from "fishtvue/select"`).
+// Имя `SelectItem` (а не `SelectOption`) — потому что `SelectOption` занято options-типом выше.
+export { SelectItemComponent as SelectItem }
 export { SelectGroupComponent as SelectGroup }

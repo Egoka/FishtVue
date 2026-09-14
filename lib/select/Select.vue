@@ -8,14 +8,16 @@
     onBeforeUnmount,
     onMounted,
     ref,
-    unref,
+    toValue,
     useSlots,
     watch
   } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
   import { getActiveLocale } from "fishtvue/config"
+  import { mergeClasses } from "fishtvue/utils/tailwindHandler"
+  import { fieldsOmit } from "fishtvue/utils/objectHandler"
   import { useVirtualScroll } from "fishtvue/virtualscroller/useVirtualScroll"
-  import type { BaseDataItem, IDataItem, SelectEmits, SelectProps } from "./Select"
+  import type { BaseDataItem, SelectClassKey, SelectDataItem, SelectEmits, SelectProps } from "./Select"
   import type { FixWindowExpose } from "fishtvue/fixwindow"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import * as LD from "lodash-es"
@@ -29,23 +31,25 @@
   const Select = new Component<"Select">()
   const options = Select.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
+  // Каждый optional boolean — `undefined` (dev-patterns §2 F): иначе слой componentsOptions недостижим.
   const props = withDefaults(defineProps<SelectProps>(), {
     autoFocus: undefined,
     multiple: undefined,
-    noQuery: undefined,
-    isValue: undefined,
-    isInvalid: undefined,
+    searchable: undefined,
+    badgeCloseButton: undefined,
+    invalid: undefined,
     required: undefined,
     loading: undefined,
     disabled: undefined,
-    clear: undefined
+    clearable: undefined
   })
   const emit = defineEmits<SelectEmits>()
   const slots = useSlots()
+  const { cls, raw, pick } = Select.resolveClasses<SelectClassKey>(props)
   // ---COMPOUND API (Issue 3) -------------
-  // Параллельный декларативный API `<Select><SelectOption>`/`<SelectGroup>` поверх schema-driven
-  // `:data-select`. Механизм — VNode-walk `slots.default()` в computed (зеркало Form.vue): renderless-дети
-  // не регистрируются в рантайме, родитель читает их VNode-дерево. Schema-driven `dataSelect` выигрывает.
+  // Параллельный декларативный API `<Select><SelectItem>`/`<SelectGroup>` поверх schema-driven
+  // `:options`. Механизм — VNode-walk `slots.default()` в computed (зеркало Form.vue): renderless-дети
+  // не регистрируются в рантайме, родитель читает их VNode-дерево. Schema-driven `options` выигрывает.
   type CompoundMeta = { disabled: boolean; group: string | null }
   function compoundNormalize(raw: unknown): Array<any> {
     if (raw === null || raw === undefined) return []
@@ -102,24 +106,25 @@
       meta.set(value, { disabled: p.disabled === "" || p.disabled === true, group })
     }
     for (const vn of top) {
-      if (isVNodeNamed(vn, "SelectOption")) pushOption(vn, null)
+      if (isVNodeNamed(vn, "SelectItem")) pushOption(vn, null)
       else if (isVNodeNamed(vn, "SelectGroup")) {
         hasGroups = true
         const label = String(vn?.props?.label ?? vn?.props?.title ?? "")
         for (const child of compoundFlatten(compoundChildren(vn)))
-          if (isVNodeNamed(child, "SelectOption")) pushOption(child, label)
+          if (isVNodeNamed(child, "SelectItem")) pushOption(child, label)
       }
     }
     return { items, meta, hasGroups }
   })
-  // schema-driven `dataSelect` выигрывает (даже пустой массив = явный выбор); иначе — compound-опции.
+  // schema-driven `options` выигрывает (даже пустой массив = явный выбор); иначе — compound-опции.
+  // `toValue` (а не `unref`) — единый канон для MaybeRef-props (dev-patterns §2, решение 3).
   const schemaActive = computed<boolean>(() => {
-    const s = unref(props?.dataSelect)
-    return s !== undefined && s !== null
+    const schema = toValue(props?.options)
+    return schema !== undefined && schema !== null
   })
   const sourceData = computed<Array<BaseDataItem>>(() =>
     schemaActive.value
-      ? ((unref(props?.dataSelect) ?? []) as Array<BaseDataItem>)
+      ? ((toValue(props?.options) ?? []) as Array<BaseDataItem>)
       : (compoundParsed.value.items as Array<BaseDataItem>)
   )
   // ---REF-LINK----------------------------
@@ -137,7 +142,6 @@
   let typeaheadTimer: ReturnType<typeof setTimeout> | undefined
   const query = ref<string>("")
   const isOpenList = ref<boolean>(false)
-  const classLayout = ref<SelectProps["class"]>()
   const value = ref<SelectProps["modelValue"]>()
   watch(
     () => props.modelValue,
@@ -179,7 +183,7 @@
     }
   })
   const dataSelect = computed<Array<BaseDataItem>>(() => {
-    const dataSelectValue = sourceData.value as Array<IDataItem> | undefined
+    const dataSelectValue = sourceData.value as Array<SelectDataItem> | undefined
     return !!keySelect.value && !!valueSelect.value
       ? (dataSelectValue ?? []).map((item) => ({
           [keySelect.value ?? ""]: typeof item === "object" && keySelect.value ? item[keySelect.value ?? ""] : item,
@@ -195,7 +199,8 @@
   )
   const isDisabled = computed<NonNullable<SelectProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<SelectProps["loading"]>>(() => props.loading ?? false)
-  const isInvalid = computed<NonNullable<SelectProps["isInvalid"]>>(() => props.isInvalid ?? false)
+  const isInvalid = computed<boolean>(() => (!isDisabled.value ? (props.invalid ?? false) : false))
+  const isClearable = computed<boolean>(() => props?.clearable ?? options?.clearable ?? false)
   const messageInvalid = computed<SelectProps["messageInvalid"]>(() => props.messageInvalid)
   const isValue = computed<boolean>(() =>
     Boolean(
@@ -207,14 +212,19 @@
     const result = props?.maxVisible ?? options?.maxVisible
     return result !== undefined && typeof +result === "number" ? +result : undefined
   })
-  const closeButtonBadge = computed<boolean>(() => props?.closeButtonBadge ?? options?.closeButtonBadge ?? false)
-  const noData = computed<NonNullable<SelectProps["noData"]>>(
-    () => (props?.noData as SelectProps["noData"]) ?? options?.noData ?? Select.t("noData") ?? "No data available"
+  const badgeCloseButton = computed<boolean>(() => props?.badgeCloseButton ?? options?.badgeCloseButton ?? false)
+  const emptyText = computed<NonNullable<SelectProps["emptyText"]>>(
+    () =>
+      (props?.emptyText as SelectProps["emptyText"]) ?? options?.emptyText ?? Select.t("noData") ?? "No data available"
   )
-  const isQuery = computed<NonNullable<SelectProps["noQuery"]>>(() => !(props?.noQuery ?? options?.noQuery))
-  const classMaskQuery = computed<NonNullable<SelectProps["classMaskQuery"]>>(() =>
-    Select.setStyle(props?.classMaskQuery ?? options?.classMaskQuery ?? "font-bold text-theme-700 dark:text-theme-300")
-  )
+  // `searchable` — positive-булев с default `true` (dev-patterns §2 F).
+  const isSearchable = computed<boolean>(() => props?.searchable ?? options?.searchable ?? true)
+  // Aspect-ключ `mark` (заменяющая семантика): `""` в props отключает подсветку целиком — тогда и
+  // `setStyle` не вызывается, иначе на `<mark>` остался бы один префикс `fv fishtvue-select`.
+  const classMark = computed(() => {
+    const value = pick("mark", "font-bold text-theme-700 dark:text-theme-300")
+    return value?.length ? Select.setStyle(value) : ""
+  })
   // ---ISSUE 10 — Intl.Collator (locale-aware, diacritic-insensitive substring search) ---
   const collator = computed(
     () => new Intl.Collator(getActiveLocale() ?? "en", { sensitivity: "base", usage: "search" })
@@ -231,9 +241,9 @@
     return false
   }
   const dataList = computed<any[]>(() => {
-    if (dataSelect.value?.length && valueSelect.value && isQuery.value) {
+    if (dataSelect.value?.length && valueSelect.value && isSearchable.value) {
       return LD.filter(dataSelect.value, (item) => {
-        const raw = typeof item === "object" ? (item as IDataItem)[valueSelect.value as string] : item
+        const raw = typeof item === "object" ? (item as SelectDataItem)[valueSelect.value as string] : item
         return matchesQuery(String(raw), query.value)
       }) as any[]
     }
@@ -336,40 +346,38 @@
   )
   const virtualTopPad = computed<number>(() => (isWindowed.value ? virtual.topPad.value : 0))
   const virtualBottomPad = computed<number>(() => (isWindowed.value ? virtual.bottomPad.value : 0))
-  const paramsFixWindow = computed<NonNullable<SelectProps["paramsFixWindow"]>>(() => ({
+  const fixWindowProps = computed<NonNullable<SelectProps["fixWindowProps"]>>(() => ({
     position: "bottom-left",
     eventOpen: "click",
     eventClose: "hover",
     marginPx: 5,
-    ...options?.paramsFixWindow,
-    ...props?.paramsFixWindow
+    ...options?.fixWindowProps,
+    ...props?.fixWindowProps
   }))
   const labelInput = computed(() => Select.t("find") ?? "Find...")
   Select.setStyle(
     `motion-safe:transition motion-safe:ease-in-out motion-safe:duration-300 opacity-100 translate-x-0 opacity-0 -translate-x-5`
   )
-  const classBase = computed<SelectProps["classSelect"]>(() => {
-    return Select.setStyle([
-      "selectBody w-46 min-h-[36px] max-h-16 focus:outline-0 focus:ring-0",
+  // Триггер `[data-select-control]` — ключ `control`; дропдаун `[data-select-list]` — ключ `list`.
+  const classControl = computed(() =>
+    cls(
+      "control",
+      "w-46 min-h-[36px] max-h-16 focus:outline-0 focus:ring-0",
       "print:bg-white print:text-black print:shadow-none",
-      options?.classSelect ?? "",
-      props?.classSelect ?? "",
-      "classSelect flex overflow-auto cursor-pointer"
-    ])
-  })
-  const classSelectList = computed<SelectProps["classSelectList"]>(() =>
-    Select.setStyle([
+      "flex overflow-auto cursor-pointer"
+    )
+  )
+  const classList = computed(() =>
+    cls(
+      "list",
       "min-w-[10rem] mt-1 max-h-60 motion-safe:transition-all",
       "text-base rounded-md ring-1 ring-black/5 shadow-xl focus:outline-none sm:text-sm",
-      mode.value === "outlined" ? "border border-surface-300 dark:border-surface-600 bg-white dark:bg-black" : "",
-      mode.value === "underlined"
-        ? "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b bg-surface-50 dark:bg-surface-950"
-        : "",
-      mode.value === "filled" ? "border-0 bg-surface-100 dark:bg-surface-900" : "",
-      options?.classSelectList ?? "",
-      props?.classSelectList ?? "",
-      "classSelectList overflow-auto"
-    ])
+      mode.value === "outlined" && "border border-surface-300 dark:border-surface-600 bg-white dark:bg-black",
+      mode.value === "underlined" &&
+        "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b bg-surface-50 dark:bg-surface-950",
+      mode.value === "filled" && "border-0 bg-surface-100 dark:bg-surface-900",
+      "overflow-auto"
+    )
   )
   const valueLayout = computed(() =>
     valueSelect.value ? visibleValue.value?.map((item) => item[valueSelect.value as string])?.join(", ") : null
@@ -399,15 +407,16 @@
   )
   const classUl = computed(() => Select.setStyle("p-0"))
   const classLiItem = computed(() =>
-    Select.setStyle([
+    cls(
+      "option",
       // ---ISSUE 9 (RTL): логические ps-8 / pe-4 вместо физических pl-8 / pr-4 (авто-флип при dir="rtl")
       "text-surface-900 dark:text-surface-100 items-center h-9 mt-2 mx-2 ps-8 pe-4 last:mb-5",
       "hover:bg-theme-200 hover:dark:bg-theme-900 hover:text-theme-700 dark:hover:text-theme-100",
       "focus-visible:bg-theme-200 focus-visible:dark:bg-theme-900 focus-visible:text-theme-700 dark:focus-visible:text-theme-100 focus-visible:ring-1 focus-visible:ring-theme-100 focus-visible:dark:ring-theme-800 focus-visible:outline-none",
-      mode.value === "outlined" ? "rounded-md" : "",
-      mode.value === "filled" ? "rounded-md" : "",
+      mode.value === "outlined" && "rounded-md",
+      mode.value === "filled" && "rounded-md",
       "group/li relative cursor-default select-none flex motion-safe:transition-colors motion-safe:duration-500"
-    ])
+    )
   )
   const classItemSelectValue = computed(() =>
     Select.setStyle(
@@ -424,28 +433,40 @@
   // Wave 3.5: локализация + плюрализация одним ключом через Component.t(key, { count }) —
   // CLDR-формы активной локали (см. select.resultsCount в locale messages).
   const ariaResultsLabel = computed<string>(() => {
-    if (!isQuery.value || !query.value) return ""
+    if (!isSearchable.value || !query.value) return ""
     const n = dataList.value?.length ?? 0
     return Select.t("select.resultsCount", { count: n })
   })
+  // Hand-off карты классов в InputLayout (dev-patterns §2 C/D): семейные ключи складываются по ключу
+  // `options → props`, aspect `animation` заменяется, `root` уходит отдельным `class`; focus-ring триггера
+  // живёт в `base` и гейтится `!isInvalid`, чтобы красная рамка ошибки оставалась видимой.
+  const FOCUS_RING = "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
+  const layoutClasses = computed(() => ({
+    ...mergeClasses(
+      { base: "cursor-pointer" },
+      fieldsOmit(options?.classes ?? {}, ["root", "animation"]),
+      fieldsOmit(props.classes ?? {}, ["root", "animation"]),
+      { base: isFocus.value && !isInvalid.value ? FOCUS_RING : undefined }
+    ),
+    animation: props.classes?.animation ?? options?.classes?.animation
+  }))
   const inputLayout = computed(() => ({
     id: props.id,
-    isValue: isValue.value,
+    hasValue: isValue.value,
     mode: mode.value,
     label: props.label,
     labelMode: props.labelMode,
-    isInvalid: isInvalid.value,
+    invalid: isInvalid.value,
     messageInvalid: messageInvalid.value,
     required: props.required,
     loading: isLoading.value,
     disabled: isDisabled.value,
     help: props.help,
-    clear: props.clear,
+    clearable: isClearable.value,
     width: props.width,
     height: props.height,
-    animation: props.animation,
-    classBody: props.classBody,
-    class: props.class
+    class: raw("root"),
+    classes: layoutClasses.value
   }))
   // ---EXPOSE------------------------------
   defineExpose({
@@ -459,7 +480,7 @@
     activeItem,
     query,
     isOpenList,
-    classLayout,
+    inputLayout,
     value,
     // ---PROPS-------------------------
     visibleValue,
@@ -472,17 +493,18 @@
     isDisabled,
     isLoading,
     isInvalid,
+    isClearable,
     messageInvalid,
     isValue,
     isMultiple,
     maxVisible,
-    noData,
-    isQuery,
-    classMaskQuery,
+    emptyText,
+    isSearchable,
+    classMark,
     dataList,
-    paramsFixWindow,
-    classBase,
-    classSelectList,
+    fixWindowProps,
+    classControl,
+    classList,
     // ---METHODS-----------------------
     focusSelect,
     openSelect,
@@ -523,7 +545,7 @@
     if (value) document.addEventListener("keydown", keydownSelect)
     else document.removeEventListener("keydown", keydownSelect)
     focusSelect(value)
-    emit("isActive", value)
+    emit("active", value)
   })
   // ---ISSUE 7 — измерение скролл-контейнера списка. Контейнер существует только пока дропдаун открыт,
   // поэтому listener и ResizeObserver живут ровно на время открытия.
@@ -661,7 +683,7 @@
     else if (newIndex >= count) newIndex = 0
     focusItemAt(newIndex)
   }
-  // first-char typeahead для noQuery-listbox: матч по значению опции из `dataList` (а не по
+  // first-char typeahead для listbox без поиска (`searchable: false`): матч по значению опции из `dataList` (а не по
   // textContent узла — при включённом окне нужного узла может не быть в DOM);
   // повтор одного символа в пределах 500 мс циклически перебирает совпадения (APG-паттерн).
   function optionText(item: any): string {
@@ -695,7 +717,7 @@
     if (!selectItems.value) return
     // когда фокус в поле поиска — Home/End и печать символов отдаём нативно (курсор/набор текста)
     const searchActive =
-      isQuery.value && !!(document.activeElement as HTMLElement | null)?.closest?.("[data-select-search]")
+      isSearchable.value && !!(document.activeElement as HTMLElement | null)?.closest?.("[data-select-search]")
     if (event.key === "Tab") activeItem.value += 1
     else if (event.key === "Enter") select(dataList.value[activeItem.value])
     else if (["Escape", "Esc"].includes(event.key)) isOpenList.value = false
@@ -715,8 +737,8 @@
     } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
       if (searchActive) return
       // есть поиск (default) → печать фокусит поле и фильтрует (de-facto typeahead);
-      // noQuery (чистый listbox) → first-char typeahead по списку
-      if (isQuery.value) selectSearch.value?.focus()
+      // `searchable: false` (чистый listbox) → first-char typeahead по списку
+      if (isSearchable.value) selectSearch.value?.focus()
       else {
         event.preventDefault()
         typeaheadFocus(event.key)
@@ -731,11 +753,6 @@
   // ---------------------------------------
   function focusSelect(focus: boolean) {
     isFocus.value = focus
-    classLayout.value =
-      (props.class ?? "") +
-      (isFocus.value
-        ? " border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
-        : "")
   }
 
   function openSelect() {
@@ -774,7 +791,7 @@
       }
     } else visibleValue.value = []
     value.value = valueKeys.value.length ? (isMultiple.value ? valueKeys.value : valueKeys.value[0]) : null
-    emit("update:isInvalid", false)
+    emit("update:invalid", false)
     emit("update:modelValue", value.value, visibleValue.value)
   }
 
@@ -853,17 +870,18 @@
 </script>
 
 <template>
-  <InputLayout ref="layout" :value="valueLayout" :class="classLayout" v-bind="inputLayout" @clear="select(null)">
+  <!-- Корень Select — корень InputLayout: `data-select` падает на него fallthrough-атрибутом -->
+  <InputLayout data-select ref="layout" :value="valueLayout" v-bind="inputLayout" @clear="select(null)">
     <template #default="{ id: fieldId, labelledby }">
       <div
-        data-select
+        data-select-control
         ref="selectBody"
         :id="fieldId"
         role="combobox"
         :aria-labelledby="labelledby"
         :aria-expanded="isOpenList"
         tabindex="0"
-        :class="classBase"
+        :class="classControl"
         @focusin="focusSelect(true)"
         @focusout="focusSelect(false)"
         @click="openSelect">
@@ -888,7 +906,7 @@
                   :delete-select="select">
                   <Badge
                     mode="neutral"
-                    :close-button="closeButtonBadge"
+                    :close-button="badgeCloseButton"
                     class-content="fill-theme-500"
                     @close="select(item)"
                     class="mx-1 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500">
@@ -900,7 +918,7 @@
                 <slot name="values" :selected="visibleValue.length" :delete-select="select">
                   <Badge
                     mode="neutral"
-                    :close-button="closeButtonBadge"
+                    :close-button="badgeCloseButton"
                     class="m-1 ps-2 text-xs bg-theme-50 text-theme-700 ring-theme-600/20 dark:bg-theme-950 dark:text-theme-300 dark:ring-theme-400/20 motion-safe:transition-colors motion-safe:duration-500"
                     class-content="fill-theme-500 flex items-center"
                     @close="select(null)">
@@ -924,14 +942,14 @@
     <template #body>
       <FixWindow
         ref="selectListWindow"
-        v-bind="paramsFixWindow"
+        v-bind="fixWindowProps"
         :model-value="isOpenList"
         :class-body="['z-50', layout?.beforeWidth != null ? `ms-[${layout.beforeWidth}px]` : '']"
         @close="closeSelect">
         <div
           data-select-list
           ref="selectList"
-          :class="classSelectList"
+          :class="classList"
           :style="`width: ${(selectBody as HTMLElement)?.clientWidth ?? 0}px`">
           <div :class="Select.setStyle('sticky z-20 w-full h-0 top-0')">
             <div :class="classGradientSelectListTop" />
@@ -940,15 +958,15 @@
             <div :class="classGradientSelectListButton" />
           </div>
           <Input
-            v-if="isQuery"
+            v-if="isSearchable"
             ref="selectSearch"
             data-select-search
             v-model="query"
             :label="labelInput"
             :mode="mode"
             label-mode="vanishing"
-            clear
-            :class-body="[
+            clearable
+            :class="[
               `m-2 mb-5 rounded-md`,
               mode === 'outlined' ? 'ring-surface-200 dark:ring-black' : '',
               mode === 'underlined' ? 'ring-surface-200 dark:ring-surface-950' : '',
@@ -1001,17 +1019,17 @@
                   :aria-disabled="row.disabled ? 'true' : undefined"
                   :class="[classLiItem, row.disabled ? classOptionDisabled : '']"
                   @click="row.disabled ? null : select(row.item)">
-                  <slot name="item" :item="row.item" :key="valueSelect" :isQuery="isQuery && !!query">
+                  <slot name="item" :item="row.item" :key="valueSelect" :isQuery="isSearchable && !!query">
                     <slot
                       name="marker"
                       :item="row.item"
                       :query="query"
-                      :isQuery="isQuery && !!query"
+                      :isQuery="isSearchable && !!query"
                       :valueKey="valueSelect ?? null">
                       <div :class="classItemSelectValue">
-                        <template v-if="isQuery && query">
+                        <template v-if="isSearchable && query">
                           <template v-for="(part, pi) in markerParts(row.item)" :key="pi">
-                            <mark v-if="part.mark" :class="classMaskQuery">{{ part.text }}</mark>
+                            <mark v-if="part.mark" :class="classMark">{{ part.text }}</mark>
                             <template v-else>{{ part.text }}</template>
                           </template>
                         </template>
@@ -1030,12 +1048,12 @@
                 data-select-virtual-pad="bottom"
                 aria-hidden="true"
                 :style="{ height: `${virtualBottomPad}px` }" />
-              <slot v-if="!dataList?.length" name="empty" :noData="noData" :query="query" :hasData="true">
-                <div :class="classDataListNoData">{{ noData }}</div>
+              <slot v-if="!dataList?.length" name="empty" :emptyText="emptyText" :query="query" :hasData="true">
+                <div :class="classDataListNoData">{{ emptyText }}</div>
               </slot>
             </template>
-            <slot v-else name="empty" :noData="noData" :query="query" :hasData="false">
-              <div :class="classNoData">{{ noData }}</div>
+            <slot v-else name="empty" :emptyText="emptyText" :query="query" :hasData="false">
+              <div :class="classNoData">{{ emptyText }}</div>
             </slot>
           </TransitionGroup>
           <div data-select-aria-live class="sr-only" aria-live="polite" aria-atomic="true">

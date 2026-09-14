@@ -1,7 +1,7 @@
 ---
 title: Textarea
-summary: Многострочный input (textarea-like) с InputLayout-обёрткой, validation, focus/blur events.
-updated: 2026-05-11
+summary: Многострочный input (textarea-like) с InputLayout-обёрткой, validation, focus/blur events. С 1.0.0: `class` — корень `[data-textarea]`, контрол — `classes.control`, positive-булевы `invalid`/`clearable`, slot-props `invalid`/`focused`.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -14,7 +14,7 @@ since: 0.2.11
 
 Наименование «Textarea» восходит к семантике form-controls (как WAI-ARIA), но компонент — **не** общий a11y abstraction. Это конкретный textarea-аналог.
 
-Stability: `stable` — 9 кейсов, coverage `Textarea.vue` 98.43%.
+Stability: `stable` — 38 кейсов, coverage `Textarea.vue` 98.43%.
 
 Source: [Source](../../lib/textarea/Textarea.vue), [Textarea.d.ts](../../lib/textarea/Textarea.d.ts), [Textarea.test.ts](../../lib/textarea/Textarea.test.ts).
 
@@ -23,8 +23,8 @@ Source: [Source](../../lib/textarea/Textarea.vue), [Textarea.d.ts](../../lib/tex
 ```
 lib/textarea/
 ├── Textarea.vue
-├── Textarea.d.ts          # 255 строк
-├── Textarea.test.ts       # 9 кейсов
+├── Textarea.d.ts          # 305 строк
+├── Textarea.test.ts       # 38 кейсов
 └── package.json
 ```
 
@@ -32,9 +32,9 @@ lib/textarea/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` ([component/index.ts:79–84](../../lib/component/index.ts#L79-L84)) сам регистрирует `onServerPrefetch + vueOnMounted → initStyle()` в конструкторе — никакого `onMounted(() => Textarea.initStyle())` в SFC.
+- **Lifecycle:** `Component.__hooks()` ([component/index.ts:88-92](../../lib/component/index.ts#L88-L92)) сам регистрирует `onServerPrefetch + vueOnMounted → initStyle()` в конструкторе — никакого `onMounted(() => Textarea.initStyle())` в SFC.
 - **Поток данных:** `modelValue` ↔ внутренний `<textarea>` value через v-model contract (4 шага, как в [dev-patterns §4](../dev-patterns.md#4-sfc-pattern)).
-- **Стили:** `Textarea.setStyle()` для контейнера и textarea.
+- **Стили:** `Textarea.resolveClasses<TextareaClassKey>(props)` — `cls("control", …)` для `<textarea>`, `mergeClasses` для семейных ключей, уходящих в `InputLayout` (dev-patterns §2 C–D, §4).
 - **Конфиг:** `componentsOptions.Textarea` — см. §10.
 - **Локализация:** через [InputLayout](./input-layout.md).
 - **SSR:** SSR-safe.
@@ -57,18 +57,17 @@ const text = ref("")
 
 ## 5. Props
 
-`TextareaProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseAriaProps>` ([Textarea.d.ts:55–72](../../lib/textarea/Textarea.d.ts#L55-L72)).
+`TextareaProps extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseTextareaProps>` ([Textarea.d.ts:56-79](../../lib/textarea/Textarea.d.ts#L56-L79)).
 
-`BaseAriaProps`:
+`BaseTextareaProps` ([Textarea.d.ts:21-51](../../lib/textarea/Textarea.d.ts#L21-L51)) — переименован из `BaseAriaProps`:
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `placeholder` | `string` | — | Native placeholder. |
-| `autocomplete` | `"on" \| "off"` | — | Native autocomplete. |
-| `wrap` | `"soft" \| "hard" \| "off"` | — | Текст-wrap режим textarea. |
-| `rows` | `number` | — | Видимое количество строк. |
-| `maxLength` | `number` | — | Макс. длина. |
-| `classInput` | `StyleClass` | — | Класс textarea. |
+| `placeholder` | `string` | `""` | Native placeholder. |
+| `autocomplete` | `InputAutocomplete` (WHATWG-токены + `string`) | `"on"` | Native autocomplete. Тип расширен до общего с [Input](./input.md) — additive. |
+| `wrap` | `"soft" \| "hard" \| "off"` | `"soft"` | Текст-wrap режим textarea. |
+| `rows` | `number` | `3` | Видимое количество строк. |
+| `maxLength` | `number` | `9999` | Макс. длина. |
 
 Свои:
 
@@ -76,17 +75,33 @@ const text = ref("")
 |---|---|---|---|
 | `id` | `string` | — | id `<textarea>`. |
 | `modelValue` | `string \| null \| undefined` | — | v-model. Narrowed 2026-05-11: `number` removed (textarea не принимает числовой ввод). |
+| `class` | `StyleClass` | — | Классы корня (он же корень `InputLayout`, `[data-textarea]`). |
+| `classes` | `ClassesMap<TextareaClassKey>` | — | Карта классов внутренних элементов — см. §5.1. |
 
-Поля `InputLayoutProps` — см. [InputLayout §5](./input-layout.md#5-props).
+Поля `InputLayoutProps` (omit `value`, `hasValue`, `classes`) — см. [InputLayout §5](./input-layout.md#5-props): `label`, `labelMode`, `mode`, `invalid`, `messageInvalid`, `required`, `loading`, `disabled`, `help`, `clearable`, …
+
+### 5.1 Classes keys
+
+`TextareaClassKey = InputLayoutClassKey | "control"` ([Textarea.d.ts:19](../../lib/textarea/Textarea.d.ts#L19)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-textarea]` (корень layout'а) | element | `relative rounded-md` + фон режима |
+| `base` | `[data-input-layout-base]` | element | рамка поля + `max-h-max` + focus-ring |
+| `control` | `[data-textarea-control]` (`<textarea>`) | element | `w-full ring-0 border-0 … caret-theme-500` (бывший `classInput`) |
+| `label` / `help` / `message` / `before` / `after` | см. [InputLayout §5.1](./input-layout.md) | element | — |
+| `animation` | корень + `base` | **aspect** | `motion-safe:transition-all motion-safe:duration-550` (`""` отключает) |
+
+`max-h-max` теперь отдельный класс в `classes.base`: раньше он склеивался с `props.class` без пробела и ломал последний класс потребителя.
 
 ## 6. Events / Emits + v-model contract
 
-`TextareaEmits` ([Textarea.d.ts:102–142](../../lib/textarea/Textarea.d.ts#L102-L142)):
+`TextareaEmits` ([Textarea.d.ts:111-149](../../lib/textarea/Textarea.d.ts#L111-L149)):
 
 | Event | Payload | When fired |
 |---|---|---|
 | `update:modelValue` | `string` | На input event. |
-| `update:isInvalid` | `boolean` | На смену состояния валидации. |
+| `update:invalid` | `boolean` (всегда `false`) | На каждый input event — reset-сигнал (`v-model:invalid`). |
 | `change:modelValue` | `string` | На native `change` event textarea и при `clear()` (payload `""`). Fixed 2026-05-11 (раньше тип был ошибочно `boolean`). |
 | `focus` | `FocusEvent` | На native focus. |
 | `blur` | `FocusEvent` | На native blur. |
@@ -98,14 +113,14 @@ const text = ref("")
 | Slot | Slot props | Description |
 |---|---|---|
 | `default` | — | Контент textarea (редко используется). |
-| `before` | `{ isInvalid: boolean; isFocused: boolean }` | Контент слева. Slot context добавлен 2026-05-11. |
-| `after` | `{ isInvalid: boolean; isFocused: boolean; clear: () => void }` | Контент справа. Slot context добавлен 2026-05-11 — позволяет условно стилизовать содержимое и вызывать `clear()` изнутри slot-шаблона. |
+| `before` | `{ invalid: boolean; focused: boolean }` | Контент слева. С 1.0.0 slot-props positive: `isInvalid`/`isFocused` → `invalid`/`focused`. |
+| `after` | `{ invalid: boolean; focused: boolean; clear: () => void }` | Контент справа — условная стилизация + вызов `clear()` изнутри slot-шаблона. |
 
 ```vue
-<Textarea v-model="comment" :is-invalid="hasError" clear>
-  <template #after="{ isInvalid, isFocused, clear }">
-    <button v-if="isInvalid" type="button" @click="clear">сбросить</button>
-    <span v-else-if="isFocused" class="text-xs text-gray-500">{{ comment.length }} / 500</span>
+<Textarea v-model="comment" :invalid="hasError" clearable>
+  <template #after="{ invalid, focused, clear }">
+    <button v-if="invalid" type="button" @click="clear">сбросить</button>
+    <span v-else-if="focused" class="text-xs text-surface-500">{{ comment.length }} / 500</span>
   </template>
 </Textarea>
 ```
@@ -118,7 +133,9 @@ const text = ref("")
 |---|---|---|
 | `layout` | `InputLayoutExpose \| undefined` | Доступ к InputLayout. |
 | `inputRef` | `HTMLElement \| undefined` | DOM-узел textarea. |
-| `id`, `modelValue`, `placeholder`, `autocomplete`, `wrap`, `rows`, `maxLength`, `isValue`, `mode`, `isDisabled`, `isLoading`, `isInvalid`, `messageInvalid`, `classStyle` | derived | Computed. |
+| `id`, `modelValue`, `placeholder`, `autocomplete`, `wrap`, `rows`, `maxLength`, `isValue`, `mode`, `isDisabled`, `isLoading`, `isInvalid`, `isClearable`, `messageInvalid` | derived | Computed. |
+| `classControl` | `string` | Итоговый класс `<textarea data-textarea-control>`. |
+| `inputLayout` | `Omit<InputLayoutProps, "value">` | Итоговый hand-off в `InputLayout` (заменил `classStyle`/`classLayout`). |
 | `clear()` | function | Очистить значение и сбросить invalid state. |
 | `focus(env)` | function | Программный focus. |
 | `blur(env)` | function | Программный blur. |
@@ -178,9 +195,9 @@ const { content } = storeToRefs(store)
 
 ### 10.1 Global
 
-`TextareaOption = Pick<TextareaProps, "autocomplete" | "wrap" | "rows" | "maxLength" | "classInput" | keyof InputLayoutOption>`.
+`TextareaOption = Pick<TextareaProps, "autocomplete" | "wrap" | "rows" | "maxLength" | "class" | "classes" | keyof InputLayoutOption>` ([Textarea.d.ts:292-295](../../lib/textarea/Textarea.d.ts#L292-L295)). Карта `classes` сливается с props по ключу (dev-patterns §2 C).
 
-`mode` определяется через стандартный fallback chain — `props.mode ?? componentsOptions.Textarea.mode ?? Textarea.componentsStyle() ?? "outlined"` ([Textarea.vue:49–51](../../lib/textarea/Textarea.vue#L49-L51)). Установка глобального `componentsStyle: "filled"` через `FishtVue` plugin автоматически меняет `mode` в Textarea, если он не задан per-instance.
+`mode` определяется через стандартный fallback chain — `props.mode ?? componentsOptions.Textarea.mode ?? Textarea.componentsStyle() ?? "outlined"` ([Textarea.vue:52-54](../../lib/textarea/Textarea.vue#L52-L54)). Установка глобального `componentsStyle: "filled"` через `FishtVue` plugin автоматически меняет `mode` в Textarea, если он не задан per-instance.
 
 ### 10.2 Per-instance
 
@@ -207,8 +224,8 @@ Root класс — `fv fishtvue-aria`.
 - Корневой `<textarea>` — нативные семантика и keyboard.
 - `aria-describedby` для error — управляется [InputLayout](./input-layout.md).
 - `aria-required` через `required` prop.
-- `placeholder:transition-all` обёрнут в `motion-safe:` ([Textarea.vue:65](../../lib/textarea/Textarea.vue#L65)) — Tailwind транспилирует это в `@media (prefers-reduced-motion: no-preference)`, поэтому пользователи с настройкой `reduce` не видят анимации placeholder'а. WCAG 2.3.3.
-- `print:*` классы ([Textarea.vue:68](../../lib/textarea/Textarea.vue#L68)) гарантируют читаемое отображение textarea при печати (`bg-white text-black border-black`, без теней).
+- `placeholder:transition-all` обёрнут в `motion-safe:` ([Textarea.vue:66](../../lib/textarea/Textarea.vue#L66)) — Tailwind транспилирует это в `@media (prefers-reduced-motion: no-preference)`, поэтому пользователи с настройкой `reduce` не видят анимации placeholder'а. WCAG 2.3.3.
+- `print:*` классы ([Textarea.vue:69](../../lib/textarea/Textarea.vue#L69)) гарантируют читаемое отображение textarea при печати (`bg-white text-black border-black`, без теней).
 
 ### Security
 
@@ -232,7 +249,7 @@ const rules = [{ type: "length", max: 500 }]
 ## 13. TypeScript
 
 ```ts
-import type { TextareaProps, TextareaEmits, TextareaExpose, BaseAriaProps } from "fishtvue/textarea"
+import type { TextareaProps, TextareaEmits, TextareaExpose, TextareaClassKey, BaseTextareaProps } from "fishtvue/textarea"
 import Textarea from "fishtvue/textarea"
 import { useTemplateRef } from "vue"
 
@@ -244,8 +261,13 @@ a.value?.clear()
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 9 кейсов, coverage 98.43%.
-- **Breaking changes:** не зафиксировано.
+- **Stability flag:** `stable` — 38 кейсов, coverage 98.43%.
+- **Breaking changes (1.0.0, редизайн props):**
+  - `classInput` → `classes.control`; `classBody` → `class` (корень), прежний `class` → `classes.base`.
+  - тип `BaseAriaProps` → `BaseTextareaProps`; `autocomplete` расширен до `InputAutocomplete` (additive).
+  - булевы: `isInvalid` → `invalid`, `clear` → `clearable`; slot-props `isInvalid`/`isFocused` → `invalid`/`focused`.
+  - emit `update:isInvalid` → `update:invalid` (silent break).
+  - `data-textarea` на корне, `<textarea>` помечен `data-textarea-control`.
 - **Deprecations:** нет.
 
 ## 15. Testing recipes
@@ -267,7 +289,7 @@ describe("Textarea", () => {
 })
 ```
 
-Реальные тесты — [Textarea.test.ts](../../lib/textarea/Textarea.test.ts) (9 кейсов).
+Реальные тесты — [Textarea.test.ts](../../lib/textarea/Textarea.test.ts) (38 кейсов, включая блок «Props 1.0 — class / classes / булевы / emits»).
 
 ## 16. Troubleshooting / FAQ
 
@@ -304,13 +326,13 @@ describe("Textarea", () => {
 
 ### Resolved 2026-05-11
 
-- ~~`change:modelValue(payload: boolean)` type bug~~ — исправлено: payload теперь `string` ([Textarea.d.ts:125](../../lib/textarea/Textarea.d.ts#L125)). Cross-cutting fix также в TextEditor.
+- ~~`change:modelValue(payload: boolean)` type bug~~ — исправлено: payload теперь `string` ([Textarea.d.ts:134](../../lib/textarea/Textarea.d.ts#L134)). Cross-cutting fix также в TextEditor.
 - ~~`modelValue?: string | number | null | undefined`~~ — narrowed до `string | null | undefined`.
 - ~~Дубль `onMounted(() => Textarea.initStyle())`~~ — удалён, остался только `Component.__hooks()`-канон.
 - ~~`mode` не учитывает `Textarea.componentsStyle()`~~ — добавлен fallback chain.
-- ~~Slots `before` / `after` без типизированного контекста~~ — добавлены `{ isInvalid, isFocused, clear }`.
+- ~~Slots `before` / `after` без типизированного контекста~~ — добавлены `{ invalid, focused, clear }` (positive-имена с 1.0.0).
 - ~~`placeholder:transition-all` без `motion-safe:`~~ — обёрнут в `motion-safe:`.
-- ~~Нет print styles~~ — добавлены `print:*` классы в classInput.
+- ~~Нет print styles~~ — добавлены `print:*` классы в `classes.control`.
 
 ### Behavioral caveats
 

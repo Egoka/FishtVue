@@ -1,6 +1,7 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
-import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor } from "../types"
+import { InputLayoutClassKey, InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
+import { InputAutocomplete } from "fishtvue/input"
 
 /**
  * ## Textarea
@@ -11,7 +12,13 @@ import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue
  */
 declare class Textarea extends ClassComponent<TextareaProps, TextareaSlots, TextareaEmits, TextareaExpose> {}
 
-export declare type BaseAriaProps = {
+/**
+ * Ключи карты `classes` (dev-patterns §2 B): семейные `InputLayoutClassKey` плюс `control` —
+ * `<textarea data-textarea-control>` (бывший `classInput`). `root` — корень `<InputLayout data-textarea>`.
+ */
+export declare type TextareaClassKey = InputLayoutClassKey | "control"
+
+export declare type BaseTextareaProps = {
   /**
    * The placeholder text for the input field.
    * @type {string | undefined}
@@ -19,10 +26,10 @@ export declare type BaseAriaProps = {
   placeholder?: string
 
   /**
-   * Autocomplete attribute for the input field.
-   * @type {"on" | "off" | undefined}
+   * Autocomplete attribute for the textarea — те же WHATWG-токены, что и у Input (`InputAutocomplete`).
+   * @type {InputAutocomplete | undefined}
    */
-  autocomplete?: "on" | "off"
+  autocomplete?: InputAutocomplete
 
   /**
    * Text wrapping behavior for the input field.
@@ -41,18 +48,13 @@ export declare type BaseAriaProps = {
    * @type {number | undefined}
    */
   maxLength?: number
-
-  /**
-   * Custom CSS class for the input field.
-   * @type {StyleClass | undefined}
-   */
-  classInput?: StyleClass
 }
 
 /**
  * Props for the Textarea component.
  */
-export interface TextareaProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseAriaProps> {
+export interface TextareaProps
+  extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseTextareaProps> {
   /**
    * The unique identifier for the input element.
    * @type {string | undefined}
@@ -67,16 +69,23 @@ export interface TextareaProps extends Omit<InputLayoutProps, "value" | "isValue
    * @type {string | null | undefined}
    */
   modelValue?: string | null | undefined
+
+  /**
+   * Карта классов внутренних элементов: семейные ключи уходят в `InputLayout`, `control` — на `<textarea>`;
+   * `root` ≡ `class`. См. `TextareaClassKey`.
+   * @type {ClassesMap<TextareaClassKey> | undefined}
+   */
+  classes?: ClassesMap<TextareaClassKey>
 }
 
 /**
- * Context provided to the `before` slot.
+ * Context provided to the `before` slot (positive-булевы, dev-patterns §2 F).
  */
 export declare type TextareaBeforeSlotProps = {
   /** Whether the textarea is currently in an invalid state. */
-  isInvalid: boolean
+  invalid: boolean
   /** Whether the textarea currently has focus. */
-  isFocused: boolean
+  focused: boolean
 }
 
 /**
@@ -84,9 +93,9 @@ export declare type TextareaBeforeSlotProps = {
  */
 export declare type TextareaAfterSlotProps = {
   /** Whether the textarea is currently in an invalid state. */
-  isInvalid: boolean
+  invalid: boolean
   /** Whether the textarea currently has focus. */
-  isFocused: boolean
+  focused: boolean
   /** Clears the textarea value and resets the invalid state. */
   clear: () => void
 }
@@ -108,11 +117,11 @@ export declare type TextareaEmits = {
   (event: "update:modelValue", payload: string): void
 
   /**
-   * Emitted when the validation state changes.
+   * v-model-канал prop'а `invalid`: любой ввод сбрасывает ошибку — payload всегда `false`.
    * @param event
    * @param {boolean} payload - Indicates whether the input is invalid.
    */
-  (event: "update:isInvalid", payload: boolean): void
+  (event: "update:invalid", payload: boolean): void
 
   /**
    * Emitted when the input value changes (native `change` event or `clear()`).
@@ -199,10 +208,10 @@ export declare type TextareaExpose = {
   maxLength: TextareaProps["maxLength"]
 
   /**
-   * Indicates whether the input has a value.
-   * @type {InputLayoutProps["isValue"]}
+   * Indicates whether the input has a value (передаётся в `InputLayout` как `hasValue`).
+   * @type {boolean}
    */
-  isValue: InputLayoutProps["isValue"]
+  isValue: boolean
 
   /**
    * Current mode of the input field.
@@ -223,10 +232,16 @@ export declare type TextareaExpose = {
   isLoading: TextareaProps["loading"]
 
   /**
-   * Indicates whether the input is invalid.
-   * @type {TextareaProps["isInvalid"]}
+   * Indicates whether the input is invalid (resolved `invalid`, `false` при `disabled`).
+   * @type {boolean}
    */
-  isInvalid: TextareaProps["isInvalid"]
+  isInvalid: boolean
+
+  /**
+   * Показывается ли кнопка очистки (resolved `clearable`: props → options → `false`).
+   * @type {boolean}
+   */
+  isClearable: boolean
 
   /**
    * The validation error message for the input field.
@@ -235,10 +250,17 @@ export declare type TextareaExpose = {
   messageInvalid: TextareaProps["messageInvalid"]
 
   /**
-   * CSS class for the input container.
-   * @type {TextareaProps["class"]}
+   * Итоговый класс `<textarea data-textarea-control>` (база + `classes.control`).
+   * @type {string}
    */
-  classStyle: TextareaProps["class"]
+  classControl: string
+
+  /**
+   * Props, переданные во внутренний `InputLayout` (включая `class` корня и семейную карту `classes`
+   * с focus-ring и `max-h-max` в `base`). Заменяет прежние `classStyle`/`classLayout`.
+   * @type {Omit<InputLayoutProps, "value">}
+   */
+  inputLayout: Omit<InputLayoutProps, "value">
 
   // ---METHODS-----------------------
   /**
@@ -269,7 +291,7 @@ export declare type TextareaExpose = {
 }
 export declare type TextareaOption = Pick<
   TextareaProps,
-  "autocomplete" | "wrap" | "rows" | "maxLength" | "classInput" | keyof InputLayoutOption
+  "autocomplete" | "wrap" | "rows" | "maxLength" | "class" | "classes" | keyof InputLayoutOption
 >
 
 // ---------------------------------------

@@ -350,7 +350,7 @@ describe("Table Component", () => {
 
         // Проверяем кнопку очистки фильтров
         expect(wrapper.find("[data-table-clear-filter]").exists()).toBe(false)
-        await wrapper.find("[data-table-thead-col-filter] input[data-input]").setValue("orange")
+        await wrapper.find("[data-table-thead-col-filter] input[data-input-control]").setValue("orange")
 
         // Эмулируем задержку 600ms
         vi.advanceTimersByTime(850)
@@ -359,7 +359,7 @@ describe("Table Component", () => {
         expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(1)
         expect(wrapper.find("[data-table-clear-filter]").exists()).toBe(true)
 
-        await wrapper.find("[data-table-thead-col-filter] input[data-input]").setValue("orange12")
+        await wrapper.find("[data-table-thead-col-filter] input[data-input-control]").setValue("orange12")
 
         // Эмулируем задержку 600ms
         vi.advanceTimersByTime(850)
@@ -1521,7 +1521,7 @@ describe("Table Component", () => {
         expect((wrapper.vm as any).allData[0].name).toBe("kiwi")
       })
 
-      it("cancels the editor on is-active=false (clearEditableCell)", async () => {
+      it("cancels the editor on active=false (clearEditableCell)", async () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: fruits,
@@ -1531,7 +1531,7 @@ describe("Table Component", () => {
         })
         await wrapper.findAll("[data-table-tbody-td]")[0].trigger("click")
         await nextTick()
-        wrapper.findComponent({ name: "Input" }).vm.$emit("is-active", false)
+        wrapper.findComponent({ name: "Input" }).vm.$emit("active", false)
         await nextTick()
         expect((wrapper.vm as any).editableCell).toBeNull()
       })
@@ -1552,9 +1552,9 @@ describe("Table Component", () => {
         await nextTick()
         const selectEditor = wrapper.findComponent({ name: "Select" })
         expect(selectEditor.exists()).toBe(true)
-        // fire editor handlers: @update:model-value → updateCell, @is-active(false) → clearEditableCell
+        // fire editor handlers: @update:model-value → updateCell, @active(false) → clearEditableCell
         selectEditor.vm.$emit("update:model-value", "user")
-        selectEditor.vm.$emit("is-active", false)
+        selectEditor.vm.$emit("active", false)
         await nextTick()
         expect((wrapper.vm as any).allData[0].role).toBe("user")
 
@@ -1563,7 +1563,7 @@ describe("Table Component", () => {
         const calendarEditor = wrapper.findComponent({ name: "Calendar" })
         expect(calendarEditor.exists()).toBe(true)
         calendarEditor.vm.$emit("update:model-value", new Date("2021-02-02"))
-        calendarEditor.vm.$emit("is-active", false)
+        calendarEditor.vm.$emit("active", false)
         await nextTick()
         expect((wrapper.vm as any).editableCell).toBeNull()
       })
@@ -2786,10 +2786,10 @@ describe("Table — remaining audit (Issues 10/11/12)", () => {
 
   // ===================================================================================================================
   // Issue 10 — filter popovers через FixWindow (H39): filter Select/Calendar получают scrollableEl: tableBody
-  // (паритет с cell-редакторами) — popover трекает скролл-контейнер. Per-column paramsFixWindow override уважается.
+  // (паритет с cell-редакторами) — popover трекает скролл-контейнер. Per-column fixWindowProps override уважается.
   // ===================================================================================================================
   describe("Issue 10 — filter popovers via FixWindow", () => {
-    it("filter Select получает paramsFixWindow.scrollableEl (= tableBody)", async () => {
+    it("filter Select получает fixWindowProps.scrollableEl (= tableBody)", async () => {
       const wrapper = mount(Table, {
         props: {
           dataSource: [{ cat: "a" }, { cat: "b" }],
@@ -2799,13 +2799,13 @@ describe("Table — remaining audit (Issues 10/11/12)", () => {
       await nextTick()
       const select = wrapper.findComponent(Select)
       expect(select.exists()).toBe(true)
-      const pfw = select.props("paramsFixWindow") as any
+      const pfw = select.props("fixWindowProps") as any
       expect(pfw).toBeTruthy()
       expect("scrollableEl" in pfw).toBe(true)
       expect(pfw.scrollableEl).toBeTruthy()
     })
 
-    it("filter Calendar получает paramsFixWindow.scrollableEl (= tableBody)", async () => {
+    it("filter Calendar получает fixWindowProps.scrollableEl (= tableBody)", async () => {
       const wrapper = mount(Table, {
         props: {
           dataSource: [{ d: "2024-01-01" }, { d: "2024-02-02" }],
@@ -2815,13 +2815,13 @@ describe("Table — remaining audit (Issues 10/11/12)", () => {
       await nextTick()
       const cal = wrapper.findComponent(Calendar)
       expect(cal.exists()).toBe(true)
-      const pfw = cal.props("paramsFixWindow") as any
+      const pfw = cal.props("fixWindowProps") as any
       expect(pfw).toBeTruthy()
       expect("scrollableEl" in pfw).toBe(true)
       expect(pfw.scrollableEl).toBeTruthy()
     })
 
-    it("per-column paramsFilter.paramsFixWindow override выигрывает над дефолтом", async () => {
+    it("per-column paramsFilter.fixWindowProps override выигрывает над дефолтом", async () => {
       const wrapper = mount(Table, {
         props: {
           dataSource: [{ cat: "a" }, { cat: "b" }],
@@ -2830,13 +2830,13 @@ describe("Table — remaining audit (Issues 10/11/12)", () => {
               dataField: "cat",
               type: "select",
               isFilter: true,
-              paramsFilter: { paramsFixWindow: { position: "top" } }
+              paramsFilter: { fixWindowProps: { position: "top" } }
             }
           ]
         } as unknown as TableProps
       })
       await nextTick()
-      const pfw = wrapper.findComponent(Select).props("paramsFixWindow") as any
+      const pfw = wrapper.findComponent(Select).props("fixWindowProps") as any
       expect(pfw.position).toBe("top") // override победил
       expect(pfw.scrollableEl).toBeTruthy() // дефолт scrollableEl сохранён
     })
@@ -2959,7 +2959,7 @@ describe("Table Component - B10 semantic surface tokens", () => {
         filter: { isClearAllFilter: true, visible: true }
       } as TableProps
     })
-    await wrapper.find("[data-table-thead-col-filter] input[data-input]").setValue("orange")
+    await wrapper.find("[data-table-thead-col-filter] input[data-input-control]").setValue("orange")
     vi.advanceTimersByTime(850)
     await nextTick()
     const btn = wrapper.find("[data-table-clear-filter]")
@@ -2987,7 +2987,7 @@ describe("Table Component - B10 semantic surface tokens", () => {
         filter: { isClearAllFilter: true, visible: true }
       } as TableProps
     })
-    await wrapper.find("[data-table-thead-col-filter] input[data-input]").setValue("orange")
+    await wrapper.find("[data-table-thead-col-filter] input[data-input-control]").setValue("orange")
     vi.advanceTimersByTime(850)
     await nextTick()
     const btn = wrapper.find("[data-table-clear-filter]")

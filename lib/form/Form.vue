@@ -57,7 +57,7 @@
     "typeComponent",
     "classCol",
     "modelValue",
-    "isInvalid",
+    "invalid",
     "name",
     "rules",
     "beforeIcon",
@@ -396,7 +396,7 @@
               }
             }
             if (resultField.typeComponent === "Select")
-              resultField.closeButtonBadge = resultField.closeButtonBadge ?? true
+              resultField.badgeCloseButton = resultField.badgeCloseButton ?? true
             resultField.classCol = Form.setStyle(["col-span-full", resultField.classCol])
             if (modeStyle.value) resultField.mode = resultField.mode ?? modeStyle.value
             resultField.disabled = resultField.disabled ?? isDisabled.value
@@ -510,7 +510,7 @@
                       v-if="resolveFieldComponent(field.typeComponent)"
                       :is="resolveFieldComponent(field.typeComponent)"
                       v-model:model-value="formFields[field.name]"
-                      v-model:is-invalid="formInvalidFields[field.name]"
+                      v-model:invalid="formInvalidFields[field.name]"
                       v-bind="{ ...fieldsOmit(field, calculatedFieldsInput), id: field.name }"
                       @update:model-value="inputField(field)"
                       @change:model-value="changeField(field)">
@@ -549,7 +549,7 @@
                           ...field,
                           id: field.name,
                           modelValue: formFields[field.name],
-                          isInvalid: formInvalidFields[field.name]
+                          invalid: formInvalidFields[field.name]
                         },
                         updateModelValue: (value: unknown) => {
                           formFields[field.name] = value
@@ -568,7 +568,7 @@
                           ...field,
                           id: field.name,
                           modelValue: formFields[field.name],
-                          isInvalid: formInvalidFields[field.name]
+                          invalid: formInvalidFields[field.name]
                         } as FieldCustom & FormValues
                       "
                       :updateModelValue="

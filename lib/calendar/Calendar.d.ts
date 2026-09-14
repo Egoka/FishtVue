@@ -1,6 +1,6 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
-import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleMode } from "../types"
+import { InputLayoutClassKey, InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 import { namesColors } from "fishtvue/theme"
 import { FixWindowProps } from "fishtvue/fixwindow"
 import Locale from "v-calendar/dist/types/src/utils/locale"
@@ -70,7 +70,7 @@ export type CalendarMask =
   | string
 export type ColorCalendarPicker = namesColors
 
-export interface IRangeDate {
+export interface CalendarRangeDate {
   start: Date | string
   end: Date | string
 }
@@ -143,7 +143,7 @@ export type AttributeConfig = Partial<{
   pinPage: boolean
 }>
 
-export interface ICalendarPicker {
+export interface CalendarPicker {
   showCalendar: boolean
   datePickerPopoverId: string
   popoverRef: any
@@ -156,7 +156,7 @@ export interface ICalendarPicker {
   hideTimeHeader: boolean
   timeAccuracy: number
   isDragging: boolean
-  inputValue: string | IRangeDate
+  inputValue: string | CalendarRangeDate
   inputEvents:
     | {
         click?: ((e: MouseEvent) => void) | undefined
@@ -230,7 +230,7 @@ export interface ICalendarPicker {
   disabledAttribute: Attribute
 }
 
-export interface IMasksDate {
+export interface CalendarMasks {
   title?: string
   weekdays?: string
   navMonths?: string
@@ -240,7 +240,7 @@ export interface IMasksDate {
   input?: Array<CalendarMask>
 }
 
-interface IAttributeConfig extends Omit<Partial<AttributeConfig>, "dates"> {
+interface CalendarAttributeConfig extends Omit<Partial<AttributeConfig>, "dates"> {
   dates: DateRangeSource | DateRangeSource[]
 }
 
@@ -249,7 +249,7 @@ export interface SimpleDateRange {
   end: Date
 }
 
-export interface IRangeValue {
+export interface CalendarRangeValue {
   start: DateValueCalendar
   end: DateValueCalendar
   span: number
@@ -257,7 +257,7 @@ export interface IRangeValue {
   repeat: Partial<DateRepeatConfig>
 }
 
-export interface IParamsDatePicker {
+export interface DatePickerProps {
   ///Calendar//////////////////////
   borderless: boolean
   transparent: boolean
@@ -274,16 +274,15 @@ export interface IParamsDatePicker {
   minDate: Date | string | null
   maxDate: Date | string | null
   popover: Partial<PopoverOptions>
-  attributes: Partial<IAttributeConfig>[]
+  attributes: Partial<CalendarAttributeConfig>[]
   ///DatePicker//////////////////////
   mode: "date" | "dateTime" | "time"
-  isRange: boolean
   isRequired: boolean
   is24hr: boolean
   mask: CalendarMask
-  masks: IMasksDate
+  masks: CalendarMasks
   disabledDates: DateRangeSource | DateRangeSource[]
-  selectAttribute: Partial<IAttributeConfig>
+  selectAttribute: Partial<CalendarAttributeConfig>
   rules: "auto" | DatePartsRules
   locale: string | Partial<LocaleConfig>
   timezone: "UTC" | string
@@ -291,12 +290,29 @@ export interface IParamsDatePicker {
   separator: "arrow" | "points" | "none"
 }
 
+/**
+ * Ключи карты `classes` (dev-patterns §2 B): семейные `InputLayoutClassKey` плюс собственные.
+ * `root` — корень `<InputLayout data-calendar>`.
+ * - `control` — триггер `<div data-calendar-control>` (бывший `classDataPicker`).
+ * - `text` — текст выбранной даты `[data-calendar-text]` (бывший `classDateText`).
+ * - `picker` — контейнер v-calendar `[data-calendar-picker]` (бывший `classPicker`).
+ */
+export declare type CalendarClassKey = InputLayoutClassKey | "control" | "text" | "picker"
+
 export declare type BaseCalendarProps = {
   /**
-   * Additional parameters for date picker behavior and formatting.
-   * @type {Partial<IParamsDatePicker> | undefined}
+   * Props, пробрасываемые во внутренний `<DatePicker>` (v-calendar): формат, локаль, атрибуты и т.д.
+   * (бывший `paramsDatePicker`). Диапазон включается отдельным top-level prop'ом `range`.
+   * @type {Partial<DatePickerProps> | undefined}
    */
-  paramsDatePicker?: Partial<IParamsDatePicker>
+  datePickerProps?: Partial<DatePickerProps>
+
+  /**
+   * Режим диапазона дат (`start`/`end`) вместо одиночной даты. Бывший `datePickerProps.isRange`:
+   * вынесен наверх, потому что определяет и модель (`modelValue`), и разметку триггера.
+   * @type {boolean | undefined}
+   */
+  range?: boolean
 
   /**
    * Automatically focuses the calendar input on mount.
@@ -305,40 +321,24 @@ export declare type BaseCalendarProps = {
   autoFocus?: boolean
 
   /**
-   * Prevents the calendar from closing when a date is selected.
+   * Закрывать picker при выборе даты. Default `true` (бывший инвертированный `isNotCloseOnDateChange`).
+   * Резолвится `props ?? componentsOptions.Calendar.closeOnSelect ?? true`.
    * @type {boolean | undefined}
    */
-  isNotCloseOnDateChange?: boolean
+  closeOnSelect?: boolean
 
   /**
-   * Custom CSS class for the data picker.
-   * @type {StyleClass | undefined}
-   */
-  classDataPicker?: StyleClass
-
-  /**
-   * Custom CSS class for the calendar picker.
-   * @type {StyleClass | undefined}
-   */
-  classPicker?: StyleClass
-
-  /**
-   * Custom CSS class for the displayed date text.
-   * @type {StyleClass | undefined}
-   */
-  classDateText?: StyleClass
-
-  /**
-   * Configuration for fixing the calendar window's position.
+   * Props, пробрасываемые в `FixWindow` дропдауна picker'а (бывший `paramsFixWindow`).
    * @type {FixWindowProps | undefined}
    */
-  paramsFixWindow?: FixWindowProps
+  fixWindowProps?: FixWindowProps
 }
 
 /**
  * Props for the Calendar component.
  */
-export interface CalendarProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseCalendarProps> {
+export interface CalendarProps
+  extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseCalendarProps> {
   /**
    * The unique identifier for the calendar component.
    * @type {string | undefined}
@@ -347,9 +347,16 @@ export interface CalendarProps extends Omit<InputLayoutProps, "value" | "isValue
 
   /**
    * The current value of the calendar, can be a single date or a date range.
-   * @type {DateValueCalendar | Partial<IRangeValue>}
+   * @type {DateValueCalendar | Partial<CalendarRangeValue>}
    */
-  modelValue?: DatePickerModel | undefined //DateValueCalendar | Partial<IRangeValue>
+  modelValue?: DatePickerModel | undefined //DateValueCalendar | Partial<CalendarRangeValue>
+
+  /**
+   * Карта классов внутренних элементов: семейные ключи уходят в `InputLayout`, `control`/`text`/`picker` —
+   * триггер, текст даты и контейнер picker'а; `root` ≡ `class`. См. `CalendarClassKey`.
+   * @type {ClassesMap<CalendarClassKey> | undefined}
+   */
+  classes?: ClassesMap<CalendarClassKey>
 }
 
 export declare type CalendarSlots = {
@@ -363,11 +370,11 @@ export declare type CalendarSlots = {
  */
 export declare type CalendarEmits = {
   /**
-   * Emitted when the invalid state of the calendar is updated.
+   * v-model-канал prop'а `invalid`: выбор даты сбрасывает ошибку — payload всегда `false`.
    * @param event
-   * @param {CalendarProps["isInvalid"]} payload - The invalid state.
+   * @param {boolean} payload - The invalid state.
    */
-  (event: "update:isInvalid", payload: CalendarProps["isInvalid"]): void
+  (event: "update:invalid", payload: boolean): void
 
   /**
    * Emitted when the `modelValue` is updated.
@@ -384,18 +391,18 @@ export declare type CalendarEmits = {
   (event: "change:modelValue", payload: CalendarProps["modelValue"]): void
 
   /**
-   * Emitted when the calendar data is retrieved.
+   * Инстанс v-calendar picker'а готов (бывший `getCalendar`).
    * @param event
-   * @param {ICalendarPicker} payload - The calendar picker instance.
+   * @param {CalendarPicker} payload - The calendar picker instance.
    */
-  (event: "getCalendar", payload: ICalendarPicker): void
+  (event: "ready", payload: CalendarPicker): void
 
   /**
-   * Emitted when the calendar's active state changes.
+   * Открыт ли picker (бывший `isActive`).
    * @param event
    * @param {boolean} payload - Indicates if the calendar is active.
    */
-  (event: "isActive", payload: boolean): void
+  (event: "active", payload: boolean): void
 }
 
 /**
@@ -439,9 +446,9 @@ export declare type CalendarExpose = {
 
   /**
    * Instance of the calendar picker.
-   * @type {ICalendarPicker | undefined}
+   * @type {CalendarPicker | undefined}
    */
-  calendarPicker: ICalendarPicker | undefined
+  calendarPicker: CalendarPicker | undefined
 
   /**
    * Indicates if the calendar input is focused.
@@ -456,10 +463,10 @@ export declare type CalendarExpose = {
   isOpenPicker: boolean
 
   /**
-   * Parameters for the date picker.
-   * @type {Partial<IParamsDatePicker>}
+   * Resolved props внутреннего `<DatePicker>` (defaults + options + props + `isRange` из `range`).
+   * @type {Partial<DatePickerProps> & { isRange: boolean }}
    */
-  datePickerOptions: Partial<IParamsDatePicker>
+  datePickerOptions: Partial<DatePickerProps> & { isRange: boolean }
 
   /**
    * Current value of the calendar.
@@ -469,9 +476,9 @@ export declare type CalendarExpose = {
 
   /**
    * The currently visible date in the picker.
-   * @type {ICalendarPicker["inputValue"] | undefined}
+   * @type {CalendarPicker["inputValue"] | undefined}
    */
-  visibleDate: ICalendarPicker["inputValue"] | undefined
+  visibleDate: CalendarPicker["inputValue"] | undefined
 
   // ---PROPS-------------------------------
   /**
@@ -493,10 +500,16 @@ export declare type CalendarExpose = {
   autoFocus: CalendarProps["autoFocus"]
 
   /**
-   * Indicates if the calendar remains open on date selection.
-   * @type {CalendarProps["isNotCloseOnDateChange"]}
+   * Закрывается ли picker при выборе даты (resolved `closeOnSelect`, default `true`).
+   * @type {boolean}
    */
-  isNotCloseOnDateChange: CalendarProps["isNotCloseOnDateChange"]
+  isCloseOnSelect: boolean
+
+  /**
+   * Режим диапазона (resolved `range`).
+   * @type {boolean}
+   */
+  isRange: boolean
 
   /**
    * The current styling mode of the editor.
@@ -506,9 +519,9 @@ export declare type CalendarExpose = {
 
   /**
    * Placeholder text for the input field.
-   * @type {IParamsDatePicker["placeholder"] | undefined}
+   * @type {DatePickerProps["placeholder"] | undefined}
    */
-  placeholder: IParamsDatePicker["placeholder"] | undefined
+  placeholder: DatePickerProps["placeholder"] | undefined
 
   /**
    * Indicates if the calendar is in a loading state.
@@ -523,10 +536,16 @@ export declare type CalendarExpose = {
   isDisabled: CalendarProps["disabled"]
 
   /**
-   * Indicates if the calendar is invalid.
-   * @type {CalendarProps["isInvalid"]}
+   * Indicates if the calendar is invalid (resolved `invalid`, `false` при `disabled`).
+   * @type {boolean}
    */
-  isInvalid: CalendarProps["isInvalid"]
+  isInvalid: boolean
+
+  /**
+   * Показывается ли кнопка очистки (resolved `clearable`: props → options → `false`).
+   * @type {boolean}
+   */
+  isClearable: boolean
 
   /**
    * Validation message for the calendar input.
@@ -536,9 +555,9 @@ export declare type CalendarExpose = {
 
   /**
    * Separator character for date ranges.
-   * @type {IParamsDatePicker["separator"] | undefined}
+   * @type {DatePickerProps["separator"] | undefined}
    */
-  separator: IParamsDatePicker["separator"] | undefined
+  separator: DatePickerProps["separator"] | undefined
 
   /**
    * Current layout value.
@@ -547,34 +566,28 @@ export declare type CalendarExpose = {
   valueLayout: string
 
   /**
-   * Configuration for fixing the calendar window.
-   * @type {CalendarProps["paramsFixWindow"]}
+   * Resolved props дропдауна picker'а.
+   * @type {NonNullable<CalendarProps["fixWindowProps"]>}
    */
-  paramsFixWindow: CalendarProps["paramsFixWindow"]
+  fixWindowProps: NonNullable<CalendarProps["fixWindowProps"]>
 
   /**
-   * CSS class for the layout container.
-   * @type {CalendarProps["class"]}
+   * Итоговый класс триггера `[data-calendar-control]` (база + `classes.control`).
+   * @type {string}
    */
-  classLayout: CalendarProps["class"]
+  classControl: string
 
   /**
-   * CSS class for the data picker.
-   * @type {CalendarProps["classDataPicker"]}
+   * Итоговый класс текста даты `[data-calendar-text]` (база + `classes.text`).
+   * @type {string}
    */
-  classDataPicker: CalendarProps["classDataPicker"]
+  classText: string
 
   /**
-   * CSS class for the date text display.
-   * @type {CalendarProps["classDateText"]}
+   * Итоговый класс контейнера picker'а `[data-calendar-picker]` (база + mode + `classes.picker`).
+   * @type {string}
    */
-  classDateText: CalendarProps["classDateText"]
-
-  /**
-   * CSS class for the calendar picker.
-   * @type {CalendarProps["classPicker"]}
-   */
-  classPicker: CalendarProps["classPicker"]
+  classPicker: string
 
   // ---METHODS-----------------------
   /**
@@ -590,9 +603,9 @@ export declare type CalendarExpose = {
 
   /**
    * Changes the selected date in the calendar.
-   * @param {ICalendarPicker["inputValue"]} date - The new date value.
+   * @param {CalendarPicker["inputValue"]} date - The new date value.
    */
-  changeDate(date: ICalendarPicker["inputValue"]): void
+  changeDate(date: CalendarPicker["inputValue"]): void
 
   /**
    * Sets the focus state for the calendar.
@@ -607,13 +620,13 @@ export declare type CalendarExpose = {
 }
 export declare type CalendarOption = Pick<
   CalendarProps,
-  | "paramsDatePicker"
+  | "datePickerProps"
+  | "range"
   | "autoFocus"
-  | "isNotCloseOnDateChange"
-  | "classDataPicker"
-  | "classPicker"
-  | "classDateText"
-  | "paramsFixWindow"
+  | "closeOnSelect"
+  | "fixWindowProps"
+  | "class"
+  | "classes"
   | keyof InputLayoutOption
 >
 

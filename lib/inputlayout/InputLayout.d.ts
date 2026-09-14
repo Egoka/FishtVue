@@ -1,5 +1,13 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode, THeight, TWidth } from "../types"
+import {
+  ClassComponent,
+  ClassesMap,
+  GlobalComponentConstructor,
+  StyleClass,
+  StyleMode,
+  THeight,
+  TWidth
+} from "../types"
 import { LabelMode } from "fishtvue/label"
 
 /**
@@ -17,6 +25,19 @@ declare class InputLayout extends ClassComponent<
 > {}
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-input-layout>` (добавляется `ClassesMap`).
+ * Семейство form-controls (Input, Textarea, Select, Calendar, TextEditor) наследует эти ключи и добавляет свои.
+ * - `base` — `<div data-input-layout-base>`: рамка поля (border/ring/mode) вокруг контрола из default-слота.
+ * - `label` — корень `<Label data-label>` (hand-off через его `class`).
+ * - `help` — `<div data-input-layout-help>`: иконка подсказки с tooltip.
+ * - `message` — `<p data-input-layout-message-invalid>`: текст ошибки (`aria-live`).
+ * - `before` / `after` — контейнеры слотов `before` / `after`.
+ * - `animation` — aspect-ключ: transition-классы корня и `base` после mount-тика
+ *   (`props ?? options ?? "motion-safe:transition-all motion-safe:duration-550"`, `""` отключает).
+ */
+export declare type InputLayoutClassKey = "base" | "label" | "help" | "message" | "before" | "after" | "animation"
+
+/**
  * Props for the InputLayout component.
  */
 export declare type InputLayoutProps = {
@@ -27,10 +48,11 @@ export declare type InputLayoutProps = {
   value: any
 
   /**
-   * Indicates whether the input has a value.
+   * Есть ли у контрола значение — управляет floating-состоянием лейбла (`labelType`).
+   * Form-controls семейства вычисляют его сами и передают сюда.
    * @type {boolean | undefined}
    */
-  isValue?: boolean
+  hasValue?: boolean
 
   /**
    * Styling mode for the input layout.
@@ -61,10 +83,11 @@ export declare type InputLayoutProps = {
   labelMode?: LabelMode
 
   /**
-   * Indicates whether the input is invalid.
+   * Невалидное состояние: красная рамка поля, иконка и текст `messageInvalid`.
+   * Игнорируется при `disabled`.
    * @type {boolean | undefined}
    */
-  isInvalid?: boolean
+  invalid?: boolean
 
   /**
    * The validation error message for the input.
@@ -97,10 +120,11 @@ export declare type InputLayoutProps = {
   help?: string
 
   /**
-   * Enables a clear button for the input.
+   * Показывать кнопку очистки при непустом `value` (emit `clear`).
+   * Резолвится `props ?? componentsOptions.InputLayout.clearable ?? false`.
    * @type {boolean | undefined}
    */
-  clear?: boolean
+  clearable?: boolean
 
   /**
    * Width of the input layout.
@@ -115,22 +139,17 @@ export declare type InputLayoutProps = {
   height?: THeight
 
   /**
-   * Animation type for transitions within the layout.
-   * @type {"transition-all duration-500" | "transition-none" | string | undefined}
-   */
-  animation?: "transition-all duration-500" | "transition-none" | string
-
-  /**
-   * Custom CSS class for the body of the layout.
-   * @type {StyleClass | "mb-6 rounded-md" | undefined}
-   */
-  classBody?: StyleClass | "mb-6 rounded-md"
-
-  /**
-   * Custom CSS class for the layout container.
+   * CSS-классы корня `<div data-input-layout>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Карта классов внутренних элементов (`base`, `label`, `help`, `message`, `before`, `after`) и aspect-ключ
+   * `animation`; `root` ≡ `class`. См. `InputLayoutClassKey`.
+   * @type {ClassesMap<InputLayoutClassKey> | undefined}
+   */
+  classes?: ClassesMap<InputLayoutClassKey>
 
   /**
    * Vertical offset used by the layout for sticky-header awareness
@@ -240,10 +259,10 @@ export declare type InputLayoutExpose = {
   value: InputLayoutProps["value"]
 
   /**
-   * Indicates whether the input has a value.
-   * @type {InputLayoutProps["isValue"]}
+   * Indicates whether the input has a value (resolved `hasValue`).
+   * @type {boolean}
    */
-  isValue: InputLayoutProps["isValue"]
+  isValue: boolean
 
   /**
    * The current styling mode of the input layout.
@@ -288,10 +307,16 @@ export declare type InputLayoutExpose = {
   isDisabled: InputLayoutProps["disabled"]
 
   /**
-   * Indicates whether the input is invalid.
-   * @type {InputLayoutProps["isInvalid"]}
+   * Indicates whether the input is invalid (resolved `invalid`, always `false` when disabled).
+   * @type {boolean}
    */
-  isInvalid: InputLayoutProps["isInvalid"]
+  isInvalid: boolean
+
+  /**
+   * Показывается ли кнопка очистки (resolved `clearable`: props → options → `false`).
+   * @type {boolean}
+   */
+  isClearable: boolean
 
   /**
    * The validation error message for the input.
@@ -318,22 +343,22 @@ export declare type InputLayoutExpose = {
   height: InputLayoutProps["height"]
 
   /**
-   * The animation applied to the layout.
-   * @type {InputLayoutProps["animation"]}
+   * Resolved aspect-ключ `classes.animation` (пустая строка до mount-тика).
+   * @type {StyleClass}
    */
-  animation: InputLayoutProps["animation"]
+  animation: StyleClass
 
   /**
-   * Custom CSS class for the layout container.
-   * @type {InputLayoutProps["class"]}
+   * Итоговый класс корня `<div data-input-layout>` (база + `class`/`classes.root`).
+   * @type {string}
    */
-  class: InputLayoutProps["class"]
+  classBase: string
 
   /**
-   * Custom CSS class for the body of the layout.
-   * @type {InputLayoutProps["classBody"]}
+   * Итоговый класс рамки поля `<div data-input-layout-base>` (база + mode + state + `classes.base`).
+   * @type {string}
    */
-  classBody: InputLayoutProps["classBody"]
+  classLayout: string
 
   // ---METHODS-----------------------
   /**
@@ -343,7 +368,7 @@ export declare type InputLayoutExpose = {
 }
 export declare type InputLayoutOption = Pick<
   InputLayoutProps,
-  "mode" | "labelMode" | "clear" | "width" | "height" | "animation" | "classBody" | "class" | "offsetTop"
+  "mode" | "labelMode" | "clearable" | "width" | "height" | "class" | "classes" | "offsetTop"
 >
 
 // ---------------------------------------

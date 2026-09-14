@@ -1,8 +1,10 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots, watch } from "vue"
-  import type { InputEmits, InputProps } from "./Input"
+  import type { InputClassKey, InputEmits, InputProps } from "./Input"
   import type { InputLayoutExpose } from "fishtvue/inputlayout"
   import { convertToNumber, convertToPhone, onkeydown, toNumber, toPhone } from "fishtvue/utils/numberHandler"
+  import { cn, mergeClasses } from "fishtvue/utils/tailwindHandler"
+  import { fieldsOmit } from "fishtvue/utils/objectHandler"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
@@ -10,22 +12,22 @@
   const Input = new Component<"Input">()
   const options = Input.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
+  // Каждый optional boolean — `undefined` (dev-patterns §2 F): иначе слой componentsOptions недостижим.
   const props = withDefaults(defineProps<InputProps>(), {
     autoFocus: undefined,
-    isValue: undefined,
-    isInvalid: undefined,
+    invalid: undefined,
     required: undefined,
     loading: undefined,
     disabled: undefined,
-    clear: undefined
+    clearable: undefined
   })
   const emit = defineEmits<InputEmits>()
   const slots = useSlots()
+  const { cls, raw } = Input.resolveClasses<InputClassKey>(props)
   // ---REF-LINK----------------------------
   const layout = ref<InputLayoutExpose>()
   const inputRef = ref<HTMLElement | undefined>()
   // ---STATE-------------------------------
-  const classLayout = ref<InputProps["class"]>()
   const isActiveInput = ref<boolean>(false)
   const modelValue = ref<InputProps["modelValue"]>()
   const arrayInputType: ReadonlyArray<NonNullable<InputProps["type"]>> = [
@@ -75,56 +77,67 @@
   const lengthDecimal = computed<NonNullable<InputProps["lengthDecimal"]>>(() => +(props?.lengthDecimal ?? 0))
   const isDisabled = computed<NonNullable<InputProps["disabled"]>>(() => props.disabled ?? false)
   const isLoading = computed<NonNullable<InputProps["loading"]>>(() => props.loading ?? false)
-  const isInvalid = computed<NonNullable<InputProps["isInvalid"]>>(() =>
-    !isDisabled.value ? (props.isInvalid ?? false) : false
-  )
-  const isClear = computed<NonNullable<InputProps["clear"]>>(() => props?.clear ?? options?.clear ?? false)
+  const isInvalid = computed<boolean>(() => (!isDisabled.value ? (props.invalid ?? false) : false))
+  const isClearable = computed<boolean>(() => props?.clearable ?? options?.clearable ?? false)
   const messageInvalid = computed<NonNullable<InputProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
-  const classBaseInput = computed(() =>
-    Input.setStyle([
+  // Контрол `<input data-input-control>` — ключ `control`: база → options.classes.control → props.classes.control
+  const classControl = computed(() =>
+    cls(
+      "control",
       "relative z-10 ring-0 border-0 w-full bg-transparent p-1 h-[28px] my-1 rounded-md text-surface-900 dark:text-surface-100",
       "placeholder:select-none focus:placeholder:text-surface-400 focus:placeholder:dark:text-surface-500",
-      props.label?.length ? "placeholder:text-transparent motion-safe:placeholder:transition-all" : "",
+      !!props.label?.length && "placeholder:text-transparent motion-safe:placeholder:transition-all",
       "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
       "focus:outline-0 focus:ring-0 motion-safe:transition-colors caret-theme-500",
       "print:border print:border-black print:bg-white print:text-black print:shadow-none",
-      options?.classInput ?? "",
-      props?.classInput ?? "",
-      "classInput flex"
-    ])
+      "flex"
+    )
   )
+  // Hand-off в корень `Icons` (`:class` ребёнка = его корень): база + `classes.passwordToggle` без setStyle-
+  // префикса — компилирует их сам Icons (dev-patterns §4).
   const classPasswordToggle = computed(() =>
-    Input.setStyle([
+    cn(
       "text-surface-400 dark:text-surface-600 hover:text-theme-500 hover:dark:text-theme-700 motion-safe:transition cursor-pointer",
-      options?.passwordToggleClass ?? "",
-      props?.passwordToggleClass ?? ""
-    ])
+      raw("passwordToggle")
+    )
   )
+  // Hand-off карты классов в InputLayout (dev-patterns §2 C/D): семейные ключи складываются по ключу
+  // `options → props`; aspect-ключ `animation` не складывается, а заменяется (`""` у потребителя отключает);
+  // `root` уходит отдельным `class`. Focus-ring поля живёт в `base` и гейтится `!isInvalid` — красная рамка
+  // ошибки остаётся видимой в фокусе (потребитель в twMerge последний).
+  const FOCUS_RING = "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
+  const layoutClasses = computed(() => ({
+    ...mergeClasses(
+      fieldsOmit(options?.classes ?? {}, ["root", "animation"]),
+      fieldsOmit(props.classes ?? {}, ["root", "animation"]),
+      { base: isActiveInput.value && !isInvalid.value ? FOCUS_RING : undefined }
+    ),
+    animation: props.classes?.animation ?? options?.classes?.animation
+  }))
   const inputLayout = computed(() => ({
     id: props.id,
-    isValue: isValue.value,
+    hasValue: isValue.value,
     mode: mode.value,
     label: props.label,
     labelMode: props.labelMode,
-    isInvalid: isInvalid.value,
+    invalid: isInvalid.value,
     messageInvalid: messageInvalid.value,
     required: props.required,
     loading: isLoading.value,
     disabled: isDisabled.value,
     help: props.help,
-    clear: isClear.value,
+    clearable: isClearable.value,
     width: props.width,
     height: props.height,
-    animation: props.animation,
-    classBody: props.classBody,
-    class: props.class
+    class: raw("root"),
+    classes: layoutClasses.value
   }))
   // ---EXPOSE------------------------------
   defineExpose({
     //---STATE-------------------------
     layout,
     isActiveInput,
-    classLayout,
+    inputLayout,
     // ---PROPS-------------------------------
     id,
     type,
@@ -140,8 +153,10 @@
     isDisabled,
     isLoading,
     isInvalid,
+    isClearable,
     messageInvalid,
-    classBaseInput,
+    classControl,
+    classPasswordToggle,
     // ---METHODS-----------------------------
     toMask,
     inputModelValue,
@@ -165,13 +180,7 @@
     (value) => (modelValue.value = String(value ? toMask(value) : (value ?? ""))),
     { immediate: true }
   )
-  watch(isActiveInput, (value) => {
-    classLayout.value =
-      (props?.class ?? options?.class ?? "") +
-      (value ? " border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700" : "")
-    Input.setStyle(classLayout.value ?? "")
-    emit("isActive", value)
-  })
+  watch(isActiveInput, (value) => emit("active", value))
 
   // ---METHODS-----------------------------
   function toMask(baseValue: string | number): string {
@@ -193,7 +202,7 @@
 
   function inputModelValue(valueResult: any) {
     modelValue.value = valueResult
-    emit("update:isInvalid", false)
+    emit("update:invalid", false)
     emit("update:modelValue", valueResult)
   }
 
@@ -228,10 +237,11 @@
 </script>
 
 <template>
-  <InputLayout ref="layout" :value="modelValue" :class="classLayout ?? ''" v-bind="inputLayout" @clear="clear">
+  <!-- Корень Input — корень InputLayout: `data-input` падает на него fallthrough-атрибутом -->
+  <InputLayout data-input ref="layout" :value="modelValue" v-bind="inputLayout" @clear="clear">
     <template #default="{ id: fieldId }">
       <input
-        data-input
+        data-input-control
         ref="inputRef"
         :id="fieldId"
         :name="id"
@@ -240,7 +250,7 @@
         :placeholder="placeholder"
         :autocomplete="autocomplete"
         :value="modelValue"
-        :class="classBaseInput"
+        :class="classControl"
         @focus="focus"
         @blur="blur"
         @input="inputEvent"
@@ -257,12 +267,14 @@
       <slot v-if="slots.after" name="after" />
       <Icons
         v-if="type === 'password' && privateType === 'password'"
+        data-input-password-toggle
         data-eye-slash
         type="EyeSlash"
         :class="classPasswordToggle"
         @click="privateType = 'text'" />
       <Icons
         v-if="type === 'password' && privateType === 'text'"
+        data-input-password-toggle
         data-eye
         type="Eye"
         :class="classPasswordToggle"

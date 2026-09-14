@@ -544,7 +544,7 @@ describe("Pagination Component Tests", () => {
       expect(cls).toContain("dark:hover:text-surface-300")
     })
 
-    it("page-size selector text + select classSelect use surface-family (not gray)", () => {
+    it("page-size selector text + select classes.control use surface-family (not gray)", () => {
       const wrapper = mount(Pagination, {
         props: { isPageSizeSelector: true, sizesSelector: [5, 10, 20], total: 50, sizePage: 10 }
       })
@@ -552,8 +552,8 @@ describe("Pagination Component Tests", () => {
       expect(selectorText.classes().join(" ")).toContain("text-surface-400 dark:text-surface-500")
 
       const paramsSelect = (wrapper.vm as any).paramsSelect
-      expect(paramsSelect.classSelect).toBe("font-bold text-surface-600 dark:text-surface-500")
-      expect(paramsSelect.classSelect).not.toMatch(legacyGrayFamily)
+      expect(paramsSelect.classes.control).toBe("font-bold text-surface-600 dark:text-surface-500")
+      expect(paramsSelect.classes.control).not.toMatch(legacyGrayFamily)
     })
 
     it("root border + short-content + info-text use surface-family (not gray/neutral)", () => {

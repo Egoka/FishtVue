@@ -1,40 +1,40 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, shallowRef, useSlots, watch } from "vue"
-  import { IQuillEditor, TextEditorEmits, TextEditorProps } from "./TextEditor"
+  import { TextEditorClassKey, TextEditorEmits, TextEditorInstance, TextEditorProps } from "./TextEditor"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Dialog from "fishtvue/dialog/Dialog.vue"
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
   import { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
   import { StyleClass } from "fishtvue/types"
+  import { mergeClasses } from "fishtvue/utils/tailwindHandler"
+  import { fieldsOmit } from "fishtvue/utils/objectHandler"
   import { htmlToText } from "fishtvue/utils/domHandler"
   import { useDarkMode } from "fishtvue/theme"
   // ---BASE-COMPONENT----------------------
   const TextEditor = new Component<"TextEditor">()
   const options = TextEditor.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
+  // Каждый optional boolean — `undefined` (dev-patterns §2 F): иначе слой componentsOptions недостижим.
   const props = withDefaults(defineProps<TextEditorProps>(), {
-    isValue: undefined,
-    isInvalid: undefined,
+    invalid: undefined,
     required: undefined,
     loading: undefined,
     disabled: undefined,
-    clear: undefined
+    clearable: undefined
   })
   const emit = defineEmits<TextEditorEmits>()
   const slots = useSlots()
+  const { cls, raw } = TextEditor.resolveClasses<TextEditorClassKey>(props)
   // ---STATE-------------------------------
   // shallowRef, а не ref: сюда кладётся определение компонента. Глубокий reactive-прокси на нём
   // не нужен и вызывает Vue-warn «received a Component that was made a reactive object».
   const QuillEditor = shallowRef<any>()
   const layout = ref<InputLayoutExpose>()
   const valueLayout = ref<TextEditorProps["modelValue"]>()
-  const classLayout = ref<TextEditorProps["class"]>()
   const open = ref<boolean>(false)
-  const quillEditorLink = ref<IQuillEditor>()
+  const quillEditorLink = ref<TextEditorInstance>()
   const isActiveTextEditor = ref<boolean>(false)
-  const additionalStyles = ref<string>("max-h-max h-max")
-  const editorSmall = ref<StyleClass>(TextEditor.setStyle("editor-small w-38 max-h-40 caret-theme-500"))
   const modelValue = ref<TextEditorProps["modelValue"]>()
   watch(
     () => props.modelValue,
@@ -57,15 +57,15 @@
     () => props.mode ?? options?.mode ?? TextEditor.componentsStyle() ?? "outlined"
   )
   const isDisabled = computed<NonNullable<TextEditorProps["disabled"]>>(() => props.disabled ?? false)
-  const isLoading = computed<NonNullable<TextEditorProps["isInvalid"]>>(() => props.loading ?? false)
-  const isInvalid = computed<NonNullable<TextEditorProps["isInvalid"]>>(() =>
-    !isDisabled.value ? (props.isInvalid ?? false) : false
-  )
+  const isLoading = computed<NonNullable<TextEditorProps["loading"]>>(() => props.loading ?? false)
+  const isInvalid = computed<boolean>(() => (!isDisabled.value ? (props.invalid ?? false) : false))
+  const isClearable = computed<boolean>(() => props?.clearable ?? options?.clearable ?? false)
   const messageInvalid = computed<NonNullable<TextEditorProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
-  const classStyle = computed<NonNullable<TextEditorProps["class"]>>(
-    () => (options?.class ? `${options?.class} ` : "") + (props.class ? `${props.class}` : "") + additionalStyles.value
-  )
-  const editor = computed<StyleClass>(() =>
+  // Inline-контейнер Quill (bubble-режим) — ключ `editor`.
+  const classEditor = computed(() => cls("editor", "editor-small w-38 max-h-40 caret-theme-500"))
+  // Контейнер редактора внутри диалога snow-режима: свой ключ не нужен — диалог настраивается
+  // через `dialogProps.class` / `dialogProps.classes`.
+  const classDialogEditor = computed<StyleClass>(() =>
     TextEditor.setStyle([
       "border rounded-md border-surface-200 dark:border-surface-800 dark:text-surface-400",
       mode.value === "outlined" ? "bg-white dark:bg-black" : "",
@@ -98,11 +98,11 @@
   }))
   const resizeButtonToBubble = ref<StyleClass>(TextEditor.setStyle("absolute top-0 right-0"))
   const resizeButtonToSnow = ref<StyleClass>(TextEditor.setStyle("relative flex text-left h-[36px]"))
-  const paramsDialog = computed<NonNullable<TextEditorProps["paramsDialog"]>>(() => ({
-    ...options?.paramsDialog,
-    ...props?.paramsDialog
+  const dialogProps = computed<NonNullable<TextEditorProps["dialogProps"]>>(() => ({
+    ...options?.dialogProps,
+    ...props?.dialogProps
   }))
-  const paramsQuillEditor = computed<NonNullable<Partial<TextEditorProps["paramsTextEditor"]>>>(() => ({
+  const editorProps = computed<NonNullable<Partial<TextEditorProps["editorProps"]>>>(() => ({
     content: typeof modelValue.value === "number" ? String(modelValue.value) : modelValue.value,
     readOnly: isDisabled.value,
     contentType: "html",
@@ -123,27 +123,39 @@
       ["link", "image"],
       ["clean"] // remove the formatting button
     ],
-    ...options?.paramsTextEditor,
-    ...props?.paramsTextEditor
+    ...options?.editorProps,
+    ...props?.editorProps
+  }))
+  // Hand-off карты классов в InputLayout (dev-patterns §2 C/D): семейные ключи складываются по ключу,
+  // aspect `animation` заменяется, `root` уходит отдельным `class`. `max-h-max h-max` в `base` снимает
+  // лимит высоты рамки (редактор растёт по контенту) — раньше эта строка клеилась к `props.class`
+  // без пробела (дефект D-TextEditor, закрыт в W2); focus-ring гейтится `!isInvalid`.
+  const FOCUS_RING = "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
+  const layoutClasses = computed(() => ({
+    ...mergeClasses(
+      { base: ["max-h-max h-max", isActiveTextEditor.value && !isInvalid.value ? FOCUS_RING : ""] },
+      fieldsOmit(options?.classes ?? {}, ["root", "animation"]),
+      fieldsOmit(props.classes ?? {}, ["root", "animation"])
+    ),
+    animation: props.classes?.animation ?? options?.classes?.animation
   }))
   const inputLayout = computed<Omit<InputLayoutProps, "value">>(() => ({
     id: props.id,
-    isValue: isValue.value,
+    hasValue: isValue.value,
     mode: mode.value,
     label: props.label,
     labelMode: props.labelMode ?? options?.labelMode,
-    isInvalid: isInvalid.value,
+    invalid: isInvalid.value,
     messageInvalid: messageInvalid.value,
     required: props.required,
     loading: isLoading.value,
     disabled: isDisabled.value,
     help: props.help,
-    clear: props.clear ?? options?.clear,
+    clearable: isClearable.value,
     width: props.width,
     height: props.height,
-    animation: props.animation,
-    classBody: props.classBody ?? options?.classBody,
-    class: classStyle.value
+    class: raw("root"),
+    classes: layoutClasses.value
   }))
   // G34: ссылка на КОРНЕВОЙ элемент + `focus()`. Корень TextEditor — `<InputLayout>`, поэтому
   // элемент берётся из его expose (`inputBody`). Зеркало `componentTable`/`buttonRef`.
@@ -165,7 +177,7 @@
     layout,
     componentTextEditor,
     valueLayout,
-    classLayout,
+    classEditor,
     open,
     quillEditorLink,
     isActiveTextEditor,
@@ -177,10 +189,10 @@
     isDisabled,
     isLoading,
     isInvalid,
+    isClearable,
     messageInvalid,
-    classStyle,
-    paramsDialog,
-    paramsQuillEditor,
+    dialogProps,
+    editorProps,
     inputLayout,
     // ---METHODS-----------------------------
     clear,
@@ -209,20 +221,13 @@
     open.value = theme === "snow" ? true : theme === "bubble" ? false : false
   })
   watch(isActiveTextEditor, (value) => {
-    {
-      classLayout.value =
-        (props.class ?? "") +
-        (value
-          ? ` border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700 ${additionalStyles.value}`
-          : " " + additionalStyles.value)
-      if (!value) changeModelValue(modelValue.value)
-    }
+    if (!value) changeModelValue(modelValue.value)
   })
 
   // ---METHODS-----------------------------
   function inputModelValue(value: any) {
     modelValue.value = value
-    emit("update:isInvalid", false)
+    emit("update:invalid", false)
     emit("update:modelValue", value)
   }
 
@@ -243,21 +248,16 @@
 </script>
 
 <template>
-  <InputLayout
-    data-text-editor
-    ref="layout"
-    :value="valueLayout"
-    :class="classLayout"
-    v-bind="inputLayout"
-    @clear="clear">
+  <!-- Корень TextEditor — корень InputLayout: `data-text-editor` падает на него fallthrough-атрибутом -->
+  <InputLayout data-text-editor ref="layout" :value="valueLayout" v-bind="inputLayout" @clear="clear">
     <template #default="{ id: fieldId, labelledby }">
-      <div :id="fieldId" :aria-labelledby="labelledby" :class="editorSmall" :style="quillVars">
+      <div data-text-editor-editor :id="fieldId" :aria-labelledby="labelledby" :class="classEditor" :style="quillVars">
         <component
           :is="QuillEditor"
           v-if="QuillEditor && theme === 'bubble'"
           ref="quillEditorLink"
           theme="bubble"
-          v-bind="paramsQuillEditor"
+          v-bind="editorProps"
           @update:content="inputModelValue"
           @focus="isActiveTextEditor = true"
           @blur="isActiveTextEditor = false"
@@ -275,15 +275,15 @@
     <template #body>
       <Dialog
         v-model="open"
-        v-bind="paramsDialog"
+        v-bind="dialogProps"
         @update:modelValue="theme = 'bubble'"
         :class="['p-0 max-w-screen-sm sm:max-w-5xl sm:m-3 sm:w-[90%] max-h-screen']">
-        <div :class="['editor', isDisabled ? 'editor-disabled' : '', editor]" :style="quillVars">
+        <div :class="['editor', isDisabled ? 'editor-disabled' : '', classDialogEditor]" :style="quillVars">
           <component
             :is="QuillEditor"
             v-if="QuillEditor && theme === 'snow'"
             theme="snow"
-            v-bind="paramsQuillEditor"
+            v-bind="editorProps"
             @update:content="inputModelValue" />
           <div :class="resizeButtonToBubble" @click="theme = 'bubble'">
             <Button

@@ -1,7 +1,7 @@
 ---
 title: TextEditor
 summary: Quill-редактор внутри Dialog с темами Snow/Bubble и кастомным toolbar. mode-цепочка учитывает глобальный componentsStyle (Wave 3.2, 2026-07-02). Native form submit через скрытое поле и полное покрытие тестами — 2026-09-05.
-updated: 2026-09-05
+updated: 2026-09-14
 stability: experimental
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `TextEditor` — обёртка над [Quill](https://quilljs.com/) (через [@vueup/vue-quill](https://vueup.github.io/vue-quill/)) внутри [Dialog](./dialog.md). Поддерживает темы `snow` (toolbar сверху) и `bubble` (toolbar появляется при выделении), кастомные toolbar-конфиги (`essential`/`minimal`/`full` или custom), reactive v-model.
 
-Stability: `experimental` — все 17 тестов пропущены ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)); coverage `TextEditor.vue` — 0%. Type-bug `change:modelValue(payload: boolean)` исправлен 2026-05-11 — payload теперь корректно типизирован как `string` (cross-cutting fix с [Textarea](./aria.md)).
+Stability: `experimental` — 45 кейсов ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts), включая блок «props 1.0»); Quill инжектит inline-стили мимо CSS-layer'а. Type-bug `change:modelValue(payload: boolean)` исправлен 2026-05-11 — payload корректно типизирован как `string` (cross-cutting fix с [Textarea](./textarea.md)).
 
 Source: [Source](../../lib/texteditor/TextEditor.vue), [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts), [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts).
 
@@ -39,8 +39,8 @@ lib/texteditor/
 - **Поток данных:** `modelValue: string` (HTML) → Quill renders → user edits → `update:modelValue` (string).
 - **v-model contract:** см. §6.
 - **Стили:** через `setStyle` для обёртки + импортированные CSS темы Quill.
-- **Конфиг:** `componentsOptions.TextEditor` — `paramsDialog`, `paramsTextEditor`, `theme`. Toolbar и Quill modules — через `paramsTextEditor`.
-- **Локализация:** не использует `t()`. Quill UI на английском; локализация — через `paramsTextEditor.options` Quill.
+- **Конфиг:** `componentsOptions.TextEditor` — `dialogProps`, `editorProps`, `theme`, `class`, `classes`. Toolbar и Quill modules — через `editorProps`.
+- **Локализация:** не использует `t()`. Quill UI на английском; локализация — через `editorProps.options` Quill.
 - **SSR:** Quill требует `document` — рендерится только на клиенте (через [Dialog](./dialog.md), который show'ится по флагу).
 - **Animation:** Dialog open/close transitions; внутри Quill — собственные.
 
@@ -63,24 +63,40 @@ Note: компонент рендерит trigger-кнопку, которая �
 
 ## 5. Props
 
-`TextEditorProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseTextEditorProps>`.
+`TextEditorProps extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseTextEditorProps>` ([TextEditor.d.ts:83-103](../../lib/texteditor/TextEditor.d.ts#L83-L103)).
 
-`BaseTextEditorProps`:
+`BaseTextEditorProps` ([TextEditor.d.ts:60-78](../../lib/texteditor/TextEditor.d.ts#L60-L78)):
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `paramsDialog` | `Partial<DialogProps>` | — | Конфиг Dialog-обёртки. См. [Dialog](./dialog.md). |
-| `paramsTextEditor` | `Partial<IDataTextEditor>` | — | Конфиг Quill (toolbar, modules, options). |
-| `theme` | `"snow" \| "bubble"` | `"snow"` | Quill тема. |
+| `dialogProps` | `Partial<DialogProps>` | — | Props Dialog-обёртки snow-режима (бывший `paramsDialog`). См. [Dialog](./dialog.md). |
+| `editorProps` | `Partial<TextEditorQuillConfig>` | (встроенный toolbar) | Props Quill (toolbar, modules, options) — бывший `paramsTextEditor`. |
+| `theme` | `"snow" \| "bubble"` | `"bubble"` | Quill тема. |
 
 Свои:
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `id` | `string` | — | id корня. |
+| `id` | `string` | — | id контейнера редактора; он же `name` скрытого поля для native submit. |
 | `modelValue` | `string \| number \| null` | — | HTML-строка содержимого. |
+| `class` | `StyleClass` | — | Классы корня (он же корень `InputLayout`, `[data-text-editor]`). |
+| `classes` | `ClassesMap<TextEditorClassKey>` | — | Карта классов внутренних элементов — см. §5.1. |
 
-`IDataTextEditor`:
+### 5.1 Classes keys
+
+`TextEditorClassKey = InputLayoutClassKey | "editor"` ([TextEditor.d.ts:58](../../lib/texteditor/TextEditor.d.ts#L58)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-text-editor]` (корень layout'а) | element | `relative rounded-md` + фон режима |
+| `base` | `[data-input-layout-base]` | element | рамка поля + `max-h-max h-max` + focus-ring |
+| `editor` | `[data-text-editor-editor]` | element | `editor-small w-38 max-h-40 caret-theme-500` (inline bubble-редактор) |
+| `label` / `help` / `message` / `before` / `after` | см. [InputLayout §5.1](./input-layout.md) | element | — |
+| `animation` | корень + `base` | **aspect** | `motion-safe:transition-all motion-safe:duration-550` |
+
+Диалог snow-режима стилизуется не ключом карты, а через `dialogProps.class` / `dialogProps.classes` — это отдельный компонент [Dialog](./dialog.md).
+
+`TextEditorQuillConfig`:
 
 | Field | Type | Description |
 |---|---|---|
@@ -98,7 +114,7 @@ Note: компонент рендерит trigger-кнопку, которая �
 | Event | Payload | When fired |
 |---|---|---|
 | `update:modelValue` | `string` (HTML) | На каждый change в Quill. |
-| `update:isInvalid` | `boolean` | При смене статуса валидации. |
+| `update:invalid` | `boolean` (всегда `false`) | Ввод — reset-сигнал (`v-model:invalid`). |
 | `change:modelValue` | `string` (HTML) | На blur / programmatic save. Fixed 2026-05-11 (раньше тип был ошибочно `boolean`). |
 
 ## 7. Slots
@@ -115,12 +131,12 @@ Note: компонент рендерит trigger-кнопку, которая �
 
 | Name | Description |
 |---|---|
-| `layout`, `valueLayout`, `classLayout`, `open`, `quillEditorLink: IQuillEditor`, `isActiveTextEditor` | Reactive state. |
-| `id`, `theme`, `isValue`, `mode`, `isDisabled`, `isLoading`, `isInvalid`, `messageInvalid`, `classStyle`, `paramsDialog`, `paramsQuillEditor`, `inputLayout` | Derived. |
+| `layout`, `componentTextEditor`, `valueLayout`, `classEditor`, `open`, `quillEditorLink: TextEditorInstance`, `isActiveTextEditor` | Reactive state. |
+| `id`, `theme`, `isValue`, `mode`, `isDisabled`, `isLoading`, `isInvalid`, `isClearable`, `messageInvalid`, `dialogProps`, `editorProps`, `inputLayout` | Derived. |
 | `clear()` | Очистка содержимого. |
 | `ready()` | Promise после init Quill (полезно для тестов). |
 
-`IQuillEditor` (на `quillEditorLink`):
+`TextEditorInstance` (на `quillEditorLink`):
 
 | Name | Description |
 |---|---|
@@ -146,7 +162,7 @@ app.use(FishtVue, {
   componentsOptions: {
     TextEditor: {
       theme: "snow",
-      paramsTextEditor: {
+      editorProps: {
         toolbar: "minimal",
         contentType: "html"
       }
@@ -160,7 +176,7 @@ app.use(FishtVue, {
 ```vue
 <TextEditor
   v-model="html"
-  :params-text-editor="{
+  :editor-props="{
     toolbar: [
       ['bold', 'italic', 'underline'],
       [{ list: 'ordered' }, { list: 'bullet' }],
@@ -174,7 +190,7 @@ app.use(FishtVue, {
 ```vue
 <TextEditor
   v-model="html"
-  :params-text-editor="{ readOnly: true, enable: false }"
+  :editor-props="{ readOnly: true, enable: false }"
   theme="bubble" />
 ```
 
@@ -182,7 +198,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`TextEditorOption = Pick<TextEditorProps, "paramsDialog" | "paramsTextEditor" | "theme" | keyof InputLayoutOption>`.
+`TextEditorOption = Pick<TextEditorProps, "dialogProps" | "editorProps" | "theme" | "class" | "classes" | keyof InputLayoutOption>` ([TextEditor.d.ts:280-283](../../lib/texteditor/TextEditor.d.ts#L280-L283)).
 
 `mode` (стиль InputLayout-обёртки) резолвится по цепочке `props.mode ?? options?.mode ?? TextEditor.componentsStyle() ?? "outlined"` — глобальный `componentsStyle` учитывается (Wave 3.2, зеркало [Input](./input.md)). Quill-тема `theme: "snow" | "bubble"` — независимая ось (тема редактора, не обёртки).
 
@@ -243,7 +259,7 @@ new FormData(form).get("bio") // "<p>Привет</p>"
 ```ts
 import type {
   TextEditorProps, TextEditorEmits, TextEditorExpose,
-  IDataTextEditor, IQuillEditor, ContentPropType
+  TextEditorQuillConfig, TextEditorInstance, TextEditorClassKey, ContentPropType
 } from "fishtvue/texteditor"
 import TextEditor from "fishtvue/texteditor"
 import { useTemplateRef } from "vue"
@@ -258,12 +274,19 @@ const quill = ed.value?.quillEditorLink?.getQuill()
 - **Vue:** `^3.5.x`.
 - **Quill:** `^2.0.2`.
 - **vue-quill:** `^1.2.0`.
-- **Stability flag:** `experimental` — нет покрытия тестами; Quill инжектит inline стили без layer'а. (Type bug в `change:modelValue` emits исправлен 2026-05-11.)
-- **Breaking changes:** при апгрейде Quill 3.x — ожидаются.
+- **Stability flag:** `experimental` — 45 кейсов, coverage `TextEditor.vue` ≥ 95%; Quill инжектит inline-стили без layer'а. (Type bug в `change:modelValue` emits исправлен 2026-05-11.)
+- **Breaking changes (1.0.0, редизайн props):**
+  - `paramsDialog` → `dialogProps`, `paramsTextEditor` → `editorProps`.
+  - `classBody` → `class` (корень), прежний `class` → `classes.base`; inline-редактор — `classes.editor`.
+  - булевы: `isInvalid` → `invalid`, `clear` → `clearable`; emit `update:isInvalid` → `update:invalid` (silent break).
+  - типы: `IQuillEditor` → `TextEditorInstance`, `IDataTextEditor` → `TextEditorQuillConfig`.
+  - expose: `classStyle`/`classLayout` → `classEditor` + `inputLayout`; `paramsQuillEditor` → `editorProps`.
+  - `data-text-editor` на корне; контейнер Quill — `[data-text-editor-editor]`.
+  - При апгрейде Quill 3.x — ожидаются дополнительные breaking changes.
 
 ## 15. Testing recipes
 
-Все 17 тестов — `it.skip` ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)). Причина — тесты не работают в jsdom (Quill требует реального DOM с window/document layout). Для интеграционных тестов используй Playwright или Cypress.
+45 кейсов ([TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts)) гоняются в jsdom через `vi.mock` Quill-обвязки (2026-09-05). Для сквозных проверок реального редактора по-прежнему нужен Playwright или Cypress.
 
 ```ts
 // Минимальный smoke — но падает из-за Quill требований
@@ -307,7 +330,7 @@ describe.skip("TextEditor smoke", () => {
 ### Incomplete or stubbed behavior
 
 - ~~**Все 17 тестов пропущены.** Coverage `TextEditor.vue` — 0%~~ ✅ resolved 2026-09-05 — см. «Skipped tests» ниже.
-- `IDataTextEditor.options` и `globalOptions` объявлены как `any` ([TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts)).
+- `TextEditorQuillConfig.options` и `globalOptions` объявлены как `any` ([TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts)).
 - ~~Тёмная тема редактора переключается по системной цветовой схеме, а не по `darkModeSelector`~~ ✅ resolved 2026-09-05 — тема идёт через [`useDarkMode()`](../../lib/theme/useDarkMode.ts), переменные биндятся инлайном на оба контейнера редактора.
 - ~~Строки Quill-tooltip захардкожены по-русски вне locale-механизма~~ ✅ resolved 2026-09-05 — ключи `textEditor.linkLabel` / `textEditor.saveLabel`.
 - **Toolbar самого Quill не локализован** — лейблы `font`/`align` и tooltip'ы кнопок приходят из Quill на английском. Требует i18n-плагина Quill либо DOM-modify; см. [issues/texteditor.md](../issues/texteditor.md) Issues 8, 9.
@@ -322,10 +345,10 @@ describe.skip("TextEditor smoke", () => {
 
 ### API inconsistencies
 
-- ~~**Type bug:** `change:modelValue(payload: boolean)`~~ ✅ resolved 2026-05-11 — payload теперь корректно типизирован как `string` ([TextEditor.d.ts:121](../../lib/texteditor/TextEditor.d.ts#L121)). Cross-cutting fix вместе с [aria.md Issue 1](../issues/textarea.md).
+- ~~**Type bug:** `change:modelValue(payload: boolean)`~~ ✅ resolved 2026-05-11 — payload теперь корректно типизирован как `string` ([TextEditor.d.ts:136](../../lib/texteditor/TextEditor.d.ts#L136)). Cross-cutting fix вместе с [textarea.md Issue 1](../issues/textarea.md).
 - `modelValue?: string | number | null` — `number` не имеет смысла для HTML-content.
 - `toolbar: "essential" \| "minimal" \| "full" \| string \| object \| Array<any>` — open union, narrow не работает.
-- `IDataTextEditor.options: any`, `globalOptions: any` — потеря типизации.
+- `TextEditorQuillConfig.options: any`, `globalOptions: any` — потеря типизации.
 
 ### Behavioral caveats
 

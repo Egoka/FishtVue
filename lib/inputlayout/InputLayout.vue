@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { computed, onMounted, onUnmounted, ref, useId, useSlots } from "vue"
-  import type { InputLayoutEmits, InputLayoutProps } from "./InputLayout"
+  import type { InputLayoutClassKey, InputLayoutEmits, InputLayoutProps } from "./InputLayout"
+  import type { StyleClass } from "fishtvue/types"
   import Label from "fishtvue/label/Label.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Loading from "fishtvue/loading/Loading.vue"
@@ -11,16 +12,19 @@
   const InputLayout = new Component<"InputLayout">()
   const options = InputLayout.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
+  // Каждый optional boolean — `undefined`: иначе Vue кастует отсутствующий prop в `false`,
+  // и слой `componentsOptions` (например `clearable`) был бы недостижим (dev-patterns §2 F).
   const props = withDefaults(defineProps<InputLayoutProps>(), {
-    isValue: undefined,
-    isInvalid: undefined,
+    hasValue: undefined,
+    invalid: undefined,
     required: undefined,
     loading: undefined,
     disabled: undefined,
-    clear: undefined
+    clearable: undefined
   })
   const emit = defineEmits<InputLayoutEmits>()
   const slots = useSlots()
+  const { cls, raw, pick } = InputLayout.resolveClasses<InputLayoutClassKey>(props)
   // ---REF-LINK----------------------------
   const input = ref<HTMLElement | undefined>()
   const inputBody = ref<HTMLElement | undefined>()
@@ -38,7 +42,7 @@
   let afterObserver: ResizeObserver | undefined
   // ---PROPS-------------------------------
   const value = computed<InputLayoutProps["value"]>(() => props.value ?? null)
-  const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props?.isValue ?? false)
+  const isValue = computed<boolean>(() => props.hasValue ?? false)
   const mode = computed<NonNullable<InputLayoutProps["mode"]>>(
     () => (props?.mode as InputLayoutProps["mode"]) ?? options?.mode ?? InputLayout.componentsStyle() ?? "outlined"
   )
@@ -61,23 +65,22 @@
   const isRequired = computed<NonNullable<InputLayoutProps["required"]>>(() => props.required ?? false)
   const isLoading = computed<InputLayoutProps["loading"]>(() => props.loading ?? false)
   const isDisabled = computed<InputLayoutProps["disabled"]>(() => props.disabled ?? false)
-  const isInvalid = computed<InputLayoutProps["isInvalid"]>(() => (!isDisabled.value ? props.isInvalid : false))
+  const isInvalid = computed<boolean>(() => (!isDisabled.value ? (props.invalid ?? false) : false))
+  const isClearable = computed<boolean>(() => props.clearable ?? options?.clearable ?? false)
   const messageInvalid = computed<InputLayoutProps["messageInvalid"]>(() => props.messageInvalid ?? "")
   const help = computed<InputLayoutProps["help"]>(() => String(props.help ?? ""))
   const widthLayout = computed<string>(() => {
-    const resultWidth = (props?.width as InputLayoutProps["width"]) ?? options?.height ?? ""
+    const resultWidth = (props?.width as InputLayoutProps["width"]) ?? options?.width ?? ""
     return resultWidth ? (typeof resultWidth === "number" ? `${resultWidth}px` : resultWidth) : ""
   })
   const heightLayout = computed<string>(() => {
     const resultHeight = (props?.height as InputLayoutProps["height"]) ?? options?.height ?? ""
     return resultHeight ? (typeof resultHeight === "number" ? `${resultHeight}px` : resultHeight) : ""
   })
-  const animation = computed<NonNullable<InputLayoutProps["animation"]>>(() =>
-    isTick.value
-      ? ((props?.animation as InputLayoutProps["animation"]) ??
-        options?.animation ??
-        "motion-safe:transition-all motion-safe:duration-550")
-      : ""
+  // Aspect-ключ `animation` (dev-patterns §2 B): transition-классы корня и `base` включаются только после
+  // mount-тика (`isTick`) — на первом кадре поле иначе «переезжает» из исходной точки. `""` отключает.
+  const animation = computed<StyleClass>(() =>
+    isTick.value ? pick("animation", "motion-safe:transition-all motion-safe:duration-550") : ""
   )
   const background = computed(() =>
     mode.value === "outlined"
@@ -88,40 +91,38 @@
           ? "bg-surface-100 dark:bg-surface-900"
           : ""
   )
-  const classBody = computed(() =>
-    InputLayout.setStyle([
-      "inputBody classBody relative rounded-md",
+  // Корень: база → mode → state → options.classes.root → props.classes.root → options.class → props.class
+  // (dev-patterns §2 D) — сегменты потребителя всегда последние, twMerge отдаёт им конфликт.
+  const classBase = computed(() =>
+    cls(
+      "root",
+      "relative rounded-md",
       background.value,
-      animation.value ?? "",
-      options?.classBody ?? "",
-      props?.classBody ?? "",
-      isInvalid.value ? "is-invalid" : "",
+      animation.value,
+      isInvalid.value && "is-invalid",
       // N59: style-for-print — печатаем монохромно и читаемо, без display:none
       "print:border print:border-black print:bg-white print:text-black print:shadow-none"
-    ])
+    )
   )
-  const classBase = computed(() =>
-    InputLayout.setStyle([
-      "classLayout rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
-      heightLayout.value.length ? "" : "max-h-20",
-      isDisabled.value
-        ? "bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-500 border-surface-200 dark:border-surface-800 border-dashed shadow-none"
-        : "",
-      mode.value === "outlined" ? "border border-surface-300 dark:border-surface-600" : "",
-      mode.value === "underlined" ? "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b" : "",
-      mode.value === "filled"
-        ? `${isDisabled.value ? "border-dotted border-2 border-surface-200" : "border-0 border-transparent"} `
-        : "",
-      animation.value ?? "",
-      options?.class ?? "",
-      props?.class ?? "",
-      isInvalid.value
-        ? "border-red-500 dark:border-red-500 ring-1 ring-inset ring-red-500 dark:ring-red-500 scroll-mt-10"
-        : "",
+  // Рамка поля `[data-input-layout-base]` — ключ `base`. Сюда же семейство кладёт focus-ring контрола.
+  const classLayout = computed(() =>
+    cls(
+      "base",
+      "rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
+      !heightLayout.value.length && "max-h-20",
+      isDisabled.value &&
+        "bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-500 border-surface-200 dark:border-surface-800 border-dashed shadow-none",
+      mode.value === "outlined" && "border border-surface-300 dark:border-surface-600",
+      mode.value === "underlined" && "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b",
+      mode.value === "filled" &&
+        (isDisabled.value ? "border-dotted border-2 border-surface-200" : "border-0 border-transparent"),
+      animation.value,
+      isInvalid.value &&
+        "border-red-500 dark:border-red-500 ring-1 ring-inset ring-red-500 dark:ring-red-500 scroll-mt-10",
       "flex items-center peer overflow-auto",
       // B10: high-contrast — border-* сбрасывается forced-colors, outline сохраняет границу поля
       "forced-colors:outline"
-    ])
+    )
   )
   const styleBase = computed(
     () =>
@@ -132,20 +133,23 @@
       (afterWidth.value ? `padding-right: ${afterWidth.value}px;` : "padding-right: 10px;")
   )
   const classBeforeInput = computed(() =>
-    InputLayout.setStyle([
-      "beforeInput absolute inset-y-0 left-0 flex items-center pr-1",
+    cls(
+      "before",
+      "absolute inset-y-0 left-0 flex items-center pr-1",
       beforeInput.value && beforeWidth.value > 16 ? "pl-2" : "pl-1.5"
-    ])
+    )
   )
   const classAfterInput = computed(() => InputLayout.setStyle("absolute inset-y-0 right-0 flex items-center"))
-  const classAfterSlot = computed(() => InputLayout.setStyle("flex pr-2"))
+  const classAfterSlot = computed(() => cls("after", "flex pr-2"))
   const classLoading = computed(() => InputLayout.setStyle("relative mx-4"))
   const classInvalid = computed(() =>
-    InputLayout.setStyle(
+    cls(
+      "message",
       "absolute block text-red-600 dark:text-red-400 text-sm truncate ml-1 data-[invalid=true]:visible invisible"
     )
   )
   const classIconBody = computed(() => InputLayout.setStyle("relative mr-2"))
+  const classHelp = computed(() => cls("help", "relative mr-2"))
   const classIconContent = computed(() =>
     InputLayout.setStyle(
       "p-3 rounded-md shadow-lg " +
@@ -182,13 +186,14 @@
     isLoading,
     isDisabled,
     isInvalid,
+    isClearable,
     messageInvalid,
     help,
     width: widthLayout,
     height: heightLayout,
     animation,
-    classBody,
-    class: classBase,
+    classBase,
+    classLayout,
     // ---METHODS-----------------------
     copy
   })
@@ -321,7 +326,7 @@
   <div
     data-input-layout
     ref="inputBody"
-    :class="classBody"
+    :class="classBase"
     :style="`${widthLayout ? `width:${widthLayout};` : ''}${heightLayout ? `height:${heightLayout};` : ''}scroll-margin-top: ${headerHeight + 10}px;`">
     <div
       v-if="slots.before"
@@ -331,7 +336,7 @@
       :style="`${heightLayout ? `height:${heightLayout};` : ''}max-height: 4rem;`">
       <slot name="before" />
     </div>
-    <div data-input-layout-base ref="input" :class="classBase" :style="styleBase">
+    <div data-input-layout-base ref="input" :class="classLayout" :style="styleBase">
       <slot :id="fieldId" :labelledby="labelId" />
     </div>
     <slot name="body" />
@@ -345,7 +350,8 @@
       :required="isRequired"
       :translate-x="beforeWidth || 10"
       :max-width="widthInput"
-      :animated="isTick" />
+      :animated="isTick"
+      :class="raw('label')" />
     <span
       ref="afterInput"
       :class="classAfterInput"
@@ -364,7 +370,7 @@
           <Loading v-if="isLoading" type="simple" class="absolute -top-[10px] -left-4" />
         </div>
       </transition>
-      <div v-if="help?.length" data-input-layout-help :class="classIconBody">
+      <div v-if="help?.length" data-input-layout-help :class="classHelp">
         <Icons
           type="QuestionMarkCircle"
           stile-icon="solid"
@@ -422,7 +428,7 @@
           enter-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-if="clear && (value?.length || value > 0)" data-input-layout-clear :class="classIconBody">
+          <div v-if="isClearable && (value?.length || value > 0)" data-input-layout-clear :class="classIconBody">
             <Icons
               type="XCircle"
               stile-icon="solid"

@@ -1,9 +1,9 @@
 import { VNode, MaybeRef } from "vue"
 import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode, THeight, TWidth } from "../types"
-import { BaseInputProps } from "fishtvue/input"
-import { BaseSelectProps } from "fishtvue/select"
+import { BaseInputProps, InputProps } from "fishtvue/input"
+import { BaseSelectProps, SelectProps } from "fishtvue/select"
 import { PaginationProps } from "fishtvue/pagination"
-import { BaseCalendarProps } from "fishtvue/calendar"
+import { BaseCalendarProps, CalendarProps } from "fishtvue/calendar"
 
 /**
  * ## Table
@@ -30,28 +30,33 @@ export type ResultData = Record<DataField, Array<Record<string, any>>>
 type EditorCell = {
   isEdit?: boolean
 }
+// Фильтры и cell-редакторы v-bind'ятся прямо в контрол, поэтому принимают и его `class`/`classes`
+// (контракт props 1.0 — dev-patterns §2 A–C), а не только `Base*Props`-часть.
+type FilterInputProps = Partial<BaseInputProps> & Pick<InputProps, "class" | "classes">
+type FilterSelectProps = Partial<BaseSelectProps> & Pick<SelectProps, "class" | "classes">
+type FilterCalendarProps = Partial<BaseCalendarProps> & Pick<CalendarProps, "class" | "classes">
 export type EditInput = EditorCell & {
-  editorOptions?: Partial<BaseInputProps>
+  editorOptions?: FilterInputProps
 }
 type InputDataType = {
   type?: "string" | "number"
-  paramsFilter?: Partial<BaseInputProps>
+  paramsFilter?: FilterInputProps
   edit?: EditInput | boolean
 }
 export type EditSelect = EditorCell & {
-  editorOptions?: Partial<BaseSelectProps>
+  editorOptions?: FilterSelectProps
 }
 type SelectDataType = {
   type?: "select"
-  paramsFilter?: Partial<BaseSelectProps>
+  paramsFilter?: FilterSelectProps
   edit?: EditSelect | boolean
 }
 export type EditDate = EditorCell & {
-  editorOptions?: Partial<BaseCalendarProps>
+  editorOptions?: FilterCalendarProps
 }
 type DateDataType = {
   type?: "date"
-  paramsFilter?: Partial<BaseCalendarProps>
+  paramsFilter?: FilterCalendarProps
   edit?: EditDate | boolean
 }
 

@@ -73,8 +73,10 @@ describe("Calendar Component", () => {
       const inputElement = wrapper.find("[data-calendar] div")
       expect(inputElement.exists()).toBe(true)
 
-      // Проверяем, отображается ли placeholder
-      expect(wrapper.attributes("placeholder")).toBe(placeholderText)
+      // `placeholder` — не prop Calendar: он падает fallthrough-атрибутом на корень (`[data-calendar]`).
+      // `wrapper.attributes()` у компонента с компонентным корнем читает контейнер mount'а, поэтому
+      // проверяем сам корень.
+      expect(wrapper.find("[data-calendar]").attributes("placeholder")).toBe(placeholderText)
     })
 
     it("does not display placeholder when value is provided", async () => {
@@ -87,7 +89,7 @@ describe("Calendar Component", () => {
           modelValue: value
         }
       })
-      const inputElement = wrapper.find("[data-calendar]")
+      const inputElement = wrapper.find("[data-calendar-control]")
       await waitFor(() => inputElement.text().length > 0)
       expect(inputElement.exists()).toBe(true)
 
@@ -135,7 +137,7 @@ describe("Calendar Component", () => {
               clear: true,
               modelValue: null,
               isInvalid: true,
-              paramsDatePicker: {
+              datePickerProps: {
                 isRange: false,
                 mask: "DD.MM.YYYY"
               }
@@ -143,7 +145,7 @@ describe("Calendar Component", () => {
           })
 
           // Найти элемент календаря
-          const calendarTrigger = wrapper.find("[data-calendar]")
+          const calendarTrigger = wrapper.find("[data-calendar-control]")
           expect(calendarTrigger.exists()).toBe(true)
 
           // Кликнуть по элементу для открытия календаря
@@ -210,13 +212,13 @@ describe("Calendar Component", () => {
       const wrapper = mount(Calendar, {
         props: {
           modelValue: { start: "2024-11-23", end: "2024-11-25" },
-          paramsDatePicker: {
-            isRange: true,
+          range: true,
+          datePickerProps: {
             mask: "YYYY-MM-DD"
           }
         }
       })
-      const dateDisplay = wrapper.find("[data-calendar]")
+      const dateDisplay = wrapper.find("[data-calendar-control]")
       await waitFor(() => dateDisplay.text().length > 0)
       expect(dateDisplay.text()).toContain("2024-11-23")
       expect(dateDisplay.text()).toContain("2024-11-25")
@@ -228,12 +230,12 @@ describe("Calendar Component", () => {
       const wrapper = mount(Calendar, {
         props: {
           modelValue: "2024-11-23",
-          paramsDatePicker: {
+          datePickerProps: {
             mask: "DD.MM.YYYY"
           }
         }
       })
-      const dateDisplay = wrapper.find("[data-calendar]")
+      const dateDisplay = wrapper.find("[data-calendar-control]")
       await waitFor(() => dateDisplay.text().length > 0)
       expect(dateDisplay.text()).toBe("23.11.2024")
     })
@@ -362,7 +364,7 @@ describe("Calendar Component", () => {
       expect(datePicker.props("locale")).toBe("ru")
     })
 
-    it("paramsDatePicker.locale (consumer override) wins over active locale", async () => {
+    it("datePickerProps.locale (consumer override) wins over active locale", async () => {
       const app = {
         install(app: any) {
           app.use(FishtVue, {
@@ -373,7 +375,7 @@ describe("Calendar Component", () => {
       const wrapper = mount(Calendar, {
         global: { plugins: [app as any] },
         props: {
-          paramsDatePicker: { locale: "en" }
+          datePickerProps: { locale: "en" }
         }
       })
       await waitFor(() => wrapper.findComponent(DatePicker as any).exists())
@@ -386,7 +388,7 @@ describe("Calendar Component", () => {
   describe("Accessibility — label association (Wave 4)", () => {
     it("links the calendar trigger to the label via aria-labelledby", () => {
       const wrapper = mount(Calendar, { props: { label: "Date", id: "date" } })
-      const trigger = wrapper.find("[data-calendar]")
+      const trigger = wrapper.find("[data-calendar-control]")
       expect(trigger.exists()).toBe(true)
       expect(trigger.attributes("aria-labelledby")).toBe("date-label")
       expect(wrapper.find("label[data-label]").attributes("id")).toBe("date-label")
@@ -396,7 +398,7 @@ describe("Calendar Component", () => {
   // ---B10 (2026-07-04) — миграция structural gray-*/stone-*/slate-* → semantic surface-* (тот же
   // числовой tone, только family rename). `surface` — 23-й named color в lib/theme/primitive.ts,
   // дефолт = точная копия gray. Source-scan (не mount) — часть классов вычисляется в computed/ref
-  // style-строках (classDateText, classPicker, classPlaceholder) и в inline :class-биндингах шаблона
+  // style-строках (classText, classPicker, classPlaceholder) и в inline :class-биндингах шаблона
   // (separator-иконки), которые не всегда достижимы через один DOM-снимок за один mount.
   // v-calendar's OWN internal theming (--vc-accent-*, vc-primary) — не в scope, не трогалось.
   describe("B10 — semantic surface-* tokens (2026-07-04)", () => {
@@ -502,5 +504,168 @@ describe("Calendar Component", () => {
       expect(src).not.toMatch(/^\s*import\s+["']v-calendar\/style\.css["']/m)
       expect(src).toMatch(/import\(["']v-calendar\/style\.css["']\)/)
     })
+  })
+})
+
+// =====================================================================================================================
+// Wave 13 / W2 — контракт props 1.0: `class` → корень `[data-calendar]`, `classes` → карта
+// (семейные + `control`/`text`/`picker`), `datePickerProps`/`range`/`closeOnSelect`/`fixWindowProps`,
+// emits `ready`/`active`/`update:invalid`.
+// =====================================================================================================================
+describe("Calendar — props 1.0 (Wave 13, W2)", () => {
+  const withOptions = (options: Record<string, unknown>) => ({
+    install(app: any) {
+      app.use(FishtVue, { componentsOptions: { Calendar: options } })
+    }
+  })
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
+  it("публичный набор props — контракт 1.0 (paramsDatePicker/isNotCloseOnDateChange/class*/paramsFixWindow сняты)", () => {
+    const wrapper = mount(Calendar)
+    expect(wrapper.props()).toEqual({
+      id: undefined,
+      modelValue: undefined,
+      classes: undefined,
+      mode: undefined,
+      label: undefined,
+      labelMode: undefined,
+      invalid: undefined,
+      messageInvalid: undefined,
+      required: undefined,
+      loading: undefined,
+      disabled: undefined,
+      help: undefined,
+      clearable: undefined,
+      width: undefined,
+      height: undefined,
+      class: undefined,
+      offsetTop: undefined,
+      datePickerProps: undefined,
+      range: undefined,
+      autoFocus: undefined,
+      closeOnSelect: undefined,
+      fixWindowProps: undefined
+    })
+  })
+
+  it("корень Calendar — корень InputLayout с data-calendar; триггер получил data-calendar-control", () => {
+    const wrapper = mount(Calendar, { props: { label: "L", class: "probe-root" } })
+    const root = wrapper.find("[data-calendar]")
+    expect(root.attributes("data-input-layout")).toBeDefined()
+    expect(root.classes()).toContain("probe-root")
+    expect(root.element.querySelectorAll("[class~='probe-root']").length).toBe(0)
+    expect(wrapper.find("[data-calendar-control]").exists()).toBe(true)
+  })
+
+  it.each([
+    ["base", "[data-input-layout-base]"],
+    ["label", "[data-calendar] > [data-label]"],
+    ["control", "[data-calendar-control]"],
+    ["text", "[data-calendar-text]"],
+    ["picker", "[data-calendar-picker]"]
+  ])("classes.%s → %s", (key, selector) => {
+    const wrapper = mount(Calendar, { props: { label: "L", classes: { [key]: "probe-key" } } })
+    expect(wrapper.find(selector).classes()).toContain("probe-key")
+    expect(wrapper.find("[data-calendar]").classes()).not.toContain("probe-key")
+  })
+
+  it("componentsOptions.Calendar.classes сливается по ключу под props.classes", () => {
+    const wrapper = mount(Calendar, {
+      global: { plugins: [withOptions({ class: "opt-root", classes: { control: "p-2 opt-ctl" } })] },
+      props: { class: "prop-root", classes: { control: "p-4" } }
+    })
+    const control = wrapper.find("[data-calendar-control]").classes()
+    expect(control).toContain("p-4")
+    expect(control).toContain("opt-ctl")
+    expect(control).not.toContain("p-2")
+    expect(wrapper.find("[data-calendar]").classes()).toEqual(expect.arrayContaining(["opt-root", "prop-root"]))
+  })
+
+  it("range вместо datePickerProps.isRange: включает range-разметку и уходит в DatePicker", () => {
+    const single = mount(Calendar)
+    expect((single.vm as any).isRange).toBe(false)
+    expect((single.vm as any).datePickerOptions.isRange).toBe(false)
+    const ranged = mount(Calendar, { props: { range: true } })
+    expect((ranged.vm as any).isRange).toBe(true)
+    expect((ranged.vm as any).datePickerOptions.isRange).toBe(true)
+    // legacy-путь через bag больше не включает диапазон
+    const legacy = mount(Calendar, { props: { datePickerProps: { isRange: true } as any } })
+    expect((legacy.vm as any).isRange).toBe(false)
+  })
+
+  it("closeOnSelect: default true закрывает picker при выборе, false — оставляет открытым", async () => {
+    const wrapper = mount(Calendar)
+    expect(wrapper.props("closeOnSelect")).toBeUndefined()
+    expect((wrapper.vm as any).isCloseOnSelect).toBe(true)
+    ;(wrapper.vm as any).openCalendar()
+    await nextTick()
+    ;(wrapper.vm as any).changeDate("01.01.2026")
+    expect((wrapper.vm as any).isOpenPicker).toBe(false)
+    const kept = mount(Calendar, { props: { closeOnSelect: false } })
+    ;(kept.vm as any).openCalendar()
+    await nextTick()
+    ;(kept.vm as any).changeDate("01.01.2026")
+    expect((kept.vm as any).isOpenPicker).toBe(true)
+  })
+
+  it("closeOnSelect достижим через componentsOptions", async () => {
+    const wrapper = mount(Calendar, { global: { plugins: [withOptions({ closeOnSelect: false })] } })
+    ;(wrapper.vm as any).openCalendar()
+    await nextTick()
+    ;(wrapper.vm as any).changeDate("01.01.2026")
+    expect((wrapper.vm as any).isOpenPicker).toBe(true)
+  })
+
+  it("fixWindowProps заменяет paramsFixWindow", () => {
+    const wrapper = mount(Calendar, { props: { fixWindowProps: { position: "top-right" } } })
+    expect((wrapper.vm as any).fixWindowProps.position).toBe("top-right")
+    expect(wrapper.findComponent({ name: "FixWindow" }).props("position")).toBe("top-right")
+  })
+
+  it("emits ready / active / update:invalid вместо getCalendar / isActive / update:isInvalid", async () => {
+    const wrapper = mount(Calendar)
+    ;(wrapper.vm as any).openCalendar()
+    await nextTick()
+    expect(wrapper.emitted("active")?.[0]).toEqual([true])
+    expect(wrapper.emitted("isActive")).toBeUndefined()
+    ;(wrapper.vm as any).changeDate("01.01.2026")
+    expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
+    expect(wrapper.emitted("update:isInvalid")).toBeUndefined()
+    expect(wrapper.emitted("getCalendar")).toBeUndefined()
+  })
+
+  it("focus-ring триггера живёт в classes.base у InputLayout и уступает рамке ошибки", async () => {
+    const wrapper = mount(Calendar, { attachTo: document.body })
+    const base = () => wrapper.find("[data-input-layout-base]").classes()
+    await wrapper.find("[data-calendar-control]").trigger("focusin")
+    expect(base()).toContain("ring-theme-600")
+    await wrapper.setProps({ invalid: true })
+    expect(base()).toContain("ring-red-500")
+    expect(base()).not.toContain("ring-theme-600")
+    wrapper.unmount()
+  })
+
+  it("clearable достижим через componentsOptions и уезжает в InputLayout", () => {
+    const wrapper = mount(Calendar, {
+      global: { plugins: [withOptions({ clearable: true })] },
+      props: { modelValue: "01.01.2026" }
+    })
+    expect(wrapper.props("clearable")).toBeUndefined()
+    expect((wrapper.vm as any).isClearable).toBe(true)
+    expect(wrapper.findComponent({ name: "InputLayout" }).props("clearable")).toBe(true)
+  })
+
+  it("unstyled: классы потребителя остаются на корне, control и picker, темы нет", () => {
+    const wrapper = mount(Calendar, {
+      global: { plugins: [{ install: (app: any) => app.use(FishtVue, { unstyled: true }) }] },
+      props: { class: "probe-root", classes: { control: "probe-ctl", picker: "probe-picker" } }
+    })
+    expect(wrapper.find("[data-calendar]").classes()).toEqual(["fv", "probe-root"])
+    expect(wrapper.find("[data-calendar-control]").classes()).toEqual(["fv", "probe-ctl"])
+    const picker = wrapper.find("[data-calendar-picker]").classes()
+    expect(picker).toContain("probe-picker")
+    expect(picker.some((c) => c.startsWith("fishtvue-"))).toBe(false)
   })
 })

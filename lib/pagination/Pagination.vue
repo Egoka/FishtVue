@@ -122,12 +122,16 @@
             "rounded-none border-t-2 border-transparent pt-4 px-2 hover:border-surface-300 hover:text-surface-700 dark:hover:border-surface-700 dark:hover:text-surface-300"
           : ""
   )
-  const paramsSelect = computed<Partial<BaseSelectProps>>(() => ({
-    noQuery: true,
-    classSelect: "font-bold text-surface-600 dark:text-surface-500",
-    classSelectList: "min-w-[8rem]",
-    dataSelect: arraySizesSelector.value,
-    paramsFixWindow: {
+  // Hand-off в Select по контракту 1.0 (dev-patterns §2 A–C): чистый listbox без поиска,
+  // внутренние классы — через карту `classes`, позиционирование — через `fixWindowProps`.
+  const paramsSelect = computed<Partial<BaseSelectProps> & { classes: Record<string, string> }>(() => ({
+    searchable: false,
+    classes: {
+      control: "font-bold text-surface-600 dark:text-surface-500",
+      list: "min-w-[8rem]"
+    },
+    options: arraySizesSelector.value,
+    fixWindowProps: {
       position: "top-right"
     }
   }))

@@ -17,14 +17,9 @@ const LIB = resolve(process.cwd(), "lib")
 
 const PENDING: string[] = [
   "accordion/Accordion.d.ts",
-  "calendar/Calendar.d.ts",
-  "input/Input.d.ts",
   "menu/Menu.d.ts",
   "pagination/Pagination.d.ts",
-  "select/Select.d.ts",
-  "table/Table.d.ts",
-  "textarea/Textarea.d.ts",
-  "texteditor/TextEditor.d.ts"
+  "table/Table.d.ts"
 ]
 
 const EVENT_NAME = /^(?:update:|change:)[a-zA-Z]+$|^[a-z]+(?:-[a-z]+)*$/

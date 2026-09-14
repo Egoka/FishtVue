@@ -69,7 +69,7 @@
   import { StyleClass, TLoading } from "fishtvue/types"
   import { BaseInputProps } from "fishtvue/input"
   import { BaseSelectProps } from "fishtvue/select"
-  import { BaseCalendarProps, IRangeValue } from "fishtvue/calendar"
+  import { BaseCalendarProps, CalendarRangeValue } from "fishtvue/calendar"
   import { InputLayoutProps } from "fishtvue/inputlayout"
   import { isClient } from "fishtvue/utils/domHandler"
   import { formatDate } from "fishtvue/utils/dateHandler"
@@ -528,38 +528,37 @@
               options.paramsFilter = {
                 multiple: true,
                 maxVisible: 0,
-                classSelect: "normal-case max-h-[25rem]",
-                classSelectList: "normal-case font-normal",
-                dataSelect:
-                  (column?.paramsFilter as Partial<BaseSelectProps>)?.dataSelect ??
+                classes: { control: "normal-case max-h-[25rem]", list: "normal-case font-normal" },
+                options:
+                  (column?.paramsFilter as Partial<BaseSelectProps>)?.options ??
                   LD.uniq(LD.map(allData.value, options.dataField ?? ""))
                     .filter((v) => v !== null && v !== undefined)
                     .sort((a, b) => String(a).localeCompare(String(b))),
-                paramsFixWindow: {
+                fixWindowProps: {
                   position: "bottom",
-                  ...(column?.paramsFilter as Partial<BaseSelectProps>)?.paramsFixWindow
+                  ...(column?.paramsFilter as Partial<BaseSelectProps>)?.fixWindowProps
                 },
                 ...column.paramsFilter
-              } as Partial<BaseSelectProps>
+              } as IColumnPrivate["paramsFilter"]
               options.edit = {
                 editorOptions: (<BaseSelectProps>{
                   ...options.paramsFilter,
                   autoFocus: true,
                   multiple: false,
                   ...(column?.edit as EditSelect)?.editorOptions,
-                  paramsFixWindow: {
+                  fixWindowProps: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...(column?.edit as EditSelect)?.editorOptions?.paramsFixWindow
+                    ...(column?.edit as EditSelect)?.editorOptions?.fixWindowProps
                   }
-                }) as Partial<BaseSelectProps>
+                }) as IColumnPrivate["paramsFilter"]
               }
               break
             }
             case "date": {
               options.paramsFilter = {
-                paramsDatePicker: {
-                  isRange: true,
+                range: true,
+                datePickerProps: {
                   attributes: [
                     {
                       highlight: { fillMode: "light" },
@@ -572,30 +571,27 @@
                     }
                   ],
                   mask:
-                    (column.paramsFilter as Partial<BaseCalendarProps>)?.paramsDatePicker?.masks?.modelValue ??
+                    (column.paramsFilter as Partial<BaseCalendarProps>)?.datePickerProps?.masks?.modelValue ??
                     "DD.MM.YYYY"
                 },
-                paramsFixWindow: {
+                fixWindowProps: {
                   position: "bottom",
-                  ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.paramsFixWindow
+                  ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.fixWindowProps
                 },
                 ...column.paramsFilter
               } as Partial<BaseCalendarProps>
               options.edit = {
                 editorOptions: {
                   ...options.paramsFilter,
-                  paramsDatePicker: {
-                    ...(options?.paramsFilter as Partial<BaseCalendarProps>)?.paramsDatePicker,
-                    isRange: false
-                  },
+                  range: false,
                   autoFocus: true,
                   ...(column?.edit as EditDate)?.editorOptions,
                   label: "",
                   labelMode: "none",
-                  paramsFixWindow: {
+                  fixWindowProps: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...((column?.edit as EditDate)?.editorOptions as Partial<BaseCalendarProps>)?.paramsFixWindow
+                    ...((column?.edit as EditDate)?.editorOptions as Partial<BaseCalendarProps>)?.fixWindowProps
                   }
                 } as Partial<BaseCalendarProps> & Pick<InputLayoutProps, "label" | "labelMode">
               }
@@ -1500,7 +1496,7 @@
         if (value instanceof Date) {
           return isEqual(startOfDay(columnValue), startOfDay(value))
         } else {
-          const range = value as IRangeValue
+          const range = value as CalendarRangeValue
           if (range?.start instanceof Date && range?.end instanceof Date) {
             return isWithinInterval(startOfDay(columnValue), {
               start: startOfDay(range.start),
@@ -1606,7 +1602,7 @@
           valueCell = toMask()
           break
         case "date":
-          valueCell = formatDate(value, (column as EditDate).editorOptions?.paramsDatePicker?.mask)
+          valueCell = formatDate(value, (column as EditDate).editorOptions?.datePickerProps?.mask)
           break
         default:
           valueCell = value
@@ -1971,12 +1967,15 @@
         <Input
           :model-value="queryTable"
           :label="Table.t('find') ?? 'Find...'"
-          clear
+          clearable
           :mode="mode"
           label-mode="vanishing"
           autocomplete="off"
-          class-input="min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] motion-safe:transition-all motion-safe:duration-500"
-          :class-body="`sticky top-1 rounded-md ease-out ${modeStyle} mb-2`"
+          :classes="{
+            control:
+              'min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] motion-safe:transition-all motion-safe:duration-500'
+          }"
+          :class="`sticky top-1 rounded-md ease-out ${modeStyle} mb-2`"
           @change:model-value="(v) => searching(v)"
           @update:model-value="(v) => lengthData > 100 || searching(v)">
           <template #before>
@@ -2046,14 +2045,11 @@
                           v-bind="column?.paramsFilter as BaseInputProps"
                           :label="column.caption"
                           :mode="mode"
-                          :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="[
-                            'tm-0 my-1 bg-inherit dark:bg-inherit',
-                            column.class?.colFilterClassBody as string
-                          ]"
+                          :classes="{ base: ['border-none font-normal', column.class?.colFilterClass as string] }"
+                          :class="['tm-0 my-1 bg-inherit dark:bg-inherit', column.class?.colFilterClassBody as string]"
                           :style="`min-width: ${column.minWidth || 70}px;${styleThFilter(column)}`"
                           label-mode="offsetDynamic"
-                          clear
+                          clearable
                           @change:model-value="(v) => filtering(column?.dataField, v)"
                           @update:model-value="(v) => lengthData > 100 || filtering(column?.dataField, v)"
                           @clear="filtering(column?.dataField, null)" />
@@ -2062,41 +2058,40 @@
                           :model-value="filterColumns[column?.dataField]"
                           v-bind="{
                             ...(column?.paramsFilter as BaseSelectProps),
-                            paramsFixWindow: {
+                            fixWindowProps: {
                               scrollableEl: tableBody,
-                              ...(column?.paramsFilter as Partial<BaseSelectProps>)?.paramsFixWindow
+                              ...(column?.paramsFilter as Partial<BaseSelectProps>)?.fixWindowProps
                             }
                           }"
                           :label="column.caption"
                           :mode="mode"
-                          :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="[
-                            'tm-0 my-1 bg-inherit dark:bg-inherit',
-                            column.class?.colFilterClassBody as string
-                          ]"
+                          :classes="{
+                            ...((
+                              column?.paramsFilter as Partial<BaseSelectProps> & { classes?: Record<string, string> }
+                            )?.classes ?? {}),
+                            base: ['border-none font-normal', column.class?.colFilterClass as string]
+                          }"
+                          :class="['tm-0 my-1 bg-inherit dark:bg-inherit', column.class?.colFilterClassBody as string]"
                           :style="`min-width: ${column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
-                          clear
+                          clearable
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                         <Calendar
                           v-else-if="column.type === 'date'"
                           :model-value="filterColumns[column?.dataField]"
                           v-bind="{
                             ...(column?.paramsFilter as BaseCalendarProps),
-                            paramsFixWindow: {
+                            fixWindowProps: {
                               scrollableEl: tableBody,
-                              ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.paramsFixWindow
+                              ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.fixWindowProps
                             }
                           }"
                           :label="column.caption"
                           :mode="mode"
                           label-mode="offsetDynamic"
-                          :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="[
-                            'tm-0 my-1 bg-inherit dark:bg-inherit',
-                            column.class?.colFilterClassBody as string
-                          ]"
+                          :classes="{ base: ['border-none font-normal', column.class?.colFilterClass as string] }"
+                          :class="['tm-0 my-1 bg-inherit dark:bg-inherit', column.class?.colFilterClassBody as string]"
                           :style="`min-width: ${widthsColumns[column.dataField] ? widthsColumns[column.dataField] - 30 : column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
-                          clear
+                          clearable
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                       </div>
                       <div v-else data-table-thead-col-no-filter :class="classNotFilter(column)">
@@ -2235,34 +2230,40 @@
                               :model-value="data[column.dataField]"
                               v-bind="{
                                 ...(column.edit as EditInput)?.editorOptions,
-                                classInput: `pt-[3px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                  (column.edit as EditInput)?.editorOptions?.classInput ?? ''
-                                }`
+                                classes: {
+                                  ...((column.edit as EditInput)?.editorOptions?.classes ?? {}),
+                                  base: 'border-none font-normal bg-transparent dark:bg-transparent',
+                                  control: `pt-[3px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                    (column.edit as EditInput)?.editorOptions?.classes?.control ?? ''
+                                  }`
+                                }
                               }"
                               :mode="mode"
-                              class="border-none font-normal bg-transparent dark:bg-transparent"
-                              class-body="pt-0 -my-3 w-full"
+                              class="pt-0 -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
+                              @active="(active) => active || clearEditableCell(absIndex(indexRow), indexCol)"
                               @change:model-value="(value) => updateCell(data?._key, column, value)" />
                             <Select
                               v-else-if="column.type === 'select'"
                               :model-value="data[column.dataField]"
                               v-bind="{
                                 ...(column.edit as EditSelect)?.editorOptions,
-                                paramsFixWindow: {
+                                fixWindowProps: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditSelect)?.editorOptions?.paramsFixWindow
+                                  ...(column.edit as EditSelect)?.editorOptions?.fixWindowProps
                                 },
-                                classSelect: `pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                  (column.edit as EditSelect)?.editorOptions?.classSelect ?? ''
-                                }`
+                                classes: {
+                                  ...((column.edit as EditSelect)?.editorOptions?.classes ?? {}),
+                                  base: 'border-none font-normal bg-transparent dark:bg-transparent',
+                                  control: `pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                    (column.edit as EditSelect)?.editorOptions?.classes?.control ?? ''
+                                  }`
+                                }
                               }"
                               :mode="mode"
-                              class="border-none font-normal bg-transparent dark:bg-transparent"
-                              class-body="pt-[0px] -my-3 w-full"
+                              class="pt-[0px] -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
+                              @active="(active) => active || clearEditableCell(absIndex(indexRow), indexCol)"
                               @update:model-value="
                                 (value) => {
                                   updateCell(data?._key, column, value)
@@ -2273,19 +2274,22 @@
                               :model-value="data[column.dataField]"
                               v-bind="{
                                 ...(column.edit as EditDate)?.editorOptions,
-                                paramsFixWindow: {
+                                fixWindowProps: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditDate)?.editorOptions?.paramsFixWindow
+                                  ...(column.edit as EditDate)?.editorOptions?.fixWindowProps
                                 },
-                                classDateText: `pt-[6px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                  (column.edit as EditDate)?.editorOptions?.classDateText ?? ''
-                                }`
+                                classes: {
+                                  ...((column.edit as EditDate)?.editorOptions?.classes ?? {}),
+                                  base: 'border-none font-normal bg-transparent dark:bg-transparent',
+                                  text: `pt-[6px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
+                                    (column.edit as EditDate)?.editorOptions?.classes?.text ?? ''
+                                  }`
+                                }
                               }"
                               :mode="mode"
-                              class="border-none font-normal bg-transparent dark:bg-transparent"
-                              class-body="pt-0 -my-3 w-full"
+                              class="pt-0 -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(absIndex(indexRow), indexCol)"
+                              @active="(active) => active || clearEditableCell(absIndex(indexRow), indexCol)"
                               @update:model-value="(value) => updateCell(data?._key, column, value)" />
                           </template>
                         </div>

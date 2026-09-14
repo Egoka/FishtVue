@@ -67,8 +67,8 @@ describe("TextEditor Component", () => {
         attachTo: document.body,
         props: {
           modelValue: "",
-          clear: true,
-          paramsTextEditor: { content: "<p>Initial content</p>" },
+          clearable: true,
+          editorProps: { content: "<p>Initial content</p>" },
           theme: "bubble"
         },
         global: {
@@ -98,7 +98,7 @@ describe("TextEditor Component", () => {
       await wrapper.setProps({ modelValue: "<p>Updated content</p>" })
       await nextTick()
       // Найти кнопку очистки
-      const clearButton = wrapper.find("[data-input-layout-clear] i")
+      const clearButton = wrapper.find("[data-input-layout-clear] [data-icon]")
       expect(clearButton.exists()).toBe(true)
 
       // Нажать на кнопку
@@ -111,13 +111,13 @@ describe("TextEditor Component", () => {
     it("clears content on clear button click", async () => {
       const wrapper = mount(TextEditor, {
         props: {
-          clear: true,
+          clearable: true,
           modelValue: "<p>Some content</p>"
         }
       })
       await nextTick()
       // Найти кнопку очистки
-      const clearButton = wrapper.find("[data-input-layout-clear] i")
+      const clearButton = wrapper.find("[data-input-layout-clear] [data-icon]")
       expect(clearButton.exists()).toBe(true)
 
       // Нажать на кнопку
@@ -170,7 +170,7 @@ describe("TextEditor Component", () => {
       const quillEditorVm = quillEditor.vm as any
       quillEditorVm.$emit("update:content", "<p>Disabled content</p>")
 
-      expect(wrapper.emitted("update:isInvalid")?.[0]).toEqual([false])
+      expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
       expect(wrapper.emitted("update:modelValue")?.[0]).toEqual(["<p>Disabled content</p>"])
       expect(wrapper.emitted("change:modelValue")).toBeUndefined()
     })
@@ -227,13 +227,12 @@ describe("TextEditor Component", () => {
     })
 
     it.each([
-      ["paramsDialog", { width: "500px", height: "600px" }],
-      ["paramsTextEditor", { toolbar: "minimal", contentType: "html" }],
+      ["dialogProps", { width: "500px", height: "600px" }],
+      ["editorProps", { toolbar: "minimal", contentType: "html" }],
       ["theme", "snow"],
       ["mode", "outlined"],
       ["labelMode", "offsetDynamic"],
       // ["animation", "transition-all duration-550"],
-      ["classBody", "custom-body-class"],
       ["class", "custom-class"]
     ])("applies global %s option", (optionKey, optionValue) => {
       const localVue = createAppWithFishtVue({ [optionKey]: optionValue })
@@ -242,12 +241,15 @@ describe("TextEditor Component", () => {
         global: { plugins: [localVue] }
       })
 
-      if (optionKey === "paramsDialog") {
-        expect(wrapper.vm.paramsDialog).toEqual(optionValue)
-      } else if (optionKey === "paramsTextEditor") {
-        expect(wrapper.vm.paramsQuillEditor).toMatchObject(optionValue as object)
+      if (optionKey === "dialogProps") {
+        expect(wrapper.vm.dialogProps).toEqual(optionValue)
+      } else if (optionKey === "editorProps") {
+        expect(wrapper.vm.editorProps).toMatchObject(optionValue as object)
       } else if (optionKey === "theme" || optionKey === "mode") {
         expect(wrapper.vm[optionKey]).toEqual(optionValue)
+      } else if (optionKey === "class") {
+        // `class` уезжает на корень layout'а (он же корень TextEditor) — см. dev-patterns §2 A.
+        expect(wrapper.find("[data-text-editor]").classes()).toContain(optionValue)
       } else {
         const componentInputLayout = wrapper.findComponent({ name: "InputLayout" })
         expect(componentInputLayout.vm[optionKey]).toContain(optionValue)
@@ -285,21 +287,23 @@ describe("TextEditor Component", () => {
 
     it("inherits and applies global styles from options", () => {
       const localVue = createAppWithFishtVue({
-        classBody: "global-body-class",
-        class: "global-class"
+        class: "global-class",
+        classes: { base: "global-base-class", editor: "global-editor-class" }
       })
 
       const wrapper = mount(TextEditor, {
         global: { plugins: [localVue] }
       })
-      const componentInputLayout = wrapper.findComponent({ name: "InputLayout" })
-      expect(componentInputLayout.vm.classBody).toContain("global-body-class")
-      expect(componentInputLayout.vm.classBase).toContain("global-class")
+      // `class` — корень (он же корень InputLayout), `classes.base` — рамка поля,
+      // `classes.editor` — inline-контейнер редактора.
+      expect(wrapper.find("[data-text-editor]").classes()).toContain("global-class")
+      expect(wrapper.find("[data-input-layout-base]").classes()).toContain("global-base-class")
+      expect(wrapper.find("[data-text-editor-editor]").classes()).toContain("global-editor-class")
     })
 
     it("emits events and updates modelValue when interacting with the editor", async () => {
       const localVue = createAppWithFishtVue({
-        paramsTextEditor: { contentType: "delta" }
+        editorProps: { contentType: "delta" }
       })
 
       const wrapper = await mountEditor({
@@ -562,5 +566,140 @@ describe("TextEditor — тема и подписи через CSS-переме�
 
     expect(style).toContain('--fv-quill-link-label: "Ваша ссылка"')
     expect(style).toContain('--fv-quill-save-label: "Сохранить"')
+  })
+})
+
+// =====================================================================================================================
+// Wave 13 / W2 — контракт props 1.0: `class` → корень `[data-text-editor]`, `classes` → карта
+// (семейные + `editor`), `dialogProps`/`editorProps`, emit `update:invalid`.
+// =====================================================================================================================
+describe("TextEditor — props 1.0 (Wave 13, W2)", () => {
+  const withOptions = (options: Record<string, unknown>) => ({
+    install(app: any) {
+      app.use(FishtVue, { componentsOptions: { TextEditor: options } })
+    }
+  })
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
+  it("публичный набор props — контракт 1.0 (paramsDialog/paramsTextEditor/isInvalid/clear сняты)", async () => {
+    const wrapper = mount(TextEditor)
+    await flushPromises()
+    expect(wrapper.props()).toEqual({
+      id: undefined,
+      modelValue: undefined,
+      classes: undefined,
+      mode: undefined,
+      label: undefined,
+      labelMode: undefined,
+      invalid: undefined,
+      messageInvalid: undefined,
+      required: undefined,
+      loading: undefined,
+      disabled: undefined,
+      help: undefined,
+      clearable: undefined,
+      width: undefined,
+      height: undefined,
+      class: undefined,
+      offsetTop: undefined,
+      dialogProps: undefined,
+      editorProps: undefined,
+      theme: undefined
+    })
+  })
+
+  it("корень TextEditor — корень InputLayout с data-text-editor; `class` только на нём", async () => {
+    const wrapper = mount(TextEditor, { props: { label: "L", class: "probe-root" } })
+    await flushPromises()
+    const root = wrapper.find("[data-text-editor]")
+    expect(root.attributes("data-input-layout")).toBeDefined()
+    expect(root.classes()).toContain("probe-root")
+    expect(root.element.querySelectorAll("[class~='probe-root']").length).toBe(0)
+  })
+
+  it.each([
+    ["base", "[data-input-layout-base]"],
+    ["label", "[data-text-editor] > [data-label]"],
+    ["editor", "[data-text-editor-editor]"]
+  ])("classes.%s → %s", async (key, selector) => {
+    const wrapper = mount(TextEditor, { props: { label: "L", classes: { [key]: "probe-key" } } })
+    await flushPromises()
+    expect(wrapper.find(selector).classes()).toContain("probe-key")
+    expect(wrapper.find("[data-text-editor]").classes()).not.toContain("probe-key")
+  })
+
+  it("рамка поля сохраняет max-h-max h-max отдельными классами (раньше склеивалось с props.class)", async () => {
+    const wrapper = mount(TextEditor, { props: { class: "probe-root" } })
+    await flushPromises()
+    const base = wrapper.find("[data-input-layout-base]").classes()
+    expect(base).toContain("max-h-max")
+    expect(base).toContain("h-max")
+    expect(wrapper.find("[data-text-editor]").classes().join(" ")).not.toContain("probe-rootmax-h-max")
+  })
+
+  it("componentsOptions.TextEditor.classes сливается по ключу под props.classes", async () => {
+    const wrapper = mount(TextEditor, {
+      global: { plugins: [withOptions({ class: "opt-root", classes: { editor: "p-2 opt-editor" } })] },
+      props: { class: "prop-root", classes: { editor: "p-4" } }
+    })
+    await flushPromises()
+    const editor = wrapper.find("[data-text-editor-editor]").classes()
+    expect(editor).toContain("p-4")
+    expect(editor).toContain("opt-editor")
+    expect(editor).not.toContain("p-2")
+    expect(wrapper.find("[data-text-editor]").classes()).toEqual(expect.arrayContaining(["opt-root", "prop-root"]))
+  })
+
+  it("dialogProps / editorProps заменяют paramsDialog / paramsTextEditor", async () => {
+    const wrapper = mount(TextEditor, {
+      props: { theme: "snow", dialogProps: { closeButton: true }, editorProps: { contentType: "text" } }
+    })
+    await flushPromises()
+    expect((wrapper.vm as any).dialogProps.closeButton).toBe(true)
+    expect((wrapper.vm as any).editorProps.contentType).toBe("text")
+    expect(wrapper.findComponent({ name: "Dialog" }).props("closeButton")).toBe(true)
+  })
+
+  it("emit update:invalid вместо update:isInvalid", async () => {
+    const wrapper = mount(TextEditor, { props: { modelValue: "<p>x</p>" } })
+    await flushPromises()
+    await wrapper.findComponent({ name: "QuillEditor" }).vm.$emit("update:content", "<p>y</p>")
+    expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
+    expect(wrapper.emitted("update:isInvalid")).toBeUndefined()
+  })
+
+  it("focus-ring живёт в classes.base и уступает красной рамке ошибки", async () => {
+    const wrapper = mount(TextEditor)
+    await flushPromises()
+    const base = () => wrapper.find("[data-input-layout-base]").classes()
+    await wrapper.findComponent({ name: "QuillEditor" }).vm.$emit("focus")
+    await nextTick()
+    expect(base()).toContain("ring-theme-600")
+    await wrapper.setProps({ invalid: true })
+    expect(base()).toContain("ring-red-500")
+    expect(base()).not.toContain("ring-theme-600")
+  })
+
+  it("clearable достижим через componentsOptions", async () => {
+    const wrapper = mount(TextEditor, {
+      global: { plugins: [withOptions({ clearable: true })] },
+      props: { modelValue: "<p>x</p>" }
+    })
+    await flushPromises()
+    expect((wrapper.vm as any).isClearable).toBe(true)
+    expect(wrapper.findComponent({ name: "InputLayout" }).props("clearable")).toBe(true)
+  })
+
+  it("unstyled: классы потребителя остаются на корне и editor, темы нет", async () => {
+    const wrapper = mount(TextEditor, {
+      global: { plugins: [{ install: (app: any) => app.use(FishtVue, { unstyled: true }) }] },
+      props: { class: "probe-root", classes: { editor: "probe-editor" } }
+    })
+    await flushPromises()
+    expect(wrapper.find("[data-text-editor]").classes()).toEqual(["fv", "probe-root"])
+    const editor = wrapper.find("[data-text-editor-editor]").classes()
+    expect(editor).toEqual(["fv", "probe-editor"])
   })
 })

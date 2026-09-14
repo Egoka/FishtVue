@@ -1,7 +1,7 @@
 ---
 title: Input
-summary: Текстовый input с masks (phone/number/price), v-model, focus/blur/clear emits, валидацией; password toggle override, кастомные phoneFormats, auto-defaults autocomplete, motion-safe + print стили; unstyled-режим (cross-cutting guard).
-updated: 2026-06-19
+summary: Текстовый input с masks (phone/number/price), v-model, focus/blur/clear emits, валидацией; auto-defaults autocomplete, кастомные phoneFormats, motion-safe + print стили. С 1.0.0: `class` — корень `[data-input]`, внутренние элементы — карта `classes` (`control`/`passwordToggle` + семейные ключи), positive-булевы `invalid`/`clearable`, emits `active`/`update:invalid`.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -17,12 +17,12 @@ since: 0.2.11
 - fallback `mode` через глобальный `componentsStyle: "filled" | "outlined" | "underlined"` (см. [Configuration](../architecture/config.md));
 - кастомные phone-форматы через `phoneFormats` (prop или `componentsOptions.Input`);
 - автоподбор `autocomplete` по `type` (для password-manager совместимости);
-- override класса password-toggle через `passwordToggleClass`;
+- адресация внутренних элементов через карту `classes` (`control`, `passwordToggle` + семейные ключи — §5.3);
 - `motion-safe:` transitions (учитывает `prefers-reduced-motion`);
 - `@media print` стили на input;
 - argless `focus()` (паритет с `HTMLElement.focus()`).
 
-Stability: `stable` (41 кейс; coverage `Input.vue` ≥ 97.89%).
+Stability: `stable` (61 кейс; coverage `Input.vue` ≥ 97.89%).
 
 Source: [Source](../../lib/input/Input.vue), [Input.d.ts](../../lib/input/Input.d.ts), [Input.test.ts](../../lib/input/Input.test.ts).
 
@@ -32,7 +32,7 @@ Source: [Source](../../lib/input/Input.vue), [Input.d.ts](../../lib/input/Input.
 lib/input/
 ├── Input.vue         # SFC
 ├── Input.d.ts        # типы (включая InputType, InputAutocomplete, re-export PhoneFormat)
-├── Input.test.ts     # 41 кейс (17 base + 24 audit)
+├── Input.test.ts     # 61 кейс (base + audit + props 1.0)
 └── package.json
 ```
 
@@ -52,8 +52,8 @@ lib/input/
   2. `update:modelValue` (синхронизация v-model),
   3. parent watcher'ы,
   4. `change:modelValue` после flush.
-- **Стили:** через `Input.setStyle()` в computed.
-- **Конфиг:** `componentsOptions.Input` — `classInput` + ключи `InputLayoutOption`.
+- **Стили:** `Input.resolveClasses<InputClassKey>(props)` — `cls("control", …)` для `<input>`, `raw("passwordToggle")` для hand-off'а в `Icons`, `mergeClasses` для семейных ключей, уходящих в `InputLayout` (dev-patterns §2 C–D, §4).
+- **Конфиг:** `componentsOptions.Input` — `classes` (по ключу) + ключи `InputLayoutOption`.
 - **Локализация:** через [InputLayout](./input-layout.md).
 - **SSR:** SSR-safe.
 - **Animation:** transition only через стили InputLayout.
@@ -75,7 +75,7 @@ const value = ref("")
 
 ## 5. Props
 
-`InputProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseInputProps>` ([Input.d.ts](../../lib/input/Input.d.ts)).
+`InputProps extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseInputProps>` ([Input.d.ts:164-183](../../lib/input/Input.d.ts#L164-L183)).
 
 `BaseInputProps` (Partial поверх InputLayout):
 
@@ -89,8 +89,6 @@ const value = ref("")
 | `phoneFormats` | `PhoneFormat[]` | дефолтный набор (+1/+7/+81/+82/+86) | Кастомные phone-форматы для `maskInput: "phone"`. |
 | `lengthInteger` | `number` | `20` | Макс длина целой части (для `number`/`price`). |
 | `lengthDecimal` | `number` | `0` | Макс длина дробной. |
-| `classInput` | `StyleClass` | — | Классы native `<input>`. |
-| `passwordToggleClass` | `StyleClass` | — | Доп. класс для иконки toggle-пароля (Eye/EyeSlash). |
 
 ### 5.1 Autocomplete auto-defaults
 
@@ -124,8 +122,26 @@ type PhoneFormat = {
 |---|---|---|---|
 | `id` | `string` | — | id `<input>`. |
 | `modelValue` | `string \| number \| null \| undefined` | — | v-model. |
+| `class` | `StyleClass` | — | Классы корня (он же корень `InputLayout`, `[data-input]`). |
+| `classes` | `ClassesMap<InputClassKey>` | — | Карта классов внутренних элементов — см. §5.3. |
 
-Поля `InputLayoutProps` (omit `value`, `isValue`) — см. [InputLayout](./input-layout.md): `label`, `help`, `mode`, `disabled`, `loading`, `isInvalid`, `messageInvalid`, `required`, и др.
+Поля `InputLayoutProps` (omit `value`, `hasValue`, `classes`) — см. [InputLayout](./input-layout.md): `label`, `help`, `mode`, `disabled`, `loading`, `invalid`, `messageInvalid`, `required`, `clearable` и др.
+
+### 5.3 Classes keys
+
+`InputClassKey = InputLayoutClassKey | "control" | "passwordToggle"` ([Input.d.ts:91](../../lib/input/Input.d.ts#L91)). Семейные ключи уходят в `InputLayout` (по ключу, dev-patterns §2 C), собственные применяются здесь.
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-input]` (корень layout'а) | element | `relative rounded-md` + фон режима |
+| `base` | `[data-input-layout-base]` | element | рамка поля + focus-ring контрола |
+| `label` | `[data-label]` | element | — |
+| `help` / `message` / `before` / `after` | см. [InputLayout §5.1](./input-layout.md) | element | — |
+| `control` | `[data-input-control]` (`<input>`) | element | `relative z-10 ring-0 border-0 w-full … caret-theme-500` (бывший `classInput`) |
+| `passwordToggle` | `[data-input-password-toggle]` (корень `Icons`) | element | `text-surface-400 … hover:text-theme-500 cursor-pointer` (бывший `passwordToggleClass`) |
+| `animation` | корень + `base` | **aspect** | `motion-safe:transition-all motion-safe:duration-550` (`""` отключает) |
+
+Focus-ring поля Input добавляет в `classes.base` сам (гейтится `!invalid`, чтобы красная рамка ошибки оставалась видимой в фокусе).
 
 > **`mode` fallback chain:** `props.mode → componentsOptions.Input.mode → Input.componentsStyle() → "outlined"`.
 > Глобальный `componentsStyle: "filled"` в `app.use(FishtVue, ...)` теперь действительно влияет на Input (закрывает [issues/input.md Issue 2](../issues/input.md)).
@@ -138,35 +154,33 @@ type PhoneFormat = {
 |---|---|---|
 | `update:modelValue` | `string` | На каждый native `input` event (печать, paste, маска). |
 | `change:modelValue` | `string` | На native `change` event (blur с изменением). |
-| `update:isInvalid` | `boolean` (всегда `false`) | На каждый input event — reset-сигнал. |
+| `update:invalid` | `boolean` (всегда `false`) | На каждый input event — reset-сигнал. |
 | `clear` | `string` (`""`) | На клик clear-кнопки. |
 | `focus` | `FocusEvent` | На native focus (и при programmatic `focus(event)`). |
 | `blur` | `FocusEvent` | На native blur. |
-| `isActive` | `boolean` | При смене focus state. |
+| `active` | `boolean` | При смене focus state (бывший `isActive`). |
 
 ### 6.1 Timing — кто за чем эмитится
 
 Каждое нажатие клавиши в input триггерит **в этом порядке**:
 
-1. native `input` event → `inputEvent($event)` ([Input.vue:185](../../lib/input/Input.vue#L185))
-2. `update:isInvalid(false)` — *reset-сигнал* (см. ниже) ([Input.vue:195](../../lib/input/Input.vue#L195))
-3. `update:modelValue(value)` — синхронизация v-model ([Input.vue:196](../../lib/input/Input.vue#L196))
+1. native `input` event → `inputEvent($event)` ([Input.vue:195](../../lib/input/Input.vue#L195))
+2. `update:invalid(false)` — *reset-сигнал* (см. ниже) ([Input.vue:205](../../lib/input/Input.vue#L205))
+3. `update:modelValue(value)` — синхронизация v-model ([Input.vue:206](../../lib/input/Input.vue#L206))
 
 Native `change` event (blur с изменением) триггерит:
 
-1. `change:modelValue(value)` ([Input.vue:199-201](../../lib/input/Input.vue#L199-L201))
+1. `change:modelValue(value)` ([Input.vue:209-211](../../lib/input/Input.vue#L209-L211))
 
-### 6.2 Почему `update:isInvalid` всегда `false`
+### 6.2 Почему `update:invalid` всегда `false`
 
-Input сам **не знает**, валидно ли значение — правила (`rules`) живут на стороне родителя ([Form](./form.md) или вручную). Поэтому Input эмитит `update:isInvalid(false)` как «новый ввод — пересчитай валидацию», а `true` ставит внешний код (родитель / Form / rulesHandler) через [InputLayoutProps.isInvalid](./input-layout.md).
+Input сам **не знает**, валидно ли значение — правила (`rules`) живут на стороне родителя ([Form](./form.md) или вручную). Поэтому Input эмитит `update:invalid(false)` как «новый ввод — пересчитай валидацию», а `true` ставит внешний код (родитель / Form / rulesHandler) через prop `invalid` — то есть канал полноценно работает как `v-model:invalid`.
 
 Использование:
 
 ```vue
-<Input
-  v-model="email"
-  :is-invalid="isInvalid"
-  @update:is-invalid="(reset) => (isInvalid = reset ? isInvalid : false)" />
+<!-- v-model:invalid — тот же канал, только короче -->
+<Input v-model="email" v-model:invalid="invalid" />
 ```
 
 Или (типичнее) — отдай весь поток правил [Form](./form.md), он сделает это сам.
@@ -198,8 +212,10 @@ Input сам **не знает**, валидно ли значение — пр�
 |---|---|---|
 | `layout` | InputLayout instance | Доступ к layout-обёртке. |
 | `isActiveInput` | `boolean` | Текущий focus state. |
-| `classLayout` | `StyleClass` | Класс layout. |
-| `id`, `type`, `mask`, `modelValue`, `autoFocus`, `placeholder`, `autocomplete`, `lengthInteger`, `lengthDecimal`, `isValue`, `mode`, `isDisabled`, `isLoading`, `isInvalid`, `messageInvalid`, `classBaseInput` | derivative props | Computed, видимые наружу. |
+| `inputLayout` | `Omit<InputLayoutProps, "value">` | Итоговый hand-off в `InputLayout` (`class` корня + карта `classes` с focus-ring в `base`). Заменил `classLayout`. |
+| `id`, `type`, `mask`, `modelValue`, `autoFocus`, `placeholder`, `autocomplete`, `lengthInteger`, `lengthDecimal`, `isValue`, `mode`, `isDisabled`, `isLoading`, `isInvalid`, `isClearable`, `messageInvalid` | derivative props | Computed, видимые наружу. |
+| `classControl` | `string` | Итоговый класс `<input data-input-control>` (заменил `classBaseInput`). |
+| `classPasswordToggle` | `string` | Итоговый класс иконок Eye/EyeSlash. |
 | `toMask(baseValue)` | function | Применяет маску к значению. |
 | `inputModelValue(valueResult)` | function | Программный update. |
 | `changeModelValue(valueResult)` | function | Программный change. |
@@ -238,7 +254,7 @@ inp.value?.focus(new FocusEvent("focus"))  // эмитит "focus"
 ```ts
 app.use(FishtVue, {
   componentsOptions: {
-    Input: { mode: "outlined", classInput: "tracking-wide" }
+    Input: { mode: "outlined", classes: { control: "tracking-wide" } }
   }
 })
 ```
@@ -274,14 +290,13 @@ const { email } = storeToRefs(store)
 
 ### 10.1 Global
 
-`InputOption = Pick<InputProps, "classInput" | "passwordToggleClass" | "phoneFormats" | "autocomplete" | keyof InputLayoutOption>`. Включает все ключи [InputLayoutOption](./input-layout.md) + `classInput`, `passwordToggleClass`, `phoneFormats`, `autocomplete`.
+`InputOption = Pick<InputProps, "phoneFormats" | "autocomplete" | "class" | "classes" | keyof InputLayoutOption>` ([Input.d.ts:428-431](../../lib/input/Input.d.ts#L428-L431)). Включает все ключи [InputLayoutOption](./input-layout.md) + `phoneFormats`, `autocomplete`, `class`, `classes`. Карта `classes` сливается с props **по ключу** (dev-patterns §2 C).
 
 ```ts
 app.use(FishtVue, {
   componentsOptions: {
     Input: {
-      classInput: "tracking-wide",
-      passwordToggleClass: "text-blue-500 hover:text-blue-700",
+      classes: { control: "tracking-wide", passwordToggle: "text-blue-500 hover:text-blue-700" },
       autocomplete: "off",
       phoneFormats: [{ codeCountry: 44, mask: [4, 3, 3], codeCity: [] }]
     }
@@ -300,7 +315,9 @@ app.use(FishtVue, {
 
 ### 10.4 CSS layer override
 
-Root класс — `fv fishtvue-input`. См. [01-getting-started §10.4](../01-getting-started.md#104-css-layer-override).
+Root класс — `fv fishtvue-input-layout` (корень Input — это корень `InputLayout`, помеченный `data-input`); сам `<input>` — `[data-input-control]` с классом `fv fishtvue-input`. См. [01-getting-started §10.4](../01-getting-started.md#104-css-layer-override).
+
+DOM-селекторы: `[data-input]` — корень, `[data-input-control]` — native `<input>`, `[data-input-password-toggle]` — иконка переключения пароля (плюс сохранённые `[data-eye]` / `[data-eye-slash]`).
 
 ## 11. Form integration & validation
 
@@ -314,7 +331,7 @@ Root класс — `fv fishtvue-input`. См. [01-getting-started §10.4](../01
   label="Email" />
 ```
 
-- Состояние invalid отображается через `isInvalid`/`messageInvalid` (передаются через [InputLayout](./input-layout.md)).
+- Состояние invalid отображается через `invalid`/`messageInvalid` (передаются через [InputLayout](./input-layout.md)); `v-model:invalid` даёт двусторонний канал.
 - При reset формы родитель сбрасывает modelValue, Input реагирует автоматически.
 
 ## 12. Accessibility & Security
@@ -342,6 +359,7 @@ import type {
   InputProps,
   InputEmits,
   InputExpose,
+  InputClassKey,
   BaseInputProps,
   InputType,
   InputAutocomplete,
@@ -361,9 +379,14 @@ const ukFormat: PhoneFormat = { codeCountry: 44, mask: [4, 3, 3], codeCity: [] }
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 41 кейс, coverage `Input.vue` ≥ 97.89%.
-- **Breaking changes:** на 2026-05-11 не зафиксировано. Расширение `type` / `autocomplete` union — additive (старые значения работают). `focus(eventFocus)` теперь принимает опциональный аргумент — `focus()` без аргументов не падает, старый код продолжает работать.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 61 кейс, coverage `Input.vue` ≥ 97.89%.
+- **Breaking changes (1.0.0, редизайн props):**
+  - `classInput` → `classes.control`, `passwordToggleClass` → `classes.passwordToggle`; `classBody` → `class` (корень), прежний `class` → `classes.base`.
+  - булевы: `isInvalid` → `invalid`, `clear` → `clearable`.
+  - emits: `update:isInvalid` → `update:invalid`, `isActive` → `active` (silent break — старые обработчики просто перестают вызываться).
+  - `data-input` теперь на корне, native `<input>` помечен `data-input-control`.
+  - expose: `classBaseInput` → `classControl`, `classLayout` → `inputLayout`.
+- **Deprecations:** нет — старые имена сняты без алиасов (решение R6).
 
 ## 15. Testing recipes
 
@@ -384,7 +407,7 @@ describe("Input", () => {
 })
 ```
 
-Реальные тесты — [Input.test.ts](../../lib/input/Input.test.ts) (17 кейсов).
+Реальные тесты — [Input.test.ts](../../lib/input/Input.test.ts) (61 кейс, включая блок «Props 1.0 — class / classes / булевы / emits»).
 
 ## 16. Troubleshooting / FAQ
 
@@ -396,7 +419,8 @@ describe("Input", () => {
 | Курсор прыгает при вводе с маской | Маска переписывает value → reset selection. | Сохрани `selectionStart` и восстанови; либо отключи маску для тех полей, где это критично. |
 | `lengthDecimal: 2` не ограничивает | Возможно `maskInput` не задан. | Установи `mask-input="number"` или `"price"`. |
 | Browser показывает «save password» для **обычного** поля | `autocomplete` по умолчанию для `type="text"` = `"on"`. | Задай `autocomplete="off"` явно или через `componentsOptions.Input`. |
-| `update:isInvalid(true)` никогда не эмитится | Это by design: Input всегда эмитит `false` как reset; `true` ставит родитель/Form по результату `rules`. | См. §6.2. |
+| `update:invalid(true)` никогда не эмитится | Это by design: Input всегда эмитит `false` как reset; `true` ставит родитель/Form по результату `rules`. | См. §6.2. |
+| Классы из `class` не попали на `<input>` | С 1.0.0 `class` — корень, контрол адресуется `classes.control`. | `:classes="{ control: '…' }"` (см. §5.3). |
 
 ## 17. Related
 
@@ -416,7 +440,7 @@ describe("Input", () => {
 Все numbered audit-issues Input закрыты (см. [issues/input.md](../issues/input.md), матрица 0/0/0/0). Последними закрыты cross-cutting (2026-06-13):
 
 - ~~**Issue 3** — sideEffects + exports map в `lib/package.json`~~ ✅ Wave 2.1 (`sideEffects: false` + build-генерируемая `exports` map).
-- ~~**Issue 4** — `unstyled: true` guard в `Component.setStyle()`~~ ✅ Wave 3.1 ([component/index.ts:138](../../lib/component/index.ts#L138)).
+- ~~**Issue 4** — `unstyled: true` guard в `Component.setStyle()`~~ ✅ Wave 3.1 ([component/index.ts:182](../../lib/component/index.ts#L182)).
 
 Остаются deferred cross-cutting (вне матрицы, отдельные waves): runtime theme switch (Wave 3.3) и auto-binding `phoneFormats` к активной локали (см. [issues/input.md](../issues/input.md) Issue 7 deferred).
 
@@ -432,7 +456,7 @@ describe("Input", () => {
 - `modelValue?: string | number | null | undefined` ([Input.d.ts](../../lib/input/Input.d.ts)) — широкий union; для строгих type-narrow на стороне родителя — кастуй.
 - Дубль defaults для `autoFocus`: явный `withDefaults` + явная computed-ветка с fallback'ом.
 - Payload `update:modelValue` всегда `string`, даже при `type="number"` — преобразование на стороне родителя.
-- `update:isInvalid` всегда эмитит `false` (по design — см. §6.2). Если в будущем добавим встроенные правила в Input, поведение поменяется (breaking — будет отмечено в CHANGELOG).
+- `update:invalid` всегда эмитит `false` (по design — см. §6.2). Если в будущем добавим встроенные правила в Input, поведение поменяется (breaking — будет отмечено в CHANGELOG).
 
 ### Behavioral caveats
 

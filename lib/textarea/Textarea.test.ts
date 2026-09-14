@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { defineComponent, createApp, h } from "vue"
 import Textarea from "fishtvue/textarea/Textarea.vue"
 import FishtVue from "fishtvue/config"
@@ -31,7 +31,7 @@ describe("Textarea Component Tests", () => {
 
       await textarea.setValue("New value")
       expect(wrapper.emitted("update:modelValue")?.[0]).toEqual(["New value"])
-      expect(wrapper.emitted("update:isInvalid")?.[0]).toEqual([false])
+      expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
 
       await textarea.trigger("change")
       expect(wrapper.emitted("change:modelValue")?.[0]).toEqual(["New value"])
@@ -69,12 +69,12 @@ describe("Textarea Component Tests", () => {
 
     it("clears the value and emits clear event when clear button is clicked", async () => {
       const wrapper = mount(Textarea, {
-        props: { modelValue: "Test value", clear: true }
+        props: { modelValue: "Test value", clearable: true }
       })
 
-      const clearButton = wrapper.find("[data-input-layout-clear] i")
+      const clearButton = wrapper.find("[data-input-layout-clear] [data-icon]")
       await clearButton.trigger("click")
-      expect(wrapper.emitted("update:isInvalid")?.[0]).toEqual([false])
+      expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
       expect(wrapper.emitted("update:modelValue")?.[0]).toEqual([""])
       expect(wrapper.emitted("change:modelValue")?.[0]).toEqual([""])
     })
@@ -131,7 +131,7 @@ describe("Textarea Component Tests", () => {
 
     it("emits correct events on input when initialized with options", async () => {
       const app: any = createAppWithFishtVue({
-        isInvalid: true
+        rows: 4
       })
 
       const wrapper = mount(Textarea, {
@@ -165,7 +165,7 @@ describe("Textarea Component Tests", () => {
 
     it("clear() emits change:modelValue with empty string (Issue 1)", () => {
       resetGlobalFishtVue()
-      const wrapper = mount(Textarea, { props: { modelValue: "x", clear: true } })
+      const wrapper = mount(Textarea, { props: { modelValue: "x", clearable: true } })
       ;(wrapper.vm as unknown as TextareaExpose).clear()
       const payload = wrapper.emitted("change:modelValue")?.[0]?.[0]
       expect(typeof payload).toBe("string")
@@ -229,7 +229,7 @@ describe("Textarea Component Tests", () => {
       app.use(FishtVue, { unstyled: true })
       const wrapper = mount(Textarea, { global: { plugins: [app] } })
       const textarea = wrapper.find("textarea")
-      // setStyle returns "" under unstyled: true, so the textarea class is empty.
+      // Под unstyled setStyle отдаёт только `fv` + классы потребителя (§2 E).
       expect(textarea.attributes("class") ?? "").toBe("fv")
     })
 
@@ -246,18 +246,18 @@ describe("Textarea Component Tests", () => {
     })
 
     // ---ISSUE 8 — typed slot props for #before / #after -----------
-    it("provides typed slot props { isInvalid, isFocused, clear } to #after (Issue 8)", async () => {
+    it("provides typed slot props { invalid, focused, clear } to #after (Issue 8)", async () => {
       resetGlobalFishtVue()
-      let captured: { isInvalid?: boolean; isFocused?: boolean; clear?: () => void } = {}
+      let captured: { invalid?: boolean; focused?: boolean; clear?: () => void } = {}
       const Host = defineComponent({
-        props: { isInvalid: { type: Boolean, default: false } },
+        props: { invalid: { type: Boolean, default: false } },
         setup(props) {
           return () =>
             h(
               Textarea,
-              { modelValue: "abc", isInvalid: props.isInvalid, clear: true },
+              { modelValue: "abc", invalid: props.invalid, clearable: true },
               {
-                after: (slotProps: { isInvalid: boolean; isFocused: boolean; clear: () => void }) => {
+                after: (slotProps: { invalid: boolean; focused: boolean; clear: () => void }) => {
                   captured = slotProps
                   return h("span", { "data-after-marker": true }, "after")
                 }
@@ -267,27 +267,27 @@ describe("Textarea Component Tests", () => {
       })
 
       const wrapper = mount(Host)
-      expect(typeof captured.isInvalid).toBe("boolean")
-      expect(typeof captured.isFocused).toBe("boolean")
+      expect(typeof captured.invalid).toBe("boolean")
+      expect(typeof captured.focused).toBe("boolean")
       expect(typeof captured.clear).toBe("function")
-      expect(captured.isInvalid).toBe(false)
-      expect(captured.isFocused).toBe(false)
+      expect(captured.invalid).toBe(false)
+      expect(captured.focused).toBe(false)
 
-      await wrapper.setProps({ isInvalid: true })
-      expect(captured.isInvalid).toBe(true)
+      await wrapper.setProps({ invalid: true })
+      expect(captured.invalid).toBe(true)
     })
 
-    it("provides typed slot props { isInvalid, isFocused } to #before (Issue 8)", () => {
+    it("provides typed slot props { invalid, focused } to #before (Issue 8)", () => {
       resetGlobalFishtVue()
-      let captured: { isInvalid?: boolean; isFocused?: boolean } = {}
+      let captured: { invalid?: boolean; focused?: boolean } = {}
       const Host = defineComponent({
         setup() {
           return () =>
             h(
               Textarea,
-              { modelValue: "abc", isInvalid: true },
+              { modelValue: "abc", invalid: true },
               {
-                before: (slotProps: { isInvalid: boolean; isFocused: boolean }) => {
+                before: (slotProps: { invalid: boolean; focused: boolean }) => {
                   captured = slotProps
                   return h("span", "before")
                 }
@@ -297,13 +297,13 @@ describe("Textarea Component Tests", () => {
       })
 
       mount(Host)
-      expect(typeof captured.isInvalid).toBe("boolean")
-      expect(typeof captured.isFocused).toBe("boolean")
-      expect(captured.isInvalid).toBe(true)
+      expect(typeof captured.invalid).toBe("boolean")
+      expect(typeof captured.focused).toBe("boolean")
+      expect(captured.invalid).toBe(true)
     })
 
     // ---ISSUE 9 — motion-safe placeholder transition -----------
-    it("uses motion-safe:placeholder:transition-all in classInput (Issue 9)", () => {
+    it("uses motion-safe:placeholder:transition-all in classControl (Issue 9)", () => {
       resetGlobalFishtVue()
       const wrapper = mount(Textarea, { props: { label: "Comment" } })
       const cls = wrapper.find("textarea").attributes("class") ?? ""
@@ -312,7 +312,7 @@ describe("Textarea Component Tests", () => {
     })
 
     // ---ISSUE 11 — print styles -----------
-    it("includes print:* classes in classInput (Issue 11)", () => {
+    it("includes print:* classes in classControl (Issue 11)", () => {
       resetGlobalFishtVue()
       const wrapper = mount(Textarea)
       const cls = wrapper.find("textarea").attributes("class") ?? ""
@@ -321,7 +321,7 @@ describe("Textarea Component Tests", () => {
 
     // ---ISSUE 11 — B10 hardcode: gray-* → surface-* (design-token migration) -----------
     describe("Issue 11 — B10 hardcode: gray-* → surface-* (design-token migration)", () => {
-      it("classInput uses surface-* for textarea text color, not hardcoded gray-*", () => {
+      it("classControl uses surface-* for textarea text color, not hardcoded gray-*", () => {
         resetGlobalFishtVue()
         const wrapper = mount(Textarea)
         const cls = wrapper.find("textarea").attributes("class") ?? ""
@@ -331,7 +331,7 @@ describe("Textarea Component Tests", () => {
         expect(cls).not.toMatch(/(?:^|\s)dark:text-gray-100(?:\s|$)/)
       })
 
-      it("classInput uses surface-* for focus placeholder color, not hardcoded gray-*", () => {
+      it("classControl uses surface-* for focus placeholder color, not hardcoded gray-*", () => {
         resetGlobalFishtVue()
         const wrapper = mount(Textarea)
         const cls = wrapper.find("textarea").attributes("class") ?? ""
@@ -376,6 +376,137 @@ describe("Textarea Component Tests", () => {
       const wrapper = mount(Textarea, { props: { label: "Bio", id: "bio-field" } })
       expect(wrapper.find("textarea").attributes("id")).toBe("bio-field")
       expect(wrapper.find("label[data-label]").attributes("for")).toBe("bio-field")
+    })
+  })
+
+  // Wave 13 / W2 — контракт props 1.0: `class` → корень `[data-textarea]`, `classes` → карта
+  // (семейные ключи + `control`), positive-булевы, emit `update:invalid`, slot-props `invalid`/`focused`.
+  describe("Props 1.0 — class / classes / булевы / emits (Wave 13, W2)", () => {
+    const withOptions = (options: Record<string, unknown>): any => {
+      const app = createApp({})
+      app.use(FishtVue, { componentsOptions: { Textarea: options } })
+      return app
+    }
+    afterEach(() => {
+      delete (window as any).FishtVue
+    })
+
+    it("публичный набор props — контракт 1.0 (classInput/isInvalid/clear/classBody сняты)", () => {
+      const wrapper = mount(Textarea)
+      expect(wrapper.props()).toEqual({
+        id: undefined,
+        modelValue: undefined,
+        classes: undefined,
+        mode: undefined,
+        label: undefined,
+        labelMode: undefined,
+        invalid: undefined,
+        messageInvalid: undefined,
+        required: undefined,
+        loading: undefined,
+        disabled: undefined,
+        help: undefined,
+        clearable: undefined,
+        width: undefined,
+        height: undefined,
+        class: undefined,
+        offsetTop: undefined,
+        placeholder: undefined,
+        autocomplete: undefined,
+        wrap: undefined,
+        rows: undefined,
+        maxLength: undefined
+      })
+    })
+
+    it("legacy-имена (classInput/isInvalid/clear) падают атрибутами на корень и ничего не меняют", () => {
+      const wrapper = mount(Textarea, {
+        props: { modelValue: "v", classInput: "old-ctl", isInvalid: true, clear: true } as any
+      })
+      expect(wrapper.find("[data-textarea]").attributes("classinput")).toBe("old-ctl")
+      expect(wrapper.find("[data-textarea-control]").classes()).not.toContain("old-ctl")
+      expect(wrapper.find("[data-input-layout-clear]").exists()).toBe(false)
+    })
+
+    it("корень Textarea — корень InputLayout с data-textarea; `class` только на нём", () => {
+      const wrapper = mount(Textarea, { props: { label: "L", class: "probe-root" } })
+      const root = wrapper.find("[data-textarea]")
+      expect(root.attributes("data-input-layout")).toBeDefined()
+      expect(root.classes()).toContain("probe-root")
+      expect(root.element.querySelectorAll("[class~='probe-root']").length).toBe(0)
+    })
+
+    it.each([
+      ["base", "[data-input-layout-base]"],
+      ["label", "[data-label]"],
+      ["control", "[data-textarea-control]"]
+    ])("classes.%s → %s", (key, selector) => {
+      const wrapper = mount(Textarea, { props: { label: "L", classes: { [key]: "probe-key" } } })
+      expect(wrapper.find(selector).classes()).toContain("probe-key")
+      expect(wrapper.find("[data-textarea]").classes()).not.toContain("probe-key")
+    })
+
+    it("рамка поля сохраняет max-h-max отдельным классом (раньше склеивалось с props.class без пробела)", () => {
+      const wrapper = mount(Textarea, { props: { class: "probe-root" } })
+      expect(wrapper.find("[data-input-layout-base]").classes()).toContain("max-h-max")
+      expect(wrapper.find("[data-textarea]").classes()).toContain("probe-root")
+      expect(wrapper.find("[data-textarea]").classes().join(" ")).not.toContain("probe-rootmax-h-max")
+    })
+
+    it("componentsOptions.Textarea.classes сливается по ключу под props.classes", () => {
+      const wrapper = mount(Textarea, {
+        global: { plugins: [withOptions({ class: "opt-root", classes: { control: "p-2 opt-ctl" } })] },
+        props: { class: "prop-root", classes: { control: "p-4" } }
+      })
+      const control = wrapper.find("[data-textarea-control]").classes()
+      expect(control).toContain("p-4")
+      expect(control).toContain("opt-ctl")
+      expect(control).not.toContain("p-2")
+      expect(wrapper.find("[data-textarea]").classes()).toEqual(expect.arrayContaining(["opt-root", "prop-root"]))
+    })
+
+    it("focus-ring живёт в classes.base и уступает красной рамке ошибки", async () => {
+      const wrapper = mount(Textarea, { attachTo: document.body })
+      const base = () => wrapper.find("[data-input-layout-base]").classes()
+      await wrapper.find("textarea").trigger("focus")
+      expect(base()).toContain("ring-theme-600")
+      await wrapper.setProps({ invalid: true })
+      expect(base()).toContain("ring-red-500")
+      expect(base()).not.toContain("ring-theme-600")
+      wrapper.unmount()
+    })
+
+    it("clearable достижим через componentsOptions и перебивается prop'ом", () => {
+      const opt = mount(Textarea, {
+        global: { plugins: [withOptions({ clearable: true })] },
+        props: { modelValue: "v" }
+      })
+      expect(opt.props("clearable")).toBeUndefined()
+      expect(opt.find("[data-input-layout-clear]").exists()).toBe(true)
+      delete (window as any).FishtVue
+      const prop = mount(Textarea, {
+        global: { plugins: [withOptions({ clearable: true })] },
+        props: { modelValue: "v", clearable: false }
+      })
+      expect(prop.find("[data-input-layout-clear]").exists()).toBe(false)
+    })
+
+    it("emit update:invalid вместо update:isInvalid", async () => {
+      const wrapper = mount(Textarea, { props: { modelValue: "" } })
+      await wrapper.find("textarea").setValue("x")
+      expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
+      expect(wrapper.emitted("update:isInvalid")).toBeUndefined()
+    })
+
+    it("unstyled: классы потребителя остаются на корне и control, темы нет", () => {
+      const app: any = createApp({})
+      app.use(FishtVue, { unstyled: true })
+      const wrapper = mount(Textarea, {
+        global: { plugins: [app] },
+        props: { class: "probe-root", classes: { control: "probe-ctl" } }
+      })
+      expect(wrapper.find("[data-textarea]").classes()).toEqual(["fv", "probe-root"])
+      expect(wrapper.find("[data-textarea-control]").classes()).toEqual(["fv", "probe-ctl"])
     })
   })
 })

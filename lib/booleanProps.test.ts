@@ -21,31 +21,31 @@ const PENDING: string[] = [
   "alert/Alert.vue",
   "badge/Badge.vue",
   "button/Button.vue",
-  "calendar/Calendar.vue",
   "dialog/Dialog.vue",
   "fixwindow/FixWindow.vue",
   "form/Form.vue",
   "form/FormField.vue",
   "form/FormSection.vue",
-  "input/Input.vue",
-  "inputlayout/InputLayout.vue",
   "menu/Menu.vue",
   "menu/MenuGroup.vue",
   "menu/MenuItem.vue",
   "pagination/Pagination.vue",
-  "select/Select.vue",
-  "select/SelectGroup.vue",
-  "select/SelectOption.vue",
   "separator/Separator.vue",
   "split/Split.vue",
   "switch/Switch.vue",
   "table/Column.vue",
   "table/ColumnGroup.vue",
   "table/Table.vue",
-  "textarea/Textarea.vue",
-  "texteditor/TextEditor.vue",
   "virtualscroller/VirtualScroller.vue"
 ]
+
+/**
+ * Renderless-дескрипторы compound-API (`<SelectItem>`, `<FormField>`, `<Column>`, …): собственного DOM
+ * не рендерят, а родитель читает их props через VNode-walk (`slots.default()`), то есть СЫРЫЕ, до
+ * `resolvePropValue`. Vue-кастинг отсутствующего Boolean в `false` их не касается, поэтому правило
+ * «own default» к ним не применяется (dev-patterns §2 F).
+ */
+const RENDERLESS = new Set(["select/SelectItem.vue"])
 
 const FORBIDDEN_PREFIX = /^(?:is|not|without|no|show|use)[A-Z]/
 
@@ -78,7 +78,7 @@ describe("Cross-cutting guard — boolean props (dev-patterns §2 F)", () => {
   it("у каждого Boolean-prop есть собственный default (слой componentsOptions достижим)", () => {
     const offenders: string[] = []
     for (const { rel, props } of entries) {
-      if (PENDING.includes(rel)) continue
+      if (PENDING.includes(rel) || RENDERLESS.has(rel)) continue
       for (const [name, def] of Object.entries(props)) {
         if (!typesOf(def).includes(Boolean)) continue
         if (!Object.prototype.hasOwnProperty.call(def, "default")) offenders.push(`${rel}: ${name}`)
