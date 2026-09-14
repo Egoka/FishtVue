@@ -40,19 +40,17 @@
 
 <template>
   <!--    v-bind="fieldsOmit(baseSeparator, ['isVisible', 'icon']) as SeparatorProps"-->
-  <Separator classLine="bg-red-500" class="py-1.5 !px-0 !-mx-1" />
+  <Separator :classes="{ line: 'bg-red-500' }" class="py-1.5 !px-0 !-mx-1" />
   <Menu
     :groups="groupsMenuMini()"
-    :separator="{ classLine: 'bg-red-500' }"
-    :styles="{
-      height: '100%',
-      class: {
-        body: 'p-3 z-30',
-        title: 'p-0 mb-3 bg-transparent dark:bg-transparent',
-        item: 'h-10 justify-start pl-3.5 mb-3 overflow-auto',
-        separator: 'bg-red-400 dark:bg-red-100 test232323'
-      },
-      selectedRows: 'bg-zinc-100 dark:bg-zinc-950'
+    :separator="{ classes: { line: 'bg-red-500' } }"
+    height="100%"
+    class="p-3 z-30"
+    :classes="{
+      title: 'p-0 mb-3 bg-transparent dark:bg-transparent',
+      item: 'h-10 justify-start pl-3.5 mb-3 overflow-auto',
+      separator: 'bg-red-400 dark:bg-red-100 test232323',
+      itemSelected: 'bg-zinc-100 dark:bg-zinc-950'
     }">
     <template #title>
       <div class="flex items-center gap-3 p-2">
@@ -67,15 +65,12 @@
       </div>
     </template>
     <template #footer>
-      <Separator classLine="bg-red-500" class="py-1.5 !px-0 !-mx-1" />
-      <Separator :depth="5" vertical class="w-full" classLine="to-red-200 dark:to-red-800">
-        <!--        :class="classRef ? 'custom-separator-class' : ''"-->
-        <!--        :classBodyLine="classBodyLine ? 'custom-separator-class' : ''"-->
-        <!--        :classBodyLineLeft="classBodyLineLeft ? 'custom-separator-class' : ''"
-        :classLineLeft="classLineLeft ? 'bg-red-500' : ''"
-        :classBodyLineRight="classBodyLineRight ? 'custom-separator-class' : ''"
-        :classLineRight="classLineRight ? 'bg-yellow-500' : ''"-->
-      </Separator>
+      <Separator :classes="{ line: 'bg-red-500' }" class="py-1.5 !px-0 !-mx-1" />
+      <Separator
+        :depth="5"
+        orientation="vertical"
+        class="w-full"
+        :classes="{ line: 'to-red-200 dark:to-red-800' }"></Separator>
     </template>
   </Menu>
 </template>

@@ -2,7 +2,7 @@
   import { ref } from "vue"
   import Accordion from "fishtvue/accordion/Accordion.vue"
 
-  const dataSource = ref([
+  const items = ref([
     {
       title: "Warm-up Exercises",
       subtitle: "Preparing your body for workout"
@@ -26,5 +26,5 @@
   ])
 </script>
 <template>
-  <Accordion :dataSource="dataSource" :multiple="true" />
+  <Accordion :items="items" :multiple="true" />
 </template>

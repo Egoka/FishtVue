@@ -27,23 +27,35 @@
   const startY = ref(0)
   const windowRef = ref<HTMLElement | null>(null)
 
-  // Обработчики событий для перетаскивания
-  function startDrag(event: MouseEvent) {
+  // Обработчики событий для перетаскивания.
+  // Корень слушает и `mousedown`, и `touchstart`, поэтому координаты берём через нормализацию:
+  // у TouchEvent нет `clientX` на самом событии — он лежит в `touches[0]`. Раньше обработчик был
+  // типизирован как `MouseEvent`, и на touch-устройстве в расчёт уходил `undefined` (NaN-позиция);
+  // listener'ы движения тоже вешались только мышиные, так что перетаскивание пальцем не работало.
+  const pointOf = (event: MouseEvent | TouchEvent) => ("touches" in event ? event.touches[0] : event)
+
+  function startDrag(event: MouseEvent | TouchEvent) {
     if (!windowRef.value) return
+    const point = pointOf(event)
+    if (!point) return
 
     isDragging.value = true
-    startX.value = event.clientX - posX.value
-    startY.value = event.clientY - posY.value
+    startX.value = point.clientX - posX.value
+    startY.value = point.clientY - posY.value
 
     document.addEventListener("mousemove", onDrag)
     document.addEventListener("mouseup", stopDrag)
+    document.addEventListener("touchmove", onDrag)
+    document.addEventListener("touchend", stopDrag)
   }
 
-  function onDrag(event: MouseEvent) {
+  function onDrag(event: MouseEvent | TouchEvent) {
     if (!isDragging.value) return
+    const point = pointOf(event)
+    if (!point) return
 
-    posX.value = event.clientX - startX.value
-    posY.value = event.clientY - startY.value
+    posX.value = point.clientX - startX.value
+    posY.value = point.clientY - startY.value
 
     // Предотвращаем выход за пределы окна браузера
     if (posX.value < 0) posX.value = 0
@@ -62,6 +74,8 @@
     isDragging.value = false
     document.removeEventListener("mousemove", onDrag)
     document.removeEventListener("mouseup", stopDrag)
+    document.removeEventListener("touchmove", onDrag)
+    document.removeEventListener("touchend", stopDrag)
   }
 
   onMounted(() => {

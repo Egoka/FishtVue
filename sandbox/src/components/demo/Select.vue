@@ -18,5 +18,5 @@
 </script>
 
 <template>
-  <Select label="Fruits" :dataSelect="data" v-model="selectedValues" :paramsFixWindow="{ typePosition: 'fixed' }" />
+  <Select label="Fruits" :options="data" v-model="selectedValues" :fixWindowProps="{ strategy: 'fixed' }" />
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { IColumn } from "fishtvue/table"
+  import type { TableColumn } from "fishtvue/table"
   import type { Panel } from "fishtvue/split"
   import Split from "fishtvue/split/Split.vue"
   import Table from "fishtvue/table/Table.vue"
@@ -122,7 +122,7 @@
   ])
 
   // Конфигурация колонок таблицы
-  const columns = shallowRef<Array<IColumn>>([
+  const columns = shallowRef<Array<TableColumn>>([
     {
       dataField: "name",
       name: "name",
@@ -131,10 +131,10 @@
       visible: true,
       width: 250,
       minWidth: 200,
-      isFilter: true,
-      isSort: true,
+      filterable: true,
+      sortable: true,
       defaultSort: "asc",
-      class: {
+      classes: {
         td: "cursor-pointer"
       }
     },
@@ -146,8 +146,8 @@
       visible: true,
       width: 250,
       minWidth: 200,
-      isFilter: true,
-      isSort: true
+      filterable: true,
+      sortable: true
     },
     {
       dataField: "role",
@@ -157,11 +157,11 @@
       visible: true,
       width: 150,
       minWidth: 150,
-      isFilter: true,
-      isSort: true,
+      filterable: true,
+      sortable: true,
       cellTemplate: "role",
-      paramsFilter: {
-        dataSelect: [
+      filterProps: {
+        options: [
           {
             id: "ADMIN",
             value: "Администратор"
@@ -185,8 +185,8 @@
       visible: true,
       width: 300,
       minWidth: 250,
-      isFilter: true,
-      isSort: false
+      filterable: true,
+      sortable: false
     },
     {
       dataField: "articlesCount",
@@ -196,8 +196,8 @@
       visible: true,
       width: 100,
       minWidth: 80,
-      isFilter: false,
-      isSort: true,
+      filterable: false,
+      sortable: true,
       defaultSort: "desc"
     },
     {
@@ -208,8 +208,8 @@
       visible: true,
       width: 150,
       minWidth: 120,
-      isFilter: true,
-      isSort: true
+      filterable: true,
+      sortable: true
     },
     {
       dataField: "updatedAt",
@@ -219,8 +219,8 @@
       visible: true,
       width: 150,
       minWidth: 120,
-      isFilter: true,
-      isSort: true
+      filterable: true,
+      sortable: true
     }
   ])
 
@@ -273,7 +273,7 @@
   const formStructure = ref<FormProps["structure"]>([
     {
       class: "border-b border-gray-900/10 pb-12",
-      classGrid: "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6",
+      classes: { grid: "grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6" },
       fields: [
         {
           typeComponent: "Input",
@@ -281,7 +281,7 @@
           rules: { required: true },
           label: "Имя",
           placeholder: "Введите имя пользователя",
-          classCol: "sm:col-span-6"
+          classes: { field: "sm:col-span-6" }
         },
         {
           typeComponent: "Input",
@@ -289,32 +289,21 @@
           rules: { required: true, email: true },
           label: "Email",
           placeholder: "Введите email",
-          classCol: "sm:col-span-6"
+          classes: { field: "sm:col-span-6" }
         },
         {
           typeComponent: "Select",
           name: "role",
           rules: { required: true },
           label: "Роль",
-          classCol: "sm:col-span-6",
-          ...({
-            params: {
-              dataSelect: [
-                {
-                  id: "ADMIN",
-                  value: "Администратор"
-                },
-                {
-                  id: "AUTHOR",
-                  value: "Автор"
-                },
-                {
-                  id: "READER",
-                  value: "Читатель"
-                }
-              ]
-            }
-          } as any)
+          classes: { field: "sm:col-span-6" },
+          // Раньше опции были завёрнуты в несуществующий ключ схемы `params` под `as any`,
+          // из-за чего не доезжали до контрола вовсе. Ключ поля Select — `options`.
+          options: [
+            { id: "ADMIN", value: "Администратор" },
+            { id: "AUTHOR", value: "Автор" },
+            { id: "READER", value: "Читатель" }
+          ]
         },
         {
           typeComponent: "Input",
@@ -322,7 +311,7 @@
           rules: { required: true },
           label: "Slug",
           placeholder: "Введите slug",
-          classCol: "sm:col-span-6"
+          classes: { field: "sm:col-span-6" }
         },
         {
           typeComponent: "Textarea",
@@ -330,7 +319,7 @@
           rules: {},
           label: "Описание",
           placeholder: "Введите описание пользователя",
-          classCol: "sm:col-span-6"
+          classes: { field: "sm:col-span-6" }
         }
       ]
     }
@@ -408,7 +397,7 @@
   <Split
     :panels="panels"
     units="percentages"
-    :styles="{
+    :classes="{
       separator: 'bg-transparent dark:bg-transparent w-2',
       panel: 'max-h-[calc(100vh-24px)] sm:rounded-xl bg-zinc-100 dark:bg-zinc-900 p-3'
     }">
@@ -420,17 +409,15 @@
       <Table
         :dataSource="[...data, ...data]"
         :columns="columns"
-        search
+        searchable
         toolbar
         class="p-0 overflow-auto"
-        :styles="{
-          activeRow: 'bg-zinc-100 dark:bg-zinc-950',
-          hoverRows: 'hover:bg-zinc-100 dark:hover:bg-zinc-950',
-          class: {
-            toolbar: 'flex-col md:flex-row'
-          },
-          width: '100%',
-          height: 'calc(100vh - 47px)'
+        width="100%"
+        height="calc(100vh - 47px)"
+        :classes="{
+          rowActive: 'bg-zinc-100 dark:bg-zinc-950',
+          rowHover: 'hover:bg-zinc-100 dark:hover:bg-zinc-950',
+          toolbar: 'flex-col md:flex-row'
         }"
         pagination
         @click-row="open">

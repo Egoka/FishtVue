@@ -27,7 +27,14 @@
 <template>
   <div :class="cn(...classDiv, isOpen ? classDivActive : '')">
     Hover Me
-    <FixWindow :class="classWindow" eventOpen="hover" eventClose="hover" @open="isOpen = true" @close="isOpen = false">
+    <!-- props 1.0: `class` у FixWindow теперь адресует корень-позиционер `[data-fix-window]`,
+         а оформление самого «пузыря» — ключ `content` (`[data-fix-window-content]`). -->
+    <FixWindow
+      :classes="{ content: classWindow }"
+      eventOpen="hover"
+      eventClose="hover"
+      @open="isOpen = true"
+      @close="isOpen = false">
       Opened on hover
     </FixWindow>
   </div>

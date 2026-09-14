@@ -2,7 +2,7 @@
   import Table from "fishtvue/table/Table.vue"
   import Badge from "fishtvue/badge/Badge.vue"
   import Button from "fishtvue/button/Button.vue"
-  import type { IColumn, IAsyncDataParams, IAsyncDataResult } from "fishtvue/table"
+  import type { TableColumn, TableAsyncDataParams, TableAsyncDataResult } from "fishtvue/table"
   import { shallowRef, ref } from "vue"
 
   // Моковые данные для тегов
@@ -100,10 +100,12 @@
   ])
 
   // Конфигурация колонок таблицы
-  const columns = shallowRef<Array<IColumn>>([
+  const columns = shallowRef<Array<TableColumn>>([
     {
-      onClick(column: IColumn, indexRow: number) {
-        console.log("onClick", column, indexRow)
+      // Сигнатура — `(column, data, indexRow)`. Раньше второй параметр звался `indexRow`,
+      // и в лог уходила строка данных под именем индекса.
+      onClick(column: TableColumn, data: any, indexRow: number) {
+        console.log("onClick", column, data, indexRow)
       },
       dataField: "name",
       name: "name",
@@ -112,14 +114,9 @@
       visible: true,
       width: 200,
       minWidth: 150,
-      isFilter: true,
-      isSort: true,
-      defaultSort: "asc",
-      paramsFilter: {
-        paramsFilter: {
-          labelMode: "offsetStatic"
-        }
-      }
+      filterable: true,
+      sortable: true,
+      defaultSort: "asc"
     },
     {
       dataField: "slug",
@@ -129,8 +126,8 @@
       visible: true,
       width: 150,
       minWidth: 120,
-      isFilter: true,
-      isSort: true
+      filterable: true,
+      sortable: true
     },
     {
       dataField: "description",
@@ -140,8 +137,8 @@
       visible: true,
       width: 300,
       minWidth: 200,
-      isFilter: true,
-      isSort: false
+      filterable: true,
+      sortable: false
     },
     {
       dataField: "isActive",
@@ -151,8 +148,8 @@
       visible: true,
       width: 120,
       minWidth: 100,
-      isFilter: true,
-      isSort: true,
+      filterable: true,
+      sortable: true,
       cellTemplate: "status"
     },
     {
@@ -163,8 +160,8 @@
       visible: true,
       width: 100,
       minWidth: 80,
-      isFilter: false,
-      isSort: true,
+      filterable: false,
+      sortable: true,
       defaultSort: "desc"
     },
     {
@@ -175,8 +172,8 @@
       visible: true,
       width: 150,
       minWidth: 120,
-      isFilter: true,
-      isSort: false
+      filterable: true,
+      sortable: false
     },
     {
       dataField: "updatedAt",
@@ -186,8 +183,8 @@
       visible: true,
       width: 150,
       minWidth: 120,
-      isFilter: true,
-      isSort: false
+      filterable: true,
+      sortable: false
     }
   ])
 
@@ -200,7 +197,9 @@
   const tableRef = ref<InstanceType<typeof Table>>()
 
   // Режим 1: asyncData = true
-  const asyncDataMode1 = ref(true)
+  // `asyncData` принимает `true` как литерал (режим «данные обновляет потребитель по событиям»),
+  // поэтому ref должен быть `Ref<true>`, а не `Ref<boolean>`.
+  const asyncDataMode1 = ref<true>(true)
   const dataMode1 = shallowRef<Array<any>>([...data.value])
 
   // Режим 2: asyncData = string URL (используем моковый URL)
@@ -218,7 +217,7 @@
   })
 
   // Режим 4: asyncData = function
-  const asyncDataMode4 = ref(async (params: IAsyncDataParams): Promise<IAsyncDataResult> => {
+  const asyncDataMode4 = ref(async (params: TableAsyncDataParams): Promise<TableAsyncDataResult> => {
     console.log("Loading data with params:", params)
     // Симуляция задержки
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -266,14 +265,14 @@
       }
     }
 
-    const totalCount = filteredData.length
+    const total = filteredData.length
     const startIndex = (params.pagination.page - 1) * params.pagination.size
     const endIndex = startIndex + params.pagination.size
     const paginatedData = filteredData.slice(startIndex, endIndex)
 
     return {
       dataSource: paginatedData,
-      totalCount
+      total
     }
   })
 
@@ -308,19 +307,19 @@
   <div class="space-y-4">
     <!-- Переключатель режимов -->
     <div class="flex gap-2 flex-wrap">
-      <Button :mode="activeMode === 'default' ? 'primary' : 'outline'" @click="activeMode = 'default'">
+      <Button :variant="activeMode === 'default' ? 'primary' : 'outline'" @click="activeMode = 'default'">
         Обычный режим
       </Button>
-      <Button :mode="activeMode === 'mode1' ? 'primary' : 'outline'" @click="activeMode = 'mode1'">
+      <Button :variant="activeMode === 'mode1' ? 'primary' : 'outline'" @click="activeMode = 'mode1'">
         Режим 1: asyncData = true
       </Button>
-      <Button :mode="activeMode === 'mode2' ? 'primary' : 'outline'" @click="activeMode = 'mode2'">
+      <Button :variant="activeMode === 'mode2' ? 'primary' : 'outline'" @click="activeMode = 'mode2'">
         Режим 2: asyncData = URL
       </Button>
-      <Button :mode="activeMode === 'mode3' ? 'primary' : 'outline'" @click="activeMode = 'mode3'">
+      <Button :variant="activeMode === 'mode3' ? 'primary' : 'outline'" @click="activeMode = 'mode3'">
         Режим 3: asyncData = Config
       </Button>
-      <Button :mode="activeMode === 'mode4' ? 'primary' : 'outline'" @click="activeMode = 'mode4'">
+      <Button :variant="activeMode === 'mode4' ? 'primary' : 'outline'" @click="activeMode = 'mode4'">
         Режим 4: asyncData = Function
       </Button>
     </div>
@@ -331,25 +330,21 @@
       <Table
         :dataSource="data"
         :columns="columns"
-        :count-visible-rows="2"
+        :visible-rows="2"
         :pagination="{
           startPage: 1,
-          sizePage: 2
+          pageSize: 2
         }"
-        search
+        searchable
         toolbar
         class="p-0 overflow-auto"
-        :styles="{
-          activeRow: true,
-          hoverRows: true,
-          class: {
-            toolbar: 'flex-col md:flex-row',
-            tfoot: 'bg-zinc-100 dark:bg-zinc-900',
-            pagination: 'bg-zinc-100 dark:bg-zinc-900'
-          },
-          borderRadiusPx: 3,
-          width: '42rem',
-          height: '39rem'
+        :border-radius="3"
+        width="42rem"
+        height="39rem"
+        :classes="{
+          toolbar: 'flex-col md:flex-row',
+          tfoot: 'bg-zinc-100 dark:bg-zinc-900',
+          pagination: 'bg-zinc-100 dark:bg-zinc-900'
         }">
         <template #toolbar>
           <div class="flex items-start gap-2 justify-between my-2.5 ml-5 text-xs sm:text-base">
@@ -381,33 +376,29 @@
         ref="tableRef"
         :dataSource="dataMode1"
         :asyncData="asyncDataMode1"
-        :totalCount="dataMode1.length"
+        :total="dataMode1.length"
         :columns="columns"
-        :count-visible-rows="2"
+        :visible-rows="2"
         :pagination="{
           startPage: 1,
-          sizePage: 2
+          pageSize: 2
         }"
-        search
+        searchable
         toolbar
         class="p-0 overflow-auto"
-        :styles="{
-          activeRow: true,
-          hoverRows: true,
-          class: {
-            toolbar: 'flex-col md:flex-row',
-            tfoot: 'bg-zinc-100 dark:bg-zinc-900',
-            pagination: 'bg-zinc-100 dark:bg-zinc-900'
-          },
-          borderRadiusPx: 3,
-          width: '42rem',
-          height: '39rem'
+        :border-radius="3"
+        width="42rem"
+        height="39rem"
+        :classes="{
+          toolbar: 'flex-col md:flex-row',
+          tfoot: 'bg-zinc-100 dark:bg-zinc-900',
+          pagination: 'bg-zinc-100 dark:bg-zinc-900'
         }"
         @sort="handleSort"
         @filter="handleFilter"
         @search="handleSearch"
         @switch-page="handleSwitchPage"
-        @switch-size-page="handleSwitchSizePage">
+        @switch-page-size="handleSwitchSizePage">
         <template #toolbar>
           <div class="flex items-start gap-2 justify-between my-2.5 ml-5 text-xs sm:text-base">
             <div class="">
@@ -447,31 +438,27 @@
             dataField: 'title',
             caption: 'Заголовок',
             type: 'string',
-            isFilter: true,
-            isSort: true
+            filterable: true,
+            sortable: true
           },
           {
             dataField: 'body',
             caption: 'Описание',
             type: 'string',
-            isFilter: true
+            filterable: true
           }
         ]"
-        :count-visible-rows="2"
+        :visible-rows="2"
         :pagination="{
           startPage: 1,
-          sizePage: 5
+          pageSize: 5
         }"
-        search
+        searchable
         toolbar
         class="p-0 overflow-auto"
-        :styles="{
-          activeRow: true,
-          hoverRows: true,
-          borderRadiusPx: 3,
-          width: '42rem',
-          height: '39rem'
-        }">
+        :border-radius="3"
+        width="42rem"
+        height="39rem">
         <template #toolbar>
           <div class="text-lg sm:text-2xl font-medium leading-8 text-black dark:text-zinc-300 truncate my-2.5 ml-5">
             Загрузка из URL
@@ -499,31 +486,27 @@
             dataField: 'title',
             caption: 'Заголовок',
             type: 'string',
-            isFilter: true,
-            isSort: true
+            filterable: true,
+            sortable: true
           },
           {
             dataField: 'body',
             caption: 'Описание',
             type: 'string',
-            isFilter: true
+            filterable: true
           }
         ]"
-        :count-visible-rows="2"
+        :visible-rows="2"
         :pagination="{
           startPage: 1,
-          sizePage: 5
+          pageSize: 5
         }"
-        search
+        searchable
         toolbar
         class="p-0 overflow-auto"
-        :styles="{
-          activeRow: true,
-          hoverRows: true,
-          borderRadiusPx: 3,
-          width: '42rem',
-          height: '39rem'
-        }">
+        :border-radius="3"
+        width="42rem"
+        height="39rem">
         <template #toolbar>
           <div class="text-lg sm:text-2xl font-medium leading-8 text-black dark:text-zinc-300 truncate my-2.5 ml-5">
             Загрузка из Config
@@ -545,25 +528,21 @@
         ref="tableRef"
         :asyncData="asyncDataMode4"
         :columns="columns"
-        :count-visible-rows="2"
+        :visible-rows="2"
         :pagination="{
           startPage: 1,
-          sizePage: 2
+          pageSize: 2
         }"
-        search
+        searchable
         toolbar
         class="p-0 overflow-auto"
-        :styles="{
-          activeRow: true,
-          hoverRows: true,
-          class: {
-            toolbar: 'flex-col md:flex-row',
-            tfoot: 'bg-zinc-100 dark:bg-zinc-900',
-            pagination: 'bg-zinc-100 dark:bg-zinc-900'
-          },
-          borderRadiusPx: 3,
-          width: '42rem',
-          height: '39rem'
+        :border-radius="3"
+        width="42rem"
+        height="39rem"
+        :classes="{
+          toolbar: 'flex-col md:flex-row',
+          tfoot: 'bg-zinc-100 dark:bg-zinc-900',
+          pagination: 'bg-zinc-100 dark:bg-zinc-900'
         }">
         <template #toolbar>
           <div class="flex items-start gap-2 justify-between my-2.5 ml-5 text-xs sm:text-base">
