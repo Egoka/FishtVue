@@ -285,12 +285,15 @@
     } else if (value && typeof +value === "number") {
       activePage.value = value
     }
-    emit("update:modelValue", activePage.value)
+    // `?? 1` — та же конвенция дефолта, что и на каждом чтении activePage выше по файлу:
+    // канал v-model обязан отдавать число (PaginationEmits), а не «пусто»
+    emit("update:modelValue", activePage.value ?? 1)
   }
 
   function switchPageSize(value: SelectProps["modelValue"] | null, _?: Array<any>) {
     pageSize.value = typeof value === "number" ? value : typeof value === "string" ? Number(value) : undefined
-    emit("update:pageSize", pageSize.value)
+    // `pageSizeProp` — резолв `props ?? options ?? 5`, поэтому фолбэк уважает конфиг
+    emit("update:pageSize", pageSize.value ?? pageSizeProp.value)
   }
 
   // Issue 7 (G34): programmatic focus корневого <nav> через exposed paginationRef.

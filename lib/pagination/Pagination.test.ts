@@ -803,6 +803,28 @@ describe("Pagination — контракт props 1.0.0", () => {
     expect(size).not.toBe(page)
   })
 
+  it("никогда не эмитит `undefined` в v-model-каналы (защитные ветки switchPage/switchPageSize)", async () => {
+    const app = withOptions({ pageSize: 15 })
+    const wrapper = mount(Pagination, { props: { total: 100 }, global: { plugins: [app] } })
+
+    // Select может отдать не число и не строку — внутренний ref уходит в undefined,
+    // но наружу канал обязан отдать резолвленный размер (`options.pageSize`), а не «пусто»
+    ;(wrapper.vm as any).switchPageSize(null)
+    await nextTick()
+    expect(wrapper.emitted("update:pageSize")?.at(-1)).toEqual([15])
+
+    // Array-ветка switchPage: reduce может не найти соседнюю страницу и вернуть свой init.
+    // `0` здесь — легальный sentinel компонента («страниц нет», см. computed `pages`),
+    // контракт требует только одного: наружу уходит число, а не undefined.
+    ;(wrapper.vm as any).switchPage([])
+    await nextTick()
+    expect(typeof wrapper.emitted("update:modelValue")?.at(-1)?.[0]).toBe("number")
+
+    for (const event of ["update:modelValue", "update:pageSize"] as const) {
+      for (const call of wrapper.emitted(event) ?? []) expect(call[0]).not.toBeUndefined()
+    }
+  })
+
   it("корень реактивен: смена props.class пересчитывает класс (был нереактивный ref)", async () => {
     const wrapper = mount(Pagination, { props: { total: 100, class: "probe-one" } })
     expect(wrapper.find("[data-pagination]").classes()).toContain("probe-one")
