@@ -84,7 +84,11 @@ const config = {
     [
       "@semantic-release/exec",
       {
-        prepareCmd: "cd lib && npm version ${nextRelease.version} && git add package.json"
+        // --allow-same-version: npm version падает с "Version not changed", если в
+        // lib/package.json уже стоит вычисленная версия, и роняет весь релиз на шаге
+        // prepare. Флаг делает шаг идемпотентным — версию всё равно назначает
+        // semantic-release по git-тегу, а не файл.
+        prepareCmd: "cd lib && npm version ${nextRelease.version} --allow-same-version && git add package.json"
       }
     ],
     [
