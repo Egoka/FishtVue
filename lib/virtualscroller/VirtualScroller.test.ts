@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { h, nextTick } from "vue"
 import FishtVue from "fishtvue/config"
 import VirtualScroller from "fishtvue/virtualscroller/VirtualScroller.vue"
-import type { VirtualScrollerExpose } from "fishtvue/virtualscroller/VirtualScroller"
+import type { VirtualScrollerClassKey, VirtualScrollerExpose } from "fishtvue/virtualscroller/VirtualScroller"
 
 type Row = { id: number; label: string }
 const makeItems = (n: number): Row[] => Array.from({ length: n }, (_, i) => ({ id: i, label: `row ${i}` }))
@@ -136,9 +136,9 @@ describe("VirtualScroller — slots", () => {
     expect(rows(wrapper)).toHaveLength(0)
   })
 
-  it("renders loader (custom slot) when showLoader && loading", () => {
+  it("renders loader (custom slot) when loader && loading", () => {
     const wrapper = mount(VirtualScroller, {
-      props: { items: makeItems(5), itemSize: 20, showLoader: true, loading: true },
+      props: { items: makeItems(5), itemSize: 20, loader: true, loading: true },
       slots: { item: itemSlot, loader: () => h("div", { class: "my-loader" }, "…") }
     })
     expect(wrapper.find("[data-vs-loader]").exists()).toBe(true)
@@ -270,7 +270,7 @@ describe("VirtualScroller — locale", () => {
   it("localizes the loader aria-label (en)", () => {
     const app = createAppWithFishtVue({}, { locale: { activeLocale: "en", defaultLocale: "en" } })
     const wrapper = mount(VirtualScroller, {
-      props: { items: makeItems(3), showLoader: true, loading: true },
+      props: { items: makeItems(3), loader: true, loading: true },
       global: { plugins: [app as any] }
     })
     expect(wrapper.find("[data-vs-loader]").attributes("aria-label")).toBe("Loading…")
@@ -293,5 +293,104 @@ describe("VirtualScroller — expose methods", () => {
     expect(r.first).toBeLessThanOrEqual(50)
     expect(r.last).toBeGreaterThanOrEqual(50)
     expect(() => vm.refresh()).not.toThrow()
+  })
+})
+
+// Контракт props 1.0.0 (dev-patterns §2 A–E): до 1.0.0 `class`/`classContent` клались в DOM
+// мимо `setStyle`, поэтому ни `componentsOptions`, ни `unstyled` на них не действовали.
+describe("VirtualScroller — контракт props 1.0.0", () => {
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
+  const ITEMS = makeItems(3)
+
+  it("отсутствующие булевы приходят `undefined`, а не скастованными в false", () => {
+    const wrapper = mount(VirtualScroller, { props: { items: ITEMS } })
+
+    expect(wrapper.props("lazy")).toBeUndefined()
+    expect(wrapper.props("appendOnly")).toBeUndefined()
+    expect(wrapper.props("loading")).toBeUndefined()
+    expect(wrapper.props("loader")).toBeUndefined()
+  })
+
+  it("`class` уходит только на корень и не протекает во внутренние элементы", () => {
+    const wrapper = mount(VirtualScroller, {
+      props: { items: ITEMS, class: "probe-root", loading: true, loader: true }
+    })
+    const root = wrapper.find("[data-virtual-scroller]")
+
+    expect(root.classes()).toContain("probe-root")
+    expect(root.element.querySelectorAll("[class~='probe-root']")).toHaveLength(0)
+  })
+
+  it.each([
+    ["viewport", "[data-vs-viewport]"],
+    ["content", "[data-vs-content]"],
+    ["loader", "[data-vs-loader]"]
+  ] as Array<[VirtualScrollerClassKey, string]>)("classes.%s доезжает до своего элемента", (key, selector) => {
+    const wrapper = mount(VirtualScroller, {
+      props: { items: ITEMS, loading: true, loader: true, classes: { [key]: "probe-key" } }
+    })
+
+    expect(wrapper.find(selector).classes()).toContain("probe-key")
+    expect(wrapper.find("[data-virtual-scroller]").classes()).not.toContain("probe-key")
+  })
+
+  it("корень получает setStyle-префикс — классы компилируются, а не просто попадают в DOM", () => {
+    const wrapper = mount(VirtualScroller, { props: { items: ITEMS } })
+
+    expect(wrapper.find("[data-virtual-scroller]").classes()).toContain("fishtvue-virtual-scroller")
+  })
+
+  it("componentsOptions.VirtualScroller.class и .classes теперь достижимы", () => {
+    const app = createAppWithFishtVue({ class: "opt-root", classes: { content: "opt-content" } })
+    const wrapper = mount(VirtualScroller, { props: { items: ITEMS }, global: { plugins: [app] } })
+
+    expect(wrapper.find("[data-virtual-scroller]").classes()).toContain("opt-root")
+    expect(wrapper.find("[data-vs-content]").classes()).toContain("opt-content")
+  })
+
+  it("props.classes перебивает options.classes, неконфликтный класс options остаётся", () => {
+    const app = createAppWithFishtVue({ classes: { content: "p-2 italic" } })
+    const wrapper = mount(VirtualScroller, {
+      props: { items: ITEMS, classes: { content: "p-8" } },
+      global: { plugins: [app] }
+    })
+    const classes = wrapper.find("[data-vs-content]").classes()
+
+    expect(classes).toContain("p-8")
+    expect(classes).not.toContain("p-2")
+    expect(classes).toContain("italic")
+  })
+
+  it("unstyled сохраняет классы потребителя и режет тему", () => {
+    const app = createAppWithFishtVue({}, { unstyled: true })
+    const wrapper = mount(VirtualScroller, {
+      props: { items: ITEMS, class: "probe-root", classes: { content: "probe-content" } },
+      global: { plugins: [app] }
+    })
+
+    expect(wrapper.find("[data-virtual-scroller]").classes()).toEqual(["fv", "probe-root"])
+    expect(wrapper.find("[data-vs-content]").classes()).toEqual(["fv", "probe-content"])
+  })
+
+  it("`throttle` заменил `delay`: options-слой достижим, expose отдаёт новое имя", () => {
+    const app = createAppWithFishtVue({ throttle: 120 })
+    const wrapper = mount(VirtualScroller, { props: { items: ITEMS }, global: { plugins: [app] } })
+    const vm = wrapper.vm as unknown as VirtualScrollerExpose & { delay?: number }
+
+    expect(vm.throttle).toBe(120)
+    expect(vm.delay).toBeUndefined()
+  })
+
+  it("снятый `showLoader` больше не показывает loader — работает только `loader`", () => {
+    const stale = mount(VirtualScroller, {
+      props: { items: ITEMS, loading: true, showLoader: true } as any
+    })
+    expect(stale.find("[data-vs-loader]").exists()).toBe(false)
+
+    const fresh = mount(VirtualScroller, { props: { items: ITEMS, loading: true, loader: true } })
+    expect(fresh.find("[data-vs-loader]").exists()).toBe(true)
   })
 })

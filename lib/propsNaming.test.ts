@@ -22,15 +22,12 @@ const LIB = resolve(process.cwd(), "lib")
 const PENDING: string[] = [
   "alert/Alert.d.ts",
   "dialog/Dialog.d.ts",
-  "fixwindow/FixWindow.d.ts",
   "form/Form.d.ts",
   "menu/Menu.d.ts",
   "menu/MenuGroup.d.ts",
   "menu/MenuItem.d.ts",
-  "pagination/Pagination.d.ts",
   "split/Split.d.ts",
   "table/Table.d.ts",
-  "virtualscroller/VirtualScroller.d.ts",
   // T5 / W7: `_key` → `ItemKey`, `namesColors` → `ColorName`.
   "types.d.ts",
   "theme/Theme.d.ts"

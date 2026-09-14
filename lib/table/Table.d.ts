@@ -1271,39 +1271,39 @@ export declare type TableExpose = {
 
   /**
    * The current page size for pagination.
-   * @type {TablePagination["sizePage"]}
+   * @type {TablePagination["pageSize"]}
    */
-  sizePage: TablePagination["sizePage"]
+  sizePage: TablePagination["pageSize"]
 
   /**
    * The number of visible pages in pagination.
-   * @type {TablePagination["visibleNumberPages"]}
+   * @type {TablePagination["visiblePages"]}
    */
-  visibleNumberPages: TablePagination["visibleNumberPages"]
+  visibleNumberPages: TablePagination["visiblePages"]
 
   /**
    * The available sizes for the page size selector.
-   * @type {TablePagination["sizesSelector"]}
+   * @type {TablePagination["pageSizes"]}
    */
-  sizesSelector: TablePagination["sizesSelector"]
+  sizesSelector: TablePagination["pageSizes"]
 
   /**
    * Indicates whether informational text is displayed in pagination.
-   * @type {TablePagination["isInfoText"]}
+   * @type {TablePagination["infoText"]}
    */
-  isInfoText: TablePagination["isInfoText"]
+  isInfoText: TablePagination["infoText"]
 
   /**
    * Indicates whether the page size selector is visible.
-   * @type {TablePagination["isPageSizeSelector"]}
+   * @type {TablePagination["pageSizeSelector"]}
    */
-  isPageSizeSelector: TablePagination["isPageSizeSelector"]
+  isPageSizeSelector: TablePagination["pageSizeSelector"]
 
   /**
-   * Indicates whether navigation buttons are hidden in pagination.
-   * @type {TablePagination["isHiddenNavigationButtons"]}
+   * Показываются ли кнопки навигации пагинации (`navigationButtons`, default `true`).
+   * @type {TablePagination["navigationButtons"]}
    */
-  isHiddenNavigationButtons: TablePagination["isHiddenNavigationButtons"]
+  isNavigationButtons: TablePagination["navigationButtons"]
 
   // ---CELL--------------------------------
   /**

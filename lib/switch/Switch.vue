@@ -282,9 +282,11 @@
           position="bottom-right"
           :margin-px="12.0"
           :padding-window="40"
-          class-body="z-20"
+          class="z-20"
           stop-open-propagation
-          class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
+          :classes="{
+            content: 'border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent'
+          }">
           <slot name="help">
             <div :class="classIconContent">{{ help }}</div>
           </slot>

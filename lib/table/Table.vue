@@ -385,25 +385,26 @@
   const modePagination = computed<NonNullable<TablePagination["mode"]>>(
     () => (pagination.value as TablePagination)?.mode ?? mode.value
   )
-  const sizePage = computed<NonNullable<TablePagination["sizePage"]>>(() =>
-    isNumber((pagination.value as TablePagination)?.sizePage as number)
-      ? +(pagination.value as any).sizePage
+  // `TablePagination extends Omit<PaginationProps, …>` — поля схемы переименовались вместе с
+  // Pagination (W3b). Локальные имена и expose Table остаются прежними до W4, где переименовывается
+  // весь публичный API таблицы разом.
+  const sizePage = computed<NonNullable<TablePagination["pageSize"]>>(() =>
+    isNumber((pagination.value as TablePagination)?.pageSize as number)
+      ? +(pagination.value as any).pageSize
       : countVisibleRows.value || sizeTable.value
   )
-  const visibleNumberPages = computed<TablePagination["visibleNumberPages"]>(
-    () => (pagination.value as TablePagination)?.visibleNumberPages
+  const visibleNumberPages = computed<TablePagination["visiblePages"]>(
+    () => (pagination.value as TablePagination)?.visiblePages
   )
-  const sizesSelector = computed<TablePagination["sizesSelector"]>(
-    () => (pagination.value as TablePagination)?.sizesSelector
+  const sizesSelector = computed<TablePagination["pageSizes"]>(() => (pagination.value as TablePagination)?.pageSizes)
+  const isInfoText = computed<TablePagination["infoText"]>(
+    () => (pagination.value as TablePagination)?.infoText ?? false
   )
-  const isInfoText = computed<TablePagination["isInfoText"]>(
-    () => (pagination.value as TablePagination)?.isInfoText ?? false
+  const isPageSizeSelector = computed<TablePagination["pageSizeSelector"]>(
+    () => (pagination.value as TablePagination)?.pageSizeSelector ?? false
   )
-  const isPageSizeSelector = computed<TablePagination["isPageSizeSelector"]>(
-    () => (pagination.value as TablePagination)?.isPageSizeSelector ?? false
-  )
-  const isHiddenNavigationButtons = computed<TablePagination["isHiddenNavigationButtons"]>(
-    () => (pagination.value as TablePagination)?.isHiddenNavigationButtons ?? false
+  const isNavigationButtons = computed<TablePagination["navigationButtons"]>(
+    () => (pagination.value as TablePagination)?.navigationButtons ?? true
   )
   // ---DATA--------------------------------
   const dataGrouping = computed<DataGrouping>(() => {
@@ -1152,7 +1153,7 @@
     sizesSelector,
     isInfoText,
     isPageSizeSelector,
-    isHiddenNavigationButtons,
+    isNavigationButtons,
     // ---CELL--------------------------------
     heightCell,
     countVisibleRows,
@@ -2355,14 +2356,14 @@
           :style="styleIsPagination">
           <Pagination
             :model-value="pageTable"
-            :size-page="+sizeTable"
+            :page-size="+sizeTable"
             :mode="modePagination"
             :total="lengthData"
-            :visible-number-pages="visibleNumberPages"
-            :is-info-text="isInfoText"
-            :sizes-selector="sizesSelector"
-            :is-page-size-selector="isPageSizeSelector"
-            :is-hidden-navigation-buttons="isHiddenNavigationButtons"
+            :visible-pages="visibleNumberPages"
+            :info-text="isInfoText"
+            :page-sizes="sizesSelector"
+            :page-size-selector="isPageSizeSelector"
+            :navigation-buttons="isNavigationButtons"
             :class="[
               'classPagination border-t sm:px-2',
               ((pagination as TablePagination)?.class as string) ?? '',
@@ -2372,7 +2373,7 @@
             ]"
             :style="styleIsPagination"
             @update:model-value="switchPage"
-            @update:size-page="switchSizePage" />
+            @update:page-size="switchSizePage" />
         </div>
         <!-- -------------------------------- -->
         <transition

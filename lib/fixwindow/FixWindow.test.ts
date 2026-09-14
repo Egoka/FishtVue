@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 import FishtVue from "fishtvue/config"
 import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
-import { FixWindowProps } from "fishtvue/fixwindow/FixWindow"
+import { FixWindowClassKey, FixWindowProps } from "fishtvue/fixwindow/FixWindow"
 import { RefLink } from "fishtvue/types"
 
 describe("FixWindow Component Tests", () => {
@@ -18,8 +18,10 @@ describe("FixWindow Component Tests", () => {
       const wrapper = mount(FixWindow)
       expect(wrapper.exists()).toBe(true)
       expect(wrapper.props()).toMatchObject({
-        modelValue: false,
-        typePosition: undefined,
+        // 1.0.0: own default `undefined` (dev-patterns §2 F) — Vue больше не кастует отсутствующий
+        // Boolean в `false`, поэтому слой `componentsOptions` остаётся достижимым.
+        modelValue: undefined,
+        strategy: undefined,
         position: undefined,
         byCursor: undefined,
         eventOpen: undefined,
@@ -366,7 +368,7 @@ describe("FixWindow Component Tests", () => {
         props: {
           eventOpen: "click",
           byCursor: true,
-          delay: 500
+          openDelay: 500
         }
       })
       vi.spyOn(wrapper.vm.element, "getBoundingClientRect").mockReturnValue({
@@ -433,12 +435,12 @@ describe("FixWindow Component Tests", () => {
     })
 
     it.each([
-      { delay: 200, expectedDelayMs: 200 },
-      { delay: 400, expectedDelayMs: 400 },
-      { delay: 600, expectedDelayMs: 600 }
-    ])("applies correct delay for value $delay ($expectedDelayMs ms)", async ({ delay, expectedDelayMs }) => {
+      { openDelay: 200, expectedDelayMs: 200 },
+      { openDelay: 400, expectedDelayMs: 400 },
+      { openDelay: 600, expectedDelayMs: 600 }
+    ])("applies correct delay for value $openDelay ($expectedDelayMs ms)", async ({ openDelay, expectedDelayMs }) => {
       const wrapper = mount(FixWindow, {
-        props: { delay }
+        props: { openDelay }
       })
 
       const timerSpy = vi.spyOn(global, "setInterval")
@@ -604,25 +606,25 @@ describe("FixWindow Component Tests", () => {
       wrapper.unmount()
     })
 
-    it("typePosition='absolute' applies absolute strategy", () => {
-      const wrapper = mount(FixWindow, { props: { typePosition: "absolute" } })
+    it("strategy='absolute' applies absolute strategy", () => {
+      const wrapper = mount(FixWindow, { props: { strategy: "absolute" } })
       const classes = wrapper.find("[data-fix-window]").classes()
-      // typePosition is part of classBase
+      // strategy is part of classBase
       expect(classes.join(" ")).toContain("fishtvue-fix-window")
       wrapper.unmount()
     })
 
-    it("typePosition='fixed' applies fixed strategy (default when no scrollableEl)", () => {
-      const wrapper = mount(FixWindow, { props: { typePosition: "fixed" } })
+    it("strategy='fixed' applies fixed strategy (default when no scrollableEl)", () => {
+      const wrapper = mount(FixWindow, { props: { strategy: "fixed" } })
       expect(wrapper.exists()).toBe(true)
       wrapper.unmount()
     })
 
-    it("scrollableEl prop infers typePosition='absolute'", async () => {
+    it("scrollableEl prop infers strategy='absolute'", async () => {
       document.body.innerHTML = `<div id="s"></div>`
       const wrapper = mount(FixWindow, { props: { scrollableEl: "#s" } })
       await nextTick()
-      // typePosition default when scrollableEl is set should be "absolute"
+      // strategy default when scrollableEl is set should be "absolute"
       // (computed prop falls back accordingly).
       expect(wrapper.exists()).toBe(true)
       wrapper.unmount()
@@ -1062,5 +1064,111 @@ describe("FixWindow Component Tests", () => {
       expect(wrapper.vm.isOpen).toBe(true)
       wrapper.unmount()
     })
+  })
+})
+
+// Контракт props 1.0.0 (dev-patterns §2 A–D): инверсия `class`/`classBody` снята — корень
+// адресуется `class`, внутренний блок — `classes.content`.
+describe("FixWindow — контракт props 1.0.0", () => {
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
+  const withOptions = (options: any = {}, extra: any = {}) => ({
+    install(app: any) {
+      app.use(FishtVue, { componentsOptions: { FixWindow: options }, ...extra })
+    }
+  })
+  const OPEN = { modelValue: true, teleport: false as const }
+
+  it("`class` ложится на корень `[data-fix-window]`, а не на контент", () => {
+    const wrapper = mount(FixWindow, {
+      props: { ...OPEN, class: "probe-root" },
+      slots: { default: "x" }
+    })
+    const root = wrapper.find("[data-fix-window]")
+
+    expect(root.classes()).toContain("probe-root")
+    expect(root.element.querySelectorAll("[class~='probe-root']")).toHaveLength(0)
+  })
+
+  it.each([
+    ["content", "[data-fix-window-content]"],
+    ["close", "[data-fix-window-close]"]
+  ] as Array<[FixWindowClassKey, string]>)("classes.%s доезжает до своего элемента", (key, selector) => {
+    const wrapper = mount(FixWindow, {
+      props: { ...OPEN, closeButton: true, classes: { [key]: "probe-key" } },
+      slots: { default: "x" }
+    })
+
+    expect(wrapper.find(selector).classes()).toContain("probe-key")
+    expect(wrapper.find("[data-fix-window]").classes()).not.toContain("probe-key")
+  })
+
+  it("props.classes перебивает options.classes, неконфликтный класс options остаётся", () => {
+    const app = withOptions({ classes: { content: "p-2 italic" } })
+    const wrapper = mount(FixWindow, {
+      props: { ...OPEN, classes: { content: "p-8" } },
+      slots: { default: "x" },
+      global: { plugins: [app] }
+    })
+    const classes = wrapper.find("[data-fix-window-content]").classes()
+
+    expect(classes).toContain("p-8")
+    expect(classes).not.toContain("p-2")
+    expect(classes).toContain("italic")
+  })
+
+  it("options.class на корне, props.class перебивает его последним сегментом", () => {
+    const app = withOptions({ class: "p-2 opt-only" })
+    const wrapper = mount(FixWindow, {
+      props: { ...OPEN, class: "p-8" },
+      slots: { default: "x" },
+      global: { plugins: [app] }
+    })
+    const classes = wrapper.find("[data-fix-window]").classes()
+
+    expect(classes).toContain("p-8")
+    expect(classes).toContain("opt-only")
+    expect(classes).not.toContain("p-2")
+  })
+
+  it("снятый `classBody` больше не адресует корень — падает fallthrough-атрибутом", () => {
+    const wrapper = mount(FixWindow, {
+      props: { ...OPEN, classBody: "probe-legacy" } as any,
+      slots: { default: "x" }
+    })
+
+    expect(wrapper.find("[data-fix-window]").classes()).not.toContain("probe-legacy")
+  })
+
+  it("`strategy` заменил `typePosition` и доезжает до корня", () => {
+    const wrapper = mount(FixWindow, {
+      props: { ...OPEN, strategy: "absolute" },
+      slots: { default: "x" }
+    })
+
+    expect(wrapper.find("[data-fix-window]").classes()).toContain("absolute")
+  })
+
+  it("`openDelay` заменил `delay`: options-слой достижим, expose отдаёт новое имя", () => {
+    const app = withOptions({ openDelay: 300 })
+    const wrapper = mount(FixWindow, { props: OPEN, slots: { default: "x" }, global: { plugins: [app] } })
+    const vm = wrapper.vm as any
+
+    expect(vm.openDelay).toBe(300)
+    expect(vm.delay).toBeUndefined()
+  })
+
+  it("unstyled сохраняет классы потребителя и режет тему", () => {
+    const app = withOptions({}, { unstyled: true })
+    const wrapper = mount(FixWindow, {
+      props: { ...OPEN, class: "probe-root", classes: { content: "probe-content" } },
+      slots: { default: "x" },
+      global: { plugins: [app] }
+    })
+
+    expect(wrapper.find("[data-fix-window]").classes()).toEqual(["fv", "probe-root"])
+    expect(wrapper.find("[data-fix-window-content]").classes()).toEqual(["fv", "probe-content"])
   })
 })

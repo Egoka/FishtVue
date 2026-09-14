@@ -4,17 +4,28 @@
   import { isClient } from "fishtvue/utils/domHandler"
   import { useStyle } from "fishtvue/theme"
   import { useVirtualScroll, type VirtualItemSize } from "./useVirtualScroll"
-  import type { VirtualScrollerProps, VirtualScrollerEmits, VirtualScrollerScrollDirection } from "./VirtualScroller"
+  import type {
+    VirtualScrollerClassKey,
+    VirtualScrollerProps,
+    VirtualScrollerEmits,
+    VirtualScrollerScrollDirection
+  } from "./VirtualScroller"
 
   // ---BASE-COMPONENT----------------------
   const VirtualScroller = new Component<"VirtualScroller">()
   const options = VirtualScroller.getOptions()
 
   // ---PROPS-EMITS-SLOTS-------------------
+  // Каждый optional boolean — `undefined` (dev-patterns §2 F): иначе слой componentsOptions недостижим.
   const props = withDefaults(defineProps<VirtualScrollerProps>(), {
-    items: () => []
+    items: () => [],
+    lazy: undefined,
+    appendOnly: undefined,
+    loading: undefined,
+    loader: undefined
   })
   const emit = defineEmits<VirtualScrollerEmits>()
+  const { cls } = VirtualScroller.resolveClasses<VirtualScrollerClassKey>(props)
 
   // ---OPTIONS-RESOLUTION (props → componentsOptions → defaults) ---
   const items = computed<any[]>(() => props.items ?? [])
@@ -23,11 +34,11 @@
   const orientation = computed(() => props.orientation ?? options?.orientation ?? "vertical")
   const overscan = computed<number>(() => props.overscan ?? options?.overscan ?? 6)
   const threshold = computed<number>(() => props.threshold ?? options?.threshold ?? 100)
-  const delay = computed<number>(() => props.delay ?? options?.delay ?? 0)
+  const throttle = computed<number>(() => props.throttle ?? options?.throttle ?? 0)
   const lazy = computed<boolean>(() => props.lazy ?? false)
   const appendOnly = computed<boolean>(() => props.appendOnly ?? false)
   const loading = computed<boolean>(() => props.loading ?? false)
-  const showLoader = computed<boolean>(() => props.showLoader ?? false)
+  const isLoader = computed<boolean>(() => props.loader ?? false)
   const scrollbarMode = computed(() => props.scrollbar ?? options?.scrollbar ?? "macos")
 
   const isHorizontal = computed(() => orientation.value === "horizontal")
@@ -122,7 +133,13 @@
   })
 
   // ---STYLES------------------------------
-  const classBase = computed(() => VirtualScroller.setStyle(["relative"]))
+  // Корень и внутренние элементы — через `cls(key, …)`: до 1.0.0 `props.class`/`props.classContent`
+  // клались в DOM мимо `setStyle`, поэтому ни `componentsOptions.VirtualScroller`, ни `unstyled`
+  // на них не действовали (dev-patterns §2 B–E).
+  const classBase = computed(() => cls("root", "relative"))
+  const classViewport = computed(() => cls("viewport"))
+  const classContent = computed(() => cls("content"))
+  const classLoader = computed(() => cls("loader"))
 
   const resolvedHeight = computed(() =>
     props.scrollHeight == null
@@ -202,12 +219,12 @@
     direction: VirtualScrollerScrollDirection
   }): void {
     pendingScroll = payload
-    if (delay.value > 0) {
+    if (throttle.value > 0) {
       if (emitTimer) return
       emitTimer = setTimeout(() => {
         emitTimer = undefined
         if (pendingScroll) emit("scroll", pendingScroll)
-      }, delay.value)
+      }, throttle.value)
     } else {
       emit("scroll", payload)
     }
@@ -367,9 +384,10 @@
     scrollbar: scrollbarMode,
     overscan,
     threshold,
-    delay,
+    throttle,
     estimatedItemSize,
     classBase,
+    classContent,
     viewportRef,
     scrollTo,
     scrollToIndex,
@@ -394,17 +412,18 @@
 </script>
 
 <template>
-  <div data-virtual-scroller :class="[classBase, props.class]">
+  <div data-virtual-scroller :class="classBase">
     <slot name="header" />
     <div
       ref="viewportRef"
       data-vs-viewport
       role="presentation"
+      :class="classViewport"
       :data-vs-scrollbar="scrollbarMode"
       :data-scrolling="isScrolling || undefined"
       :style="viewportStyle"
       @scroll="onScroll">
-      <div ref="contentRef" data-vs-content role="presentation" :class="props.classContent" :style="contentStyle">
+      <div ref="contentRef" data-vs-content role="presentation" :class="classContent" :style="contentStyle">
         <div v-if="topPad > 0" data-vs-spacer="top" aria-hidden="true" :style="spacerTopStyle" />
         <slot
           v-if="$slots.content"
@@ -424,7 +443,7 @@
             :active="vi.active" />
         </template>
         <div v-if="bottomPad > 0" data-vs-spacer="bottom" aria-hidden="true" :style="spacerBottomStyle" />
-        <div v-if="showLoader && loading" data-vs-loader role="status" :aria-label="loaderLabel">
+        <div v-if="isLoader && loading" data-vs-loader role="status" :class="classLoader" :aria-label="loaderLabel">
           <slot name="loader" :index="items.length">
             <div data-vs-loader-default aria-hidden="true" />
           </slot>

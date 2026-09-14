@@ -448,8 +448,8 @@
       <FixWindow
         v-bind="fixWindowProps"
         :model-value="isOpenPicker"
-        class-body="z-30"
-        class="px-0 rounded-[0.4rem]"
+        class="z-30"
+        :classes="{ content: 'px-0 rounded-[0.4rem]' }"
         @close="(env) => closeCalendar(env)">
         <div data-calendar-picker ref="picker" :class="classPicker">
           <component

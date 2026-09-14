@@ -5,9 +5,17 @@
   import { useFloating, type Placement } from "./useFloating"
   import { useClickOutside } from "./useClickOutside"
   import { isClient } from "fishtvue/utils/domHandler"
-  import type { FixWindowEmits, FixWindowEvent, FixWindowExpose, FixWindowProps, FixWindowRole } from "./FixWindow"
+  import type {
+    FixWindowClassKey,
+    FixWindowEmits,
+    FixWindowEvent,
+    FixWindowExpose,
+    FixWindowProps,
+    FixWindowRole
+  } from "./FixWindow"
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
+  import { cn } from "fishtvue/utils/tailwindHandler"
   // ---BASE-COMPONENT----------------------
   // Component.__hooks() авто-регистрирует onServerPrefetch + vueOnMounted → initStyle().
   // Не вызывать FixWindow.initStyle() вручную — будет дубликат (dev-patterns.md §2 row 1).
@@ -15,6 +23,7 @@
   const options = FixWindow.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<FixWindowProps>(), {
+    modelValue: undefined,
     byCursor: undefined,
     closeButton: undefined,
     stopOpenPropagation: undefined,
@@ -23,6 +32,7 @@
     teleport: undefined
   })
   const emit = defineEmits<FixWindowEmits>()
+  const { cls, raw } = FixWindow.resolveClasses<FixWindowClassKey>(props)
   // ---REF-LINK----------------------------
   const fixWindow = ref<HTMLElement>()
   const scrollableEl = ref<HTMLElement | Element>()
@@ -36,19 +46,19 @@
   const stopClickOutside = ref<(() => void) | null>(null)
   let escapeListener: ((event: KeyboardEvent) => void) | null = null
   // ---PROPS-------------------------------
-  const typePosition = computed<NonNullable<FixWindowProps["typePosition"]>>(
+  const strategyProp = computed<NonNullable<FixWindowProps["strategy"]>>(
     () =>
-      (props?.typePosition as FixWindowProps["typePosition"]) ??
-      options?.typePosition ??
+      (props?.strategy as FixWindowProps["strategy"]) ??
+      options?.strategy ??
       (props.scrollableEl ? "absolute" : "fixed")
   )
   const position = computed<NonNullable<FixWindowProps["position"]>>(
     () =>
       (props?.position as FixWindowProps["position"]) ?? options?.position ?? (byCursor.value ? "center-bottom" : "top")
   )
-  const delay = computed<NonNullable<FixWindowProps["delay"]>>(() => {
-    const delay = (props?.delay as FixWindowProps["delay"]) ?? options?.delay
-    return delay && !isNaN(delay) ? delay : 0
+  const openDelay = computed<NonNullable<FixWindowProps["openDelay"]>>(() => {
+    const value = (props?.openDelay as FixWindowProps["openDelay"]) ?? options?.openDelay
+    return value && !isNaN(value) ? value : 0
   })
   const marginPx = computed<NonNullable<FixWindowProps["marginPx"]>>(
     () => (props?.marginPx as FixWindowProps["marginPx"]) ?? options?.marginPx ?? 10
@@ -129,11 +139,13 @@
   FixWindow.setStyle(
     `motion-safe:transition-opacity motion-safe:ease-in-out motion-safe:duration-300 opacity-100 opacity-0`
   )
-  const classBase = computed(() => {
-    const classes = `text-surface-800 dark:text-surface-300 text-sm z-5`
-    return FixWindow.setStyle([classes, options?.classBody ?? "", props?.classBody ?? "", typePosition.value])
-  })
-  const classContent = computed(() => FixWindow.setStyle([mode.value ?? "", options?.class ?? "", props?.class ?? ""]))
+  // Корень и контент — через `cls(key, …)`: до 1.0.0 у FixWindow была инверсия (`classBody` — корень,
+  // `class` — внутренний блок), а сегменты потребителя склеивались вручную (dev-patterns §2 A–D).
+  const classBase = computed(() =>
+    cls("root", "text-surface-800 dark:text-surface-300 text-sm z-5", strategyProp.value)
+  )
+  const classContent = computed(() => cls("content", mode.value ?? ""))
+  const classClose = computed(() => cn("absolute top-2 end-2 px-[5px] m-0.5 h-9 w-9", raw("close")))
   // ---FLOATING-UI-------------------------
   // Mapping FishtVue Position → Floating UI Placement.
   // Floating UI's logical `start`/`end` обеспечивает корректное RTL-зеркалирование
@@ -196,7 +208,7 @@
   })
   const referenceRef = computed(() => virtualReferenceEl.value ?? element.value ?? null)
   const placement = computed<Placement>(() => positionToPlacement(position.value))
-  const strategy = computed<"absolute" | "fixed">(() => (typePosition.value === "absolute" ? "absolute" : "fixed"))
+  const strategy = computed<"absolute" | "fixed">(() => (strategyProp.value === "absolute" ? "absolute" : "fixed"))
   // Собственный движок (lib/fixwindow/useFloating.ts) — без рантайм-зависимостей.
   // offset = translatePx ТОЛЬКО: marginPx выражается прозрачным `border` (см. computed
   // `border`) — это и зазор, и hover-bridge (border-box-кромка окна вплотную к триггеру,
@@ -289,7 +301,7 @@
     isOpen,
     // ---PROPS-------------------------
     position,
-    delay,
+    openDelay,
     marginPx,
     isCloseButton,
     eventOpen,
@@ -595,11 +607,11 @@
       emit("open", event)
     }
 
-    if (delay.value === 0) return setIsOpen()
+    if (openDelay.value === 0) return setIsOpen()
     if (timer.value === null) {
       addCloseListener()
       timer.value = setInterval(() => {
-        if (countTimer.value === delay.value / 10) {
+        if (countTimer.value === openDelay.value / 10) {
           if (timer.value !== null) clearInterval(timer.value)
           timer.value = null
           setIsOpen()
@@ -684,8 +696,9 @@
         </div>
         <Button
           v-if="isCloseButton"
+          data-fix-window-close
           variant="ghost"
-          class="absolute top-2 end-2 px-[5px] m-0.5 h-9 w-9"
+          :class="classClose"
           :aria-label="FixWindow.t('fixwindow.close') ?? 'Close'"
           @click="onCloseButton">
           <XMarkIcon aria-hidden="true" class="h-5 w-5 fill-surface-500 dark:fill-surface-500" />

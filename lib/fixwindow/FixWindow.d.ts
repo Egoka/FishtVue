@@ -1,5 +1,14 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, Position, RefLink, StyleClass, StyleMode } from "../types"
+import {
+  ClassComponent,
+  ClassesMap,
+  GlobalComponentConstructor,
+  Position,
+  RefLink,
+  StyleClass,
+  StyleMode,
+  TeleportTarget
+} from "../types"
 
 /**
  * ## FixWindow
@@ -18,11 +27,11 @@ export type FixWindowEvent = "hover" | "click" | "mousedown" | "mouseup" | "dblc
 export type FixWindowRole = "tooltip" | "dialog" | "menu"
 
 /**
- * Target для `<Teleport>`. `false` (default) сохраняет inline-render для
- * backward-compat; `"body"` или произвольный CSS-селектор / HTMLElement —
- * выносит popover из родительского scroll-parent'а.
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-fix-window>` (добавляется `ClassesMap`).
+ * - `content` — `<div data-fix-window-content>` со слотом (бывший инвертированный `class`).
+ * - `close` — корень `Button` закрытия `[data-fix-window-close]`.
  */
-export type FixWindowTeleport = string | HTMLElement | false
+export declare type FixWindowClassKey = "content" | "close"
 
 /**
  * Props for the FixWindow component.
@@ -47,10 +56,10 @@ export declare type FixWindowProps = {
   scrollableEl?: RefLink
 
   /**
-   * The CSS positioning style for the fixed window.
+   * CSS-стратегия позиционирования popover'а (Floating UI `strategy`). Бывший `typePosition`.
    * @type {"absolute" | "fixed" | undefined}
    */
-  typePosition?: "absolute" | "fixed"
+  strategy?: "absolute" | "fixed"
 
   /**
    * The position of the fixed window relative to the target element.
@@ -62,16 +71,17 @@ export declare type FixWindowProps = {
   position?: Position
 
   /**
-   * Custom CSS class for the fixed window container.
+   * CSS-классы корня `<div data-fix-window>` (dev-patterns §2 A). Бывший `classBody`.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom CSS class for the body of the fixed window.
-   * @type {StyleClass | undefined}
+   * Карта классов внутренних элементов: `content`, `close`; `root` ≡ `class`.
+   * См. `FixWindowClassKey`.
+   * @type {ClassesMap<FixWindowClassKey> | undefined}
    */
-  classBody?: StyleClass
+  classes?: ClassesMap<FixWindowClassKey>
 
   /**
    * Styling mode for the fixed window.
@@ -92,10 +102,10 @@ export declare type FixWindowProps = {
   eventClose?: FixWindowEvent
 
   /**
-   * Delay before opening the fixed window (in milliseconds).
+   * Задержка перед открытием popover'а, мс. Бывший `delay`.
    * @type {number | 100 | 500 | 1000 | 1500 | 2000 | undefined}
    */
-  delay?: number | 100 | 500 | 1000 | 1500 | 2000
+  openDelay?: number | 100 | 500 | 1000 | 1500 | 2000
 
   /**
    * Margin between the fixed window and the target element (in pixels).
@@ -137,9 +147,9 @@ export declare type FixWindowProps = {
    * Teleport target для popover. `false` (default) — inline-render.
    * `"body"` — рекомендованный target для popover'ов внутри scroll-parent'ов
    * с `overflow: hidden / auto`. Также принимает CSS-селектор или `HTMLElement`.
-   * @type {FixWindowTeleport | undefined}
+   * @type {TeleportTarget | undefined}
    */
-  teleport?: FixWindowTeleport
+  teleport?: TeleportTarget
 
   /**
    * Включает focus trap внутри popover (Tab/Shift+Tab циклятся между
@@ -253,9 +263,9 @@ export declare type FixWindowExpose = {
 
   /**
    * Current delay before opening the fixed window.
-   * @type {FixWindowProps["delay"]}
+   * @type {FixWindowProps["openDelay"]}
    */
-  delay: FixWindowProps["delay"]
+  openDelay: FixWindowProps["openDelay"]
 
   /**
    * Current margin between the fixed window and the target element.
@@ -321,14 +331,14 @@ export declare type FixWindowExpose = {
 }
 export declare type FixWindowOption = Pick<
   FixWindowProps,
-  | "typePosition"
+  | "strategy"
   | "position"
   | "class"
-  | "classBody"
+  | "classes"
   | "mode"
   | "eventOpen"
   | "eventClose"
-  | "delay"
+  | "openDelay"
   | "marginPx"
   | "translatePx"
   | "paddingWindow"

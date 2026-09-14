@@ -1,5 +1,5 @@
 import { CSSProperties, Ref, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass } from "../types"
 
 /**
  * ## VirtualScroller
@@ -36,6 +36,14 @@ export declare type VirtualScrollerOrientation = "vertical" | "horizontal" | "bo
  * @type {"macos" | "thin" | "native" | "hidden"}
  */
 export declare type VirtualScrollerScrollbar = "macos" | "thin" | "native" | "hidden"
+
+/**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-virtual-scroller>` (добавляется `ClassesMap`).
+ * - `viewport` — скролл-контейнер `[data-vs-viewport]`.
+ * - `content` — окно с элементами `[data-vs-content]`, бывший `classContent`.
+ * - `loader` — блок индикатора догрузки `[data-vs-loader]` (виден при `loader` + `loading`).
+ */
+export declare type VirtualScrollerClassKey = "viewport" | "content" | "loader"
 
 /**
  * Размер элемента: фиксированное число (px), функция от индекса/элемента, либо `"auto"`
@@ -129,7 +137,7 @@ export interface VirtualScrollerProps {
    * Throttle scroll-обработчика, мс. `0` — throttle по `requestAnimationFrame`.
    * @type {number | undefined}
    */
-  delay?: number
+  throttle?: number
 
   /**
    * Infinite-scroll: данные догружает родитель по событию `lazy-load`.
@@ -150,10 +158,10 @@ export interface VirtualScrollerProps {
   loading?: boolean
 
   /**
-   * Показывать встроенный loader/skeleton (или slot `loader`).
+   * Показывать встроенный loader/skeleton (или slot `loader`) во время `loading`.
    * @type {boolean | undefined}
    */
-  showLoader?: boolean
+  loader?: boolean
 
   /**
    * Стиль полосы прокрутки.
@@ -162,16 +170,17 @@ export interface VirtualScrollerProps {
   scrollbar?: VirtualScrollerScrollbar
 
   /**
-   * Custom CSS class корневого контейнера (viewport).
+   * CSS-классы корня `<div data-virtual-scroller>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom CSS class окна с элементами.
-   * @type {StyleClass | undefined}
+   * Карта классов внутренних элементов: `viewport`, `content`, `loader`; `root` ≡ `class`.
+   * См. `VirtualScrollerClassKey`.
+   * @type {ClassesMap<VirtualScrollerClassKey> | undefined}
    */
-  classContent?: StyleClass
+  classes?: ClassesMap<VirtualScrollerClassKey>
 }
 
 /**
@@ -275,17 +284,24 @@ export declare type VirtualScrollerExpose = {
    * Resolved throttle, мс.
    * @type {number}
    */
-  delay: number
+  throttle: number
   /**
    * Resolved оценка размера элемента.
    * @type {number}
    */
   estimatedItemSize: number
   /**
-   * CSS-класс корневого контейнера (вывод `setStyle`; `""` при `unstyled`).
+   * Итоговый класс корня `<div data-virtual-scroller>` (база + `class`/`classes.root`).
+   * Под `unstyled` — `fv` + классы потребителя.
    * @type {StyleClass}
    */
   classBase: StyleClass
+
+  /**
+   * Итоговый класс окна с элементами `[data-vs-content]` (база + `classes.content`).
+   * @type {StyleClass}
+   */
+  classContent: StyleClass
 
   // ---REFS--------------------------------
   /**
@@ -334,10 +350,10 @@ export declare type VirtualScrollerOption = Pick<
   | "orientation"
   | "overscan"
   | "threshold"
-  | "delay"
+  | "throttle"
   | "scrollbar"
   | "class"
-  | "classContent"
+  | "classes"
 >
 
 // ---------------------------------------

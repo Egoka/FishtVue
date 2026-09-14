@@ -140,10 +140,10 @@ describe("VirtualScroller — grid-режим", () => {
 })
 
 describe("VirtualScroller — отложенный scroll-эмит", () => {
-  it("при delay > 0 схлопывает серию событий в одно", async () => {
+  it("при throttle > 0 схлопывает серию событий в одно", async () => {
     vi.useFakeTimers()
     try {
-      const { wrapper, viewport } = await mountScroller({ delay: 100 })
+      const { wrapper, viewport } = await mountScroller({ throttle: 100 })
 
       for (const top of [100, 200, 300]) {
         viewport.scrollTop = top
@@ -163,8 +163,8 @@ describe("VirtualScroller — отложенный scroll-эмит", () => {
     }
   })
 
-  it("при delay = 0 эмитит синхронно на каждое событие", async () => {
-    const { wrapper, viewport } = await mountScroller({ delay: 0 })
+  it("при throttle = 0 эмитит синхронно на каждое событие", async () => {
+    const { wrapper, viewport } = await mountScroller({ throttle: 0 })
     await scrollTo(wrapper, viewport, { top: 100 })
     await scrollTo(wrapper, viewport, { top: 200 })
 
@@ -286,7 +286,7 @@ describe("VirtualScroller — очистка при unmount", () => {
   it("не эмитит отложенный scroll после размонтирования", async () => {
     vi.useFakeTimers()
     try {
-      const { wrapper, viewport } = await mountScroller({ delay: 200 })
+      const { wrapper, viewport } = await mountScroller({ throttle: 200 })
       viewport.scrollTop = 100
       await wrapper.find("[data-vs-viewport]").trigger("scroll")
 

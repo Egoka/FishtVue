@@ -20,7 +20,7 @@ describe("Pagination Component Tests", () => {
 
     it("displays the correct number of pages", () => {
       const wrapper = mount(Pagination, {
-        props: { total: 50, sizePage: 10 }
+        props: { total: 50, pageSize: 10 }
       })
 
       const pages = wrapper.findAll("[data-pagination-nav-pages] button")
@@ -29,7 +29,7 @@ describe("Pagination Component Tests", () => {
 
     it('emits "update:modelValue" on page change', async () => {
       const wrapper = mount(Pagination, {
-        props: { total: 30, sizePage: 10 }
+        props: { total: 30, pageSize: 10 }
       })
 
       const nextButton = wrapper.find("[data-pagination-nav-next] button")
@@ -39,9 +39,9 @@ describe("Pagination Component Tests", () => {
       expect(wrapper.emitted("update:modelValue")![0]).toEqual([2])
     })
 
-    it('renders page size selector when "isPageSizeSelector" is true', () => {
+    it('renders page size selector when "pageSizeSelector" is true', () => {
       const wrapper = mount(Pagination, {
-        props: { isPageSizeSelector: true, sizesSelector: [5, 10, 20] }
+        props: { pageSizeSelector: true, pageSizes: [5, 10, 20] }
       })
 
       const selector = wrapper.find("[data-pagination-selector]")
@@ -53,10 +53,10 @@ describe("Pagination Component Tests", () => {
       [2, 5, 25, 5], // 25 total, 5 per page
       [3, 20, 100, 5] // 100 total, 20 per page
     ])(
-      "displays the correct number of pages for activePage: %i, sizePage: %i, total: %i",
-      (activePage, sizePage, total, expectedPages) => {
+      "displays the correct number of pages for activePage: %i, pageSize: %i, total: %i",
+      (activePage, pageSize, total, expectedPages) => {
         const wrapper = mount(Pagination, {
-          props: { modelValue: activePage, sizePage, total }
+          props: { modelValue: activePage, pageSize, total }
         })
 
         const pages = wrapper.findAll("[data-pagination-nav-pages] button")
@@ -106,8 +106,8 @@ describe("Pagination Component Tests", () => {
           props: {
             modelValue: 1,
             total: 100,
-            sizePage: 5,
-            visibleNumberPages: 7
+            pageSize: 5,
+            visiblePages: 7
           }
         })
       })
@@ -148,8 +148,8 @@ describe("Pagination Component Tests", () => {
           props: {
             modelValue: 1,
             total: 100,
-            sizePage: 10,
-            visibleNumberPages: 5
+            pageSize: 10,
+            visiblePages: 5
           }
         })
       })
@@ -194,8 +194,8 @@ describe("Pagination Component Tests", () => {
 
       it("disables Next button on the last page", async () => {
         const total = 100
-        const sizePage = 10
-        const lastPage = total / sizePage
+        const pageSize = 10
+        const lastPage = total / pageSize
 
         await wrapper.setProps({ modelValue: lastPage })
 
@@ -230,7 +230,7 @@ describe("Pagination Component Tests", () => {
       const disconnectSpy = vi.spyOn(global.ResizeObserver.prototype, "disconnect")
 
       const wrapper = mount(Pagination, {
-        props: { modelValue: 1, total: 100, sizePage: 10 }
+        props: { modelValue: 1, total: 100, pageSize: 10 }
       })
 
       // оба nav-link (previous + next) должны наблюдаться
@@ -246,7 +246,7 @@ describe("Pagination Component Tests", () => {
       const disconnectSpy = vi.spyOn(global.ResizeObserver.prototype, "disconnect")
 
       const wrapper = mount(Pagination, {
-        props: { modelValue: 1, total: 100, sizePage: 10 }
+        props: { modelValue: 1, total: 100, pageSize: 10 }
       })
       expect(disconnectSpy).not.toHaveBeenCalled()
 
@@ -262,7 +262,7 @@ describe("Pagination Component Tests", () => {
 
       for (let i = 0; i < 5; i++) {
         const wrapper = mount(Pagination, {
-          props: { modelValue: 1, total: 100, sizePage: 10 }
+          props: { modelValue: 1, total: 100, pageSize: 10 }
         })
         expect(() => wrapper.unmount()).not.toThrow()
       }
@@ -287,7 +287,7 @@ describe("Pagination Component Tests", () => {
 
     it("applies default options from library", () => {
       const app = createAppWithFishtVue({
-        sizePage: 20,
+        pageSize: 20,
         total: 100
       })
 
@@ -301,33 +301,33 @@ describe("Pagination Component Tests", () => {
 
     it("overrides library defaults with local props", () => {
       const app = createAppWithFishtVue({
-        sizePage: 10,
+        pageSize: 10,
         total: 50
       })
 
       const wrapper = mount(Pagination, {
         global: { plugins: [app] },
-        props: { sizePage: 5, total: 25 }
+        props: { pageSize: 5, total: 25 }
       })
 
       const pages = wrapper.findAll("[data-pagination-nav-pages] button")
       expect(pages).toHaveLength(5) // 25 total, 5 per page = 5 pages
     })
 
-    it('renders visible number of pages based on "visibleNumberPages"', async () => {
+    it('renders visible number of pages based on "visiblePages"', async () => {
       const app = createAppWithFishtVue()
 
       const wrapper = mount(Pagination, {
         global: { plugins: [app] },
         // @ts-ignore
-        props: { visibleNumberPages: 3, total: 200, sizePage: 10 }
+        props: { visiblePages: 3, total: 200, pageSize: 10 }
       })
 
       let pages = wrapper.findAll("[data-pagination-nav-pages] button")
-      expect(pages).toHaveLength(5) // Restricts to visibleNumberPages
-      await wrapper.setProps({ visibleNumberPages: 6 })
+      expect(pages).toHaveLength(5) // Restricts to visiblePages
+      await wrapper.setProps({ visiblePages: 6 })
       pages = wrapper.findAll("[data-pagination-nav-pages] button")
-      expect(pages).toHaveLength(6) // Restricts to visibleNumberPages
+      expect(pages).toHaveLength(6) // Restricts to visiblePages
     })
 
     it("emits size change event on size selector", async () => {
@@ -335,7 +335,7 @@ describe("Pagination Component Tests", () => {
 
       const wrapper = mount(Pagination, {
         global: { plugins: [app] },
-        props: { isPageSizeSelector: true, sizesSelector: [5, 10, 20] }
+        props: { pageSizeSelector: true, pageSizes: [5, 10, 20] }
       })
 
       await wrapper.find("[data-pagination-selector]").trigger("click")
@@ -347,8 +347,8 @@ describe("Pagination Component Tests", () => {
       expect(SelectComponent.vm.value).toBe(20)
       expect(SelectComponent.emitted("update:modelValue")?.[0]).toEqual([20, [{ key: 20, value: "20 rows" }]])
 
-      expect(wrapper.emitted("update:sizePage")).toBeTruthy()
-      expect(wrapper.emitted("update:sizePage")?.[0]).toEqual([20])
+      expect(wrapper.emitted("update:pageSize")).toBeTruthy()
+      expect(wrapper.emitted("update:pageSize")?.[0]).toEqual([20])
     })
   })
 
@@ -380,13 +380,13 @@ describe("Pagination Component Tests", () => {
       }
       const wrapper = mount(Pagination, {
         global: { plugins: [app] },
-        props: { total: 50, sizePage: 10 }
+        props: { total: 50, pageSize: 10 }
       })
       expect(wrapper.find("[data-pagination]").classes()).toEqual(["fv"])
     })
 
     it("renders styled root class when unstyled is not set", () => {
-      const wrapper = mount(Pagination, { props: { total: 50, sizePage: 10 } })
+      const wrapper = mount(Pagination, { props: { total: 50, pageSize: 10 } })
       expect(wrapper.find("[data-pagination]").classes().join(" ")).toContain("fishtvue-pagination")
     })
   })
@@ -414,7 +414,7 @@ describe("Pagination Component Tests", () => {
       })
 
     it("root is a <nav> landmark with role and localized aria-label", () => {
-      const wrapper = mountWithLocale({ total: 50, sizePage: 10, modelValue: 1 })
+      const wrapper = mountWithLocale({ total: 50, pageSize: 10, modelValue: 1 })
       const root = wrapper.find("[data-pagination]")
       expect(root.element.tagName).toBe("NAV")
       expect(root.attributes("role")).toBe("navigation")
@@ -422,14 +422,14 @@ describe("Pagination Component Tests", () => {
     })
 
     it("does not render a nested second navigation landmark", () => {
-      const wrapper = mountWithLocale({ total: 50, sizePage: 10, modelValue: 1 })
+      const wrapper = mountWithLocale({ total: 50, pageSize: 10, modelValue: 1 })
       expect(wrapper.findAll("nav")).toHaveLength(1)
       // внутренний контейнер страниц больше не <nav>
       expect(wrapper.find("[data-pagination-nav]").element.tagName).not.toBe("NAV")
     })
 
     it("page buttons expose aria-label and aria-current", () => {
-      const wrapper = mountWithLocale({ total: 50, sizePage: 10, modelValue: 2 })
+      const wrapper = mountWithLocale({ total: 50, pageSize: 10, modelValue: 2 })
       const pageButtons = wrapper.findAll("button[data-pagination-nav-page]")
       expect(pageButtons.length).toBeGreaterThan(0)
       pageButtons.forEach((btn) => {
@@ -440,7 +440,7 @@ describe("Pagination Component Tests", () => {
     })
 
     it("renders a polite live region announcing the active page", async () => {
-      const wrapper = mountWithLocale({ total: 100, sizePage: 10, modelValue: 1 })
+      const wrapper = mountWithLocale({ total: 100, pageSize: 10, modelValue: 1 })
       const live = wrapper.find("[data-pagination-live]")
       expect(live.exists()).toBe(true)
       expect(live.attributes("aria-live")).toBe("polite")
@@ -456,7 +456,7 @@ describe("Pagination Component Tests", () => {
   describe("Pagination Component - RTL (direction-aware icons)", () => {
     it("compact chevron icon carries rtl flip", () => {
       const wrapper = mount(Pagination, {
-        props: { total: 100, sizePage: 10, modelValue: 1, isInfoText: true }
+        props: { total: 100, pageSize: 10, modelValue: 1, infoText: true }
       })
       const prevIcon = wrapper.find("[data-pagination-nav-previous] svg")
       expect(prevIcon.exists()).toBe(true)
@@ -464,7 +464,7 @@ describe("Pagination Component Tests", () => {
     })
 
     it("long-form arrow uses logical margin (ms) not physical (ml)", () => {
-      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 5 } })
+      const wrapper = mount(Pagination, { props: { total: 100, pageSize: 10, modelValue: 5 } })
       const nextIcon = wrapper.find("[data-pagination-nav-next] svg")
       expect(nextIcon.exists()).toBe(true)
       const cls = nextIcon.classes().join(" ")
@@ -477,7 +477,7 @@ describe("Pagination Component Tests", () => {
   // Issue 7 (G34) — expose root ref + focus().
   describe("Pagination Component - Expose (paginationRef & focus)", () => {
     it("exposes paginationRef pointing to the root nav and a focus() method", () => {
-      const wrapper = mount(Pagination, { props: { total: 50, sizePage: 10 } })
+      const wrapper = mount(Pagination, { props: { total: 50, pageSize: 10 } })
       const vm = wrapper.vm as any
       expect(vm.paginationRef).toBe(wrapper.find("[data-pagination]").element)
       expect(typeof vm.focus).toBe("function")
@@ -488,12 +488,12 @@ describe("Pagination Component Tests", () => {
   // Issue 8 (N59 / B10) — print styles + forced-colors high-contrast.
   describe("Pagination Component - Print & forced-colors", () => {
     it("root container carries print styles", () => {
-      const wrapper = mount(Pagination, { props: { total: 50, sizePage: 10 } })
+      const wrapper = mount(Pagination, { props: { total: 50, pageSize: 10 } })
       expect(wrapper.find("[data-pagination]").classes().join(" ")).toMatch(/print:/)
     })
 
     it("active page indicator is distinguishable in forced-colors mode", () => {
-      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
+      const wrapper = mount(Pagination, { props: { total: 100, pageSize: 10, modelValue: 1 } })
       const active = wrapper.findAll("button[data-pagination-nav-page]").find((b) => b.text() === "1")
       expect(active?.classes().join(" ")).toMatch(/forced-colors:/)
     })
@@ -506,14 +506,14 @@ describe("Pagination Component Tests", () => {
     const legacyGrayFamily = /\b(?:bg|text|border|ring|from|via)-(?:neutral|stone|zinc|slate|gray)-\d+/
 
     it("outlined mode: modeStyleSelect + page-size selector wrapper use surface-family (not gray)", () => {
-      const wrapper = mount(Pagination, { props: { mode: "outlined", total: 50, sizePage: 10 } })
+      const wrapper = mount(Pagination, { props: { mode: "outlined", total: 50, pageSize: 10 } })
       const cls = wrapper.vm.modeStyleSelect as string
       expect(cls).toBe("border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-950")
       expect(cls).not.toMatch(legacyGrayFamily)
     })
 
     it("filled mode: modeStyleSelect + button surface uses surface-family (not stone)", () => {
-      const wrapper = mount(Pagination, { props: { mode: "filled", total: 50, sizePage: 10 } })
+      const wrapper = mount(Pagination, { props: { mode: "filled", total: 50, pageSize: 10 } })
       const cls = wrapper.vm.modeStyleSelect as string
       expect(cls).toBe("bg-surface-100 dark:bg-surface-900")
       expect(cls).not.toMatch(legacyGrayFamily)
@@ -535,7 +535,7 @@ describe("Pagination Component Tests", () => {
     })
 
     it("underlined mode: hover border/text on nav buttons use surface-family (not gray)", () => {
-      const wrapper = mount(Pagination, { props: { mode: "underlined", total: 50, sizePage: 10 } })
+      const wrapper = mount(Pagination, { props: { mode: "underlined", total: 50, pageSize: 10 } })
       const prevButton = wrapper.find("[data-pagination-nav-previous] button")
       const cls = prevButton.classes().join(" ")
       expect(cls).toContain("hover:border-surface-300")
@@ -546,19 +546,19 @@ describe("Pagination Component Tests", () => {
 
     it("page-size selector text + select classes.control use surface-family (not gray)", () => {
       const wrapper = mount(Pagination, {
-        props: { isPageSizeSelector: true, sizesSelector: [5, 10, 20], total: 50, sizePage: 10 }
+        props: { pageSizeSelector: true, pageSizes: [5, 10, 20], total: 50, pageSize: 10 }
       })
       const selectorText = wrapper.find("[data-pagination-selector] p")
       expect(selectorText.classes().join(" ")).toContain("text-surface-400 dark:text-surface-500")
 
-      const paramsSelect = (wrapper.vm as any).paramsSelect
-      expect(paramsSelect.classes.control).toBe("font-bold text-surface-600 dark:text-surface-500")
-      expect(paramsSelect.classes.control).not.toMatch(legacyGrayFamily)
+      const selectProps = (wrapper.vm as any).selectProps
+      expect(selectProps.classes.control).toBe("font-bold text-surface-600 dark:text-surface-500")
+      expect(selectProps.classes.control).not.toMatch(legacyGrayFamily)
     })
 
     it("root border + short-content + info-text use surface-family (not gray/neutral)", () => {
       const wrapper = mount(Pagination, {
-        props: { total: 100, sizePage: 10, modelValue: 1, isInfoText: true }
+        props: { total: 100, pageSize: 10, modelValue: 1, infoText: true }
       })
       const root = wrapper.find("[data-pagination]")
       expect(root.classes().join(" ")).toContain("border-surface-200 dark:border-surface-800")
@@ -571,7 +571,7 @@ describe("Pagination Component Tests", () => {
     })
 
     it("short-version content (mobile) counters use surface-family (not neutral)", () => {
-      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
+      const wrapper = mount(Pagination, { props: { total: 100, pageSize: 10, modelValue: 1 } })
       // classShortContent рендерится дважды: mobile short-version (первым — несёт data-pagination-content)
       // и desktop short-content (bare <div> внутри data-pagination-nav, без своего data-атрибута).
       const mobileShortContent = wrapper.find("[data-pagination-short-version] [data-pagination-content]")
@@ -582,7 +582,7 @@ describe("Pagination Component Tests", () => {
     })
 
     it("nav prev/next icon (content variant) uses surface-family (not gray)", () => {
-      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 5 } })
+      const wrapper = mount(Pagination, { props: { total: 100, pageSize: 10, modelValue: 5 } })
       const nextIcon = wrapper.find("[data-pagination-nav-next] svg")
       expect(nextIcon.classes().join(" ")).toContain("text-surface-400")
       expect(nextIcon.classes().join(" ")).not.toMatch(legacyGrayFamily)
@@ -590,7 +590,7 @@ describe("Pagination Component Tests", () => {
 
     it("ellipsis (not-page) icon uses surface-family (not gray)", () => {
       const wrapper = mount(Pagination, {
-        props: { total: 1000, sizePage: 10, modelValue: 50, visibleNumberPages: 5 }
+        props: { total: 1000, pageSize: 10, modelValue: 50, visiblePages: 5 }
       })
       const ellipsisIcon = wrapper.find("[data-pagination-nav-pages] svg")
       expect(ellipsisIcon.exists()).toBe(true)
@@ -601,7 +601,7 @@ describe("Pagination Component Tests", () => {
     it.each(["filled", "outlined"] as PaginationProps["mode"][])(
       "mode: %s — inactive page button background/ring uses surface-family (not stone/neutral)",
       (mode) => {
-        const wrapper = mount(Pagination, { props: { mode, total: 100, sizePage: 10, modelValue: 1 } })
+        const wrapper = mount(Pagination, { props: { mode, total: 100, pageSize: 10, modelValue: 1 } })
         const inactivePage = wrapper
           .findAll("button[data-pagination-nav-page]")
           .find((b) => b.text() === "2" && b.attributes("aria-current") !== "page")
@@ -619,7 +619,7 @@ describe("Pagination Component Tests", () => {
     )
 
     it("outlined mode: active page button keeps theme-* untouched but structural bg/ring use surface-family", () => {
-      const wrapper = mount(Pagination, { props: { mode: "outlined", total: 100, sizePage: 10, modelValue: 1 } })
+      const wrapper = mount(Pagination, { props: { mode: "outlined", total: 100, pageSize: 10, modelValue: 1 } })
       const activePageButton = wrapper
         .findAll("button[data-pagination-nav-page]")
         .find((b) => b.attributes("aria-current") === "page")
@@ -635,7 +635,7 @@ describe("Pagination Component Tests", () => {
     })
 
     it("default (gray) page-button label fallback uses surface-family while active theme-* branch is untouched", () => {
-      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
+      const wrapper = mount(Pagination, { props: { total: 100, pageSize: 10, modelValue: 1 } })
       const inactivePage = wrapper
         .findAll("button[data-pagination-nav-page]")
         .find((b) => b.attributes("aria-current") !== "page" && b.text() === "2")
@@ -648,7 +648,7 @@ describe("Pagination Component Tests", () => {
     })
 
     it("short/compact nav buttons (mobile + desktop prev/next label) use surface-family (not gray)", () => {
-      const wrapper = mount(Pagination, { props: { total: 100, sizePage: 10, modelValue: 1 } })
+      const wrapper = mount(Pagination, { props: { total: 100, pageSize: 10, modelValue: 1 } })
       const labelButtons = [
         wrapper.find("[data-pagination-short-previous]"),
         wrapper.find("[data-pagination-short-next]"),
@@ -668,7 +668,7 @@ describe("Pagination Component Tests", () => {
     // мигрирует только свой собственный `:class`-вклад, передаваемый в Button через modeStyle/classNavPageActiveState).
     it("no residual gray/stone/neutral-family classes on non-Button structural nodes (outlined mode)", () => {
       const wrapper = mount(Pagination, {
-        props: { total: 100, sizePage: 10, modelValue: 1, isInfoText: true, isPageSizeSelector: true }
+        props: { total: 100, pageSize: 10, modelValue: 1, infoText: true, pageSizeSelector: true }
       })
       const root = wrapper.find("[data-pagination]")
       expect(root.classes().join(" ")).not.toMatch(legacyGrayFamily)
@@ -679,7 +679,7 @@ describe("Pagination Component Tests", () => {
 
     it("no residual gray/stone/neutral-family classes on non-Button structural nodes (filled mode)", () => {
       const wrapper = mount(Pagination, {
-        props: { mode: "filled", total: 100, sizePage: 10, modelValue: 1, isInfoText: true, isPageSizeSelector: true }
+        props: { mode: "filled", total: 100, pageSize: 10, modelValue: 1, infoText: true, pageSizeSelector: true }
       })
       wrapper.findAll("div, span, svg, p").forEach((node) => {
         expect(node.classes().join(" ")).not.toMatch(legacyGrayFamily)
@@ -691,15 +691,136 @@ describe("Pagination Component Tests", () => {
         props: {
           mode: "underlined",
           total: 100,
-          sizePage: 10,
+          pageSize: 10,
           modelValue: 1,
-          isInfoText: true,
-          isPageSizeSelector: true
+          infoText: true,
+          pageSizeSelector: true
         }
       })
       wrapper.findAll("div, span, svg, p").forEach((node) => {
         expect(node.classes().join(" ")).not.toMatch(legacyGrayFamily)
       })
     })
+  })
+})
+
+// Контракт props 1.0.0: Hungarian-имена сняты, негативный булев инвертирован, корень реактивен.
+describe("Pagination — контракт props 1.0.0", () => {
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
+  const withOptions = (options: any = {}, extra: any = {}) => ({
+    install(app: any) {
+      app.use(FishtVue, { componentsOptions: { Pagination: options }, ...extra })
+    }
+  })
+
+  it("объявляет ровно набор props 1.0.0", () => {
+    const wrapper = mount(Pagination, { props: { total: 100 } })
+
+    expect(Object.keys(wrapper.props()).sort()).toEqual(
+      [
+        "class",
+        "infoText",
+        "mode",
+        "modelValue",
+        "navigationButtons",
+        "pageSize",
+        "pageSizeSelector",
+        "pageSizes",
+        "selectProps",
+        "total",
+        "visiblePages"
+      ].sort()
+    )
+  })
+
+  it("отсутствующие булевы приходят `undefined`, а не скастованными в false", () => {
+    const wrapper = mount(Pagination, { props: { total: 100 } })
+
+    expect(wrapper.props("infoText")).toBeUndefined()
+    expect(wrapper.props("pageSizeSelector")).toBeUndefined()
+    expect(wrapper.props("navigationButtons")).toBeUndefined()
+  })
+
+  it("`navigationButtons` — positive-инверсия: default true, `false` прячет кнопки", () => {
+    const shown = mount(Pagination, { props: { total: 100 } })
+    expect((shown.vm as any).isNavigationButtons).toBe(true)
+
+    const hidden = mount(Pagination, { props: { total: 100, navigationButtons: false } })
+    expect((hidden.vm as any).isNavigationButtons).toBe(false)
+  })
+
+  it("componentsOptions достижимы для каждого переименованного поля", () => {
+    const app = withOptions({ pageSize: 20, pageSizes: [20, 40], visiblePages: 7, infoText: true })
+    const wrapper = mount(Pagination, { props: { total: 100 }, global: { plugins: [app] } })
+    const vm = wrapper.vm as any
+
+    expect(vm.pageSize).toBe(20)
+    expect(vm.visiblePages).toBe(7)
+    expect(vm.isInfoText).toBe(true)
+    expect(vm.arrayPageSizes.map((s: any) => s.key)).toEqual([20, 40])
+  })
+
+  it("prop перебивает option", () => {
+    const app = withOptions({ pageSize: 20, visiblePages: 7 })
+    const wrapper = mount(Pagination, {
+      props: { total: 100, pageSize: 50, visiblePages: 9 },
+      global: { plugins: [app] }
+    })
+
+    expect((wrapper.vm as any).pageSize).toBe(50)
+    expect((wrapper.vm as any).visiblePages).toBe(9)
+  })
+
+  it("эмитит `update:pageSize`, снятый `update:sizePage` больше не эмитится", async () => {
+    const wrapper = mount(Pagination, { props: { total: 100 } })
+
+    ;(wrapper.vm as any).switchPageSize(20)
+    await nextTick()
+
+    expect(wrapper.emitted("update:pageSize")).toEqual([[20]])
+    expect(wrapper.emitted("update:sizePage")).toBeUndefined()
+  })
+
+  it("корень реактивен: смена props.class пересчитывает класс (был нереактивный ref)", async () => {
+    const wrapper = mount(Pagination, { props: { total: 100, class: "probe-one" } })
+    expect(wrapper.find("[data-pagination]").classes()).toContain("probe-one")
+
+    await wrapper.setProps({ class: "probe-two" })
+
+    expect(wrapper.find("[data-pagination]").classes()).toContain("probe-two")
+    expect(wrapper.find("[data-pagination]").classes()).not.toContain("probe-one")
+  })
+
+  it("options.class на корне, props.class перебивает его последним сегментом", () => {
+    const app = withOptions({ class: "p-2 opt-only" })
+    const wrapper = mount(Pagination, { props: { total: 100, class: "p-8" }, global: { plugins: [app] } })
+    const classes = wrapper.find("[data-pagination]").classes()
+
+    expect(classes).toContain("p-8")
+    expect(classes).toContain("opt-only")
+    expect(classes).not.toContain("p-2")
+  })
+
+  it("`selectProps` кладётся поверх базы селектора, база сохраняется", () => {
+    const wrapper = mount(Pagination, {
+      props: { total: 100, pageSizeSelector: true, selectProps: { classes: { list: "probe-list" }, clearable: true } }
+    })
+    const resolved = (wrapper.vm as any).selectProps
+
+    expect(resolved.searchable).toBe(false)
+    expect(resolved.clearable).toBe(true)
+    expect(resolved.classes.list).toContain("probe-list")
+    expect(resolved.classes.control).toContain("font-bold")
+    expect(resolved.fixWindowProps.position).toBe("top-right")
+  })
+
+  it("unstyled сохраняет класс потребителя на корне и режет тему", () => {
+    const app = withOptions({}, { unstyled: true })
+    const wrapper = mount(Pagination, { props: { total: 100, class: "probe-root" }, global: { plugins: [app] } })
+
+    expect(wrapper.find("[data-pagination]").classes()).toEqual(["fv", "probe-root"])
   })
 })

@@ -597,7 +597,7 @@ describe("Table Component", () => {
               { dataField: "date", type: "date" },
               { dataField: "value", type: "number" }
             ],
-            pagination: { sizePage: 20, sizesSelector: [5, 15, 20, 50, 100, 150] },
+            pagination: { pageSize: 20, pageSizes: [5, 15, 20, 50, 100, 150] },
             countVisibleRows: 3
           }
         })
@@ -1725,10 +1725,10 @@ describe("Table Component", () => {
             grouping: { groupField: "color", visible: true },
             pagination: {
               visible: true,
-              sizePage: 2,
-              sizesSelector: [2, 5],
-              isInfoText: true,
-              isPageSizeSelector: true
+              pageSize: 2,
+              pageSizes: [2, 5],
+              infoText: true,
+              pageSizeSelector: true
             },
             search: true,
             columns: [{ dataField: "name", isSort: true, isFilter: true }, { dataField: "color" }]
@@ -2031,7 +2031,7 @@ describe("Table Component", () => {
             dataSource: largeData,
             asyncData: true,
             totalCount: 50,
-            pagination: { sizePage: 10 },
+            pagination: { pageSize: 10 },
             columns: [{ dataField: "name" }, { dataField: "color" }]
           }
         })
@@ -2469,7 +2469,7 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            pagination: { sizePage: 2 },
+            pagination: { pageSize: 2 },
             columns: [{ dataField: "name" }]
           }
         })
@@ -2502,7 +2502,7 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            pagination: { sizePage: 10 },
+            pagination: { pageSize: 10 },
             columns: [{ dataField: "id" }, { dataField: "name" }]
           }
         })
@@ -2572,7 +2572,7 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            pagination: { sizePage: 10 },
+            pagination: { pageSize: 10 },
             columns: [{ dataField: "id" }]
           }
         })

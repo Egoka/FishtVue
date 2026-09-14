@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { mount } from "@vue/test-utils"
+import { flushPromises, mount } from "@vue/test-utils"
 import type { Component } from "vue"
 import FishtVue from "fishtvue/config"
 
@@ -15,17 +15,7 @@ import FishtVue from "fishtvue/config"
  * Per-component нюансы (aspect-ключи, hand-off'ы, слоты) живут в `<Name>.test.ts`; здесь — инвариант.
  * `PENDING` — компоненты до своей волны; обнуляется в W7, после чего `skipIf` удаляется.
  */
-const PENDING: string[] = [
-  "Alert",
-  "Dialog",
-  "FixWindow",
-  "Form",
-  "Menu",
-  "Pagination",
-  "Split",
-  "Table",
-  "VirtualScroller"
-]
+const PENDING: string[] = ["Alert", "Dialog", "Form", "Menu", "Split", "Table"]
 
 type Entry = {
   name: string
@@ -296,6 +286,29 @@ const unstyledPlugin = {
 
 const classesOf = (el: Element) => (el.getAttribute("class") ?? "").split(/\s+/).filter(Boolean)
 
+/**
+ * Область поиска ключей. У телепортируемых компонентов (FixWindow/Dialog/Alert) корень живёт под
+ * `<Teleport>`, поэтому `wrapper.element` в VTU — fragment-якорь, а не DOM-узел: `querySelectorAll`
+ * от него ничего не находит. Все entry монтируются с `attachTo: document.body`, так что fallback
+ * на `document.body` покрывает и телепорт, и inline-render.
+ */
+const scopeOf = (wrapper: { element: unknown }): Element =>
+  (wrapper.element as Element)?.querySelectorAll ? (wrapper.element as Element) : document.body
+
+/**
+ * Ленивые дети (`Loading`/`FixWindow` под `defineAsyncComponent`) резолвятся за несколько
+ * macrotask-тиков. На холодном графе модулей селектор ключа не найдётся сразу, поэтому
+ * прокручиваем очередь до готовности — иначе результат зависит от порядка файлов (`isolate:false`).
+ */
+const flushLazy = async (isReady: () => boolean, maxTicks = 50): Promise<void> => {
+  for (let tick = 0; tick < maxTicks; tick++) {
+    if (isReady()) return
+    await flushPromises()
+    await new Promise((r) => setTimeout(r))
+    await flushPromises()
+  }
+}
+
 describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)", () => {
   // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback): чистим,
   // чтобы `unstyled: true` не протёк в соседние файлы (vite.config.ts: isolate:false).
@@ -337,7 +350,8 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
         it.skipIf(skip)(`classes.${key} → ${selector}`, async () => {
           const probe = `probe-${key.toLowerCase()}`
           const wrapper = await render({ classes: { [key]: probe } })
-          const targets = Array.from((wrapper.element as Element).querySelectorAll(selector))
+          await flushLazy(() => scopeOf(wrapper).querySelector(selector) !== null)
+          const targets = Array.from(scopeOf(wrapper).querySelectorAll(selector))
           expect(targets.length, `элемент ${selector} не найден`).toBeGreaterThan(0)
           for (const el of targets) expect(classesOf(el), `${selector} без ${probe}`).toContain(probe)
           wrapper.unmount()
@@ -349,11 +363,12 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
         const wrapper = await render({ class: "probe-root", classes: firstKey ? { [firstKey]: "probe-inner" } : {} }, [
           unstyledPlugin
         ])
+        if (firstKey) await flushLazy(() => scopeOf(wrapper).querySelector(entry.keys[firstKey]) !== null)
         const root = wrapper.find(entry.root)
         expect(classesOf(root.element)).toContain("probe-root")
         expect(classesOf(root.element).some((c) => c.startsWith("fishtvue-"))).toBe(false)
         if (firstKey) {
-          const el = (wrapper.element as Element).querySelector(entry.keys[firstKey])
+          const el = scopeOf(wrapper).querySelector(entry.keys[firstKey])
           expect(el && classesOf(el)).toContain("probe-inner")
         }
         wrapper.unmount()

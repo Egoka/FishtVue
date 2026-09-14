@@ -451,10 +451,10 @@
       <Loading v-if="isLoading" data-button-loading type="simple" :size="25" :class="['absolute', classLoading]" />
       <FixWindow
         v-if="slots.default"
-        type-position="absolute"
+        strategy="absolute"
         mode="filled"
         :class="roundedClasses[rounded]"
-        :delay="1000"
+        :open-delay="1000"
         :padding-window="40">
         <slot name="default" />
       </FixWindow>

@@ -18,19 +18,16 @@ import { describe, expect, it } from "vitest"
 const PENDING: string[] = [
   "alert/Alert.vue",
   "dialog/Dialog.vue",
-  "fixwindow/FixWindow.vue",
   "form/Form.vue",
   "form/FormField.vue",
   "form/FormSection.vue",
   "menu/Menu.vue",
   "menu/MenuGroup.vue",
   "menu/MenuItem.vue",
-  "pagination/Pagination.vue",
   "split/Split.vue",
   "table/Column.vue",
   "table/ColumnGroup.vue",
-  "table/Table.vue",
-  "virtualscroller/VirtualScroller.vue"
+  "table/Table.vue"
 ]
 
 /**

@@ -382,9 +382,11 @@
           position="bottom-right"
           :margin-px="12"
           :padding-window="40"
-          class-body="z-30"
+          class="z-30"
           stop-open-propagation
-          class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
+          :classes="{
+            content: 'border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent'
+          }">
           <div :class="classIconContent">
             <slot name="help">
               <span data-input-layout-help-text>{{ help }}</span>
@@ -405,9 +407,11 @@
             position="bottom-right"
             :margin-px="12"
             :padding-window="40"
-            class-body="z-30"
+            class="z-30"
             stop-open-propagation
-            class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
+            :classes="{
+              content: 'border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent'
+            }">
             <div :class="classIconContent">
               <slot name="messageInvalid">
                 <span data-input-layout-message-invalid-text>{{ messageInvalid }}</span>

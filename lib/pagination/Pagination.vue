@@ -8,8 +8,10 @@
     ChevronRightIcon,
     EllipsisHorizontalIcon
   } from "@heroicons/vue/20/solid"
-  import type { PaginationEmits, PaginationProps } from "./Pagination"
-  import { BaseSelectProps, SelectExpose, SelectProps } from "fishtvue/select"
+  import type { PaginationEmits, PaginationProps, PaginationSelectProps } from "./Pagination"
+  import { SelectExpose, SelectProps } from "fishtvue/select"
+  import { cn, mergeClasses } from "fishtvue/utils/tailwindHandler"
+  import { fieldsOmit } from "fishtvue/utils/objectHandler"
   import Button from "fishtvue/button/Button.vue"
   import Select from "fishtvue/select/Select.vue"
   import Component from "fishtvue/component"
@@ -18,62 +20,66 @@
   const options = Pagination.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<PaginationProps>(), {
-    isInfoText: undefined,
-    isPageSizeSelector: undefined,
-    isHiddenNavigationButtons: undefined
+    infoText: undefined,
+    pageSizeSelector: undefined,
+    navigationButtons: undefined
   })
   const emit = defineEmits<PaginationEmits>()
+  const { cls } = Pagination.resolveClasses<never>(props)
   // ---STATE-------------------------------
   const paginationRef = ref<HTMLElement>()
   const navPreviousLink = ref<HTMLElement>()
   const navNextLink = ref<HTMLElement>()
   const selectPageSize = ref<SelectExpose>()
-  const sizePage = ref<number>()
+  const pageSize = ref<number>()
   const isShortPrevious = ref(false)
   const isShortNext = ref(false)
   const navigationObservers: ResizeObserver[] = []
   // ---PROPS-------------------------------
-  const sizePageProp = computed<NonNullable<PaginationProps["sizePage"]>>(() => {
-    const sizePageProp = (props.sizePage as PaginationProps["sizePage"]) ?? options?.sizePage ?? 5
-    return sizePageProp > 0 ? sizePageProp : 5
+  const pageSizeProp = computed<NonNullable<PaginationProps["pageSize"]>>(() => {
+    const value = (props.pageSize as PaginationProps["pageSize"]) ?? options?.pageSize ?? 5
+    return value > 0 ? value : 5
   })
-  const visibleNumberPages = computed<NonNullable<PaginationProps["visibleNumberPages"]>>(() => {
-    const countVisible =
-      (props?.visibleNumberPages as PaginationProps["visibleNumberPages"]) ?? options?.visibleNumberPages ?? 5
+  const visiblePages = computed<NonNullable<PaginationProps["visiblePages"]>>(() => {
+    const countVisible = (props?.visiblePages as PaginationProps["visiblePages"]) ?? options?.visiblePages ?? 5
     return countVisible > 5 ? countVisible : 5
   })
   const total = computed<NonNullable<PaginationProps["total"]>>(() => props.total ?? options?.total ?? 0)
-  const isInfoText = computed<PaginationProps["isInfoText"]>(() => props.isInfoText ?? options?.isInfoText ?? false)
-  const sizesSelector = computed<PaginationProps["sizesSelector"]>(
-    () => (props?.sizesSelector as PaginationProps["sizesSelector"]) ?? options?.sizesSelector
+  const isInfoText = computed<PaginationProps["infoText"]>(() => props.infoText ?? options?.infoText ?? false)
+  const pageSizes = computed<PaginationProps["pageSizes"]>(
+    () => (props?.pageSizes as PaginationProps["pageSizes"]) ?? options?.pageSizes
   )
-  const isPageSizeSelector = computed<PaginationProps["isPageSizeSelector"]>(
-    () => ((props.isPageSizeSelector ?? options?.isPageSizeSelector) || !!sizesSelector.value?.length) ?? false
+  const isPageSizeSelector = computed<PaginationProps["pageSizeSelector"]>(
+    () => ((props.pageSizeSelector ?? options?.pageSizeSelector) || !!pageSizes.value?.length) ?? false
   )
-  const isNavigationButtons = computed<PaginationProps["isHiddenNavigationButtons"]>(
-    () => !(props?.isHiddenNavigationButtons ?? options?.isHiddenNavigationButtons)
+  // `navigationButtons` — bare-positive инверсия снятого `isHiddenNavigationButtons` (dev-patterns §2 F):
+  // default перевёрнут в `true`, поэтому отсутствие prop'а означает «кнопки показываем».
+  const isNavigationButtons = computed<PaginationProps["navigationButtons"]>(
+    () => props?.navigationButtons ?? options?.navigationButtons ?? true
   )
-  const arraySizesSelector = computed<Array<{ key: number; value: string }>>(() =>
-    ((sizesSelector.value ?? [...new Set([+(sizePage.value ?? 5), 5, 15, 20, 50, 100, 150])]) as Array<number>)
+  const arrayPageSizes = computed<Array<{ key: number; value: string }>>(() =>
+    // Копия перед `sort`: он мутирует массив на месте, а `pageSizes` может прийти из frozen-снимка
+    // `componentsOptions` — тогда сортировка бросала TypeError на readonly-элементе.
+    [...((pageSizes.value ?? [...new Set([+(pageSize.value ?? 5), 5, 15, 20, 50, 100, 150])]) as Array<number>)]
       .sort((a, b) => a - b)
       .map((size) => ({ key: size, value: `${size} ${Pagination.t("rows") ?? "rows"}` }))
   )
   const pages = computed(() => {
-    const countPages = Math.ceil(total.value / (sizePage.value ?? 5))
+    const countPages = Math.ceil(total.value / (pageSize.value ?? 5))
     let resultArray = Array(countPages)
       .fill(null)
       .map((_, i) => i + 1)
-    if (countPages > visibleNumberPages.value) {
+    if (countPages > visiblePages.value) {
       // ---------------
-      let beforeCount = (activePage.value ?? 1) - Math.floor((visibleNumberPages.value - 3) / 2)
-      let afterCount = (activePage.value ?? 1) + Math.ceil((visibleNumberPages.value - 3) / 2)
+      let beforeCount = (activePage.value ?? 1) - Math.floor((visiblePages.value - 3) / 2)
+      let afterCount = (activePage.value ?? 1) + Math.ceil((visiblePages.value - 3) / 2)
       if (!((activePage.value ?? 1) > 1 && beforeCount > 1)) {
         beforeCount = 1
-        afterCount = afterCount + (visibleNumberPages.value - (afterCount - beforeCount + 1) - 1)
+        afterCount = afterCount + (visiblePages.value - (afterCount - beforeCount + 1) - 1)
       }
       if (!((activePage.value ?? 1) < countPages && afterCount < countPages)) {
         afterCount = countPages
-        beforeCount = beforeCount - (visibleNumberPages.value - (afterCount - beforeCount + 1) - 1)
+        beforeCount = beforeCount - (visiblePages.value - (afterCount - beforeCount + 1) - 1)
       }
       resultArray = resultArray.slice(beforeCount - 1, afterCount)
       // ---------------
@@ -123,24 +129,36 @@
           : ""
   )
   // Hand-off в Select по контракту 1.0 (dev-patterns §2 A–C): чистый listbox без поиска,
-  // внутренние классы — через карту `classes`, позиционирование — через `fixWindowProps`.
-  const paramsSelect = computed<Partial<BaseSelectProps> & { classes: Record<string, string> }>(() => ({
-    searchable: false,
-    classes: {
-      control: "font-bold text-surface-600 dark:text-surface-500",
-      list: "min-w-[8rem]"
-    },
-    options: arraySizesSelector.value,
-    fixWindowProps: {
-      position: "top-right"
+  // `class` — корень селектора, внутренние элементы — карта `classes`, позиционирование —
+  // `fixWindowProps`. Props потребителя (`selectProps`) кладутся поверх базы по ключу.
+  const selectProps = computed<PaginationSelectProps>(() => {
+    const consumer = (props.selectProps ?? options?.selectProps ?? {}) as PaginationSelectProps
+    return {
+      searchable: false,
+      options: arrayPageSizes.value,
+      ...fieldsOmit(consumer, ["class", "classes", "fixWindowProps"]),
+      fixWindowProps: { position: "top-right", ...(consumer.fixWindowProps ?? {}) },
+      class: cn("m-0 min-w-[5rem] max-w-[5rem]", consumer.class),
+      classes: mergeClasses(
+        {
+          base: modeBorderSelect.value,
+          control: "font-bold text-surface-600 dark:text-surface-500",
+          list: "min-w-[8rem]"
+        },
+        consumer.classes
+      )
     }
-  }))
-  const classBase = ref(
-    Pagination.setStyle([
-      "flex items-center justify-between w-full overflow-auto border-t border-surface-200 dark:border-surface-800 pb-3 -mt-px print:border-black",
-      options?.class ?? "",
-      props?.class ?? ""
-    ])
+  })
+  const modeBorderSelect = computed<string>(() =>
+    mode.value === "outlined" ? "border-none" : mode.value === "underlined" ? "bg-transparent dark:bg-transparent" : ""
+  )
+  // Корень: до 1.0.0 был нереактивным `ref(setStyle(...))` — смена `props.class` или `mode`
+  // после mount не пересчитывалась (dev-patterns §2 D).
+  const classBase = computed(() =>
+    cls(
+      "root",
+      "flex items-center justify-between w-full overflow-auto border-t border-surface-200 dark:border-surface-800 pb-3 -mt-px print:border-black"
+    )
   )
   const classShortVersion = computed(() =>
     Pagination.setStyle(["justify-between mx-5 sm:hidden", isStyleMode.value ? "pt-3" : "", "flex flex-1"])
@@ -151,18 +169,20 @@
       isStyleMode.value ? "pt-2" : "pt-4"
     ])
   )
-  const classShortContentActivePage = ref(Pagination.setStyle("text-theme-700 dark:text-theme-400 print:text-black"))
-  const classShortContentSeparator = ref(Pagination.setStyle("mx-0.5"))
-  const classShortContentCountPages = ref(Pagination.setStyle("text-surface-700 dark:text-surface-400"))
+  const classShortContentActivePage = computed(() =>
+    Pagination.setStyle("text-theme-700 dark:text-theme-400 print:text-black")
+  )
+  const classShortContentSeparator = computed(() => Pagination.setStyle("mx-0.5"))
+  const classShortContentCountPages = computed(() => Pagination.setStyle("text-surface-700 dark:text-surface-400"))
   const classContent = computed(() =>
     Pagination.setStyle([
       "hidden sm:flex sm:flex-1 sm:items-center sm:justify-between",
       isInfoText.value ? "" : "flex-row-reverse"
     ])
   )
-  const classInfoText = ref(Pagination.setStyle("w-28 md:w-40 text-center -mb-4"))
-  const classInfoTextContent = ref(Pagination.setStyle("text-sm text-surface-600 dark:text-surface-500"))
-  const classInfoTextPage = ref(Pagination.setStyle("font-bold dark:text-surface-400"))
+  const classInfoText = computed(() => Pagination.setStyle("w-28 md:w-40 text-center -mb-4"))
+  const classInfoTextContent = computed(() => Pagination.setStyle("text-sm text-surface-600 dark:text-surface-500"))
+  const classInfoTextPage = computed(() => Pagination.setStyle("font-bold dark:text-surface-400"))
   const classNav = computed(() => Pagination.setStyle(["w-full isolate inline-flex rounded-md"]))
   const classPrevious = computed(() =>
     Pagination.setStyle([
@@ -178,14 +198,14 @@
       isStyleMode.value ? "pt-3" : ""
     ])
   )
-  const classButtonSpan = ref(Pagination.setStyle("sr-only"))
-  const classAriaLive = ref(Pagination.setStyle("sr-only"))
+  const classButtonSpan = computed(() => Pagination.setStyle("sr-only"))
+  const classAriaLive = computed(() => Pagination.setStyle("sr-only"))
   // Issue 6 (RTL): directional иконки prev/next зеркалятся через logical `rtl:-scale-x-100`;
   // физический `ml-3` заменён на logical `ms-3` (auto-флип). Порядок prev/next зеркалит сам
   // `inline-flex` контейнера (main-axis следует document direction).
-  const classIcon = ref(Pagination.setStyle("h-5 w-5 rtl:-scale-x-100"))
-  const classIconContent = ref(Pagination.setStyle("ms-3 h-5 w-5 text-surface-400 rtl:-scale-x-100"))
-  const classIconNotPage = ref(Pagination.setStyle("h-5 w-5 text-surface-400"))
+  const classIcon = computed(() => Pagination.setStyle("h-5 w-5 rtl:-scale-x-100"))
+  const classIconContent = computed(() => Pagination.setStyle("ms-3 h-5 w-5 text-surface-400 rtl:-scale-x-100"))
+  const classIconNotPage = computed(() => Pagination.setStyle("h-5 w-5 text-surface-400"))
   const classBodyPages = computed(() =>
     Pagination.setStyle(["hidden sm:-mt-px sm:flex", isStyleMode.value ? "pt-3" : ""])
   )
@@ -197,10 +217,12 @@
       modeStyleSelect.value
     ])
   )
-  const classPageSizeSelectorText = ref(Pagination.setStyle("text-sm text-surface-400 dark:text-surface-500"))
+  const classPageSizeSelectorText = computed(() =>
+    Pagination.setStyle("text-sm text-surface-400 dark:text-surface-500")
+  )
   // Issue 8 (N59/B10): active-страница остаётся различимой в forced-colors (high-contrast)
   // и монохромно читаемой при печати (style-for-print, канон Button/Input/Table).
-  const classNavPageActiveState = ref(
+  const classNavPageActiveState = computed(() =>
     Pagination.setStyle("forced-colors:outline forced-colors:outline-offset-2 print:font-bold print:text-black")
   )
   // ---EXPOSE------------------------------
@@ -208,22 +230,23 @@
     // ---STATE-------------------------
     paginationRef,
     selectPageSize,
-    sizePage,
+    pageSize,
     // ---PROPS-------------------------
-    visibleNumberPages,
+    visiblePages,
     total,
     isInfoText,
     isPageSizeSelector,
     isNavigationButtons,
-    arraySizesSelector,
+    arrayPageSizes,
     pages,
     activePage,
     mode,
     modeStyleSelect,
-    paramsSelect,
+    selectProps,
+    classBase,
     // ---METHODS-----------------------
     switchPage,
-    switchSizePage,
+    switchPageSize,
     focus
   })
   // ---MOUNT-UNMOUNT-----------------------
@@ -244,7 +267,7 @@
     navigationObservers.length = 0
   })
   // ---WATCHERS----------------------------
-  watch(sizePageProp, (value) => (sizePage.value = value), {
+  watch(pageSizeProp, (value) => (pageSize.value = value), {
     immediate: true
   })
 
@@ -265,14 +288,9 @@
     emit("update:modelValue", activePage.value)
   }
 
-  function switchSizePage(sizePageValue: SelectProps["modelValue"] | null, _?: Array<any>) {
-    sizePage.value =
-      typeof sizePageValue === "number"
-        ? sizePageValue
-        : typeof sizePageValue === "string"
-          ? Number(sizePageValue)
-          : undefined
-    emit("update:sizePage", sizePage.value)
+  function switchPageSize(value: SelectProps["modelValue"] | null, _?: Array<any>) {
+    pageSize.value = typeof value === "number" ? value : typeof value === "string" ? Number(value) : undefined
+    emit("update:pageSize", pageSize.value)
   }
 
   // Issue 7 (G34): programmatic focus корневого <nav> через exposed paginationRef.
@@ -339,8 +357,8 @@
         <p :class="classInfoTextContent">
           <span :class="classInfoTextPage">
             {{
-              (sizePage ?? 5) * (activePage ?? 1) +
-              (total - (sizePage ?? 5) * (activePage ?? 1) < 0 ? total - (sizePage ?? 5) * (activePage ?? 1) : 0)
+              (pageSize ?? 5) * (activePage ?? 1) +
+              (total - (pageSize ?? 5) * (activePage ?? 1) < 0 ? total - (pageSize ?? 5) * (activePage ?? 1) : 0)
             }}
           </span>
           {{ Pagination.t("of") ?? "of" }}
@@ -433,15 +451,11 @@
         @click="selectPageSize?.openSelect()">
         <p :class="classPageSizeSelectorText">{{ Pagination.t("show") ?? "Show:" }}</p>
         <Select
-          v-bind="paramsSelect"
+          v-bind="selectProps"
           ref="selectPageSize"
           :mode="mode"
-          :model-value="sizePage"
-          :class="[
-            mode === 'outlined' ? 'border-none' : mode === 'underlined' ? 'bg-transparent dark:bg-transparent' : ''
-          ]"
-          :class-body="['m-0 min-w-[5rem] max-w-[5rem]']"
-          @update:model-value="switchSizePage">
+          :model-value="pageSize"
+          @update:model-value="switchPageSize">
         </Select>
       </div>
     </div>

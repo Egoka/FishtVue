@@ -145,7 +145,7 @@ export interface MenuSeparator extends Omit<SeparatorProps, "orientation"> {
  */
 export type MenuFixWindow = Pick<
   FixWindowProps,
-  "eventOpen" | "eventClose" | "mode" | "delay" | "class" | "classBody" | "marginPx" | "translatePx" | "paddingWindow"
+  "eventOpen" | "eventClose" | "mode" | "openDelay" | "class" | "classes" | "marginPx" | "translatePx" | "paddingWindow"
 >
 
 /**

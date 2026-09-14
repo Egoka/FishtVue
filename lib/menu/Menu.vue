@@ -40,9 +40,9 @@
     "eventOpen",
     "eventClose",
     "mode",
-    "delay",
+    "openDelay",
     "class",
-    "classBody",
+    "classes",
     "marginPx",
     "translatePx",
     "paddingWindow"
@@ -76,8 +76,8 @@
     () => props.separator?.isVisible ?? options?.separator?.isVisible ?? true
   )
   const paramsWindowMenu = computed<MenuProps["paramsWindowMenu"]>(() => ({
-    delay: 200,
-    typePosition: "absolute",
+    openDelay: 200,
+    strategy: "absolute",
     position: "right-top",
     eventOpen: onlyIcons.value ? "click" : "hover",
     eventClose: "hover",
@@ -659,7 +659,7 @@
             <FixWindow
               v-else
               :position="flipPosition(horizontal ? 'top' : 'right')"
-              :delay="500"
+              :open-delay="500"
               :margin-px="10"
               :mode="mode">
               <span :data-title="!!item?.title" :class="classItemTitleFixWindow">{{ item?.title }}</span>
@@ -676,7 +676,7 @@
             :ref="(el) => setSubmenuRef(el, item._key)"
             v-bind="submenuParams(item)"
             :focus-trap="usingKeyboard"
-            class-body="z-10"
+            class="z-10"
             @open="() => onSubmenuOpen(item)"
             @close="() => onSubmenuClose(item)">
             <Menu
