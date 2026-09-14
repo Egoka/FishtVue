@@ -205,7 +205,7 @@ watch(isOpenList, (value) => {
 - [x] Mix `:data-select` + дети → schema выигрывает. Тест: `schema-driven dataSelect wins over compound children`.
 - [x] Type-safe value: `<SelectOption :value="42">` → `modelValue === 42`. Тест: `infers value type — numeric value round-trips through modelValue`.
 - [x] `disabled` опция не выбирается + `aria-disabled`. Тест: `disabled compound option is marked aria-disabled and is not selectable`.
-- [x] `<SelectGroup>` рендерит header. Тест: `renders <SelectGroup> label header above its options`.
+- [x] `<SelectGroup>` рендерит header. Тест: `renders <SelectGroup> title header above its options`.
 
 **Ограничение:** rich per-option контент (иконки) compound-API не рендерит — используй `#item` slot / schema-driven `:data-select`.
 

@@ -109,7 +109,7 @@
       if (isVNodeNamed(vn, "SelectItem")) pushOption(vn, null)
       else if (isVNodeNamed(vn, "SelectGroup")) {
         hasGroups = true
-        const label = String(vn?.props?.label ?? vn?.props?.title ?? "")
+        const label = String(vn?.props?.title ?? "")
         for (const child of compoundFlatten(compoundChildren(vn)))
           if (isVNodeNamed(child, "SelectItem")) pushOption(child, label)
       }

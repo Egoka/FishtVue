@@ -175,7 +175,7 @@ describe("Select — Issue 7: виртуализация списка опций
           default: () => [
             h(
               SelectGroup,
-              { label: "Numbers" },
+              { title: "Numbers" },
               { default: () => bigData(150).map((o) => h(SelectItem, { value: o.id, label: o.value })) }
             )
           ]

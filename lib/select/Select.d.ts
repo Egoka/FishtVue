@@ -463,20 +463,19 @@ export declare type SelectItemSlots = {
 
 /**
  * Props for the `<SelectGroup>` descriptor (compound API) — groups `<SelectItem>` children under a
- * non-selectable label header.
+ * non-selectable header row.
+ *
+ * До 1.0.0 заголовок задавался двумя props сразу: обязательным `label` и его алиасом `title`.
+ * Остался один — `title`, как у соседних group-дескрипторов библиотеки (`FormSectionProps.title`,
+ * `MenuGroupData.title`). Заодно уходит двусмысленность с `SelectItemProps.label`: у опции `label` —
+ * её собственный текст, и одноимённый prop у группы читался как «label опций этой группы».
  */
 export declare type SelectGroupProps = {
   /**
-   * Group header label.
+   * Group header text. Бывший `label`.
    * @type {string}
    */
-  label: string
-
-  /**
-   * Alias of `label`.
-   * @type {string | undefined}
-   */
-  title?: string
+  title: string
 }
 
 /**
@@ -508,7 +507,7 @@ declare class SelectItemComponent extends ClassComponent<
  *
  * ```vue
  * <Select v-model="x">
- *   <SelectGroup label="Fruits">
+ *   <SelectGroup title="Fruits">
  *     <SelectItem value="a">Apple</SelectItem>
  *   </SelectGroup>
  * </Select>

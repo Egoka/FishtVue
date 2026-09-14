@@ -245,7 +245,7 @@ watch(query, debounce((q) => store.fetchUsers(q), 300))
 <Select v-model="x">
   <SelectItem value="a">Apple</SelectItem>
   <SelectItem value="b" disabled>Banana (locked)</SelectItem>
-  <SelectGroup label="Citrus">
+  <SelectGroup title="Citrus">
     <SelectItem value="c" label="Orange" />
     <SelectItem value="d">Lemon</SelectItem>
   </SelectGroup>
@@ -255,8 +255,11 @@ watch(query, debounce((q) => store.fetchUsers(q), 300))
 - `<SelectItem>` props (`SelectItemProps`, [Select.d.ts:436-454](../../lib/select/Select.d.ts#L436-L454)): `value` (required — становится `modelValue` при выборе и identity-ключом),
   `label?` (display-текст; перекрывает текст default-slot), `disabled?` (не выбирается, `aria-disabled`).
   Текст опции берётся из `label` → текста default-slot → `String(value)`.
-- `<SelectGroup>` props: `label` (required; алиас `title`) — рендерит non-selectable header-строку
-  (`[data-select-group]`, `role="presentation"`) над вложенными `<SelectItem>`.
+- `<SelectGroup>` props (`SelectGroupProps`): `title` (required) — рендерит non-selectable header-строку
+  (`[data-select-group]`, `role="presentation"`) над вложенными `<SelectItem>`. Пустой `title` — header
+  не рендерится, группировка опций сохраняется. С 1.0.0 это единственный prop заголовка: прежняя пара
+  `label` + алиас `title` схлопнута в `title` (зеркало `FormSectionProps.title` / `MenuGroupData.title`),
+  иначе `label` читался двусмысленно рядом с `SelectItemProps.label`.
 - `value` сохраняет тип: `<SelectItem :value="42">` → `modelValue === 42` (number).
 - В Nuxt оба компонента авто-импортируются; для explicit-import — `import { SelectItem, SelectGroup } from "fishtvue/select"`.
 - Ограничение: rich per-option контент (иконки и т.п.) compound-API не рендерит — для этого используй
@@ -349,6 +352,7 @@ sel.value?.openSelect()
   - `noQuery: true` → `searchable: false` (инверсия смысла, default `searchable: true`).
   - `classSelect` → `classes.control`, `classSelectList` → `classes.list`, `classMaskQuery` → `classes.mark`; `classBody` → `class`, прежний `class` → `classes.base`.
   - компонент `<SelectOption>` → `<SelectItem>` (`SelectItemProps`/`SelectItemSlots`); options-тип `SelectOption` не тронут.
+  - `<SelectGroup>`: пара `label` (required) + алиас `title` схлопнута в один `title` (required).
   - тип `IDataItem` → `SelectDataItem`.
   - emits: `update:isInvalid` → `update:invalid`, `isActive` → `active` (silent break).
   - `data-select` теперь на корне; триггер-combobox — `[data-select-control]`.

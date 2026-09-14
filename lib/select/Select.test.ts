@@ -584,11 +584,11 @@ describe("Select — Issue 3: compound <SelectItem>/<SelectGroup> API", () => {
   })
 
   // ---GROUPS ---------------------------------------------------------------
-  it("renders <SelectGroup> label header above its options", async () => {
+  it("renders <SelectGroup> title header above its options", async () => {
     const wrapper = mount(Select, {
       slots: {
         default: () => [
-          h(SelectGroup, { label: "Fruits" }, () => [
+          h(SelectGroup, { title: "Fruits" }, () => [
             h(SelectItem, { value: "a" }, () => "Apple"),
             h(SelectItem, { value: "b" }, () => "Banana")
           ])
@@ -600,6 +600,24 @@ describe("Select — Issue 3: compound <SelectItem>/<SelectGroup> API", () => {
     expect(wrapper.find("[data-select-group]").text()).toContain("Fruits")
     // опции группы — выбираемы и НЕ включают header в selectable-список
     expect(wrapper.findAll("[data-select-list-item]").length).toBe(2)
+  })
+
+  it("снятый `label` заголовком группы больше не работает (props 1.0)", async () => {
+    // До 1.0.0 <SelectGroup> принимал и `label`, и алиас `title`. Остался только `title`:
+    // `label` уходит в $attrs дескриптора и до header-строки не доезжает.
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [
+          h(SelectGroup, { label: "Fruits" } as any, () => [h(SelectItem, { value: "a" }, () => "Apple")])
+        ]
+      }
+    })
+    await nextTick()
+    // заголовок пустой → header-строка не рендерится вовсе
+    expect(wrapper.find("[data-select-group]").exists()).toBe(false)
+    expect(wrapper.text()).not.toContain("Fruits")
+    // опции группы при этом на месте — снят заголовок, а не группировка
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(1)
   })
 
   // ---BOUNDARY -------------------------------------------------------------
@@ -862,7 +880,7 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
     it("group header text uses surface-family (not gray)", async () => {
       const wrapper = mount(Select, {
         slots: {
-          default: () => [h(SelectGroup, { label: "Fruits" }, () => [h(SelectItem, { value: "a" }, () => "Apple")])]
+          default: () => [h(SelectGroup, { title: "Fruits" }, () => [h(SelectItem, { value: "a" }, () => "Apple")])]
         }
       })
       await wrapper.find("[data-select-control]").trigger("click")
