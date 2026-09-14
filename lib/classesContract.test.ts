@@ -13,10 +13,7 @@ import FishtVue from "fishtvue/config"
  * 3. под `unstyled: true` классы потребителя переживают, а тема (`{prefix}-{name}`) — нет.
  *
  * Per-component нюансы (aspect-ключи, hand-off'ы, слоты) живут в `<Name>.test.ts`; здесь — инвариант.
- * `PENDING` — компоненты до своей волны; обнуляется в W7, после чего `skipIf` удаляется.
  */
-const PENDING: string[] = []
-
 type Entry = {
   name: string
   load: () => Promise<{ default: Component }>
@@ -350,11 +347,9 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
     const names = CONTRACT.map((e) => e.name)
     expect(new Set(names).size).toBe(names.length)
     expect(names.length).toBe(23)
-    expect(PENDING.every((n) => names.includes(n))).toBe(true)
   })
 
   for (const entry of CONTRACT) {
-    const skip = PENDING.includes(entry.name)
     describe(entry.name, () => {
       let host: HTMLElement
       beforeEach(() => {
@@ -373,7 +368,7 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
         })
       }
 
-      it.skipIf(skip)("prop `class` ложится только на корень", async () => {
+      it("prop `class` ложится только на корень", async () => {
         const wrapper = await render({ class: "probe-root" })
         const root = wrapper.find(entry.root)
         expect(root.exists(), `корень ${entry.root} не найден`).toBe(true)
@@ -384,7 +379,7 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
       })
 
       for (const [key, selector] of Object.entries(entry.keys)) {
-        it.skipIf(skip)(`classes.${key} → ${selector}`, async () => {
+        it(`classes.${key} → ${selector}`, async () => {
           const probe = `probe-${key.toLowerCase()}`
           const wrapper = await render({ classes: { [key]: probe } })
           await flushLazy(() => queryAll(host, selector).length > 0)
@@ -395,7 +390,7 @@ describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)"
         })
       }
 
-      it.skipIf(skip)("под unstyled классы потребителя остаются, тема — нет", async () => {
+      it("под unstyled классы потребителя остаются, тема — нет", async () => {
         const firstKey = Object.keys(entry.keys)[0]
         const wrapper = await render({ class: "probe-root", classes: firstKey ? { [firstKey]: "probe-inner" } : {} }, [
           unstyledPlugin

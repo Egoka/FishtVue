@@ -14,7 +14,7 @@
   } from "./Menu"
   import type { FixWindowProps } from "fishtvue/fixwindow"
   import type { SeparatorProps } from "fishtvue/separator"
-  import type { _key, StyleClass } from "fishtvue/types"
+  import type { ItemKey, StyleClass } from "fishtvue/types"
   import { fieldsOmit, fieldsPick } from "fishtvue/utils/objectHandler"
   import { generateUUID } from "fishtvue/utils/functionHandler"
   import { isArray } from "fishtvue/utils/arrayHandler"
@@ -46,8 +46,8 @@
     "paddingWindow"
   ]
   // ---STATE-------------------------------
-  const selectedItemIndex = ref<_key>()
-  const activeItemIndex = ref<_key>()
+  const selectedItemIndex = ref<ItemKey>()
+  const activeItemIndex = ref<ItemKey>()
   // Корневой DOM-элемент `[data-menu]` (expose G34) + RTL-флаг (детект в onMounted).
   const rootRef = ref<HTMLElement | null>(null)
   const isRtl = ref(false)
@@ -272,11 +272,11 @@
     return compoundGroups.value
   })
   // ---KEYBOARD-NAVIGATION (roving tabindex + WAI-ARIA menu) ----------
-  const focusedItemKey = ref<_key>()
+  const focusedItemKey = ref<ItemKey>()
   const usingKeyboard = ref(false)
-  const openSubmenuKeys = ref<Set<_key>>(new Set())
-  const itemElements = new Map<_key, HTMLElement>()
-  const submenuWindows = new Map<_key, { open?: () => void; close?: () => void }>()
+  const openSubmenuKeys = ref<Set<ItemKey>>(new Set())
+  const itemElements = new Map<ItemKey, HTMLElement>()
+  const submenuWindows = new Map<ItemKey, { open?: () => void; close?: () => void }>()
   const flatItems = computed<Array<MenuItemDataPrivate>>(() =>
     (listGroups.value ?? []).flatMap((group) => (group?.items ?? []) as Array<MenuItemDataPrivate>)
   )
@@ -288,18 +288,18 @@
     },
     { immediate: true }
   )
-  function setItemRef(el: unknown, key: _key): void {
+  function setItemRef(el: unknown, key: ItemKey): void {
     if (el) itemElements.set(key, el as HTMLElement)
     else itemElements.delete(key)
   }
-  function setSubmenuRef(el: unknown, key: _key): void {
+  function setSubmenuRef(el: unknown, key: ItemKey): void {
     if (el) submenuWindows.set(key, el as { open?: () => void; close?: () => void })
     else submenuWindows.delete(key)
   }
   function currentItem(): MenuItemDataPrivate | undefined {
     return flatItems.value.find((item) => item._key === focusedItemKey.value)
   }
-  function focusItemByKey(key: _key | undefined): void {
+  function focusItemByKey(key: ItemKey | undefined): void {
     if (key === undefined) return
     focusedItemKey.value = key
     setActiveItem(key)
@@ -495,11 +495,11 @@
       item.onClick(event, fieldsOmit(item, ["onClick", "onActive", "onInactive"]) as MenuItemDataPrivate)
   }
 
-  function setSelectedItem(itemKey: _key | undefined): void {
+  function setSelectedItem(itemKey: ItemKey | undefined): void {
     selectedItemIndex.value = itemKey
   }
 
-  function setActiveItem(itemKey: _key | undefined): void {
+  function setActiveItem(itemKey: ItemKey | undefined): void {
     activeItemIndex.value = itemKey
   }
 

@@ -243,7 +243,7 @@ Guard разбирает тело `*Emits`-блока целиком, поэто
 2. Заполнить `<Name>.vue` по §4.
 3. Заполнить `<Name>.d.ts` по §5 (включая `XClassKey` и `"class" | "classes"` в `XOption`).
 4. Написать тесты (минимум 5 кейсов) по §6; добавить компонент в манифест [lib/classesContract.test.ts](../lib/classesContract.test.ts) (корень + ключи → селекторы); убедиться, что [booleanProps.test.ts](../lib/booleanProps.test.ts) и [propsNaming.test.ts](../lib/propsNaming.test.ts) зелёные.
-5. Добавить экспорт в [lib/index.ts](../lib/index.ts) и [lib/index.d.ts](../lib/index.d.ts).
+5. Добавить экспорт в [lib/index.ts](../lib/index.ts) и [lib/index.d.ts](../lib/index.d.ts) — наборы имён в двух barrel'ах обязаны совпадать, паритет проверяет [lib/package.test.ts](../lib/package.test.ts). У compound-компонента дети (`<XItem>`, `<XGroup>`) реэкспортируются **из родительского `<Name>.d.ts`** (`export * from "./XItem"` + `export { default as XItem }`): `package.json.types` подпакета указывает только на родителя, поэтому иначе `import { XItem } from "fishtvue/<name>"` пройдёт рантайм, но упадёт на typecheck.
 6. Зарегистрировать в [lib/rollup.config.js](../lib/rollup.config.js) (entries + `EXTERNAL_CORE_DEPENDENCIES`).
 7. Добавить опции в [lib/config/FishtVue.d.ts](../lib/config/FishtVue.d.ts) (`ComponentsOptions`).
 8. При наличии локализации — ключи в [lib/locale/locales/en.ts](../lib/locale/locales/en.ts) и [ru.ts](../lib/locale/locales/ru.ts).

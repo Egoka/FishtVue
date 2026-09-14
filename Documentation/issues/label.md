@@ -216,7 +216,7 @@ text-gray-400 dark:text-gray-500
 
 ### Резолюция
 
-Cross-cutting инфраструктура (Wave 9) добавила 23-й именованный цвет `surface` в [lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317) — структурный semantic-слот, default = точная копия `gray`-шкалы, и включила `"surface"` в union `namesColors` ([lib/theme/Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)). `text-surface-{tone}` работает идентично любому другому named-цвету — движок не требовал изменений.
+Cross-cutting инфраструктура (Wave 9) добавила 23-й именованный цвет `surface` в [lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317) — структурный semantic-слот, default = точная копия `gray`-шкалы, и включила `"surface"` в union `ColorName` ([lib/theme/Theme.d.ts:178](../../lib/theme/Theme.d.ts#L178)). `text-surface-{tone}` работает идентично любому другому named-цвету — движок не требовал изменений.
 
 Механическая миграция: `text-gray-400 dark:text-gray-500` → `text-surface-400 dark:text-surface-500` ([Label.vue:57](../../lib/label/Label.vue#L57)) — тот же numeric tone (400/500), только family rename. Поскольку `surface` по умолчанию идентичен `gray`, визуальных изменений нет — но цвет метки теперь подключён к theme-token indirection и подхватит будущую кастомизацию `surface`-палитры через `updateSurfacePalette()` без правок в `Label.vue`.
 

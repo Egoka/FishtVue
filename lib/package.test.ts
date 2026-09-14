@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 
 /**
@@ -168,5 +168,57 @@ describe.skipIf(!hasDist)("dist/package.json root exports map (Issue 5c-b)", () 
         expect(exp[id]).toMatchObject({ import: id })
       }
     }
+  })
+})
+
+/**
+ * Паритет корневых barrel'ов: `lib/index.ts` (рантайм, entry сборки `index.mjs`) и
+ * `lib/index.d.ts` (типы, `package.json.types`). Два файла пишутся руками и обязаны отдавать
+ * одинаковый набор имён: потребитель делает один `import { X } from "fishtvue"` и получает
+ * значение из первого, тип — из второго.
+ *
+ * Ничем не проверявшийся дрейф уже случался: `VirtualScroller` присутствовал в `index.ts`
+ * и отсутствовал в `index.d.ts` — компонент импортировался, но был `any` у TS-потребителя.
+ * `nuxt.test.ts` сверяет регистрацию модуля только с рантайм-barrel'ом, типовой не смотрел никто.
+ *
+ * Сравниваем по двум осям: спецификаторы `export * from "…"` (через них едут props/slots/emits-типы)
+ * и имена `export { default as X }` (сами компоненты).
+ */
+describe("корневой barrel: index.ts ↔ index.d.ts", () => {
+  const read = (file: string) => readFileSync(resolve(process.cwd(), file), "utf-8")
+  const starSpecifiers = (src: string) => [...src.matchAll(/^export \* from "([^"]+)"/gm)].map((m) => m[1]).sort()
+  const defaultNames = (src: string) =>
+    [...src.matchAll(/^export \{ default as (\w+) \} from "([^"]+)"/gm)].map((m) => `${m[1]} ← ${m[2]}`).sort()
+
+  const runtime = read("lib/index.ts")
+  const types = read("lib/index.d.ts")
+
+  it("реэкспортирует одни и те же модули (`export *`)", () => {
+    expect(starSpecifiers(types)).toEqual(starSpecifiers(runtime))
+  })
+
+  it("отдаёт одни и те же компоненты под одними и теми же именами", () => {
+    expect(defaultNames(types)).toEqual(defaultNames(runtime))
+  })
+
+  /**
+   * Обратная сторона: barrel должен покрывать все компоненты библиотеки. Инфра-подпакеты
+   * (component/locale/module/plugins/theme/utils) в barrel не входят намеренно — у них свои
+   * subpath'ы; список держим явным, чтобы новый инфра-каталог не проскочил как «забытый компонент».
+   */
+  it("покрывает каждый компонентный подпакет lib/", () => {
+    const INFRA = new Set(["component", "locale", "module", "plugins", "theme", "utils"])
+    const dirs = readdirSync(resolve(process.cwd(), "lib"), { withFileTypes: true })
+      .filter(
+        (e) =>
+          e.isDirectory() && !INFRA.has(e.name) && existsSync(resolve(process.cwd(), "lib", e.name, "package.json"))
+      )
+      .map((e) => e.name)
+      .sort()
+    const exported = starSpecifiers(runtime)
+      .filter((s) => s.startsWith("fishtvue/"))
+      .map((s) => s.slice("fishtvue/".length))
+      .sort()
+    expect(exported).toEqual(dirs)
   })
 })

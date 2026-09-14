@@ -140,11 +140,6 @@ export declare type THeight = number | string | "500px" | "50rem" | "50em" | "50
 export declare type RefLink = string | HTMLElement | Element
 
 /**
- * Type for key (usually used for identifiers)
- */
-export declare type _key = string
-
-/**
  * Type for loading state
  */
 export declare type TLoading = boolean

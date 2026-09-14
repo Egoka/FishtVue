@@ -121,7 +121,7 @@ declare type ColorScheme<T extends string> = OtherParametersScheme<T> & {
 // ----------------------
 export declare type Margin = Record<"m" | "mx" | "my" | "mt" | "mb" | "ml" | "mr", Record<keysLength, string>>
 export declare type Padding = Record<"p" | "px" | "py" | "pt" | "pb" | "pl" | "pr", Record<keysLength, string>>
-export declare type Colors = Record<namesColors, ThemeColor>
+export declare type Colors = Record<ColorName, ThemeColor>
 export declare type ColorsConst = Record<"white" | "black", string>
 export declare type Border = Record<"borderWidth", BorderWidth>
 export declare type Rounded = Record<"rounded", ThemeRounded>
@@ -169,7 +169,13 @@ interface Length extends Record<keysLength, string> {
 }
 
 export type ThemeColor = { [key in keysColor]: string }
-export declare type namesColors =
+/**
+ * Имя цвета палитры движка тем. Бывший `namesColors`.
+ * Определяет, какие Tailwind-утилиты движок умеет собирать: `bg-{ColorName}-{tone}`,
+ * `text-{ColorName}-{tone}` и т.д. Новый цвет добавляется парой `primitive.ts.colors` + этот union
+ * (`unoRules.ts` строит regex динамически из `Object.keys(colors)` и правок не требует).
+ */
+export declare type ColorName =
   | "theme"
   | "emerald"
   | "green"

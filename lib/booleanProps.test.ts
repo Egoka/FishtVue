@@ -13,10 +13,7 @@ import { describe, expect, it } from "vitest"
  *
  * Скан идёт по скомпилированным runtime-опциям props (`Component.props`) всех SFC верхнего уровня
  * `lib/<name>/<Name>.vue` (компоненты + renderless-дескрипторы; `lib/loading/svg|epic` не входят).
- * `PENDING` — компоненты, ещё не переведённые на 1.0; обнуляется в W7.
  */
-const PENDING: string[] = []
-
 /**
  * Renderless-дескрипторы compound-API (`<SelectItem>`, `<FormField>`, `<Column>`, …): собственного DOM
  * не рендерят, а родитель читает их props через VNode-walk (`slots.default()`), то есть СЫРЫЕ, до
@@ -56,16 +53,10 @@ describe("Cross-cutting guard — boolean props (dev-patterns §2 F)", () => {
     expect(entries.length).toBeGreaterThan(25)
   })
 
-  it("PENDING содержит только существующие SFC", () => {
-    const known = new Set(entries.map((e) => e.rel))
-    const stale = PENDING.filter((rel) => !known.has(rel))
-    expect(stale, `SFC нет в lib/: ${stale.join(", ")}`).toEqual([])
-  })
-
   it("у каждого Boolean-prop есть собственный default (слой componentsOptions достижим)", () => {
     const offenders: string[] = []
     for (const { rel, props } of entries) {
-      if (PENDING.includes(rel) || RENDERLESS.has(rel)) continue
+      if (RENDERLESS.has(rel)) continue
       for (const [name, def] of Object.entries(props)) {
         if (!typesOf(def).includes(Boolean)) continue
         // Обязательный prop потребитель не может опустить, поэтому cast отсутствующего в `false`
@@ -80,7 +71,6 @@ describe("Cross-cutting guard — boolean props (dev-patterns §2 F)", () => {
   it("имена props — bare-positive, без is/not/without/no/show/use", () => {
     const offenders: string[] = []
     for (const { rel, props } of entries) {
-      if (PENDING.includes(rel)) continue
       for (const name of Object.keys(props)) {
         if (FORBIDDEN_PREFIX.test(name)) offenders.push(`${rel}: ${name}`)
       }

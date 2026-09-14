@@ -1,6 +1,6 @@
 import { MaybeRef, Ref, VNode } from "vue"
 import {
-  _key,
+  ItemKey,
   ClassComponent,
   ClassesMap,
   GlobalComponentConstructor,
@@ -93,7 +93,7 @@ export interface MenuItemData {
 }
 
 export interface MenuItemDataPrivate extends MenuItemData {
-  _key: _key
+  _key: ItemKey
 }
 
 /**
@@ -354,15 +354,15 @@ export declare type MenuExpose = {
   // ---STATE-------------------------
   /**
    * The key of the currently selected menu item.
-   * @type {_key | undefined}
+   * @type {ItemKey | undefined}
    */
-  selectedItemIndex: _key | undefined
+  selectedItemIndex: ItemKey | undefined
 
   /**
    * The key of the currently active menu item.
-   * @type {Ref<_key | undefined>}
+   * @type {Ref<ItemKey | undefined>}
    */
-  activeItemIndex: _key | undefined
+  activeItemIndex: ItemKey | undefined
 
   // ---PROPS-------------------------
   /**
@@ -516,15 +516,15 @@ export declare type MenuExpose = {
   // ---METHODS-----------------------
   /**
    * Sets the selected menu item.
-   * @param {_key | undefined} itemKey - The key of the selected item.
+   * @param {ItemKey | undefined} itemKey - The key of the selected item.
    */
-  setSelectedItem(itemKey: _key | undefined): void
+  setSelectedItem(itemKey: ItemKey | undefined): void
 
   /**
    * Sets the active menu item.
-   * @param {_key | undefined} itemKey - The key of the active item.
+   * @param {ItemKey | undefined} itemKey - The key of the active item.
    */
-  setActiveItem(itemKey: _key | undefined): void
+  setActiveItem(itemKey: ItemKey | undefined): void
 
   /**
    * Populates the menu items.
@@ -559,3 +559,12 @@ declare module "vue" {
 }
 
 export default Menu
+// value-экспорты compound-детей (зеркало Table.d.ts / Select.d.ts / Form.d.ts).
+// `fishtvue/menu` типизируется через этот файл (`package.json.types`), поэтому классы и
+// props-типы детей обязаны реэкспортироваться отсюда — иначе `import { MenuItem } from
+// "fishtvue/menu"` проходит рантайм (named-экспорт menu.mjs), но падает на typecheck,
+// а `declare module "vue"` этих файлов не подхватывается при subpath-импорте.
+export * from "./MenuItem"
+export * from "./MenuGroup"
+export { default as MenuItem } from "./MenuItem"
+export { default as MenuGroup } from "./MenuGroup"

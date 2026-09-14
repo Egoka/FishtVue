@@ -87,7 +87,7 @@ related-doc: ../components/separator.md
 
 ### Что было сделано
 
-Family rename (тот же numeric tone, значение не менялось) на новый `surface` semantic-слот ([lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317), дефолт — точная копия `gray`-шкалы; `namesColors` union в [Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)):
+Family rename (тот же numeric tone, значение не менялось) на новый `surface` semantic-слот ([lib/theme/primitive.ts:305-317](../../lib/theme/primitive.ts#L305-L317), дефолт — точная копия `gray`-шкалы; `ColorName` union в [Theme.d.ts:178](../../lib/theme/Theme.d.ts#L178)):
 
 - `via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800` → `via-surface-200 dark:via-surface-800 to-surface-200 dark:to-surface-800` ([Separator.vue:77,109](../../lib/separator/Separator.vue#L77))
 - `bg-neutral-200 dark:bg-neutral-800` → `bg-surface-200 dark:bg-surface-800` ([Separator.vue:78,110](../../lib/separator/Separator.vue#L78))

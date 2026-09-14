@@ -197,7 +197,7 @@ Runtime theme API (Wave 3.3 — [usePreset.ts](../../lib/theme/usePreset.ts), [u
 | `updateSurfacePalette(input)` | `(input: Partial<ThemeColor> \| { light?, dark? }) => Theme \| undefined` | Пишет `semantic.surface` и `--fv-surface-{tone}`; dark-подмножество скоупится на `darkModeSelector`/`prefers-color-scheme`. Потребление компонентами — Wave 9.                       |
 | `$dt(path)`                   | `(path: string) => DesignToken \| undefined`                              | Метаданные токена по dot-path: `{ name?, variable?, value }`; `name`/`variable` — только у путей, представленных CSS-переменной.                                                     |
 
-`StyleOptions` ([Theme.d.ts:220–233](../../lib/theme/Theme.d.ts#L220-L233)): `document`, `immediate`, `manual`, `name`, `id`, `media`, `nonce`, `props`, `first`, `onMounted`, `onUpdated`, `onLoad`.
+`StyleOptions` ([Theme.d.ts:242–255](../../lib/theme/Theme.d.ts#L242-L255)): `document`, `immediate`, `manual`, `name`, `id`, `media`, `nonce`, `props`, `first`, `onMounted`, `onUpdated`, `onLoad`.
 
 ## 9. Examples
 
@@ -305,7 +305,7 @@ updatePrimaryPalette("#6366f1") // брендовая палитра из одн
 
 ### Security
 
-- `useStyle` создаёт inline `<style>` — требует CSP `style-src 'unsafe-inline'` или nonce. `StyleOptions.nonce` ([Theme.d.ts:227](../../lib/theme/Theme.d.ts#L227)) поддерживается, но `Component.__setStyle()` его не пробрасывает — см. [Component class §18](./component-class.md#18-known-issues--limitations).
+- `useStyle` создаёт inline `<style>` — требует CSP `style-src 'unsafe-inline'` или nonce. `StyleOptions.nonce` ([Theme.d.ts:249](../../lib/theme/Theme.d.ts#L249)) поддерживается, но `Component.__setStyle()` его не пробрасывает — см. [Component class §18](./component-class.md#18-known-issues--limitations).
 - `palette()` — чисто вычислительная функция, без внешних обращений.
 - Uno-engine генерирует CSS из строк — не использует `eval`. Безопасен.
 

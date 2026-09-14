@@ -235,3 +235,7 @@ declare module "vue" {
 }
 
 export default Accordion
+// value-экспорт compound-ребёнка (зеркало Menu.d.ts / Table.d.ts): `fishtvue/accordion`
+// типизируется через этот файл, поэтому класс и props-типы `AccordionItem` идут отсюда.
+export * from "./AccordionItem"
+export { default as AccordionItem } from "./AccordionItem"

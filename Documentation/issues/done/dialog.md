@@ -129,7 +129,7 @@ related-doc: ../../components/dialog.md
 - **Severity:** ~~low~~
 - **Где:** [Dialog.vue](../../../lib/dialog/Dialog.vue)
 - **Что было:** `bg-neutral-500/10 dark:bg-neutral-900/10` (overlay background), `dark:bg-neutral-950` (dialog panel, `bg-white` не менялся) и `fill-neutral-500 dark:fill-neutral-500` (close-icon) — хардкоженные Tailwind color-primitive классы вместо semantic design-token. На момент аудита 2026-05-12 (Issue 9 таблица выше) это оставили как **не Dialog-specific issue**, ожидая cross-cutting `surface` token из Wave 9.
-- **Resolution:** family rename (тот же numeric tone, значение не менялось) на `surface` semantic-слот, добавленный в [lib/theme/primitive.ts:305-317](../../../lib/theme/primitive.ts#L305-L317) (дефолт — точная копия `gray`-шкалы; `namesColors` union в [Theme.d.ts](../../../lib/theme/Theme.d.ts)):
+- **Resolution:** family rename (тот же numeric tone, значение не менялось) на `surface` semantic-слот, добавленный в [lib/theme/primitive.ts:305-317](../../../lib/theme/primitive.ts#L305-L317) (дефолт — точная копия `gray`-шкалы; `ColorName` union в [Theme.d.ts](../../../lib/theme/Theme.d.ts)):
   - `bg-neutral-500/10 dark:bg-neutral-900/10` → `bg-surface-500/10 dark:bg-surface-900/10` ([Dialog.vue:129](../../../lib/dialog/Dialog.vue#L129))
   - `dark:bg-neutral-950` → `dark:bg-surface-950` ([Dialog.vue:134](../../../lib/dialog/Dialog.vue#L134), `bg-white` не тронут)
   - `fill-neutral-500 dark:fill-neutral-500` → `fill-surface-500 dark:fill-surface-500` ([Dialog.vue:308](../../../lib/dialog/Dialog.vue#L308))

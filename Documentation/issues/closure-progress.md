@@ -398,7 +398,7 @@ Auto-derive (то, что предлагал план) сознательно н
 | - | ------- |
 | R9 | Три темы **дифференцировать** — но только брендовым hue: Aurora тёплый, Harmony зелёный, Sapphire синий. Меняются два числа в `semantic`, остальная палитра общая |
 | R10 | `primitive.ts` **не разбивать** на per-color — wontfix. Цветовые regex движка собираются через `Object.keys(colors)`, разбиение потребовало бы переделывать этот механизм ради выигрыша, который съедает gzip |
-| R11 | Alert — **завести четыре semantic-слота** success/warning/info/error по контракту диалекта (`primitive.ts.colors` + `namesColors`, `unoRules.ts` не патчится) |
+| R11 | Alert — **завести четыре semantic-слота** success/warning/info/error по контракту диалекта (`primitive.ts.colors` + `ColorName`, `unoRules.ts` не патчится) |
 | R12 | Loading — epic-спиннеры **перевести на токены**, затем поднять статус до stable |
 | R28 | Поле `name` **убрать из пресетов** — идентичность темы задаётся через `optionsTheme.nameTheme`, дублировать её в объекте незачем. Заодно уходит type assertion, закрывающий Theme D21 |
 

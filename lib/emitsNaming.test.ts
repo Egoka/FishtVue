@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join, resolve } from "node:path"
 
 /**
@@ -15,11 +15,9 @@ import { join, resolve } from "node:path"
  * текст по глубине скобок, а не построчно: построчный regex такие объявления не видел.
  *
  * Второй кейс — контракт v-model-канала: `change:modelValue` несут ровно form-control'ы
- * (dev-patterns §2 H). `PENDING` пуст с W5 и удаляется вместе с механизмом в W7.
+ * (dev-patterns §2 H).
  */
 const LIB = resolve(process.cwd(), "lib")
-
-const PENDING: string[] = []
 
 const EVENT_NAME = /^(?:update:|change:)[a-zA-Z]+$|^[a-z]+(?:-[a-z]+)*$/
 const FORBIDDEN = /^(?:on|is|get)[A-Z]/
@@ -94,11 +92,6 @@ function emitsOf(file: string): Array<{ name: string; line: number }> {
 describe("Cross-cutting guard — emits naming (dev-patterns §2 H)", () => {
   const files = collectDts(LIB)
 
-  it("PENDING содержит только существующие файлы", () => {
-    const stale = PENDING.filter((rel) => !existsSync(join(LIB, rel)))
-    expect(stale, `Файлов нет в lib/: ${stale.join(", ")}`).toEqual([])
-  })
-
   it("находит объявления событий", () => {
     // Точное число, а не `> 30`: при потере видимости событий (напр. новая форма сигнатуры)
     // счётчик просядет и тест упадёт, вместо того чтобы молча пропустить объявление.
@@ -106,11 +99,10 @@ describe("Cross-cutting guard — emits naming (dev-patterns §2 H)", () => {
     expect(total).toBe(70)
   })
 
-  it("события вне PENDING — kebab-case или update:/change:<camelProp>, без on*/is*/get*", () => {
+  it("имена событий — kebab-case или update:/change:<camelProp>, без on*/is*/get*", () => {
     const offenders: string[] = []
     for (const file of files) {
       const rel = file.slice(LIB.length + 1)
-      if (PENDING.includes(rel)) continue
       for (const { name, line } of emitsOf(file)) {
         if (FORBIDDEN.test(name) || !EVENT_NAME.test(name)) offenders.push(`${rel}:${line} — "${name}"`)
       }

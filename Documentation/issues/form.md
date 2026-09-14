@@ -184,7 +184,7 @@ Branch coverage `Form.vue` поднят **78.91% → 80.6%** (statements 95.73%,
 
 ### ~~B10 (colors)~~ ✅ resolved 2026-07-04 (structural part)
 
-Все hardcoded `gray-*` structural-классы Form мигрированы на именованный semantic-цвет `surface` (23-й named color в [primitive.ts](../../lib/theme/primitive.ts), по умолчанию — точная копия `gray`-шкалы; включён в `namesColors` union, [Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187)) с сохранением тех же числовых tone и opacity-суффиксов — family rename, не value change:
+Все hardcoded `gray-*` structural-классы Form мигрированы на именованный semantic-цвет `surface` (23-й named color в [primitive.ts](../../lib/theme/primitive.ts), по умолчанию — точная копия `gray`-шкалы; включён в `ColorName` union, [Theme.d.ts:178](../../lib/theme/Theme.d.ts#L178)) с сохранением тех же числовых tone и opacity-суффиксов — family rename, не value change:
 
 - Section-divider border: `border-gray-900/10 dark:border-gray-100/10` → `border-surface-900/10 dark:border-surface-100/10` ([Form.vue:203](../../lib/form/Form.vue#L203)).
 - `insert.beforeText` slot prefix: `text-gray-500` → `text-surface-500` (`classBeforeSlot`, [Form.vue:216](../../lib/form/Form.vue#L216)).

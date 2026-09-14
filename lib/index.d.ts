@@ -1,4 +1,11 @@
-// Accordion
+// Типовой близнец рантайм-barrel'а `index.ts` (`package.json.types` → этот файл).
+// Набор имён обязан совпадать с ним один в один — паритет проверяет `lib/package.test.ts`,
+// describe «корневой barrel: index.ts ↔ index.d.ts».
+//
+// Compound-дети (MenuItem/MenuGroup, AccordionItem, Column/ColumnGroup, SelectItem/SelectGroup,
+// FormField/FormSection) приезжают сюда через `export *` из родительского `.d.ts` — subpath-строк
+// вида `fishtvue/menu/MenuItem` здесь быть не должно: raw-`.vue` не публикуется в tarball.
+// Accordion (+ AccordionItem — реэкспортируется из Accordion.d.ts)
 export * from "fishtvue/accordion"
 export { default as Accordion } from "fishtvue/accordion"
 // Alert
@@ -43,13 +50,9 @@ export { default as Label } from "fishtvue/label"
 // Loading
 export * from "fishtvue/loading"
 export { default as Loading } from "fishtvue/loading"
-// Menu
+// Menu (+ MenuItem/MenuGroup — реэкспортируются из Menu.d.ts)
 export * from "fishtvue/menu"
 export { default as Menu } from "fishtvue/menu"
-export * from "fishtvue/menu/MenuItem"
-export { default as MenuItem } from "fishtvue/menu/MenuItem"
-export * from "fishtvue/menu/MenuGroup"
-export { default as MenuGroup } from "fishtvue/menu/MenuGroup"
 // Pagination
 export * from "fishtvue/pagination"
 export { default as Pagination } from "fishtvue/pagination"
@@ -71,3 +74,6 @@ export { default as Table } from "fishtvue/table"
 // TextEditor
 export * from "fishtvue/texteditor"
 export { default as TextEditor } from "fishtvue/texteditor"
+// VirtualScroller
+export * from "fishtvue/virtualscroller"
+export { default as VirtualScroller } from "fishtvue/virtualscroller"

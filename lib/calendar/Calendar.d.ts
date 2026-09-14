@@ -1,7 +1,7 @@
 import { VNode } from "vue"
 import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleMode } from "../types"
 import { InputLayoutClassKey, InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
-import { namesColors } from "fishtvue/theme"
+import { ColorName } from "fishtvue/theme"
 import { FixWindowProps } from "fishtvue/fixwindow"
 import Locale from "v-calendar/dist/types/src/utils/locale"
 import { Theme } from "v-calendar/dist/types/src/utils/theme"
@@ -68,7 +68,7 @@ export type CalendarMask =
   | "DD.MM.YYYY"
   | "YYYY/MM/DD"
   | string
-export type ColorCalendarPicker = namesColors
+export type ColorCalendarPicker = ColorName
 
 export interface CalendarRangeDate {
   start: Date | string

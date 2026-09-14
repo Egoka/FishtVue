@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join, resolve } from "node:path"
 
 /**
@@ -13,17 +13,9 @@ import { join, resolve } from "node:path"
  * - булевы props — bare-positive (`animated`, `searchable`), без `is*`/`not*`/`without*`/`no*`/`show*`/`use*`;
  * - экспортируемые типы — PascalCase без Hungarian `I*`;
  * - `MaybeRef` только у data/schema-props из allowlist (решение 3).
- *
- * `PENDING` — файлы, ещё не переведённые на 1.0. Список сокращается волнами (W1–W5) и обнуляется в W7,
- * после чего механизм удаляется: guard становится безусловным.
+
  */
 const LIB = resolve(process.cwd(), "lib")
-
-const PENDING: string[] = [
-  // T5 / W7: `_key` → `ItemKey`, `namesColors` → `ColorName`.
-  "types.d.ts",
-  "theme/Theme.d.ts"
-]
 
 /** `file:prop` — единственные места, где `MaybeRef` допустим (data/schema-props, решение 3). */
 const MAYBE_REF_ALLOWLIST = new Set([
@@ -144,16 +136,9 @@ describe("Cross-cutting guard — props naming 1.0 (dev-patterns §2 A–I)", ()
     expect(files.length).toBeGreaterThan(25)
   })
 
-  it("PENDING содержит только существующие файлы (нет устаревших записей)", () => {
-    const stale = PENDING.filter((rel) => !existsSync(join(LIB, rel)))
-    expect(stale, `Файлов нет в lib/: ${stale.join(", ")}`).toEqual([])
-  })
-
-  it("файлы вне PENDING соответствуют канону props 1.0", () => {
+  it("каждый .d.ts соответствует канону props 1.0", () => {
     const offenders: string[] = []
     for (const file of files) {
-      const rel = file.slice(LIB.length + 1)
-      if (PENDING.includes(rel)) continue
       for (const hit of scan(file).hits) offenders.push(`${hit.file}:${hit.line} [${hit.rule}] — ${hit.text}`)
     }
     expect(offenders, `Нарушения канона props 1.0:\n${offenders.join("\n")}`).toEqual([])
@@ -162,8 +147,6 @@ describe("Cross-cutting guard — props naming 1.0 (dev-patterns §2 A–I)", ()
   it("MaybeRef в props — только у data/schema-props из allowlist (решение 3)", () => {
     const offenders: string[] = []
     for (const file of files) {
-      const rel = file.slice(LIB.length + 1)
-      if (PENDING.includes(rel)) continue
       for (const ref of scan(file).maybeRefs) {
         if (!MAYBE_REF_ALLOWLIST.has(ref.key)) offenders.push(`${ref.key} (line ${ref.line})`)
       }

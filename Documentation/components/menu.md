@@ -154,7 +154,7 @@ v-model contract — не применимо.
 
 | Name | Type | Description |
 |---|---|---|
-| `selectedItemIndex`, `activeItemIndex` | `_key \| undefined` | State selection и active. |
+| `selectedItemIndex`, `activeItemIndex` | `ItemKey \| undefined` | State selection и active. |
 | `mode`, `selected`, `orientation`, `firstLetter`, `onlyIcons`, `title`, `width`, `height` | derived | Computed props. |
 | `iconSeparator`, `isSeparator`, `listGroups`, `fixWindowProps`, `baseSeparator`, `modeStyle`, `classBase`, `classSeparator`, `classSeparatorIcon`, `classGroupTitle`, `classTitle`, `classItemIcon`, `classItemTitleOnlyIcons`, `classItemInfoOnlyIcons`, `classItemTitleFixWindow`, `classItemInfoFixWindow`, `classItemEndIcon` | derived | CSS computed. `styles` снят, `classMenu` → `classBase`, `classItemRightIcon` → `classItemEndIcon`. |
 | `rootRef` | `Ref<HTMLElement \| null>` | Ref на корневой `[data-menu]` (G34). `null`, пока групп нет (root под `v-if`). Для скролла/измерений/интеграций. |

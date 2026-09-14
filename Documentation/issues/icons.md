@@ -236,7 +236,7 @@ class: "h-5 w-5 text-gray-900 dark:text-gray-100" | StyleClass
 
 ### Resolution (2026-07-04)
 
-Cross-cutting [Wave 9](../README.md#-wave-9--theming-polish) добавил semantic-token цвет `surface` в [theme/primitive.ts](../../lib/theme/primitive.ts#L305-L317) (23-й именованный цвет, default = точная копия шкалы `gray`) + расширил union `namesColors` в [theme/Theme.d.ts:187](../../lib/theme/Theme.d.ts#L187). Движок не требовал изменений — `text-surface-{tone}` работает как любой другой именованный цвет (аналогично `text-gray-900`).
+Cross-cutting [Wave 9](../README.md#-wave-9--theming-polish) добавил semantic-token цвет `surface` в [theme/primitive.ts](../../lib/theme/primitive.ts#L305-L317) (23-й именованный цвет, default = точная копия шкалы `gray`) + расширил union `ColorName` в [theme/Theme.d.ts:178](../../lib/theme/Theme.d.ts#L178). Движок не требовал изменений — `text-surface-{tone}` работает как любой другой именованный цвет (аналогично `text-gray-900`).
 
 Default-класс иконки переименован **family-only** (то же числовое tone, без изменения значения): `text-gray-900 dark:text-gray-100` → `text-surface-900 dark:text-surface-100` в [Icons.vue:204](../../lib/icons/Icons.vue#L204) и в JSDoc `@type` литерале [Icons.d.ts:125,127](../../lib/icons/Icons.d.ts#L125-L127). Так как `surface` шкала — byte-identical копия `gray` (900 = `#111827`, 100 = `#f3f4f6`), визуальный рендер не меняется; меняется только семантика (иконка теперь на theme-token indirection, а не на hardcoded primitive).
 
