@@ -113,15 +113,15 @@ describe("Split Component", () => {
       expect(panel2.attributes("data-size")).toBe("25")
     })
 
-    it("applies `direction` prop correctly", () => {
+    it("applies `orientation` prop correctly", () => {
       const wrapper = mount(Split, {
         props: {
           panels: [{ name: "panel1", size: 50 }],
-          direction: "vertical"
+          orientation: "vertical"
         }
       })
 
-      expect(wrapper.attributes("data-direction")).toBe("vertical")
+      expect(wrapper.attributes("data-orientation")).toBe("vertical")
     })
 
     it("handles `separatorType` prop", () => {
@@ -248,14 +248,14 @@ describe("Split Component", () => {
 
   // ---ISSUE 4 — ARIA separator-------------------------------------------
   describe("Issue 4 — ARIA on resize handle", () => {
-    it("exposes aria-orientation matching direction", () => {
+    it("exposes aria-orientation matching orientation", () => {
       const horizontal = mount(Split, {
         props: {
           panels: [
             { name: "a", size: 50 },
             { name: "b", size: 50 }
           ],
-          direction: "horizontal"
+          orientation: "horizontal"
         }
       })
       expect(horizontal.find("[data-split-separator]").attributes("aria-orientation")).toBe("horizontal")
@@ -266,7 +266,7 @@ describe("Split Component", () => {
             { name: "a", size: 50 },
             { name: "b", size: 50 }
           ],
-          direction: "vertical"
+          orientation: "vertical"
         }
       })
       expect(vertical.find("[data-split-separator]").attributes("aria-orientation")).toBe("vertical")
@@ -328,7 +328,7 @@ describe("Split Component", () => {
             { name: "a", size: 50 },
             { name: "b", size: 50 }
           ],
-          direction: "horizontal"
+          orientation: "horizontal"
         }
       })
       const separator = wrapper.find("[data-split-separator]")
@@ -373,14 +373,14 @@ describe("Split Component", () => {
       expect((wrapper.vm as any).sizePanels.b).toBe(45)
     })
 
-    it("maps ArrowUp/ArrowDown for vertical direction", async () => {
+    it("maps ArrowUp/ArrowDown for vertical orientation", async () => {
       const wrapper = mount(Split, {
         props: {
           panels: [
             { name: "a", size: 50 },
             { name: "b", size: 50 }
           ],
-          direction: "vertical"
+          orientation: "vertical"
         }
       })
       const separator = wrapper.find("[data-split-separator]")
@@ -533,7 +533,7 @@ describe("Split Component", () => {
 
   // ---boundary----------------------------------------------------------
   describe("Boundary cases", () => {
-    it("renders with pixels units + vertical direction", () => {
+    it("renders with pixels units + vertical orientation", () => {
       const wrapper = mount(Split, {
         props: {
           panels: [
@@ -541,11 +541,11 @@ describe("Split Component", () => {
             { name: "b", size: 300 }
           ],
           units: "pixels",
-          direction: "vertical"
+          orientation: "vertical"
         }
       })
       expect(wrapper.attributes("data-units")).toBe("pixels")
-      expect(wrapper.attributes("data-direction")).toBe("vertical")
+      expect(wrapper.attributes("data-orientation")).toBe("vertical")
     })
 
     it("excludes hidden panels from the rendered output", () => {
@@ -571,7 +571,7 @@ describe("Split Component", () => {
           props: {
             panels: [{ name: "menu", size: 75, minSize: 75, maxSize: 200 }, { name: "main" }],
             units: "pixels",
-            direction: "horizontal"
+            orientation: "horizontal"
           }
         })
         const vm = wrapper.vm as any
@@ -614,7 +614,7 @@ describe("Split Component", () => {
             { name: "b", size: 30 },
             { name: "c", size: 30, minSize: 10 }
           ],
-          direction: "horizontal"
+          orientation: "horizontal"
         },
         attachTo: container
       })
@@ -642,7 +642,7 @@ describe("Split Component", () => {
             { name: "a", size: 50 },
             { name: "b", size: 50 }
           ],
-          direction: "vertical"
+          orientation: "vertical"
         },
         attachTo: container
       })
@@ -678,7 +678,7 @@ describe("Split Component", () => {
               { name: "b", size: 100, minSize: 50 }
             ],
             units: "pixels",
-            direction: "horizontal"
+            orientation: "horizontal"
           },
           attachTo: container
         })
@@ -758,7 +758,7 @@ describe("Split Component", () => {
             { name: "a", size: 50 },
             { name: "b", size: 50 }
           ],
-          direction: "horizontal"
+          orientation: "horizontal"
         },
         attachTo: container
       })
@@ -786,7 +786,7 @@ describe("Split Component", () => {
             { name: "a", size: 50 },
             { name: "b", size: 50 }
           ],
-          direction: "horizontal"
+          orientation: "horizontal"
         },
         attachTo: container
       })
@@ -902,10 +902,10 @@ describe("Split Component", () => {
     it("applies default options from library", () => {
       const app = createAppWithFishtVue({
         separatorType: "hexagon",
-        separatorNotHoverOpacity: true,
+        separatorFade: false,
         class: "classSplitOption",
-        styles: {
-          panel: "stylesPanel"
+        classes: {
+          panel: "classesPanel"
         }
       })
 
@@ -918,10 +918,197 @@ describe("Split Component", () => {
 
       const selectedItems = wrapper.findAll("[data-split-item]")
       expect(selectedItems).toHaveLength(2)
-      expect(wrapper.vm.separatorType)
-      expect(wrapper.vm.separatorNotHoverOpacity)
+      expect(wrapper.vm.separatorType).toBe("hexagon")
+      expect(wrapper.vm.separatorFade).toBe(false)
       expect(wrapper.vm.classBase).toContain("classSplitOption")
-      expect(wrapper.vm.styles).toEqual({ panel: "stylesPanel" })
+      expect(selectedItems[0].attributes("class")).toContain("classesPanel")
+    })
+  })
+
+  // ---1.0.0 — контракт props--------------------------------------------
+  describe("Props contract 1.0.0", () => {
+    const twoPanels = [
+      { name: "a", size: 50 },
+      { name: "b", size: 50 }
+    ]
+
+    const createAppWithFishtVue = (options: SplitOption = {}) => ({
+      install(app: any) {
+        app.use(FishtVue, { componentsOptions: { Split: options } })
+      }
+    })
+
+    it("объявляет ровно новый набор props (снятые — отсутствуют)", () => {
+      const wrapper = mount(Split, { props: { panels: twoPanels } })
+      expect(wrapper.props()).toEqual({
+        autoSaveName: undefined,
+        units: undefined,
+        panels: twoPanels,
+        orientation: undefined,
+        separatorType: undefined,
+        separatorFade: undefined,
+        class: undefined,
+        classes: undefined
+      })
+    })
+
+    it("`class` садится только на корень `[data-split]`", () => {
+      const wrapper = mount(Split, { props: { panels: twoPanels, class: "probe-root" } })
+      expect(wrapper.find("[data-split]").attributes("class")).toContain("probe-root")
+      for (const selector of ["[data-split-item]", "[data-split-separator]", "[data-split-separator-icon]"]) {
+        expect(wrapper.find(selector).attributes("class") ?? "").not.toContain("probe-root")
+      }
+    })
+
+    it.each([
+      ["root", "[data-split]"],
+      ["panel", "[data-split-item]"],
+      ["separator", "[data-split-separator]"],
+      ["separatorIcon", "[data-split-separator-icon]"],
+      ["overlay", "[data-split-drag-overlay]"]
+    ])("classes.%s → %s", async (key, selector) => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const wrapper = mount(Split, {
+        attachTo: container,
+        props: { panels: twoPanels, classes: { [key]: "probe-key" } as any }
+      })
+      // overlay рендерится только во время drag
+      if (key === "overlay") await wrapper.find("[data-split-separator]").trigger("pointerdown")
+      expect(wrapper.find(selector).attributes("class")).toContain("probe-key")
+      wrapper.unmount()
+      container.remove()
+    })
+
+    it("`classes.separator` доезжает и до неактивного разделителя", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, disabled: true },
+            { name: "b", size: 50 }
+          ],
+          classes: { separator: "probe-sep" }
+        }
+      })
+      expect(wrapper.find("[data-split-separator-disabled]").attributes("class")).toContain("probe-sep")
+    })
+
+    it("props.classes перебивает options.classes по twMerge, неконфликтный класс options остаётся", () => {
+      const app = createAppWithFishtVue({ classes: { panel: "p-2 italic" } })
+      const wrapper = mount(Split, {
+        global: { plugins: [app] },
+        props: { panels: twoPanels, classes: { panel: "p-4" } }
+      })
+      const cls = wrapper.find("[data-split-item]").attributes("class") ?? ""
+      expect(cls).toContain("p-4")
+      expect(cls).not.toContain("p-2")
+      expect(cls).toContain("italic")
+    })
+
+    it("`Panel.class` — самый частный потребитель, выигрывает у `classes.panel`", () => {
+      const wrapper = mount(Split, {
+        props: {
+          panels: [
+            { name: "a", size: 50, class: "p-8" },
+            { name: "b", size: 50 }
+          ],
+          classes: { panel: "p-2" }
+        }
+      })
+      const cls = wrapper.find("[data-split-item]").attributes("class") ?? ""
+      expect(cls).toContain("p-8")
+      expect(cls).not.toContain("p-2")
+    })
+
+    it("карта классов реактивна — замена `props.classes` перерисовывает панель", async () => {
+      const wrapper = mount(Split, {
+        props: { panels: twoPanels, classes: { panel: "probe-one" } }
+      })
+      expect(wrapper.find("[data-split-item]").attributes("class")).toContain("probe-one")
+      await wrapper.setProps({ classes: { panel: "probe-two" } })
+      const cls = wrapper.find("[data-split-item]").attributes("class") ?? ""
+      expect(cls).toContain("probe-two")
+      expect(cls).not.toContain("probe-one")
+    })
+
+    it("unstyled сохраняет `class`/`classes`, но режет базу и `fishtvue-split`", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { unstyled: true })
+        }
+      }
+      const wrapper = mount(Split, {
+        global: { plugins: [app as any] },
+        props: { panels: twoPanels, class: "probe-root", classes: { panel: "probe-panel" } }
+      })
+      const root = wrapper.find("[data-split]").attributes("class") ?? ""
+      const panel = wrapper.find("[data-split-item]").attributes("class") ?? ""
+      expect(root).toContain("probe-root")
+      expect(root).not.toContain("fishtvue-")
+      expect(root).not.toContain("h-full")
+      expect(panel).toContain("probe-panel")
+      expect(panel).not.toContain("overflow-hidden")
+    })
+
+    // ---T2 — имена концептов------------------------------------------
+    it("снятый `direction` уходит fallthrough-атрибутом и не влияет на раскладку", () => {
+      const wrapper = mount(Split, {
+        props: { panels: twoPanels, direction: "vertical" } as any
+      })
+      expect(wrapper.attributes("direction")).toBe("vertical")
+      expect(wrapper.attributes("data-orientation")).toBe("horizontal")
+    })
+
+    // ---T3 — булевы---------------------------------------------------
+    it("`separatorFade`: absent → undefined в props(), default `true`", () => {
+      const wrapper = mount(Split, { props: { panels: twoPanels } })
+      expect(wrapper.props().separatorFade).toBeUndefined()
+      expect(wrapper.vm.separatorFade).toBe(true)
+      // default = приглушать до hover
+      expect(wrapper.find("[data-split-separator-icon]").attributes("class")).toContain("opacity-0")
+    })
+
+    it("`separatorFade: false` снимает приглушение (бывший `separatorNotHoverOpacity: true`)", () => {
+      const wrapper = mount(Split, { props: { panels: twoPanels, separatorFade: false } })
+      expect(wrapper.find("[data-split-separator-icon]").attributes("class")).not.toContain("opacity-0")
+    })
+
+    it("слой options достижим, prop перебивает option", () => {
+      const app = createAppWithFishtVue({ separatorFade: false })
+      const fromOptions = mount(Split, { global: { plugins: [app] }, props: { panels: twoPanels } })
+      expect(fromOptions.vm.separatorFade).toBe(false)
+
+      const fromProps = mount(Split, {
+        global: { plugins: [app] },
+        props: { panels: twoPanels, separatorFade: true }
+      })
+      expect(fromProps.vm.separatorFade).toBe(true)
+    })
+
+    // ---дефекты волны--------------------------------------------------
+    it("база разделителя больше не замораживается на setup — `classes.separator` реактивен", async () => {
+      const wrapper = mount(Split, { props: { panels: twoPanels } })
+      expect(wrapper.find("[data-split-separator]").attributes("class") ?? "").not.toContain("probe-late")
+      await wrapper.setProps({ classes: { separator: "probe-late" } })
+      expect(wrapper.find("[data-split-separator]").attributes("class")).toContain("probe-late")
+    })
+
+    it("потребитель идёт после базы — `classes.root` выигрывает twMerge-конфликт с `h-full`", () => {
+      const wrapper = mount(Split, { props: { panels: twoPanels, classes: { root: "h-1/2" } } })
+      const cls = wrapper.vm.classBase as string
+      expect(cls).toContain("h-1/2")
+      expect(cls).not.toContain("h-full")
+    })
+
+    it("`class` побеждает `classes.root`, а тот — `options.class`", () => {
+      const app = createAppWithFishtVue({ class: "p-1", classes: { root: "p-2" } })
+      const wrapper = mount(Split, {
+        global: { plugins: [app] },
+        props: { panels: twoPanels, classes: { root: "p-3" }, class: "p-4" }
+      })
+      const cls = wrapper.vm.classBase as string
+      expect(cls).toContain("p-4")
+      for (const loser of ["p-1", "p-2", "p-3"]) expect(cls).not.toContain(loser)
     })
   })
 

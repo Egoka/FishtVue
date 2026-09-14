@@ -1,5 +1,5 @@
 import { MaybeRef, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass } from "../types"
 import { IconsProps } from "fishtvue/icons"
 
 /**
@@ -14,23 +14,18 @@ declare class Split extends ClassComponent<SplitProps, SplitSlots, SplitEmits, S
 
 // ---------------------------------------
 export type CursorType = "center" | "left" | "right"
-export type Size = number
+/** Размер панели (в единицах `units`: проценты или пиксели). Бывший `Size`. */
+export type PanelSize = number
 
 /**
- * Styles configuration for panels in the Split component.
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-split>` (добавляется `ClassesMap`).
+ * - `panel` — панель `[data-split-item]` (бывший `styles.panel`).
+ * - `separator` — разделитель `[data-split-separator]` и его неактивный близнец
+ *   `[data-split-separator-disabled]` (бывший `styles.separator`).
+ * - `separatorIcon` — иконка/грип внутри разделителя `[data-split-separator-icon]`.
+ * - `overlay` — drag-оверлей `[data-split-drag-overlay]`, перекрывающий viewport во время resize.
  */
-export type ISplitStyles = {
-  /**
-   * Custom CSS class for the panel elements.
-   * @type {StyleClass}
-   */
-  panel?: StyleClass
-  /**
-   * Custom CSS class for the separator elements between panels.
-   * @type {StyleClass}
-   */
-  separator?: StyleClass
-}
+export declare type SplitClassKey = "panel" | "separator" | "separatorIcon" | "overlay"
 
 /**
  * Defines a single panel within the Split component.
@@ -44,21 +39,21 @@ export type Panel = {
 
   /**
    * The initial size of the panel.
-   * @type {Size | undefined}
+   * @type {PanelSize | undefined}
    */
-  size?: Size
+  size?: PanelSize
 
   /**
    * The maximum size of the panel.
-   * @type {Size | undefined}
+   * @type {PanelSize | undefined}
    */
-  maxSize?: Size
+  maxSize?: PanelSize
 
   /**
    * The minimum size of the panel.
-   * @type {Size | undefined}
+   * @type {PanelSize | undefined}
    */
-  minSize?: Size
+  minSize?: PanelSize
 
   /**
    * Disables resizing for the panel.
@@ -103,10 +98,11 @@ export type Group = {
   panels: MaybeRef<Panel[]>
 
   /**
-   * The direction of panel resizing (`vertical` or `horizontal`).
+   * Ориентация раскладки панелей. Единое имя с [Menu](./menu.md) и [Separator](./separator.md).
+   * Бывший `direction`.
    * @type {"vertical" | "horizontal" | undefined}
    */
-  direction?: "vertical" | "horizontal"
+  orientation?: "vertical" | "horizontal"
 }
 
 /**
@@ -128,22 +124,24 @@ export declare type SplitProps = {
   separatorType?: "strip" | "hexagon" | IconsProps["type"]
 
   /**
-   * Controls opacity of the separator when not hovered.
+   * Приглушать разделитель, пока на него не навели курсор. Bare-positive инверсия снятого
+   * `separatorNotHoverOpacity` (dev-patterns §2 F): default перевёрнут в `true`.
    * @type {boolean | undefined}
    */
-  separatorNotHoverOpacity?: boolean
+  separatorFade?: boolean
 
   /**
-   * Custom CSS class for the Split component container.
+   * CSS-классы корня `<div data-split>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom styles for the panels in the Split component.
-   * @type {ISplitStyles | undefined}
+   * Карта классов внутренних элементов: `panel`, `separator`, `separatorIcon`, `overlay`;
+   * `root` ≡ `class`. См. `SplitClassKey`.
+   * @type {ClassesMap<SplitClassKey> | undefined}
    */
-  styles?: ISplitStyles
+  classes?: ClassesMap<SplitClassKey>
 } & Group
 
 export declare type SplitSlots = {
@@ -164,10 +162,10 @@ export declare type SplitEmits = {
   /**
    * Emitted when a single panel's size is updated.
    * @param event
-   * @param {Size} panel - The updated size of the panel.
+   * @param {PanelSize} panel - The updated size of the panel.
    * @param {Panel["name"]} namePanel - The name of the resized panel.
    */
-  (event: "updated-size-panel", panel: Size, namePanel: Panel["name"]): void
+  (event: "updated-size-panel", panel: PanelSize, namePanel: Panel["name"]): void
 
   /**
    * Emitted when resizing starts for a panel.
@@ -252,10 +250,10 @@ export declare type SplitExpose = {
   panels: SplitProps["panels"]
 
   /**
-   * The direction of panel resizing (`vertical` or `horizontal`).
-   * @type {SplitProps["direction"]}
+   * Ориентация раскладки панелей.
+   * @type {SplitProps["orientation"]}
    */
-  direction: SplitProps["direction"]
+  orientation: SplitProps["orientation"]
 
   /**
    * The type of separator used between panels.
@@ -264,16 +262,10 @@ export declare type SplitExpose = {
   separatorType: SplitProps["separatorType"]
 
   /**
-   * Indicates whether the separator has reduced opacity when not hovered.
-   * @type {SplitProps["separatorNotHoverOpacity"]}
+   * Приглушён ли разделитель, пока на него не навели курсор.
+   * @type {SplitProps["separatorFade"]}
    */
-  separatorNotHoverOpacity: SplitProps["separatorNotHoverOpacity"]
-
-  /**
-   * The styles applied to the Split component.
-   * @type {SplitProps["styles"]}
-   */
-  styles: SplitProps["styles"]
+  separatorFade: SplitProps["separatorFade"]
 
   /**
    * The base CSS class for the Split component.
@@ -289,7 +281,7 @@ export declare type SplitExpose = {
    */
   focus: () => void
 }
-export declare type SplitOption = Pick<SplitProps, "separatorType" | "separatorNotHoverOpacity" | "class" | "styles">
+export declare type SplitOption = Pick<SplitProps, "separatorType" | "separatorFade" | "class" | "classes">
 
 // ---------------------------------------
 

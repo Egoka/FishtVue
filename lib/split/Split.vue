@@ -1,9 +1,8 @@
 <script setup lang="ts">
   import { computed, onMounted, onUnmounted, reactive, ref, unref, useId, watch } from "vue"
   import { isClient } from "fishtvue/utils/domHandler"
-  import { deepCopyObject, deepMergeSoft } from "fishtvue/utils/objectHandler"
   import type { StyleClass } from "fishtvue/types"
-  import type { CursorType, Panel, SplitEmits, SplitProps } from "./Split"
+  import type { CursorType, Panel, SplitClassKey, SplitEmits, SplitProps } from "./Split"
   import Icons from "fishtvue/icons/Icons.vue"
   import Component from "fishtvue/component"
 
@@ -16,7 +15,7 @@
 
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<SplitProps>(), {
-    separatorNotHoverOpacity: undefined
+    separatorFade: undefined
   })
   const emit = defineEmits<SplitEmits>()
 
@@ -62,22 +61,21 @@
         }) ?? []
     )
   })
-  const direction = computed<SplitProps["direction"]>(
-    () => (props?.direction as SplitProps["direction"]) ?? "horizontal"
+  const orientation = computed<NonNullable<SplitProps["orientation"]>>(
+    () => (props?.orientation as SplitProps["orientation"]) ?? "horizontal"
   )
   const separatorType = computed<NonNullable<SplitProps["separatorType"]>>(
     () => (props?.separatorType as SplitProps["separatorType"]) ?? options?.separatorType ?? "strip"
   )
-  const separatorNotHoverOpacity = computed<SplitProps["separatorNotHoverOpacity"]>(
-    () => props?.separatorNotHoverOpacity ?? options?.separatorNotHoverOpacity
-  )
+  // Bare-positive инверсия снятого `separatorNotHoverOpacity`: default `true` = приглушать до hover
+  const separatorFade = computed<boolean>(() => props?.separatorFade ?? options?.separatorFade ?? true)
 
   // ---STYLE-------------------------------
-  const styles = computed<SplitProps["styles"]>(() =>
-    deepMergeSoft<NonNullable<SplitProps["styles"]>>(deepCopyObject(options?.styles), deepCopyObject(props?.styles))
-  )
+  const { cls, raw } = Split.resolveClasses<SplitClassKey>(props)
 
-  const separatorClass = ref<StyleClass>([
+  // База разделителя — константа: сегменты потребителя добавляет `cls("separator", …)`,
+  // поэтому здесь нет ни `setStyle`, ни чтения карты классов (был нереактивный `ref`).
+  const separatorBase: StyleClass = [
     // B10: forced-colors:outline сохраняет разделитель видимым в Windows high-contrast (bg-* там сбрасывается)
     // Wave 9 residual: структурная divider-линия — hardcode gray-* → semantic-токен surface-* (тот же numeric tone)
     "relative flex w-px items-center justify-center bg-surface-200 dark:bg-surface-800 forced-colors:outline",
@@ -85,58 +83,55 @@
     "after:absolute after:inset-y-0 after:left-1/2 after:w-2 after:-translate-x-1/2 after:z-10",
     // ring-ring — несуществующий токен из shadcn-пресета; focus-идиома проекта — theme-токены (как Input/TextEditor)
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-theme-600 dark:focus-visible:ring-theme-700 focus-visible:ring-offset-1",
-    "data-[direction=vertical]:h-px data-[direction=vertical]:w-full data-[direction=vertical]:after:left-0 data-[direction=vertical]:after:h-3 data-[direction=vertical]:after:w-full data-[direction=vertical]:after:-translate-y-1/2 data-[direction=vertical]:after:translate-x-0",
-    styles.value?.separator ? (styles.value.separator as string) : ""
+    "data-[orientation=vertical]:h-px data-[orientation=vertical]:w-full data-[orientation=vertical]:after:left-0 data-[orientation=vertical]:after:h-3 data-[orientation=vertical]:after:w-full data-[orientation=vertical]:after:-translate-y-1/2 data-[orientation=vertical]:after:translate-x-0"
+  ]
+
+  const separatorIconBase = computed<StyleClass>(() => [
+    "split z-10 inset-y-0 flex items-center justify-center",
+    separatorFade.value ? "motion-safe:transition-opacity motion-safe:duration-500 opacity-0" : "",
+    orientation.value === "vertical" ? "rotate-90" : ""
   ])
 
-  const separatorIconClass = computed<StyleClass>(() => [
-    "split z-10 inset-y-0 flex items-center justify-center",
-    separatorNotHoverOpacity.value ? "" : "motion-safe:transition-opacity motion-safe:duration-500 opacity-0",
-    direction.value === "vertical" ? "rotate-90" : ""
-  ])
+  // Приглушённый грип проявляется, пока тянут именно этот разделитель
+  const isGripVisible = (panel: Panel) =>
+    separatorFade.value && resizablePanel.value === panel.name && isClient() ? "opacity-100" : ""
 
   const classBase = computed<StyleClass>(() =>
-    Split.setStyle([
-      "h-full w-full motion-safe:transition-all",
-      options?.class ?? "",
-      props?.class ?? "",
-      "flex data-[direction=vertical]:flex-col"
-    ])
+    cls("root", "h-full w-full motion-safe:transition-all", "flex data-[orientation=vertical]:flex-col")
   )
 
   // overlay покрывает весь viewport во время drag — задаёт глобальный cursor без мутации document.body (Issue 1)
   const classDragOverlay = computed<StyleClass>(() =>
-    Split.setStyle(["fixed inset-0 z-[9999]", getStyleCursor(activeCursorPanel.value)])
+    cls("overlay", "fixed inset-0 z-[9999]", getStyleCursor(activeCursorPanel.value))
   )
 
+  // `panel.class` — самый частный потребитель, поэтому идёт после `classes.panel`
   const classPanelBody = (panel: Panel) =>
-    Split.setStyle([
-      "overflow-hidden w-full",
-      styles.value && styles.value?.panel ? styles.value?.panel : "",
-      panel.class,
-      "relative"
-    ])
+    Split.setStyle(["overflow-hidden w-full relative"], { consumer: [raw("panel"), panel.class] })
 
   const classSeparator = (panel: Panel) =>
-    Split.setStyle([separatorClass.value, isClient() ? getStyleCursor(cursorPanels[panel.name]) : "", "group"])
+    cls("separator", separatorBase, isClient() ? getStyleCursor(cursorPanels[panel.name]) : "", "group")
 
-  const classSeparatorStrip = (panel: Panel) =>
-    Split.setStyle([
-      separatorIconClass.value,
-      separatorNotHoverOpacity.value ? "" : resizablePanel.value === panel.name && isClient() ? "opacity-100" : ""
-    ])
+  const classSeparatorDisabled = computed<StyleClass>(() => cls("separator", separatorBase, "group"))
+
+  const classSeparatorStrip = (panel: Panel) => cls("separatorIcon", separatorIconBase.value, isGripVisible(panel))
 
   // B10: грип-акцент через preset-aware токен theme-* (был hardcode bg-neutral-*)
-  const classSeparatorStripStyle = ref(Split.setStyle("h-8 w-1.5 bg-theme-300 dark:bg-theme-700 rounded-full"))
-  const classSeparatorIcon = (panel: Panel) =>
-    Split.setStyle([
-      separatorIconClass.value,
-      separatorNotHoverOpacity.value ? "" : resizablePanel.value === panel.name && isClient() ? "opacity-100" : "",
-      "h-4 w-3 rounded-sm bg-theme-300 dark:bg-theme-700"
-    ])
+  const classSeparatorStripStyle = computed<StyleClass>(() =>
+    Split.setStyle("h-8 w-1.5 bg-theme-300 dark:bg-theme-700 rounded-full")
+  )
 
-  const classSeparatorHexagonStyle = ref(Split.setStyle("h-2.5 w-2.5 bg-theme-300 dark:bg-theme-700"))
-  const classSeparatorDisabled = ref(Split.setStyle([separatorClass.value, "group"]))
+  const classSeparatorIcon = (panel: Panel) =>
+    cls(
+      "separatorIcon",
+      separatorIconBase.value,
+      isGripVisible(panel),
+      "h-4 w-3 rounded-sm bg-theme-300 dark:bg-theme-700"
+    )
+
+  const classSeparatorHexagonStyle = computed<StyleClass>(() =>
+    Split.setStyle("h-2.5 w-2.5 bg-theme-300 dark:bg-theme-700")
+  )
 
   // ---FOCUS-------------------------------
   // G34: программный фокус на первый resize handle (separator tabindex=0) — зеркало Button/Pagination focus()
@@ -157,10 +152,9 @@
     // ---PROPS-------------------------
     units,
     panels,
-    direction,
+    orientation,
     separatorType,
-    separatorNotHoverOpacity,
-    styles,
+    separatorFade,
     classBase,
     // ---METHODS-----------------------------
     focus
@@ -210,7 +204,7 @@
     if (units.value === "pixels" && resizableGroup.value) {
       // Get current container size
       const currentContainerSize =
-        direction.value === "horizontal" ? resizableGroup.value.offsetWidth : resizableGroup.value.offsetHeight
+        orientation.value === "horizontal" ? resizableGroup.value.offsetWidth : resizableGroup.value.offsetHeight
 
       // Calculate sum of current sizes of all panels (not hidden and not disabled)
       const totalCurrentSize = panels.value
@@ -358,7 +352,7 @@
       // For percentages also save size for consistency
       if (resizableGroup.value) {
         previousContainerSize.value =
-          direction.value === "horizontal" ? resizableGroup.value.offsetWidth : resizableGroup.value.offsetHeight
+          orientation.value === "horizontal" ? resizableGroup.value.offsetWidth : resizableGroup.value.offsetHeight
       }
     }
   }
@@ -378,7 +372,7 @@
   function getDefaultSize(array: Panel[]) {
     const fullSizeSplit =
       units.value === "pixels"
-        ? direction.value === "horizontal"
+        ? orientation.value === "horizontal"
           ? (resizableGroup.value?.offsetWidth ?? 0)
           : (resizableGroup.value?.offsetHeight ?? 0)
         : 100
@@ -390,21 +384,21 @@
   function getStyleCursor(cursor: CursorType) {
     switch (cursor) {
       case "center":
-        return direction.value === "horizontal"
+        return orientation.value === "horizontal"
           ? "cursor-col-resize"
-          : direction.value === "vertical"
+          : orientation.value === "vertical"
             ? "cursor-row-resize"
             : ""
       case "right":
-        return direction.value === "horizontal"
+        return orientation.value === "horizontal"
           ? "cursor-e-resize"
-          : direction.value === "vertical"
+          : orientation.value === "vertical"
             ? "cursor-s-resize"
             : ""
       case "left":
-        return direction.value === "horizontal"
+        return orientation.value === "horizontal"
           ? "cursor-w-resize"
-          : direction.value === "vertical"
+          : orientation.value === "vertical"
             ? "cursor-n-resize"
             : ""
     }
@@ -413,7 +407,7 @@
   // F31: для horizontal в RTL drag/keyboard считают пиксели от другого края — движок знает rtl:, но математику флипаем тут
   function isRtlHorizontal() {
     return (
-      direction.value === "horizontal" &&
+      orientation.value === "horizontal" &&
       isClient() &&
       !!resizableGroup.value &&
       getComputedStyle(resizableGroup.value).direction === "rtl"
@@ -481,7 +475,7 @@
   function onSeparatorKeydown(event: KeyboardEvent, namePanel: Panel["name"]) {
     if (!isClient()) return
     const step = event.shiftKey ? 50 : 10
-    const horizontal = direction.value === "horizontal"
+    const horizontal = orientation.value === "horizontal"
     const rtl = isRtlHorizontal()
     const nextKey = horizontal ? (rtl ? "ArrowLeft" : "ArrowRight") : "ArrowDown"
     const prevKey = horizontal ? (rtl ? "ArrowRight" : "ArrowLeft") : "ArrowUp"
@@ -564,7 +558,7 @@
     const indexNamePanel = panels.value.findIndex((item) => item.name === namePanel)
     //------------------
     let addedDistance =
-      direction.value === "horizontal"
+      orientation.value === "horizontal"
         ? isRtlHorizontal()
           ? panel.x - $event.clientX
           : $event.clientX - panel.x - panel.width
@@ -693,7 +687,7 @@
     data-split
     ref="resizableGroup"
     :class="classBase"
-    :data-direction="direction"
+    :data-orientation="orientation"
     :data-name="props.autoSaveName ?? null"
     :data-units="units ?? null">
     <template v-for="(panel, key) in panels" :key="key">
@@ -713,12 +707,12 @@
         role="separator"
         tabindex="0"
         :class="classSeparator(panel)"
-        :data-direction="direction"
+        :data-orientation="orientation"
         :data-unit="units"
         :data-now="sizePanels[panel.name]"
         :data-max="panel.maxSize"
         :data-min="panel.minSize"
-        :aria-orientation="direction"
+        :aria-orientation="orientation"
         :aria-controls="panelDomId(panel.name)"
         :aria-valuenow="Math.round(sizePanels[panel.name] ?? panel.size ?? 0)"
         :aria-valuemax="panel.maxSize"
@@ -730,7 +724,11 @@
         @pointercancel="stopResizePanel($event, panel.name)"
         @pointerout="outResizePanel($event, panel.name)"
         @keydown="onSeparatorKeydown($event, panel.name)">
-        <div v-if="separatorType === 'strip'" data-split-separator-strip :class="classSeparatorStrip(panel)">
+        <div
+          v-if="separatorType === 'strip'"
+          data-split-separator-icon
+          data-split-separator-strip
+          :class="classSeparatorStrip(panel)">
           <div :class="classSeparatorStripStyle"></div>
         </div>
         <div v-else data-split-separator-icon :class="classSeparatorIcon(panel)">
@@ -750,7 +748,7 @@
           <Icons
             v-else
             :type="separatorType"
-            :class="['h-2.5 w-2.5 text-theme-500', direction === 'vertical' ? 'rotate-90' : '']" />
+            :class="['h-2.5 w-2.5 text-theme-500', orientation === 'vertical' ? 'rotate-90' : '']" />
         </div>
       </div>
       <div
@@ -758,7 +756,7 @@
         data-split-separator-disabled
         role="separator"
         aria-disabled="true"
-        :aria-orientation="direction"
+        :aria-orientation="orientation"
         :class="classSeparatorDisabled" />
     </template>
     <div v-if="isStartResize" data-split-drag-overlay :class="classDragOverlay" />

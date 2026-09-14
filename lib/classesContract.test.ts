@@ -15,7 +15,7 @@ import FishtVue from "fishtvue/config"
  * Per-component нюансы (aspect-ключи, hand-off'ы, слоты) живут в `<Name>.test.ts`; здесь — инвариант.
  * `PENDING` — компоненты до своей волны; обнуляется в W7, после чего `skipIf` удаляется.
  */
-const PENDING: string[] = ["Form", "Menu", "Split"]
+const PENDING: string[] = ["Form", "Menu"]
 
 type Entry = {
   name: string
@@ -219,7 +219,11 @@ const CONTRACT: Entry[] = [
     load: () => import("fishtvue/split/Split.vue"),
     root: "[data-split]",
     props: { panels: [{ name: "a" }, { name: "b" }] },
-    keys: { panel: "[data-split-item]", separator: "[data-split-separator]" }
+    keys: {
+      panel: "[data-split-item]",
+      separator: "[data-split-separator]",
+      separatorIcon: "[data-split-separator-icon]"
+    }
   },
   {
     name: "Switch",

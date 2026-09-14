@@ -24,7 +24,6 @@ const PENDING: string[] = [
   "menu/Menu.d.ts",
   "menu/MenuGroup.d.ts",
   "menu/MenuItem.d.ts",
-  "split/Split.d.ts",
   // T5 / W7: `_key` → `ItemKey`, `namesColors` → `ColorName`.
   "types.d.ts",
   "theme/Theme.d.ts"

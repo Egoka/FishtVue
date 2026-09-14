@@ -21,10 +21,7 @@ const PENDING: string[] = [
   "form/FormSection.vue",
   "menu/Menu.vue",
   "menu/MenuGroup.vue",
-  "menu/MenuItem.vue",
-  "split/Split.vue",
-  "table/Column.vue",
-  "table/ColumnGroup.vue"
+  "menu/MenuItem.vue"
 ]
 
 /**
