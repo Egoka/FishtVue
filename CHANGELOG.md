@@ -1,12 +1,196 @@
 # CHANGELOG
 
-## [1.0.1](https://github.com/Egoka/FishtVue/compare/v1.0.0...v1.0.1) (2026-09-14)
+## [1.0.1](https://github.com/Egoka/FishtVue/compare/v0.2.11...v1.0.1) (2026-09-14)
 
+> **How to read this release.** The auto-generated `v1.0.0...v1.0.1` diff shows two fixes — that is an artifact of a bookkeeping tag, not the scope of the work. Version `1.0.0` was unpublished from npm long ago and the registry reserves that number forever, so the 1.x line opens at `1.0.1`.
+>
+> The real baseline is **`0.2.11`**, the last version available in the registry. Between it and this release: **149 commits, 464 changed files, 14 breaking changes**.
 
-### Bug Fixes
+**Upgrading from 0.2.x will break your code.** The library ships one global major and changes the props contract across all 23 components at once — but only once, with a migration recipe for every step.
 
-* **release:** npm version ронял релиз на совпадении версий ([283052f](https://github.com/Egoka/FishtVue/commit/283052f32c3834eddd13addf1760d8dabc2cc9d9))
-* **sandbox:** pnpm 11 падал на проигнорированных build-скриптах ([c383e18](https://github.com/Egoka/FishtVue/commit/c383e1845ae65630debdaba85bd20d3b6ad10c0a))
+📖 **[Migration guide](https://github.com/Egoka/FishtVue/blob/v1.0.1/Documentation/migration-guide.md)** — 15 sections, each with a "removed → replacement → what happens if you keep the old one" table and a ready-to-run `rg`/`sed` recipe. (The guide is written in Russian.)
+
+---
+
+### ⚠️ Start here: the breaks your compiler will not catch
+
+Most breaking changes are loud — the first `vue-tsc` run will point at them. Six of them are **silent**: the code compiles, the types line up, the behaviour is different. Check these by hand before anything else.
+
+| What | Before | After | What silently happens |
+|---|---|---|---|
+| **`class` changed target** | inner node | component root | Your styling moves to the wrapper or positioner. The prop is valid, the type is valid, grep will not help. The inner node is now `classes.content` (or `classes.base` on form controls) |
+| **Renamed events** | `@update:sizePage`, `@onClick`, `@switch-size-page`, `@getCalendar`, `@isActive`, `@update:isInvalid` | `@update:page-size`, `@item-click`, `@switch-page-size`, `@ready`, `@active`, `@update:invalid` | The old handler simply stops firing. No error |
+| **Accordion `toggle` payload** | array of sections | object `{ key, open, items }` | Same event name — your handler now receives an object instead of an array |
+| **Inverted booleans** | `isHiddenNavigationButtons`, `notAnimate`, `withoutMargin`, `notCloseBackground`, `separatorNotHoverOpacity` | `navigationButtons`, `animated`, `margin`, `closeOnBackdrop`, `separatorFade` | A mechanical rename **without flipping the value** gives you the opposite behaviour |
+| **`Alert.position`** | physical `top-right`, `left`… | logical `top-end`, `start`… | A physical value fails the allow-list and silently falls back to `top` |
+| **`Badge` `delete` event** | `@delete` | `@close` | An event cannot fall back to a default — it simply stopped being emitted |
+
+---
+
+### One class system
+
+The headline of this major. There used to be three ways to reach an inner node — the `styles` bag, flat hooks like `classInput`/`classBody`/`classLine`/`classMaskQuery`, and `class` itself, which meant something different in every component. There is now a single rule, identical across all 23 components:
+
+```vue
+<!-- before: class targeted something inside; styling went through a styles bag or flat hooks -->
+<Table class="p-0" :styles="{ class: { body: 'rounded-xl', cellText: 'text-sm' }, border: { radius: 8 } }" />
+
+<!-- after: class is always the root, internals go through the classes map, sizing is top-level -->
+<Table class="p-0" :classes="{ root: 'rounded-xl', td: 'text-sm' }" :border-radius="8" />
+```
+
+- `class` is **always** the component root, with no exceptions.
+- `classes` is a map of inner elements whose key names are consistent library-wide (`root`, `content`, `base`, `icon`, `line`…).
+- The `styles` bag is dissolved in Table, Menu and Split: classes moved into `classes`, sizes and flags became top-level props.
+- Aspect keys (`animation`, `itemActive`, `rowHover`) no longer accept `boolean` — write `itemActive: ""` instead of `activeRows: false`.
+- Under `unstyled: true` your own classes are no longer wiped: the root emits `fv` plus whatever you passed.
+
+Boolean props moved to a **positive form** — `edit` → `editable`, `search` → `searchable`, `isFilter` → `filterable`, `isValue` → `hasValue`, `clear` → `clearable`, `isInvalid` → `invalid`.
+
+---
+
+### What's new
+
+**VirtualScroller** — a new windowing primitive plus the `useVirtualScroll` composable. Table row virtualization (on by default, with opt-out) and Select option virtualization both run on the same core.
+
+**Compound API** in seven components — declarative markup instead of config arrays: `<Column>/<ColumnGroup>` for Table, `<SelectItem>/<SelectGroup>`, `<MenuItem>/<MenuGroup>`, `<AccordionItem>`, `<FormField>/<FormSection>`.
+
+**Runtime theme API** — themes switch on the fly through CSS-variable indirection, no rebuild required. A `surface` semantic token was added and 19 components were migrated off hardcoded neutrals onto it; semantic intent slots landed; the built-in Aurora / Harmony / Sapphire themes now actually differ from one another. Default styles are wrapped in `@layer fishtvue`, so your cascade no longer fights the library's.
+
+**The uno engine reached parity with Tailwind v4** — arbitrary properties, `space-*`, v4 variants and names, modern transform properties, negative values. The engine is now fail-closed: an unrecognised class is reported in dev instead of being swallowed.
+
+**i18n** — interpolation in `t()`, CLDR pluralization, locale metadata and an automatic `<html dir>` for RTL.
+
+**Polymorphic `as`** on Button, `registerFieldType` on Form, native form submit in Switch, TextEditor and Form.
+
+---
+
+### Accessibility
+
+A sweep across the whole library rather than spot fixes:
+
+- WAI-ARIA patterns: disclosure in Accordion, `aria-modal` plus focus trap in Dialog and FixWindow, `role="separator"` in Separator, `aria-live` in Select, InputLayout and Table.
+- Keyboard: navigation in Menu, `Home`/`End`/typeahead in Select, keyboard resize in Split, sortable headers in Table.
+- `label ↔ control` association wired across every form control.
+- `prefers-reduced-motion`, `forced-colors` (high contrast) and print styles in every animated component.
+- RTL through logical properties: `left`/`right` → `start`/`end` in Button, Separator, Alert, Menu, Table and Icons.
+- Root refs exposed for programmatic focus.
+
+---
+
+### Security
+
+XSS gates closed everywhere user-supplied HTML was rendered: Accordion (subtitle), Alert, Select, Menu (slot), Form (marker), InputLayout, Switch and Table. `sanitizeHtml` was tightened. Switch's `help` prop now renders as text — use the `#help` slot for markup.
+
+Memory leaks fixed: ResizeObservers in Pagination, observers in InputLayout, timers and listeners in Calendar, Dialog, Select, Table and Split.
+
+---
+
+### Performance
+
+- Table rows and Select options virtualize on a shared core.
+- Heroicons load through per-icon dynamic imports instead of a namespace import.
+- Button lazy-loads Loading and FixWindow.
+- FixWindow moved to its own positioning engine — `@floating-ui/vue` and `@vueuse/core` are no longer needed.
+
+---
+
+### Packaging
+
+| | 0.2.11 | 1.0.1 |
+|---|---|---|
+| `vue` | in `dependencies` | in `peerDependencies` |
+| `v-calendar`, `quill`, `@vueup/vue-quill`, `gsap` | in `dependencies` | optional peers, lazily loaded |
+| Size | 2.02 MB / 424 files | 2.47 MB / 432 files (sourcemaps included) |
+
+Shipping `vue` as a direct dependency meant two copies of Vue on one page — `provide`/`inject` could not see across them, and the `Config` plugin quietly fell back to the window global. It is a peer now.
+
+Heavy integrations became **optional**: if you do not use Calendar or TextEditor, you do not install `v-calendar` or `quill`. Plus sourcemaps in the tarball, an honest `sideEffects` field for tree-shaking, a `files` whitelist, and an exports map generated from the build output.
+
+Nuxt module: compound children are auto-imported, and `disableGlobalStyles` was added.
+
+---
+
+<details>
+<summary><b>Full breaking-change list by component</b> (14 commits)</summary>
+
+**Renamed component**
+- `Aria` → `Textarea`: import `fishtvue/aria` → `fishtvue/textarea`, types `AriaProps` → `TextareaProps`, option key `componentsOptions.Aria` → `Textarea`, `typeComponent: "Aria"` → `"Textarea"`. No alias, deliberately.
+
+**Removed deprecated aliases** (carried over from 0.2.x)
+- `Icons.stileIcon` → `variant`; `Button.iconPosition` `left`/`right` → `start`/`end`; `Separator.contentPosition` `left`/`right` → `start`/`end`; `Alert.position` physical → logical; `Badge` `delete` event → `close`; `IDataItem.marker` → the `#marker` scoped slot; locale keys `select.resultsCountOne`/`resultsCountNone` → `select.resultsCount` with CLDR forms.
+
+**Table** — `styles` removed entirely: `styles.class.body` → `classes.root`, `bodyTable` → `viewport`, `slotHeader`/`slotFooter` → `header`/`footer`, `cellText` → `td`, `maskQuery` → `mark`, `activeRow` → `rowActive`, `hoverRows` → `rowHover`, `border.*` → `border*`. Sizes and flags are top-level: `isStripedRows` → `stripedRows`, `heightCell` → `cellHeight`, `borderRadiusPx` → `borderRadius`, `defaultWidthColumn` → `defaultColumnWidth`. Booleans: `edit` → `editable`, `search` → `searchable`, `resizedColumns` → `resizableColumns`, Column `isFilter`/`isSort`/`isResized` → `filterable`/`sortable`/`resizable`. Names: `totalCount` → `total`, `countVisibleRows` → `visibleRows`, `sizeLoadingRows` → `loadingRows`, `countDataOnLoading` → `loadingThreshold`, `noData`/`noColumn` → `emptyText`/`emptyColumnsText`. Column `class` → `classes`, `paramsFilter` → `filterProps`, `editorOptions` → `editorProps`. Event `switch-size-page` → `switch-page-size`. Types `I*` → `Table*`. Selectors `data-table-component` → `data-table`, `data-table-scroll` → `data-table-viewport`.
+
+**Menu** — `styles` removed (`styles.class.body` → `classes.root`, `itemRightIcon` → `itemEndIcon`), `horizontal: boolean` → `orientation`, `useFirstLetter` → `firstLetter`, `paramsWindowMenu` → `fixWindowProps`, `MenuSeparator.isVisible` → `visible`. Events `onActive`/`onInactive`/`onClick` → `item-active`/`item-inactive`/`item-click`. Types `ItemMenu` → `MenuItemData`, `GroupMenu` → `MenuGroupData`, `MenuItem` → `MenuData`.
+
+**Form** — `structureClass`/`structureClassGrid` → `classes.section`/`classes.grid`, `classCol` → `classes.field`, `modeStyle` → `mode`, `modeLabel` → `labelMode`, `isHidden` → `hidden`, `isValue` → `hasValue`. The `type` prop on `<FormField>` is gone — `typeComponent` is the only discriminator. Type `FieldAria` → `FieldTextarea`.
+
+**Split** — `styles` → `classes`, `direction` → `orientation` (and the `data-direction` attribute → `data-orientation`), `separatorNotHoverOpacity` → `separatorFade` (inverted), type `Size` → `PanelSize`.
+
+**Dialog** — `classBody` → `class`, the former `class` → `classes.content`; `notAnimate` → `animated`, `withoutMargin` → `margin`, `notCloseBackground` → `closeOnBackdrop` (all three inverted); `toTeleport` → `teleport`.
+
+**Alert** — `class` is the `[data-alert]` root, the card is `classes.body`; `notAnimate` → `animated`; `toTeleport` → `teleport`.
+
+**FixWindow** — `classBody` → `class`, the former `class` → `classes.content`; `typePosition` → `strategy`; `delay` → `openDelay`; type `FixWindowTeleport` → `TeleportTarget`.
+
+**Pagination** — `sizePage` → `pageSize`, `sizesSelector` → `pageSizes`, `visibleNumberPages` → `visiblePages`, `isInfoText` → `infoText`, `isPageSizeSelector` → `pageSizeSelector`, `isHiddenNavigationButtons` → `navigationButtons` (inverted), event `update:sizePage` → `update:pageSize`.
+
+**VirtualScroller** — `classContent` → `classes.content`, `delay` → `throttle`, `showLoader` → `loader`.
+
+**Button / Badge** — `mode` → `variant`; `classIcon` → `classes.icon`, `classContent` → `classes.content`.
+
+**Separator** — flat class hooks → `classes.{segment,segmentStart,segmentEnd,line,lineStart,lineEnd,content}`; the `vertical` boolean → `orientation`; `data-separator-left/right` → `data-separator-start/end`.
+
+**Switch** — the `updateModelValue` alias is gone (use `@update:model-value`); `switchingType` and `mode` are now closed unions; `help` renders as text; `data-input-switch` → `data-switch-button`.
+
+**Accordion** — `dataSource` → `items`, type `AccordionItem` → `AccordionItemData`, `toggle` payload is now an object.
+
+**Form controls** (InputLayout, Input, Textarea, Select, Calendar, TextEditor) — `class` targets the root, its former content moved to `classes.base`, `classBody` is gone. Flat hooks became `classes` keys. Booleans: `isValue` → `hasValue`, `isInvalid` → `invalid`, `clear` → `clearable`, `noQuery: true` → `searchable: false`, `isNotCloseOnDateChange: true` → `closeOnSelect: false`. Bags: `paramsFixWindow` → `fixWindowProps`, `paramsDatePicker` → `datePickerProps`, `paramsDialog` → `dialogProps`, `paramsTextEditor` → `editorProps`. Select: `dataSelect` → `options`, `noData` → `emptyText`, component `SelectOption` → `SelectItem`, `SelectGroup.label` → `title`. Emits `isActive` → `active`, `getCalendar` → `ready`, `update:isInvalid` → `update:invalid`. DOM: controls are marked with `-control`.
+
+**Icons / Label / Loading** — Icons: `class`/`style` now land on the `<i data-icon>` root, svg classes are `classes.icon`. Label: `title` → `label`, `isRequired` → `required`, `type` → `labelMode`, `animate` → `animated`, `classBody` → `class`. Loading: type `"4-dots-goeey"` → `"4-dots-gooey"`.
+
+**Types** — `namesColors` → `ColorName`, the `_key` alias is removed (use `ItemKey`). The `_key` field in Table row data is unchanged.
+
+**Component** — under `unstyled: true`, `setStyle` returns `"fv"` plus consumer classes instead of an empty string; type `setStyleOptions` → `SetStyleOptions`.
+
+</details>
+
+<details>
+<summary><b>Fixes</b> (41 commits)</summary>
+
+- **Calendar** — `visibleDate` stayed empty forever due to a stale-sync race with the lazily loaded `v-calendar`; memory leak; duplicate `initStyle`.
+- **Pagination** — `undefined` leaking into v-model channels; channel payloads are now `number`; ResizeObservers disconnect on unmount.
+- **Select** — guarded the `ms-[width]` class body against an `undefined beforeWidth`; XSS, leak, `aria-live`, intl.
+- **Split** — drag ends on `pointerup`/`pointercancel` outside the component; wrong pixel default; the non-existent `ring-ring` token replaced with the theme focus ring.
+- **Input** — transition flashes on focus and mount; phone mask; 11 audit items.
+- **Menu** — `MenuItem`/`MenuGroup` were missing from the npm tarball.
+- **Table** — filter popovers now float via `FixWindow scrollableEl`.
+- **Config** — built-in presets and locales are no longer mutated during `install()`.
+- **Utils** — AM/PM casing in `formatDate`.
+- **Theme** — fail-closed engine with dev warnings, negative transforms, v4 scale corrections.
+- **Button** — respects the global `componentsStyle` config.
+- **Loading** — `sr-only` routed through the `setStyle` factory, removing a Tailwind dependency for consumers.
+- Plus closed audits against the 60-point checklist for Alert, Dialog, FixWindow, InputLayout, Label, Textarea, Switch, Accordion, Form and Loading.
+
+</details>
+
+---
+
+### Compatibility
+
+- **Vue** `^3.5.0` (peer).
+- **Nuxt** 3 and 4 — optional.
+- Optional peers: `v-calendar` (Calendar), `quill` + `@vueup/vue-quill` (TextEditor), `gsap` (animations).
+- SSR-ready, evergreen-only, no runtime Tailwind dependency for consumers.
+
+Coverage: 6477 tests across 77 files, gated at 91% statements / 80% branches / 93% functions / 94% lines.
+
+```bash
+npm i fishtvue@1.0.1
+```
+
+**[Full diff against 0.2.11](https://github.com/Egoka/FishtVue/compare/v0.2.11...v1.0.1)** · **[Documentation](https://github.com/Egoka/FishtVue/blob/v1.0.1/Documentation/README.md)** · **[fisht.org](https://www.fisht.org)**
 
 ## [0.2.12](https://github.com/Egoka/FishtVue/compare/v0.2.11...v0.2.12) (2026-05-10)
 
