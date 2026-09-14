@@ -37,7 +37,7 @@
 
 ### Form-controls
 
-- [components/button.md](./components/button.md) — Button (modes, color, size, rounded, icon, loading).
+- [components/button.md](./components/button.md) — Button (variants, color, size, rounded, icon, loading).
 - [components/label.md](./components/label.md) — Label с пятью режимами поведения.
 - [components/switch.md](./components/switch.md) — Switch / checkbox с v-model.
 - [components/input.md](./components/input.md) — Input с masks, focus/blur/clear, валидацией.
@@ -49,7 +49,7 @@
 
 - [components/table.md](./components/table.md) — Table с sort/filter/group/search/pagination/edit, asyncData (4 режима), summary.
 - [components/pagination.md](./components/pagination.md) — Pagination с size-selector и info-text.
-- [components/badge.md](./components/badge.md) — Badge с modes/point/closeButton.
+- [components/badge.md](./components/badge.md) — Badge с variants/point/closeButton.
 
 ### Layout
 
@@ -58,6 +58,7 @@
 - [components/separator.md](./components/separator.md) — Separator с gradient/depth/contentPosition.
 - [components/split.md](./components/split.md) — Split resizable panels с persistence. **beta**.
 - [components/fix-window.md](./components/fix-window.md) — FixWindow popover/tooltip с 12 позициями.
+- [components/virtualscroller.md](./components/virtualscroller.md) — VirtualScroller: windowing-примитив (variable-height, lazy, grid) + composable `useVirtualScroll` + macOS-скроллбар.
 
 ### Disclosure
 
@@ -73,11 +74,12 @@
 
 ### A11y
 
-- [components/aria.md](./components/aria.md) — Aria (textarea-аналог) с InputLayout-обёрткой.
+- [components/textarea.md](./components/textarea.md) — Textarea (textarea-аналог) с InputLayout-обёрткой.
 
 ## Misc
 
 - [dev-patterns.md](./dev-patterns.md) — конституция разработки + регламенты документирования (§11). Прочти перед правкой любого `.md` или нового компонента.
+- [migration-guide.md](./migration-guide.md) — breaking changes major-релиза 1.0.0 и как через них пройти: §1–§8 — закрытие аудит-сводки, §9–§15 — редизайн публичного API props (`class`/`classes`, булевы, имена, события, типы).
 - [playgrounds.md](./playgrounds.md) — назначение `sandbox` и `sandbox-nuxt`, workflow для регрессионного репро.
 - [issues/README.md](./issues/README.md) — внутренний аудит компонентов и инфра-модулей по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Файл `{component}.md` появляется только при наличии проблем.
 
@@ -97,6 +99,7 @@ Documentation/
 ├── 01-getting-started.md
 ├── 02-installation.md
 ├── dev-patterns.md            # конституция разработки и регламенты документирования
+├── migration-guide.md         # breaking changes major-релиза и рецепты миграции
 ├── playgrounds.md             # справка по sandbox + sandbox-nuxt
 ├── architecture/
 │   ├── component-class.md

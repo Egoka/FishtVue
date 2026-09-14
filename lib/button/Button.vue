@@ -1,10 +1,19 @@
+<script lang="ts">
+  import { defineAsyncComponent } from "vue"
+  // Issue 6: Loading/FixWindow подгружаются лениво — текстовая <Button>Save</Button> (без
+  // loading и без icon-tooltip) не тянет их в синхронный chunk. Объявлены в module-scope
+  // (а не в setup), чтобы определение async-компонента было стабильным для всех инстансов —
+  // под polymorphic dynamic root (Issue 5) per-instance-определение не резолвилось.
+  const Loading = defineAsyncComponent(() => import("fishtvue/loading/Loading.vue"))
+  const FixWindow = defineAsyncComponent(() => import("fishtvue/fixwindow/FixWindow.vue"))
+</script>
+
 <script setup lang="ts">
   import { computed, onMounted, ref, useSlots } from "vue"
-  import { ButtonProps } from "./Button"
+  import { ButtonClassKey, ButtonEmits, ButtonProps } from "./Button"
   import Icons from "fishtvue/icons/Icons.vue"
-  import Loading from "fishtvue/loading/Loading.vue"
-  import FixWindow from "fishtvue/fixwindow/FixWindow.vue"
   import Component from "fishtvue/component"
+  import { cn } from "fishtvue/utils/tailwindHandler"
   import { StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
   const Button = new Component<"Button">()
@@ -14,18 +23,22 @@
     disabled: undefined,
     loading: undefined
   })
+  const emit = defineEmits<ButtonEmits>()
   const slots = useSlots()
+  const { cls, raw } = Button.resolveClasses<ButtonClassKey>(props)
   // ---STATE-------------------------------
-  const buttonRef = ref<HTMLButtonElement>()
+  const buttonRef = ref<HTMLElement>()
   // ---STATE-------------------------------
   const baseClasses = ref(
     "group/button relative gap-2 m-1 h-min rounded inline-flex items-center justify-center leading-none " +
       "focus:outline-none focus-visible:ring-1 " +
       "disabled:opacity-50 disabled:cursor-not-allowed " +
       "data-[loading=true]:cursor-wait " +
-      "transition-colors duration-200"
+      "motion-safe:transition-colors motion-safe:duration-200 " +
+      // Issue 15: стилизуем кнопку для печати (канон Input/Loading/Table), не прячем display:none.
+      "print:border print:border-black print:bg-white print:text-black print:shadow-none"
   )
-  const modesClasses = ref({
+  const variantsClasses = ref({
     outline: ["border", "disabled:hover:bg-transparent"],
     ghost: ["disabled:bg-transparent", "disabled:hover:bg-transparent"]
   })
@@ -233,7 +246,7 @@
     ]
   })
   // prettier-ignore
-  const modeClasses = ref({
+  const variantClasses = ref({
     primary: {
       theme: [
         ...textColorsPrimaryClasses.value.theme,
@@ -257,16 +270,16 @@
       ]
     },
     outline: {
-      theme: [...modesClasses.value.outline, ...colorClasses.value.theme, "border-theme-200", "dark:border-theme-700"],
-      neutral: [...modesClasses.value.outline, ...colorClasses.value.neutral, "border-neutral-200", "dark:border-neutral-700"],
-      creative: [...modesClasses.value.outline, ...colorClasses.value.creative, "border-green-200", "dark:border-green-700"],
-      destructive: [...modesClasses.value.outline, ...colorClasses.value.destructive, "border-red-200", "dark:border-red-700"]
+      theme: [...variantsClasses.value.outline, ...colorClasses.value.theme, "border-theme-200", "dark:border-theme-700"],
+      neutral: [...variantsClasses.value.outline, ...colorClasses.value.neutral, "border-neutral-200", "dark:border-neutral-700"],
+      creative: [...variantsClasses.value.outline, ...colorClasses.value.creative, "border-green-200", "dark:border-green-700"],
+      destructive: [...variantsClasses.value.outline, ...colorClasses.value.destructive, "border-red-200", "dark:border-red-700"]
     },
     ghost: {
-      theme: [...modesClasses.value.ghost, ...colorClasses.value.theme],
-      neutral: [...modesClasses.value.ghost, ...colorClasses.value.neutral],
-      creative: [...modesClasses.value.ghost, ...colorClasses.value.creative],
-      destructive: [...modesClasses.value.ghost, ...colorClasses.value.destructive]
+      theme: [...variantsClasses.value.ghost, ...colorClasses.value.theme],
+      neutral: [...variantsClasses.value.ghost, ...colorClasses.value.neutral],
+      creative: [...variantsClasses.value.ghost, ...colorClasses.value.creative],
+      destructive: [...variantsClasses.value.ghost, ...colorClasses.value.destructive]
     }
   })
   const sizesClasses = ref({
@@ -295,11 +308,58 @@
   // ---PROPS-------------------------------
   const type = computed<ButtonProps["type"]>(() => props.type ?? "button")
   const icon = computed<ButtonProps["icon"]>(() => props.icon ?? "")
-  const iconPosition = computed<ButtonProps["iconPosition"] | null>(() => props.iconPosition ?? "right")
+  // Issue 3: logical start/end positioning. RTL-корректность обеспечивается тем, что корневой
+  // <button> — inline-flex, и его main-axis следует document direction; дополнительный CSS не нужен.
+  // Физические алиасы "left"/"right" сняты в major 2026-09-06 (решение R7). Резолв намеренно
+  // сводит к "end" всё, что не "start": untyped JS-потребитель, оставшийся на старом "left",
+  // получит иконку в дефолтной позиции, а не исчезнувшую иконку — шаблон рендерит её только
+  // для двух известных значений.
+  const iconPosition = computed<"start" | "end">(() => (props.iconPosition === "start" ? "start" : "end"))
   const isLoading = computed<ButtonProps["loading"]>(() => props.loading)
   const disabled = computed<ButtonProps["disabled"]>(() => props.disabled ?? false)
-  const mode = computed<NonNullable<ButtonProps["mode"]>>(
-    () => (props?.mode as ButtonProps["mode"]) ?? options?.mode ?? "primary"
+  // Issue 5: polymorphic root. По умолчанию <button>; `as` позволяет <a>/<NuxtLink>/….
+  const asTag = computed<NonNullable<ButtonProps["as"]>>(() => props.as ?? "button")
+  const isNativeButton = computed<boolean>(() => asTag.value === "button")
+  // Нативный type — только на <button>; type="icon" маппится в "button".
+  const resolvedType = computed<"button" | "reset" | "submit" | undefined>(() =>
+    isNativeButton.value
+      ? type.value === "icon"
+        ? "button"
+        : (type.value as "button" | "reset" | "submit")
+      : undefined
+  )
+  // role="button" для не-button/не-<a> корней (<a href> уже интерактивен).
+  const resolvedRole = computed<"button" | undefined>(() =>
+    isNativeButton.value || asTag.value === "a" ? undefined : "button"
+  )
+  // tabindex для не-нативно-фокусируемых корней; -1 при disabled.
+  const resolvedTabindex = computed<number | undefined>(() => {
+    if (isNativeButton.value || asTag.value === "a") return undefined
+    return disabled.value ? -1 : 0
+  })
+  // disabled: нативный атрибут только на <button>; иначе aria-disabled.
+  const resolvedDisabled = computed<boolean | undefined>(() =>
+    isNativeButton.value && disabled.value ? true : undefined
+  )
+  const resolvedAriaDisabled = computed<"true" | undefined>(() =>
+    !isNativeButton.value && disabled.value ? "true" : undefined
+  )
+  // Для icon-кнопок без явного ariaLabel и без default-slot fallback'имся
+  // на имя иконки — это хоть какой-то accessible name, лучше чем «button».
+  const resolvedAriaLabel = computed<string | undefined>(() => {
+    if (props.ariaLabel) return props.ariaLabel
+    if (type.value === "icon" && icon.value) return icon.value
+    return undefined
+  })
+  // Issue 13: глобальный `componentsStyle` ("filled"|"outlined"|"underlined") → Button.variant.
+  // Маппинг filled→primary, outlined→outline, underlined→ghost. В fallback chain стоит ниже
+  // props/componentsOptions, но выше литерального default — как у Badge/Input/Select/Calendar.
+  const componentsStyleVariant = computed<ButtonProps["variant"] | undefined>(() => {
+    const cs = Button.componentsStyle()
+    return cs === "filled" ? "primary" : cs === "outlined" ? "outline" : cs === "underlined" ? "ghost" : undefined
+  })
+  const variant = computed<NonNullable<ButtonProps["variant"]>>(
+    () => (props?.variant as ButtonProps["variant"]) ?? options?.variant ?? componentsStyleVariant.value ?? "primary"
   )
   const size = computed<NonNullable<ButtonProps["size"]>>(
     () => (props?.size as ButtonProps["size"]) ?? options?.size ?? "md"
@@ -310,69 +370,102 @@
   const color = computed<NonNullable<ButtonProps["color"]>>(
     () => (props?.color as ButtonProps["color"]) ?? options?.color ?? "neutral"
   )
-  const classBase = computed<StyleClass>(() => {
-    const classes = [
+  // Корень: база → variant → size → rounded → state → options.classes.root → props.classes.root →
+  // options.class → props.class (dev-patterns §2 D) — сегменты потребителя всегда последние.
+  const classBase = computed<StyleClass>(() =>
+    cls(
+      "root",
       baseClasses.value,
-      modeClasses.value?.[mode.value]?.[color.value],
+      variantClasses.value?.[variant.value]?.[color.value],
       sizeClasses.value[type.value === "icon" ? "icon" : "button"][size.value],
       roundedClasses.value[rounded.value],
-      options?.class ?? "",
-      props?.class ?? "",
-      disabled.value ? "opacity-50 cursor-not-allowed" : ""
-    ]
-    return Button.setStyle(classes.filter(Boolean))
-  })
-
-  const classIcon = computed<ButtonProps["classIcon"]>(() =>
-    [
-      "inline-flex items-center",
-      mode.value === "primary" ? textColorsPrimaryClasses.value[color.value] : textColorsClasses.value[color.value],
-      options?.classIcon ?? "",
-      props?.classIcon ?? ""
-    ]
-      .flat()
-      .join(" ")
+      disabled.value && "opacity-50 cursor-not-allowed"
+    )
   )
+  // Hand-off в корень `Icons` (`:class` ребёнка = его корень): `raw` отдаёт классы потребителя
+  // без setStyle-префикса — компилирует их сам Icons (dev-patterns §4).
+  const classIcon = computed<StyleClass>(() =>
+    cn(
+      "inline-flex items-center",
+      variant.value === "primary" ? textColorsPrimaryClasses.value[color.value] : textColorsClasses.value[color.value],
+      raw("icon")
+    )
+  )
+  // Hand-off в корень `Loading`. Тип — `string` (а не `StyleClass`), иначе `['absolute', classLoading]`
+  // в шаблоне схлопывается во вложенный массив, которого `class` ребёнка не принимает.
+  const classLoading = computed<string>(() => raw("loading"))
+  // ---METHODS-----------------------------
+  function focus(options?: FocusOptions) {
+    buttonRef.value?.focus(options)
+  }
+
+  function blur() {
+    buttonRef.value?.blur()
+  }
+
   defineExpose({
+    // ---STATE-------------------------
+    buttonRef,
     // ---PROPS-------------------------
-    mode,
+    variant,
     size,
     rounded,
     color,
     classBase,
-    classIcon
+    classIcon,
+    // ---METHODS-----------------------
+    focus,
+    blur
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // `Button.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
   onMounted(() => {
-    Button.initStyle()
+    // Dev-warning: icon-кнопка без accessible name (нет ariaLabel и нет default-slot,
+    // даже tooltip-контента не будет) — screen-reader озвучит как «button», что
+    // нарушает WCAG 2.1 SC 4.1.2.
+    if (process.env.NODE_ENV !== "production" && type.value === "icon" && !props.ariaLabel && !slots.default) {
+      console.warn(
+        "[FishtVue Button] icon-only button without aria-label or default slot is inaccessible. " +
+          "Pass `:aria-label` or provide a default slot with descriptive content."
+      )
+    }
   })
 </script>
 <template>
-  <button
+  <component
+    :is="asTag"
     ref="buttonRef"
     data-button
-    :type="type === 'icon' ? 'button' : type"
+    :type="resolvedType"
+    :role="resolvedRole"
+    :tabindex="resolvedTabindex"
     :class="classBase"
     :data-loading="isLoading"
-    v-bind="{ disabled }">
+    :aria-label="resolvedAriaLabel"
+    :disabled="resolvedDisabled"
+    :aria-disabled="resolvedAriaDisabled"
+    @click="(e: MouseEvent) => emit('click', e)">
     <template v-if="type === 'icon'">
-      <Icons v-if="icon" :type="icon" :class="classIcon" />
-      <Loading v-if="isLoading" type="simple" :size="25" class="absolute" />
+      <Icons v-if="icon" data-button-icon :type="icon" :class="classIcon" />
+      <Loading v-if="isLoading" data-button-loading type="simple" :size="25" :class="['absolute', classLoading]" />
       <FixWindow
         v-if="slots.default"
-        type-position="absolute"
+        strategy="absolute"
         mode="filled"
         :class="roundedClasses[rounded]"
-        :delay="1000"
+        :open-delay="1000"
         :padding-window="40">
         <slot name="default" />
       </FixWindow>
     </template>
     <template v-else>
-      <Icons v-if="icon && iconPosition === 'left'" :type="icon" :class="classIcon" />
+      <slot v-if="slots.start" name="start" />
+      <Icons v-if="icon && iconPosition === 'start'" data-button-icon :type="icon" :class="classIcon" />
       <slot name="default" />
-      <Icons v-if="icon && iconPosition === 'right'" :type="icon" :class="classIcon" />
-      <Loading v-if="isLoading" type="simple" :class="['-mr-2']" />
+      <Icons v-if="icon && iconPosition === 'end'" data-button-icon :type="icon" :class="classIcon" />
+      <Loading v-if="isLoading" data-button-loading type="simple" :class="['-me-2', classLoading]" />
+      <slot v-if="slots.end" name="end" />
     </template>
-  </button>
+  </component>
 </template>

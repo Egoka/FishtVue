@@ -71,30 +71,16 @@ describe("Testing theme", () => {
       // Проверка наличия основных ключей
       expect(semantic).toHaveProperty("customThemeColor")
       expect(semantic).toHaveProperty("customThemeColorContrast")
-      expect(semantic).toHaveProperty("primary")
 
       // Проверка типов значений для базовых свойств
       expect(typeof semantic.customThemeColor).toBe("number")
       expect(typeof semantic.customThemeColorContrast).toBe("number")
 
-      // Проверка структуры и типов в объекте `primary`
-      const primary = semantic.primary
-      expect(primary).toHaveProperty("50")
-      expect(primary).toHaveProperty("100")
-      expect(primary).toHaveProperty("200")
-      expect(primary).toHaveProperty("300")
-      expect(primary).toHaveProperty("400")
-      expect(primary).toHaveProperty("500")
-      expect(primary).toHaveProperty("600")
-      expect(primary).toHaveProperty("700")
-      expect(primary).toHaveProperty("800")
-      expect(primary).toHaveProperty("900")
-      expect(primary).toHaveProperty("950")
-
-      // Проверка, что значения цветов в `primary` являются строками
-      Object.values(primary).forEach((value) => {
-        expect(typeof value).toBe("string")
-      })
+      // Wave 3.3: дефолтного `primary` больше нет — слот стал опциональным user-override'ом
+      // брендовой палитры (пишется updatePrimaryPalette → `--fv-theme-{tone}` в tokens-теге).
+      // Дефолтные формулы после linksTheme давали статические hsl(0 0 …)-строки и, будучи
+      // эмитированными, перебили бы живые var(--theme)-формулы слота theme.
+      expect(semantic).not.toHaveProperty("primary")
     })
   })
 
@@ -464,6 +450,25 @@ describe("Testing theme", () => {
 
       styleTag = document.head.querySelector("#test-style") as HTMLStyleElement
       expect(styleTag.textContent).toBe(updatedCss)
+    })
+
+    it("does not duplicate <style> across re-instantiation with the same name (HMR — Issue 3)", () => {
+      // Каждый вызов useStyle() — отдельный closure, как при HMR-re-mount компонента
+      // (Component.__setStyle вызывает useStyle(css, { name }) заново на каждом mount).
+      // load() переиспользует существующий style[data-fishtvue-style-id] вместо append нового —
+      // это и есть teardown-эквивалент: один тег, контент заменяется, дубли не копятся.
+      const name = "Issue3HmrProbe"
+      useStyle(".a { color: red }", { name })
+      useStyle(".a { color: blue }", { name })
+      const { unload } = useStyle(".a { color: green }", { name })
+
+      const tags = document.head.querySelectorAll(`style[data-fishtvue-style-id="${name}"]`)
+      expect(tags.length).toBe(1) // acceptance Issue 3: один <style> в head, не дубль
+      expect(tags[0].textContent).toBe(".a { color: green }") // контент заменён, не добавлен
+
+      // cleanup: isolate:false шарит document.head между тест-файлами в одном worker
+      unload()
+      document.head.querySelectorAll(`style[data-fishtvue-style-id="${name}"]`).forEach((t) => t.remove())
     })
   })
 })

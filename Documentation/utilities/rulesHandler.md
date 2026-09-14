@@ -1,7 +1,7 @@
 ---
 title: utils/rulesHandler
 summary: Валидация: Rules union (RulesArray/RulesObject), getValidate (sync), getAsyncValidate, setDefaultRuleMessages для i18n.
-updated: 2026-05-10
+updated: 2026-06-03
 stability: stable
 since: 0.2.11
 ---
@@ -186,6 +186,8 @@ function applyLocaleToRules() {
 ## 11. Form integration & validation
 
 Это и есть модуль валидации. См. [components/form.md](../components/form.md) для интеграции на уровне формы.
+
+[Form](../components/form.md) авто-применяет `setDefaultRuleMessages()` (через `applyLocaleToRules()`, guarded `useFishtVue()` + `watch(getActiveLocale)`), мапя rule-типы на ключи активной локали (`requiredField`, `invalidEmail`, …). Так validation messages формы локализуются без ручного вызова §10.
 
 ## 12. Accessibility & Security
 

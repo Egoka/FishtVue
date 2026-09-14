@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { computed, onMounted, onUnmounted, ref, useSlots } from "vue"
-  import type { InputLayoutEmits, InputLayoutProps } from "./InputLayout"
+  import { computed, onMounted, onUnmounted, ref, useId, useSlots } from "vue"
+  import type { InputLayoutClassKey, InputLayoutEmits, InputLayoutProps } from "./InputLayout"
+  import type { StyleClass } from "fishtvue/types"
   import Label from "fishtvue/label/Label.vue"
   import Icons from "fishtvue/icons/Icons.vue"
   import Loading from "fishtvue/loading/Loading.vue"
@@ -11,16 +12,19 @@
   const InputLayout = new Component<"InputLayout">()
   const options = InputLayout.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
+  // Каждый optional boolean — `undefined`: иначе Vue кастует отсутствующий prop в `false`,
+  // и слой `componentsOptions` (например `clearable`) был бы недостижим (dev-patterns §2 F).
   const props = withDefaults(defineProps<InputLayoutProps>(), {
-    isValue: undefined,
-    isInvalid: undefined,
+    hasValue: undefined,
+    invalid: undefined,
     required: undefined,
     loading: undefined,
     disabled: undefined,
-    clear: undefined
+    clearable: undefined
   })
   const emit = defineEmits<InputLayoutEmits>()
   const slots = useSlots()
+  const { cls, raw, pick } = InputLayout.resolveClasses<InputLayoutClassKey>(props)
   // ---REF-LINK----------------------------
   const input = ref<HTMLElement | undefined>()
   const inputBody = ref<HTMLElement | undefined>()
@@ -33,9 +37,12 @@
   const beforeWidth = ref<number>(0)
   const afterWidth = ref<number>(0)
   const isTick = ref<boolean>(false)
+  // ---OBSERVER REFS (saved for cleanup on unmount) -----------------
+  let beforeObserver: ResizeObserver | undefined
+  let afterObserver: ResizeObserver | undefined
   // ---PROPS-------------------------------
   const value = computed<InputLayoutProps["value"]>(() => props.value ?? null)
-  const isValue = computed<NonNullable<InputLayoutProps["isValue"]>>(() => props?.isValue ?? false)
+  const isValue = computed<boolean>(() => props.hasValue ?? false)
   const mode = computed<NonNullable<InputLayoutProps["mode"]>>(
     () => (props?.mode as InputLayoutProps["mode"]) ?? options?.mode ?? InputLayout.componentsStyle() ?? "outlined"
   )
@@ -47,64 +54,75 @@
   const labelType = computed<NonNullable<InputLayoutProps["labelMode"]>>(() =>
     getLabelType(isValue.value, label.value, labelMode.value)
   )
+  // ---A11Y: label↔control association (single source of truth) -----
+  // `useId()` — SSR-stable, hydration-safe (зеркало Accordion/Split).
+  const autoId = useId() ?? ""
+  // id контрола: явный props.id выигрывает, иначе автогенерация.
+  const fieldId = computed<string>(() => props.id ?? autoId)
+  // id самой метки (для aria-labelledby у non-labelable триггеров);
+  // undefined без label → атрибут не виснет на dangling-id.
+  const labelId = computed<string | undefined>(() => (label.value ? `${fieldId.value}-label` : undefined))
   const isRequired = computed<NonNullable<InputLayoutProps["required"]>>(() => props.required ?? false)
   const isLoading = computed<InputLayoutProps["loading"]>(() => props.loading ?? false)
   const isDisabled = computed<InputLayoutProps["disabled"]>(() => props.disabled ?? false)
-  const isInvalid = computed<InputLayoutProps["isInvalid"]>(() => (!isDisabled.value ? props.isInvalid : false))
+  const isInvalid = computed<boolean>(() => (!isDisabled.value ? (props.invalid ?? false) : false))
+  const isClearable = computed<boolean>(() => props.clearable ?? options?.clearable ?? false)
   const messageInvalid = computed<InputLayoutProps["messageInvalid"]>(() => props.messageInvalid ?? "")
   const help = computed<InputLayoutProps["help"]>(() => String(props.help ?? ""))
   const widthLayout = computed<string>(() => {
-    const resultWidth = (props?.width as InputLayoutProps["width"]) ?? options?.height ?? ""
+    const resultWidth = (props?.width as InputLayoutProps["width"]) ?? options?.width ?? ""
     return resultWidth ? (typeof resultWidth === "number" ? `${resultWidth}px` : resultWidth) : ""
   })
   const heightLayout = computed<string>(() => {
     const resultHeight = (props?.height as InputLayoutProps["height"]) ?? options?.height ?? ""
     return resultHeight ? (typeof resultHeight === "number" ? `${resultHeight}px` : resultHeight) : ""
   })
-  const animation = computed<NonNullable<InputLayoutProps["animation"]>>(() =>
-    isTick.value
-      ? ((props?.animation as InputLayoutProps["animation"]) ?? options?.animation ?? "transition-all duration-550")
-      : ""
+  // Aspect-ключ `animation` (dev-patterns §2 B): transition-классы корня и `base` включаются только после
+  // mount-тика (`isTick`) — на первом кадре поле иначе «переезжает» из исходной точки. `""` отключает.
+  const animation = computed<StyleClass>(() =>
+    isTick.value ? pick("animation", "motion-safe:transition-all motion-safe:duration-550") : ""
   )
   const background = computed(() =>
     mode.value === "outlined"
-      ? "bg-white dark:bg-neutral-950"
+      ? "bg-white dark:bg-surface-950"
       : mode.value === "underlined"
-        ? "bg-stone-50 dark:bg-stone-950"
+        ? "bg-surface-50 dark:bg-surface-950"
         : mode.value === "filled"
-          ? "bg-stone-100 dark:bg-stone-900"
+          ? "bg-surface-100 dark:bg-surface-900"
           : ""
   )
-  const classBody = computed(() =>
-    InputLayout.setStyle([
-      "inputBody classBody relative rounded-md",
-      background.value,
-      animation.value ?? "",
-      options?.classBody ?? "",
-      props?.classBody ?? "",
-      isInvalid.value ? "is-invalid" : ""
-    ])
-  )
+  // Корень: база → mode → state → options.classes.root → props.classes.root → options.class → props.class
+  // (dev-patterns §2 D) — сегменты потребителя всегда последние, twMerge отдаёт им конфликт.
   const classBase = computed(() =>
-    InputLayout.setStyle([
-      "classLayout rounded-md w-full text-gray-900 dark:text-gray-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
-      heightLayout.value.length ? "" : "max-h-20",
-      isDisabled.value
-        ? "bg-neutral-50 dark:bg-neutral-950 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-800 border-dashed shadow-none"
-        : "",
-      mode.value === "outlined" ? "border border-gray-300 dark:border-gray-600" : "",
-      mode.value === "underlined" ? "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b" : "",
-      mode.value === "filled"
-        ? `${isDisabled.value ? "border-dotted border-2 border-slate-200" : "border-0 border-transparent"} `
-        : "",
-      animation.value ?? "",
-      options?.class ?? "",
-      props?.class ?? "",
-      isInvalid.value
-        ? "border-red-500 dark:border-red-500 ring-1 ring-inset ring-red-500 dark:ring-red-500 scroll-mt-10"
-        : "",
-      "flex items-center peer overflow-auto"
-    ])
+    cls(
+      "root",
+      "relative rounded-md",
+      background.value,
+      animation.value,
+      isInvalid.value && "is-invalid",
+      // N59: style-for-print — печатаем монохромно и читаемо, без display:none
+      "print:border print:border-black print:bg-white print:text-black print:shadow-none"
+    )
+  )
+  // Рамка поля `[data-input-layout-base]` — ключ `base`. Сюда же семейство кладёт focus-ring контрола.
+  const classLayout = computed(() =>
+    cls(
+      "base",
+      "rounded-md w-full text-surface-900 dark:text-surface-100 sm:text-sm sm:leading-6 focus-visible:ring-0",
+      !heightLayout.value.length && "max-h-20",
+      isDisabled.value &&
+        "bg-surface-50 dark:bg-surface-950 text-surface-500 dark:text-surface-500 border-surface-200 dark:border-surface-800 border-dashed shadow-none",
+      mode.value === "outlined" && "border border-surface-300 dark:border-surface-600",
+      mode.value === "underlined" && "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b",
+      mode.value === "filled" &&
+        (isDisabled.value ? "border-dotted border-2 border-surface-200" : "border-0 border-transparent"),
+      animation.value,
+      isInvalid.value &&
+        "border-red-500 dark:border-red-500 ring-1 ring-inset ring-red-500 dark:ring-red-500 scroll-mt-10",
+      "flex items-center peer overflow-auto",
+      // B10: high-contrast — border-* сбрасывается forced-colors, outline сохраняет границу поля
+      "forced-colors:outline"
+    )
   )
   const styleBase = computed(
     () =>
@@ -115,29 +133,37 @@
       (afterWidth.value ? `padding-right: ${afterWidth.value}px;` : "padding-right: 10px;")
   )
   const classBeforeInput = computed(() =>
-    InputLayout.setStyle([
-      "beforeInput absolute inset-y-0 left-0 flex items-center pr-1",
+    cls(
+      "before",
+      "absolute inset-y-0 left-0 flex items-center pr-1",
       beforeInput.value && beforeWidth.value > 16 ? "pl-2" : "pl-1.5"
-    ])
+    )
   )
   const classAfterInput = computed(() => InputLayout.setStyle("absolute inset-y-0 right-0 flex items-center"))
-  const classAfterSlot = computed(() => InputLayout.setStyle("flex pr-2"))
+  const classAfterSlot = computed(() => cls("after", "flex pr-2"))
   const classLoading = computed(() => InputLayout.setStyle("relative mx-4"))
   const classInvalid = computed(() =>
-    InputLayout.setStyle(
+    cls(
+      "message",
       "absolute block text-red-600 dark:text-red-400 text-sm truncate ml-1 data-[invalid=true]:visible invisible"
     )
   )
   const classIconBody = computed(() => InputLayout.setStyle("relative mr-2"))
+  const classHelp = computed(() => cls("help", "relative mr-2"))
   const classIconContent = computed(() =>
     InputLayout.setStyle(
       "p-3 rounded-md shadow-lg " +
-        "bg-white dark:bg-stone-900 " +
-        "font-light italic text-xs text-gray-500 dark:text-gray-400 " +
+        "bg-white dark:bg-surface-900 " +
+        "font-light italic text-xs text-surface-500 dark:text-surface-400 " +
         "ring-1 ring-black/20 focus:outline-none"
     )
   )
-  InputLayout.setStyle("transition ease-in duration-200 opacity-100 opacity-0")
+  // E29.7: inline-классы шаблона (<transition>-блоки + hover-иконки) движок сам не регистрирует —
+  // явно регистрируем их motion-safe:-варианты, чтобы reduced-motion уважался.
+  InputLayout.setStyle(
+    "motion-safe:transition motion-safe:transition-all motion-safe:ease-in " +
+      "motion-safe:duration-200 motion-safe:duration-300 opacity-100 opacity-0"
+  )
   // ---EXPOSE------------------------------
   defineExpose({
     // ---STATE-------------------------
@@ -160,28 +186,53 @@
     isLoading,
     isDisabled,
     isInvalid,
+    isClearable,
     messageInvalid,
     help,
     width: widthLayout,
     height: heightLayout,
     animation,
-    classBody,
-    class: classBase,
+    classBase,
+    classLayout,
     // ---METHODS-----------------------
     copy
   })
   // ---MOUNT-UNMOUNT-----------------------
+  function resolveOffsetTop(): number {
+    const raw = (props.offsetTop as InputLayoutProps["offsetTop"]) ?? options?.offsetTop
+    if (typeof raw === "number") return raw
+    if (typeof raw === "function") {
+      try {
+        return (raw as () => number)() || 0
+      } catch {
+        return 0
+      }
+    }
+    if (typeof raw === "string") {
+      const parsed = parseInt(raw, 10)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+    return 0
+  }
+  // Резолвим offsetTop сразу — synchronously: в jsdom-тестах expose.headerHeight
+  // должен быть актуальным без ожидания onMounted-hook.
+  headerHeight.value = resolveOffsetTop()
+  // `InputLayout.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
   onMounted(() => {
-    InputLayout.initStyle()
-    if (beforeInput.value)
-      new ResizeObserver((entries) => {
+    if (beforeInput.value) {
+      beforeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) beforeWidth.value = (entry as any).target["offsetWidth"]
-      }).observe(beforeInput.value as HTMLElement)
-    if (afterInput.value)
-      new ResizeObserver((entries) => {
+      })
+      beforeObserver.observe(beforeInput.value as HTMLElement)
+    }
+    if (afterInput.value) {
+      afterObserver = new ResizeObserver((entries) => {
         for (const entry of entries) afterWidth.value = (entry as any)?.target["offsetWidth"]
-      }).observe(afterInput.value as HTMLElement)
-    if (isClient()) headerHeight.value = <number>document.querySelector("header")?.offsetHeight
+      })
+      afterObserver.observe(afterInput.value as HTMLElement)
+    }
+    headerHeight.value = resolveOffsetTop()
     setTimeout(() => (isTick.value = true), 100)
   })
   // ---SET_OBSERVER-------------------------
@@ -200,11 +251,13 @@
   }
 
   onMounted(() => {
-    InputLayout.initStyle()
     if (isClient() && inputBody.value) layoutObserver.observe(inputBody.value as Element)
   })
   onUnmounted(() => {
-    if (isClient() && layoutObserver) layoutObserver.disconnect()
+    if (!isClient()) return
+    layoutObserver?.disconnect()
+    beforeObserver?.disconnect()
+    afterObserver?.disconnect()
   })
   // ---METHODS-----------------------------
   const getLabelType = (
@@ -221,13 +274,50 @@
     } else return "none"
   }
 
-  async function copy() {
+  function legacyCopy(text: string): boolean {
+    if (!isClient()) return false
     try {
-      await navigator.clipboard.writeText(String(value.value))
+      const el = document.createElement("textarea")
+      el.value = text
+      el.setAttribute("readonly", "")
+      el.style.position = "fixed"
+      el.style.top = "0"
+      el.style.left = "0"
+      el.style.opacity = "0"
+      document.body.appendChild(el)
+      el.focus()
+      el.select()
+      const ok = document.execCommand("copy")
+      document.body.removeChild(el)
+      return ok
+    } catch {
+      return false
+    }
+  }
+
+  async function copy() {
+    if (!isClient()) return
+    const text = String(value.value ?? "")
+    const writeText: ((s: string) => Promise<void>) | undefined =
+      typeof navigator !== "undefined" && navigator.clipboard && typeof navigator.clipboard.writeText === "function"
+        ? navigator.clipboard.writeText.bind(navigator.clipboard)
+        : undefined
+    let ok = false
+    if (writeText) {
+      try {
+        await writeText(text)
+        ok = true
+      } catch (err) {
+        // HTTPS-only / permission-denied / iframe-sandbox → fallback на execCommand
+        ok = legacyCopy(text)
+        if (!ok) console.error("Failed to copy: ", err)
+      }
+    } else {
+      ok = legacyCopy(text)
+    }
+    if (ok) {
       isCopy.value = true
       setTimeout(() => (isCopy.value = false), 3000)
-    } catch (err) {
-      console.error("Failed to copy: ", err)
     }
   }
 </script>
@@ -236,7 +326,7 @@
   <div
     data-input-layout
     ref="inputBody"
-    :class="classBody"
+    :class="classBase"
     :style="`${widthLayout ? `width:${widthLayout};` : ''}${heightLayout ? `height:${heightLayout};` : ''}scroll-margin-top: ${headerHeight + 10}px;`">
     <div
       v-if="slots.before"
@@ -246,18 +336,22 @@
       :style="`${heightLayout ? `height:${heightLayout};` : ''}max-height: 4rem;`">
       <slot name="before" />
     </div>
-    <div data-input-layout-base ref="input" :class="classBase" :style="styleBase">
-      <slot />
+    <div data-input-layout-base ref="input" :class="classLayout" :style="styleBase">
+      <slot :id="fieldId" :labelledby="labelId" />
     </div>
     <slot name="body" />
     <Label
       v-if="label"
-      :title="label"
-      :type="labelType"
+      :id="labelId"
+      :for-id="fieldId"
+      :label="label"
+      :label-mode="labelType"
       :mode="mode"
-      :is-required="isRequired"
+      :required="isRequired"
       :translate-x="beforeWidth || 10"
-      :max-width="widthInput" />
+      :max-width="widthInput"
+      :animated="isTick"
+      :class="raw('label')" />
     <span
       ref="afterInput"
       :class="classAfterInput"
@@ -266,21 +360,21 @@
         <slot name="after" />
       </div>
       <transition
-        leave-active-class="transition ease-in duration-200"
+        leave-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
-        enter-active-class="transition ease-in duration-200"
+        enter-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
         <div v-if="isLoading" data-loading :class="classLoading">
           <Loading v-if="isLoading" type="simple" class="absolute -top-[10px] -left-4" />
         </div>
       </transition>
-      <div v-if="help?.length" data-input-layout-help :class="classIconBody">
+      <div v-if="help?.length" data-input-layout-help :class="classHelp">
         <Icons
           type="QuestionMarkCircle"
           stile-icon="solid"
-          class="text-gray-400 dark:text-gray-600 hover:text-yellow-500 transition cursor-help" />
+          class="text-surface-400 dark:text-surface-600 hover:text-yellow-500 motion-safe:transition cursor-help" />
         <FixWindow
           :mode="mode"
           event-open="click"
@@ -288,10 +382,16 @@
           position="bottom-right"
           :margin-px="12"
           :padding-window="40"
-          class-body="z-30"
+          class="z-30"
           stop-open-propagation
-          class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
-          <div v-html="help" :class="classIconContent" />
+          :classes="{
+            content: 'border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent'
+          }">
+          <div :class="classIconContent">
+            <slot name="help">
+              <span data-input-layout-help-text>{{ help }}</span>
+            </slot>
+          </div>
         </FixWindow>
       </div>
       <template v-if="!isDisabled">
@@ -299,7 +399,7 @@
           <Icons
             type="ExclamationCircle"
             stile-icon="solid"
-            class="text-red-500 dark:text-red-500 transition cursor-pointer" />
+            class="text-red-500 dark:text-red-500 motion-safe:transition cursor-pointer" />
           <FixWindow
             :mode="mode"
             event-open="click"
@@ -307,24 +407,36 @@
             position="bottom-right"
             :margin-px="12"
             :padding-window="40"
-            class-body="z-30"
+            class="z-30"
             stop-open-propagation
-            class="border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent">
-            <div v-html="messageInvalid" :class="classIconContent" />
+            :classes="{
+              content: 'border-0 w-auto max-w-[15rem] origin-top-right px-0 bg-transparent dark:bg-transparent'
+            }">
+            <div :class="classIconContent">
+              <slot name="messageInvalid">
+                <span data-input-layout-message-invalid-text>{{ messageInvalid }}</span>
+              </slot>
+            </div>
           </FixWindow>
         </div>
+        <!--
+          E29.7: active-классы `<transition>` тоже обязаны гейтиться `motion-safe:` — они
+          применяются к DOM напрямую, минуя `setStyle`, поэтому cross-cutting-заход по классам
+          компонента их не задел. Без гейта появление/исчезновение clear-иконки анимируется
+          даже при `prefers-reduced-motion: reduce`.
+        -->
         <transition
-          leave-active-class="transition ease-in duration-200"
+          leave-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-200"
+          enter-active-class="motion-safe:transition motion-safe:ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
-          <div v-if="clear && (value?.length || value > 0)" data-input-layout-clear :class="classIconBody">
+          <div v-if="isClearable && (value?.length || value > 0)" data-input-layout-clear :class="classIconBody">
             <Icons
               type="XCircle"
               stile-icon="solid"
-              class="text-gray-400 dark:text-gray-600 hover:text-red-600 hover:dark:text-red-500 transition-all duration-300 cursor-pointer"
+              class="text-surface-400 dark:text-surface-600 hover:text-red-600 hover:dark:text-red-500 motion-safe:transition-all motion-safe:duration-300 cursor-pointer"
               @click.stop="emit('clear')" />
             <FixWindow v-if="slots.default" mode="filled" :delay="1000" :padding-window="40">
               {{ InputLayout.t("clear") ?? "Clear" }}
@@ -337,20 +449,31 @@
           <Icons
             type="square-2-stack"
             stile-icon="solid"
-            class="mr-2 text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400 transition"
+            class="mr-2 text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400 motion-safe:transition"
             @click.stop="copy" />
           <FixWindow :mode="mode" :delay="1000" :padding-window="40">
             {{ InputLayout.t("copy") ?? "Copy" }}
           </FixWindow>
         </div>
-        <Icons v-else type="Check" stile-icon="solid" class="mr-2 text-emerald-400 dark:text-emerald-600" />
+        <div v-else data-input-layout-copied :class="classIconBody">
+          <Icons
+            type="Check"
+            stile-icon="solid"
+            class="mr-2 text-emerald-400 dark:text-emerald-600"
+            :aria-label="InputLayout.t('inputLayout.copied') ?? 'Copied'" />
+          <FixWindow :mode="mode" :delay="0" :padding-window="40">
+            {{ InputLayout.t("inputLayout.copied") ?? "Copied" }}
+          </FixWindow>
+        </div>
       </template>
     </span>
     <p
       data-input-layout-message-invalid
       :data-invalid="isInvalid"
       :class="classInvalid"
-      :style="`max-width: ${inputBody?.['offsetWidth'] ?? 10}px`">
+      :style="`max-width: ${inputBody?.['offsetWidth'] ?? 10}px`"
+      aria-live="assertive"
+      aria-atomic="true">
       {{ messageInvalid }}
     </p>
   </div>

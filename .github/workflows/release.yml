@@ -14,6 +14,8 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      # OIDC-токен для trusted publishing в npm (заменяет NPM_TOKEN)
+      # и автоматических provenance attestations.
       id-token: write
     runs-on: ubuntu-latest
     steps:
@@ -29,6 +31,13 @@ jobs:
         with:
           node-version: '22'
           cache: "pnpm"
+      - name: Setup npm CLI with trusted publishing support
+        # Trusted publishing (OIDC) умеет только npm CLI >= 11.5.0
+        # (11.5.1 фиксит provenance-by-default). Node 22 приносит npm 10.9.x.
+        # @semantic-release/npm@13 тащит npm@^11.6.2 в своих зависимостях, но
+        # pnpm с isolated node_modules не кладёт его в root node_modules/.bin,
+        # поэтому semantic-release вызовет системный npm. Ставим 11.x глобально.
+        run: npm install -g "npm@^11.6.2"
       - name: Allow whitelisted build scripts (pnpm 11)
         # pnpm-workspace.yaml is gitignored to keep Vercel docs/ deploy
         # working (Root Directory = docs). Generate it on CI so pnpm 11
@@ -40,11 +49,13 @@ jobs:
           allowBuilds:
             '@parcel/watcher': true
             esbuild: true
+            vue-demi: true
           EOF
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Lint library
-        run: pnpm lint
+        # lint:check = `eslint .` без --fix — см. комментарий в pull_request.yml.
+        run: pnpm lint:check
       - name: Type check
         run: pnpm typecheck
       - name: Test library
@@ -54,7 +65,6 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GIT_AUTHOR_NAME: "github-actions[bot]"
           GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
           GIT_COMMITTER_NAME: "github-actions[bot]"

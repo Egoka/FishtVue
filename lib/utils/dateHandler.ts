@@ -1,4 +1,4 @@
-import { format, getDay, getHours, isValid, Locale, parse, parseISO } from "date-fns"
+import { format, getHours, isValid, Locale, parse, parseISO } from "date-fns"
 import * as locales from "date-fns/locale"
 
 /**
@@ -312,6 +312,9 @@ export function formatDate(
   options: FormatDateOptions = {}
 ): string {
   let date: Date
+  // Исходная dayjs-маска нужна отдельно: `convertMask` схлопывает `A` и `a` в один токен `a`,
+  // после чего различить регистр AM/PM уже нельзя.
+  const sourceMask = mask
   mask = convertMask(mask)
   if (value instanceof Date) {
     date = value
@@ -337,39 +340,28 @@ export function formatDate(
 
   const locale = options.locale || detectLocale(value, mask)
 
-  switch (mask) {
-    case "Do":
-      return format(date, "do MMMM", { locale })
-    case "A":
-      return getHours(date) >= 12 ? "PM" : "AM"
-    case "a":
-      return getHours(date) >= 12 ? "pm" : "am"
-    case "W":
-      return String(getDay(date))
-    case "WW":
-      return format(date, "EEEEEE", { locale })
-    case "WWW":
-      return format(date, "EEE", { locale })
-    case "WWWW":
-      return format(date, "EEEE", { locale })
-    case "L":
-      return format(date, "P", { locale })
-    case "ZZ":
-      return format(date, "XX")
-    case "ZZZ":
-      return format(date, "XXX")
-    case "ZZZZ":
-      return format(date, "XXXX")
-    default:
-      return format(
-        date,
-        mask
-          .replace(/A/g, "a")
-          .replace(/Do/g, "do")
-          .replace(/ZZZZ/g, "xxxx")
-          .replace(/ZZZ/g, "xxx")
-          .replace(/ZZ/g, "xx"),
-        { locale }
-      )
-  }
+  // dayjs различает `A` (AM/PM) и `a` (am/pm); у date-fns на оба случая один токен `a`, и он
+  // отдаёт ВЕРХНИЙ регистр. Значит нижний регистр надо восстанавливать так же явно, как верхний,
+  // и решать по ИСХОДНОЙ маске — после `convertMask` они неразличимы.
+  if (sourceMask === "A") return getHours(date) >= 12 ? "PM" : "AM"
+  if (sourceMask === "a") return getHours(date) >= 12 ? "pm" : "am"
+
+  // Здесь раньше стоял switch по маскам `Do`/`W`/`WW`/`WWW`/`WWWW`/`L`/`ZZ`/`ZZZ`/`ZZZZ`.
+  // Он был **недостижим**: `convertMask()` выше уже переписал маску (`Do` → `do`, `W` → `w`,
+  // `L` → `P`, `ZZ` → `xx` и т.д.), и ни одна метка совпасть не могла — coverage годами
+  // показывал этот блок непокрытым именно поэтому. Единственной живой веткой была `case "a"`,
+  // из-за чего маска `A` отдавала нижний регистр (см. фикс строкой выше).
+  //
+  // Мёртвые ветки удалены, а не «оживлены» переносом switch'а до конвертации: часть из них
+  // расходилась с семантикой dayjs, которую этот модуль эмулирует (`W` — номер недели года,
+  // а не день недели; `Do` — порядковый день месяца без названия месяца). Текущее поведение
+  // ближе к dayjs и зафиксировано тестами — см. `dateHandlerMasks.test.ts`.
+  //
+  // Цепочка `.replace()` ниже по той же причине избыточна (в конвертированной маске нет ни `A`,
+  // ни `Do`, ни `Z`), но оставлена как страховка для масок, собранных в обход `convertMask`.
+  return format(
+    date,
+    mask.replace(/A/g, "a").replace(/Do/g, "do").replace(/ZZZZ/g, "xxxx").replace(/ZZZ/g, "xxx").replace(/ZZ/g, "xx"),
+    { locale }
+  )
 }

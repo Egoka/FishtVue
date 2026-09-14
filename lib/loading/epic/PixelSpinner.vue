@@ -19,7 +19,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -105,8 +105,8 @@
   .pixel-spinner .pixel-spinner-inner {
     width: calc(70px / 7);
     height: calc(70px / 7);
-    background-color: #ff1d5e;
-    color: #ff1d5e;
+    background-color: currentColor;
+    color: currentColor;
     box-shadow:
       15px 15px 0 0,
       -15px -15px 0 0,

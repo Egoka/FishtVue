@@ -1,4 +1,4 @@
-import { InjectionKey, Plugin } from "vue"
+import { InjectionKey, Plugin, Component as VueComponent } from "vue"
 import { StyleMode } from "../types"
 
 import { Locales, type NameLocale } from "fishtvue/locale/TypesLocale"
@@ -12,7 +12,7 @@ import { LabelOption } from "fishtvue/label"
 import { InputLayoutOption } from "fishtvue/inputlayout"
 import { InputOption } from "fishtvue/input"
 import { SelectOption } from "fishtvue/select"
-import { AriaOption } from "fishtvue/aria"
+import { TextareaOption } from "fishtvue/textarea"
 import { SwitchOption } from "fishtvue/switch"
 import { CalendarOption } from "fishtvue/calendar"
 import { TextEditorOption } from "fishtvue/texteditor"
@@ -25,6 +25,7 @@ import { MenuOption } from "fishtvue/menu"
 import { PaginationOption } from "fishtvue/pagination"
 import { SplitOption } from "fishtvue/split"
 import { TableOption } from "fishtvue/table"
+import { VirtualScrollerOption } from "fishtvue/virtualscroller"
 
 /**
  * Main FishtVue instance type that provides core functionality and configuration
@@ -65,8 +66,12 @@ export declare type FishtVue = {
    */
   getDefaultLocale(): string | undefined
 }
-/** Injection key symbol used for dependency injection of FishtVue instance in Vue components */
-export let FishtVueSymbol: InjectionKey<string>
+/**
+ * Stable injection key for the FishtVue instance. Provided by `install` via `app.provide(FishtVueSymbol, FishtVue)`.
+ * Use `inject(FishtVueSymbol)` inside `setup()` to access the reactive config (mutating allowed).
+ * For a frozen copy use `useFishtVue()`.
+ */
+export const FishtVueSymbol: InjectionKey<FishtVue>
 /**
  * Global function to get a readonly copy of the FishtVue instance
  * @template T - FishtVue type
@@ -104,7 +109,47 @@ export declare function getActiveLocale(): string | undefined
  */
 export declare function getDefaultLocale(): string | undefined
 
-declare const plugin: Plugin
+/**
+ * Метаданные локали — направление письма и строки для `Intl` / `date-fns`
+ * ([locale.md Issues 4, 6](../../Documentation/issues/locale.md), решение R23).
+ * @param {NameLocale} [code] Код локали; по умолчанию — активная.
+ */
+export declare function getLocaleMetadata(code?: NameLocale): import("fishtvue/locale").LocaleMetadata
+
+/**
+ * Синхронизирует `<html dir>` с направлением письма локали. Вызывается автоматически на
+ * `install()` и на `setActiveLocale()`; отдельно нужен, только если направление меняется в обход
+ * FishtVue. Уже выставленный вручную `dir` не перетирается — возвращается текущее значение.
+ * @param {NameLocale} activeLocale Код локали.
+ * @returns {"ltr" | "rtl" | undefined} Применённое (или сохранённое) направление; `undefined` в SSR.
+ */
+export declare function applyDocumentDirection(activeLocale: NameLocale | undefined): "ltr" | "rtl" | undefined
+
+/**
+ * Middleware-функция, мутирующая FishtVueConfiguration перед merge с defaults.
+ * Либо мутирует параметр in-place (возвращает void), либо возвращает новый объект.
+ */
+export declare type FishtVueMiddleware = (config: FishtVueConfiguration) => FishtVueConfiguration | void
+
+/**
+ * Vue plugin + extensibility API. Default export `fishtvue/config`.
+ * @example
+ *   FishtVue.use((cfg) => { cfg.unstyled = true })
+ *   FishtVue.registerComponent("CustomBtn", MyButton)
+ *   FishtVue.extendTheme("Sunset", sunsetTheme)
+ *   app.use(FishtVue, { optionsTheme: { nameTheme: "Sunset" } })
+ */
+export declare interface FishtVuePlugin extends Plugin {
+  install: Required<Plugin>["install"]
+  /** Регистрирует middleware, запускающийся на каждый install до deepMerge с defaults. */
+  use(middleware: FishtVueMiddleware): void
+  /** Регистрирует custom-компонент глобально для всех будущих installs. */
+  registerComponent(name: string, component: VueComponent): void
+  /** Регистрирует custom theme под именем; после — доступна через `optionsTheme.nameTheme`. */
+  extendTheme(name: string, theme: import("fishtvue/theme").Theme): void
+}
+
+declare const plugin: FishtVuePlugin
 export default plugin
 
 declare module "vue/types/vue" {
@@ -166,7 +211,7 @@ export type OptionsTheme = Partial<{
 export type ComponentsOptions = Partial<{
   Form: FormOption
   Input: InputOption
-  Aria: AriaOption
+  Textarea: TextareaOption
   Switch: SwitchOption
   Select: SelectOption
   Calendar: CalendarOption
@@ -186,4 +231,5 @@ export type ComponentsOptions = Partial<{
   Pagination: PaginationOption
   Split: SplitOption
   Table: TableOption
+  VirtualScroller: VirtualScrollerOption
 }>

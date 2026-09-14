@@ -3,17 +3,40 @@ import { PseudoClasses } from "fishtvue/theme/unoStyle/UnoTypes"
 export const baseFilter = `filter: var(--fv-blur) var(--fv-brightness) var(--fv-contrast) var(--fv-grayscale) var(--fv-hue-rotate) var(--fv-invert) var(--fv-saturate) var(--fv-sepia) var(--fv-drop-shadow);`
 export const baseBackdropFilter = `-webkit-backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);\n  backdrop-filter: var(--fv-backdrop-blur) var(--fv-backdrop-brightness) var(--fv-backdrop-contrast) var(--fv-backdrop-grayscale) var(--fv-backdrop-hue-rotate) var(--fv-backdrop-invert) var(--fv-backdrop-opacity) var(--fv-backdrop-saturate) var(--fv-backdrop-sepia);`
 export const baseTransition = `transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n  transition-duration: 150ms;`
-export const baseTransform = `transform: translate(var(--fv-translate-x), var(--fv-translate-y)) rotate(var(--fv-rotate)) skewX(var(--fv-skew-x)) skewY(var(--fv-skew-y)) scaleX(var(--fv-scale-x)) scaleY(var(--fv-scale-y));`
+// Issue 6 (uno-engine.md): transforms — modern CSS properties (v4-подход). translate:/rotate:/scale: —
+// независимые свойства; в transform:-цепочке остаётся только skew (у него нет modern property).
 export const baseTranslate = `translate: var(--fv-translate-x) var(--fv-translate-y);`
+// Issue 4 (uno-engine.md): 3D-формы. `translate:`/`scale:` принимают третье значение — z-компонента
+// добавляется только классами `translate-z-*`/`scale-z-*`, поэтому 2D-вывод не меняется.
+export const baseTranslate3d = `translate: var(--fv-translate-x) var(--fv-translate-y) var(--fv-translate-z, 0);`
+export const baseScale = `scale: var(--fv-scale-x) var(--fv-scale-y);`
+export const baseScale3d = `scale: var(--fv-scale-x) var(--fv-scale-y) var(--fv-scale-z, 1);`
+// Issue 4 (uno-engine.md): transform-цепочка несёт 3D-повороты и skew. У rotateX/Y/Z нет modern
+// property (в отличие от `rotate:`), поэтому они живут здесь; fallback'и делают цепочку валидной,
+// даже когда задана лишь одна ось. `skew-*` использует ту же цепочку — иначе `skew-x-3 rotate-x-45`
+// затирали бы друг друга.
+export const baseTransform = `transform: rotateX(var(--fv-rotate-x, 0)) rotateY(var(--fv-rotate-y, 0)) rotateZ(var(--fv-rotate-z, 0)) skewX(var(--fv-skew-x, 0)) skewY(var(--fv-skew-y, 0));`
+export const baseSkew = baseTransform
+// Issue 4 (uno-engine.md): полная цепочка box-shadow из пяти слотов — inset-слои идут первыми,
+// как в v4. Используется только новыми `inset-shadow-*` / `inset-ring-*`: у прежних `shadow-*`
+// и `ring-*` цепочка своя, трёхслотовая, и переписывать её здесь значило бы менять вывод у всех
+// существующих классов. Практическое следствие — при комбинации inset-класс должен идти в строке
+// классов последним; зафиксировано в таблице диалекта architecture/theme.md.
+export const baseShadowChain = `box-shadow: var(--fv-inset-shadow, 0 0 #0000), var(--fv-inset-ring-shadow, 0 0 #0000), var(--fv-ring-offset-shadow, 0 0 #0000), var(--fv-ring-shadow, 0 0 #0000), var(--fv-shadow, 0 0 #0000);`
 export const specialSelectors: Record<string, string> = {
-  divide: " > :not([hidden]) ~ :not([hidden])"
+  divide: " > :not([hidden]) ~ :not([hidden])",
+  space: " > :not([hidden]) ~ :not([hidden])"
 }
 export const singleStyles: Record<string, string> = {
   "w-screen": "width: 100vw;",
   "h-screen": "height: 100vh;",
   "max-h-screen": "max-height: 100vh;",
+  "min-h-screen": "min-height: 100vh;",
   italic: "font-style: italic;",
   "not-italic": "font-style: normal;",
+  // Issue 4 (uno-engine.md): Font Smoothing.
+  antialiased: "-webkit-font-smoothing: antialiased;\n  -moz-osx-font-smoothing: grayscale;",
+  "subpixel-antialiased": "-webkit-font-smoothing: auto;\n  -moz-osx-font-smoothing: auto;",
   "bg-none": "background-image: none;",
   "normal-nums": "font-variant-numeric: normal;",
   ordinal: "font-variant-numeric: ordinal;",
@@ -38,12 +61,15 @@ export const singleStyles: Record<string, string> = {
   rounded: "border-radius: 0.25rem;",
   border: "border-width: 1px;",
   "outline-none": "outline: 2px solid transparent;\n  outline-offset: 2px;",
+  // Issue 5 (uno-engine.md): v4-имя «невидимого outline» (в v4 outline-none = outline-style: none,
+  // здесь общее имя сохраняет v3-семантику — см. таблицу диалекта в architecture/theme.md).
+  "outline-hidden": "outline: 2px solid transparent;\n  outline-offset: 2px;",
   outline: "outline-style: solid;",
   "ring-inset": "--fv-ring-inset: inset;",
   ring: "box-shadow: var(--fv-ring-offset-shadow), var(--fv-ring-shadow), var(--fv-shadow, 0 0 #0000);",
   shadow: "box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);",
   blur: `--fv-blur: blur(8px);\n  ${baseFilter}`,
-  "drop-shadow": `--fv-drop-shadow: drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));\n  ${baseFilter}`,
+  "drop-shadow": `--fv-drop-shadow: drop-shadow(0 1px 2px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.1))) drop-shadow(0 1px 1px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.06)));\n  ${baseFilter}`,
   grayscale: `--fv-grayscale: grayscale(100%);\n  ${baseFilter}`,
   invert: `--fv-invert: invert(100%);\n  ${baseFilter}`,
   sepia: `--fv-sepia: sepia(100%);\n  ${baseFilter}`,
@@ -51,9 +77,13 @@ export const singleStyles: Record<string, string> = {
   "backdrop-grayscale": `--fv-backdrop-grayscale: grayscale(100%);\n  ${baseBackdropFilter}`,
   "backdrop-invert": `--fv-backdrop-invert: invert(100%);\n  ${baseBackdropFilter}`,
   "backdrop-sepia": `--fv-backdrop-sepia: sepia(100%);\n  ${baseBackdropFilter}`,
+  // Issue 4 (uno-engine.md): v4 transition-behavior. Без этих записей `transition-discrete`
+  // попадал в правило `transition` и давал пустой `transition-property: ;`.
+  "transition-discrete": `transition-behavior: allow-discrete;`,
+  "transition-normal": `transition-behavior: normal;`,
   "transition-none": `transition-property: none;`,
   "transition-shadow": `transition-property: box-shadow;\n  ${baseTransition}`,
-  transition: `transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;\n  ${baseTransition}`,
+  transition: `transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, backdrop-filter;\n  ${baseTransition}`,
   resize: "resize: both;",
   block: "display: block;",
   inline: "display: inline;",
@@ -79,7 +109,36 @@ export const singleStyles: Record<string, string> = {
   "sr-only":
     "position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border-width: 0;",
   "not-sr-only":
-    "position: static;\n  width: auto;\n  height: auto;\n  padding: 0;\n  margin: 0;\n  overflow: visible;\n  clip: auto;\n  white-space: normal;"
+    "position: static;\n  width: auto;\n  height: auto;\n  padding: 0;\n  margin: 0;\n  overflow: visible;\n  clip: auto;\n  white-space: normal;",
+  // ---Issue 4 (uno-engine.md): keyword-утилиты Tailwind v4 / v4.1 -------------------------
+  // Text wrapping (v4.1).
+  "wrap-anywhere": "overflow-wrap: anywhere;",
+  "wrap-break-word": "overflow-wrap: break-word;",
+  "wrap-normal": "overflow-wrap: normal;",
+  // Gradients без параметра (v4): угол по умолчанию задаёт сам CSS.
+  "bg-radial": "background-image: radial-gradient(var(--fv-gradient-stops));",
+  "bg-conic": "background-image: conic-gradient(var(--fv-gradient-stops));",
+  // Filters (v4).
+  "filter-none": "filter: none;",
+  "backdrop-filter-none": "-webkit-backdrop-filter: none;\n  backdrop-filter: none;",
+  // 3D transforms (v4).
+  "transform-3d": "transform-style: preserve-3d;",
+  "transform-flat": "transform-style: flat;",
+  "transform-none": "transform: none;",
+  "transform-gpu": `transform: translateZ(0) rotateX(var(--fv-rotate-x, 0)) rotateY(var(--fv-rotate-y, 0)) rotateZ(var(--fv-rotate-z, 0)) skewX(var(--fv-skew-x, 0)) skewY(var(--fv-skew-y, 0));`,
+  "transform-cpu": `transform: rotateX(var(--fv-rotate-x, 0)) rotateY(var(--fv-rotate-y, 0)) rotateZ(var(--fv-rotate-z, 0)) skewX(var(--fv-skew-x, 0)) skewY(var(--fv-skew-y, 0));`,
+  "backface-visible": "backface-visibility: visible;",
+  "backface-hidden": "backface-visibility: hidden;",
+  // Accessibility (v4).
+  "forced-color-adjust-auto": "forced-color-adjust: auto;",
+  "forced-color-adjust-none": "forced-color-adjust: none;",
+  // Interactivity (v4).
+  "field-sizing-content": "field-sizing: content;",
+  "field-sizing-fixed": "field-sizing: fixed;",
+  // Effects — размер по умолчанию, как у `shadow` / `ring` без значения (v4).
+  "inset-shadow": `--fv-inset-shadow: ${"inset 0 2px 4px var(--fv-inset-shadow-color, rgb(0 0 0 / 0.05))"};\n  ${baseShadowChain}`,
+  "inset-ring": `--fv-inset-ring-shadow: inset 0 0 0 1px var(--fv-inset-ring-color, currentcolor);\n  ${baseShadowChain}`,
+  "text-shadow-none": "text-shadow: none;"
 }
 
 export const MATH_FUNCTIONS = [
@@ -155,6 +214,13 @@ export const positionsBackground = {
   "left-top": "left-top",
   "right-bottom": "right-bottom",
   "right-top": "right-top",
+  // v4.1-имена (uno-engine.md Issue 3): двухсловные позиции word-order top/bottom-first.
+  // Двухсловные ключи обязаны идти в map ДО одиночных (top|left|…) — alternation в reg
+  // собирается из Object.keys, первый матч выигрывает.
+  "top-left": "top-left",
+  "top-right": "top-right",
+  "bottom-left": "bottom-left",
+  "bottom-right": "bottom-right",
   bottom: "bottom",
   center: "center",
   left: "left",
@@ -209,6 +275,8 @@ export const wordBreak: Record<string, string> = {
 }
 export const borderSize: Record<string, string> = {
   none: "0px",
+  // v4-имена (uno-engine.md Issue 3): rounded-xs/rounded-4xl; v3-шкала sm…3xl не тронута.
+  xs: "0.125rem",
   sm: "0.125rem",
   undefined: "0.25rem",
   md: "0.375rem",
@@ -216,9 +284,13 @@ export const borderSize: Record<string, string> = {
   xl: "0.75rem",
   "2xl": "1rem",
   "3xl": "1.5rem",
+  "4xl": "2rem",
   full: "9999px"
 }
 export const boxShadow: Record<string, string> = {
+  // Issue 5 (uno-engine.md): v4-имена с v4-значениями; общие имена (sm, md, …) сохраняют v3-семантику.
+  "2xs": "box-shadow: 0 1px rgb(0 0 0 / 0.05);",
+  xs: "box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);",
   sm: "box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);",
   md: "box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);",
   lg: "box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);",
@@ -249,6 +321,9 @@ export const blend: Record<string, string> = {
 }
 export const blur: Record<string, string | number> = {
   none: "",
+  // v4-имена (uno-engine.md Issue 3): blur-2xs/blur-xs; v3-шкала sm…3xl не тронута.
+  "2xs": 2,
+  xs: 4,
   sm: 4,
   md: 12,
   lg: 16,
@@ -256,20 +331,84 @@ export const blur: Record<string, string | number> = {
   "2xl": 40,
   "3xl": 64
 }
+// Issue 4 (uno-engine.md): цвет тени вынесен в `--fv-drop-shadow-color` с fallback'ом на прежний
+// литерал. Внешний вид без `drop-shadow-<color>` не изменился, но класс цвета (v4.1) теперь работает
+// в любом порядке относительно класса размера — они пишут разные свойства.
 export const dropShadow: Record<string, string> = {
-  sm: "--fv-drop-shadow: drop-shadow(0 1px 1px rgb(0 0 0 / 0.05));",
-  md: "--fv-drop-shadow: drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));",
-  lg: "--fv-drop-shadow: drop-shadow(0 10px 8px rgb(0 0 0 / 0.04)) drop-shadow(0 4px 3px rgb(0 0 0 / 0.1));",
-  xl: "--fv-drop-shadow: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));",
-  "2xl": "--fv-drop-shadow: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15));",
+  // Issue 5 (uno-engine.md): v4-имя; общие имена сохраняют v3-семантику.
+  xs: "--fv-drop-shadow: drop-shadow(0 1px 1px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.05)));",
+  sm: "--fv-drop-shadow: drop-shadow(0 1px 1px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.05)));",
+  md: "--fv-drop-shadow: drop-shadow(0 4px 3px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.07))) drop-shadow(0 2px 2px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.06)));",
+  lg: "--fv-drop-shadow: drop-shadow(0 10px 8px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.04))) drop-shadow(0 4px 3px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.1)));",
+  xl: "--fv-drop-shadow: drop-shadow(0 20px 13px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.03))) drop-shadow(0 8px 5px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.08)));",
+  "2xl": "--fv-drop-shadow: drop-shadow(0 25px 25px var(--fv-drop-shadow-color, rgb(0 0 0 / 0.15)));",
   none: "--fv-drop-shadow: drop-shadow(0 0 #0000);"
+}
+// Issue 4 (uno-engine.md): v4.1 text-shadow.
+export const textShadow: Record<string, string> = {
+  "2xs": "0px 1px 0px var(--fv-text-shadow-color, rgb(0 0 0 / 0.15))",
+  xs: "0px 1px 1px var(--fv-text-shadow-color, rgb(0 0 0 / 0.2))",
+  sm: "0px 1px 0px var(--fv-text-shadow-color, rgb(0 0 0 / 0.075)), 0px 1px 1px var(--fv-text-shadow-color, rgb(0 0 0 / 0.075)), 0px 2px 2px var(--fv-text-shadow-color, rgb(0 0 0 / 0.075))",
+  md: "0px 1px 1px var(--fv-text-shadow-color, rgb(0 0 0 / 0.1)), 0px 1px 2px var(--fv-text-shadow-color, rgb(0 0 0 / 0.1)), 0px 2px 4px var(--fv-text-shadow-color, rgb(0 0 0 / 0.1))",
+  lg: "0px 1px 2px var(--fv-text-shadow-color, rgb(0 0 0 / 0.1)), 0px 3px 2px var(--fv-text-shadow-color, rgb(0 0 0 / 0.1)), 0px 4px 8px var(--fv-text-shadow-color, rgb(0 0 0 / 0.1))",
+  none: "none"
+}
+// Issue 4 (uno-engine.md): v4 inset-shadow. Цепочка `box-shadow` собирается из пяти слотов с
+// fallback'ами — inset-слои идут первыми, как в v4.
+export const insetShadow: Record<string, string> = {
+  "2xs": "inset 0 1px var(--fv-inset-shadow-color, rgb(0 0 0 / 0.05))",
+  xs: "inset 0 1px 1px var(--fv-inset-shadow-color, rgb(0 0 0 / 0.05))",
+  sm: "inset 0 2px 4px var(--fv-inset-shadow-color, rgb(0 0 0 / 0.05))",
+  none: "0 0 #0000"
+}
+// Issue 4 (uno-engine.md): v4 3D-перспектива. Значения — из дефолтной темы Tailwind v4.
+export const perspective: Record<string, string> = {
+  dramatic: "100px",
+  near: "300px",
+  normal: "500px",
+  midrange: "800px",
+  distant: "1200px",
+  none: "none"
+}
+export const perspectiveOrigin: Record<string, string> = {
+  center: "center",
+  top: "top",
+  "top-right": "top right",
+  right: "right",
+  "bottom-right": "bottom right",
+  bottom: "bottom",
+  "bottom-left": "bottom left",
+  left: "left",
+  "top-left": "top left"
+}
+// Issue 4 (uno-engine.md): v4.1 font-stretch (именованные ключи; проценты и arbitrary — в правиле).
+export const fontStretch: Record<string, string> = {
+  normal: "normal",
+  "ultra-condensed": "ultra-condensed",
+  "extra-condensed": "extra-condensed",
+  condensed: "condensed",
+  "semi-condensed": "semi-condensed",
+  "semi-expanded": "semi-expanded",
+  expanded: "expanded",
+  "extra-expanded": "extra-expanded",
+  "ultra-expanded": "ultra-expanded"
+}
+// Issue 4 (uno-engine.md): v4 color-scheme.
+export const colorScheme: Record<string, string> = {
+  normal: "normal",
+  dark: "dark",
+  light: "light",
+  "light-dark": "light dark",
+  "only-dark": "only dark",
+  "only-light": "only light"
 }
 export const transitionProperty: Record<string, string> = {
   all: `all`,
   colors: `color, background-color, border-color, text-decoration-color, fill, stroke`,
   opacity: `opacity`,
   shadow: `box-shadow`,
-  transform: `transform`
+  // Issue 6: rotate/scale/translate — независимые modern properties, transition должен покрывать их явно (v4).
+  transform: `transform, translate, scale, rotate`
 }
 export const transitionFunction: Record<string, string> = {
   "in-out": "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -431,6 +570,13 @@ export const divideWidth: Record<string, (value: string) => string> = {
   y: (value) =>
     `--fv-divide-y-reverse: 0;\n  border-top-width: calc(${value}* calc(1 - var(--fv-divide-y-reverse)));\n  border-bottom-width: calc(${value}* var(--fv-divide-y-reverse));`
 }
+// Issue 4 (uno-engine.md): Space Between — зеркало divideWidth (селектор — specialSelectors.space).
+export const spaceBetween: Record<string, (value: string) => string> = {
+  x: (value) =>
+    `--fv-space-x-reverse: 0;\n  margin-right: calc(${value} * var(--fv-space-x-reverse));\n  margin-left: calc(${value} * calc(1 - var(--fv-space-x-reverse)));`,
+  y: (value) =>
+    `--fv-space-y-reverse: 0;\n  margin-top: calc(${value} * calc(1 - var(--fv-space-y-reverse)));\n  margin-bottom: calc(${value} * var(--fv-space-y-reverse));`
+}
 export const borderLogical: Record<string, (value: string) => string> = {
   undefined: (value) => `border-radius: ${value};`,
   ss: (value) => `border-start-start-radius: ${value};`,
@@ -476,18 +622,29 @@ export const borderSpacing: Record<string, (value: string) => string> = {
   y: (value) => `border-spacing: var(--fv-border-spacing-x) ${value};`
 }
 export const scale: Record<string, (value: string) => string> = {
-  undefined: (value) => `--fv-scale-x: ${value};\n  --fv-scale-y: ${value};\n  ${baseTransform}`,
-  x: (value) => `--fv-scale-x: ${value};\n  ${baseTransform}`,
-  y: (value) => `--fv-scale-y: ${value};\n  ${baseTransform}`
+  undefined: (value) => `--fv-scale-x: ${value};\n  --fv-scale-y: ${value};\n  ${baseScale}`,
+  x: (value) => `--fv-scale-x: ${value};\n  ${baseScale}`,
+  y: (value) => `--fv-scale-y: ${value};\n  ${baseScale}`,
+  z: (value) => `--fv-scale-z: ${value};\n  ${baseScale3d}`
 }
 export const translate: Record<string, (value: string) => string> = {
   undefined: (value) => `--fv-translate-x: ${value};\n  --fv-translate-y: ${value};\n  ${baseTranslate}`,
   x: (value) => `--fv-translate-x: ${value};\n  ${baseTranslate}`,
-  y: (value) => `--fv-translate-y: ${value};\n  ${baseTranslate}`
+  y: (value) => `--fv-translate-y: ${value};\n  ${baseTranslate}`,
+  z: (value) => `--fv-translate-z: ${value};\n  ${baseTranslate3d}`
 }
+// Issue 4 (uno-engine.md): `skew-<n>` без оси (v4) задаёт обе. Раньше эта форма роняла движок:
+// `skew[undefined]` не существовало, и вызов падал ещё до fail-closed-проверок.
 export const skew: Record<string, (value: string) => string> = {
-  x: (value) => `--fv-skew-x: ${value};\n  ${baseTransform}`,
-  y: (value) => `--fv-skew-y: ${value};\n  ${baseTransform}`
+  undefined: (value) => `--fv-skew-x: ${value};\n  --fv-skew-y: ${value};\n  ${baseSkew}`,
+  x: (value) => `--fv-skew-x: ${value};\n  ${baseSkew}`,
+  y: (value) => `--fv-skew-y: ${value};\n  ${baseSkew}`
+}
+// Issue 4 (uno-engine.md): v4 3D-повороты — отдельные CSS-переменные внутри общей transform-цепочки.
+export const rotate3d: Record<string, (value: string) => string> = {
+  x: (value) => `--fv-rotate-x: ${value};\n  ${baseTransform}`,
+  y: (value) => `--fv-rotate-y: ${value};\n  ${baseTransform}`,
+  z: (value) => `--fv-rotate-z: ${value};\n  ${baseTransform}`
 }
 export const textSize: Record<string, (value?: string) => string> = {
   xs: (value?: string) => `font-size: 0.75rem;\n  line-height: ${value ?? "1rem"};`,
@@ -526,7 +683,11 @@ export const formElementStates = {
   "out-of-range": ":out-of-range",
   "placeholder-shown": ":placeholder-shown",
   autofill: ":autofill",
-  "read-only": ":read-only"
+  "read-only": ":read-only",
+  // Issue 2 (uno-engine.md): v4-варианты.
+  optional: ":optional",
+  "user-valid": ":user-valid",
+  "user-invalid": ":user-invalid"
 } satisfies PseudoClasses["formElementStates"]
 export const structuralPseudoClasses = {
   first: ":first-child",
@@ -550,10 +711,14 @@ export const pseudoElements = {
   selection: "::selection",
   file: "::file-selector-button",
   backdrop: "::backdrop",
-  placeholder: "::placeholder"
+  placeholder: "::placeholder",
+  // Issue 2 (uno-engine.md): v4.1.
+  "details-content": "::details-content"
 } satisfies PseudoClasses["pseudoElements"]
 export const specialStates = {
   open: "[open]",
+  // Issue 2 (uno-engine.md): v4-вариант [inert].
+  inert: "[inert]",
   rtl: `:where([dir="rtl"], [dir="rtl"] *)`,
   ltr: `:where([dir="ltr"], [dir="ltr"] *)`
 } satisfies PseudoClasses["specialStates"]
@@ -576,7 +741,36 @@ export const media: Record<string, string> = {
   "forced-colors": "@media (forced-colors: active)",
   portrait: "@media (orientation: portrait)",
   landscape: "@media (orientation: landscape)",
-  print: "@media print"
+  print: "@media print",
+  // Issue 2 (uno-engine.md): v4/v4.1 media-варианты.
+  "pointer-fine": "@media (pointer: fine)",
+  "pointer-coarse": "@media (pointer: coarse)",
+  "pointer-none": "@media (pointer: none)",
+  "any-pointer-fine": "@media (any-pointer: fine)",
+  "any-pointer-coarse": "@media (any-pointer: coarse)",
+  "any-pointer-none": "@media (any-pointer: none)",
+  "inverted-colors": "@media (inverted-colors: inverted)",
+  noscript: "@media (scripting: none)",
+  // Issue 2 (uno-engine.md): v4 `@starting-style`. Условия у at-rule нет, но машинерия media
+  // (открыть блок → закрыть) подходит ему без изменений.
+  starting: "@starting-style"
+}
+
+// Issue 2 (uno-engine.md): container queries (v4 core). Шкала — дефолтная тема Tailwind v4.
+export const containerSizes: Record<string, string> = {
+  "3xs": "16rem",
+  "2xs": "18rem",
+  xs: "20rem",
+  sm: "24rem",
+  md: "28rem",
+  lg: "32rem",
+  xl: "36rem",
+  "2xl": "42rem",
+  "3xl": "48rem",
+  "4xl": "56rem",
+  "5xl": "64rem",
+  "6xl": "72rem",
+  "7xl": "80rem"
 }
 
 export const mediaDynamic: Record<string, (value: string) => string> = {

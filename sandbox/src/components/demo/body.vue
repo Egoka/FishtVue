@@ -4,7 +4,7 @@
   import { ref } from "vue"
 
   const isOnlyIcons = ref(true)
-  const panels = ref([
+  const panels = ref<Panel[]>([
     {
       name: "menu",
       size: 75,
@@ -24,7 +24,7 @@
   <Split
     :panels="panels"
     units="pixels"
-    :styles="{ separator: 'bg-transparent dark:bg-transparent' }"
+    :classes="{ separator: 'bg-transparent dark:bg-transparent' }"
     class="overflow-auto bg-white dark:bg-zinc-800 sm:p-3"
     @updated-panels="updateSize">
     <template #menu><div class="bg-red-600">test</div></template>

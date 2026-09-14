@@ -10,7 +10,7 @@
     | "Input"
     | "Select"
     | "Calendar"
-    | "Aria"
+    | "Textarea"
     | "TextEditor"
     | "Switch"
     | "Custom"
@@ -98,10 +98,10 @@
         name: "Calendar",
         label: "Calendar"
       },
-      Aria: {
-        typeComponent: "Aria",
-        name: "Aria",
-        label: "Aria"
+      Textarea: {
+        typeComponent: "Textarea",
+        name: "Textarea",
+        label: "Textarea"
       },
       TextEditor: {
         typeComponent: "TextEditor",

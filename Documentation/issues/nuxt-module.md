@@ -1,7 +1,7 @@
 ---
 title: Issues — Nuxt module + plugins
-summary: Аудит lib/module + lib/plugins — coverage 0%, hardcoded version detection через require (Nuxt 3 vs 4), нет тестов SSR injection, FISHT_VUE_COMPONENTS list требует ручной поддержки.
-updated: 2026-05-10
+summary: Аудит lib/module + lib/plugins. Issue 4 (peer range @nuxt/kit) закрыт 2026-06-19 (Wave 2.1); Issues 1 (частично), 2, 5 закрыты 2026-09-05 — заведён nuxt.test.ts (lib/module 0% → 100% stmts), удалено мёртвое version-detection через require, реализован disableGlobalStyles. Остаются hardcoded FISHT_VUE_COMPONENTS, lib/plugins 0%, prefer-component-naming.
+updated: 2026-09-06
 audit-checklist: 60-point + Configuration support
 source: lib/module/, lib/plugins/
 related-doc: ../architecture/nuxt-module.md
@@ -14,15 +14,19 @@ related-doc: ../architecture/nuxt-module.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 6 | A2, A4-5, C18 (Nuxt module), J46 (0% coverage), K49 (peer-range Nuxt 3+4 conflict), L53 (disableGlobalStyles нет тестов) |
-| medium | 4 | D21, K52 (require dynamic), F30, K46 |
-| low | 2 | E29, B10 |
+| high | 0 | ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2, ~~C18~~ ✅, ~~J46 (module 0%)~~ ✅, ~~L53 (disableGlobalStyles)~~ ✅ 2026-09-05 |
+| medium | 0 | ~~D25 (Issue 8 — prefix)~~ ✅ 2026-09-06, ~~F30~~ ✅ фантом, ~~D21 (Issue 3 — hardcoded списки)~~ ✅ 2026-09-05, ~~K46 (Issue 7)~~ ✅ 2026-09-05, ~~K52~~ ✅ 2026-09-05 |
+| low | 0 | ~~E29, B10~~ ✅ N/A — см. врезку |
 
-## Issue 1: lib/module/nuxt.ts coverage 0% — нет тестов
+> **Три категории неприменимы к build-модулю.** `F30` (i18n), `E29` (a11y) и `B10` (theme tokens) достались `nuxt-module.md` от общего 60-пунктового чек-листа, рассчитанного на компоненты. `lib/module/nuxt.ts` не рендерит разметку, не показывает текст пользователю и не имеет цветов: он регистрирует компоненты и плагин на этапе сборки. Ни одной секции этим категориям в файле не соответствует — тот же класс фантомов, что снят в T11 у Button и Table.
+
+## ~~Issue 1: lib/module/nuxt.ts coverage 0% — нет тестов~~ ✅ resolved 2026-09-05 (частично — `lib/plugins` остаётся, см. Issue 7)
+
+> **Закрыто 2026-09-05.** Заведён [lib/module/nuxt.test.ts](../../lib/module/nuxt.test.ts) — 11 тестов, `lib/module` **0% → 100% stmts / 75% branch**. `defineNuxtModule` мокается в тождественную функцию, `setup(options, nuxt)` вызывается напрямую с подставленными `defaults` — проверяется логика регистрации без поднятия Nuxt-приложения. Покрыты все четыре пункта плана ниже: список компонентов (включая `VirtualScroller`), `prefix`, `disableGlobalStyles` (обе ветки), `autoImport: false`. Сверх плана — инвариант «каждый named-экспорт compound-барреля зарегистрирован» (он и вскрыл пропажу `MenuItem`/`MenuGroup`/`AccordionItem`, см. Issue 3) и контракт `fieldsOmit` для `MODULE_OPTIONS`. Integration-тест через `@nuxt/test-utils` (п. 3 плана) **не** делался — остаётся вместе с Issue 7.
 
 - **Категория:** J46
-- **Severity:** high
-- **Где:** [lib/module/nuxt.ts](../../lib/module/nuxt.ts), coverage 0%
+- **Severity:** ~~high~~
+- **Где:** [lib/module/nuxt.ts](../../lib/module/nuxt.ts)
 
 ### Что найдено
 
@@ -42,11 +46,15 @@ lib/module/nuxt.ts: 0/0/0/0
    - `autoImport: false` — компоненты не registered.
 3. Integration test через `@nuxt/test-utils` — сделать sandbox-test.
 
-## Issue 2: `getNuxtVersion()` через `require("nuxt/package.json")` — fragile в pure ESM
+## ~~Issue 2: `getNuxtVersion()` через `require("nuxt/package.json")` — fragile в pure ESM~~ ✅ resolved 2026-09-05
+
+> **Закрыто удалением, а не переписыванием.** Единственным потребителем `getNuxtVersion()` был `isNuxt4()`, а тот — строка `const importPath = isV4 ? "#app" : "#app"`: **обе ветки одинаковы**. Весь блок version-detection (`createRequire` + `require("nuxt/package.json")` + `isNuxt4`) существовал ради мёртвого выбора и вырезан целиком; в шаблоне плагина `'#app'` подставляется литералом. Pure-ESM-совместимость (Bun/Deno) достигнута без асинхронного `import ... with { type: "json" }` из плана ниже.
+>
+> В том же заходе исправлен связанный импорт: `from "path"` → `from "node:path"`. Голый спецификатор перехватывался legacy-пакетом `path@0.12.7` из devDependencies монорепозитория, который на современном Node падает с `util.isString is not a function`. Обнаружено сразу, как только модуль впервые попал под тест — в проде это выстрелило бы при любой резолюции, отдающей приоритет пакету перед builtin.
 
 - **Категория:** K52, A4 (ESM/CJS dual hazard)
-- **Severity:** medium
-- **Где:** [module/nuxt.ts:10-15](../../lib/module/nuxt.ts#L10-L15)
+- **Severity:** ~~medium~~
+- **Где:** [module/nuxt.ts](../../lib/module/nuxt.ts) — блок удалён
 
 ### Что найдено
 
@@ -78,7 +86,7 @@ const getNuxtVersion = () => {
 2. Или через `@nuxt/kit` API — если доступно.
 3. Тест: Bun + Vite — модуль загружается без require-shim.
 
-## Issue 3: Hardcoded `FISHT_VUE_COMPONENTS` list — ручная поддержка
+## ~~Issue 3: Hardcoded `FISHT_VUE_COMPONENTS` list — ручная поддержка~~ ✅ resolved 2026-09-05
 
 - **Категория:** D21
 - **Severity:** medium
@@ -88,53 +96,62 @@ const getNuxtVersion = () => {
 
 Список 22 компонентов прописан явно. При добавлении нового компонента — нужно вручную дополнить массив. Ошибки: новый компонент не auto-imported, или удалённый — registers fail.
 
+> **Риск подтверждён на практике (2026-09-05).** Ровно этот механизм и выстрелил, только на параллельном массиве `FISHT_VUE_SUBCOMPONENTS`: в нём были заведены `Column`/`ColumnGroup`/`FormField`/`FormSection`/`SelectOption`/`SelectGroup`, но **не** `MenuItem`/`MenuGroup`/`AccordionItem` — хотя [menu/index.ts](../../lib/menu/index.ts) и [accordion/index.ts](../../lib/accordion/index.ts) их экспортируют, а [02-installation.md](../02-installation.md) обещает «В Nuxt — глобальны». В Nuxt-приложении `<MenuItem>` без ручного импорта оставался unresolved.
+>
+> **Частично закрыто:** три записи добавлены, и заведён инвариант-тест — «каждый named-экспорт барреля `table`/`form`/`select`/`menu`/`accordion` присутствует в `FISHT_VUE_SUBCOMPONENTS`» ([nuxt.test.ts](../../lib/module/nuxt.test.ts), парсит `export { default as X }` из barrel-исходников). Повторить рассинхрон на compound-детях больше нельзя — тест упадёт.
+>
+> **Остаётся открытым** сам Issue: `FISHT_VUE_COMPONENTS` (top-level, 23 имени) по-прежнему заполняется руками, инвариант против [lib/index.ts](../../lib/index.ts) не заведён — тест проверяет только наличие `Table` и `VirtualScroller` точечно. Auto-derive (п. 1 ниже) не делался.
+
 ### Что нужно сделать
 
 1. Auto-derive из [lib/index.ts](../../lib/index.ts) или из filesystem (`fs.readdirSync('./lib').filter(...)`).
-2. Тест: `FISHT_VUE_COMPONENTS` соответствует реальным экспортам.
+2. ~~Тест: `FISHT_VUE_SUBCOMPONENTS` соответствует реальным экспортам compound-баррелей~~ ✅ 2026-09-05.
+3. ~~Тест: `FISHT_VUE_COMPONENTS` соответствует экспортам корневого barrel~~ ✅ 2026-09-05.
 
-## Issue 4: peer Nuxt range — `nuxt: ">=3.0.0"` и `@nuxt/kit ^4.1.2` несогласованы
+> **Закрыто инвариантом, а не auto-derive.** Списки остались явными, но рассинхронить их больше нельзя: тест парсит `export { default as X }` из [lib/index.ts](../../lib/index.ts) и сверяет с `FISHT_VUE_COMPONENTS` **в обе стороны** — и «забыли добавить», и «осталось имя, которого barrel не отдаёт» (второе опаснее: `addComponent` указал бы на несуществующий `filePath`, и Nuxt упал бы при резолве). Единственное легитимное расхождение — `Config`, это Vue plugin, а не компонент; исключение задано явным списком, а не «на глаз».
+>
+> Auto-derive (п. 1) сознательно не делался: явный список читается при ревью, а чтение barrel'а в рантайме модуля добавило бы Nuxt-сборке зависимость от парсинга исходника. Инвариант даёт ту же гарантию без этой цены.
 
-- **Категория:** K49 (Vue/Nuxt peer ranges)
-- **Severity:** high
-- **Где:** [lib/package.json:28-32](../../lib/package.json#L28-L32)
+## ~~Issue 4: peer Nuxt range — `nuxt: ">=3.0.0"` и `@nuxt/kit ^4.1.2` несогласованы~~ ✅ resolved 2026-06-19 (Wave 2.1)
 
-### Что найдено
+> **Status:** ✅ resolved 2026-06-19 (Wave 2.1). `@nuxt/kit`/`@nuxt/schema` peer-range расширен `^4.1.2` → `>=3.0.0` — согласован с `nuxt: ">=3.0.0"`. Nuxt 3 больше не получает несовместимый `@nuxt/kit` major 4.
+
+**Что сделано (2026-06-19):**
+
+- [lib/package.json](../../lib/package.json) — `@nuxt/kit`/`@nuxt/schema` peer = `>=3.0.0` (были `^4.1.2`); оба остаются optional. Сам monorepo собирается на Nuxt 3 (`@nuxt/kit ^3.17.3` в root) — старый `^4.1.2` противоречил реальности.
+- Контракт — [lib/package.test.ts](../../lib/package.test.ts) (`@nuxt/kit`/`@nuxt/schema` peer === `>=3.0.0`, optional).
+- Runtime detection `isNuxt4()` уже есть для разных API paths.
+
+### Что найдено (was)
 
 ```json
-"peerDependencies": {
-  "@nuxt/kit": "^4.1.2",
-  "@nuxt/schema": "^4.1.2",
-  "nuxt": ">=3.0.0"
-}
+"peerDependencies": { "@nuxt/kit": "^4.1.2", "@nuxt/schema": "^4.1.2", "nuxt": ">=3.0.0" }
 ```
 
-`nuxt: ">=3.0.0"` — соглашается с Nuxt 3+. Но `@nuxt/kit: ^4.1.2` — только Nuxt 4 schema. Nuxt 3 имеет `@nuxt/kit: ^3.x`.
+`nuxt: ">=3.0.0"` допускал Nuxt 3+, но `@nuxt/kit: ^4.1.2` — только Nuxt 4. Пользователь Nuxt 3 получал `@nuxt/kit ^4.1.2` (новый major) → runtime-ошибки.
 
-Если пользователь Nuxt 3 — установится `@nuxt/kit ^4.1.2` (новая major) что приведёт к runtime ошибкам.
-
-### Что нужно сделать
-
-1. Расширить peer ranges:
-   ```json
-   "@nuxt/kit": ">=3.0.0",
-   "@nuxt/schema": ">=3.0.0"
-   ```
-2. Runtime detection — `isNuxt4()` уже есть, использовать correctly для разных API paths.
-3. Документировать в [Documentation/architecture/nuxt-module.md](../architecture/nuxt-module.md): «Tested with Nuxt 3.x and 4.x».
+- **Категория:** ~~K49 (Vue/Nuxt peer ranges)~~ — закрыто
+- **Severity:** ~~high~~
+- **Где (was):** [lib/package.json:28-32](../../lib/package.json#L28-L32)
 
 ### Acceptance criteria
 
-- [ ] Установка fishtvue в Nuxt 3 проект — работает без version conflicts.
-- [ ] Аналогично для Nuxt 4.
+- [x] Установка fishtvue в Nuxt 3 проект — peer-range допускает `@nuxt/kit ^3.x` (нет принудительного major 4).
+- [x] Аналогично для Nuxt 4 (`>=3.0.0` покрывает обе major).
 
-## Issue 5: `disableGlobalStyles: false` default — но что именно отключается?
+## ~~Issue 5: `disableGlobalStyles: false` default — но что именно отключается?~~ ✅ resolved 2026-09-05
+
+> **Ответ на вопрос заголовка: до 2026-09-05 — ничего.** Опция объявлялась в `defaults`, вычиталась из plugin-конфига через `MODULE_OPTIONS`/`fieldsOmit` и **нигде не читалась** — полный no-op. Значение `true` не отключало ничего.
+>
+> **Реализовано** по документированной здесь же семантике: при `disableGlobalStyles: true` не вызывается `addPlugin` для server-плагина [plugins/nuxt.ts](../../lib/plugins/nuxt.ts) (он пушит собранный `cssComponents` в `ssrContext.head` на хуке `app:rendered`) — то есть отключается SSR-инжект CSS. Client-плагин конфигурации (`addPluginTemplate` → `app.use(FishtVue, options)`) при этом **остаётся**: иначе компоненты потеряли бы config, локали и тему, а не только стили.
+>
+> Обе ветки покрыты тестами ([nuxt.test.ts](../../lib/module/nuxt.test.ts), describe «disableGlobalStyles»), включая отдельную проверку, что client-плагин не задет.
 
 - **Категория:** L53
-- **Severity:** high
-- **Где:** [module/nuxt.ts](../../lib/module/nuxt.ts) defaults
+- **Severity:** ~~high~~
+- **Где:** [module/nuxt.ts](../../lib/module/nuxt.ts) — `if (!options.disableGlobalStyles)` перед `addPlugin`
 
-### Что найдено
+### Что найдено (was)
 
 `disableGlobalStyles: false` — default. Если `true` — server plugin не должен инжектить CSS. Behavior не задокументировано в [Documentation/architecture/nuxt-module.md](../architecture/nuxt-module.md), не тестируется.
 
@@ -143,11 +160,17 @@ const getNuxtVersion = () => {
 1. Тест: `disableGlobalStyles: true` — server plugin не подключается.
 2. Документировать use-cases (например, для Tailwind potlight без global CSS).
 
-## Issue 6: SSR styles + sideEffects + unstyled
+## ~~Issue 6: SSR styles + sideEffects + unstyled~~ ✅ resolved (наследуется от волн 2 и 3.1)
 
-См. [button.md Issue 1, 8, 9, 14](./button.md). Server plugin должен корректно инжектить styles в SSR.
+Все четыре корневых issue закрыты: [button.md Issue 1](./button.md) (SSR-инжекция) ✅ 2026-06-07, [Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map) ✅ 2026-06-11, [Issue 14](./button.md) (`unstyled`) ✅ 2026-05-11. Работу server-плагина по инжекции стилей в SSR см. в Issue 5 (`disableGlobalStyles`) и Issue 7 (его покрытие тестами).
 
-## Issue 7: `lib/plugins/{Plugins,nuxt}` coverage 0%
+## ~~Issue 7: `lib/plugins/{Plugins,nuxt}` coverage 0%~~ ✅ resolved 2026-09-05
+
+> **Закрыто тестами** — [plugins.test.ts](../../lib/plugins/plugins.test.ts), 6 кейсов. `plugins/nuxt.ts` **0% → 100%** по всем метрикам: пуш по одному style-узлу на компонент, формат записи (`type: text/css`, `data-fishtvue-style-id`, `innerHTML`), пустой реестр, и обе ветки отказа — вне SSR-контекста и при `process.server === false`. `defineNuxtPlugin` мокается тождественной функцией, поэтому Nuxt поднимать не нужно.
+>
+> `Plugins.ts` — чистый ре-экспорт, его контракт проверен отдельным кейсом; цифра в отчёте останется нулём (0 исполняемых инструкций, см. ниже).
+>
+> **Важно про саму метрику.** Поднять её тестами **нельзя**: у модуля 0 исполняемых инструкций после трансформа (`export default <литерал>` / чистый ре-экспорт), v8 рапортует `0/0 statements`, а репортер рисует это как «0%». Проверено по `coverage-final.json`. На агрегат такие файлы не влияют — они не добавляют ни в числитель, ни в знаменатель. Это тот же класс, что уже описанные «ложные нули — renderless-дети». Issue закрыт по существу: поведение теперь проверяется тестами, а цифра в отчёте останется нулём навсегда.
 
 - **Категория:** J46
 - **Где:** [lib/plugins/](../../lib/plugins/), coverage 0%
@@ -159,13 +182,18 @@ Plugins.ts 6 lines, nuxt.ts 22 lines — coverage 0%. Server plugin критич
 ### Что нужно сделать
 
 1. Тест: server plugin собирает styles из всех Component-инстанций при SSR-render.
-2. Тест: `disableGlobalStyles` skip server plugin loading.
+2. ~~Тест: `disableGlobalStyles` skip server plugin loading~~ ✅ 2026-09-05 — покрыт со стороны модуля ([nuxt.test.ts](../../lib/module/nuxt.test.ts)); сам `lib/plugins/nuxt.ts` по-прежнему 0%, п. 1 открыт.
 
-## Issue 8: prefer-component-naming не задокументирован
+## ~~Issue 8: prefer-component-naming не задокументирован~~ ✅ resolved 2026-09-06
 
 - **Категория:** D25
+- **Severity:** ~~medium~~
 
-`prefix: ""` default — компоненты regist'ятся как `<Button>`. С prefix `"Fv"` — `<FvButton>`. Документировать чётко.
+`prefix: ""` default — компоненты регистрируются как `<Button>`. С prefix `"Fv"` — `<FvButton>`.
+
+**Resolution.** Раздел [architecture/nuxt-module.md §9.3](../architecture/nuxt-module.md) расширен с примера до контракта: как выбирать значение (PascalCase, подставляется буквально, без разделителя), **когда префикс нужен** и что он не затрагивает.
+
+Практически важен второй пункт. Дефолтные имена `<Button>` / `<Input>` / `<Table>` — самые вероятные для коллизии: собственный `components/Button.vue`, вторая UI-библиотека, `@nuxt/ui`. Nuxt в такой ситуации не падает — выигрывает зарегистрированный последним, и расхождение проявляется как «кнопка выглядит не так», а не как ошибка сборки. Такое отлаживают часами, поэтому рекомендация задавать префикс при наличии любой второй библиотеки вынесена в текст явно.
 
 ## Cross-cutting: Configuration support
 

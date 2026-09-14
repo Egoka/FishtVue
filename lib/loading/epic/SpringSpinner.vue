@@ -24,7 +24,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -104,8 +104,8 @@
     width: 60px;
     height: 60px;
     border: calc(60px / 7) solid transparent;
-    border-right-color: #ff1d5e;
-    border-top-color: #ff1d5e;
+    border-right-color: currentColor;
+    border-top-color: currentColor;
     border-radius: 50%;
     box-sizing: border-box;
     animation: spring-spinner-animation 3s ease-in-out infinite;

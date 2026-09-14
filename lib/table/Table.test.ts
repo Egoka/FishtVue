@@ -3,9 +3,15 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import FishtVue from "fishtvue/config"
 import { addDays, format } from "date-fns"
 import * as functionHandler from "fishtvue/utils/functionHandler"
+import { convertToPhone, convertToNumber } from "fishtvue/utils/numberHandler"
 import Table from "fishtvue/table/Table.vue"
 import { TableOption, TableProps } from "fishtvue/table/Table"
 import { nextTick } from "vue"
+import { tailwind } from "fishtvue/theme"
+import { cssComponents } from "fishtvue/component"
+import Select from "fishtvue/select/Select.vue"
+import Calendar from "fishtvue/calendar/Calendar.vue"
+import Loading from "fishtvue/loading/Loading.vue"
 
 describe("Table Component", () => {
   beforeAll(() => {
@@ -88,7 +94,7 @@ describe("Table Component", () => {
       it("renders no data message when dataSource is empty", () => {
         const wrapper = mount(Table, {
           props: {
-            noData: "Текст при отсутствии данных"
+            emptyText: "Текст при отсутствии данных"
           }
         })
 
@@ -136,9 +142,9 @@ describe("Table Component", () => {
 
       it("renders table with sortable columns", async () => {
         const columns = [
-          { dataField: "name", isSort: true },
-          { dataField: "shape", isSort: true },
-          { dataField: "color", isSort: true }
+          { dataField: "name", sortable: true },
+          { dataField: "shape", sortable: true },
+          { dataField: "color", sortable: true }
         ]
 
         const wrapper = mount(Table, {
@@ -158,9 +164,9 @@ describe("Table Component", () => {
 
       it("renders table with filterable columns", async () => {
         const columns = [
-          { dataField: "name", isFilter: true },
-          { dataField: "shape", isFilter: true },
-          { dataField: "color", isFilter: true }
+          { dataField: "name", filterable: true },
+          { dataField: "shape", filterable: true },
+          { dataField: "color", filterable: true }
         ]
 
         const wrapper = mount(Table, {
@@ -223,28 +229,28 @@ describe("Table Component", () => {
             dataField: "name",
             caption: "Название",
             type: "string",
-            isSort: true,
-            isFilter: true
+            sortable: true,
+            filterable: true
           },
           {
             dataField: "color",
             caption: "Цвет",
             type: "select",
-            isSort: true,
-            isFilter: true
+            sortable: true,
+            filterable: true
           },
           {
             dataField: "date",
             type: "date",
-            isSort: true,
-            isFilter: true
+            sortable: true,
+            filterable: true
           },
           {
             dataField: "t1",
             type: "number",
             mask: "price",
-            isSort: true,
-            isFilter: true
+            sortable: true,
+            filterable: true
           }
         ]
 
@@ -335,7 +341,7 @@ describe("Table Component", () => {
             dataSource: baseData,
             columns: true,
             toolbar: true,
-            filter: { isClearAllFilter: true, visible: true, noFilter: "No data was found for your query" }
+            filter: { clearAll: true, visible: true, emptyFilterText: "No data was found for your query" }
           }
         })
 
@@ -344,7 +350,7 @@ describe("Table Component", () => {
 
         // Проверяем кнопку очистки фильтров
         expect(wrapper.find("[data-table-clear-filter]").exists()).toBe(false)
-        await wrapper.find("[data-table-thead-col-filter] input[data-input]").setValue("orange")
+        await wrapper.find("[data-table-thead-col-filter] input[data-input-control]").setValue("orange")
 
         // Эмулируем задержку 600ms
         vi.advanceTimersByTime(850)
@@ -353,7 +359,7 @@ describe("Table Component", () => {
         expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(1)
         expect(wrapper.find("[data-table-clear-filter]").exists()).toBe(true)
 
-        await wrapper.find("[data-table-thead-col-filter] input[data-input]").setValue("orange12")
+        await wrapper.find("[data-table-thead-col-filter] input[data-input-control]").setValue("orange12")
 
         // Эмулируем задержку 600ms
         vi.advanceTimersByTime(850)
@@ -374,7 +380,7 @@ describe("Table Component", () => {
           props: {
             dataSource: baseData,
             columns: true,
-            search: true
+            searchable: true
           }
         })
 
@@ -540,7 +546,7 @@ describe("Table Component", () => {
               { dataField: "value", type: "number" }
             ],
             pagination: true,
-            countVisibleRows: 3
+            visibleRows: 3
           }
         })
 
@@ -565,7 +571,7 @@ describe("Table Component", () => {
               { dataField: "value", type: "number" }
             ],
             pagination: { startPage: 20 },
-            countVisibleRows: 3
+            visibleRows: 3
           }
         })
 
@@ -591,8 +597,8 @@ describe("Table Component", () => {
               { dataField: "date", type: "date" },
               { dataField: "value", type: "number" }
             ],
-            pagination: { sizePage: 20, sizesSelector: [5, 15, 20, 50, 100, 150] },
-            countVisibleRows: 3
+            pagination: { pageSize: 20, pageSizes: [5, 15, 20, 50, 100, 150] },
+            visibleRows: 3
           }
         })
 
@@ -606,8 +612,8 @@ describe("Table Component", () => {
         // Проверяем смену размера страницы
         await SelectComponent.findAll("[data-select-list-item]")[3].trigger("click")
         expect(SelectComponent.vm.value).toBe(50)
-        expect(wrapper.emitted("switch-size-page")).toBeTruthy()
-        expect(wrapper.emitted("switch-size-page")?.[1][0]).toBe(50) // Новое значение размера страницы
+        expect(wrapper.emitted("switch-page-size")).toBeTruthy()
+        expect(wrapper.emitted("switch-page-size")?.[1][0]).toBe(50) // Новое значение размера страницы
       })
     })
     describe("Table Component - Resize Columns", () => {
@@ -628,7 +634,7 @@ describe("Table Component", () => {
               { dataField: "date", type: "date", width: 130, minWidth: 120, maxWidth: 250 },
               { dataField: "value", type: "number", width: 150 }
             ],
-            resizedColumns: true
+            resizableColumns: true
           } as TableProps
         })
 
@@ -663,7 +669,7 @@ describe("Table Component", () => {
           props: {
             dataSource: generateData(5),
             columns: [{ dataField: "name", id: "col-name", width: 120, minWidth: 100, maxWidth: 200 }],
-            resizedColumns: true
+            resizableColumns: true
           }
         })
 
@@ -729,7 +735,7 @@ describe("Table Component", () => {
           props: {
             dataSource: baseData,
             columns: [
-              { dataField: "name", caption: "Name", edit: true },
+              { dataField: "name", caption: "Name", editable: true },
               { dataField: "color", caption: "Color" },
               { dataField: "shape", caption: "Shape" }
             ]
@@ -893,9 +899,7 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
-            styles: {
-              horizontalLines: true
-            }
+            horizontalLines: true
           } as TableProps
         })
 
@@ -910,9 +914,7 @@ describe("Table Component", () => {
           props: {
             dataSource: baseData,
             columns: [{ dataField: "name" }, { dataField: "color" }],
-            styles: {
-              verticalLines: true
-            }
+            verticalLines: true
           } as TableProps
         })
 
@@ -926,10 +928,8 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
-            columns: [{ dataField: "name", isFilter: true }],
-            styles: {
-              filterLines: true
-            }
+            columns: [{ dataField: "name", filterable: true }],
+            filterLines: true
           } as TableProps
         })
 
@@ -943,9 +943,7 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
-            styles: {
-              hoverRows: "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50"
-            }
+            classes: { rowHover: "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50" }
           } as TableProps
         })
 
@@ -960,16 +958,16 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
-            styles: {
-              isStripedRows: true
-            }
+            stripedRows: true
           } as TableProps
         })
 
         const rows = wrapper.findAll("[data-table-tbody-tr]")
         rows.forEach((row) => {
           expect(row.classes()).toContain("odd:bg-white")
-          expect(row.classes()).toContain("even:bg-neutral-50")
+          // B10 (Wave 9, 2026-07-05): even:bg-neutral-50 → even:bg-surface-50 (family rename,
+          // та же тональность) — см. Documentation/issues/table.md.
+          expect(row.classes()).toContain("even:bg-surface-50")
         })
       })
 
@@ -977,9 +975,7 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
-            styles: {
-              borderRadiusPx: 10
-            }
+            borderRadius: 10
           } as TableProps
         })
 
@@ -991,9 +987,7 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
-            styles: {
-              heightCell: 50
-            }
+            cellHeight: 50
           } as TableProps
         })
 
@@ -1008,10 +1002,8 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
-            search: true,
-            styles: {
-              maskQuery: "font-bold text-theme-700"
-            }
+            searchable: true,
+            classes: { mark: "font-bold text-theme-700" }
           } as TableProps
         })
 
@@ -1024,9 +1016,12 @@ describe("Table Component", () => {
 
         vi.advanceTimersByTime(850)
         await nextTick()
-        const highlightedText = wrapper.find("[data-table-tbody-td] [data-table-tbody-not-cell-template] div span")
+        const highlightedText = wrapper.find("[data-table-tbody-td] [data-table-tbody-not-cell-template] div mark")
         expect(highlightedText.exists()).toBe(true)
-        expect(highlightedText.html()).toBe('<span class="fv fishtvue-table font-bold text-theme-700">orange</span>')
+        expect(highlightedText.text()).toBe("orange")
+        expect(highlightedText.classes()).toContain("fishtvue-table")
+        expect(highlightedText.classes()).toContain("font-bold")
+        expect(highlightedText.classes()).toContain("text-theme-700")
         vi.clearAllTimers()
         vi.useRealTimers()
       })
@@ -1036,16 +1031,14 @@ describe("Table Component", () => {
           props: {
             dataSource: baseData,
             toolbar: true,
-            styles: {
-              class: {
-                body: "custom-body-class",
-                toolbar: "custom-toolbar-class"
-              }
+            classes: {
+              root: "custom-body-class",
+              toolbar: "custom-toolbar-class"
             }
           } as TableProps
         })
 
-        expect(wrapper.find("[data-table-component]").classes()).toContain("custom-body-class")
+        expect(wrapper.find("[data-table]").classes()).toContain("custom-body-class")
         expect(wrapper.find("[data-table-toolbar]").classes()).toContain("custom-toolbar-class")
       })
 
@@ -1053,7 +1046,7 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             dataSource: baseData,
-            styles: { border: "border-0 border-b-0 border-t-0 border-r-0" }
+            classes: { border: "border-0 border-b-0 border-t-0 border-r-0" }
           } as TableProps
         })
 
@@ -1069,17 +1062,15 @@ describe("Table Component", () => {
           },
           props: {
             dataSource: baseData,
-            styles: {
-              border: {
-                table: "border-red-500",
-                header: "border-blue-500"
-              }
+            classes: {
+              borderTable: "border-red-500",
+              borderHeader: "border-blue-500"
             }
           } as TableProps
         })
 
         const tableBody = wrapper.find("[data-table-body]")
-        const header = wrapper.find("[data-table-header-slot]")
+        const header = wrapper.find("[data-table-header]")
 
         expect(tableBody.classes()).toContain("border-red-500")
         expect(header.classes()).toContain("border-blue-500")
@@ -1101,20 +1092,20 @@ describe("Table Component", () => {
       const app = createAppWithFishtVue({
         mode: "filled",
         toolbar: true,
-        edit: true,
+        editable: true,
         sort: true,
         filter: true,
         grouping: "color",
-        resizedColumns: false,
+        resizableColumns: false,
         pagination: false,
-        search: true,
-        countVisibleRows: 5,
-        sizeLoadingRows: 5,
-        noData: "No data",
-        noColumn: "No column",
-        countDataOnLoading: 1000,
+        searchable: true,
+        visibleRows: 5,
+        loadingRows: 5,
+        emptyText: "No data",
+        emptyColumnsText: "No column",
+        loadingThreshold: 1000,
         class: "optionClass",
-        styles: { class: { body: "optionClassBody" } }
+        classes: { root: "optionClassBody" }
       })
 
       const wrapper = mount(Table, {
@@ -1132,27 +1123,787 @@ describe("Table Component", () => {
       expect(wrapper.vm.sort).toBe(true)
       expect(wrapper.vm.filter).toBe(true)
       expect(wrapper.vm.grouping).toBe("color")
-      expect(wrapper.vm.resizedColumns).toBe(false)
+      expect(wrapper.vm.resizableColumns).toBe(false)
       expect(wrapper.vm.pagination).toBe(false)
       expect(wrapper.vm.isSearch).toBe(true)
-      expect(wrapper.vm.countVisibleRows).toBe(5)
-      expect(wrapper.vm.sizeLoadingRows).toBe(5)
-      expect(wrapper.vm.noData).toBe("No data")
-      expect(wrapper.vm.noColumn).toBe("No column")
-      expect(wrapper.vm.countDataOnLoading).toBe(1000)
+      expect(wrapper.vm.visibleRows).toBe(5)
+      expect(wrapper.vm.loadingRows).toBe(5)
+      expect(wrapper.vm.emptyText).toBe("No data")
+      expect(wrapper.vm.emptyColumnsText).toBe("No column")
+      expect(wrapper.vm.loadingThreshold).toBe(1000)
       expect(wrapper.vm.classBaseTable).toContain("optionClass")
-      expect(wrapper.vm.styles).toEqual({
-        activeRow: "",
-        animation: "transition-all duration-500",
-        borderRadiusPx: 7,
-        class: {
-          body: "optionClassBody"
-        },
+      // bag `styles` снят в 1.0.0 — остался только его безклассовый остаток `settings`.
+      expect(wrapper.vm.settings).toEqual({
+        width: "",
         height: "",
+        stripedRows: false,
         horizontalLines: true,
-        hoverRows: "",
-        isStripedRows: false,
-        width: ""
+        verticalLines: false,
+        filterLines: false,
+        cellHeight: undefined,
+        borderRadius: 7,
+        defaultColumnWidth: undefined
+      })
+    })
+  })
+  describe("Table Component - Audit: XSS / cleanup / a11y / unstyled", () => {
+    const XSS = "<img src=x onerror=alert(1)>"
+    // unstyled инициализируется через window.FishtVue fallback при install — чистим, чтобы
+    // не утекало в соседние тесты/файлы (см. memory: window.FishtVue leak across Vitest files).
+    afterEach(() => {
+      try {
+        // @ts-ignore
+        delete window.FishtVue
+      } catch {
+        // @ts-ignore
+        window.FishtVue = undefined
+      }
+    })
+
+    describe("Issue 1 — XSS via v-html", () => {
+      it("does not render raw HTML from cell data (cell content)", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: [{ name: XSS }], columns: [{ dataField: "name" }] }
+        })
+        expect(wrapper.find("[data-table-tbody-td] img").exists()).toBe(false)
+        expect(wrapper.find("[data-table-tbody-not-cell-template]").text()).toContain("<img")
+      })
+
+      it("renders search highlight via <mark> text-node, not v-html <span>", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData, searchable: true, classes: { mark: "font-bold text-theme-700" } } as TableProps
+        })
+        await wrapper.find("[data-table-search] input").setValue("orange")
+        vi.advanceTimersByTime(850)
+        await nextTick()
+        const cell = wrapper.find("[data-table-tbody-td] [data-table-tbody-not-cell-template] div")
+        const mark = cell.find("mark")
+        expect(mark.exists()).toBe(true)
+        expect(mark.text()).toBe("orange")
+        expect(mark.classes()).toContain("font-bold")
+        expect(mark.classes()).toContain("text-theme-700")
+        // нет инъекции через v-html span
+        expect(cell.find("span").exists()).toBe(false)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("does not highlight cells without an active query", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData, columns: [{ dataField: "name" }] }
+        })
+        expect(wrapper.find("[data-table-tbody-not-cell-template] mark").exists()).toBe(false)
+        expect(wrapper.find("[data-table-tbody-td]").text()).toBe("orange")
+      })
+
+      it("renders noData message as text, not HTML", () => {
+        const wrapper = mount(Table, { props: { dataSource: [], emptyText: XSS } })
+        const el = wrapper.find("[data-table-no-data]")
+        expect(el.exists()).toBe(true)
+        expect(el.find("img").exists()).toBe(false)
+        expect(el.text()).toContain("<img")
+      })
+
+      it("renders noColumn message as text, not HTML", () => {
+        const wrapper = mount(Table, { props: { dataSource: [{}], emptyColumnsText: XSS } })
+        const el = wrapper.find("[data-table-no-column]")
+        expect(el.exists()).toBe(true)
+        expect(el.find("img").exists()).toBe(false)
+      })
+
+      it("renders noFilter message as text, not HTML", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            columns: [{ dataField: "name", filterable: true }],
+            filter: { emptyFilterText: XSS }
+          } as TableProps
+        })
+        await wrapper.find("[data-table-thead-col-filter] input").setValue("zzz-nomatch")
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        const el = wrapper.find("[data-table-no-filter]")
+        expect(el.exists()).toBe(true)
+        expect(el.find("img").exists()).toBe(false)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("renders summary as text, not HTML", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ t1: 1 }, { t1: 2 }],
+            columns: [{ dataField: "t1", type: "number" }],
+            summary: [{ dataField: "t1", type: "sum", displayFormat: `${XSS}{0}` }]
+          } as TableProps
+        })
+        const tfoot = wrapper.find("[data-table-tfoot]")
+        expect(tfoot.exists()).toBe(true)
+        expect(tfoot.find("img").exists()).toBe(false)
+        expect(tfoot.text()).toContain("<img")
+      })
+
+      it("allows custom HTML only via explicit empty slot", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: [] },
+          slots: { empty: "<div class='my-empty'>Nothing</div>" }
+        })
+        expect(wrapper.find("[data-table-no-data] .my-empty").exists()).toBe(true)
+      })
+
+      it("supports #empty-columns slot", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: [{}] },
+          slots: { "empty-columns": "<div class='my-noc'>No columns</div>" }
+        })
+        expect(wrapper.find("[data-table-no-column] .my-noc").exists()).toBe(true)
+      })
+
+      it("supports #empty-filter slot", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData, columns: [{ dataField: "name", filterable: true }] } as TableProps,
+          slots: { "empty-filter": "<div class='my-nof'>No filter</div>" }
+        })
+        await wrapper.find("[data-table-thead-col-filter] input").setValue("zzz-nomatch")
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        expect(wrapper.find("[data-table-no-filter] .my-nof").exists()).toBe(true)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("Issue 2 — observer / listener cleanup on unmount", () => {
+      it("disconnects IntersectionObserver and removes window listeners on unmount", async () => {
+        const disconnectSpy = vi.spyOn(global.IntersectionObserver.prototype, "disconnect")
+        const removeSpy = vi.spyOn(window, "removeEventListener")
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            columns: [{ dataField: "name", width: 120 }],
+            resizableColumns: true
+          } as TableProps
+        })
+        // начинаем drag-resize → добавляются window mousemove/mouseup
+        await wrapper.find("[data-table-thead-col-resized]").trigger("mousedown")
+        wrapper.unmount()
+        expect(disconnectSpy).toHaveBeenCalled()
+        expect(removeSpy).toHaveBeenCalledWith("mousemove", expect.any(Function))
+        expect(removeSpy).toHaveBeenCalledWith("mouseup", expect.any(Function))
+      })
+    })
+
+    describe("Issue 8 — caption + scope", () => {
+      it("renders <caption> from the caption prop (sr-only)", () => {
+        const wrapper = mount(Table, { props: { dataSource: baseData, caption: "Fruit inventory" } as TableProps })
+        const cap = wrapper.find("caption[data-table-caption]")
+        expect(cap.exists()).toBe(true)
+        expect(cap.text()).toBe("Fruit inventory")
+        expect(cap.classes()).toContain("sr-only")
+      })
+
+      it("renders #caption slot over the prop", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData },
+          slots: { caption: "<span class='cap'>Custom</span>" }
+        })
+        expect(wrapper.find("caption[data-table-caption] .cap").exists()).toBe(true)
+      })
+
+      it("does not render <caption> without prop or slot", () => {
+        const wrapper = mount(Table, { props: { dataSource: baseData } })
+        expect(wrapper.find("caption[data-table-caption]").exists()).toBe(false)
+      })
+
+      it("keeps scope=col on header cells", () => {
+        const wrapper = mount(Table, { props: { dataSource: baseData, columns: true } as TableProps })
+        const headers = wrapper.findAll("[data-table-thead-col]")
+        expect(headers.length).toBeGreaterThan(0)
+        headers.forEach((th) => expect(th.attributes("scope")).toBe("col"))
+      })
+    })
+
+    describe("Issue 9 — aria-live results announcement", () => {
+      it("renders a polite sr-only live region reflecting the result count", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData },
+          global: { plugins: [[FishtVue as any, {}]] }
+        })
+        const live = wrapper.find("[data-table-aria-live]")
+        expect(live.exists()).toBe(true)
+        expect(live.attributes("aria-live")).toBe("polite")
+        expect(live.attributes("aria-atomic")).toBe("true")
+        expect(live.classes()).toContain("sr-only")
+        expect(live.text()).toBe("Results: 5")
+      })
+
+      it("announces one / none after filtering", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData, columns: [{ dataField: "name", filterable: true }] } as TableProps,
+          global: { plugins: [[FishtVue as any, {}]] }
+        })
+        await wrapper.find("[data-table-thead-col-filter] input").setValue("orange")
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        expect(wrapper.find("[data-table-aria-live]").text()).toBe("1 result")
+        await wrapper.find("[data-table-thead-col-filter] input").setValue("zzz-nomatch")
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        expect(wrapper.find("[data-table-aria-live]").text()).toBe("No results")
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("localizes the results count via Russian pluralization (Wave 3.5)", () => {
+        const wrapper = mount(Table, {
+          props: { dataSource: baseData },
+          global: { plugins: [[FishtVue as any, { locale: { defaultLocale: "ru" } }]] }
+        })
+        // 5 rows → Russian "many" form: "5 результатов".
+        expect(wrapper.find("[data-table-aria-live]").text()).toBe("5 результатов")
+      })
+    })
+
+    describe("Issue 6 — unstyled", () => {
+      it("respects unstyled: true via Component.setStyle guard", () => {
+        const styled = mount(Table, { props: { dataSource: baseData } })
+        expect(styled.find("[data-table]").classes()).toContain("fishtvue-table")
+
+        const wrapper = mount(Table, {
+          global: { plugins: [[FishtVue, { unstyled: true }] as any] },
+          props: { dataSource: baseData }
+        })
+        expect(wrapper.find("[data-table]").classes()).not.toContain("fishtvue-table")
+      })
+    })
+  })
+  describe("Table Component - Virtualization (Issue 4)", () => {
+    const genRows = (n: number) => Array.from({ length: n }, (_, i) => ({ name: `Item ${i}`, id: i }))
+    // jsdom не считает layout — мокаем viewport-высоту scroll-контейнера и scrollTop.
+    const setViewport = async (wrapper: any, { scrollTop = 0, clientHeight = 0 } = {}) => {
+      const el = wrapper.find("[data-table-viewport]").element as HTMLElement
+      Object.defineProperty(el, "clientHeight", { value: clientHeight, configurable: true })
+      el.scrollTop = scrollTop
+      await wrapper.find("[data-table-viewport]").trigger("scroll")
+      await nextTick()
+      return el
+    }
+
+    it("auto-enables virtualization for large client-side tables", () => {
+      const wrapper = mount(Table, { props: { dataSource: genRows(500) } })
+      const rendered = wrapper.findAll("[data-table-tbody-tr]").length
+      expect(rendered).toBeGreaterThan(0)
+      expect(rendered).toBeLessThan(500) // окно, не весь список
+      expect(wrapper.find("[data-table-virtual-spacer-bottom]").exists()).toBe(true)
+      expect(wrapper.find("[data-table-element]").attributes("aria-rowcount")).toBe("500")
+    })
+
+    it("opt-out via :virtual=false renders all rows (legacy)", () => {
+      const wrapper = mount(Table, { props: { dataSource: genRows(500), virtual: false } as TableProps })
+      expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(500)
+      expect(wrapper.find("[data-table-virtual-spacer-top]").exists()).toBe(false)
+      expect(wrapper.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+    })
+
+    it("force-enables via :virtual=true below threshold", () => {
+      const wrapper = mount(Table, { props: { dataSource: genRows(10), virtual: true } as TableProps })
+      expect(wrapper.find("[data-table-element]").attributes("aria-rowcount")).toBe("10")
+    })
+
+    // Три opt-out-условия проверяются отдельными it(), а не одним: каждый mount на 500 строк
+    // рендерится без virtual-окна (это и есть суть проверки) и стоит ~0.5-2s в jsdom. Собранные
+    // в один тест, они выбирали почти весь testTimeout (5000ms) и падали по timeout при нагрузке
+    // на машину. Раздельные it() дают каждому случаю собственный бюджет времени.
+    it("does NOT virtualize with grouping", () => {
+      const grouped = mount(Table, {
+        props: { dataSource: genRows(500), grouping: "name" } as TableProps
+      })
+      expect(grouped.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+    })
+
+    it("does NOT virtualize with pagination", () => {
+      const paged = mount(Table, {
+        props: { dataSource: genRows(500), pagination: true, visibleRows: 3 } as TableProps
+      })
+      expect(paged.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+    })
+
+    it("does NOT virtualize with asyncData:true", () => {
+      const asyncTrue = mount(Table, { props: { dataSource: genRows(500), asyncData: true } as TableProps })
+      expect(asyncTrue.find("[data-table]").attributes("aria-rowcount")).toBeUndefined()
+    })
+
+    it("shifts the window and top spacer on scroll (rowHeight math)", async () => {
+      const wrapper = mount(Table, {
+        props: { dataSource: genRows(500), virtual: { rowHeight: 50, overscan: 5 } } as TableProps
+      })
+      await setViewport(wrapper, { scrollTop: 0, clientHeight: 200 })
+      const firstBefore = wrapper.find("[data-table-tbody-tr] [data-table-tbody-td]").text()
+
+      await setViewport(wrapper, { scrollTop: 1000, clientHeight: 200 })
+      // startIndex = floor(1000/50) - overscan(5) = 15 -> topPad = 15*50 = 750
+      expect(wrapper.find("[data-table-virtual-spacer-top]").attributes("style")).toContain("750px")
+      const firstAfter = wrapper.find("[data-table-tbody-tr] [data-table-tbody-td]").text()
+      expect(firstAfter).not.toBe(firstBefore)
+      expect(firstAfter).toContain("Item 15")
+    })
+
+    it("emits click-row with the absolute index after scrolling", async () => {
+      const wrapper = mount(Table, {
+        props: { dataSource: genRows(500), virtual: { rowHeight: 50, overscan: 5 } } as TableProps
+      })
+      await setViewport(wrapper, { scrollTop: 1000, clientHeight: 200 })
+      await wrapper.find("[data-table-tbody-tr]").trigger("click")
+      const payload = wrapper.emitted("click-row")?.[0]?.[0] as any
+      expect(payload).toBeTruthy()
+      // первая отрисованная строка = startIndex; data.name должна совпасть с absolute index
+      expect(payload.data.name).toBe(`Item ${payload.indexRow}`)
+      expect(payload.indexRow).toBe(15)
+    })
+
+    it("removes the scroll listener on unmount", () => {
+      const wrapper = mount(Table, { props: { dataSource: genRows(500) } })
+      const el = wrapper.find("[data-table-viewport]").element as HTMLElement
+      const removeSpy = vi.spyOn(el, "removeEventListener")
+      wrapper.unmount()
+      expect(removeSpy).toHaveBeenCalledWith("scroll", expect.any(Function))
+    })
+  })
+  describe("Table Component - Coverage (Issue 7)", () => {
+    const fruits = [
+      { name: "orange", color: "orange", shape: "round" },
+      { name: "banana", color: "yellow", shape: "long" },
+      { name: "grape", color: "purple", shape: "round" }
+    ]
+
+    describe("edit-cell editors", () => {
+      it("opens Input editor, saves via change:model-value, emits before/after-edit-cell", async () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            editable: true,
+            columns: [{ dataField: "name", type: "string", editable: true }]
+          } as TableProps
+        })
+        await wrapper.findAll("[data-table-tbody-td]")[0].trigger("click")
+        await nextTick()
+        const input = wrapper.findComponent({ name: "Input" })
+        expect(input.exists()).toBe(true)
+        input.vm.$emit("change:model-value", "kiwi")
+        await nextTick()
+        expect(wrapper.emitted("before-edit-cell")).toBeTruthy()
+        expect(wrapper.emitted("after-edit-cell")).toBeTruthy()
+        expect((wrapper.vm as any).allData[0].name).toBe("kiwi")
+      })
+
+      it("cancels the editor on active=false (clearEditableCell)", async () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            editable: true,
+            columns: [{ dataField: "name", type: "string", editable: true }]
+          } as TableProps
+        })
+        await wrapper.findAll("[data-table-tbody-td]")[0].trigger("click")
+        await nextTick()
+        wrapper.findComponent({ name: "Input" }).vm.$emit("active", false)
+        await nextTick()
+        expect((wrapper.vm as any).editableCell).toBeNull()
+      })
+
+      it("renders Select and Calendar editors for select/date columns", async () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ role: "admin", born: new Date("2020-01-01") }],
+            editable: true,
+            columns: [
+              { dataField: "role", type: "select", editable: true },
+              { dataField: "born", type: "date", editable: true }
+            ]
+          } as TableProps
+        })
+        const cells = wrapper.findAll("[data-table-tbody-td]")
+        await cells[0].trigger("click")
+        await nextTick()
+        const selectEditor = wrapper.findComponent({ name: "Select" })
+        expect(selectEditor.exists()).toBe(true)
+        // fire editor handlers: @update:model-value → updateCell, @active(false) → clearEditableCell
+        selectEditor.vm.$emit("update:model-value", "user")
+        selectEditor.vm.$emit("active", false)
+        await nextTick()
+        expect((wrapper.vm as any).allData[0].role).toBe("user")
+
+        await cells[1].trigger("click")
+        await nextTick()
+        const calendarEditor = wrapper.findComponent({ name: "Calendar" })
+        expect(calendarEditor.exists()).toBe(true)
+        calendarEditor.vm.$emit("update:model-value", new Date("2021-02-02"))
+        calendarEditor.vm.$emit("active", false)
+        await nextTick()
+        expect((wrapper.vm as any).editableCell).toBeNull()
+      })
+    })
+
+    describe("setCell masks + setCellValue", () => {
+      it("applies phone/number/price masks and setCellValue callback", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ phone: "1234567890", num: 1234567, price: 1234567, custom: "v" }],
+            columns: [
+              { dataField: "phone", type: "string", mask: "phone" },
+              { dataField: "num", type: "number", mask: "number" },
+              { dataField: "price", type: "number", mask: "price" },
+              { dataField: "custom", setCellValue: (_c: any, v: any) => `X:${v}` }
+            ]
+          } as TableProps
+        })
+        const cells = wrapper.findAll("[data-table-tbody-td]")
+        expect(cells[0].text()).toBe(convertToPhone("1234567890"))
+        expect(cells[1].text()).toBe(convertToNumber(1234567, 20, 0, ""))
+        expect(cells[2].text()).toBe(convertToNumber(1234567, 20, 0, " "))
+        expect(cells[3].text()).toBe("X:v")
+      })
+    })
+
+    describe("isEqualsValue select / date filtering", () => {
+      it("filters a select column by array value", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: { dataSource: fruits, columns: [{ dataField: "color", type: "select" }] } as TableProps
+        })
+        ;(wrapper.vm as any).filtering("color", ["orange"])
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect((wrapper.vm as any).dataSource.length).toBe(1)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("filters a date column by Date and by range", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ d: new Date("2023-10-13") }, { d: new Date("2023-11-20") }],
+            columns: [{ dataField: "d", type: "date" }]
+          } as TableProps
+        })
+        ;(wrapper.vm as any).filtering("d", new Date("2023-10-13"))
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect((wrapper.vm as any).dataSource.length).toBe(1)
+        ;(wrapper.vm as any).filtering("d", { start: new Date("2023-10-01"), end: new Date("2023-12-31") })
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect((wrapper.vm as any).dataSource.length).toBe(2)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("setSummary string / date branches", () => {
+      it("computes min/max/avg for string and min for date", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [
+              { t1: "aa", t2: "aa", t3: "aa", d: new Date("2023-01-01") },
+              { t1: "bbbb", t2: "bbbb", t3: "bbbb", d: new Date("2023-12-31") }
+            ],
+            columns: [
+              { dataField: "t1", type: "string" },
+              { dataField: "t2", type: "string" },
+              { dataField: "t3", type: "string" },
+              { dataField: "d", type: "date" }
+            ],
+            summary: [
+              { dataField: "t1", type: "min", displayFormat: "min:{0}" },
+              { dataField: "t2", type: "max", displayFormat: "max:{0}" },
+              { dataField: "t3", type: "avg", displayFormat: "avg:{0}" },
+              { dataField: "d", type: "min", displayFormat: "dmin:{0}" }
+            ]
+          } as TableProps
+        })
+        const sums = wrapper.findAll("[data-table-tfoot-th]")
+        expect(sums.length).toBe(4)
+        expect(sums[0].text()).toBe("min:aa") // min by length
+        expect(sums[1].text()).toBe("max:bbbb") // max by length
+        expect(sums[2].text()).toContain("avg:") // round(mean length)
+        expect(sums[3].text()).toContain("dmin:")
+      })
+    })
+
+    describe("loading-timeout (lengthData > loadingThreshold)", () => {
+      it("toggles loading on sort / filter / search", () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            loadingThreshold: 2,
+            columns: [{ dataField: "name", type: "string" }]
+          } as TableProps
+        })
+        const vm = wrapper.vm as any
+        for (const run of [() => vm.searching("a"), () => vm.sorting("name"), () => vm.filtering("name", "a")]) {
+          run()
+          expect(vm.isLoading).toBe(true)
+          vi.advanceTimersByTime(850)
+          expect(vm.isLoading).toBe(false)
+        }
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+    })
+
+    describe("clearFilter + column.onClick", () => {
+      it("clearFilter resets query and emits clear-filter", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            filter: { clearAll: true },
+            columns: [{ dataField: "name", type: "string" }]
+          } as TableProps
+        })
+        const vm = wrapper.vm as any
+        vm.searching("or")
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        vm.clearFilter()
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect(wrapper.emitted("clear-filter")).toBeTruthy()
+        expect(vm.queryTable).toBe("")
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("invokes column.onClick on cell click", async () => {
+        const onClick = vi.fn()
+        const wrapper = mount(Table, {
+          props: { dataSource: fruits, columns: [{ dataField: "name", onClick }] } as TableProps
+        })
+        await wrapper.findAll("[data-table-tbody-td]")[0].trigger("click")
+        expect(onClick).toHaveBeenCalled()
+        expect(onClick.mock.calls[0][2]).toBe(0) // indexRow
+      })
+    })
+
+    describe("configuration & style variants", () => {
+      it("resolves object-form configs (toolbar/sort/filter/grouping/pagination) in filled mode", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            mode: "filled",
+            toolbar: { visible: true, searchable: true },
+            sort: { visible: true, icon: "Bars" },
+            filter: { visible: true, clearAll: true },
+            grouping: { groupField: "color", visible: true },
+            pagination: {
+              visible: true,
+              pageSize: 2,
+              pageSizes: [2, 5],
+              infoText: true,
+              pageSizeSelector: true
+            },
+            searchable: true,
+            columns: [{ dataField: "name", sortable: true, filterable: true }, { dataField: "color" }]
+          } as TableProps
+        })
+        vi.advanceTimersByTime(50)
+        await nextTick()
+        expect(wrapper.vm.isGroup).toBe(true)
+        expect(wrapper.vm.isSort).toBe(true)
+        expect(wrapper.vm.isFilter).toBe(true)
+        expect(wrapper.vm.isPagination).toBe(true)
+        expect(wrapper.vm.isVisibleToolbar).toBe(true)
+        expect(wrapper.find("[data-table-thead]").exists()).toBe(true)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("applies full display settings (filled, striped, lines, borders, dimensions)", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            mode: "filled",
+            stripedRows: true,
+            width: 320,
+            height: 400,
+            borderRadius: 10,
+            verticalLines: true,
+            horizontalLines: false,
+            filterLines: true,
+            cellHeight: 30,
+            classes: {
+              rowActive: "bg-surface-100/90 dark:bg-surface-900/50",
+              rowHover: "hover:bg-surface-100/90 dark:hover:bg-surface-900/50",
+              border: "border-x",
+              borderTable: "border-y",
+              borderHead: "border-t",
+              borderCell: "border-b"
+            },
+            columns: [{ dataField: "name", filterable: true, sortable: true }, { dataField: "color" }]
+          } as TableProps
+        })
+        vi.advanceTimersByTime(550)
+        await nextTick()
+        expect(wrapper.find("[data-table]").exists()).toBe(true)
+        expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(3)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("applies striping per mode (underlined / outlined)", () => {
+        for (const mode of ["underlined", "outlined"] as const) {
+          const wrapper = mount(Table, {
+            props: {
+              dataSource: fruits,
+              mode,
+              stripedRows: true,
+              columns: [{ dataField: "name" }]
+            } as TableProps
+          })
+          expect(wrapper.vm.mode).toBe(mode)
+          expect(wrapper.findAll("[data-table-tbody-tr]").length).toBe(3)
+        }
+      })
+
+      it("renders date and select typed cells + filter editors", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [{ when: new Date("2023-05-01"), role: "admin" }],
+            columns: [
+              { dataField: "when", type: "date", filterable: true },
+              { dataField: "role", type: "select", filterable: true }
+            ]
+          } as TableProps
+        })
+        // date/select cells render (setCell date→formatDate, select→toMask)
+        expect(wrapper.findAll("[data-table-tbody-td]").length).toBe(2)
+        // filter editors: Calendar (date) + Select (select) in the header
+        expect(wrapper.findComponent({ name: "Calendar" }).exists()).toBe(true)
+        expect(wrapper.findComponent({ name: "Select" }).exists()).toBe(true)
+      })
+
+      it("marks the clicked row active (classTr active branch)", async () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            classes: { rowActive: "bg-surface-100/90 dark:bg-surface-900/50" },
+            columns: [{ dataField: "name" }]
+          } as TableProps
+        })
+        const row = wrapper.findAll("[data-table-tbody-tr]")[1]
+        await row.trigger("click")
+        await nextTick()
+        expect(wrapper.vm.activeRow).toContain("-1")
+      })
+
+      it("covers loading ternary branches (empty/null query, sort toggle, filter null/empty)", () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            loadingThreshold: 2,
+            columns: [{ dataField: "name", type: "string" }]
+          } as TableProps
+        })
+        const vm = wrapper.vm as any
+        for (const run of [
+          () => vm.searching(""),
+          () => vm.searching(null),
+          () => vm.sorting("name", "asc"),
+          () => vm.sorting("name"),
+          () => vm.filtering("name", null),
+          () => vm.filtering("name", "")
+        ]) {
+          run()
+          vi.advanceTimersByTime(850)
+        }
+        expect(vm.isLoading).toBe(false)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("isEqualsValue number + select-string, and renders a null cell", async () => {
+        vi.useFakeTimers()
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [
+              { n: 5, c: "a", x: null },
+              { n: 6, c: "ab", x: "y" }
+            ],
+            columns: [
+              { dataField: "n", type: "number" },
+              { dataField: "c", type: "select" },
+              { dataField: "x", type: "string" }
+            ]
+          } as TableProps
+        })
+        const vm = wrapper.vm as any
+        vm.filtering("n", "5") // number branch (=== Number(value))
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect(vm.dataSource.length).toBe(1)
+        vm.filtering("n", null)
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        vm.filtering("c", "ab") // select non-array → String.includes
+        vi.advanceTimersByTime(20)
+        await nextTick()
+        expect(vm.dataSource.length).toBe(1)
+        vi.clearAllTimers()
+        vi.useRealTimers()
+      })
+
+      it("setSummary count(select) / sum(number) / max(date)", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: [
+              { a: "x", n: 10, d: new Date("2023-01-01") },
+              { a: "y", n: 20, d: new Date("2023-06-01") }
+            ],
+            columns: [
+              { dataField: "a", type: "select" },
+              { dataField: "n", type: "number" },
+              { dataField: "d", type: "date" }
+            ],
+            summary: [
+              { dataField: "a", type: "count", displayFormat: "c:{0}" },
+              { dataField: "n", type: "sum", displayFormat: "s:{0}" },
+              { dataField: "d", type: "max", displayFormat: "mx:{0}" }
+            ]
+          } as TableProps
+        })
+        const sums = wrapper.findAll("[data-table-tfoot-th]")
+        expect(sums.length).toBe(3)
+        expect(sums[0].text()).toBe("c:2")
+        expect(sums[1].text()).toBe("s:30")
+        expect(sums[2].text()).toContain("mx:")
+      })
+
+      it("resolves string-form aspect-ключи (border/rowActive/rowHover) + string width/height", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: fruits,
+            width: "50%",
+            height: "10rem",
+            classes: {
+              border: "border-red-500",
+              rowActive: "bg-active",
+              rowHover: "hover:bg-hover"
+            },
+            columns: [{ dataField: "name" }]
+          } as TableProps
+        })
+        expect(wrapper.find("[data-table]").exists()).toBe(true)
+        expect(wrapper.vm.settings.width).toBe("50%")
+        expect(wrapper.vm.settings.height).toBe("10rem")
       })
     })
   })
@@ -1165,8 +1916,8 @@ describe("Table Component", () => {
             dataSource: baseData,
             asyncData: true,
             columns: [
-              { dataField: "name", isSort: true },
-              { dataField: "color", isSort: true }
+              { dataField: "name", sortable: true },
+              { dataField: "color", sortable: true }
             ]
           }
         })
@@ -1198,8 +1949,8 @@ describe("Table Component", () => {
             dataSource: baseData,
             asyncData: true,
             columns: [
-              { dataField: "name", isFilter: true },
-              { dataField: "color", isFilter: true }
+              { dataField: "name", filterable: true },
+              { dataField: "color", filterable: true }
             ]
           }
         })
@@ -1230,7 +1981,7 @@ describe("Table Component", () => {
           props: {
             dataSource: baseData,
             asyncData: true,
-            search: true
+            searchable: true
           }
         })
 
@@ -1265,8 +2016,8 @@ describe("Table Component", () => {
           props: {
             dataSource: largeData,
             asyncData: true,
-            totalCount: 50,
-            pagination: { sizePage: 10 },
+            total: 50,
+            pagination: { pageSize: 10 },
             columns: [{ dataField: "name" }, { dataField: "color" }]
           }
         })
@@ -1285,9 +2036,9 @@ describe("Table Component", () => {
           props: {
             dataSource: baseData,
             asyncData: true,
-            search: true,
+            searchable: true,
             pagination: true,
-            columns: [{ dataField: "name", isSort: true, isFilter: true }]
+            columns: [{ dataField: "name", sortable: true, filterable: true }]
           }
         })
 
@@ -1413,8 +2164,8 @@ describe("Table Component", () => {
         const wrapper = mount(Table, {
           props: {
             asyncData: "https://api.example.com/data",
-            search: true,
-            columns: [{ dataField: "name", isSort: true, isFilter: true }, { dataField: "type" }]
+            searchable: true,
+            columns: [{ dataField: "name", sortable: true, filterable: true }, { dataField: "type" }]
           }
         })
 
@@ -1543,7 +2294,7 @@ describe("Table Component", () => {
       it("calls asyncData function on mount", async () => {
         const mockAsyncFunction = vi.fn().mockResolvedValue({
           dataSource: baseData,
-          totalCount: 5
+          total: 5
         })
 
         const wrapper = mount(Table, {
@@ -1574,7 +2325,7 @@ describe("Table Component", () => {
             { id: 1, name: "Test 1" },
             { id: 2, name: "Test 2" }
           ],
-          totalCount: 2
+          total: 2
         })
 
         const wrapper = mount(Table, {
@@ -1596,13 +2347,13 @@ describe("Table Component", () => {
         vi.useFakeTimers()
         const mockAsyncFunction = vi.fn().mockResolvedValue({
           dataSource: baseData,
-          totalCount: 5
+          total: 5
         })
 
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            columns: [{ dataField: "name", isFilter: true }, { dataField: "color" }]
+            columns: [{ dataField: "name", filterable: true }, { dataField: "color" }]
           }
         })
 
@@ -1631,13 +2382,13 @@ describe("Table Component", () => {
         vi.useFakeTimers()
         const mockAsyncFunction = vi.fn().mockResolvedValue({
           dataSource: baseData,
-          totalCount: 5
+          total: 5
         })
 
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            columns: [{ dataField: "name", isSort: true }, { dataField: "color" }]
+            columns: [{ dataField: "name", sortable: true }, { dataField: "color" }]
           }
         })
 
@@ -1664,13 +2415,13 @@ describe("Table Component", () => {
         vi.useFakeTimers()
         const mockAsyncFunction = vi.fn().mockResolvedValue({
           dataSource: baseData,
-          totalCount: 5
+          total: 5
         })
 
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            search: true,
+            searchable: true,
             columns: [{ dataField: "name" }]
           }
         })
@@ -1698,13 +2449,13 @@ describe("Table Component", () => {
       it("calls asyncData function when pagination changes", async () => {
         const mockAsyncFunction = vi.fn().mockResolvedValue({
           dataSource: baseData,
-          totalCount: 5
+          total: 5
         })
 
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            pagination: { sizePage: 2 },
+            pagination: { pageSize: 2 },
             columns: [{ dataField: "name" }]
           }
         })
@@ -1725,19 +2476,19 @@ describe("Table Component", () => {
         expect(callArgs.pagination.size).toBe(2)
       })
 
-      it("uses totalCount from function result for pagination", async () => {
+      it("uses total from function result for pagination", async () => {
         const mockAsyncFunction = vi.fn().mockResolvedValue({
           dataSource: [
             { id: 1, name: "Item 1" },
             { id: 2, name: "Item 2" }
           ],
-          totalCount: 100
+          total: 100
         })
 
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            pagination: { sizePage: 10 },
+            pagination: { pageSize: 10 },
             columns: [{ dataField: "id" }, { dataField: "name" }]
           }
         })
@@ -1746,7 +2497,7 @@ describe("Table Component", () => {
         await flushPromises()
         await nextTick()
 
-        // Проверяем, что lengthData использует totalCount из функции
+        // Проверяем, что lengthData использует total из функции
         expect(wrapper.vm.lengthData).toBe(100)
       })
 
@@ -1772,7 +2523,7 @@ describe("Table Component", () => {
       it("reloads data when reloadData method is called", async () => {
         const mockAsyncFunction = vi.fn().mockResolvedValue({
           dataSource: baseData,
-          totalCount: 5
+          total: 5
         })
 
         const wrapper = mount(Table, {
@@ -1801,13 +2552,13 @@ describe("Table Component", () => {
             { id: 1, name: "Item 1" },
             { id: 2, name: "Item 2" }
           ],
-          totalCount: 2
+          total: 2
         })
 
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            pagination: { sizePage: 10 },
+            pagination: { pageSize: 10 },
             columns: [{ dataField: "id" }]
           }
         })
@@ -1825,14 +2576,14 @@ describe("Table Component", () => {
         vi.useFakeTimers()
         const mockAsyncFunction = vi.fn().mockResolvedValue({
           dataSource: baseData,
-          totalCount: 5
+          total: 5
         })
 
         const wrapper = mount(Table, {
           props: {
             asyncData: mockAsyncFunction,
-            search: true,
-            columns: [{ dataField: "name", isSort: true, isFilter: true }]
+            searchable: true,
+            columns: [{ dataField: "name", sortable: true, filterable: true }]
           }
         })
 
@@ -1858,6 +2609,881 @@ describe("Table Component", () => {
         vi.clearAllTimers()
         vi.useRealTimers()
       })
+    })
+  })
+})
+
+// =====================================================================================================================
+// Issues 10 / 11 / 12 — оставшийся аудит Table (filter popovers / RTL / reduced-motion·print·forced-colors)
+// =====================================================================================================================
+describe("Table — remaining audit (Issues 10/11/12)", () => {
+  beforeAll(() => {
+    // @ts-ignore — этот describe — sibling основного, нужен свой IO-mock
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] } as Response)
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  // ===================================================================================================================
+  // Issue 12 — prefers-reduced-motion / print / forced-colors
+  // Движок `tailwind()` понимает media-варианты (unoStatic.ts → media: motion-safe/print/forced-colors),
+  // канон FishtVue — анимировать только при motion-safe (как Button/Menu/Select), плюс print/forced-colors.
+  // ===================================================================================================================
+  describe("Issue 12 — reduced-motion / print / forced-colors", () => {
+    const baseData = [
+      { name: "orange", color: "orange" },
+      { name: "banana", color: "yellow" }
+    ]
+
+    describe("generator поддерживает media-варианты", () => {
+      it("motion-safe:transition-all → @media (prefers-reduced-motion: no-preference) + transition-property: all", () => {
+        const css = tailwind("motion-safe:transition-all", { selector: ".x", darkSelector: "" }) ?? ""
+        expect(css).toContain("prefers-reduced-motion: no-preference")
+        expect(css).toContain("transition-property: all")
+      })
+
+      it("print:hidden → @media print + display: none", () => {
+        const css = tailwind("print:hidden", { selector: ".x", darkSelector: "" }) ?? ""
+        expect(css).toMatch(/@media\s+print/)
+        expect(css).toContain("display: none")
+      })
+
+      it("forced-colors:outline → @media (forced-colors: active) + outline-style: solid", () => {
+        const css = tailwind("forced-colors:outline", { selector: ".x", darkSelector: "" }) ?? ""
+        expect(css).toContain("forced-colors: active")
+        expect(css).toContain("outline-style: solid")
+      })
+    })
+
+    describe("Table применяет варианты", () => {
+      it("resize-handle несёт motion-safe:transition-opacity и print:hidden", () => {
+        const wrapper = mount(Table, {
+          props: {
+            dataSource: baseData,
+            columns: [{ dataField: "name" }, { dataField: "color" }],
+            resizableColumns: true
+          } as TableProps
+        })
+        const handle = wrapper.find("[data-table-thead-col-resized]")
+        expect(handle.exists()).toBe(true)
+        expect(handle.attributes("class")).toContain("motion-safe:transition-opacity")
+        expect(handle.attributes("class")).toContain("print:hidden")
+      })
+
+      it("сгенерированный CSS Table содержит reduced-motion / print / forced-colors media", async () => {
+        mount(Table, {
+          props: {
+            dataSource: baseData,
+            columns: [{ dataField: "name" }],
+            activeRow: true
+          } as TableProps
+        })
+        await nextTick()
+        const css = cssComponents.get("Table") ?? ""
+        expect(css).toContain("prefers-reduced-motion")
+        expect(css).toMatch(/@media\s*print/)
+        expect(css).toContain("forced-colors")
+      })
+    })
+  }) // /Issue 12 describe
+
+  // ===================================================================================================================
+  // Issue 11 — RTL (F31): resize-handle на логической стороне + dir-aware width-математика.
+  // Движок понимает rtl:/ltr: (specialStates) и логические start/end/pe (unoRules). Resize-handle:
+  // pe-2 (padding-inline-end, auto-flip) + rtl:-override для inset; width-math детектит dir через getComputedStyle.
+  // ===================================================================================================================
+  describe("Issue 11 — RTL", () => {
+    const baseData = [
+      { name: "orange", color: "orange" },
+      { name: "banana", color: "yellow" }
+    ]
+    const rect = (left: number, right: number) =>
+      ({ left, right, top: 0, bottom: 0, width: right - left, height: 0, x: left, y: 0, toJSON() {} }) as DOMRect
+
+    it("resize-handle несёт dir-aware классы (rtl: override + логический pe-)", () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: baseData,
+          columns: [{ dataField: "name" }, { dataField: "color" }],
+          resizableColumns: true
+        } as TableProps
+      })
+      const handle = wrapper.find("[data-table-thead-col-resized]")
+      expect(handle.exists()).toBe(true)
+      const cls = handle.attributes("class") ?? ""
+      expect(cls).toMatch(/rtl:/)
+      expect(cls).toContain("pe-2")
+    })
+
+    it("resizeColumn считает ширину от правого края под dir=rtl", async () => {
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(rect(100, 300))
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ name: "a" }],
+          columns: [{ dataField: "name", width: 200, minWidth: 50, maxWidth: 250 }],
+          resizableColumns: true
+        } as TableProps
+      })
+      await wrapper.find("[data-table-thead-col-resized]").trigger("mousedown")
+      // dir=rtl только на момент resize (после mount, чтобы не мешать рендеру)
+      vi.spyOn(window, "getComputedStyle").mockReturnValue({ direction: "rtl" } as any)
+      window.dispatchEvent(new MouseEvent("mousemove", { clientX: 250 }))
+      // RTL: ширина от правого края = rect.right(300) - pageX(250) = 50
+      expect((wrapper.vm as any).widthsColumns["name"]).toBe(50)
+    })
+
+    it("resizeColumn считает ширину от левого края под dir=ltr (регресс)", async () => {
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(rect(100, 300))
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ name: "a" }],
+          columns: [{ dataField: "name", width: 200, minWidth: 50, maxWidth: 250 }],
+          resizableColumns: true
+        } as TableProps
+      })
+      await wrapper.find("[data-table-thead-col-resized]").trigger("mousedown")
+      // без dir-атрибута getComputedStyle().direction === "" → LTR-ветка
+      window.dispatchEvent(new MouseEvent("mousemove", { clientX: 250 }))
+      // LTR: ширина от левого края = pageX(250) - rect.left(100) = 150
+      expect((wrapper.vm as any).widthsColumns["name"]).toBe(150)
+    })
+
+    it("group-label использует логические inset/padding (start-/ps-)", () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [
+            { name: "a", g: "x" },
+            { name: "b", g: "x" }
+          ],
+          columns: [{ dataField: "name" }],
+          grouping: "g"
+        } as unknown as TableProps
+      })
+      const groupText = wrapper.find("[data-table-tbody-colgroup] div")
+      expect(groupText.exists()).toBe(true)
+      expect(groupText.attributes("class") ?? "").toMatch(/start-/)
+    })
+  }) // /Issue 11 describe
+
+  // ===================================================================================================================
+  // Issue 10 — filter popovers через FixWindow (H39): filter Select/Calendar получают scrollableEl: tableBody
+  // (паритет с cell-редакторами) — popover трекает скролл-контейнер. Per-column fixWindowProps override уважается.
+  // ===================================================================================================================
+  describe("Issue 10 — filter popovers via FixWindow", () => {
+    it("filter Select получает fixWindowProps.scrollableEl (= tableBody)", async () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ cat: "a" }, { cat: "b" }],
+          columns: [{ dataField: "cat", type: "select", filterable: true }]
+        } as TableProps
+      })
+      await nextTick()
+      const select = wrapper.findComponent(Select)
+      expect(select.exists()).toBe(true)
+      const pfw = select.props("fixWindowProps") as any
+      expect(pfw).toBeTruthy()
+      expect("scrollableEl" in pfw).toBe(true)
+      expect(pfw.scrollableEl).toBeTruthy()
+    })
+
+    it("filter Calendar получает fixWindowProps.scrollableEl (= tableBody)", async () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ d: "2024-01-01" }, { d: "2024-02-02" }],
+          columns: [{ dataField: "d", type: "date", filterable: true }]
+        } as TableProps
+      })
+      await nextTick()
+      const cal = wrapper.findComponent(Calendar)
+      expect(cal.exists()).toBe(true)
+      const pfw = cal.props("fixWindowProps") as any
+      expect(pfw).toBeTruthy()
+      expect("scrollableEl" in pfw).toBe(true)
+      expect(pfw.scrollableEl).toBeTruthy()
+    })
+
+    it("per-column paramsFilter.fixWindowProps override выигрывает над дефолтом", async () => {
+      const wrapper = mount(Table, {
+        props: {
+          dataSource: [{ cat: "a" }, { cat: "b" }],
+          columns: [
+            {
+              dataField: "cat",
+              type: "select",
+              filterable: true,
+              filterProps: { fixWindowProps: { position: "top" } }
+            }
+          ]
+        } as unknown as TableProps
+      })
+      await nextTick()
+      const pfw = wrapper.findComponent(Select).props("fixWindowProps") as any
+      expect(pfw.position).toBe("top") // override победил
+      expect(pfw.scrollableEl).toBeTruthy() // дефолт scrollableEl сохранён
+    })
+  }) // /Issue 10 describe
+}) // /Table — remaining audit (Issues 10/11/12)
+
+// =====================================================================================================================
+// B10 (Wave 9, 2026-07-05) — structural neutrals → semantic `surface` token (family rename only, та же тональность).
+// Table закрыла forced-colors-часть B10 2026-06-11 (Issue 12), но осознанно оставила hardcoded gray/stone/neutral —
+// этот describe закрывает residual-часть (см. Documentation/issues/table.md, Documentation/issues/README.md Wave 9).
+// =====================================================================================================================
+describe("Table Component - B10 semantic surface tokens", () => {
+  beforeAll(() => {
+    // @ts-ignore — этот describe — sibling основного, нужен свой IO-mock
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] } as Response)
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  const legacyGrayFamily = /\b(?:bg|text|border|ring|divide)-(?:neutral|stone|zinc|slate|gray)-\d+/
+  const fruits = [
+    { name: "orange", color: "orange" },
+    { name: "banana", color: "yellow" }
+  ]
+
+  it("classBaseTable (root) несёт activeRow/hoverRows на surface-family (не neutral)", async () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }],
+        classes: {
+          rowActive: "bg-surface-100/90 dark:bg-surface-900/50",
+          rowHover: "hover:bg-surface-100/90 dark:hover:bg-surface-900/50"
+        }
+      } as TableProps
+    })
+    const row = wrapper.findAll("[data-table-tbody-tr]")[0]
+    await row.trigger("click")
+    await nextTick()
+    const cls = row.attributes("class") ?? ""
+    expect(cls).toContain("bg-surface-100/90 dark:bg-surface-900/50")
+    expect(cls).toContain("hover:bg-surface-100/90 dark:hover:bg-surface-900/50")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it.each([
+    { mode: "filled", expected: "border-surface-200 dark:border-surface-800" },
+    { mode: "outlined", expected: "border-surface-200 dark:border-surface-800" },
+    { mode: "underlined", expected: "border-surface-200 dark:border-surface-800" }
+  ])("defaultBorder in mode '$mode' uses surface-family (not neutral)", ({ mode, expected }) => {
+    const wrapper = mount(Table, {
+      props: { dataSource: fruits, columns: [{ dataField: "name" }], mode: mode as TableProps["mode"] } as TableProps
+    })
+    const body = wrapper.find("[data-table-body]")
+    expect(body.attributes("class") ?? "").toContain(expected)
+  })
+
+  it.each(["filled", "outlined", "underlined"] as const)("modeStyle ternary — mode '%s'", (mode) => {
+    // modeStyle сам по себе покрывается через classBodySlotHeader/classIsPagination/classTFoot/classSlotFooterBody —
+    // здесь проверяем через classBodySlotHeader: это внешняя обёртка header-слота (сам
+    // `[data-table-header]` — визуальная полоса внутри неё, маркер ключа `classes.header`).
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }],
+        mode: mode as TableProps["mode"]
+      } as TableProps,
+      slots: { header: "<div>header</div>" }
+    })
+    const header = wrapper.find("[data-table-header]").element.parentElement
+    expect(header).not.toBeNull()
+    const cls = header?.getAttribute("class") ?? ""
+    if (mode === "filled") {
+      expect(cls).toContain("bg-surface-100 dark:bg-surface-900")
+    } else if (mode === "outlined") {
+      expect(cls).toContain("bg-white dark:bg-surface-950")
+    } else if (mode === "underlined") {
+      expect(cls).toContain("bg-surface-50 dark:bg-surface-950")
+    }
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classIcon (search/no-data icons) uses surface-family text (not gray)", () => {
+    const wrapper = mount(Table, {
+      props: { dataSource: fruits, columns: [{ dataField: "name" }], searchable: true } as TableProps
+    })
+    const icon = wrapper.find("[data-table-search] svg")
+    expect(icon.exists()).toBe(true)
+    const cls = icon.attributes("class") ?? ""
+    expect(cls).toContain("text-surface-400")
+    expect(cls).toContain("dark:text-surface-600")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classSortIcon uses surface-family text (not gray)", async () => {
+    const wrapper = mount(Table, {
+      props: { dataSource: fruits, columns: [{ dataField: "name", sortable: true }] } as TableProps
+    })
+    const sortEl = wrapper.find("[data-table-thead-col-sort]")
+    expect(sortEl.exists()).toBe(true)
+    // sortColumns[dataField] стартует как undefined — иконка направления не рендерится,
+    // пока не произойдёт клик (populates sortColumns через sorting()).
+    await sortEl.trigger("click")
+    const icon = sortEl.find("svg")
+    expect(icon.exists()).toBe(true)
+    const cls = icon.attributes("class") ?? ""
+    expect(cls).toContain("text-surface-400")
+    expect(cls).toContain("dark:text-surface-600")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classIconClearFilter migrates gray→surface but leaves red hover danger-intent UNTOUCHED", async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: true,
+        toolbar: true,
+        filter: { clearAll: true, visible: true }
+      } as TableProps
+    })
+    await wrapper.find("[data-table-thead-col-filter] input[data-input-control]").setValue("orange")
+    vi.advanceTimersByTime(850)
+    await nextTick()
+    const btn = wrapper.find("[data-table-clear-filter]")
+    expect(btn.exists()).toBe(true)
+    const icon = btn.find("svg")
+    const cls = icon.attributes("class") ?? ""
+    // Мигрировано: gray → surface (та же тональность 400/600)
+    expect(cls).toContain("text-surface-400")
+    expect(cls).toContain("dark:text-surface-600")
+    // НЕ мигрировано намеренно — semantic "danger" intent, вне scope B10
+    expect(cls).toContain("group-hover:text-red-400")
+    expect(cls).toContain("group-hover:dark:text-red-600")
+    expect(cls).not.toMatch(legacyGrayFamily)
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  it("clear-filter button chrome (line ~1940) uses surface-family background (not stone)", async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: true,
+        toolbar: true,
+        filter: { clearAll: true, visible: true }
+      } as TableProps
+    })
+    await wrapper.find("[data-table-thead-col-filter] input[data-input-control]").setValue("orange")
+    vi.advanceTimersByTime(850)
+    await nextTick()
+    const btn = wrapper.find("[data-table-clear-filter]")
+    expect(btn.exists()).toBe(true)
+    const cls = btn.attributes("class") ?? ""
+    // Замена конкретно Table-owned "bg-stone-100 dark:bg-stone-900" на surface-family.
+    // Не проверяем через legacyGrayFamily "чистоту" всего class-списка: <Button> (внешний
+    // компонент, не входит в scope этой миграции) добавляет свои собственные text-neutral-*/
+    // ring-neutral-* классы — они вне scope B10 для Table (Button ведёт свою собственную миграцию).
+    expect(cls).toContain("bg-surface-100")
+    expect(cls).toContain("dark:bg-surface-900")
+    expect(cls).not.toContain("bg-stone-100")
+    expect(cls).not.toContain("dark:bg-stone-900")
+    vi.clearAllTimers()
+    vi.useRealTimers()
+  })
+
+  it("classNotFilter (header text, no-filter column) uses surface-family text (not gray)", () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }]
+      } as TableProps
+    })
+    const notFilter = wrapper.find("[data-table-thead-col-no-filter]")
+    expect(notFilter.exists()).toBe(true)
+    const cls = notFilter.attributes("class") ?? ""
+    expect(cls).toContain("text-surface-400")
+    expect(cls).toContain("dark:text-surface-500")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classResize (resize handle bar) uses surface-family background (not neutral)", () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }, { dataField: "color" }],
+        resizableColumns: true
+      } as TableProps
+    })
+    const bar = wrapper.find("[data-table-thead-col-resized] div")
+    expect(bar.exists()).toBe(true)
+    const cls = bar.attributes("class") ?? ""
+    expect(cls).toContain("bg-surface-300")
+    expect(cls).toContain("dark:bg-surface-600")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classGroup (group header row) uses surface-family text (not gray)", () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: [
+          { name: "a", g: "x" },
+          { name: "b", g: "x" }
+        ],
+        columns: [{ dataField: "name" }],
+        grouping: "g"
+      } as unknown as TableProps
+    })
+    const group = wrapper.find("[data-table-tbody-colgroup]")
+    expect(group.exists()).toBe(true)
+    const cls = group.attributes("class") ?? ""
+    expect(cls).toContain("text-surface-800")
+    expect(cls).toContain("dark:text-surface-300")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it.each([
+    {
+      mode: "filled",
+      expected: "odd:bg-surface-100 even:bg-surface-50 dark:odd:bg-surface-900 dark:even:bg-surface-950"
+    },
+    {
+      mode: "outlined",
+      expected: "odd:bg-white even:bg-surface-50 dark:odd:bg-surface-950 dark:even:bg-surface-900"
+    },
+    {
+      mode: "underlined",
+      expected: "odd:bg-surface-50 even:bg-surface-100 dark:odd:bg-surface-950 dark:even:bg-surface-900"
+    }
+  ])("classTr zebra-striping in mode '$mode' uses surface-family (not stone/neutral)", ({ mode, expected }) => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }],
+        mode: mode as TableProps["mode"],
+        stripedRows: true
+      } as TableProps
+    })
+    const row = wrapper.findAll("[data-table-tbody-tr]")[0]
+    const cls = row.attributes("class") ?? ""
+    expect(cls).toContain(expected)
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+
+  it("classIsLoadingBody (loading overlay) uses surface-family background (not neutral), opacity suffixes kept", async () => {
+    const wrapper = mount(Table, {
+      props: {
+        dataSource: fruits,
+        columns: [{ dataField: "name" }]
+      } as TableProps
+    })
+    ;(wrapper.vm as any).startLoading()
+    await nextTick()
+    const overlay = wrapper.find("[data-table-loading] > div")
+    expect(overlay.exists()).toBe(true)
+    const cls = overlay.attributes("class") ?? ""
+    expect(cls).toContain("bg-surface-100/70")
+    expect(cls).toContain("dark:bg-surface-800/50")
+    expect(cls).not.toMatch(legacyGrayFamily)
+  })
+})
+
+describe("Table Component - T1 public API surface + T3 darkModeSelector", () => {
+  beforeAll(() => {
+    // @ts-ignore — этот describe — sibling основного, нужен свой IO-mock
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] } as Response)
+  })
+
+  const fruits = [
+    { name: "orange", color: "orange" },
+    { name: "banana", color: "yellow" }
+  ]
+
+  // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback), а
+  // documentElement переживает mount: чистим обоих, чтобы darkModeSelector не протёк ни в
+  // соседние тесты, ни в соседние файлы (см. memory: window.FishtVue leak across Vitest files).
+  const resetGlobals = () => {
+    try {
+      // @ts-ignore
+      delete window.FishtVue
+    } catch {
+      // @ts-ignore
+      window.FishtVue = undefined
+    }
+    document.documentElement.classList.remove("dark")
+    document.documentElement.removeAttribute("data-theme")
+  }
+  beforeEach(resetGlobals)
+  afterEach(() => {
+    resetGlobals()
+    vi.restoreAllMocks()
+  })
+
+  const appWithTheme = (optionsTheme: Record<string, unknown>) => ({
+    install(app: any) {
+      app.use(FishtVue, { optionsTheme })
+    }
+  })
+
+  // Подменяем ТОЛЬКО "(prefers-color-scheme: dark)": Loading.vue читает
+  // "(prefers-reduced-motion: reduce)" через тот же window.matchMedia, и его ответ портить нельзя.
+  const stubColorSchemeMedia = (darkMatches: boolean) => {
+    const darkQuery = "(prefers-color-scheme: dark)"
+    const removeEventListener = vi.fn()
+    const handlers: Array<(e: any) => void> = []
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          media: query,
+          matches: query === darkQuery ? darkMatches : false,
+          onchange: null,
+          addEventListener: (_type: string, handler: (e: any) => void) => {
+            if (query === darkQuery) handlers.push(handler)
+          },
+          removeEventListener,
+          addListener: () => {},
+          removeListener: () => {},
+          dispatchEvent: () => false
+        }) as any
+    )
+    return { handlers, removeEventListener }
+  }
+
+  describe("T1 — componentTable / focus()", () => {
+    it("exposes componentTable pointing at the root [data-table] element", () => {
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps })
+      expect(wrapper.vm.componentTable).toBe(wrapper.find("[data-table]").element)
+    })
+
+    it('root carries tabindex="-1" — фокус только программный, tab order не меняется', () => {
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps })
+      expect(wrapper.find("[data-table]").attributes("tabindex")).toBe("-1")
+    })
+
+    it("focus() moves document.activeElement onto the root container", () => {
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps, attachTo: document.body })
+      const root = wrapper.find("[data-table]").element as HTMLElement
+      expect(document.activeElement).not.toBe(root)
+      wrapper.vm.focus()
+      expect(document.activeElement).toBe(root)
+      wrapper.unmount()
+    })
+
+    it("focus() forwards FocusOptions to HTMLElement.focus", () => {
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps, attachTo: document.body })
+      const root = wrapper.find("[data-table]").element as HTMLElement
+      const focusSpy = vi.spyOn(root, "focus")
+      wrapper.vm.focus({ preventScroll: true })
+      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+      wrapper.unmount()
+    })
+  })
+
+  describe("T3 — isDark follows optionsTheme.darkModeSelector", () => {
+    it("derives dark from the configured selector present in the DOM, ignoring the OS preference", () => {
+      document.documentElement.classList.add("dark")
+      // OS говорит «light» — сконфигурированный селектор обязан победить.
+      stubColorSchemeMedia(false)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: ".dark" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      expect(wrapper.vm.isDark).toBe(true)
+    })
+
+    it("stays light when the configured selector is absent, even if the OS prefers dark", () => {
+      // Обратная сторона контракта: селектор задан → media-query больше не источник истины.
+      stubColorSchemeMedia(true)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: ".dark" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      expect(wrapper.vm.isDark).toBe(false)
+    })
+
+    it("reacts to the selector being toggled at runtime (MutationObserver)", async () => {
+      stubColorSchemeMedia(false)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: "[data-theme='dark']" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      expect(wrapper.vm.isDark).toBe(false)
+
+      document.documentElement.setAttribute("data-theme", "dark")
+      await flushPromises()
+      expect(wrapper.vm.isDark).toBe(true)
+
+      document.documentElement.removeAttribute("data-theme")
+      await flushPromises()
+      expect(wrapper.vm.isDark).toBe(false)
+    })
+
+    it("stops tracking the selector after unmount (observer disconnected)", async () => {
+      stubColorSchemeMedia(false)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: ".dark" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      const vm = wrapper.vm
+      expect(vm.isDark).toBe(false)
+
+      wrapper.unmount()
+      document.documentElement.classList.add("dark")
+      await flushPromises()
+      expect(vm.isDark).toBe(false)
+    })
+
+    it("falls back to prefers-color-scheme when no darkModeSelector is configured and unsubscribes on unmount", () => {
+      const { handlers, removeEventListener } = stubColorSchemeMedia(true)
+      const wrapper = mount(Table, { props: { dataSource: fruits } as TableProps })
+      expect(wrapper.vm.isDark).toBe(true)
+      expect(handlers.length).toBe(1)
+
+      // Живой media-listener сохранён — реакция на смену OS-темы не потеряна.
+      handlers[0]({ matches: false })
+      expect(wrapper.vm.isDark).toBe(false)
+
+      wrapper.unmount()
+      expect(removeEventListener).toHaveBeenCalledWith("change", handlers[0])
+    })
+
+    it("Loading colour follows the darkModeSelector (theme.600 in dark, theme.500 in light)", async () => {
+      // Единственный template-потребитель isDark — цвет спиннера в loading-оверлее.
+      document.documentElement.classList.add("dark")
+      stubColorSchemeMedia(false)
+      const wrapper = mount(Table, {
+        global: { plugins: [appWithTheme({ darkModeSelector: ".dark" })] },
+        props: { dataSource: fruits } as TableProps
+      })
+      wrapper.vm.startLoading()
+      await nextTick()
+      expect(wrapper.find("[data-table-loading]").exists()).toBe(true)
+      expect(wrapper.findComponent(Loading).props("color")).toBe("theme.600")
+
+      document.documentElement.classList.remove("dark")
+      await flushPromises()
+      await nextTick()
+      expect(wrapper.findComponent(Loading).props("color")).toBe("theme.500")
+    })
+  })
+})
+
+describe("Table Component - T2 aria-sort + доступный клавиатурный триггер сортировки", () => {
+  beforeAll(() => {
+    // @ts-ignore — этот describe — sibling основного, нужен свой IO-mock
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] } as Response)
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  const fruits = [
+    { name: "orange", color: "orange" },
+    { name: "banana", color: "yellow" }
+  ]
+
+  const mountTable = (columns: Array<Record<string, unknown>>) =>
+    mount(Table, { props: { dataSource: fruits, columns } as TableProps })
+
+  // sorting() пишет в sortColumns внутри setTimeout — без прокрутки таймеров aria-sort не обновится.
+  const settleSort = async () => {
+    vi.advanceTimersByTime(850)
+    await nextTick()
+  }
+
+  it('sortable <th> стартует с aria-sort="none", у несортируемой колонки атрибута нет вовсе', async () => {
+    const wrapper = mountTable([
+      { dataField: "name", sortable: true },
+      { dataField: "color", sortable: false }
+    ])
+    await nextTick()
+
+    const ths = wrapper.findAll("[data-table-thead-col]")
+    expect(ths[0].attributes("aria-sort")).toBe("none")
+    // Именно отсутствие атрибута: aria-sort="none" на несортируемой колонке объявил бы её sortable.
+    expect(ths[1].element.hasAttribute("aria-sort")).toBe(false)
+  })
+
+  it("aria-sort проходит цикл none → ascending → descending → none по мере активации", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([
+      { dataField: "name", sortable: true },
+      { dataField: "color", sortable: true }
+    ])
+    await nextTick()
+    const ariaSortOf = (index: number) => wrapper.findAll("[data-table-thead-col]")[index].attributes("aria-sort")
+    const trigger = () => wrapper.findAll("[data-table-thead-col-sort]")[0]
+
+    expect(ariaSortOf(0)).toBe("none")
+
+    await trigger().trigger("click")
+    await settleSort()
+    expect(ariaSortOf(0)).toBe("ascending")
+
+    await trigger().trigger("click")
+    await settleSort()
+    expect(ariaSortOf(0)).toBe("descending")
+
+    await trigger().trigger("click")
+    await settleSort()
+    expect(ariaSortOf(0)).toBe("none")
+
+    // Соседняя сортируемая колонка своё состояние не меняла.
+    expect(ariaSortOf(1)).toBe("none")
+  })
+
+  it("aria-sort отражает defaultSort ещё до любого взаимодействия", async () => {
+    const wrapper = mountTable([
+      { dataField: "name", sortable: true, defaultSort: "asc" },
+      { dataField: "color", sortable: true, defaultSort: "desc" }
+    ])
+    await nextTick()
+
+    const ths = wrapper.findAll("[data-table-thead-col]")
+    expect(ths[0].attributes("aria-sort")).toBe("ascending")
+    expect(ths[1].attributes("aria-sort")).toBe("descending")
+  })
+
+  it('триггер сортировки — нативный <button type="button">, попадающий в tab order', async () => {
+    const wrapper = mountTable([{ dataField: "name", sortable: true }])
+    await nextTick()
+
+    const trigger = wrapper.find("[data-table-thead-col-sort]")
+    expect(trigger.element.tagName).toBe("BUTTON")
+    expect(trigger.attributes("type")).toBe("button")
+    // Нативная кнопка фокусируется сама: отрицательного tabindex быть не должно.
+    expect(trigger.attributes("tabindex")).toBeUndefined()
+    expect((trigger.element as HTMLButtonElement).tabIndex).toBe(0)
+  })
+
+  it("Enter запускает сортировку ровно на один шаг цикла (нет double-fire)", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([{ dataField: "name", sortable: true }])
+    await nextTick()
+
+    await wrapper.find("[data-table-thead-col-sort]").trigger("keydown.enter")
+    await settleSort()
+    // Двойной вызов sorting() увёл бы состояние сразу в "descending".
+    expect(wrapper.find("[data-table-thead-col]").attributes("aria-sort")).toBe("ascending")
+  })
+
+  it("keydown Enter помечается defaultPrevented — именно это гасит синтетический click браузера", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([{ dataField: "name", sortable: true }])
+    await nextTick()
+
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+    const notPrevented = wrapper.find("[data-table-thead-col-sort]").element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(notPrevented).toBe(false)
+
+    await settleSort()
+    expect(wrapper.find("[data-table-thead-col]").attributes("aria-sort")).toBe("ascending")
+  })
+
+  it("Space запускает сортировку и preventDefault'ит событие (страница не скроллится)", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([{ dataField: "name", sortable: true }])
+    await nextTick()
+
+    const event = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true })
+    const notPrevented = wrapper.find("[data-table-thead-col-sort]").element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(notPrevented).toBe(false)
+
+    await settleSort()
+    expect(wrapper.find("[data-table-thead-col]").attributes("aria-sort")).toBe("ascending")
+  })
+
+  it("клик по триггеру тоже сдвигает цикл ровно на один шаг", async () => {
+    vi.useFakeTimers()
+    const wrapper = mountTable([{ dataField: "name", sortable: true }])
+    await nextTick()
+
+    await wrapper.find("[data-table-thead-col-sort]").trigger("click")
+    await settleSort()
+    expect(wrapper.find("[data-table-thead-col]").attributes("aria-sort")).toBe("ascending")
+  })
+
+  it("accessible name триггера берётся из caption колонки", async () => {
+    const wrapper = mountTable([
+      { dataField: "name", sortable: true },
+      { dataField: "color", sortable: true, caption: "Цвет" }
+    ])
+    await nextTick()
+
+    const triggers = wrapper.findAll("[data-table-thead-col-sort]")
+    // caption по умолчанию выводится из dataField при нормализации колонок — новый locale-key не нужен.
+    expect(triggers[0].attributes("aria-label")).toBe("Name")
+    expect(triggers[1].attributes("aria-label")).toBe("Цвет")
+  })
+
+  it("явно пустой caption откатывается на dataField — безымянных кнопок не остаётся", async () => {
+    const wrapper = mountTable([{ dataField: "color", sortable: true, caption: "" }])
+    await nextTick()
+
+    expect(wrapper.find("[data-table-thead-col-sort]").attributes("aria-label")).toBe("color")
+  })
+
+  describe("unstyled — UA-хром нативного триггера", () => {
+    // unstyled инициализируется через window.FishtVue fallback при install — чистим, чтобы
+    // не утекало в соседние тесты/файлы (см. memory: window.FishtVue leak across Vitest files).
+    afterEach(() => {
+      try {
+        // @ts-ignore
+        delete window.FishtVue
+      } catch {
+        // @ts-ignore
+        window.FishtVue = undefined
+      }
+    })
+
+    it("в unstyled-режиме триггер сохраняет класс `fv` — preflight снимает нативный chrome кнопки", async () => {
+      const wrapper = mount(Table, {
+        global: { plugins: [[FishtVue, { unstyled: true }] as any] },
+        props: { dataSource: fruits, columns: [{ dataField: "name", sortable: true }] } as TableProps
+      })
+      await nextTick()
+
+      const trigger = wrapper.find("[data-table-thead-col-sort]")
+      // Элемент остаётся нативной кнопкой — клавиатурная семантика T2 не откатывается.
+      expect(trigger.element.tagName).toBe("BUTTON")
+      const classes = trigger.classes()
+      // `fv` — единственный крючок, по которому baseStyle гасит border/background/padding кнопки.
+      expect(classes).toContain("fv")
+      // При этом никакой темы: ни component-scope класса, ни utility-классов.
+      expect(classes).not.toContain("fishtvue-table")
+      expect(classes).toEqual(["fv"])
+    })
+
+    it("styled-режим не меняется: триггер по-прежнему получает полный набор классов темы", async () => {
+      const wrapper = mountTable([{ dataField: "name", sortable: true }])
+      await nextTick()
+
+      const classes = wrapper.find("[data-table-thead-col-sort]").classes()
+      expect(classes).toContain("fv")
+      expect(classes).toContain("fishtvue-table")
+      expect(classes).toContain("flex")
+      expect(classes).toContain("items-center")
+      expect(classes).toContain("cursor-pointer")
     })
   })
 })

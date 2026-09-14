@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import { computed, onMounted, useSlots } from "vue"
-  import type { SeparatorProps } from "./Separator"
+  import { computed, useSlots } from "vue"
+  import type { SeparatorClassKey, SeparatorProps } from "./Separator"
   import Component from "fishtvue/component"
   import { StyleClass } from "fishtvue/types"
   // ---BASE-COMPONENT----------------------
@@ -11,11 +11,25 @@
     gradient: undefined
   })
   const slots = useSlots()
+  // Пары ключей `["segment", "segmentStart"]` — «общий → частный»: оба сегмента получают `segment`,
+  // затем конкретный ключ, поэтому при конфликте twMerge отдаёт победу частному.
+  const { cls } = Separator.resolveClasses<SeparatorClassKey>(props)
   // ---PROPS-------------------------------
-  const vertical = computed<NonNullable<SeparatorProps["vertical"]>>(() => props.vertical)
-  const content = computed<NonNullable<SeparatorProps["contentPosition"]>>(
-    () => props.contentPosition ?? options?.contentPosition ?? "center"
+  // Ориентация: строковый prop вместо булева `vertical` (T2 редизайна props 1.0). Неизвестное
+  // значение сводится к "horizontal" — дефолту, а не к пустой разметке (решение R6).
+  const orientation = computed<NonNullable<SeparatorProps["orientation"]>>(() =>
+    (props.orientation ?? options?.orientation) === "vertical" ? "vertical" : "horizontal"
   )
+  const isVertical = computed<boolean>(() => orientation.value === "vertical")
+  // Issue 3 / F31: logical start/end. RTL-корректность порядка сегментов обеспечивается тем,
+  // что корень — flex, и его main-axis следует document direction; отдельный CSS или
+  // `useDirectionality()` не нужен (зеркало Button Issue 3).
+  // Физические алиасы "left"/"right" сняты в major 2026-09-06 (решение R7); неизвестное значение
+  // сводится к "center" — дефолту, а не к пустой разметке.
+  const content = computed<"start" | "end" | "center" | "full">(() => {
+    const raw = props.contentPosition ?? options?.contentPosition ?? "center"
+    return raw === "start" || raw === "end" || raw === "full" ? raw : "center"
+  })
   const gradient = computed<number>(() => {
     let gradient = props?.gradient ?? options?.gradient
     if (typeof gradient === "boolean") return gradient ? 20 : 0
@@ -44,111 +58,80 @@
     const depth = (props?.depth as SeparatorProps["depth"]) ?? options?.depth ?? 1
     return depth && depth <= 7 ? depth : 1
   })
-  const classBase = computed<SeparatorProps["class"]>(() =>
-    Separator.setStyle([
-      "w-auto justify-center",
-      vertical.value ? "flex-col h-full" : "",
-      options?.class ?? "",
-      props?.class ?? "",
-      "relative flex"
-    ])
+  // Корень: база → orientation → options.classes.root → props.classes.root → options.class → props.class
+  // (dev-patterns §2 D).
+  const classBase = computed<StyleClass>(() =>
+    cls("root", "w-auto justify-center", isVertical.value && "flex-col h-full", "relative flex")
   )
-  const classBodyLineLeft = computed<StyleClass>(() =>
-    Separator.setStyle([
+  // Сегмент = обёртка линии. Общий ключ `segment` применяется к обоим, `segmentStart`/`segmentEnd` —
+  // к конкретному (оба сегмента получают их после общего, поэтому частный ключ выигрывает twMerge).
+  const classSegmentStart = computed<StyleClass>(() =>
+    cls(
+      ["segment", "segmentStart"],
       "items-center w-full",
-      options?.classBodyLine ?? "",
-      props?.classBodyLine ?? "",
-      options?.classBodyLineLeft ?? "",
-      props?.classBodyLineLeft ?? "",
-      vertical.value ? "h-full justify-center" : "",
+      isVertical.value && "h-full justify-center",
       "relative flex"
-    ])
+    )
   )
-  const classLineLeft = computed<StyleClass>(() =>
-    Separator.setStyle([
-      gradient.value ? (vertical.value ? "bg-gradient-to-b" : "bg-gradient-to-r") : "",
-      "from-transparent via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800",
-      "bg-neutral-200 dark:bg-neutral-800",
-      "rounded-l-[2px]",
-      options?.classLine ?? "",
-      props?.classLine ?? "",
-      options?.classLineLeft ?? "",
-      props?.classLineLeft ?? ""
-    ])
+  const classSegmentEnd = computed<StyleClass>(() =>
+    cls(["segment", "segmentEnd"], "items-center w-full", isVertical.value && "h-full justify-center", "relative flex")
+  )
+  const lineBase = computed<Array<string>>(() => [
+    gradient.value ? (isVertical.value ? "bg-gradient-to-b" : "bg-gradient-to-r rtl:bg-gradient-to-l") : "",
+    "from-transparent via-surface-200 dark:via-surface-800 to-surface-200 dark:to-surface-800",
+    "bg-surface-200 dark:bg-surface-800"
+  ])
+  const classLineStart = computed<StyleClass>(() => cls(["line", "lineStart"], lineBase.value, "rounded-l-[2px]"))
+  const classLineEnd = computed<StyleClass>(() =>
+    cls(
+      ["line", "lineEnd"],
+      gradient.value ? (isVertical.value ? "bg-gradient-to-t" : "bg-gradient-to-l rtl:bg-gradient-to-r") : "",
+      "from-transparent via-surface-200 dark:via-surface-800 to-surface-200 dark:to-surface-800",
+      "bg-surface-200 dark:bg-surface-800",
+      "rounded-r-[2px]"
+    )
   )
   const classContent = computed<StyleClass>(() =>
-    Separator.setStyle([
-      "min-w-max text-sm text-gray-500",
-      slots?.default ? "mx-1" : "",
-      options?.classContent ?? "",
-      props?.classContent ?? "",
-      "relative"
-    ])
-  )
-  const classBodyLineRight = computed<StyleClass>(() =>
-    Separator.setStyle([
-      "items-center w-full",
-      options?.classBodyLine ?? "",
-      props?.classBodyLine ?? "",
-      options?.classBodyLineRight ?? "",
-      props?.classBodyLineRight ?? "",
-      vertical?.value ? "h-full justify-center" : "",
-      "relative flex"
-    ])
-  )
-  const classLineRight = computed<StyleClass>(() =>
-    Separator.setStyle([
-      gradient.value ? (vertical.value ? "bg-gradient-to-t" : "bg-gradient-to-l") : "",
-      "from-transparent via-neutral-200 dark:via-neutral-800 to-neutral-200 dark:to-neutral-800",
-      "bg-neutral-200 dark:bg-neutral-800",
-      "rounded-r-[2px]",
-      options?.classLine ?? "",
-      props?.classLine ?? "",
-      options?.classLineRight ?? "",
-      props?.classLineRight ?? ""
-    ])
+    cls("content", "min-w-max text-sm text-surface-500", !!slots?.default && "mx-1", "relative")
   )
   // ---EXPOSE------------------------------
   defineExpose({
     // ---PROPS-------------------------
-    vertical,
+    orientation,
     content,
     gradient,
     gradientLength,
     depth,
     classBase,
-    classBodyLineLeft,
-    classLineLeft,
+    classSegmentStart,
+    classLineStart,
     classContent,
-    classBodyLineRight,
-    classLineRight
+    classSegmentEnd,
+    classLineEnd
   })
   // ---MOUNT-UNMOUNT-----------------------
-  onMounted(() => {
-    Separator.initStyle()
-  })
+  // `Separator.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:88-92).
 </script>
 
 <template>
-  <div data-separator :class="classBase">
-    <div v-if="!['left', 'full'].includes(content)" data-separator-left :class="classBodyLineLeft" aria-hidden="true">
+  <div data-separator role="separator" :aria-orientation="orientation" :class="classBase">
+    <div v-if="!['start', 'full'].includes(content)" data-separator-start :class="classSegmentStart" aria-hidden="true">
       <div
-        :class="classLineLeft"
+        data-separator-line
+        :class="classLineStart"
         :style="[
-          vertical ? `height: 100%;width: ${depth}px;` : `width: 100%;height: ${depth}px;`,
+          orientation === 'vertical' ? `height: 100%;width: ${depth}px;` : `width: 100%;height: ${depth}px;`,
           `--fv-gradient-from-position: ${gradient}%;--fv-gradient-via-position: ${gradient > 0 ? gradientLength : 0}%`
         ]" />
     </div>
     <span v-if="slots?.default" data-separator-content :class="classContent"><slot /></span>
-    <div
-      v-if="!['right', 'full'].includes(content)"
-      data-separator-right
-      :class="classBodyLineRight"
-      aria-hidden="true">
+    <div v-if="!['end', 'full'].includes(content)" data-separator-end :class="classSegmentEnd" aria-hidden="true">
       <div
-        :class="classLineRight"
+        data-separator-line
+        :class="classLineEnd"
         :style="[
-          vertical ? `height: 100%;width: ${depth}px;` : `width: 100%;height: ${depth}px;`,
+          orientation === 'vertical' ? `height: 100%;width: ${depth}px;` : `width: 100%;height: ${depth}px;`,
           `--fv-gradient-from-position: ${gradient}%;--fv-gradient-via-position: ${gradient > 0 ? gradientLength : 0}%`
         ]" />
     </div>

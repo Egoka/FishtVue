@@ -1,39 +1,40 @@
 <script setup lang="ts">
-  import { computed, onMounted, ref, useSlots, watch } from "vue"
-  import { IQuillEditor, TextEditorEmits, TextEditorProps } from "./TextEditor"
-  import "@vueup/vue-quill/dist/vue-quill.snow.css"
-  import "@vueup/vue-quill/dist/vue-quill.bubble.css"
+  import { computed, onMounted, ref, shallowRef, useSlots, watch } from "vue"
+  import { TextEditorClassKey, TextEditorEmits, TextEditorInstance, TextEditorProps } from "./TextEditor"
   import InputLayout from "fishtvue/inputlayout/InputLayout.vue"
   import Dialog from "fishtvue/dialog/Dialog.vue"
   import Button from "fishtvue/button/Button.vue"
   import Component from "fishtvue/component"
   import { InputLayoutExpose, InputLayoutProps } from "fishtvue/inputlayout"
   import { StyleClass } from "fishtvue/types"
+  import { mergeClasses } from "fishtvue/utils/tailwindHandler"
+  import { fieldsOmit } from "fishtvue/utils/objectHandler"
   import { htmlToText } from "fishtvue/utils/domHandler"
+  import { useDarkMode } from "fishtvue/theme"
   // ---BASE-COMPONENT----------------------
   const TextEditor = new Component<"TextEditor">()
   const options = TextEditor.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
+  // Каждый optional boolean — `undefined` (dev-patterns §2 F): иначе слой componentsOptions недостижим.
   const props = withDefaults(defineProps<TextEditorProps>(), {
-    isValue: undefined,
-    isInvalid: undefined,
+    invalid: undefined,
     required: undefined,
     loading: undefined,
     disabled: undefined,
-    clear: undefined
+    clearable: undefined
   })
   const emit = defineEmits<TextEditorEmits>()
   const slots = useSlots()
+  const { cls, raw } = TextEditor.resolveClasses<TextEditorClassKey>(props)
   // ---STATE-------------------------------
-  const QuillEditor = ref<any>()
+  // shallowRef, а не ref: сюда кладётся определение компонента. Глубокий reactive-прокси на нём
+  // не нужен и вызывает Vue-warn «received a Component that was made a reactive object».
+  const QuillEditor = shallowRef<any>()
   const layout = ref<InputLayoutExpose>()
   const valueLayout = ref<TextEditorProps["modelValue"]>()
-  const classLayout = ref<TextEditorProps["class"]>()
   const open = ref<boolean>(false)
-  const quillEditorLink = ref<IQuillEditor>()
+  const quillEditorLink = ref<TextEditorInstance>()
   const isActiveTextEditor = ref<boolean>(false)
-  const additionalStyles = ref<string>("max-h-max h-max")
-  const editorSmall = ref<StyleClass>(TextEditor.setStyle("editor-small w-38 max-h-40 caret-theme-500"))
   const modelValue = ref<TextEditorProps["modelValue"]>()
   watch(
     () => props.modelValue,
@@ -51,32 +52,57 @@
   const isValue = computed<boolean>(() =>
     Boolean(modelValue.value ? String(modelValue.value).length : (modelValue.value ?? isActiveTextEditor.value))
   )
-  const mode = computed<NonNullable<TextEditorProps["mode"]>>(() => props.mode ?? options?.mode ?? "outlined")
+  // Wave 3.2 (texteditor.md Issue 7): глобальный componentsStyle в fallback-chain — зеркало Input.vue.
+  const mode = computed<NonNullable<TextEditorProps["mode"]>>(
+    () => props.mode ?? options?.mode ?? TextEditor.componentsStyle() ?? "outlined"
+  )
   const isDisabled = computed<NonNullable<TextEditorProps["disabled"]>>(() => props.disabled ?? false)
-  const isLoading = computed<NonNullable<TextEditorProps["isInvalid"]>>(() => props.loading ?? false)
-  const isInvalid = computed<NonNullable<TextEditorProps["isInvalid"]>>(() =>
-    !isDisabled.value ? (props.isInvalid ?? false) : false
-  )
+  const isLoading = computed<NonNullable<TextEditorProps["loading"]>>(() => props.loading ?? false)
+  const isInvalid = computed<boolean>(() => (!isDisabled.value ? (props.invalid ?? false) : false))
+  const isClearable = computed<boolean>(() => props?.clearable ?? options?.clearable ?? false)
   const messageInvalid = computed<NonNullable<TextEditorProps["messageInvalid"]>>(() => props.messageInvalid ?? "")
-  const classStyle = computed<NonNullable<TextEditorProps["class"]>>(
-    () => (options?.class ? `${options?.class} ` : "") + (props.class ? `${props.class}` : "") + additionalStyles.value
-  )
-  const editor = computed<StyleClass>(() =>
+  // Inline-контейнер Quill (bubble-режим) — ключ `editor`.
+  const classEditor = computed(() => cls("editor", "editor-small w-38 max-h-40 caret-theme-500"))
+  // Контейнер редактора внутри диалога snow-режима: свой ключ не нужен — диалог настраивается
+  // через `dialogProps.class` / `dialogProps.classes`.
+  const classDialogEditor = computed<StyleClass>(() =>
     TextEditor.setStyle([
-      "border rounded-md border-neutral-200 dark:border-neutral-800 dark:text-gray-400",
+      "border rounded-md border-surface-200 dark:border-surface-800 dark:text-surface-400",
       mode.value === "outlined" ? "bg-white dark:bg-black" : "",
-      mode.value === "underlined" ? "bg-stone-50 dark:bg-stone-950" : "",
-      mode.value === "filled" ? "bg-stone-100 dark:bg-stone-900" : "",
+      mode.value === "underlined" ? "bg-surface-50 dark:bg-surface-950" : "",
+      mode.value === "filled" ? "bg-surface-100 dark:bg-surface-900" : "",
       "st-text-editor caret-theme-500"
     ])
   )
+  // Тема Quill-обвязки и подписи его tooltip'ов идут CSS-переменными, а не `@media` / литералами:
+  //
+  // - dark-режим определяется через `optionsTheme.darkModeSelector` (единый источник истины с
+  //   движком стилей), иначе при `<html class="dark">` и светлой системной теме редактор оставался
+  //   светлым посреди тёмной страницы — прежняя привязка к системной цветовой схеме этого не умела;
+  // - подписи `content:` в псевдоэлементах Quill нельзя проставить из шаблона, поэтому строки
+  //   локали заезжают переменными (значение обязано быть в кавычках — это CSS-строка).
+  const isDark = useDarkMode()
+  const quillVars = computed<Record<string, string>>(() => ({
+    "--background-quill-toolbar": isDark.value ? "var(--ql-theme-900)" : "var(--ql-theme-100)",
+    "--border-quill-editor": isDark.value ? "var(--ql-theme-800)" : "var(--ql-theme-200)",
+    "--placeholder-quill-editor": isDark.value ? "#ffffff99" : "#00000099",
+    // surface-100 / surface-900 (Wave 9 — Issue 2 / B10): ближайшие тона к прежним хардкодам.
+    "--background-quill-editor": isDark.value
+      ? "rgb(var(--fv-surface-900, 17 24 39))"
+      : "rgb(var(--fv-surface-100, 243 244 246))",
+    "--background-picker-options-quill-editor": isDark.value
+      ? "rgb(var(--fv-surface-900, 17 24 39))"
+      : "rgb(var(--fv-surface-100, 243 244 246))",
+    "--fv-quill-link-label": JSON.stringify(TextEditor.t("textEditor.linkLabel") ?? "Enter link:"),
+    "--fv-quill-save-label": JSON.stringify(TextEditor.t("textEditor.saveLabel") ?? TextEditor.t("save") ?? "Save")
+  }))
   const resizeButtonToBubble = ref<StyleClass>(TextEditor.setStyle("absolute top-0 right-0"))
   const resizeButtonToSnow = ref<StyleClass>(TextEditor.setStyle("relative flex text-left h-[36px]"))
-  const paramsDialog = computed<NonNullable<TextEditorProps["paramsDialog"]>>(() => ({
-    ...options?.paramsDialog,
-    ...props?.paramsDialog
+  const dialogProps = computed<NonNullable<TextEditorProps["dialogProps"]>>(() => ({
+    ...options?.dialogProps,
+    ...props?.dialogProps
   }))
-  const paramsQuillEditor = computed<NonNullable<Partial<TextEditorProps["paramsTextEditor"]>>>(() => ({
+  const editorProps = computed<NonNullable<Partial<TextEditorProps["editorProps"]>>>(() => ({
     content: typeof modelValue.value === "number" ? String(modelValue.value) : modelValue.value,
     readOnly: isDisabled.value,
     contentType: "html",
@@ -97,33 +123,61 @@
       ["link", "image"],
       ["clean"] // remove the formatting button
     ],
-    ...options?.paramsTextEditor,
-    ...props?.paramsTextEditor
+    ...options?.editorProps,
+    ...props?.editorProps
+  }))
+  // Hand-off карты классов в InputLayout (dev-patterns §2 C/D): семейные ключи складываются по ключу,
+  // aspect `animation` заменяется, `root` уходит отдельным `class`. `max-h-max h-max` в `base` снимает
+  // лимит высоты рамки (редактор растёт по контенту) — раньше эта строка клеилась к `props.class`
+  // без пробела (дефект D-TextEditor, закрыт в W2); focus-ring гейтится `!isInvalid`.
+  const FOCUS_RING = "border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700"
+  const layoutClasses = computed(() => ({
+    ...mergeClasses(
+      { base: ["max-h-max h-max", isActiveTextEditor.value && !isInvalid.value ? FOCUS_RING : ""] },
+      fieldsOmit(options?.classes ?? {}, ["root", "animation"]),
+      fieldsOmit(props.classes ?? {}, ["root", "animation"])
+    ),
+    animation: props.classes?.animation ?? options?.classes?.animation
   }))
   const inputLayout = computed<Omit<InputLayoutProps, "value">>(() => ({
-    isValue: isValue.value,
+    id: props.id,
+    hasValue: isValue.value,
     mode: mode.value,
     label: props.label,
     labelMode: props.labelMode ?? options?.labelMode,
-    isInvalid: isInvalid.value,
+    invalid: isInvalid.value,
     messageInvalid: messageInvalid.value,
     required: props.required,
     loading: isLoading.value,
     disabled: isDisabled.value,
     help: props.help,
-    clear: props.clear ?? options?.clear,
+    clearable: isClearable.value,
     width: props.width,
     height: props.height,
-    animation: props.animation,
-    classBody: props.classBody ?? options?.classBody,
-    class: classStyle.value
+    class: raw("root"),
+    classes: layoutClasses.value
   }))
+  // G34: ссылка на КОРНЕВОЙ элемент + `focus()`. Корень TextEditor — `<InputLayout>`, поэтому
+  // элемент берётся из его expose (`inputBody`). Зеркало `componentTable`/`buttonRef`.
+  const componentTextEditor = computed<HTMLElement | undefined>(() => layout.value?.inputBody)
+
+  /**
+   * Ставит фокус в редактор. Делегирует Quill'у, если тот загружен (он сам знает, куда именно
+   * внутри contenteditable вернуть каретку); иначе фокусирует корневой элемент, чтобы вызов
+   * не был молча бесполезным при отсутствующем optional peer-dep.
+   */
+  function focus() {
+    if (quillEditorLink.value) quillEditorLink.value.focus()
+    else componentTextEditor.value?.focus()
+  }
+
   // ---EXPOSE------------------------------
   defineExpose({
     // ---STATE-------------------------
     layout,
+    componentTextEditor,
     valueLayout,
-    classLayout,
+    classEditor,
     open,
     quillEditorLink,
     isActiveTextEditor,
@@ -135,39 +189,45 @@
     isDisabled,
     isLoading,
     isInvalid,
+    isClearable,
     messageInvalid,
-    classStyle,
-    paramsDialog,
-    paramsQuillEditor,
+    dialogProps,
+    editorProps,
     inputLayout,
     // ---METHODS-----------------------------
     clear,
-    ready
+    ready,
+    focus
   })
   // ---MOUNT-UNMOUNT-----------------------
   onMounted(async () => {
-    TextEditor.initStyle()
-    QuillEditor.value = (await import("@vueup/vue-quill")).QuillEditor
+    // ---CANON (Wave 2.3) — без ручного TextEditor.initStyle(): базовый Component.__hooks() уже
+    // регистрирует onServerPrefetch + vueOnMounted → initStyle() (см. lib/component/index.ts:79–84).
+    // ---Wave 2.1 — Quill (@vueup/vue-quill + quill) = optional peerDependencies: и компонент, и его
+    // CSS грузятся lazy на клиенте при mount, не на import-time (bundle без TextEditor их не тянет,
+    // SSR-safe). При отсутствии peer редактор просто не рендерится (template v-if="QuillEditor").
+    try {
+      QuillEditor.value = (await import("@vueup/vue-quill")).QuillEditor
+      await Promise.all([
+        import("@vueup/vue-quill/dist/vue-quill.snow.css"),
+        import("@vueup/vue-quill/dist/vue-quill.bubble.css")
+      ])
+    } catch {
+      /* @vueup/vue-quill не установлен (optional peer) — редактор остаётся нерендеренным */
+    }
   })
   // ---WATCHERS----------------------------
   watch(theme, (theme) => {
     open.value = theme === "snow" ? true : theme === "bubble" ? false : false
   })
   watch(isActiveTextEditor, (value) => {
-    {
-      classLayout.value =
-        (props.class ?? "") +
-        (value
-          ? ` border-theme-600 dark:border-theme-700 ring-2 ring-inset ring-theme-600 dark:ring-theme-700 ${additionalStyles.value}`
-          : " " + additionalStyles.value)
-      if (!value) changeModelValue(modelValue.value)
-    }
+    if (!value) changeModelValue(modelValue.value)
   })
 
   // ---METHODS-----------------------------
   function inputModelValue(value: any) {
     modelValue.value = value
-    emit("update:isInvalid", false)
+    emit("update:invalid", false)
     emit("update:modelValue", value)
   }
 
@@ -188,45 +248,52 @@
 </script>
 
 <template>
-  <InputLayout
-    data-text-editor
-    ref="layout"
-    :value="valueLayout"
-    :class="classLayout"
-    v-bind="inputLayout"
-    @clear="clear">
-    <div :id="id" :class="editorSmall">
-      <component
-        :is="QuillEditor"
-        v-if="QuillEditor && theme === 'bubble'"
-        ref="quillEditorLink"
-        theme="bubble"
-        v-bind="paramsQuillEditor"
-        @update:content="inputModelValue"
-        @focus="isActiveTextEditor = true"
-        @blur="isActiveTextEditor = false"
-        @ready="ready" />
-    </div>
+  <!-- Корень TextEditor — корень InputLayout: `data-text-editor` падает на него fallthrough-атрибутом -->
+  <InputLayout data-text-editor ref="layout" :value="valueLayout" v-bind="inputLayout" @clear="clear">
+    <template #default="{ id: fieldId, labelledby }">
+      <div data-text-editor-editor :id="fieldId" :aria-labelledby="labelledby" :class="classEditor" :style="quillVars">
+        <component
+          :is="QuillEditor"
+          v-if="QuillEditor && theme === 'bubble'"
+          ref="quillEditorLink"
+          theme="bubble"
+          v-bind="editorProps"
+          @update:content="inputModelValue"
+          @focus="isActiveTextEditor = true"
+          @blur="isActiveTextEditor = false"
+          @ready="ready" />
+      </div>
+      <!--
+        Issue 10 (M54-55): Quill рендерится в contenteditable-div'ах, поэтому при native submit
+        содержимое не попадало в FormData. Скрытый input переносит HTML-строку в форму.
+        `:name="id"` — канон формы, зеркало Textarea.vue: id компонента служит и именем поля.
+        Значение берётся из локального modelValue (а не props), чтобы правки попадали в FormData
+        сразу, не дожидаясь change-эмита на blur.
+      -->
+      <input v-if="id" type="hidden" data-text-editor-value :name="id" :value="modelValue ?? ''" />
+    </template>
     <template #body>
       <Dialog
         v-model="open"
-        v-bind="paramsDialog"
+        v-bind="dialogProps"
         @update:modelValue="theme = 'bubble'"
-        :class="['p-0 max-w-screen-sm sm:max-w-5xl sm:m-3 sm:w-[90%] max-h-screen']">
-        <div :class="['editor', isDisabled ? 'editor-disabled' : '', editor]">
+        :classes="{ content: 'p-0 max-w-screen-sm sm:max-w-5xl sm:m-3 sm:w-[90%] max-h-screen' }">
+        <div :class="['editor', isDisabled ? 'editor-disabled' : '', classDialogEditor]" :style="quillVars">
           <component
             :is="QuillEditor"
             v-if="QuillEditor && theme === 'snow'"
             theme="snow"
-            v-bind="paramsQuillEditor"
+            v-bind="editorProps"
             @update:content="inputModelValue" />
           <div :class="resizeButtonToBubble" @click="theme = 'bubble'">
             <Button
               type="icon"
               size="xs"
-              mode="ghost"
+              variant="ghost"
               icon="ArrowsPointingIn"
-              class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400">
+              :classes="{
+                icon: 'text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400'
+              }">
             </Button>
           </div>
         </div>
@@ -241,10 +308,12 @@
         <Button
           type="icon"
           size="xs"
-          mode="ghost"
+          variant="ghost"
           icon="ArrowsPointingOut"
           data-switch-size
-          class-icon="text-gray-400 dark:text-gray-600 hover:text-gray-600 hover:dark:text-gray-400">
+          :classes="{
+            icon: 'text-surface-400 dark:text-surface-600 hover:text-surface-600 hover:dark:text-surface-400'
+          }">
           {{ TextEditor.t("increase") ?? "Increase" }}
         </Button>
       </div>
@@ -361,25 +430,13 @@
     stroke: var(--ql-theme-500);
   }
 
-  @media (prefers-color-scheme: light) {
-    .editor {
-      --background-quill-toolbar: var(--ql-theme-100);
-      --border-quill-editor: var(--ql-theme-200);
-      --placeholder-quill-editor: #00000099;
-      --background-quill-editor: #f6f3f4;
-      --background-picker-options-quill-editor: #f5f5f5;
-    }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .editor {
-      --background-quill-toolbar: var(--ql-theme-900);
-      --border-quill-editor: var(--ql-theme-800);
-      --placeholder-quill-editor: #ffffff99;
-      --background-quill-editor: #212121;
-      --background-picker-options-quill-editor: #131313;
-    }
-  }
+  /*
+    Тематические переменные (--background-quill-*, --border-quill-editor, --placeholder-quill-editor)
+    инжектятся инлайном из `quillVars` — на .editor и на .editor-small одновременно.
+    Раньше здесь стояла пара media-блоков по системной цветовой схеме: они игнорировали
+    `optionsTheme.darkModeSelector` и вешали переменные только на .editor, из-за чего
+    bubble-редактор (.editor-small, отдельный узел вне .editor) их вовсе не наследовал.
+  */
 
   .editor-small .ql-editor {
     padding: 9px 5px;
@@ -467,12 +524,14 @@
     background-color: var(--background-quill-editor);
   }
 
+  /* Подписи Quill-tooltip'а: `content` в псевдоэлементе не задать из шаблона, поэтому строка
+     локали приезжает CSS-переменной из `quillVars` (fallback — английский литерал). */
   .editor .ql-snow .ql-tooltip[data-mode="link"]::before {
-    content: "Ваша ссылка";
+    content: var(--fv-quill-link-label, "Enter link:");
   }
 
   .editor .ql-snow .ql-tooltip.ql-editing a.ql-action::after {
-    content: "Сохранить";
+    content: var(--fv-quill-save-label, "Save");
   }
 
   .editor-small .ql-editor.ql-blank::before,

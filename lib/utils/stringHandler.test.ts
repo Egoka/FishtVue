@@ -3,7 +3,9 @@ import {
   convertToCamelCase,
   convertToDashCase,
   convertToSnakeCase,
+  interpolate,
   isString,
+  selectPlural,
   stringify,
   toCapitalCase,
   toFlatCase,
@@ -503,6 +505,78 @@ describe("Testing string handler", () => {
       expect(stringify(42)).toBe("42")
       expect(stringify(true)).toBe("true")
       expect(stringify("string")).toBe('"string"')
+    })
+  })
+
+  describe("interpolate function", () => {
+    it("substitutes named placeholders", () => {
+      expect(interpolate("Hello, {name}!", { name: "Egor" })).toBe("Hello, Egor!")
+    })
+
+    it("coerces number params to string", () => {
+      expect(interpolate("Page {page} of {total}", { page: 2, total: 10 })).toBe("Page 2 of 10")
+    })
+
+    it("substitutes repeated placeholders", () => {
+      expect(interpolate("{a}{a}{b}", { a: "x", b: "y" })).toBe("xxy")
+    })
+
+    it("leaves unknown placeholders as literals (dev signal)", () => {
+      expect(interpolate("Hi {name}", { other: 1 })).toBe("Hi {name}")
+      expect(interpolate("Hi {name}", {})).toBe("Hi {name}")
+    })
+
+    it("returns the template unchanged when no params passed", () => {
+      expect(interpolate("Hi {name}")).toBe("Hi {name}")
+    })
+
+    it("handles empty template", () => {
+      expect(interpolate("", { name: "x" })).toBe("")
+    })
+  })
+
+  describe("selectPlural function", () => {
+    const en = "=0 No results|one 1 result|other Results: {count}"
+    const ru =
+      "=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата"
+
+    it("matches exact =N selector before category", () => {
+      expect(selectPlural(en, 0, "en")).toBe("No results")
+      expect(selectPlural(ru, 0, "ru")).toBe("Результатов не найдено")
+    })
+
+    it("selects English one / other categories", () => {
+      expect(selectPlural(en, 1, "en")).toBe("1 result")
+      expect(selectPlural(en, 5, "en")).toBe("Results: {count}")
+    })
+
+    it("selects Russian one / few / many via Intl.PluralRules", () => {
+      expect(selectPlural(ru, 1, "ru")).toBe("{count} результат")
+      expect(selectPlural(ru, 2, "ru")).toBe("{count} результата")
+      expect(selectPlural(ru, 5, "ru")).toBe("{count} результатов")
+    })
+
+    it("applies correct Russian rule for teens and 21 (where n===1 heuristic fails)", () => {
+      expect(selectPlural(ru, 21, "ru")).toBe("{count} результат") // one
+      expect(selectPlural(ru, 11, "ru")).toBe("{count} результатов") // many
+      expect(selectPlural(ru, 22, "ru")).toBe("{count} результата") // few
+    })
+
+    it("falls back to other category when exact category absent", () => {
+      expect(selectPlural("one A|other B", 5, "en")).toBe("B")
+    })
+
+    it("falls back to the first form when neither category nor other matches", () => {
+      expect(selectPlural("one A", 5, "en")).toBe("A")
+    })
+
+    it("does not throw on an invalid locale tag", () => {
+      expect(() => selectPlural("one A|other B", 5, "invalid tag!!")).not.toThrow()
+      expect(selectPlural("one A|other B", 5, "invalid tag!!")).toBe("B")
+    })
+
+    it("trims surrounding whitespace around pipe-separated forms", () => {
+      expect(selectPlural("one one item | other many items", 1, "en")).toBe("one item")
     })
   })
 })

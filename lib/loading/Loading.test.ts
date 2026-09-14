@@ -1,0 +1,330 @@
+import { flushPromises, mount } from "@vue/test-utils"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { createApp } from "vue"
+import FishtVue from "fishtvue/config"
+import Loading from "fishtvue/loading/Loading.vue"
+import type { LoadingExpose, LoadingProps } from "fishtvue/loading/Loading"
+import { componentsMapEpic, componentsMapSvg } from "fishtvue/loading/loadingTypes"
+
+type Expose = LoadingExpose & { classLoading: string; type: LoadingProps["type"] }
+const vm = (wrapper: ReturnType<typeof mount>) => wrapper.vm as unknown as Expose
+
+// matchMedia mock-factory: jsdom не реализует matchMedia, поэтому подставляем заглушку.
+const stubMatchMedia = (matches: boolean) => {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn()
+  })) as unknown as typeof window.matchMedia
+}
+
+const createAppWithFishtVue = (config: Record<string, any> = {}) => {
+  const app = createApp({})
+  app.use(FishtVue, config)
+  return app
+}
+
+describe("Loading Component", () => {
+  beforeEach(() => stubMatchMedia(false))
+  afterEach(() => {
+    // window.FishtVue утекает между файлами Vitest — чистим (см. memory).
+    delete (window as any).FishtVue
+    vi.restoreAllMocks()
+  })
+
+  describe("Without Library Initialization", () => {
+    it("renders the root container with defaults", () => {
+      const wrapper = mount(Loading)
+      expect(wrapper.find("[data-loading]").exists()).toBe(true)
+      expect(vm(wrapper).type).toBe("simple")
+      expect(vm(wrapper).size).toBe(20)
+      expect(vm(wrapper).animationDuration).toBe(1500)
+      expect(vm(wrapper).color).toBe("currentColor")
+    })
+
+    it("exposes reactive computed fields", async () => {
+      const wrapper = mount(Loading, { props: { type: "bars" } })
+      expect(vm(wrapper).type).toBe("bars")
+      await wrapper.setProps({ type: "oval" })
+      expect(vm(wrapper).type).toBe("oval")
+    })
+  })
+
+  describe("Open prop unions", () => {
+    // Type-test: `animationDuration`/`size` должны принимать произвольные числа, а `type` —
+    // любой ключ Svg-карты (включая "simple" без отдельного литерала в union).
+    // Присваивание в `LoadingProps` проверяется `pnpm typecheck`, значения — рантаймом.
+    it("accepts arbitrary numeric values outside the preset literals", () => {
+      const props: LoadingProps = { type: "simple", animationDuration: 1234, size: 7 }
+      const wrapper = mount(Loading, { props })
+      expect(vm(wrapper).type).toBe("simple")
+      expect(vm(wrapper).animationDuration).toBe(1234)
+      expect(vm(wrapper).size).toBe(7)
+    })
+  })
+
+  describe("Accessibility (Issue 3)", () => {
+    it("marks the root as an ARIA live status region", () => {
+      const wrapper = mount(Loading)
+      const root = wrapper.find("[data-loading]")
+      expect(root.attributes("role")).toBe("status")
+      expect(root.attributes("aria-live")).toBe("polite")
+      expect(root.attributes("aria-label")).toBeTruthy()
+    })
+
+    it("renders a visually-hidden label", () => {
+      const wrapper = mount(Loading)
+      const sr = wrapper.find("[data-loading] .sr-only")
+      expect(sr.exists()).toBe(true)
+      expect(sr.text().length).toBeGreaterThan(0)
+    })
+
+    it("routes the visually-hidden label class through the setStyle factory", () => {
+      // `sr-only` должен генерироваться движком через `Loading.setStyle`, а не быть
+      // литеральным `class="sr-only"`: у потребителя без Tailwind литеральный класс не
+      // сгенерит CSS → текст скринридера потеряет visually-hidden-позиционирование.
+      // setStyle возвращает `fv {prefix}-{name} {classes}` — проверяем эти маркеры.
+      const wrapper = mount(Loading)
+      const cls = wrapper.find("[data-loading] .sr-only").attributes("class") ?? ""
+      expect(cls).toContain("fv")
+      expect(cls).toContain("fishtvue-loading")
+      expect(cls).toContain("sr-only")
+    })
+
+    it("localizes the label via t('loading.label')", () => {
+      const en = createAppWithFishtVue({
+        locale: { activeLocale: "en", messages: { en: { loading: { label: "Loading" } } } }
+      })
+      const enWrapper = mount(Loading, { global: { plugins: [en as any] } })
+      expect(enWrapper.find("[data-loading]").attributes("aria-label")).toBe("Loading")
+      expect(enWrapper.find("[data-loading] .sr-only").text()).toBe("Loading")
+      delete (window as any).FishtVue
+
+      const ru = createAppWithFishtVue({
+        locale: { activeLocale: "ru", messages: { ru: { loading: { label: "Загрузка" } } } }
+      })
+      const ruWrapper = mount(Loading, { global: { plugins: [ru as any] } })
+      expect(ruWrapper.find("[data-loading]").attributes("aria-label")).toBe("Загрузка")
+    })
+  })
+
+  describe("Reduced motion (Issue 6)", () => {
+    it("renders the static simple loader when prefers-reduced-motion: reduce", () => {
+      stubMatchMedia(true)
+      const wrapper = mount(Loading, { props: { type: "AtomSpinner" } })
+      // simple.vue — это <svg> с 8 <line>; epic AtomSpinner рендерит .atom-spinner
+      expect(wrapper.findAll("[data-loading] svg line").length).toBe(8)
+      expect(wrapper.find(".atom-spinner").exists()).toBe(false)
+    })
+
+    it("renders the animated loader when motion is allowed", async () => {
+      stubMatchMedia(false)
+      const wrapper = mount(Loading, { props: { type: "simple" } })
+      await flushPromises()
+      expect(wrapper.find("[data-loading]").exists()).toBe(true)
+    })
+  })
+
+  describe("Print styles (Issue 8)", () => {
+    it("hides the loader on print", () => {
+      const wrapper = mount(Loading)
+      expect(vm(wrapper).classLoading).toContain("print:hidden")
+    })
+  })
+
+  describe("Unstyled mode (Issue 5 / cross-cutting)", () => {
+    it("drops all utility classes when unstyled: true", () => {
+      const app = createAppWithFishtVue({ unstyled: true })
+      const wrapper = mount(Loading, { global: { plugins: [app as any] } })
+      const classLoading = vm(wrapper).classLoading
+      expect(classLoading).not.toContain("inline-block")
+      expect(classLoading).not.toContain("print:hidden")
+    })
+  })
+
+  // props 1.0 (dev-patterns §2 A–E): единственный элемент — корень; `classes.root` ≡ `class`.
+  describe("class / classes (props 1.0)", () => {
+    it("`class` and `classes.root` land on the root and win twMerge conflicts against the base", () => {
+      const wrapper = mount(Loading, { props: { class: "probe-root block", classes: { root: "probe-key" } } })
+      const root = wrapper.find("[data-loading]").classes()
+      expect(root).toContain("probe-root")
+      expect(root).toContain("probe-key")
+      expect(root).toContain("block")
+      expect(root).not.toContain("inline-block")
+      expect(wrapper.find("[data-loading] .sr-only").classes()).not.toContain("probe-root")
+    })
+
+    it("merges componentsOptions.Loading.class / classes.root under local props", () => {
+      const app = createAppWithFishtVue({
+        componentsOptions: { Loading: { class: "global-root p-2", classes: { root: "global-key" } } }
+      })
+      const wrapper = mount(Loading, { props: { class: "p-4" }, global: { plugins: [app as any] } })
+      const root = wrapper.find("[data-loading]").classes()
+      expect(root).toContain("global-root")
+      expect(root).toContain("global-key")
+      expect(root).toContain("p-4")
+      expect(root).not.toContain("p-2")
+    })
+
+    it("keeps consumer classes under unstyled, drops the theme", () => {
+      const app = createAppWithFishtVue({ unstyled: true })
+      const wrapper = mount(Loading, {
+        props: { class: "probe-root", classes: { root: "probe-key" } },
+        global: { plugins: [app as any] }
+      })
+      // порядок сегментов потребителя: classes.root → class (dev-patterns §2 D)
+      expect(wrapper.find("[data-loading]").classes()).toEqual(["fv", "probe-key", "probe-root"])
+    })
+
+    it('resolves the corrected "4-dots-gooey" key (typo "goeey" снят в 1.0)', () => {
+      const wrapper = mount(Loading, { props: { type: "4-dots-gooey" } })
+      expect(vm(wrapper).type).toBe("4-dots-gooey")
+      expect(wrapper.find("[data-loading]").exists()).toBe(true)
+    })
+  })
+
+  describe("Option resolution (Issue 4)", () => {
+    it("applies componentsOptions.Loading including type", () => {
+      const app = createAppWithFishtVue({
+        componentsOptions: { Loading: { type: "spinner", size: 50, color: "#abcdef", animationDuration: 2000 } }
+      })
+      const wrapper = mount(Loading, { global: { plugins: [app as any] } })
+      expect(vm(wrapper).type).toBe("spinner")
+      expect(vm(wrapper).size).toBe(50)
+      expect(vm(wrapper).color).toBe("#abcdef")
+      expect(vm(wrapper).animationDuration).toBe(2000)
+    })
+
+    it("lets explicit props override global options", () => {
+      const app = createAppWithFishtVue({
+        componentsOptions: { Loading: { type: "spinner", size: 50 } }
+      })
+      const wrapper = mount(Loading, {
+        props: { type: "bars", size: 64 },
+        global: { plugins: [app as any] }
+      })
+      expect(vm(wrapper).type).toBe("bars")
+      expect(vm(wrapper).size).toBe(64)
+    })
+  })
+
+  describe("Color resolution", () => {
+    it("passes hex colors through unchanged", () => {
+      const wrapper = mount(Loading, { props: { color: "#3b82f6" } })
+      expect(vm(wrapper).color).toBe("#3b82f6")
+    })
+
+    it("falls back to currentColor when no color is set", () => {
+      const wrapper = mount(Loading)
+      expect(vm(wrapper).color).toBe("currentColor")
+    })
+
+    it("resolves a theme palette token to its hex value", () => {
+      const wrapper = mount(Loading, { props: { color: "emerald" } })
+      expect(vm(wrapper).color).toBe("#10b981")
+    })
+
+    it("warns and falls back to currentColor for an unknown token", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const wrapper = mount(Loading, { props: { color: "totallyUnknownToken" } })
+      expect(vm(wrapper).color).toBe("currentColor")
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("[FishtVue Loading]"))
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown color token "totallyUnknownToken"'))
+    })
+
+    it("warns for an unknown token coming from componentsOptions", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const app = createAppWithFishtVue({ componentsOptions: { Loading: { color: "definitelyNotAToken" } } })
+      const wrapper = mount(Loading, { global: { plugins: [app as any] } })
+      expect(vm(wrapper).color).toBe("currentColor")
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown color token "definitelyNotAToken"'))
+    })
+
+    it("stays silent for hex, palette token, explicit currentColor and an unset color", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      mount(Loading, { props: { color: "#3b82f6" } })
+      mount(Loading, { props: { color: "emerald" } })
+      mount(Loading, { props: { color: "currentColor" } })
+      mount(Loading)
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Unknown color token"))
+    })
+
+    it("suppresses the dev-warning in a production build", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const nodeEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "production"
+      try {
+        const wrapper = mount(Loading, { props: { color: "totallyUnknownToken" } })
+        expect(vm(wrapper).color).toBe("currentColor")
+      } finally {
+        process.env.NODE_ENV = nodeEnv
+      }
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Unknown color token"))
+    })
+  })
+
+  describe("loadComponent fallback", () => {
+    it("warns and renders simple for an unknown type", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const wrapper = mount(Loading, { props: { type: "does-not-exist" as any } })
+      await flushPromises()
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("Unknown loading type"))
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("[FishtVue Loading]"))
+      expect(wrapper.find("[data-loading]").exists()).toBe(true)
+    })
+
+    it("does not warn for a known type", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const wrapper = mount(Loading, { props: { type: "bars" } })
+      await flushPromises()
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Unknown loading type"))
+      expect(wrapper.find("[data-loading]").exists()).toBe(true)
+    })
+
+    it("suppresses the dev-warning in a production build", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+      const nodeEnv = process.env.NODE_ENV
+      process.env.NODE_ENV = "production"
+      try {
+        const wrapper = mount(Loading, { props: { type: "does-not-exist" as any } })
+        await flushPromises()
+        expect(wrapper.find("[data-loading]").exists()).toBe(true)
+      } finally {
+        process.env.NODE_ENV = nodeEnv
+      }
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("Unknown loading type"))
+    })
+  })
+
+  // Issue 1: каждая Epic/Svg вариация должна рендериться без ошибок (coverage loadingTypes.ts).
+  describe("All Epic variations render", () => {
+    it.each(Object.entries(componentsMapEpic))("renders Epic %s", async (_name, loader) => {
+      const mod = (await loader()) as { default: any }
+      expect(mod.default).toBeTruthy()
+      const wrapper = mount(mod.default, { props: { size: 40, color: "#000000", animationDuration: 1000 } })
+      expect(wrapper.exists()).toBe(true)
+    })
+  })
+
+  describe("All Svg variations render", () => {
+    it.each(Object.entries(componentsMapSvg))("renders Svg %s", async (_name, loader) => {
+      const mod = (await loader()) as { default: any }
+      expect(mod.default).toBeTruthy()
+      const wrapper = mount(mod.default, { props: { size: 40, color: "#000000", animationDuration: 1000 } })
+      expect(wrapper.exists()).toBe(true)
+    })
+  })
+
+  describe("Wrapper integration through the async path", () => {
+    it.each(["simple", "AtomSpinner", "bars"] as const)("mounts Loading with type %s", async (type) => {
+      const wrapper = mount(Loading, { props: { type } })
+      await flushPromises()
+      expect(wrapper.find("[data-loading]").exists()).toBe(true)
+    })
+  })
+})

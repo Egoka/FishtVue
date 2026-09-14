@@ -1,5 +1,6 @@
 {
   "main": "./accordion.mjs",
   "module": "./accordion.mjs",
-  "types": "./Accordion.d.ts"
+  "types": "./Accordion.d.ts",
+  "sideEffects": ["**/*.css", "**/*.vue"]
 }

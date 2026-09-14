@@ -1,7 +1,7 @@
 ---
 title: utils/stringHandler
-summary: isString type guard, case-конверсии (включая locale-aware `toCapitalCase`), stringify сериализация.
-updated: 2026-05-10
+summary: isString type guard, case-конверсии (включая locale-aware `toCapitalCase`), stringify сериализация, interpolate (`{name}`) + selectPlural (CLDR через `Intl.PluralRules`) для локализации.
+updated: 2026-06-19
 stability: stable
 since: 0.2.11
 ---
@@ -20,8 +20,8 @@ Source: [lib/utils/stringHandler.ts](../../lib/utils/stringHandler.ts), [lib/uti
 
 ```
 lib/utils/stringHandler.ts
-lib/utils/stringHandler.d.ts       # 223 строки (полные сигнатуры с JSDoc)
-lib/utils/stringHandler.test.ts    # 86 кейсов
+lib/utils/stringHandler.d.ts       # полные сигнатуры с JSDoc (+ interpolate / selectPlural)
+lib/utils/stringHandler.test.ts    # 103 кейса
 ```
 
 Зависимостей нет.
@@ -33,8 +33,10 @@ lib/utils/stringHandler.test.ts    # 86 кейсов
 - `toKebabCase(str)` — `"myThing"` → `"my-thing"`.
 - `toCapitalCase(str, locale?)` — `"hello"` → `"Hello"`. Использует `String.prototype.toLocaleUpperCase(locale)` — без `locale` берётся host environment locale; явный `locale` (например, `"tr-TR"`) корректно обрабатывает Turkish dotted I (`"i"` → `"İ"`).
 - `stringify(value, indent?, currentIndent?)` — `JSON.stringify`-подобный сериализатор с отступами, понимает функции, циклы и спец-кейсы.
+- `interpolate(template, params?)` — подставляет именованные плейсхолдеры `{name}` → `params[name]` (число коэрсится в строку). Неизвестный плейсхолдер остаётся литералом (dev-сигнал); без `params` шаблон возвращается без изменений. Используется `Component.t(key, params)`.
+- `selectPlural(template, count, locale?)` — выбирает форму из pipe-разделённого шаблона (`<selector> <text>`, selector = `=N` или CLDR-категория `zero|one|two|few|many|other`) по `Intl.PluralRules(locale)`. Порядок выбора: точное `=count` → CLDR-категория → `other` → первая форма. Интерполяцию НЕ выполняет (отдельный шаг). На невалидном locale-теге не бросает — fallback на `other`.
 
-SSR/hydration: чистые функции.
+SSR/hydration: чистые функции (`Intl.PluralRules` доступен и на сервере).
 
 ## 4. Quick Start
 
@@ -70,6 +72,8 @@ stringify({ a: 1 }, 2)       // "{\n  a: 1\n}"
 | `toKebabCase(str)` | `(str: string) => string` | → kebab-case. |
 | `toCapitalCase(str, locale?)` | `(str: string, locale?: string \| string[]) => string` | Первая буква → uppercase через `toLocaleUpperCase(locale)`. Поддерживает Unicode (`"über"` → `"Über"`) и явный locale для Turkish dotted I и т.п. |
 | `stringify(value, indent?, currentIndent?)` | `(value: any, indent?: number, currentIndent?: number) => string` | Сериализация с отступами. |
+| `interpolate(template, params?)` | `(template: string, params?: Record<string, string \| number>) => string` | Подстановка `{name}` → `params[name]`; неизвестный плейсхолдер — литерал; без `params` — без изменений. |
+| `selectPlural(template, count, locale?)` | `(template: string, count: number, locale?: string) => string` | Выбор формы из `\|`-шаблона (`=N`/CLDR-категория) по `Intl.PluralRules`. Без интерполяции. |
 
 ## 9. Examples
 
@@ -100,6 +104,24 @@ import { stringify } from "fishtvue/utils/stringHandler"
 
 const obj = { name: "X", values: [1, 2, 3] }
 console.log(stringify(obj, 2))
+```
+
+### 9.4 Interpolation + pluralization (основа `Component.t(key, params)`)
+
+```ts
+import { interpolate, selectPlural } from "fishtvue/utils/stringHandler"
+
+interpolate("Hello, {name}!", { name: "Egor" }) // "Hello, Egor!"
+interpolate("Hi {name}", {}) // "Hi {name}" — неизвестный плейсхолдер остаётся литералом
+
+const ru = "=0 нет|one {count} файл|few {count} файла|many {count} файлов"
+selectPlural(ru, 0, "ru") // "нет"
+selectPlural(ru, 1, "ru") // "{count} файл"
+selectPlural(ru, 5, "ru") // "{count} файлов"
+selectPlural(ru, 21, "ru") // "{count} файл" — CLDR "one"
+
+// Связка (как внутри Component.t): сначала plural-форма, потом interpolation
+interpolate(selectPlural(ru, 5, "ru"), { count: 5 }) // "5 файлов"
 ```
 
 ## 10. Configuration & Customization
@@ -147,7 +169,7 @@ describe("toKebabCase", () => {
 })
 ```
 
-Реальные тесты — [stringHandler.test.ts](../../lib/utils/stringHandler.test.ts) (86 кейсов).
+Реальные тесты — [stringHandler.test.ts](../../lib/utils/stringHandler.test.ts) (103 кейса).
 
 ## 16. Troubleshooting / FAQ
 
@@ -161,7 +183,8 @@ describe("toKebabCase", () => {
 
 - [utilities/objectHandler.md](./objectHandler.md) — `get`, dot-path navigation.
 - [utilities/numberHandler.md](./numberHandler.md) — числовое форматирование.
-- [architecture/component-class.md](../architecture/component-class.md) — `Component` использует `toKebabCase` для CSS-селектора.
+- [architecture/component-class.md](../architecture/component-class.md) — `Component` использует `toKebabCase` для CSS-селектора; `interpolate`/`selectPlural` — движок `Component.t(key, params)`.
+- [architecture/locale.md](../architecture/locale.md) — формат pluralized-сообщений и `t(key, params)`.
 
 ## 18. Known issues & limitations
 

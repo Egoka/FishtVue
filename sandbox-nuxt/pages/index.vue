@@ -70,7 +70,7 @@
           <DemoSwitch />
         </DocComponent>
         <DocComponent
-          title="Aria"
+          title="Textarea"
           subtitle="Utility component to assist with ARIA attributes for form accessibility.  "
           link="/components/form/aria">
           <DemoAria />

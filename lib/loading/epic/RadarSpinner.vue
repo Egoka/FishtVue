@@ -23,7 +23,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -137,8 +137,8 @@
   }
 
   .radar-spinner .circle-inner {
-    border-left-color: #ff1d5e;
-    border-right-color: #ff1d5e;
+    border-left-color: currentColor;
+    border-right-color: currentColor;
   }
 
   @keyframes radar-spinner-animation {

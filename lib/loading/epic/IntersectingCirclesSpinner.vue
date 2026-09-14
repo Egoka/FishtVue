@@ -21,7 +21,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -94,7 +94,7 @@
 
   .intersecting-circles-spinner .circle {
     display: block;
-    border: 2px solid #ff1d5e;
+    border: 2px solid currentColor;
     border-radius: 50%;
     height: 100%;
     width: 100%;

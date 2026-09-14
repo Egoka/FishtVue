@@ -1,6 +1,76 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
-import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor } from "../types"
+import { InputLayoutClassKey, InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
+import type { PhoneFormat } from "fishtvue/utils/numberHandler"
+
+export type { PhoneFormat } from "fishtvue/utils/numberHandler"
+
+/**
+ * Supported `<input type>` values for the Input component.
+ *
+ * Native semantics enable on-screen keyboards (`tel`, `number`, `email`, `url`),
+ * password-manager hints (`password`) and platform clear/affordance (`search`).
+ */
+export declare type InputType = "text" | "number" | "email" | "password" | "tel" | "url" | "search"
+
+/**
+ * Autocomplete tokens for the Input component.
+ *
+ * Accepts canonical [WHATWG autofill tokens](https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#autofill)
+ * (`"current-password"`, `"new-password"`, `"email"`, `"tel"`, `"one-time-code"`, etc.)
+ * plus `"on"`/`"off"` and arbitrary strings (kept open via `string & {}` so editor
+ * autocomplete still shows the known values).
+ */
+export declare type InputAutocomplete =
+  | "on"
+  | "off"
+  | "current-password"
+  | "new-password"
+  | "username"
+  | "email"
+  | "tel"
+  | "tel-country-code"
+  | "tel-national"
+  | "url"
+  | "one-time-code"
+  | "name"
+  | "given-name"
+  | "family-name"
+  | "honorific-prefix"
+  | "honorific-suffix"
+  | "nickname"
+  | "organization"
+  | "organization-title"
+  | "street-address"
+  | "address-line1"
+  | "address-line2"
+  | "address-line3"
+  | "address-level1"
+  | "address-level2"
+  | "address-level3"
+  | "address-level4"
+  | "country"
+  | "country-name"
+  | "postal-code"
+  | "cc-name"
+  | "cc-given-name"
+  | "cc-family-name"
+  | "cc-number"
+  | "cc-exp"
+  | "cc-exp-month"
+  | "cc-exp-year"
+  | "cc-csc"
+  | "cc-type"
+  | "language"
+  | "bday"
+  | "bday-day"
+  | "bday-month"
+  | "bday-year"
+  | "sex"
+  | "transaction-currency"
+  | "transaction-amount"
+  | "photo"
+  | (string & {})
 
 /**
  * ## Input
@@ -12,14 +82,26 @@ import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue
 declare class Input extends ClassComponent<InputProps, InputSlots, InputEmits, InputExpose> {}
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B): семейные `InputLayoutClassKey` (`base`, `label`, `help`, `message`,
+ * `before`, `after`, aspect-ключ `animation`) плюс собственные. `root` — корень `<InputLayout data-input>`.
+ * - `control` — `<input data-input-control>` (бывший `classInput`).
+ * - `passwordToggle` — иконки Eye/EyeSlash `[data-input-password-toggle]` при `type="password"`
+ *   (бывший `passwordToggleClass`).
+ */
+export declare type InputClassKey = InputLayoutClassKey | "control" | "passwordToggle"
+
+/**
  * Base props for the Input component.
  */
 export declare type BaseInputProps = {
   /**
    * The type of input field.
-   * @type {"text" | "number" | "email" | "password"}
+   *
+   * Расширенный union: к базовым text/number/email/password добавлены
+   * нативно-семантичные `tel`/`url`/`search` (mobile keyboards, clear-affordance).
+   * @type {InputType}
    */
-  type: "text" | "number" | "email" | "password"
+  type: InputType
 
   /**
    * Automatically focuses the input field on mount.
@@ -35,9 +117,15 @@ export declare type BaseInputProps = {
 
   /**
    * Autocomplete behavior for the input field.
-   * @type {"on" | "off"}
+   *
+   * Поддерживает WHATWG autofill tokens (`"current-password"`, `"new-password"`,
+   * `"email"`, `"tel"`, `"one-time-code"`, и др.) + произвольные строки.
+   * Если значение не задано, Input авто-подбирает разумный default по `type`
+   * (см. `Input.vue`): `password → "current-password"`, `email → "email"`,
+   * `tel → "tel"`, `url → "url"`, иначе `"on"`.
+   * @type {InputAutocomplete}
    */
-  autocomplete: "on" | "off"
+  autocomplete: InputAutocomplete
 
   /**
    * Mask type for the input value.
@@ -58,16 +146,22 @@ export declare type BaseInputProps = {
   lengthDecimal: number
 
   /**
-   * Custom CSS class for the input element.
-   * @type {StyleClass}
+   * Кастомные phone-форматы для `maskInput: "phone"`.
+   *
+   * Прокидывается в `convertToPhone(value, { phoneFormats })` и `toPhone(e, { phoneFormats })`.
+   * Если не задан — используется дефолтный набор (`+1`/`+7`/`+81`/`+82`/`+86`)
+   * из `lib/utils/numberHandler.ts`.
+   *
+   * Также может быть задан глобально через `componentsOptions.Input.phoneFormats`.
+   * @type {PhoneFormat[]}
    */
-  classInput: StyleClass
+  phoneFormats: PhoneFormat[]
 }
 
 /**
  * Props for the Input component.
  */
-export interface InputProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseInputProps> {
+export interface InputProps extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseInputProps> {
   /**
    * Unique identifier for the input element.
    * @type {string | undefined}
@@ -79,6 +173,13 @@ export interface InputProps extends Omit<InputLayoutProps, "value" | "isValue">,
    * @type {string | number | null | undefined}
    */
   modelValue?: string | number | null | undefined
+
+  /**
+   * Карта классов внутренних элементов: семейные ключи уходят в `InputLayout`, `control` — на `<input>`,
+   * `passwordToggle` — на иконки переключения видимости пароля; `root` ≡ `class`. См. `InputClassKey`.
+   * @type {ClassesMap<InputClassKey> | undefined}
+   */
+  classes?: ClassesMap<InputClassKey>
 }
 
 export declare type InputSlots = {
@@ -127,18 +228,19 @@ export declare type InputEmits = {
   (event: "change:modelValue", payload: string): void
 
   /**
-   * Emitted when the invalid state of the input is updated.
+   * v-model-канал prop'а `invalid`: любой ввод сбрасывает ошибку — payload всегда `false`
+   * (`v-model:invalid` в Form). См. Documentation/components/input.md §6.2.
    * @param event
    * @param {boolean} payload - Indicates whether the input is invalid.
    */
-  (event: "update:isInvalid", payload: boolean): void
+  (event: "update:invalid", payload: boolean): void
 
   /**
-   * Emitted when the input becomes active.
+   * Смена focus-состояния контрола: `true` на focus, `false` на blur (бывший `isActive`).
    * @param event
    * @param {boolean} payload - Indicates the active state of the input.
    */
-  (event: "isActive", payload: boolean): void
+  (event: "active", payload: boolean): void
 }
 
 /**
@@ -159,10 +261,11 @@ export declare type InputExpose = {
   isActiveInput: boolean
 
   /**
-   * Custom CSS class for the input layout.
-   * @type {InputProps["class"]}
+   * Props, переданные во внутренний `InputLayout` (включая `class` корня и семейную карту `classes`
+   * с focus-ring в `base`). Заменяет прежний `classLayout`.
+   * @type {Omit<InputLayoutProps, "value">}
    */
-  classLayout: InputProps["class"]
+  inputLayout: Omit<InputLayoutProps, "value">
 
   // ---PROPS-------------------------------
   /**
@@ -220,10 +323,10 @@ export declare type InputExpose = {
   lengthDecimal: InputProps["lengthDecimal"]
 
   /**
-   * Indicates whether the input has a value.
-   * @type {InputLayoutProps["isValue"]}
+   * Indicates whether the input has a value (передаётся в `InputLayout` как `hasValue`).
+   * @type {boolean}
    */
-  isValue: InputLayoutProps["isValue"]
+  isValue: boolean
 
   /**
    * Current mode of the input.
@@ -244,10 +347,16 @@ export declare type InputExpose = {
   isLoading: InputProps["loading"]
 
   /**
-   * Indicates whether the input is invalid.
-   * @type {InputProps["isInvalid"]}
+   * Indicates whether the input is invalid (resolved `invalid`, `false` при `disabled`).
+   * @type {boolean}
    */
-  isInvalid: InputProps["isInvalid"]
+  isInvalid: boolean
+
+  /**
+   * Показывается ли кнопка очистки (resolved `clearable`: props → options → `false`).
+   * @type {boolean}
+   */
+  isClearable: boolean
 
   /**
    * Validation error message for the input field.
@@ -256,10 +365,16 @@ export declare type InputExpose = {
   messageInvalid: InputProps["messageInvalid"]
 
   /**
-   * CSS class for the input base container.
-   * @type {InputProps["class"]}
+   * Итоговый класс `<input data-input-control>` (база + `classes.control`).
+   * @type {string}
    */
-  classBaseInput: InputProps["class"]
+  classControl: string
+
+  /**
+   * Класс иконок Eye/EyeSlash (база + `classes.passwordToggle`), hand-off в корень `Icons`.
+   * @type {string}
+   */
+  classPasswordToggle: string
 
   // ---METHODS-----------------------------
   /**
@@ -288,17 +403,32 @@ export declare type InputExpose = {
 
   /**
    * Focuses the input field.
-   * @param {FocusEvent} eventFocus - The focus event.
+   *
+   * Принимает либо native `FocusEvent` (когда вызывается из `@focus` template-handler —
+   * сохраняется emit `"focus"` с исходным event), либо `FocusOptions` (programmatic
+   * вызов: `inp.value?.focus({ preventScroll: true })`), либо ничего
+   * (`inp.value?.focus()` — аналог нативного `HTMLElement.focus()`).
+   *
+   * Паритет с Button.focus(options?) — см. Documentation/issues/done/button.md Issue 4.
+   *
+   * @param {FocusEvent | FocusOptions} [eventOrOptions] - The focus event from a template handler,
+   *   `FocusOptions` for programmatic focus, or omitted.
    */
-  focus(eventFocus: FocusEvent): void
+  focus(eventOrOptions?: FocusEvent | FocusOptions): void
 
   /**
    * Blurs the input field.
-   * @param {FocusEvent} eventFocus - The blur event.
+   *
+   * Принимает либо native `FocusEvent` (template handler), либо ничего (programmatic).
+   *
+   * @param {FocusEvent} [eventFocus] - The blur event from a template handler (optional).
    */
-  blur(eventFocus: FocusEvent): void
+  blur(eventFocus?: FocusEvent): void
 }
-export declare type InputOption = Pick<InputProps, "classInput" | keyof InputLayoutOption>
+export declare type InputOption = Pick<
+  InputProps,
+  "phoneFormats" | "autocomplete" | "class" | "classes" | keyof InputLayoutOption
+>
 
 // ---------------------------------------
 

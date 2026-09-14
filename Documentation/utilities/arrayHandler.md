@@ -1,7 +1,7 @@
 ---
 title: utils/arrayHandler
-summary: isArray, contains, sort/filter, find/findIndex, reorder, deepCopyArray, nestedKeys.
-updated: 2026-05-09
+summary: isArray, contains, sort/filter, find/findIndex, reorder, deepCopyArray, nestedKeys. §9.1 — контракт стабильности sort (2026-09-05).
+updated: 2026-09-05
 stability: stable
 since: 0.2.11
 ---
@@ -107,6 +107,16 @@ const data = [{ name: null }, { name: "B" }, { name: "A" }]
 data.sort((a, b) => sort(a.name, b.name, 1, (x, y) => (x ?? "").localeCompare(y ?? ""), -1))
 // null уйдёт в конец (nullSortOrder = -1 при возрастании)
 ```
+
+#### Стабильность сортировки
+
+`sort` — **comparator, а не сортировщик**: он принимает два значения и возвращает число, `Array.prototype.sort` внутри не вызывается. Поэтому стабильность определяется вызывающей стороной, а не этой функцией.
+
+`Array.prototype.sort` обязан быть **стабильным по спецификации начиная с ES2019**. FishtVue таргетирует evergreen-браузеры (см. [01-getting-started.md](../01-getting-started.md)), где это гарантировано, — то есть при обычном `data.sort((a, b) => sort(...))` элементы с равным ключом сохраняют исходный взаимный порядок.
+
+Одна оговорка, специфичная для этой функции: при `nullSortOrder`, отличном от `order`, пары с `null`/`undefined` сравниваются **другим** множителем, чем остальные. На стабильность это не влияет (равные всё так же остаются равными), но означает, что «пустые» значения нельзя рассматривать как ещё одно обычное значение шкалы — они образуют отдельный блок в начале или в конце.
+
+Внутри библиотеки `sort` не используется ни одним компонентом — это публичная утилита для потребителей.
 
 ### 9.2 Фильтр Table
 

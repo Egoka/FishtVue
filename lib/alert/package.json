@@ -1,5 +1,6 @@
 {
   "main": "./alert.mjs",
   "module": "./alert.mjs",
-  "types": "./Alert.d.ts"
+  "types": "./Alert.d.ts",
+  "sideEffects": false
 }

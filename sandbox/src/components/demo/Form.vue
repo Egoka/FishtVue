@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import Form from "fishtvue/form/Form.vue"
   import type { FormProps } from "fishtvue/form"
-  import type { FieldType, FormStructure } from "fishtvue/form"
+  import type { FieldType, FormStructure, FormValues } from "fishtvue/form"
   import { ref } from "vue"
 
   type Keys =
@@ -12,7 +12,7 @@
     | "Input"
     | "Select"
     | "Calendar"
-    | "Aria"
+    | "Textarea"
     | "TextEditor"
     | "Switch"
     | "Custom"
@@ -41,7 +41,7 @@
         rules: { required: true },
         label: "Username",
         placeholder: "Username",
-        classCol: "sm:col-span-6"
+        classes: { field: "sm:col-span-6" }
       },
       email: {
         typeComponent: "Input",
@@ -49,7 +49,7 @@
         rules: { required: true, email: true },
         label: "Email",
         placeholder: "Email",
-        classCol: "sm:col-span-3"
+        classes: { field: "sm:col-span-3" }
       },
       password: {
         typeComponent: "Input",
@@ -58,7 +58,7 @@
         rules: { required: true, length: { min: 3, max: 8, message: "lengthRule" } },
         label: "Password",
         placeholder: "Password",
-        classCol: "sm:col-span-3"
+        classes: { field: "sm:col-span-3" }
       },
       additionalInformation: {
         typeComponent: "Switch",
@@ -69,7 +69,7 @@
         modelValue: false,
         label: "additionalInformation",
         required: true,
-        classCol: "sm:col-span-6",
+        classes: { field: "sm:col-span-6" },
         help: "additionalInformation"
       },
       Input: {
@@ -81,8 +81,7 @@
         typeComponent: "Select",
         name: "Select",
         label: "Select",
-        //@ts-ignore
-        dataSelect: [
+        options: [
           "apple",
           "banana",
           "orange",
@@ -100,10 +99,10 @@
         name: "Calendar",
         label: "Calendar"
       },
-      Aria: {
-        typeComponent: "Aria",
-        name: "Aria",
-        label: "Aria"
+      Textarea: {
+        typeComponent: "Textarea",
+        name: "Textarea",
+        label: "Textarea"
       },
       TextEditor: {
         typeComponent: "TextEditor",
@@ -120,7 +119,7 @@
         name: "Custom",
         nameTemplate: "custom",
         label: "Custom",
-        classCol: "col-span-full rounded-md border border-gray-200 dark:border-gray-700 m-1"
+        classes: { field: "col-span-full rounded-md border border-gray-200 dark:border-gray-700 m-1" }
       },
       requiredRule: {
         typeComponent: "Input",
@@ -197,7 +196,7 @@
         typeComponent: "Select",
         name: "expires",
         label: "expires",
-        dataSelect: [
+        options: [
           "January",
           "February",
           "March",
@@ -211,14 +210,14 @@
           "November",
           "December"
         ],
-        classCol: "sm:col-span-2"
+        classes: { field: "sm:col-span-2" }
       },
       year: {
         typeComponent: "Select",
         name: "year",
         label: "year",
-        dataSelect: ["2024", "2025", "2026", "2027", "2028"],
-        classCol: "sm:col-span-2"
+        options: ["2024", "2025", "2026", "2027", "2028"],
+        classes: { field: "sm:col-span-2" }
       },
       CVC: {
         typeComponent: "Input",
@@ -226,7 +225,7 @@
         type: "number",
         label: "CVC",
         maskInput: "number",
-        classCol: "sm:col-span-2",
+        classes: { field: "sm:col-span-2" },
         lengthInteger: 3
       }
     }
@@ -236,7 +235,7 @@
     }, []) as FormStructure["fields"]
   }
 
-  const formValues = ref({ username: "", email: "", password: "" })
+  const formValues = ref<FormValues>({ username: "", email: "", password: "" })
   const structure = ref<FormProps["structure"]>([{ fields: structureFields(["username", "email", "password"]) }])
 </script>
 

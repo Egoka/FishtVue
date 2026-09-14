@@ -1,6 +1,6 @@
-import { VNode } from "vue"
+import { Ref, VNode } from "vue"
 import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
-import type { BaseSelectProps, SelectExpose } from "fishtvue/select"
+import type { BaseSelectProps, SelectExpose, SelectProps } from "fishtvue/select"
 
 /**
  * ## Pagination
@@ -31,19 +31,19 @@ export declare type PaginationProps = {
    * The size of a single page (number of items per page).
    * @type {number | 5 | 15 | 20 | 50 | 100 | 150 | undefined}
    */
-  sizePage?: number | 5 | 15 | 20 | 50 | 100 | 150
+  pageSize?: number | 5 | 15 | 20 | 50 | 100 | 150
 
   /**
    * The available page sizes for selection.
    * @type {[5, 15, 20, 50, 100, 150] | Array<number> | undefined}
    */
-  sizesSelector?: [5, 15, 20, 50, 100, 150] | Array<number>
+  pageSizes?: [5, 15, 20, 50, 100, 150] | Array<number>
 
   /**
    * The number of pages visible in the pagination control.
    * @type {5 | 6 | 7 | 8 | 9 | 10 | 11 | undefined}
    */
-  visibleNumberPages?: 5 | 6 | 7 | 8 | 9 | 10 | 11
+  visiblePages?: 5 | 6 | 7 | 8 | 9 | 10 | 11
 
   /**
    * The total number of items across all pages.
@@ -55,29 +55,40 @@ export declare type PaginationProps = {
    * Enables informational text about the pagination state.
    * @type {boolean | undefined}
    */
-  isInfoText?: boolean
+  infoText?: boolean
 
   /**
    * Enables a selector for choosing page sizes.
    * @type {boolean | undefined}
    */
-  isPageSizeSelector?: boolean
+  pageSizeSelector?: boolean
 
   /**
-   * Hides navigation buttons if set to `true`.
+   * Показывать кнопки навигации «назад/вперёд». Инверсия снятого `isHiddenNavigationButtons`
+   * (dev-patterns §2 F): bare-positive имя, default перевёрнут в `true`.
    * @type {boolean | undefined}
    */
-  isHiddenNavigationButtons?: boolean
+  navigationButtons?: boolean
+
   /**
-   * The CSS class or classes to apply to the Pagination component.
-   *
-   * This property allows customization of the component's appearance
-   * by specifying one or more CSS class names.
-   *
+   * CSS-классы корня `<nav data-pagination>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Props селектора размера страницы (dev-patterns §2 G). Бывший `paramsSelect` в expose.
+   * @type {PaginationSelectProps | undefined}
+   */
+  selectProps?: PaginationSelectProps
 }
+
+/**
+ * Подмножество props [Select](./select.md), которым Pagination настраивает свой селектор
+ * размера страницы. `class`/`classes` вынесены явно — `Partial<BaseSelectProps>` их не содержит.
+ */
+export declare type PaginationSelectProps = Partial<BaseSelectProps> &
+  Pick<SelectProps, "class" | "classes" | "fixWindowProps">
 
 export declare type PaginationSlots = {
   default(): VNode[]
@@ -89,17 +100,19 @@ export declare type PaginationSlots = {
 export declare type PaginationEmits = {
   /**
    * Emitted when the active page (`modelValue`) is updated.
+   * Payload — всегда число: канал синхронизирует `modelValue`, а не отражает его optional-тип.
    * @param event
-   * @param {PaginationProps["modelValue"]} payload - The updated page number.
+   * @param {number} payload - The updated page number.
    */
-  (event: "update:modelValue", payload: PaginationProps["modelValue"]): void
+  (event: "update:modelValue", payload: number): void
 
   /**
-   * Emitted when the page size is updated.
+   * Emitted when the page size is updated. Payload — новый размер страницы (не активная
+   * страница: до 1.0 здесь по ошибке стоял тип `PaginationProps["modelValue"]`).
    * @param event
-   * @param {PaginationProps["modelValue"]} payload - The updated page size.
+   * @param {number} payload - The updated page size.
    */
-  (event: "update:sizePage", payload: PaginationProps["modelValue"]): void
+  (event: "update:pageSize", payload: number): void
 }
 
 /**
@@ -107,6 +120,13 @@ export declare type PaginationEmits = {
  */
 export declare type PaginationExpose = {
   // ---STATE-------------------------
+  /**
+   * Ref на корневой `<nav>`-элемент пагинации. Позволяет programmatically делать
+   * `.focus()` / `.scrollIntoView()` без обращения к DOM-селекторам.
+   * @type {Readonly<Ref<HTMLElement | undefined>>}
+   */
+  paginationRef: Readonly<Ref<HTMLElement | undefined>>
+
   /**
    * Reference to the page size selector.
    * @type {SelectExpose | undefined}
@@ -117,14 +137,14 @@ export declare type PaginationExpose = {
    * The current page size.
    * @type {number | undefined}
    */
-  sizePage: number | undefined
+  pageSize: number | undefined
 
   // ---PROPS-------------------------
   /**
    * The number of pages visible in the pagination control.
-   * @type {PaginationProps["visibleNumberPages"]}
+   * @type {PaginationProps["visiblePages"]}
    */
-  visibleNumberPages: PaginationProps["visibleNumberPages"]
+  visiblePages: PaginationProps["visiblePages"]
 
   /**
    * The total number of items across all pages.
@@ -134,27 +154,27 @@ export declare type PaginationExpose = {
 
   /**
    * Indicates whether informational text about pagination is enabled.
-   * @type {PaginationProps["isInfoText"]}
+   * @type {PaginationProps["infoText"]}
    */
-  isInfoText: PaginationProps["isInfoText"]
+  isInfoText: PaginationProps["infoText"]
 
   /**
    * Indicates whether the page size selector is enabled.
-   * @type {PaginationProps["isPageSizeSelector"]}
+   * @type {PaginationProps["pageSizeSelector"]}
    */
-  isPageSizeSelector: PaginationProps["isPageSizeSelector"]
+  isPageSizeSelector: PaginationProps["pageSizeSelector"]
 
   /**
-   * Indicates whether navigation buttons are hidden.
-   * @type {PaginationProps["isHiddenNavigationButtons"]}
+   * Показываются ли кнопки навигации (`navigationButtons`, default `true`).
+   * @type {PaginationProps["navigationButtons"]}
    */
-  isNavigationButtons: PaginationProps["isHiddenNavigationButtons"]
+  isNavigationButtons: PaginationProps["navigationButtons"]
 
   /**
    * Array of available sizes for the page size selector.
    * @type {Array<{ key: number; value: string }>}
    */
-  arraySizesSelector: Array<{ key: number; value: string }>
+  arrayPageSizes: Array<{ key: number; value: string }>
 
   /**
    * Array of page numbers available for navigation.
@@ -181,10 +201,16 @@ export declare type PaginationExpose = {
   modeStyleSelect: string
 
   /**
-   * Parameters for the page size selector component.
-   * @type {Partial<BaseSelectProps>}
+   * Итоговые props селектора размера страницы (база Pagination + `selectProps` потребителя).
+   * @type {PaginationSelectProps}
    */
-  paramsSelect: Partial<BaseSelectProps>
+  selectProps: PaginationSelectProps
+
+  /**
+   * Итоговый класс корня `<nav data-pagination>` (база + mode + `class`/`classes.root`).
+   * @type {StyleClass}
+   */
+  classBase: StyleClass
 
   // ---METHODS-----------------------
   /**
@@ -195,21 +221,28 @@ export declare type PaginationExpose = {
 
   /**
    * Updates the page size.
-   * @param {PaginationProps["modelValue"]} sizePageValue - The new page size.
+   * @param {PaginationProps["modelValue"]} value - The new page size.
    */
-  switchSizePage(sizePageValue: PaginationProps["modelValue"]): void
+  switchPageSize(value: PaginationProps["modelValue"]): void
+
+  /**
+   * Программно фокусирует корневой `<nav>` пагинации. Опционально принимает native
+   * `FocusOptions` (например, `{ preventScroll: true }`).
+   */
+  focus(options?: FocusOptions): void
 }
 export declare type PaginationOption = Pick<
   PaginationProps,
   | "mode"
-  | "sizePage"
-  | "sizesSelector"
-  | "visibleNumberPages"
+  | "pageSize"
+  | "pageSizes"
+  | "visiblePages"
   | "total"
-  | "isInfoText"
-  | "isPageSizeSelector"
-  | "isHiddenNavigationButtons"
+  | "infoText"
+  | "pageSizeSelector"
+  | "navigationButtons"
   | "class"
+  | "selectProps"
 >
 
 // ---------------------------------------

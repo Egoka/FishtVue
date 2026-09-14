@@ -1,7 +1,7 @@
 ---
 title: Alert
-summary: Уведомления (success/warning/info/error/neutral) + programmatic openAlert.
-updated: 2026-05-09
+summary: Уведомления (success/warning/info/error/neutral) + programmatic openAlert. RTL-safe logical position (start/end), mobile-first gutters, unstyled.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Alert` — уведомление с типами `success`/`warning`/`info`/`error`/`neutral`, позиционированием на экране, auto-dismiss через `displayTime`, опциональной close-кнопкой. Поддерживает programmatic API `openAlert(options)` для динамического создания без `<template>`-разметки.
 
-Stability: `stable` — 58 кейсов, coverage `Alert.vue` 100% / `openAlert.ts` 94.52%.
+Stability: `stable` — 97 кейсов (`Alert.test.ts`).
 
 Source: [Source](../../lib/alert/Alert.vue), [Alert.d.ts](../../lib/alert/Alert.d.ts), [openAlert.ts](../../lib/alert/openAlert.ts), [Alert.test.ts](../../lib/alert/Alert.test.ts).
 
@@ -21,9 +21,9 @@ Source: [Source](../../lib/alert/Alert.vue), [Alert.d.ts](../../lib/alert/Alert.
 ```
 lib/alert/
 ├── Alert.vue
-├── Alert.d.ts          # 198 строк
+├── Alert.d.ts          # типы + AlertPosition (RTL-safe logical union)
 ├── openAlert.ts        # programmatic API
-├── Alert.test.ts       # 58 кейсов
+├── Alert.test.ts       # 97 кейсов
 └── package.json
 ```
 
@@ -31,18 +31,20 @@ lib/alert/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили; `onMounted` подписывается на `displayTime` setTimeout (если задан).
+- **Lifecycle:** `Component.__hooks()` инжектит стили (через `onServerPrefetch + vueOnMounted`); SFC **не** дублирует `initStyle()` в `onMounted` — см. [Alert.vue:234–236](../../lib/alert/Alert.vue#L234-L236). Собственный `onMounted` используется только для dev-warning о deprecated физических позициях ([Alert.vue:238](../../lib/alert/Alert.vue#L238)). Watcher на `props.modelValue` ставит `setTimeout` для `displayTime`.
 - **Поток данных:** `modelValue` ↔ `isVisible`. По истечении `displayTime` или клика на close — `update:modelValue(false)`.
-- **`openAlert(options)`** ([openAlert.ts](../../lib/alert/openAlert.ts)) — programmatic API:
-  1. `isClient()` guard.
-  2. Создаёт div-контейнер `.alert-{position}` если ещё не существует (или находит по `toTeleport`).
-  3. Динамически монтирует Alert через `createApp(Alert).mount(...)`.
-  4. Auto-destroy через `displayTime` или клик на close-button.
+- **`openAlert(options)`** ([openAlert.ts](../../lib/alert/openAlert.ts)) — programmatic API (audit 2026-05-11 — Issue 2):
+  1. `isClient()` guard ([openAlert.ts:51](../../lib/alert/openAlert.ts#L51)) — SSR no-op.
+  2. Нормализует позицию в logical (`toLogicalPosition` — `left → start`, `right → end`; [openAlert.ts:29](../../lib/alert/openAlert.ts#L29)), затем резолвит / создаёт shared контейнер `.alert-{logical-position}` (стэкинг нескольких alerts по одной позиции). Физический `top-left` и logical `top-start` дедуплицируются в один контейнер.
+  3. Создаёт per-alert child `<div id="alert-{uuid}">` и монтирует Alert через `createApp(Alert, { ...options, "onUpdate:modelValue": destroy })` ([openAlert.ts:120](../../lib/alert/openAlert.ts#L120)).
+  4. Cleanup полностью Vue-bound: Alert emits `update:modelValue(false)` (на timer или клике close-кнопки) → `destroy()` → `app.unmount() + DOM cleanup` после leave-transition. Никаких manual `addEventListener`.
 - **Стили:** через `Alert.setStyle()`. `classesStyle` — switch по `type` для разных цветовых схем.
+- **Subtitle:** prop рендерится как **sanitized HTML** (`v-html` от значения, пропущенного через best-effort [sanitizeHtml.ts](../../lib/alert/sanitizeHtml.ts) — SSR-safe). `title` — только text. Для полного контроля / недоверенного ввода — slot `#subtitle`. Детали — §12 Security.
 - **Конфиг:** `componentsOptions.Alert` — см. §10.
-- **Локализация:** не использует.
-- **SSR:** Alert template SSR-safe; `openAlert` — только клиент.
-- **Animation:** Vue `<transition>` с динамическими классами (translate + opacity), `transition-all ease-in-out duration-500`. При `notAnimate: true` — без transition.
+- **Локализация:** `Alert.t("alert.close")` → `aria-label` close-кнопки (en: `"Close"`, ru: `"Закрыть"`).
+- **SSR:** Alert template SSR-safe; `openAlert` — только клиент (returns без падения, если `document` отсутствует).
+- **Animation:** Vue `<transition>` с динамическими классами (translate + opacity), `motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500` — уважает `prefers-reduced-motion: reduce`. При `animated: false` — без directional-transition. Для logical `start`/`end` направление slide-in флипается в RTL через `rtl:`-вариант translate ([Alert.vue:55–67](../../lib/alert/Alert.vue#L55-L67)).
+- **RTL / responsive:** позиции RTL-safe — logical-utilities (`ms`/`ps`/`start`/`end`) авто-зеркалятся при `dir="rtl"`; физические `left`/`right` — deprecated алиасы. Gutters mobile-first (`p-3 sm:p-4`, `pt-3 sm:pt-5`, `gap-3 sm:gap-4`) — см. §12 и §14.
 
 ## 4. Quick Start
 
@@ -84,16 +86,33 @@ openAlert({
 |---|---|---|---|
 | `modelValue` | `boolean` | — | v-model видимость. |
 | `type` | `"success" \| "warning" \| "info" \| "error" \| "neutral"` | `"info"` (или из global) | Тип. |
-| `position` | `"top" \| "bottom" \| "left" \| "right" \| "center"` | — | Позиция (для programmatic-API). |
+| `position` | `"top" \| "bottom" \| "center" \| "start" \| "end" \| "left" \| "right"` | — | Позиция. RTL-safe logical `start`/`end` (зеркалятся в RTL); `left`/`right` — **deprecated** алиасы (`left → start`, `right → end`, dev-warn). `openAlert` дополнительно принимает `top-start`/`top-end`/`bottom-start`/`bottom-end` (+ deprecated `*-left`/`*-right`) — тип `AlertPosition`. |
 | `size` | `Size` (`xs..7xl`) | — | Размер. |
-| `title` | `string` | — | Заголовок. |
-| `subtitle` | `string` | — | Описание. |
-| `toTeleport` | `string` | — | Селектор Teleport (для openAlert). |
-| `class` | `StyleClass` | — | Класс. |
+| `title` | `string` | — | Заголовок (text-bound, без `v-html`). |
+| `subtitle` | `string` | — | Описание; рендерится как **sanitized HTML** (best-effort: вырезаются `<script>`/`on*`/`javascript:` и т.п.). Безопасные теги (`<span>`, `<b>`, `<img>`) рендерятся. Для недоверенного ввода — slot `#subtitle` + свой sanitizer. |
+| `teleport` | `TeleportTarget` (`string \| HTMLElement \| false`) | `"body"` | Контейнер стека для `openAlert`. Бывший `toTeleport`. |
+| `class` | `StyleClass` | — | Классы **только корня** `[data-alert]` (dev-patterns §2 A). До 1.0.0 адресовал карточку. |
+| `classes` | `ClassesMap<AlertClassKey>` | — | Карта внутренних элементов. См. §5.1. |
 | `style` | `CSSProperties` | — | Inline стиль. |
 | `displayTime` | `1000 \| 2000 \| 3000 \| 4000 \| 5000 \| number` | — | Auto-close (ms). 0/undefined — не закрывать. |
-| `notAnimate` | `boolean` | — | Отключить animation. |
-| `closeButton` | `boolean` | — | Показать `×`-кнопку. |
+| `animated` | `boolean` | `true` | Directional-анимация появления. Positive-инверсия снятого `notAnimate`. |
+| `closeButton` | `boolean` | `false` | Показать `×`-кнопку. |
+
+### 5.1 Classes keys
+
+`AlertClassKey = "body" | "icon" | "content" | "title" | "subtitle" | "close"` ([Alert.d.ts:39](../../lib/alert/Alert.d.ts#L39)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-alert]` (`role`/`aria-live`) | element | — |
+| `body` | `[data-alert-body]` (карточка) | element | `alert-body p-3 sm:p-4 w-auto max-w-[89vw] rounded-md` + цвета типа + size (бывший инвертированный `class`) |
+| `icon` | `[data-alert-icon]` | element | `shrink-0` |
+| `content` | `[data-alert-content]` | element | `ms-3 mt-0.5` |
+| `title` | `[data-alert-title]` | element | `text-sm font-medium` + цвет типа |
+| `subtitle` | `[data-alert-subtitle]` | element | `text-sm` (+ `mt-2` при наличии title) |
+| `close` | `[data-alert-button]` (обёртка кнопки) | element | `relative bottom-[2px] ms-auto ps-3` |
+
+`class` и `classes` принимает и `openAlert({ … })` — тип `BaseAlert` их содержит.
 
 ## 6. Events / Emits + v-model contract
 
@@ -101,11 +120,14 @@ openAlert({
 |---|---|---|
 | `update:modelValue` | `boolean` | На close (timeout, кнопка). |
 
+**v-model contract:** видимость — стандартный `v-model="open"`. `change:modelValue` **не заводится**: Alert не form-control, а канал несёт булеву видимость — у него нет момента «значение устоялось», отличного от самого обновления (dev-patterns §2 H).
+
 ## 7. Slots
 
 | Slot | Slot props | Description |
 |---|---|---|
 | `default` | — | Кастомный контент рядом с subtitle. |
+| `subtitle` | — | Кастомный рендер subtitle. Fallback — `subtitle` prop как **sanitized HTML**. Использовать для полного контроля над rich-разметкой или для недоверенного ввода (нужен сильнее sanitizer). См. [Alert.vue:291](../../lib/alert/Alert.vue#L291). |
 
 ## 8. Exposed methods
 
@@ -114,9 +136,13 @@ openAlert({
 | Name | Type | Description |
 |---|---|---|
 | `isVisible` | `boolean` | Текущее состояние. |
-| `type`, `title`, `subtitle`, `displayTime`, `isCloseButton`, `position` | derived | Computed. |
+| `type`, `title`, `subtitle`, `displayTime`, `isCloseButton`, `position` | derived | Computed. `position` — raw (как передано). |
+| `positionLogical` | `string` | Logical (RTL-safe) позиция: `left`/`right` нормализованы в `start`/`end`. |
+| `startEnterAndLeaveClass`, `endEnterAndLeaveClass` | `string` | Transition-классы (off-screen / on-screen); для `start`/`end` содержат `rtl:`-флип. |
 | `classesStyle` | `Record<"body" \| "icon" \| "title" \| "subtitle" \| "button" \| "buttonIcon", StyleClass>` | Цветовая схема по `type`. |
-| `size`, `classBase` | derived | CSS computed. |
+| `size` | derived | CSS computed. |
+| `classBase` | `StyleClass` | Итоговый класс корня `[data-alert]`. |
+| `classBody` | `StyleClass` | Итоговый класс карточки `[data-alert-body]`. |
 | `close()` | function | Программное закрытие. |
 
 ## 9. Examples
@@ -167,7 +193,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`AlertOption = Pick<AlertProps & { toTeleport? }, "type" | "position" | "size" | "class" | "style" | "displayTime" | "notAnimate" | "toTeleport" | "closeButton">`.
+`AlertOption = Pick<AlertProps, "type" | "position" | "size" | "class" | "classes" | "style" | "displayTime" | "animated" | "teleport" | "closeButton">` ([Alert.d.ts:256–268](../../lib/alert/Alert.d.ts#L256-L268)). Карта `classes` сливается с props **по ключу** (dev-patterns §2 C).
 
 ### 10.2 Per-instance
 
@@ -181,6 +207,16 @@ app.use(FishtVue, {
 
 Root класс — `fv fishtvue-alert`.
 
+### 10.5 Unstyled
+
+Глобальный `unstyled: true` поддерживается: все классы Alert проходят через `Alert.setStyle()`, который при `unstyled` возвращает `""` (cross-cutting guard [component/index.ts:138](../../lib/component/index.ts#L138)). Styled-root (`[data-alert] > div`) рендерится без классов — стилизация остаётся за потребителем.
+
+```ts
+app.use(FishtVue, { unstyled: true })
+```
+
+> ⚠️ Behavioral caveat: `<transition>` active-классы (`motion-safe:transition-all …`) заданы литералами в шаблоне и через движок не проходят — при `unstyled` они **остаются** (это behavior-класс, не декоративный). Аналогично, programmatic `openAlert`-контейнер теряет позиционирующие классы при `unstyled` — позиционирование при unstyled на потребителе.
+
 ## 11. Form integration & validation
 
 Не применимо.
@@ -189,14 +225,20 @@ Root класс — `fv fishtvue-alert`.
 
 ### A11y
 
-- ARIA: `role="alert"`/`role="status"` — проверь по DOM. Динамическое создание через `openAlert` — screen-reader озвучит при `aria-live`.
-- Keyboard: Escape для close (если closeButton).
-- `prefers-reduced-motion` не учтён.
+- **ARIA** (audit 2026-05-11 — Issue 3, [Alert.vue:282](../../lib/alert/Alert.vue#L282)):
+  - `type="error"` / `"warning"` → корень имеет `role="alert"` + `aria-live="assertive"` + `aria-atomic="true"`.
+  - `type="success"` / `"info"` / `"neutral"` → `role="status"` + `aria-live="polite"` + `aria-atomic="true"`.
+- **Close button** имеет локализованный `aria-label` через `Alert.t("alert.close")` ([Alert.vue:302](../../lib/alert/Alert.vue#L302)) — en `"Close"`, ru `"Закрыть"`.
+- **Keyboard:** Escape для close — не реализован (toast не блокирует focus, как Dialog). При необходимости добавь обработчик в обёртке.
+- **RTL** (audit 2026-06-14 — Issue 7 / F31): позиции RTL-safe. Logical `start`/`end` (+ `top-start`/`bottom-end` в `openAlert`) зеркалятся при `dir="rtl"` через logical-utilities (`ms`/`ps`/`start-0`/`end-0`); slide-in анимация для `start`/`end` флипает translate через `rtl:`-вариант ([Alert.vue:55–67](../../lib/alert/Alert.vue#L55-L67)). Физические `left`/`right` — deprecated алиасы с dev-warning.
+- **`prefers-reduced-motion`** учтён через Tailwind `motion-safe:` prefix на всех transition-классах ([Alert.vue:186, 276, 279](../../lib/alert/Alert.vue#L186)). Пользователи с настройкой OS «Reduce motion» видят alert без анимации.
+- **Focus management** для programmatic alert умышленно **не реализован** — toast pattern не должен забирать focus у текущего interactive element (см. WCAG 2.1 SC 2.4.3 рекомендации для status-сообщений). Для Confirm/Cancel-сценариев используй [Dialog](./dialog.md).
 
 ### Security
 
-- `title`/`subtitle` рендерятся как text — без HTML. Для slot-content родитель отвечает.
-- Нет `v-html`.
+- **`title`** рендерится как text-node (interpolation `{{ title }}`) — HTML не поддерживает.
+- **`subtitle`** рендерится как **sanitized HTML** (audit 2026-06-14 — Issue 1 amended, [Alert.vue:291](../../lib/alert/Alert.vue#L291)): `v-html` от значения, пропущенного через best-effort sanitizer [sanitizeHtml.ts](../../lib/alert/sanitizeHtml.ts). Вырезаются `<script>`/`<style>`/`<iframe>`/`<object>`/`<svg>`/…, inline `on*`-обработчики (`onerror`/`onclick`/…), протоколы `javascript:`/`vbscript:`/`data:text/html`. Безопасные теги (`<span class>`, `<b>`, `<img src="https://…">`) рендерятся.
+- ⚠️ **Best-effort, не замена DOMPurify** — строковая санитизация (SSR-safe) не ловит все обфускации. Для **недоверенного** ввода (server error messages, user-generated content) используй slot `#subtitle` + собственную проверенную санитизацию (например DOMPurify).
 
 ## 13. TypeScript
 
@@ -214,9 +256,16 @@ openAlert({ type: "success", title: "Done" } satisfies BaseAlert)
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 58 кейсов, coverage Alert.vue 100% / openAlert.ts 94.52%.
-- **Breaking changes:** не зафиксировано.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 106 кейсов (`Alert.test.ts`).
+- **Breaking changes (1.0.0, редизайн props):**
+  - `class` переехал с карточки на корень `[data-alert]`; карточка адресуется `classes.body` (+ маркер `data-alert-body`); добавлены ключи `icon`/`content`/`title`/`subtitle`/`close`.
+  - `notAnimate` → `animated` (default `true`, смысл инвертирован).
+  - `toTeleport: string` → `teleport: TeleportTarget`; prop теперь объявлен и в `AlertProps`, а не только в `BaseAlert`.
+  - `props.class` больше не идёт **перед** `options.class` — precedence выправлена helper'ом (§2 D).
+  - expose: добавлен `classBody`; `classBase` теперь класс корня, а не карточки.
+  - Ранее (0.2.x): расширение `position`-union и миграция на logical CSS — additive.
+- **Deprecations:** физические `position`-значения `left`/`right` (+ `top-left`/`top-right`/`bottom-left`/`bottom-right` в `openAlert`) — deprecated алиасы logical `start`/`end`/`top-start`/… Эмитят dev-warning (только non-production), продолжают работать (нормализуются в logical). Используй logical-значения для RTL-корректности.
+- **Responsive:** mobile-first gutters — на мобиле компактнее (`p-3`, `pt-3`, `gap-3`), на desktop `sm:`-варианты (`sm:p-4`, `sm:pt-5`, `sm:gap-4`); ширина ограничена `max-w-[89vw]`.
 
 ## 15. Testing recipes
 
@@ -247,7 +296,7 @@ describe("Alert", () => {
 | `openAlert` не появляется | SSR (`isClient()` блокирует). | Вызывай только на клиенте (Vue setup или `onMounted`). |
 | Несколько Alert'ов перекрывают друг друга | `.alert-{position}` контейнер — один на позицию. | По дизайну — Alert'ы стэкаются вертикально. |
 | `displayTime: 0` не работает | 0 интерпретируется как «не закрывать». | Используй явное `undefined` для отсутствия timer'а. |
-| Custom `toTeleport` теряется | Селектор не существует в DOM. | Создай `<div id="my-alerts">` в App.vue. |
+| Custom `teleport` теряется | Селектор не существует в DOM. | Создай `<div id="my-alerts">` в App.vue или передай сам `HTMLElement`. |
 | Alert не закрывается на кнопку | `closeButton: false`. | Установи `:close-button="true"`. |
 
 ## 17. Related
@@ -260,11 +309,11 @@ describe("Alert", () => {
 
 ### TODO / FIXME / HACK / XXX
 
-На момент ревизии (2026-05-09) комментариев `TODO/FIXME/HACK/XXX` в [Alert.vue](../../lib/alert/Alert.vue), [Alert.d.ts](../../lib/alert/Alert.d.ts) и [openAlert.ts](../../lib/alert/openAlert.ts) не зафиксировано.
+На момент ревизии (2026-05-11) комментариев `TODO/FIXME/HACK/XXX` в [Alert.vue](../../lib/alert/Alert.vue), [Alert.d.ts](../../lib/alert/Alert.d.ts) и [openAlert.ts](../../lib/alert/openAlert.ts) не зафиксировано.
 
 ### Incomplete or stubbed behavior
 
-- Coverage Alert.vue 100% / openAlert.ts 94.52%; одна строка ([openAlert.ts:108](../../lib/alert/openAlert.ts#L108)) не покрыта.
+- Coverage Alert.vue 100% / openAlert.ts ≥94%; после refactor Vue-bound cleanup-логика стала проще, dead branches убраны.
 
 ### Skipped tests
 
@@ -274,14 +323,19 @@ describe("Alert", () => {
 
 - `BaseAlert` и `AlertProps.style` — `any` / `CSSProperties`.
 - `displayTime` open union с numeric.
-- `classesStyle` switch без default-case — при неизвестном `type` `undefined`.
+- `classesStyle` switch без default-case — при неизвестном `type` `undefined` (TypeScript ловит, runtime — нет; type guard в каноне).
 
 ### Behavioral caveats
 
-- Programmatic `openAlert` создаёт mini-app через `createApp` — каждый Alert это отдельный Vue-app instance. Состояние не shared.
+- Programmatic `openAlert` создаёт mini-app через `createApp(Alert, rootProps)` — каждый Alert это отдельный Vue-app instance. Состояние не shared.
 - При SSR `openAlert` — no-op (`isClient()` guard); планируй UI на клиенте.
 - `position: "center"` — full-overlay; не путай с Dialog.
-- При множественных вызовах `openAlert` подряд они стэкаются в одном контейнере вертикально.
+- При множественных вызовах `openAlert` подряд они стэкаются в одном `.alert-{position}` контейнере вертикально (preserved после refactor).
+- ~~**RTL (cross-cutting):** `position: "top-left"`/`"bottom-right"` буквально привязаны к ltr-axis~~ — ✅ resolved 2026-06-14: позиции RTL-safe (logical `start`/`end` + deprecated физические алиасы, авто-зеркалирование при `dir="rtl"`; см. §12 RTL, [issues/alert.md Issue 7](../issues/alert.md)).
+- ~~**`unstyled: true` cross-cutting:** не поддерживается~~ — ✅ resolved 2026-06-14: поддерживается через `Component.setStyle()` guard (см. §10.5).
+- **Theme tokens (B10):** severity-цвета (`bg-green-50`, `text-red-400` и т.д.) пока хардкодены Tailwind-примитивами; миграция на semantic theme-tokens отложена (cross-cutting Wave 9, см. [issues/alert.md Issue 9](../issues/alert.md)).
+- **`subtitle` sanitizer — best-effort:** встроенный [sanitizeHtml.ts](../../lib/alert/sanitizeHtml.ts) (строковый, SSR-safe) вырезает основные XSS-вектора (`<script>`/`on*`/`javascript:`), но **не** заменяет DOMPurify и не гарантирует защиту от всех обфускаций. Для недоверенного ввода — slot `#subtitle` + проверенный sanitizer. См. [issues/alert.md Issue 1](../issues/alert.md).
+- **Focus auto-move** не реализован умышленно — toast-pattern; для Confirm/Cancel-сценариев используй [Dialog](./dialog.md).
 
 ### Bug report format
 

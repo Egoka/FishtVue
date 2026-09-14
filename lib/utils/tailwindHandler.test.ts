@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cn } from "fishtvue/utils/tailwindHandler"
+import { cn, mergeClasses } from "fishtvue/utils/tailwindHandler"
 
 describe("Testing tailwind handler", () => {
   describe("cn function", () => {
@@ -42,6 +42,37 @@ describe("Testing tailwind handler", () => {
     it("should handle nested arrays of class names", () => {
       const result = cn(["text-red-500", ["bg-blue-500", "font-bold"]])
       expect(result).toBe("text-red-500 bg-blue-500 font-bold")
+    })
+  })
+
+  describe("mergeClasses (classes-map, props 1.0)", () => {
+    // По-ключевой cn: родитель складывает свои дефолты с `xProps.classes` потребителя
+    // (Table → filter Input, Form → Field, InputLayout-семья → InputLayout). Позднее — побеждает.
+    it("merges maps per key, later wins twMerge conflicts, non-conflicting classes accumulate", () => {
+      expect(mergeClasses({ root: "p-2 rounded", base: "border" }, { root: "p-4" })).toEqual({
+        root: "rounded p-4",
+        base: "border"
+      })
+    })
+
+    it("skips undefined maps and keys without a value", () => {
+      expect(mergeClasses(undefined, { base: "x" }, undefined)).toEqual({ base: "x" })
+      expect(mergeClasses({ base: undefined, root: "" }, {})).toEqual({})
+    })
+
+    it("flattens StyleClass arrays", () => {
+      expect(mergeClasses({ base: ["a", "b"] }, { base: "c" })).toEqual({ base: "a b c" })
+    })
+
+    it("returns a fresh object and never mutates the inputs", () => {
+      const first = { base: "a" }
+      const out = mergeClasses(first, { base: "b" })
+      expect(first).toEqual({ base: "a" })
+      expect(out).not.toBe(first)
+    })
+
+    it("returns an empty map when nothing is passed", () => {
+      expect(mergeClasses()).toEqual({})
     })
   })
 })

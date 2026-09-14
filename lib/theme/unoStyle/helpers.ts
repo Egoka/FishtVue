@@ -1,5 +1,46 @@
 import { MATH_FUNCTIONS, specialValues } from "fishtvue/theme/unoStyle/unoStatic"
 import type { GroupsRegExp } from "fishtvue/theme/unoStyle/UnoTypes"
+import { colors } from "fishtvue/theme/primitive"
+
+const HEX_COLOR = /^#(?:[0-9a-f]{6}|[0-9a-f]{3})$/i
+
+export function hexToRgbTriplet(hex: string): string | undefined {
+  if (!HEX_COLOR.test(hex)) return
+  let value = hex.slice(1)
+  if (value.length === 3)
+    value = value
+      .split("")
+      .map((ch) => ch + ch)
+      .join("")
+  const int = parseInt(value, 16)
+  return `${(int >> 16) & 255} ${(int >> 8) & 255} ${int & 255}`
+}
+
+// Wave 3.3 (theme.md Issue 1) — эмиссия именованных цветов палитры через CSS-variable indirection.
+// Fallback внутри var() обязателен: без установленного plugin'а tokens-тег отсутствует, и цвет
+// резолвится из запечённого значения — рендер без FishtVue не меняется. Слот `theme` (значение —
+// hsla-формула на var(--theme)) хранит в переменной ПОЛНЫЙ цвет; alpha для него — color-mix
+// (раньше alpha молча игнорировался ранним return'ом в addAlphaToHex — см. colorVars.test.ts).
+export function resolveColor(groups: GroupsRegExp, forceAlpha?: number): string | undefined {
+  const name = groups?.special
+  const tone = groups?.tone
+  const value = (colors as any)?.[name]?.[tone]
+  if (value === undefined) return
+  let alpha =
+    forceAlpha ??
+    (groups?.abstractOpacity ? +groups.abstractOpacity : groups?.opacity ? +groups.opacity / 100 : undefined)
+  if (typeof alpha === "number") {
+    if (alpha > 1) alpha = alpha / 100
+    alpha = +alpha.toFixed(4)
+    if (alpha === 1) alpha = undefined
+  }
+  const token = `--fv-${name}-${tone}`
+  const triplet = hexToRgbTriplet(String(value))
+  if (triplet)
+    return alpha === undefined ? `rgb(var(${token}, ${triplet}))` : `rgb(var(${token}, ${triplet}) / ${alpha})`
+  const base = `var(${token}, ${String(value).replace("<alpha-value>", "100")})`
+  return alpha === undefined ? base : `color-mix(in srgb, ${base} ${+(alpha * 100).toFixed(2)}%, transparent)`
+}
 
 export function addAlphaToHex(color: string | undefined, alpha?: number | undefined): string | undefined {
   if (!color) return color

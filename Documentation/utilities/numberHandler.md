@@ -1,7 +1,7 @@
 ---
 title: utils/numberHandler
-summary: Форматирование чисел и телефонов + input-handlers для масок. `convertToPhone` принимает optional `phoneFormats` для произвольных стран.
-updated: 2026-05-10
+summary: Форматирование чисел и телефонов + input-handlers для масок. `convertToPhone` и `toPhone` принимают optional `phoneFormats` для произвольных стран.
+updated: 2026-05-11
 stability: beta
 since: 0.2.11
 ---
@@ -68,7 +68,7 @@ convertToNumber(1234567.891, 20, 2, " ", " ₽", 3, ".")
 | `convertToPhone(value, options?)` | `(value: string, options?: ConvertToPhoneOptions) => string` | Форматирует строку цифр в телефон. `options.phoneFormats` — кастомные форматы вида `{ codeCountry, mask, codeCity }[]`. |
 | `convertToNumber(number, lengthInteger, lengthDecimal, separator, end, interval, floatingPoint)` | См. [.d.ts](../../lib/utils/numberHandler.d.ts) | Форматирует число с разделителем, обрезкой, suffix. |
 | `onkeydown(e)` | `(e: any) => void` | Keyboard handler — фильтрует не-цифровой ввод. |
-| `toPhone(e)` | `(e: any) => void` | Маска для ввода телефона. |
+| `toPhone(e, options?)` | `(e: InputEvent, options?: ConvertToPhoneOptions) => void` | Маска для ввода телефона. `options.phoneFormats` пробрасывается во внутренний `convertToPhone(value, options)`. |
 | `toNumber(e, separator, lengthInteger, lengthDecimal)` | См. [.d.ts](../../lib/utils/numberHandler.d.ts) | Маска для числового ввода. |
 
 ## 9. Examples
@@ -105,21 +105,29 @@ function onInput(e: Event) {
 
 Чаще всего эти helpers не вызываются напрямую — за маски ввода в FishtVue отвечает [Input](../components/input.md) с props `maskInput`.
 
-### 9.4 Кастомный набор стран в `convertToPhone`
+### 9.4 Кастомный набор стран в `convertToPhone` / `toPhone`
 
 ```ts
-import { convertToPhone, type PhoneFormat } from "fishtvue/utils/numberHandler"
+import { convertToPhone, toPhone, type PhoneFormat } from "fishtvue/utils/numberHandler"
 
 const europe: PhoneFormat[] = [
   { codeCountry: 44, mask: [4, 4, 2], codeCity: [20] }, // UK
   { codeCountry: 49, mask: [4, 4, 4], codeCity: [30] }  // DE
 ]
 
+// 1. Pure formatting
 convertToPhone("442012345678", { phoneFormats: europe })
 // "+44 (20) 1234-5678"
+
+// 2. DOM-handler с теми же опциями (используется внутри Input.vue)
+function onInput(e: InputEvent) {
+  toPhone(e, { phoneFormats: europe })
+}
 ```
 
 Если `phoneFormats` пустой массив или не передан — используются дефолтные форматы (1, 7, 81, 82, 86).
+
+> **Cross-ref:** в [Input.vue](../../lib/input/Input.vue) `phoneFormats` пробрасывается из `InputProps.phoneFormats` ?? `componentsOptions.Input.phoneFormats`. См. [components/input.md §5](../components/input.md#5-props).
 
 ## 10. Configuration & Customization
 

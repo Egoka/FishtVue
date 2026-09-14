@@ -1,7 +1,7 @@
 ---
 title: Calendar
-summary: Date picker на v-calendar — single/range, date/time/dateTime, кастомные шаблоны.
-updated: 2026-05-09
+summary: Date picker на v-calendar — single/range (`range`), date/time/dateTime, кастомные шаблоны. С 1.0.0: `class` — корень `[data-calendar]`, внутренние элементы — карта `classes` (`control`/`text`/`picker`), `datePickerProps`/`fixWindowProps`, `closeOnSelect`, emits `ready`/`active`/`update:invalid`.
+updated: 2026-09-14
 stability: beta
 since: 0.2.11
 ---
@@ -10,9 +10,9 @@ since: 0.2.11
 
 ## 1. Overview
 
-`Calendar` — обёртка над [v-calendar](https://vcalendar.io/) с интеграцией FishtVue: layout, theming, локализация (через `paramsDatePicker.locale`), валидация. Поддерживает три режима — `date`, `dateTime`, `time` — и диапазон через `isRange`. Реализует v-model contract FishtVue.
+`Calendar` — обёртка над [v-calendar](https://vcalendar.io/) с интеграцией FishtVue: layout, theming, локализация (через `datePickerProps.locale`), валидация. Поддерживает три режима — `date`, `dateTime`, `time` — и диапазон через top-level prop `range`. Реализует v-model contract FishtVue.
 
-Stability: `beta` — coverage `Calendar.vue` 63.12% (часть веток не покрыта тестами); `paramsDatePicker.IParamsDatePicker` содержит ~30 опций v-calendar с `Partial`-типами без чётких границ.
+Stability: `beta` — coverage `Calendar.vue` 63.12% (часть веток не покрыта тестами); `DatePickerProps` содержит ~30 опций v-calendar с `Partial`-типами без чётких границ.
 
 Source: [Source](../../lib/calendar/Calendar.vue), [Calendar.d.ts](../../lib/calendar/Calendar.d.ts), [Calendar.test.ts](../../lib/calendar/Calendar.test.ts).
 
@@ -21,29 +21,30 @@ Source: [Source](../../lib/calendar/Calendar.vue), [Calendar.d.ts](../../lib/cal
 ```
 lib/calendar/
 ├── Calendar.vue
-├── Calendar.d.ts        # 618 строк (включая IParamsDatePicker)
+├── Calendar.d.ts        # 641 строка (включая DatePickerProps)
 ├── Calendar.test.ts     # 14 кейсов, 2 skipped
 └── package.json
 ```
 
 Зависимости:
-- [v-calendar](../../lib/package.json) `^3.1.2` — core engine.
+- [v-calendar](../../lib/package.json) `^3.0.0` — core engine. **Wave 2.1: optional `peerDependency` + lazy.** v-calendar больше не runtime-dependency: его ставит приложение (`pnpm add v-calendar`), а `DatePicker` грузится lazy в `onMounted` (`DatePicker.value = (await import("v-calendar")).DatePicker`; ref-based, не `defineAsyncComponent` — template-ref `calendarPicker` должен указывать на реальный инстанс для чтения `inputValue`/`dateParts`). Без установленного peer Calendar не падает «жёстко» — picker просто не рендерится (`<component :is="DatePicker" v-if="DatePicker …">`).
 - [InputLayout](./input-layout.md), [FixWindow](./fix-window.md).
 - [Component class](../architecture/component-class.md).
-- `date-fns` для форматирования через [dateHandler](../utilities/dateHandler.md).
-- Css импортируется явно: `v-calendar/style.css` ([rollup.config.js:65](../../lib/rollup.config.js#L65)).
+- `date-fns` для форматирования через [dateHandler](../utilities/dateHandler.md) (остаётся runtime-dependency).
+- CSS грузится lazy в `onMounted` (`import("v-calendar/style.css")`, client-only → SSR-safe), а не top-level side-effect-импортом ([rollup.config.js:65](../../lib/rollup.config.js#L65) — external).
 
 Лицензия v-calendar — MIT (не копилефт).
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили + явный `onMounted(() => initDarkModeObserver())` для трекинга dark-mode на body/html.
+- **Lifecycle:** `Component.__hooks()` ([component/index.ts:88-92](../../lib/component/index.ts#L88-L92)) автоматически вызывает `initStyle()` на `onServerPrefetch` + `vueOnMounted`. В Calendar.vue `onMounted` дополнительно запускает `initDarkModeObserver()` ([Calendar.vue:266-280](../../lib/calendar/Calendar.vue#L266-L280)) и `autoFocus`-логику. `onBeforeUnmount` ([Calendar.vue:281-288](../../lib/calendar/Calendar.vue#L281-L288)) делает `darkObserver.disconnect()` и снимает keydown listener'ы — memory-leak fix 2026-05-11 (Issue 1).
 - **Поток данных:** `modelValue` (string/Date/range) → внутренний state → emit'ы.
 - **v-model contract:** standard.
 - **Стили:** `Calendar.setStyle()` для обёртки. Внутренние стили v-calendar — через `v-calendar/style.css`.
-- **Конфиг:** `componentsOptions.Calendar` — см. §10. Помимо этого, `paramsDatePicker.locale` принимает `date-fns/locale` объект.
-- **Локализация:** через `paramsDatePicker.locale` или `optionsTheme.locale`.
-- **SSR:** `isClient()` guard перед инициализацией observer'а. v-calendar SSR-friendly до версии 3.1.x.
+- **Mode resolution:** `props.mode ?? options?.mode ?? Calendar.componentsStyle() ?? "outlined"` ([Calendar.vue:119-121](../../lib/calendar/Calendar.vue#L119-L121)) — `componentsStyle` global fallback с 2026-05-11 (Issue 6).
+- **Конфиг:** `componentsOptions.Calendar` — см. §10. Помимо этого, `datePickerProps.locale` принимает `date-fns/locale` объект или строку.
+- **Локализация:** автоматически пробрасывается `FishtV?.getActiveLocale()` в `<DatePicker :locale>` ([Calendar.vue:115-117](../../lib/calendar/Calendar.vue#L115-L117)). Приоритет: `props.datePickerProps.locale > options.datePickerProps.locale > getActiveLocale() > "en"`.
+- **SSR:** `isClient()` guard перед инициализацией observer'а и перед `removeEventListener`. v-calendar SSR-friendly до версии 3.1.x.
 - **Animation:** v-calendar использует свои анимации; FixWindow — для popover.
 
 ## 4. Quick Start
@@ -63,31 +64,47 @@ const date = ref<Date | null>(null)
 
 ## 5. Props
 
-`CalendarProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseCalendarProps>`.
+`CalendarProps extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseCalendarProps>` ([Calendar.d.ts:340-360](../../lib/calendar/Calendar.d.ts#L340-L360)).
 
-`BaseCalendarProps`:
+`BaseCalendarProps` ([Calendar.d.ts:302-335](../../lib/calendar/Calendar.d.ts#L302-L335)):
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `paramsDatePicker` | `Partial<IParamsDatePicker>` | — | Большой объект v-calendar опций. |
-| `autoFocus` | `boolean` | — | Фокус на mount. |
-| `isNotCloseOnDateChange` | `boolean` | `false` | Не закрывать popover после выбора. |
-| `classDataPicker` | `StyleClass` | — | Класс root picker. |
-| `classPicker` | `StyleClass` | — | Класс собственно календаря. |
-| `classDateText` | `StyleClass` | — | Класс текстового представления даты. |
-| `paramsFixWindow` | `FixWindowProps` | — | Конфиг позиционирования popover. |
+| `datePickerProps` | `Partial<DatePickerProps>` | — | Props внутреннего `<DatePicker>` v-calendar (бывший `paramsDatePicker`). |
+| `range` | `boolean` | `false` | Режим диапазона (бывший `datePickerProps.isRange`) — влияет и на модель, и на разметку триггера. |
+| `autoFocus` | `boolean` | `false` | Фокус на mount. |
+| `closeOnSelect` | `boolean` | `true` | Закрывать picker при выборе даты (инверсия бывшего `isNotCloseOnDateChange`). |
+| `fixWindowProps` | `FixWindowProps` | (позиция `bottom-left`) | Конфиг позиционирования popover (бывший `paramsFixWindow`). |
 
 Свои:
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `id` | `string` | — | id корня. |
+| `id` | `string` | — | id триггера. |
 | `modelValue` | `DatePickerModel \| undefined` | — | v-model. См. ниже. |
+| `class` | `StyleClass` | — | Классы корня (он же корень `InputLayout`, `[data-calendar]`). |
+| `classes` | `ClassesMap<CalendarClassKey>` | — | Карта классов внутренних элементов — см. §5.1. |
 
-`IParamsDatePicker` ([Calendar.d.ts](../../lib/calendar/Calendar.d.ts)) включает (фрагмент):
+### 5.1 Classes keys
+
+`CalendarClassKey = InputLayoutClassKey | "control" | "text" | "picker"` ([Calendar.d.ts:300](../../lib/calendar/Calendar.d.ts#L300)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-calendar]` (корень layout'а) | element | `relative rounded-md` + фон режима |
+| `base` | `[data-input-layout-base]` | element | рамка поля + `cursor-pointer` + focus-ring |
+| `control` | `[data-calendar-control]` (триггер) | element | `w-56 focus:outline-0 … flex min-h-[36px]` (бывший `classDataPicker`) |
+| `text` | `[data-calendar-text]` | element | текст даты; в range-режиме — `flex flex-wrap …` (бывший `classDateText`) |
+| `picker` | `[data-calendar-picker]` | element | контейнер v-calendar + mode (бывший `classPicker`) |
+| `label` / `help` / `message` / `before` / `after` | см. [InputLayout §5.1](./input-layout.md) | element | — |
+| `animation` | корень + `base` | **aspect** | `motion-safe:transition-all motion-safe:duration-550` |
+
+`DatePickerProps` ([Calendar.d.ts:260-291](../../lib/calendar/Calendar.d.ts#L260-L291)) включает (фрагмент):
 
 - Calendar: `borderless`, `transparent`, `color: ColorCalendarPicker`, `isDark`, `expanded`, `titlePosition`, `view`, `showWeeknumbers`, `trimWeeks`, `rows`, `columns`, `step`, `minDate`, `maxDate`, `popover`, `attributes`.
-- DatePicker: `mode: "date" \| "dateTime" \| "time"`, `isRange`, `isRequired`, `is24hr`, `mask: CalendarMask`, `masks: IMasksDate`, `disabledDates`, `selectAttribute`, `rules`, `locale`, `timezone`, `placeholder`, `separator`.
+- DatePicker: `mode: "date" \| "dateTime" \| "time"`, `isRequired`, `is24hr`, `mask: CalendarMask`, `masks: CalendarMasks`, `disabledDates`, `selectAttribute`, `rules`, `locale`, `timezone`, `placeholder`, `separator`.
+
+Имена внутри `DatePickerProps` — зеркало API v-calendar (`isDark`, `isRequired`, `is24hr`), поэтому под правило bare-positive булевых они не попадают (решения R30/R33); `isRange` из набора убран — это top-level `range`.
 
 `DatePickerModel` — union из `Date | string | number | { start, end } | null` (см. [Calendar.d.ts](../../lib/calendar/Calendar.d.ts)).
 
@@ -97,9 +114,16 @@ const date = ref<Date | null>(null)
 |---|---|---|
 | `update:modelValue` | `DatePickerModel` | На каждый pick. |
 | `change:modelValue` | `DatePickerModel` | После flush. |
-| `update:isInvalid` | `boolean` | При смене статуса валидации. |
-| `getCalendar` | `ICalendarPicker` | После init — даёт ссылку на v-calendar API. |
-| `isActive` | `boolean` | Открытие/закрытие popover. |
+| `update:invalid` | `boolean` (всегда `false`) | Выбор даты — reset-сигнал (`v-model:invalid`). |
+| `ready` | `CalendarPicker` | После init — даёт ссылку на v-calendar API (бывший `getCalendar`). |
+| `active` | `boolean` | Открытие/закрытие popover (бывший `isActive`). |
+
+**v-model contract** (form-control): стандартный `v-model` идёт через `update:modelValue`,
+парный `change:modelValue` — «значение устоялось». У Calendar момент устаканивания — смена
+или очистка даты (`changeDate`/`clearDataPicker`), а не blur: popover закрывается уже после.
+`update:modelValue` подписывай для непрерывного отслеживания, `change:modelValue` — для
+тяжёлых операций (server sync, пересчёт диапазонов). Валидность — отдельный канал
+`v-model:invalid`.
 
 ## 7. Slots
 
@@ -117,7 +141,8 @@ const date = ref<Date | null>(null)
 | Name | Description |
 |---|---|
 | `layout`, `inputLayout`, `datePickerLink`, `picker`, `calendarPicker`, `isFocus`, `isOpenPicker`, `datePickerOptions`, `value`, `visibleDate` | Reactive state. |
-| `id`, `isValue`, `autoFocus`, `isNotCloseOnDateChange`, `mode`, `placeholder`, `isLoading`, `isDisabled`, `isInvalid`, `messageInvalid`, `separator`, `valueLayout`, `paramsFixWindow`, `classLayout`, `classDataPicker`, `classDateText`, `classPicker` | Derived. |
+| `id`, `isValue`, `autoFocus`, `isCloseOnSelect`, `isRange`, `mode`, `placeholder`, `isLoading`, `isDisabled`, `isInvalid`, `isClearable`, `messageInvalid`, `separator`, `valueLayout`, `fixWindowProps` | Derived. |
+| `classControl`, `classText`, `classPicker` | Итоговые классы триггера, текста даты и контейнера picker'а. |
 | `openCalendar()` / `closeCalendar(event?)` | Open/close. |
 | `changeDate(date)` | Программный set. |
 | `focus(focus)` | Программный focus. |
@@ -134,10 +159,7 @@ const date = ref<Date | null>(null)
 ### 9.2 Range
 
 ```vue
-<Calendar
-  v-model="range"
-  :params-date-picker="{ isRange: true }"
-  label="Booking" />
+<Calendar v-model="range" range label="Booking" />
 ```
 
 ### 9.3 DateTime + русская локаль
@@ -154,7 +176,7 @@ const dt = ref<Date | null>(null)
 <template>
   <Calendar
     v-model="dt"
-    :params-date-picker="{ mode: 'dateTime', is24hr: true, locale: ru }"
+    :date-picker-props="{ mode: 'dateTime', is24hr: true, locale: ru }"
     label="Дата и время" />
 </template>
 ```
@@ -176,7 +198,7 @@ const dt = ref<Date | null>(null)
 
 ### 10.1 Global
 
-`CalendarOption = Pick<CalendarProps, "paramsDatePicker" | "autoFocus" | "isNotCloseOnDateChange" | "classDataPicker" | "classPicker" | "classDateText" | "paramsFixWindow" | keyof InputLayoutOption>`.
+`CalendarOption = Pick<CalendarProps, "datePickerProps" | "range" | "autoFocus" | "closeOnSelect" | "fixWindowProps" | "class" | "classes" | keyof InputLayoutOption>` ([Calendar.d.ts:621-631](../../lib/calendar/Calendar.d.ts#L621-L631)).
 
 ### 10.2 Per-instance
 
@@ -184,8 +206,8 @@ const dt = ref<Date | null>(null)
 
 ### 10.3 Theming
 
-- `paramsDatePicker.color: ColorCalendarPicker` — задаёт цветовую тему v-calendar.
-- `paramsDatePicker.isDark: true` — принудительный dark mode (или auto через `optionsTheme.darkModeSelector` + observer).
+- `datePickerProps.color: ColorCalendarPicker` — задаёт цветовую тему v-calendar.
+- `datePickerProps.isDark: true` — принудительный dark mode (или auto через `optionsTheme.darkModeSelector` + observer).
 - Кастомные стили v-calendar — через `:deep(.vc-...)` в parent SFC.
 
 ### 10.4 CSS layer override
@@ -195,12 +217,12 @@ Calendar инжектит часть стилей через `Calendar.setStyle(
 ## 11. Form integration & validation
 
 - Полностью поддерживается в [Form](./form.md).
-- Валидация через rules — но `paramsDatePicker.rules` (v-calendar) — отдельный механизм min/max date validation:
+- Валидация через rules — но `datePickerProps.rules` (v-calendar) — отдельный механизм min/max date validation:
 
 ```vue
 <Calendar
   v-model="date"
-  :params-date-picker="{
+  :date-picker-props="{
     rules: { hours: { min: 9, max: 18 } }
   }" />
 ```
@@ -211,6 +233,7 @@ Calendar инжектит часть стилей через `Calendar.setStyle(
 
 ### A11y
 
+- **Trigger** (`<div data-calendar>`) связан с меткой через `:aria-labelledby` → id `<Label>` (Wave 4, 2026-06-19); id раздаётся [InputLayout](./input-layout.md) (`useId()`, либо `id` prop). См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - v-calendar содержит a11y-семантику для grid и кнопок навигации. Проверь актуальность по версии.
 - Keyboard: ArrowKeys для навигации по сетке, Enter для выбора, Escape — close popover.
 - Focus management: open → focus на picker, close → return.
@@ -226,7 +249,7 @@ Calendar инжектит часть стилей через `Calendar.setStyle(
 ```ts
 import type {
   CalendarProps, CalendarEmits, CalendarExpose,
-  DatePickerModel, IParamsDatePicker, ICalendarPicker
+  DatePickerModel, DatePickerProps, CalendarPicker, CalendarClassKey
 } from "fishtvue/calendar"
 import Calendar from "fishtvue/calendar"
 import { useTemplateRef } from "vue"
@@ -238,9 +261,16 @@ cal.value?.openCalendar()
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **v-calendar:** `^3.1.2` — major-bump может ломать API `IParamsDatePicker`.
-- **Stability flag:** `beta` — coverage ниже `stable`-порога; типы содержат `Partial<...>` с широкими полями.
-- **Breaking changes:** при апгрейде v-calendar до 4.x — ожидаются.
+- **v-calendar:** `^3.1.2` — major-bump может ломать API `DatePickerProps`.
+- **Stability flag:** `beta` — coverage ниже `stable`-порога; типы содержат `Partial<...>` с широкими полями. Тестов — 42 (+2 todo).
+- **Breaking changes (1.0.0, редизайн props):**
+  - `paramsDatePicker` → `datePickerProps`, `paramsFixWindow` → `fixWindowProps`.
+  - `datePickerProps.isRange` → top-level `range`; `isNotCloseOnDateChange: true` → `closeOnSelect: false` (инверсия, default `true`).
+  - `classDataPicker` → `classes.control`, `classDateText` → `classes.text`, `classPicker` → `classes.picker`; `classBody` → `class`, прежний `class` → `classes.base`.
+  - типы: `IParamsDatePicker` → `DatePickerProps`, `ICalendarPicker` → `CalendarPicker`, `IMasksDate` → `CalendarMasks`, `IRangeDate` → `CalendarRangeDate`, `IRangeValue` → `CalendarRangeValue`.
+  - emits: `getCalendar` → `ready`, `isActive` → `active`, `update:isInvalid` → `update:invalid` (silent break).
+  - `data-calendar` теперь на корне; триггер — `[data-calendar-control]`, текст даты — `[data-calendar-text]`.
+  - При апгрейде v-calendar до 4.x — ожидаются дополнительные breaking changes.
 
 ## 15. Testing recipes
 
@@ -269,9 +299,9 @@ describe("Calendar", () => {
 | Стили v-calendar не загрузились | Не подключён CSS-импорт. | В `main.ts` добавь `import "v-calendar/style.css"` (если bundler не подхватывает автоматически). |
 | Dark mode не активируется | `initDarkModeObserver` не дождался mount или `darkModeSelector` пустой. | Установи `optionsTheme.darkModeSelector` и проверь корневой DOM. |
 | `mode: "dateTime"` не показывает время | `v-calendar` версия не поддерживает или `is24hr` не задан. | Установи `is24hr: true` явно. |
-| Range возвращает `{ start, end }`, а ожидался array | `isRange: true` всегда возвращает объект. | Адаптируй на стороне родителя. |
-| `paramsDatePicker.locale` не применяется | Прокинут не date-fns Locale, а строка. | Передай объект из `import { ru } from "date-fns/locale"`. |
-| `getCalendar` event не срабатывает | v-calendar mount с задержкой. | Используй `onMounted` + `nextTick`, либо expose `datePickerLink`. |
+| Range возвращает `{ start, end }`, а ожидался array | `range` всегда возвращает объект. | Адаптируй на стороне родителя. |
+| `datePickerProps.locale` не применяется | Прокинут не date-fns Locale, а строка. | Передай объект из `import { ru } from "date-fns/locale"`. |
+| `ready` event не срабатывает | v-calendar mount с задержкой. | Используй `onMounted` + `nextTick`, либо expose `datePickerLink`. |
 
 ## 17. Related
 
@@ -288,9 +318,9 @@ describe("Calendar", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 63.12% — большая часть веток ([Calendar.vue:319–340, 377–396](../../lib/calendar/Calendar.vue#L319-L340)) не покрыта тестами.
-- 2 skipped тестов в [Calendar.test.ts](../../lib/calendar/Calendar.test.ts).
-- `initDarkModeObserver()` — внутренний; не expose'ится; на cleanup'е компонента observer disconnect'ится (надо проверить).
+- Coverage 63.12% — часть веток (range-mode DatePicker, masks edge cases) не покрыта тестами. После аудит-фикса 2026-05-11 добавлено 7 кейсов в `describe("Audit fixes 2026-05-11 (Issues 1, 6, 8)")` — coverage observer/listener/componentsStyle/locale теперь покрыт.
+- 2 skipped (todo) теста в [Calendar.test.ts](../../lib/calendar/Calendar.test.ts) — `Calendar Component - Date Selection` (требует jsdom day-cell interaction), `renders slot content in the footer` (требует open-state).
+- `initDarkModeObserver()` — внутренний; observer хранится в setup-scoped `let darkObserver` ([Calendar.vue:112](../../lib/calendar/Calendar.vue#L112)) и disconnect'ится в `onBeforeUnmount` ([Calendar.vue:281-288](../../lib/calendar/Calendar.vue#L281-L288)) — Issue 1 ✅ resolved 2026-05-11.
 
 ### Skipped tests
 
@@ -298,15 +328,19 @@ describe("Calendar", () => {
 
 ### API inconsistencies
 
-- `IParamsDatePicker` ([Calendar.d.ts](../../lib/calendar/Calendar.d.ts)) содержит ~30 полей через `Partial`, многие из которых — re-export типов v-calendar (`v-calendar/dist/types`, `v-calendar/src/utils`). При апгрейде v-calendar пути могут сменить — fragile.
-- `DatePickerModel` — широкий union; narrow для `isRange: true` vs single — на стороне потребителя.
-- `ICalendarPicker` (expose v-calendar API) — содержит `any` поля.
+- `DatePickerProps` ([Calendar.d.ts:260-291](../../lib/calendar/Calendar.d.ts#L260-L291)) содержит ~30 полей через `Partial`, многие из которых — re-export типов v-calendar (`v-calendar/dist/types`, `v-calendar/src/utils`). При апгрейде v-calendar пути могут сменить — fragile.
+- `DatePickerModel` — широкий union; narrow для `range` vs single — на стороне потребителя.
+- `CalendarPicker` (expose v-calendar API) — содержит `any` поля.
+- Нет событий `focus` / `blur` — они есть только у [Input](./input.md) и [Textarea](./textarea.md). Асимметрия осознанная: major 1.0.0 переименовывал события, но новых не добавлял (dev-patterns §7). Фокус-состояние доступно через `active`.
 
 ### Behavioral caveats
 
-- При `paramsDatePicker.timezone` v-calendar парсит `Date` относительно зоны — `modelValue` приходит в UTC. Для рендеринга в локальной зоне — преобразуй явно.
-- `isNotCloseOnDateChange: true` оставляет popover открытым после выбора — для UI-паттерна «выбрал-нажал-OK» используй custom `footerPicker`.
+- При `datePickerProps.timezone` v-calendar парсит `Date` относительно зоны — `modelValue` приходит в UTC. Для рендеринга в локальной зоне — преобразуй явно.
+- `closeOnSelect: false` оставляет popover открытым после выбора — для UI-паттерна «выбрал-нажал-OK» используй custom `footerPicker`.
 - На server-side render в Nuxt 4 — есть риск инициализации в неправильное время. Проверяй интеграционно.
+- `getActiveLocale()` (Issue 8 ✅) — reactive computed, но v-calendar internally rebuilds month-data только при mount. Если нужен runtime locale-switch без перезагрузки страницы — пробрось `:key="locale"` на Calendar, чтобы форсировать remount.
+- v-calendar dependency (Issue 2, deferred) — в `lib/package.json` `dependencies`, не `peerDependencies`. Если потребитель уже использует v-calendar 4.x — npm может установить две копии. Решается отдельным packaging-аудитом для всей библиотеки.
+- Floating positioning через FixWindow (Issue 9, deferred) — не пересчитывает позицию при scroll внутри scroll-parent. Cross-cutting; решается переходом на floating-ui для FixWindow.
 
 ### Bug report format
 

@@ -1,5 +1,20 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, onUnmounted, reactive, ref, toRaw, unref, useSlots, watch } from "vue"
+  import {
+    Comment,
+    Fragment,
+    Text,
+    computed,
+    defineComponent,
+    nextTick,
+    onMounted,
+    onUnmounted,
+    reactive,
+    ref,
+    toRaw,
+    toValue,
+    useSlots,
+    watch
+  } from "vue"
   import * as LD from "lodash-es"
   import { isEqual, isWithinInterval, startOfDay } from "date-fns"
   import {
@@ -20,18 +35,18 @@
     EditInput,
     EditSelect,
     Filters,
-    IAsyncDataConfig,
-    IAsyncDataParams,
-    IAsyncDataResult,
-    IColumn,
-    IColumnPrivate,
-    IFilter,
-    IGrouping,
-    ISort,
-    ISummaryPrivate,
-    ITableStyles,
-    ITableStylesBorder,
-    IToolbar,
+    TableAsyncDataConfig,
+    TableAsyncDataParams,
+    TableAsyncDataResult,
+    TableColumn,
+    TableColumnPrivate,
+    TableFilter,
+    TableGrouping,
+    TableSort,
+    TableSummaryPrivate,
+    TableClassKey,
+    TableSettings,
+    TableToolbar,
     Page,
     ResultData,
     Search,
@@ -50,33 +65,124 @@
   import Select from "fishtvue/select/Select.vue"
   import Calendar from "fishtvue/calendar/Calendar.vue"
   import Component from "fishtvue/component"
+  import { useFishtVue } from "fishtvue/config"
   import { StyleClass, TLoading } from "fishtvue/types"
   import { BaseInputProps } from "fishtvue/input"
   import { BaseSelectProps } from "fishtvue/select"
-  import { BaseCalendarProps, IRangeValue } from "fishtvue/calendar"
+  import { BaseCalendarProps, CalendarRangeValue } from "fishtvue/calendar"
   import { InputLayoutProps } from "fishtvue/inputlayout"
   import { isClient } from "fishtvue/utils/domHandler"
   import { formatDate } from "fishtvue/utils/dateHandler"
   import { generateUUID } from "fishtvue/utils/functionHandler"
   import { convertToNumber, convertToPhone, isNumber } from "fishtvue/utils/numberHandler"
-  import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
+  import { deepCopyObject, deepMerge, deepMergeSoft, fieldsOmit } from "fishtvue/utils/objectHandler"
+  import { cn, mergeClasses } from "fishtvue/utils/tailwindHandler"
   // ---BASE-COMPONENT----------------------
   const Table = new Component<"Table">()
   const options = Table.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<TableProps>(), {
     toolbar: undefined,
-    edit: undefined,
+    editable: undefined,
     sort: undefined,
     filter: undefined,
-    resizedColumns: undefined,
+    resizableColumns: undefined,
     pagination: undefined,
-    search: undefined,
+    searchable: undefined,
     columns: undefined,
-    summary: undefined
+    summary: undefined,
+    virtual: undefined,
+    stripedRows: undefined,
+    horizontalLines: undefined,
+    verticalLines: undefined,
+    filterLines: undefined,
+    // union `asyncData` включает `boolean` — без own default Vue скастовал бы отсутствующий
+    // prop в `false` и слой `componentsOptions` стал бы недостижим (dev-patterns §2 F).
+    asyncData: undefined
   })
   const emit = defineEmits<TableEmits>()
+  const { cls, raw, pick } = Table.resolveClasses<TableClassKey>(props)
   const slots = useSlots()
+  // ---COMPOUND-API (VNode-walk <Column>/<ColumnGroup>/<Pagination>/<Loading>) ----------
+  // Считываем декларативные дети из default slot и синтезируем descriptor'ы колонок + header-группы
+  // + override-конфиги пейджера/лоадера. Schema-driven `:columns`/`:pagination` при наличии выигрывают
+  // (backward compat). Сопоставление по ИМЕНИ компонента — Column.vue/ColumnGroup.vue НЕ импортируем
+  // в этот SFC: импорт SFC в SFC ломает type-resolver @vue/compiler-sfc на re-export
+  // `declare class ... extends ClassComponent` (урок Menu.vue:206). Имя надёжно и не минифицируется.
+  function compoundNormalize(raw: unknown): Array<any> {
+    if (raw === null || raw === undefined) return []
+    return Array.isArray(raw) ? (raw as Array<any>) : [raw]
+  }
+  function isVNodeNamed(vn: any, name: string): boolean {
+    const t = vn?.type
+    return !!t && (t?.name === name || t?.__name === name)
+  }
+  function compoundFlatten(nodes: Array<any>): Array<any> {
+    const out: Array<any> = []
+    for (const n of nodes) {
+      if (n === null || n === undefined || typeof n !== "object") continue
+      if (n.type === Comment || n.type === Text) continue
+      if (n.type === Fragment) out.push(...compoundFlatten(compoundNormalize(n.children)))
+      else out.push(n)
+    }
+    return out
+  }
+  function compoundChildren(vn: any): Array<any> {
+    const def = vn?.children?.default
+    return typeof def === "function" ? compoundNormalize(def()) : []
+  }
+  // Извлекаем TableColumn из <Column>-vnode: props + захваченные scoped-slots (cell/header/filter) + ключ группы.
+  function extractColumn(vn: any, groupKey: number | null): TableColumn {
+    const childSlots = (vn?.children && typeof vn.children === "object" ? vn.children : {}) as Record<string, any>
+    return {
+      ...(vn?.props ?? {}),
+      _groupKey: groupKey,
+      _cellSlot: typeof childSlots.cell === "function" ? childSlots.cell : undefined,
+      _headerSlot: typeof childSlots.header === "function" ? childSlots.header : undefined,
+      _filterSlot: typeof childSlots.filter === "function" ? childSlots.filter : undefined
+    } as TableColumn
+  }
+  type CompoundHeaderGroupMeta = { key: number; caption?: string; class?: any }
+  const compoundParsed = computed<{
+    columns: Array<TableColumn>
+    groups: Array<CompoundHeaderGroupMeta>
+    pagination?: Record<string, any>
+    loading?: Record<string, any>
+  }>(() => {
+    const raw = typeof slots.default === "function" ? slots.default() : undefined
+    const top = compoundFlatten(compoundNormalize(raw))
+    const columnsAcc: Array<TableColumn> = []
+    const groupsAcc: Array<CompoundHeaderGroupMeta> = []
+    let pagination: Record<string, any> | undefined
+    let loading: Record<string, any> | undefined
+    let groupKey = 0
+    for (const vn of top) {
+      if (isVNodeNamed(vn, "Column")) {
+        columnsAcc.push(extractColumn(vn, null))
+      } else if (isVNodeNamed(vn, "ColumnGroup")) {
+        const key = groupKey++
+        groupsAcc.push({ key, caption: vn?.props?.caption, class: vn?.props?.class })
+        for (const child of compoundFlatten(compoundChildren(vn)))
+          if (isVNodeNamed(child, "Column")) columnsAcc.push(extractColumn(child, key))
+      } else if (isVNodeNamed(vn, "Pagination")) {
+        pagination = { ...(vn?.props ?? {}) }
+      } else if (isVNodeNamed(vn, "Loading")) {
+        loading = { ...(vn?.props ?? {}) }
+      }
+    }
+    return { columns: columnsAcc, groups: groupsAcc, pagination, loading }
+  })
+  const compoundColumns = computed<Array<TableColumn>>(() => compoundParsed.value.columns)
+  const compoundPaginationConfig = computed<Record<string, any> | undefined>(() => compoundParsed.value.pagination)
+  const compoundLoadingProps = computed<Record<string, any>>(() => compoundParsed.value.loading ?? {})
+  // Стабильный рендерер захваченного со <Column> scoped-slot (cell/header/filter): определён один раз,
+  // props (fn/args) объявлены — slot-props передаются корректно (в отличие от `<component :is="fn">`,
+  // где недекларированные атрибуты ушли бы в attrs, а не в первый аргумент slot-функции).
+  const RenderColumnSlot = defineComponent({
+    name: "RenderColumnSlot",
+    props: { render: { type: Function, default: undefined }, args: { type: Object, default: undefined } },
+    setup: (p) => () => (p.render ? (p.render as (a: any) => any)(p.args) : null)
+  })
   // ---REF-LINK----------------------------
   const componentTable = ref<HTMLElement>()
   const tableHeader = ref<HTMLElement>()
@@ -109,54 +215,74 @@
   const mode = computed<NonNullable<TableProps["mode"]>>(
     () => (props?.mode as TableProps["mode"]) ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
   )
-  const toolbar = computed<IToolbar | boolean>(() => deepMerge(options?.toolbar, unref(props?.toolbar)) ?? false)
-  const sort = computed<ISort | boolean>(() => deepMerge(options?.sort, unref(props?.sort)) ?? false)
-  const filter = computed<IFilter | boolean>(() => deepMerge(options?.filter, unref(props?.filter)) ?? false)
-  const grouping = computed<IGrouping | string>(() => deepMerge(options?.grouping, unref(props?.grouping)))
-  const pagination = computed<TablePagination | boolean>(
-    () => deepMerge(options?.pagination, unref(props?.pagination)) ?? false
-  )
-  const columns = computed<boolean | Array<IColumn>>(() => unref(props?.columns) ?? false)
+  const toolbar = computed<TableToolbar | boolean>(() => deepMerge(options?.toolbar, toValue(props?.toolbar)) ?? false)
+  const sort = computed<TableSort | boolean>(() => deepMerge(options?.sort, toValue(props?.sort)) ?? false)
+  const filter = computed<TableFilter | boolean>(() => deepMerge(options?.filter, toValue(props?.filter)) ?? false)
+  const grouping = computed<TableGrouping | string>(() => deepMerge(options?.grouping, toValue(props?.grouping)))
+  const pagination = computed<TablePagination | boolean>(() => {
+    // Явный `:pagination` (object/false) выигрывает над compound `<Pagination>`-child.
+    const explicit = toValue(props?.pagination)
+    if (explicit !== undefined && explicit !== null) return deepMerge(options?.pagination, explicit) ?? false
+    return (deepMerge(options?.pagination, compoundPaginationConfig.value) as TablePagination | boolean) ?? false
+  })
+  const columns = computed<boolean | Array<TableColumn>>(() => {
+    // Schema `:columns` (массив ИЛИ false) выигрывает; иначе — compound `<Column>`-дети.
+    const schema = toValue(props?.columns)
+    if (schema !== undefined && schema !== null) return schema as boolean | Array<TableColumn>
+    return compoundColumns.value.length ? compoundColumns.value : false
+  })
   // -----------
   const isVisibleToolbar = computed<boolean>(
-    () => (isSearch.value || !!toolbar.value) && ((toolbar.value as IToolbar)?.visible ?? true)
+    () => (isSearch.value || !!toolbar.value) && ((toolbar.value as TableToolbar)?.visible ?? true)
   )
   const isSearch = computed<boolean>(
-    () => (toolbar.value as IToolbar)?.search ?? props?.search ?? options?.search ?? false
+    () => (toolbar.value as TableToolbar)?.searchable ?? props?.searchable ?? options?.searchable ?? false
   )
   const isFilterClear = computed<boolean>(
     () =>
-      ((filter.value as IFilter)?.isClearAllFilter ?? false) &&
+      ((filter.value as TableFilter)?.clearAll ?? false) &&
       (!!noEmptyFilters(filterColumns).length || !!queryTable.value.length)
   )
   const isColumns = computed<boolean>(() =>
     typeof columns.value === "boolean" ? columns.value : Array.isArray(columns.value)
   )
   const isSummary = computed<boolean>(() => {
-    const summaryValue = unref(props.summary)
+    const summaryValue = toValue(props.summary)
     return typeof summaryValue === "boolean" ? summaryValue : Array.isArray(summaryValue)
   })
-  const countDataOnLoading = computed<NonNullable<TableProps["countDataOnLoading"]>>(
-    () => (props?.countDataOnLoading as TableProps["countDataOnLoading"]) ?? options?.countDataOnLoading ?? 1000
+  const loadingThreshold = computed<NonNullable<TableProps["loadingThreshold"]>>(
+    () => (props?.loadingThreshold as TableProps["loadingThreshold"]) ?? options?.loadingThreshold ?? 1000
   )
-  const classMaskQuery = computed<NonNullable<ITableStyles["maskQuery"]>>(() =>
-    Table.setStyle(styles.value?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400")
+  // Aspect-ключ `mark`: `""` отключает подсветку целиком, поэтому пустое значение не уходит
+  // в `setStyle` (иначе на `<mark>` остался бы голый префикс — урок W2/Select).
+  const classMark = computed<StyleClass>(() => {
+    const value = pick("mark", "font-bold text-theme-700 dark:text-theme-400")
+    return value?.length ? Table.setStyle(value) : ""
+  })
+  const emptyText = computed<NonNullable<TableProps["emptyText"]>>(
+    () => props.emptyText ?? options?.emptyText ?? Table.t("noData") ?? "No data"
   )
-  const noData = computed<NonNullable<TableProps["noData"]>>(
-    () => props.noData ?? options?.noData ?? Table.t("noData") ?? "No data"
+  const emptyColumnsText = computed<NonNullable<TableProps["emptyText"]>>(
+    () => props.emptyColumnsText ?? options?.emptyColumnsText ?? Table.t("noColumn") ?? "There are no columns"
   )
-  const noColumn = computed<NonNullable<TableProps["noData"]>>(
-    () => props.noColumn ?? options?.noColumn ?? Table.t("noColumn") ?? "There are no columns"
+  const emptyFilterText = computed<NonNullable<TableFilter["emptyFilterText"]>>(
+    () =>
+      (filter.value as TableFilter)?.emptyFilterText ?? Table.t("noDataForQuery") ?? "No data was found for your query"
   )
-  const noFilter = computed<NonNullable<IFilter["noFilter"]>>(
-    () => (filter.value as IFilter)?.noFilter ?? Table.t("noDataForQuery") ?? "No data was found for your query"
+  const caption = computed<NonNullable<TableProps["caption"]>>(() => props.caption ?? "")
+  const iconSort = computed<TableSort["icon"]>(() => (sort.value as TableSort)?.icon ?? "Arrow")
+  const resizableColumns = computed<NonNullable<TableProps["resizableColumns"]>>(
+    () => props?.resizableColumns ?? options?.resizableColumns ?? false
   )
-  const iconSort = computed<ISort["icon"]>(() => (sort.value as ISort)?.icon ?? "Arrow")
-  const resizedColumns = computed<NonNullable<TableProps["resizedColumns"]>>(
-    () => props?.resizedColumns ?? options?.resizedColumns ?? false
-  )
-  const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props?.edit ?? options?.edit ?? false)
-  const lengthData = computed<number>(() => totalCountAsync.value ?? props.totalCount ?? dataSource.value.length)
+  const isEditCells = computed<NonNullable<TableProps["editable"]>>(() => props?.editable ?? options?.editable ?? false)
+  const lengthData = computed<number>(() => totalCountAsync.value ?? props.total ?? dataSource.value.length)
+  // aria-live: озвучивание количества строк после filter/search/sort (polite, sr-only).
+  // Wave 3.5: локализация + плюрализация одним ключом через Component.t(key, { count }) —
+  // CLDR-формы активной локали (например, ru: 21 → "результат", 5 → "результатов"; см. table.resultsCount в locale messages).
+  const ariaResultsLabel = computed<string>(() => {
+    const count = lengthData.value ?? 0
+    return Table.t("table.resultsCount", { count })
+  })
   const isFilter = computed<boolean>(() =>
     typeof filter.value === "object"
       ? typeof filter.value?.visible === "boolean"
@@ -184,7 +310,7 @@
         ? !!grouping.value.length
         : false
   )
-  const groupField = computed<IGrouping["groupField"] | null>(() =>
+  const groupField = computed<TableGrouping["groupField"] | null>(() =>
     typeof grouping.value === "object"
       ? typeof grouping.value?.groupField === "string"
         ? grouping.value.groupField
@@ -218,21 +344,53 @@
   const isAsyncDataFunction = computed<boolean>(() => asyncDataMode.value === "function")
   const asyncDataUrl = computed<string | null>(() => {
     if (asyncDataMode.value === "url") return asyncData.value as string
-    if (asyncDataMode.value === "config") return (asyncData.value as IAsyncDataConfig)?.url ?? null
+    if (asyncDataMode.value === "config") return (asyncData.value as TableAsyncDataConfig)?.url ?? null
     return null
   })
-  const asyncDataConfig = computed<IAsyncDataConfig | null>(() => {
-    if (asyncDataMode.value === "config") return asyncData.value as IAsyncDataConfig
+  const asyncDataConfig = computed<TableAsyncDataConfig | null>(() => {
+    if (asyncDataMode.value === "config") return asyncData.value as TableAsyncDataConfig
     return null
   })
   // ---CELL--------------------------------
-  const heightCell = computed<number>(() => styles.value?.heightCell ?? 50)
-  const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
-    () => props?.countVisibleRows ?? options?.countVisibleRows ?? 0
+  const heightCell = computed<number>(() => settings.value.cellHeight ?? 50)
+  const visibleRows = computed<NonNullable<TableProps["visibleRows"]>>(
+    () => props?.visibleRows ?? options?.visibleRows ?? 0
   )
-  const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
-    () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
+  const loadingRows = computed<NonNullable<TableProps["loadingRows"]>>(
+    () => props?.loadingRows ?? options?.loadingRows ?? 5
   )
+  // ---VIRTUALIZATION----------------------
+  const virtualScrollTop = ref<number>(0)
+  const virtualViewportHeight = ref<number>(0)
+  const virtualConfig = computed<{
+    enabled: boolean
+    force: boolean
+    rowHeight: number
+    overscan: number
+    threshold: number
+  }>(() => {
+    const raw = props.virtual ?? options?.virtual
+    const obj = (typeof raw === "object" && raw !== null ? raw : {}) as Exclude<
+      TableProps["virtual"],
+      boolean | undefined
+    >
+    return {
+      enabled: raw !== false,
+      force: raw === true || (typeof raw === "object" && raw !== null),
+      rowHeight: Math.max(1, obj?.rowHeight ?? heightCell.value + 9),
+      overscan: obj?.overscan ?? 6,
+      threshold: obj?.threshold ?? 100
+    }
+  })
+  // Auto по умолчанию + opt-out через :virtual=false. Только client-side flat-режим:
+  // не виртуализируем asyncData(boolean/function) / grouping / активную pagination.
+  const isVirtual = computed<boolean>(() => {
+    const c = virtualConfig.value
+    if (!c.enabled) return false
+    if (isAsyncDataBoolean.value || isAsyncDataFunction.value || isGroup.value || isPagination.value) return false
+    return c.force || lengthData.value > c.threshold
+  })
+  const virtualRowHeight = computed<number>(() => virtualConfig.value.rowHeight)
   // ---PAGINATION--------------------------
   const startPage = computed<NonNullable<TablePagination["startPage"]>>(() =>
     isNumber((pagination.value as TablePagination)?.startPage as number) ? +(pagination.value as any).startPage : 1
@@ -240,25 +398,26 @@
   const modePagination = computed<NonNullable<TablePagination["mode"]>>(
     () => (pagination.value as TablePagination)?.mode ?? mode.value
   )
-  const sizePage = computed<NonNullable<TablePagination["sizePage"]>>(() =>
-    isNumber((pagination.value as TablePagination)?.sizePage as number)
-      ? +(pagination.value as any).sizePage
-      : countVisibleRows.value || sizeTable.value
+  // `TablePagination extends Omit<PaginationProps, …>` — поля схемы переименовались вместе с
+  // Pagination (W3b). Локальные имена и expose Table остаются прежними до W4, где переименовывается
+  // весь публичный API таблицы разом.
+  const pageSize = computed<NonNullable<TablePagination["pageSize"]>>(() =>
+    isNumber((pagination.value as TablePagination)?.pageSize as number)
+      ? +(pagination.value as any).pageSize
+      : visibleRows.value || sizeTable.value
   )
-  const visibleNumberPages = computed<TablePagination["visibleNumberPages"]>(
-    () => (pagination.value as TablePagination)?.visibleNumberPages
+  const visibleNumberPages = computed<TablePagination["visiblePages"]>(
+    () => (pagination.value as TablePagination)?.visiblePages
   )
-  const sizesSelector = computed<TablePagination["sizesSelector"]>(
-    () => (pagination.value as TablePagination)?.sizesSelector
+  const sizesSelector = computed<TablePagination["pageSizes"]>(() => (pagination.value as TablePagination)?.pageSizes)
+  const isInfoText = computed<TablePagination["infoText"]>(
+    () => (pagination.value as TablePagination)?.infoText ?? false
   )
-  const isInfoText = computed<TablePagination["isInfoText"]>(
-    () => (pagination.value as TablePagination)?.isInfoText ?? false
+  const isPageSizeSelector = computed<TablePagination["pageSizeSelector"]>(
+    () => (pagination.value as TablePagination)?.pageSizeSelector ?? false
   )
-  const isPageSizeSelector = computed<TablePagination["isPageSizeSelector"]>(
-    () => (pagination.value as TablePagination)?.isPageSizeSelector ?? false
-  )
-  const isHiddenNavigationButtons = computed<TablePagination["isHiddenNavigationButtons"]>(
-    () => (pagination.value as TablePagination)?.isHiddenNavigationButtons ?? false
+  const isNavigationButtons = computed<TablePagination["navigationButtons"]>(
+    () => (pagination.value as TablePagination)?.navigationButtons ?? true
   )
   // ---DATA--------------------------------
   const dataGrouping = computed<DataGrouping>(() => {
@@ -276,8 +435,8 @@
   })
   const resultDataSource = computed<ResultData>(() => {
     let resultData: Record<string, any> = toRaw(dataGrouping.value)
-    let limit = countVisibleRows.value + sizeLoadedRows.value
-    if (resultData && countVisibleRows.value > 0) {
+    let limit = visibleRows.value + sizeLoadedRows.value
+    if (resultData && visibleRows.value > 0 && !isVirtual.value) {
       const result: Record<string, any> = {}
       for (const item of Object.keys(resultData)) {
         if (limit > resultData[item]?.length) {
@@ -294,17 +453,48 @@
     emit("result-data", resultData)
     return resultData
   })
-  const dataColumns = computed<Array<IColumnPrivate>>(() => {
+  // Окно виртуализации поверх плоского (non-grouped) результата. Читает resultDataSource,
+  // поэтому result-data продолжает эмититься. visibleRows-слайс в virtual-режиме отключён.
+  const virtualWindow = computed<{ rows: any[]; startIndex: number; topPad: number; bottomPad: number }>(() => {
+    if (!isVirtual.value) return { rows: [], startIndex: 0, topPad: 0, bottomPad: 0 }
+    const { rowHeight, overscan } = virtualConfig.value
+    const all = ((resultDataSource.value as any)?.[0] as any[]) ?? []
+    const total = all.length
+    const count = Math.ceil((virtualViewportHeight.value || 0) / rowHeight) + overscan * 2
+    const startIndex = Math.max(0, Math.floor(virtualScrollTop.value / rowHeight) - overscan)
+    const endIndex = Math.min(total, startIndex + count)
+    return {
+      rows: all.slice(startIndex, endIndex),
+      startIndex,
+      topPad: startIndex * rowHeight,
+      bottomPad: Math.max(0, (total - endIndex) * rowHeight)
+    }
+  })
+  // Единый источник для рендера tbody: окно (virtual) или сгруппированный resultDataSource.
+  const renderSource = computed<Record<string, any[]>>(() =>
+    isVirtual.value ? { 0: virtualWindow.value.rows } : (resultDataSource.value as any)
+  )
+  // Absolute index строки: для virtual = startIndex + локальный; иначе — локальный (без изменений).
+  const absIndex = (localIndex: number): number =>
+    isVirtual.value ? virtualWindow.value.startIndex + localIndex : localIndex
+  // Захватываем элемент scroll-viewport: в onUnmounted template-ref уже может быть null.
+  let virtualScrollEl: HTMLElement | null = null
+  function onVirtualScroll() {
+    if (!virtualScrollEl) return
+    virtualScrollTop.value = virtualScrollEl.scrollTop
+    virtualViewportHeight.value = virtualScrollEl.clientHeight
+  }
+  const dataColumns = computed<Array<TableColumnPrivate>>(() => {
     const listFields: Array<string> = LD.uniq(
       LD.flatMap(allData.value, (item) => Object.keys(item)) as string[]
     ).filter((field) => field !== "_key")
     const columnsValue = columns.value
     if (Array.isArray(columnsValue) && columnsValue?.length) {
-      return <Array<IColumnPrivate>>columnsValue
+      return <Array<TableColumnPrivate>>columnsValue
         .map((column, index) => {
           const fieldName = column.dataField ?? listFields[index] ?? ""
           if (fieldName === "") return false
-          const options = <IColumnPrivate>{
+          const options = <TableColumnPrivate>{
             ...column,
             id: `Col-${fieldName}-${index}`,
             dataField: fieldName,
@@ -315,75 +505,77 @@
                 ? `Col ${fieldName}`
                 : (fieldName as string).charAt(0).toUpperCase() + (fieldName as string).slice(1)),
             visible: typeof column?.visible === "boolean" ? column.visible : true,
-            isFilter: typeof column.isFilter === "boolean" ? column.isFilter : isFilter.value,
-            isSort: typeof column.isSort === "boolean" ? column.isSort : isSort.value,
-            isResized: typeof column.isResized === "boolean" ? column.isResized : resizedColumns.value,
-            isEdit: typeof column.edit === "boolean" ? column.edit : (column?.edit?.isEdit ?? isEditCells.value),
+            filterable: typeof column.filterable === "boolean" ? column.filterable : isFilter.value,
+            sortable: typeof column.sortable === "boolean" ? column.sortable : isSort.value,
+            resizable: typeof column.resizable === "boolean" ? column.resizable : resizableColumns.value,
+            hasEditor:
+              typeof column.editable === "boolean"
+                ? column.editable
+                : (column?.editable?.editable ?? isEditCells.value),
             type: column.type ?? "string"
           }
           switch (options.type) {
             case "string": {
-              options.paramsFilter = { autocomplete: "off", ...column.paramsFilter } as Partial<BaseInputProps>
-              options.edit = {
-                editorOptions: {
-                  ...options.paramsFilter,
+              options.filterProps = { autocomplete: "off", ...column.filterProps } as Partial<BaseInputProps>
+              options.editable = {
+                editorProps: {
+                  ...options.filterProps,
                   autoFocus: true,
-                  ...(column?.edit as EditInput)?.editorOptions
+                  ...(column?.editable as EditInput)?.editorProps
                 } as Partial<BaseInputProps>
               }
               break
             }
             case "number": {
-              options.paramsFilter = {
+              options.filterProps = {
                 autocomplete: "off",
                 maskInput: "number",
-                ...column.paramsFilter
+                ...column.filterProps
               } as Partial<BaseInputProps>
-              options.edit = {
-                editorOptions: {
-                  ...options.paramsFilter,
+              options.editable = {
+                editorProps: {
+                  ...options.filterProps,
                   autoFocus: true,
-                  ...(column?.edit as EditInput)?.editorOptions
+                  ...(column?.editable as EditInput)?.editorProps
                 } as Partial<BaseInputProps>
               }
               break
             }
             case "select": {
-              options.paramsFilter = {
+              options.filterProps = {
                 multiple: true,
                 maxVisible: 0,
-                classSelect: "normal-case max-h-[25rem]",
-                classSelectList: "normal-case font-normal",
-                dataSelect:
-                  (column?.paramsFilter as Partial<BaseSelectProps>)?.dataSelect ??
+                classes: { control: "normal-case max-h-[25rem]", list: "normal-case font-normal" },
+                options:
+                  (column?.filterProps as Partial<BaseSelectProps>)?.options ??
                   LD.uniq(LD.map(allData.value, options.dataField ?? ""))
                     .filter((v) => v !== null && v !== undefined)
                     .sort((a, b) => String(a).localeCompare(String(b))),
-                paramsFixWindow: {
+                fixWindowProps: {
                   position: "bottom",
-                  ...(column?.paramsFilter as Partial<BaseSelectProps>)?.paramsFixWindow
+                  ...(column?.filterProps as Partial<BaseSelectProps>)?.fixWindowProps
                 },
-                ...column.paramsFilter
-              } as Partial<BaseSelectProps>
-              options.edit = {
-                editorOptions: (<BaseSelectProps>{
-                  ...options.paramsFilter,
+                ...column.filterProps
+              } as TableColumnPrivate["filterProps"]
+              options.editable = {
+                editorProps: (<BaseSelectProps>{
+                  ...options.filterProps,
                   autoFocus: true,
                   multiple: false,
-                  ...(column?.edit as EditSelect)?.editorOptions,
-                  paramsFixWindow: {
+                  ...(column?.editable as EditSelect)?.editorProps,
+                  fixWindowProps: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...(column?.edit as EditSelect)?.editorOptions?.paramsFixWindow
+                    ...(column?.editable as EditSelect)?.editorProps?.fixWindowProps
                   }
-                }) as Partial<BaseSelectProps>
+                }) as TableColumnPrivate["filterProps"]
               }
               break
             }
             case "date": {
-              options.paramsFilter = {
-                paramsDatePicker: {
-                  isRange: true,
+              options.filterProps = {
+                range: true,
+                datePickerProps: {
                   attributes: [
                     {
                       highlight: { fillMode: "light" },
@@ -396,30 +588,27 @@
                     }
                   ],
                   mask:
-                    (column.paramsFilter as Partial<BaseCalendarProps>)?.paramsDatePicker?.masks?.modelValue ??
+                    (column.filterProps as Partial<BaseCalendarProps>)?.datePickerProps?.masks?.modelValue ??
                     "DD.MM.YYYY"
                 },
-                paramsFixWindow: {
+                fixWindowProps: {
                   position: "bottom",
-                  ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.paramsFixWindow
+                  ...(column?.filterProps as Partial<BaseCalendarProps>)?.fixWindowProps
                 },
-                ...column.paramsFilter
+                ...column.filterProps
               } as Partial<BaseCalendarProps>
-              options.edit = {
-                editorOptions: {
-                  ...options.paramsFilter,
-                  paramsDatePicker: {
-                    ...(options?.paramsFilter as Partial<BaseCalendarProps>)?.paramsDatePicker,
-                    isRange: false
-                  },
+              options.editable = {
+                editorProps: {
+                  ...options.filterProps,
+                  range: false,
                   autoFocus: true,
-                  ...(column?.edit as EditDate)?.editorOptions,
+                  ...(column?.editable as EditDate)?.editorProps,
                   label: "",
                   labelMode: "none",
-                  paramsFixWindow: {
+                  fixWindowProps: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...((column?.edit as EditDate)?.editorOptions as Partial<BaseCalendarProps>)?.paramsFixWindow
+                    ...((column?.editable as EditDate)?.editorProps as Partial<BaseCalendarProps>)?.fixWindowProps
                   }
                 } as Partial<BaseCalendarProps> & Pick<InputLayoutProps, "label" | "labelMode">
               }
@@ -430,8 +619,8 @@
         })
         .filter((i) => i)
     } else {
-      return listFields.map<IColumnPrivate>((column, index): IColumnPrivate => {
-        const options: IColumnPrivate = {
+      return listFields.map<TableColumnPrivate>((column, index): TableColumnPrivate => {
+        const options: TableColumnPrivate = {
           id: `Col-${column}-${index}`,
           dataField: column,
           name: `Col-${column}`,
@@ -440,16 +629,16 @@
             ? `Col ${column}`
             : (column.charAt(0).toUpperCase() + column.slice(1))?.replace(/_/g, " "),
           visible: true,
-          isFilter: isFilter.value,
-          isSort: isSort.value,
-          isResized: resizedColumns.value,
-          isEdit: isEditCells.value
+          filterable: isFilter.value,
+          sortable: isSort.value,
+          resizable: resizableColumns.value,
+          hasEditor: isEditCells.value
         }
-        if (options.isEdit) {
-          options.paramsFilter = { autocomplete: "off" } as Partial<BaseInputProps>
-          options.edit = {
-            editorOptions: {
-              ...options.paramsFilter,
+        if (options.hasEditor) {
+          options.filterProps = { autocomplete: "off" } as Partial<BaseInputProps>
+          options.editable = {
+            editorProps: {
+              ...options.filterProps,
               autoFocus: true
             } as Partial<BaseInputProps>
           }
@@ -458,11 +647,29 @@
       })
     }
   })
-  const dataSummary = computed<Array<ISummaryPrivate>>(() => {
+  // Верхний ряд шапки для compound `<ColumnGroup>`: группируем ВИДИМЫЕ dataColumns по `_groupKey`.
+  // Подряд идущие колонки одной группы сливаются в один `<th colspan>`; не сгруппированные — span 1.
+  const hasColumnGroups = computed<boolean>(() => compoundParsed.value.groups.length > 0)
+  const headerGroups = computed<Array<{ key: number | null; caption?: string; class?: any; span: number }>>(() => {
+    if (!hasColumnGroups.value) return []
+    const groupsMeta = compoundParsed.value.groups
+    const out: Array<{ key: number | null; caption?: string; class?: any; span: number }> = []
+    for (const col of (dataColumns.value ?? []).filter((c) => c.visible)) {
+      const gk = col._groupKey ?? null
+      const last = out[out.length - 1]
+      if (last && gk !== null && last.key === gk) last.span += 1
+      else {
+        const meta = gk !== null ? groupsMeta.find((g) => g.key === gk) : undefined
+        out.push({ key: gk, caption: meta?.caption, class: meta?.class, span: 1 })
+      }
+    }
+    return out
+  })
+  const dataSummary = computed<Array<TableSummaryPrivate>>(() => {
     if (!isSummary.value) return []
-    const summaryValue = unref(props.summary)
+    const summaryValue = toValue(props.summary)
     if (Array.isArray(summaryValue) && summaryValue?.length) {
-      return <Array<ISummaryPrivate>>summaryValue.map((summary, index) => {
+      return <Array<TableSummaryPrivate>>summaryValue.map((summary, index) => {
         const column = getColumn(summary.dataField, index)
         if (column) {
           const summaryName = summary.dataField ?? column.dataField
@@ -502,7 +709,7 @@
         return {}
       })
     } else {
-      return <Array<ISummaryPrivate>>dataColumns.value
+      return <Array<TableSummaryPrivate>>dataColumns.value
         .filter((item) => item.visible)
         .map((column) => ({
           name: `Sum-${column.name}`,
@@ -536,196 +743,198 @@
    * Used to apply active styles to the clicked row via classTr function.
    */
   const activeRow = ref<string | null>()
-  const heightTable = ref<string>(countVisibleRows.value ? `height: ${baseTableHeight}px` : "height: auto")
-  const styles = computed<
-    Omit<ITableStyles, "border" | "activeRow"> & { border?: ITableStylesBorder; activeRow: string }
-  >((): any => {
-    const s = deepMergeSoft<ITableStyles>(deepCopyObject(options?.styles), deepCopyObject(unref(props?.styles)))
+  const heightTable = ref<string>(visibleRows.value ? `height: ${baseTableHeight}px` : "height: auto")
+  // Не-классовые настройки отображения: bag `styles` растворён в top-level props (§2 B),
+  // здесь остался только их резолв `props ?? options ?? default`.
+  const settings = computed<TableSettings>(() => {
+    const width = props.width ?? options?.width
+    const height = props.height ?? options?.height
     return {
-      ...s,
-      activeRow:
-        typeof s?.activeRow === "string"
-          ? (s?.activeRow as string)
-          : typeof s?.activeRow === "boolean" && s?.activeRow
-            ? "bg-neutral-100/90 dark:bg-neutral-900/50"
-            : "",
-      hoverRows:
-        typeof s?.hoverRows === "string"
-          ? (s?.hoverRows as string)
-          : typeof s?.hoverRows === "boolean" && s?.hoverRows
-            ? "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50"
-            : "",
-      width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
-      height: s?.height ? (typeof s?.height === "number" ? `${s?.height}px` : s?.height) : "",
-      animation: s?.animation ?? "transition-all duration-500",
-      borderRadiusPx: s?.borderRadiusPx ?? (mode.value === "underlined" ? 0 : 7),
-      isStripedRows: s?.isStripedRows ?? false,
-      horizontalLines: s?.horizontalLines ?? true
+      width: width ? (typeof width === "number" ? `${width}px` : width) : "",
+      height: height ? (typeof height === "number" ? `${height}px` : height) : "",
+      stripedRows: props.stripedRows ?? options?.stripedRows ?? false,
+      horizontalLines: props.horizontalLines ?? options?.horizontalLines ?? true,
+      verticalLines: props.verticalLines ?? options?.verticalLines ?? false,
+      filterLines: props.filterLines ?? options?.filterLines ?? false,
+      cellHeight: props.cellHeight ?? options?.cellHeight,
+      borderRadius: props.borderRadius ?? options?.borderRadius ?? (mode.value === "underlined" ? 0 : 7),
+      defaultColumnWidth: props.defaultColumnWidth ?? options?.defaultColumnWidth
     }
   })
-  const defaultBorder = computed(() =>
-    typeof styles.value?.border === "object"
-      ? (styles.value?.border.default ?? "border-neutral-200 dark:border-neutral-800")
-      : (styles.value?.border ?? "border-neutral-200 dark:border-neutral-800")
+  // Aspect-ключи (§2 B): `""` отключает, иначе `props ?? options ?? default`.
+  const classAnimation = computed<StyleClass>(() =>
+    pick("animation", "motion-safe:transition-all motion-safe:duration-500")
   )
+  const classRowActive = computed<StyleClass>(() => pick("rowActive", "bg-surface-100/90 dark:bg-surface-900/50"))
+  const classRowHover = computed<StyleClass>(() =>
+    pick("rowHover", "hover:bg-surface-100/90 dark:hover:bg-surface-900/50")
+  )
+  // Общий цвет рамок; региональные ключи падают на него, если не заданы (бывший `styles.border.default`).
+  const defaultBorder = computed<StyleClass>(() => pick("border", "border-surface-200 dark:border-surface-800"))
+  const borderOf = (key: TableClassKey): StyleClass => pick(key, defaultBorder.value)
   const tableBodyStyle = computed<string>(() => {
-    const borderTop = !slots.header
-      ? `border-top-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-top-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
-      : ""
+    const radius = settings.value.borderRadius - 1
+    const borderTop = !slots.header ? `border-top-left-radius: ${radius}px;border-top-right-radius: ${radius}px;` : ""
     const borderBottom = !(isPagination.value || slots.footer)
-      ? `border-bottom-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-bottom-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
+      ? `border-bottom-left-radius: ${radius}px;border-bottom-right-radius: ${radius}px;`
       : ""
     return `${borderTop}${borderBottom}`
   })
   const modeStyle = computed<string>(() =>
     mode.value === "filled"
-      ? "bg-stone-100 dark:bg-stone-900"
+      ? "bg-surface-100 dark:bg-surface-900"
       : mode.value === "outlined"
-        ? "bg-white dark:bg-neutral-950"
+        ? "bg-white dark:bg-surface-950"
         : mode.value === "underlined"
-          ? "bg-stone-50 dark:bg-stone-950"
+          ? "bg-surface-50 dark:bg-surface-950"
           : ""
   )
-  Table.setStyle("transition ease-in opacity-100 opacity-0")
-  Table.setStyle("duration-200")
-  Table.setStyle("duration-500")
-  Table.setStyle("duration-1000")
+  // Issue 12: reduced-motion канон FishtVue — анимируем только при motion-safe (как Button/Menu/Select).
+  // Inline-<transition>/Input-классы шаблона не проходят через computed → регистрируем их варианты явно.
+  Table.setStyle("motion-safe:transition motion-safe:transition-all ease-in opacity-100 opacity-0")
+  Table.setStyle("motion-safe:duration-200")
+  Table.setStyle("motion-safe:duration-500")
+  Table.setStyle("motion-safe:duration-1000")
+  // print / forced-colors варианты overlay/resize/active-row — явная регистрация для гарантии CSS.
+  Table.setStyle("print:hidden")
+  Table.setStyle("forced-colors:outline")
   const classBaseTable = computed<StyleClass>(() =>
-    Table.setStyle([
-      "componentTable classBody inline-block align-middle relative w-full p-1.5",
-      styles.value?.animation,
-      styles.value.class?.body,
-      options?.class ?? "",
-      props?.class ?? ""
-    ])
+    cls("root", "componentTable classBody inline-block align-middle relative w-full p-1.5", classAnimation.value)
   )
   const classBaseToolbar = computed(() =>
-    Table.setStyle([
-      "classToolbar toolbar flex mb-2 justify-between items-end",
-      styles.value?.animation,
-      styles.value.class?.toolbar
-    ])
+    cls("toolbar", "classToolbar toolbar flex mb-2 justify-between items-end", classAnimation.value)
   )
   const classSearch = ref(Table.setStyle("ml-1"))
-  const classIcon = ref(Table.setStyle("h-5 w-5 text-gray-400 dark:text-gray-600"))
+  const classIcon = ref(Table.setStyle("h-5 w-5 text-surface-400 dark:text-surface-600"))
   const classIconClearFilter = ref(
-    Table.setStyle("h-4 w-4 text-gray-400 dark:text-gray-600 group-hover:text-red-400 group-hover:dark:text-red-600")
+    Table.setStyle(
+      "h-4 w-4 text-surface-400 dark:text-surface-600 group-hover:text-red-400 group-hover:dark:text-red-600"
+    )
   )
-  const classTableBody = computed(() =>
-    Table.setStyle(["flex flex-col border", defaultBorder.value, styles.value.border?.table])
-  )
+  const classTableBody = computed(() => cls("body", "flex flex-col border", borderOf("borderTable")))
   const classBodySlotHeader = computed(() =>
     Table.setStyle([
-      "min-h-[1.5rem] text-gray-500",
+      "min-h-[1.5rem] text-surface-500",
       isSummary.value || isPagination.value ? "relative" : "",
       modeStyle.value
     ])
   )
   const styleHeader = computed(
     () =>
-      `border-top-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-top-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
+      `border-top-left-radius: ${settings.value.borderRadius - 1}px;border-top-right-radius: ${settings.value.borderRadius - 1}px;`
   )
   const classSlotHeader = computed(() =>
-    Table.setStyle([
-      "classSlotHeader p-2 border-b-2",
-      styles.value.class?.slotHeader,
-      defaultBorder.value,
-      styles.value.border?.header
-    ])
+    Table.setStyle(["classSlotHeader p-2 border-b-2", borderOf("borderHeader"), raw("header")])
   )
   const classBaseTableBody = ref(Table.setStyle("relative"))
-  const classBodyTable = computed(() =>
-    Table.setStyle(["classBodyTable overflow-x-auto", styles.value?.animation, styles.value.class?.bodyTable])
-  )
+  const classBodyTable = computed(() => cls("viewport", "classBodyTable overflow-x-auto", classAnimation.value))
   const styleBodyTable = computed(() => [
     tableBodyStyle.value,
     heightTable.value,
-    countVisibleRows.value > 0 ? "" : `min-height: ${baseTableHeight}px;`
+    visibleRows.value > 0 ? "" : `min-height: ${baseTableHeight}px;`
   ])
-  const classTable = computed(() =>
-    Table.setStyle(["classTable min-w-full border-separate border-spacing-0", styles.value.class?.table])
-  )
-  const classTHead = computed(() =>
-    Table.setStyle(["classTHead sticky top-0 z-20", styles.value.class?.thead || modeStyle.value])
-  )
+  const classTable = computed(() => cls("table", "classTable min-w-full border-separate border-spacing-0"))
+  const classTHead = computed(() => cls("thead", "classTHead sticky top-0 z-20", raw("thead") ? "" : modeStyle.value))
   const classHeadTr = computed(() => Table.setStyle("bg-inherit dark:bg-inherit"))
-  const classTh = (column: IColumnPrivate) =>
+  const classTh = (column: TableColumnPrivate) =>
     Table.setStyle([
       column.id,
-      column.class?.th,
       "group/th",
       "bg-inherit dark:bg-inherit",
-      column.isFilter ? "pl-1 pr-0 py-2" : "pl-6 py-5",
+      column.filterable ? "pl-1 pr-0 py-2" : "pl-6 py-5",
       "border-b",
-      defaultBorder.value,
-      styles.value.border?.head
+      borderOf("borderHead"),
+      raw("th"),
+      column.classes?.th
     ])
-  const styleTh = (column: IColumnPrivate) =>
+  const styleTh = (column: TableColumnPrivate) =>
     !widthsColumns[column.dataField]
-      ? (styles.value?.defaultWidthColumn ?? "max-width: 600px;min-width:100px;width:auto")
+      ? (settings.value.defaultColumnWidth ?? "max-width: 600px;min-width:100px;width:auto")
       : `width: ${widthsColumns[column.dataField]}px;min-width: ${widthsColumns[column.dataField]}px;max-width: ${widthsColumns[column.dataField]}px;`
-  const styleThFilter = (column: IColumnPrivate) => {
-    const width = widthsColumns[column.dataField] - ((column?.isSort ?? isSort.value) ? 28 : 18)
+  const styleThFilter = (column: TableColumnPrivate) => {
+    const width = widthsColumns[column.dataField] - ((column?.sortable ?? isSort.value) ? 28 : 18)
     return `width: ${width}px;min-width: ${width}px;max-width: ${width}px;`
   }
   const classBodyFilter = computed(() =>
     Table.setStyle([
       "group relative flex w-full bg-inherit dark:bg-inherit",
-      styles.value.filterLines ? "border-r group-last/th:border-r-0" : "",
-      defaultBorder.value,
-      styles.value.border?.filter
+      settings.value.filterLines ? "border-r group-last/th:border-r-0" : "",
+      borderOf("borderFilter")
     ])
   )
-  const classIsFilter = (column: IColumnPrivate) =>
+  // Hand-off в filter-контрол колонки (dev-patterns §2 G): база Table + `filterProps` потребителя.
+  // До 1.0.0 это были `column.class.colFilterClass` (шёл в `classes.base`) и `colFilterClassBody`
+  // (шёл в `class`) — оба переехали внутрь самого `filterProps`.
+  const filterControlProps = (column: TableColumnPrivate) =>
+    fieldsOmit((column?.filterProps ?? {}) as Record<string, any>, ["class", "classes"])
+  const filterControlClasses = (column: TableColumnPrivate, base: StyleClass = "border-none font-normal") =>
+    mergeClasses({ base }, (column?.filterProps as { classes?: Record<string, StyleClass> })?.classes)
+  const filterControlClass = (column: TableColumnPrivate) =>
+    cn("tm-0 my-1 bg-inherit dark:bg-inherit", (column?.filterProps as { class?: StyleClass })?.class)
+  const classIsFilter = (column: TableColumnPrivate) =>
     Table.setStyle([
       "w-full cursor-pointer bg-inherit dark:bg-inherit",
-      column.class?.colFilter,
-      column.isSort || isSort.value ? "" : "px-1"
+      column.classes?.filter,
+      column.sortable || isSort.value ? "" : "px-1"
     ])
-  const classNotFilter = (column: IColumnPrivate) =>
+  const classNotFilter = (column: TableColumnPrivate) =>
     Table.setStyle([
       "block text-sm font-medium truncate",
-      "text-left text-gray-400 dark:text-gray-500",
-      column.class?.colText
+      "text-left text-surface-400 dark:text-surface-500",
+      column.classes?.headerText
     ])
-  const classIsSort = (column: IColumnPrivate) =>
+  // Под `unstyled` setStyle сам оставляет `fv` (UA-preflight `button.fv` из baseStyle) — отдельный
+  // fallback не нужен (component/index.ts, dev-patterns §2 E).
+  const classIsSort = (column: TableColumnPrivate) =>
     Table.setStyle([
-      "flex items-center transition-opacity duration-500 pr-1 cursor-pointer",
-      !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+      "flex items-center motion-safe:transition-opacity motion-safe:duration-500 pr-1 cursor-pointer",
+      // T2: триггер сортировки доступен с клавиатуры, поэтому у несортированной колонки он обязан
+      // проявляться не только по hover, но и по focus-visible — иначе фокус «пропадает» (opacity-0).
+      !sortColumns?.[column?.dataField] ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "opacity-100"
     ])
-  const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-gray-400 dark:text-gray-600"))
-  const classResizedColumns = (column: IColumnPrivate, key: number) =>
+  const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-surface-400 dark:text-surface-600"))
+  // T2 (a11y): aria-sort отражает live-состояние sortColumns — параллельного state нет.
+  // `undefined` убирает атрибут целиком: несортируемая колонка не должна объявляться sortable.
+  const ariaSort = (column: TableColumnPrivate): "ascending" | "descending" | "none" | undefined => {
+    if (!(column?.sortable ?? isSort.value)) return undefined
+    const sort = sortColumns?.[column?.dataField]
+    return sort === "asc" ? "ascending" : sort === "desc" ? "descending" : "none"
+  }
+  // T2 (a11y): accessible name триггера берётся из уже существующего caption колонки (он всегда
+  // заполнен при нормализации колонок, fallback выводится из dataField). Явно переданный
+  // пустой caption добиваем самим dataField — новый locale-key не нужен.
+  const ariaSortLabel = (column: TableColumnPrivate): string => String(column?.caption || column?.dataField || "")
+  const classResizedColumns = (column: TableColumnPrivate, key: number) =>
     Table.setStyle([
-      "resizable absolute z-10 inset-y-0 flex items-center hover:opacity-100 pr-2 cursor-ew-resize transition-opacity duration-500",
-      dataColumns.value.length - 1 > key ? "-right-3" : "right-3",
+      // Issue 11 (RTL): pe-2 (padding-inline-end) авто-флипается по dir; inset — физический default
+      // (работает без dir-атрибута) + rtl:-override (negative-логический inset движок не поддерживает).
+      "resizable absolute z-10 inset-y-0 flex items-center hover:opacity-100 pe-2 cursor-ew-resize motion-safe:transition-opacity motion-safe:duration-500 print:hidden",
+      dataColumns.value.length - 1 > key ? "-right-3 rtl:right-auto rtl:-left-3" : "right-3 rtl:right-auto rtl:left-3",
       resizableColumn.value === column.id ? "opacity-100" : "opacity-0"
     ])
   const classResize = computed(() =>
     Table.setStyle([
-      "h-8 w-1.5 bg-neutral-300 dark:bg-neutral-600",
+      "h-8 w-1.5 bg-surface-300 dark:bg-surface-600",
       mode.value === "filled" ? "rounded-full" : "",
       mode.value === "outlined" ? "rounded-full" : "",
       mode.value === "underlined" ? "rounded-none" : ""
     ])
   )
-  const classTBody = computed(() => Table.setStyle(["classTBody overflow-y-auto", styles.value.class?.tbody]))
+  const classTBody = computed(() => cls("tbody", "classTBody overflow-y-auto"))
   const classGroup = computed(() =>
-    Table.setStyle([
+    cls(
+      "group",
       "classGroup sticky",
       "border-t-2 border-b",
       "font-medium text-base whitespace-nowrap",
-      "text-left text-gray-800 dark:text-gray-300 px-6 py-2 pr-3 pl-10 sm:pl-12",
-      styles.value.class?.group ?? modeStyle.value,
-      defaultBorder.value,
-      styles.value.border?.cell
-    ])
+      "text-left text-surface-800 dark:text-surface-300 px-6 py-2 pe-3 ps-10 sm:ps-12",
+      raw("group") ? "" : modeStyle.value,
+      borderOf("borderCell")
+    )
   )
   const styleGroup = computed(() => `top:${thead.value?.clientHeight ?? 1 - 1}px`)
   const classGroupText = computed(() =>
-    Table.setStyle([
-      "sticky classGroupText left-10 sm:left-12 flex items-center w-fit min-h-[2.5rem] truncate",
-      styles.value.class?.groupText
-    ])
+    cls("groupText", "sticky classGroupText start-10 sm:start-12 flex items-center w-fit min-h-[2.5rem] truncate")
   )
   const styleGroupText = computed(() => `min-height: ${heightCell.value}px`)
   /**
@@ -738,93 +947,88 @@
   const classTr = (data: Record<string, any>, indexRow: number): string =>
     Table.setStyle([
       `tr--${indexRow} group/tr`,
-      activeRow.value === `${data?._key}-${indexRow}` ? `active-row ${styles.value.activeRow}` : "",
-      styles.value.hoverRows ? `${styles.value.hoverRows} transition-colors duration-200` : "",
-      styles.value.isStripedRows
+      activeRow.value === `${data?._key}-${indexRow}` ? `active-row forced-colors:outline ${classRowActive.value}` : "",
+      classRowHover.value ? `${classRowHover.value} motion-safe:transition-colors motion-safe:duration-200` : "",
+      settings.value.stripedRows
         ? mode.value === "filled"
-          ? "odd:bg-stone-100 even:bg-stone-50 dark:odd:bg-stone-900 dark:even:bg-stone-950"
+          ? "odd:bg-surface-100 even:bg-surface-50 dark:odd:bg-surface-900 dark:even:bg-surface-950"
           : mode.value === "outlined"
-            ? "odd:bg-white even:bg-neutral-50 dark:odd:bg-neutral-950 dark:even:bg-neutral-900"
+            ? "odd:bg-white even:bg-surface-50 dark:odd:bg-surface-950 dark:even:bg-surface-900"
             : mode.value === "underlined"
-              ? "odd:bg-stone-50 even:bg-stone-100 dark:odd:bg-stone-950 dark:even:bg-neutral-900"
+              ? "odd:bg-surface-50 even:bg-surface-100 dark:odd:bg-surface-950 dark:even:bg-surface-900"
               : ""
         : ""
     ])
-  const classColumnTd = (_: Record<string, any>, indexRow: number, column: IColumnPrivate, indexCol: number) =>
+  const classColumnTd = (_: Record<string, any>, indexRow: number, column: TableColumnPrivate, indexCol: number) =>
     Table.setStyle([
       "ColumnClassTd",
       `td--${indexRow}--${column?.name ?? indexCol}`,
       "first:border-l-0 group-first/tr:border-t-0 last:border-r-0 group-last/tr:border-b-0",
       "text-sm font-medium",
-      "px-4 py-1 text-gray-800 dark:text-gray-300",
-      column.class?.td,
-      styles.value.class?.cellText,
-      defaultBorder.value,
-      styles.value.border?.cell,
-      styles.value.verticalLines ? "border-r" : "border-r-0",
-      styles.value.horizontalLines ? "border-b" : "border-b-0",
+      "px-4 py-1 text-surface-800 dark:text-surface-300",
+      borderOf("borderCell"),
+      settings.value.verticalLines ? "border-r" : "border-r-0",
+      settings.value.horizontalLines ? "border-b" : "border-b-0",
+      raw("td"),
+      column.classes?.td,
       editableCell.value?.indexRow === indexRow && editableCell.value?.indexCol === indexCol ? "px-1" : ""
     ])
-  const styleColumnTd = (column: IColumnPrivate) =>
+  const styleColumnTd = (column: TableColumnPrivate) =>
     !widthsColumns[column.dataField]
-      ? (styles.value?.defaultWidthColumn ?? "max-width: 600px;min-width:100px;width:auto")
+      ? (settings.value.defaultColumnWidth ?? "max-width: 600px;min-width:100px;width:auto")
       : `width: ${widthsColumns[column.dataField]}px;min-width: ${widthsColumns[column.dataField]}px;max-width: ${widthsColumns[column.dataField]}px;`
-  const classCellTable = (indexRow: number, column: IColumnPrivate, indexCol: number) =>
+  const classCellTable = (indexRow: number, column: TableColumnPrivate, indexCol: number) =>
     Table.setStyle([
       "flex items-center whitespace-pre-line overflow-auto",
-      column.class?.cellText,
+      raw("cell"),
+      column.classes?.cellText,
       editableCell.value?.indexRow === indexRow && editableCell.value?.indexCol === indexCol ? "overflow-visible" : ""
     ])
   const styleCellTable = computed(() => `min-height: ${heightCell.value}px;max-height: ${heightCell.value * 5 + 2}px;`)
-  const classTemplate = (column: IColumnPrivate) =>
-    Table.setStyle(["flex items-center whitespace-pre-line overflow-auto", column.class?.cellText])
+  const classTemplate = (column: TableColumnPrivate) =>
+    Table.setStyle(["flex items-center whitespace-pre-line overflow-auto", raw("cell"), column.classes?.cellText])
   const classFooterPaddingHeight = ref(Table.setStyle("border-none"))
   const styleFooterPaddingHeight = computed(() => `height: ${footerPaddingHeight.value - 1}px`)
-  const classTFoot = computed(() =>
-    Table.setStyle(["classTFoot sticky bottom-0", styles.value.class?.tfoot ?? modeStyle.value])
-  )
-  const classThSummary = (column: IColumnPrivate) =>
-    Table.setStyle(["px-3 py-3", column.class?.tf, "border-t", defaultBorder.value, styles.value.border?.summary])
-  const classThSummaryText = (column: IColumnPrivate) =>
+  const classTFoot = computed(() => cls("tfoot", "classTFoot sticky bottom-0", raw("tfoot") ? "" : modeStyle.value))
+  const classThSummary = (column: TableColumnPrivate) =>
+    Table.setStyle(["px-3 py-3", "border-t", borderOf("borderSummary"), column.classes?.summary])
+  const classThSummaryText = (column: TableColumnPrivate) =>
     Table.setStyle([
-      "block font-normal text-sm text-left text-gray-400 dark:text-gray-500 truncate",
-      column.class?.sumText
+      "block font-normal text-sm text-left text-surface-400 dark:text-surface-500 truncate",
+      column.classes?.summaryText
     ])
   const classIsPagination = computed(() => Table.setStyle([isSummary.value ? "relative sm:px-5" : "", modeStyle.value]))
   const styleIsPagination = computed(() =>
     !slots.footer
-      ? `border-bottom-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-bottom-right-radius: ${(styles.value.borderRadiusPx ?? 1) - 1}px;`
+      ? `border-bottom-left-radius: ${settings.value.borderRadius - 1}px;border-bottom-right-radius: ${settings.value.borderRadius - 1}px;`
       : ""
   )
   const classIsLoading = ref(
-    Table.setStyle("absolute z-30 top-0 bottom-0 left-0 w-full select-none text-center text-sm text-gray-500")
+    Table.setStyle(
+      "absolute z-30 top-0 bottom-0 left-0 w-full select-none text-center text-sm text-surface-500 print:hidden"
+    )
   )
   const classIsLoadingBody = ref(
-    Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-neutral-100/70 dark:bg-neutral-800/50")
+    Table.setStyle("flex justify-center items-center h-full w-full rounded-lg bg-surface-100/70 dark:bg-surface-800/50")
   )
   const classNoData = ref(
     Table.setStyle(
-      "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-gray-500"
+      "absolute top-[40%] flex flex-col items-center left-0 w-full my-5 pointer-events-none text-center text-sm text-surface-500"
     )
   )
   const classSlotFooterBody = computed(() =>
     Table.setStyle([
-      "min-h-[1.5rem] -mt-[1px] text-gray-500",
+      "min-h-[1.5rem] -mt-[1px] text-surface-500",
       isSummary.value || isPagination.value ? "relative sm:px-5" : "",
       modeStyle.value
     ])
   )
   const styleSlotFooterBody = computed(
     () =>
-      `border-bottom-left-radius: ${styles.value.borderRadiusPx}px;border-bottom-right-radius: ${styles.value.borderRadiusPx}px;`
+      `border-bottom-left-radius: ${settings.value.borderRadius}px;border-bottom-right-radius: ${settings.value.borderRadius}px;`
   )
   const classSlotFooter = computed(() =>
-    Table.setStyle([
-      "classSlotFooter p-2 border-t-2",
-      styles.value.class?.slotFooter,
-      defaultBorder.value,
-      styles.value.border?.footer
-    ])
+    Table.setStyle(["classSlotFooter p-2 border-t-2", borderOf("borderFooter"), raw("footer")])
   )
   // ---TABLE_OBSERVER----------------------
   let tableObserver: ResizeObserver
@@ -839,23 +1043,60 @@
   }
 
   // ---IS-DARK-----------------------------
+  // T3: источник истины о dark-режиме — тот же `optionsTheme.darkModeSelector`, который движок
+  // получает как `darkSelector` (lib/component/index.ts:150). Если селектор сконфигурирован,
+  // движок скоупит все `dark:*` на него ВМЕСТО `prefers-color-scheme`, поэтому и `isDark` обязан
+  // читать DOM, а не OS-preference: иначе при `<html class="dark">` и светлой системной теме
+  // isDark === false, и Loading красился бы в light-оттенок посреди тёмной таблицы.
+  // Селектор не задан → дефолт движка, fallback на `prefers-color-scheme: dark`.
+  // Зеркало Calendar.initDarkModeObserver() (lib/calendar/Calendar.vue:367).
   const isDark = ref<boolean>(false)
+  // eslint-disable-next-line no-undef
+  let darkObserver: MutationObserver | undefined
   if (isClient()) {
-    const colorSchemeQueryList = window.matchMedia("(prefers-color-scheme: dark)")
-    const setColorScheme = (e: any) => (isDark.value = e.matches)
+    const darkModeSelector = useFishtVue()?.config?.optionsTheme?.darkModeSelector ?? ""
+    if (darkModeSelector) {
+      const checkDarkMode = () => (isDark.value = !!document.querySelector(darkModeSelector))
+      checkDarkMode()
+      // eslint-disable-next-line no-undef
+      darkObserver = new MutationObserver(checkDarkMode)
+      darkObserver.observe(document.documentElement, {
+        attributes: true,
+        // селектором может быть и класс (`.dark`), и data-атрибут (`[data-theme='dark']`)
+        attributeFilter: ["class", "data-theme"],
+        subtree: true
+      })
+      onUnmounted(() => {
+        darkObserver?.disconnect()
+        darkObserver = undefined
+      })
+    } else {
+      const colorSchemeQueryList = window.matchMedia("(prefers-color-scheme: dark)")
+      const setColorScheme = (e: any) => (isDark.value = e.matches)
 
-    isDark.value = colorSchemeQueryList.matches
-    colorSchemeQueryList.addEventListener("change", setColorScheme)
+      isDark.value = colorSchemeQueryList.matches
+      colorSchemeQueryList.addEventListener("change", setColorScheme)
 
-    onUnmounted(() => {
-      colorSchemeQueryList.removeEventListener("change", setColorScheme)
-    })
+      onUnmounted(() => {
+        colorSchemeQueryList.removeEventListener("change", setColorScheme)
+      })
+    }
   }
 
   const resizableColumn = ref<string | null>(null)
 
+  // ---FOCUS-------------------------------
+  // T1: программный фокус корневого контейнера через exposed `componentTable` — зеркало
+  // Pagination/Split focus(). Корень несёт `tabindex="-1"`: фокусируется только программно,
+  // в natural tab order не попадает.
+  function focus(options?: FocusOptions) {
+    componentTable.value?.focus(options)
+  }
+
   // ---EXPOSE------------------------------
   defineExpose({
+    // ---REF-LINK----------------------------
+    componentTable,
     //---STATE-------------------------
     activeRow,
     sortColumns,
@@ -875,13 +1116,13 @@
     isFilterClear,
     isColumns,
     isSummary,
-    countDataOnLoading,
-    classMaskQuery,
-    noData,
-    noColumn,
-    noFilter,
+    loadingThreshold,
+    classMark,
+    emptyText,
+    emptyColumnsText,
+    emptyFilterText,
     iconSort,
-    resizedColumns,
+    resizableColumns,
     isEditCells,
     lengthData,
     groupField,
@@ -892,15 +1133,15 @@
     // ---PAGINATION--------------------------
     startPage,
     modePagination,
-    sizePage,
+    pageSize,
     visibleNumberPages,
     sizesSelector,
     isInfoText,
     isPageSizeSelector,
-    isHiddenNavigationButtons,
+    isNavigationButtons,
     // ---CELL--------------------------------
     heightCell,
-    countVisibleRows,
+    visibleRows,
     heightTable,
     // ---DATA--------------------------------
     dataSource,
@@ -909,7 +1150,7 @@
     dataSummary,
     summaryColumns,
     // ---STYLE-------------------------------
-    styles,
+    settings,
     tableBodyStyle,
     modeStyle,
     isDark,
@@ -925,16 +1166,18 @@
     filtering,
     searching,
     switchPage,
-    switchSizePage,
+    switchPageSize,
     clearFilter,
     startLoading,
     stopLoading,
     updateHeightTable,
-    reloadData: loadDataFromFunction
+    reloadData: loadDataFromFunction,
+    focus
   })
   // ---MOUNT-UNMOUNT-----------------------
+  // `Table.initStyle()` НЕ вызывается тут: базовый `Component.__hooks()` уже регистрирует
+  // `onServerPrefetch + vueOnMounted` → `initStyle()` (см. lib/component/index.ts:79–84).
   onMounted(() => {
-    Table.initStyle()
     if (isClient() && tbody.value) tableObserver.observe(tbody.value as Element)
     suppressLoadFromFunctionInWatchers = true
     Object.assign(
@@ -958,19 +1201,35 @@
     Promise.resolve().then(() => {
       suppressLoadFromFunctionInWatchers = false
     })
+    // Scroll-listener вешаем синхронно (template-ref уже доступен в onMounted) —
+    // иначе cleanup в onUnmounted может не найти элемент при раннем размонтировании.
+    virtualScrollEl = (tableBody.value as HTMLElement) ?? null
+    virtualScrollEl?.addEventListener("scroll", onVirtualScroll, { passive: true })
     nextTick(() => {
       updateHeightTable()
-      startLastRowVisibleObserver()
+      onVirtualScroll()
+      // virtual заменяет lazy-load: lastRowVisibleObserver не нужен.
+      if (!isVirtual.value) startLastRowVisibleObserver()
     })
     setTimeout(() => {
       updateHeightTable()
     }, 10)
 
     if (isAsyncDataUrl.value) loadDataFromUrl()
-    // Function mode: initial load triggered by sizePage/startPage immediate watchers
+    // Function mode: initial load triggered by pageSize/startPage immediate watchers
   })
   onUnmounted(() => {
-    if (isClient() && tableObserver) tableObserver.disconnect()
+    if (isClient()) {
+      tableObserver?.disconnect()
+      // IntersectionObserver lazy-load: без disconnect наблюдатель продолжает держать DOM-узел.
+      lastRowVisibleObserver?.disconnect()
+      // window-listeners снимаются и в stopResizeColumn, но при unmount во время drag mouseup не приходит.
+      window.removeEventListener("mousemove", moveResizedColumns)
+      window.removeEventListener("mouseup", stopResizeColumn)
+      // virtual scroll listener.
+      virtualScrollEl?.removeEventListener("scroll", onVirtualScroll)
+      virtualScrollEl = null
+    }
   })
   // ---WATCHERS----------------------------
   let loadDataFromFunctionPending = false
@@ -979,17 +1238,17 @@
   // Emits still fire so that tests/external listeners see the initial sort/filter state.
   let suppressLoadFromFunctionInWatchers = false
   watch(
-    () => [countVisibleRows.value, styles.value.height],
+    () => [visibleRows.value, settings.value.height],
     (value, oldValue) => {
       clientHeightTable.value = 0
-      const timeout: number = value[0] === oldValue[0] && styles.value?.hoverRows !== "transition-none" ? 500 : 1
+      const timeout: number = value[0] === oldValue[0] && classRowHover.value !== "transition-none" ? 500 : 1
       setTimeout(() => updateHeightTable(), timeout)
     }
   )
   watch(
     () => props.dataSource,
     () => {
-      const dataSourceValue = unref(props.dataSource)
+      const dataSourceValue = toValue(props.dataSource)
       allData.value = dataSourceValue?.length ? dataSourceValue?.map((item) => ({ ...item, _key: generateUUID() })) : []
       updateDataSource()
     },
@@ -1029,25 +1288,25 @@
     }
   )
   watch(startPage, (numberPage: number) => setTimeout(() => switchPage(numberPage), 1), { immediate: true })
-  watch(sizePage, (sizePageValue: number) => switchSizePage(sizePageValue ?? sizePage.value), { immediate: true })
+  watch(pageSize, (sizePageValue: number) => switchPageSize(sizePageValue ?? pageSize.value), { immediate: true })
 
   // ---METHODS-----------------------------
   function getHeightVisibleRows(): number {
-    if (countVisibleRows.value && tbody.value && componentTable.value) {
+    if (visibleRows.value && tbody.value && componentTable.value) {
       const tagTrs: NodeListOf<HTMLTableRowElement> | undefined = (tbody.value as HTMLElement)?.querySelectorAll(
-        `tr:nth-child(-n+${countVisibleRows.value ?? 1})`
+        `tr:nth-child(-n+${visibleRows.value ?? 1})`
       )
       if (tagTrs && tagTrs.length) {
         let sum = 0
         tagTrs.forEach((item) => (sum += item?.offsetHeight ?? 0))
         return sum
-      } else return countVisibleRows.value * (4 * 2 + heightCell.value + 1)
+      } else return visibleRows.value * (4 * 2 + heightCell.value + 1)
     }
     return 0
   }
 
   function updateHeightTable(): void {
-    if (styles.value.height) {
+    if (settings.value.height) {
       function getHeight(el: HTMLElement | undefined): number {
         let height = 0
         if (el)
@@ -1074,7 +1333,7 @@
         (getHeight(tableFooter.value) ?? 0)
       clientHeightTable.value = height >= 0 ? height : 0
       heightTable.value = `height:${height >= 0 ? height : 0}px;`
-    } else if (countVisibleRows.value) {
+    } else if (visibleRows.value) {
       const resultHeight = (thead.value?.clientHeight ?? 0) + (tfoot.value?.clientHeight ?? 0) + getHeightVisibleRows()
       clientHeightTable.value = resultHeight > 0 ? resultHeight : baseTableHeight
       heightTable.value = `height: ${resultHeight > 0 ? resultHeight : baseTableHeight}px;`
@@ -1084,7 +1343,7 @@
     }
   }
 
-  function getColumn(dataField: IColumn["dataField"], index?: number): IColumnPrivate | undefined {
+  function getColumn(dataField: TableColumn["dataField"], index?: number): TableColumnPrivate | undefined {
     return dataColumns.value.find((column, item) => (dataField ? column.dataField === dataField : item === index))
   }
 
@@ -1126,7 +1385,7 @@
     return data ?? []
   }
 
-  function sorting(dataField: IColumn["dataField"], value?: Sort) {
+  function sorting(dataField: TableColumn["dataField"], value?: Sort) {
     if (!dataField) {
       return
     }
@@ -1140,7 +1399,7 @@
               ? null
               : null
     }
-    const timeout = lengthData.value > countDataOnLoading.value ? 800 : 10
+    const timeout = lengthData.value > loadingThreshold.value ? 800 : 10
     if (timeout > 100) {
       startLoading()
     }
@@ -1150,15 +1409,15 @@
     }, timeout)
   }
 
-  function filtering(dataField: IColumn["dataField"], value: any) {
+  function filtering(dataField: TableColumn["dataField"], value: any) {
     if (!dataField) return
     const isLoading =
       typeof value === "object" || typeof value === "number"
         ? true
         : (filterColumns[dataField] as string | Array<any>)?.length > (value as string | Array<any>)?.length
     const timeout =
-      (allData.value?.length ?? 0) > countDataOnLoading.value
-        ? (lengthData.value > countDataOnLoading.value || value === null || value === "" || isLoading) &&
+      (allData.value?.length ?? 0) > loadingThreshold.value
+        ? (lengthData.value > loadingThreshold.value || value === null || value === "" || isLoading) &&
           filterColumns[dataField] !== value
           ? 800
           : 0
@@ -1175,8 +1434,8 @@
   function searching(value: Search | null) {
     const isLoading = queryTable.value?.length > (value?.length ?? 0)
     const timeout =
-      (allData.value?.length ?? 0) > countDataOnLoading.value
-        ? lengthData.value > countDataOnLoading.value || value === null || value === "" || isLoading
+      (allData.value?.length ?? 0) > loadingThreshold.value
+        ? lengthData.value > loadingThreshold.value || value === null || value === "" || isLoading
           ? 800
           : 0
         : 0
@@ -1199,16 +1458,16 @@
     }
   }
 
-  function switchSizePage(sizePage: Page | undefined) {
-    sizeTable.value = sizePage ?? 5
+  function switchPageSize(pageSize: Page | undefined) {
+    sizeTable.value = pageSize ?? 5
     switchPage(1)
-    emit("switch-size-page", sizeTable.value)
+    emit("switch-page-size", sizeTable.value)
     if (isAsyncDataFunction.value) {
       loadDataFromFunction()
     }
   }
 
-  function isEqualsValue(column: IColumnPrivate, columnValue: any, value: any): boolean {
+  function isEqualsValue(column: TableColumnPrivate, columnValue: any, value: any): boolean {
     if (columnValue === null || columnValue === undefined) return false
     switch (column.type) {
       case "string":
@@ -1223,7 +1482,7 @@
         if (value instanceof Date) {
           return isEqual(startOfDay(columnValue), startOfDay(value))
         } else {
-          const range = value as IRangeValue
+          const range = value as CalendarRangeValue
           if (range?.start instanceof Date && range?.end instanceof Date) {
             return isWithinInterval(startOfDay(columnValue), {
               start: startOfDay(range.start),
@@ -1239,7 +1498,7 @@
     }
   }
 
-  function setSummary(summary: ISummaryPrivate): string {
+  function setSummary(summary: TableSummaryPrivate): string {
     let result: number | string | null | undefined = null
     const columnData: Array<any> = LD.map(dataSource.value, summary.dataField ?? "")
     switch (summary.type) {
@@ -1293,21 +1552,21 @@
     else return String(summary?.displayFormat).replace(/\{0}/g, `${result}`)
   }
 
-  function setCell(column: IColumnPrivate, value: any, data?: any): string {
+  function setCell(column: TableColumnPrivate, value: any, data?: any): string {
     function toMask() {
       if (column?.mask === "phone") return convertToPhone(String(value))
       else if (column?.mask === "number")
         return convertToNumber(
           value,
-          (column.paramsFilter as Partial<BaseInputProps>)?.lengthInteger ?? 20,
-          (column.paramsFilter as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
+          (column.filterProps as Partial<BaseInputProps>)?.lengthInteger ?? 20,
+          (column.filterProps as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
           ""
         )
       else if (column?.mask === "price")
         return convertToNumber(
           value,
-          (column.paramsFilter as Partial<BaseInputProps>)?.lengthInteger ?? 20,
-          (column.paramsFilter as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
+          (column.filterProps as Partial<BaseInputProps>)?.lengthInteger ?? 20,
+          (column.filterProps as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
           " "
         )
       else return String(value)
@@ -1329,7 +1588,7 @@
           valueCell = toMask()
           break
         case "date":
-          valueCell = formatDate(value, (column as EditDate).editorOptions?.paramsDatePicker?.mask)
+          valueCell = formatDate(value, (column as EditDate).editorProps?.datePickerProps?.mask)
           break
         default:
           valueCell = value
@@ -1338,13 +1597,39 @@
     return valueCell
   }
 
-  function setMarker(column: IColumnPrivate, valueCell: any): string {
+  function setMarker(column: TableColumnPrivate, valueCell: any): string {
     if (valueCell && (filterColumns[column.dataField] || queryTable.value.length))
       valueCell = valueCell.replace(
-        new RegExp(filterColumns[column.dataField] ?? queryTable.value, "gi"),
-        `<span class="${classMaskQuery.value}">$&</span>`
+        new RegExp(escapeRegExp(String(filterColumns[column.dataField] ?? queryTable.value)), "gi"),
+        `<span class="${classMark.value}">$&</span>`
       )
     return valueCell
+  }
+
+  // Экранирование regex-спецсимволов — query/filter приходят от пользователя.
+  function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  }
+
+  // Безопасный аналог setMarker: разбивает значение ячейки на текстовые части, отмечая
+  // совпадения с query/filter. Рендерится через <mark> + text-node (без v-html) — нет XSS.
+  function markerParts(column: TableColumnPrivate, valueCell: any): Array<{ text: string; mark: boolean }> {
+    const text = valueCell === null || valueCell === undefined ? "" : String(valueCell)
+    const rawQuery = filterColumns[column.dataField] ?? queryTable.value
+    const query = typeof rawQuery === "string" ? rawQuery : ""
+    if (!text || !query.length) return [{ text, mark: false }]
+    const parts: Array<{ text: string; mark: boolean }> = []
+    const regex = new RegExp(escapeRegExp(query), "gi")
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) parts.push({ text: text.slice(lastIndex, match.index), mark: false })
+      parts.push({ text: match[0], mark: true })
+      lastIndex = match.index + match[0].length
+      if (match.index === regex.lastIndex) regex.lastIndex++
+    }
+    if (lastIndex < text.length) parts.push({ text: text.slice(lastIndex), mark: false })
+    return parts.length ? parts : [{ text, mark: false }]
   }
 
   function getSorted(sorted: Sorted): Sorted {
@@ -1417,14 +1702,14 @@
 
   function clickCell(
     key: string,
-    column: IColumnPrivate,
+    column: TableColumnPrivate,
     value: any,
     valueWithMarker: any,
     data: any,
     indexRow: number,
     indexCol: number
   ) {
-    if (column.isEdit) editableCell.value = { indexRow, indexCol }
+    if (column.hasEditor) editableCell.value = { indexRow, indexCol }
     if (typeof column.onClick === "function") column.onClick(column, data, indexRow)
     emit("click-cell", {
       eventEl: ((tbody.value as HTMLElement)?.querySelector(`.${key}`) as HTMLElement) ?? null,
@@ -1472,7 +1757,7 @@
     return null
   }
 
-  function updateCell(_key?: string, column?: IColumnPrivate, value?: any): any | null {
+  function updateCell(_key?: string, column?: TableColumnPrivate, value?: any): any | null {
     if (_key && Array.isArray(allData.value) && column && column?.dataField) {
       const index = allData.value?.findIndex((i) => i._key === _key)
       if (index >= 0 && column.dataField in allData.value[index]) {
@@ -1486,11 +1771,11 @@
   }
 
   function startLastRowVisibleObserver() {
-    if (tbody.value && countVisibleRows.value > 0) {
+    if (tbody.value && visibleRows.value > 0) {
       const el = (tbody.value as HTMLElement)?.querySelector(rowSelector)
       if (el) lastRowVisibleObserver.unobserve(el)
       sizeLoadedRows.value =
-        countVisibleRows.value + sizeLoadedRows.value > dataSource.value?.length
+        visibleRows.value + sizeLoadedRows.value > dataSource.value?.length
           ? (dataSource.value?.length ?? sizeLoadedRows.value)
           : sizeLoadedRows.value
       nextTick(() => {
@@ -1506,7 +1791,7 @@
     if (!tbody.value) return
     const el = (tbody.value as HTMLElement)?.querySelector(rowSelector)
     if (el) lastRowVisibleObserver.unobserve(el)
-    sizeLoadedRows.value += sizeLoadingRows.value
+    sizeLoadedRows.value += loadingRows.value
     nextTick(() => {
       if (!tbody.value) return
       if (sizeLoadedRows.value >= dataSource.value?.length) return
@@ -1530,9 +1815,12 @@
   function resizeColumn($event: MouseEvent, columnId: string) {
     const columnEl = (thead.value as HTMLElement)?.querySelector(`.${columnId}`)
     if (columnEl) {
-      const column = <IColumnPrivate>dataColumns.value.find((item) => item.id === columnId)
+      const column = <TableColumnPrivate>dataColumns.value.find((item) => item.id === columnId)
       const rect = columnEl.getBoundingClientRect()
-      let newW = $event.pageX - rect.left
+      // Issue 11 (RTL): resize-handle живёт на trailing-крае колонки. В RTL trailing = левый край,
+      // поэтому ширину считаем от ПРАВОГО края (rect.right - pageX), а не от левого.
+      const isRTL = isClient() && getComputedStyle(columnEl).direction === "rtl"
+      let newW = isRTL ? rect.right - $event.pageX : $event.pageX - rect.left
       const maxW = column.maxWidth
       if (maxW && newW > maxW) newW = maxW
       const minW = column.minWidth ?? 100
@@ -1545,7 +1833,7 @@
     resizeColumn(ev, resizableColumn.value ?? "")
   }
 
-  function startResizeColumn($event: MouseEvent, column: IColumnPrivate["id"]) {
+  function startResizeColumn($event: MouseEvent, column: TableColumnPrivate["id"]) {
     if ($event.stopPropagation) $event.stopPropagation()
     if ($event.preventDefault) $event.preventDefault()
     resizableColumn.value = column
@@ -1619,7 +1907,7 @@
 
     startLoading()
     try {
-      const params: IAsyncDataParams = {
+      const params: TableAsyncDataParams = {
         filters: getFilters(filterColumns),
         sort: getSorted(sortColumns),
         search: queryTable.value,
@@ -1629,11 +1917,11 @@
         }
       }
 
-      const result = await (asyncData.value as (params: IAsyncDataParams) => Promise<IAsyncDataResult>)(params)
+      const result = await (asyncData.value as (params: TableAsyncDataParams) => Promise<TableAsyncDataResult>)(params)
 
       if (result && Array.isArray(result.dataSource)) {
         allData.value = result.dataSource.map((item) => ({ ...item, _key: generateUUID() }))
-        totalCountAsync.value = typeof (result.totalCount as unknown) === "number" ? result.totalCount : undefined
+        totalCountAsync.value = typeof (result.total as unknown) === "number" ? result.total : undefined
         updateDataSource()
       } else {
         allData.value = []
@@ -1653,22 +1941,27 @@
 
 <template>
   <div
-    data-table-component
+    data-table
     ref="componentTable"
+    tabindex="-1"
     :class="classBaseTable"
-    :style="`width:${styles.width};height:${styles.height};`">
+    :style="`width:${settings.width};height:${settings.height};`">
+    <div data-table-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>
     <div v-if="isVisibleToolbar" data-table-toolbar ref="tableToolbar" :class="classBaseToolbar">
       <slot v-if="slots.toolbar" data-table-toolbar-slot name="toolbar" />
       <div v-if="isSearch" data-table-search :class="classSearch">
         <Input
           :model-value="queryTable"
           :label="Table.t('find') ?? 'Find...'"
-          clear
+          clearable
           :mode="mode"
           label-mode="vanishing"
           autocomplete="off"
-          class-input="min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] transition-all duration-500"
-          :class-body="`sticky top-1 rounded-md ease-out ${modeStyle} mb-2`"
+          :classes="{
+            control:
+              'min-w-[5rem] max-w-[5rem] focus:max-w-[8rem] focus:min-w-[8rem] sm:focus:max-w-[15rem] sm:focus:min-w-[15rem] motion-safe:transition-all motion-safe:duration-500'
+          }"
+          :class="`sticky top-1 rounded-md ease-out ${modeStyle} mb-2`"
           @change:model-value="(v) => searching(v)"
           @update:model-value="(v) => lengthData > 100 || searching(v)">
           <template #before>
@@ -1677,98 +1970,132 @@
         </Input>
       </div>
       <transition
-        leave-active-class="transition ease-in duration-1000"
+        leave-active-class="motion-safe:transition ease-in motion-safe:duration-1000"
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
-        enter-active-class="transition ease-in duration-1000"
+        enter-active-class="motion-safe:transition ease-in motion-safe:duration-1000"
         enter-from-class="opacity-0"
         enter-to-class="opacity-100">
         <Button
           v-if="isFilterClear"
           data-table-clear-filter
-          class="group rounded-md ml-2 h-[38px] min-w-[38px] px-2 bg-stone-100 dark:bg-stone-900"
+          class="group rounded-md ml-2 h-[38px] min-w-[38px] px-2 bg-surface-100 dark:bg-surface-900"
           @click="clearFilter">
           <FunnelIcon aria-hidden="true" :class="classIconClearFilter" />
           <FixWindow :mode="mode">{{ Table.t("clearAllFilters") ?? "Clear all filters" }}</FixWindow>
         </Button>
       </transition>
     </div>
-    <div data-table-body :class="classTableBody" :style="`border-radius: ${styles.borderRadiusPx}px;`">
-      <div v-if="slots.header" data-table-header ref="tableHeader" :class="classBodySlotHeader" :style="styleHeader">
-        <div data-table-header-slot :class="classSlotHeader">
+    <div data-table-body :class="classTableBody" :style="`border-radius: ${settings.borderRadius}px;`">
+      <div v-if="slots.header" ref="tableHeader" :class="classBodySlotHeader" :style="styleHeader">
+        <div data-table-header :class="classSlotHeader">
           <slot name="header" />
         </div>
       </div>
       <div data-table-body-base :class="classBaseTableBody">
-        <div ref="tableBody" :class="classBodyTable" :style="styleBodyTable">
-          <table data-table ref="table" :class="classTable">
+        <div ref="tableBody" data-table-viewport :class="classBodyTable" :style="styleBodyTable">
+          <table data-table-element ref="table" :class="classTable" :aria-rowcount="isVirtual ? lengthData : undefined">
+            <caption v-if="caption || slots.caption" data-table-caption class="sr-only">
+              <slot name="caption">{{ caption }}</slot>
+            </caption>
             <!-- -------------------------------- -->
             <thead v-if="isColumns" data-table-thead ref="thead" :class="classTHead">
+              <tr v-if="hasColumnGroups" data-table-thead-group-tr :class="classHeadTr">
+                <th
+                  v-for="(g, gi) in headerGroups"
+                  :key="`group-${gi}`"
+                  data-table-thead-group-col
+                  scope="colgroup"
+                  :colspan="g.span"
+                  :class="classTh({ classes: { th: g.class } } as TableColumnPrivate)">
+                  <div :class="classBodyFilter">
+                    <div :class="classNotFilter({} as TableColumnPrivate)">{{ g.caption }}</div>
+                  </div>
+                </th>
+              </tr>
               <tr :class="classHeadTr">
                 <template v-for="(column, key) in dataColumns" :key="column.id">
                   <th
                     v-if="column.visible"
                     data-table-thead-col
                     scope="col"
+                    :aria-sort="ariaSort(column)"
                     :class="classTh(column)"
                     :style="styleTh(column)">
                     <div :class="classBodyFilter">
-                      <div v-if="column.isFilter" data-table-thead-col-filter :class="classIsFilter(column)">
+                      <div v-if="column.filterable" data-table-thead-col-filter :class="classIsFilter(column)">
+                        <RenderColumnSlot v-if="column._filterSlot" :render="column._filterSlot" :args="{ column }" />
                         <Input
-                          v-if="column.type === 'string' || column.type === 'number'"
+                          v-else-if="column.type === 'string' || column.type === 'number'"
                           :model-value="filterColumns[column?.dataField]"
-                          v-bind="column?.paramsFilter as BaseInputProps"
+                          v-bind="filterControlProps(column)"
                           :label="column.caption"
                           :mode="mode"
-                          :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="[
-                            'tm-0 my-1 bg-inherit dark:bg-inherit',
-                            column.class?.colFilterClassBody as string
-                          ]"
+                          :classes="filterControlClasses(column)"
+                          :class="filterControlClass(column)"
                           :style="`min-width: ${column.minWidth || 70}px;${styleThFilter(column)}`"
                           label-mode="offsetDynamic"
-                          clear
+                          clearable
                           @change:model-value="(v) => filtering(column?.dataField, v)"
                           @update:model-value="(v) => lengthData > 100 || filtering(column?.dataField, v)"
                           @clear="filtering(column?.dataField, null)" />
                         <Select
                           v-else-if="column.type === 'select'"
                           :model-value="filterColumns[column?.dataField]"
-                          v-bind="column?.paramsFilter as BaseSelectProps"
+                          v-bind="{
+                            ...filterControlProps(column),
+                            fixWindowProps: {
+                              scrollableEl: tableBody,
+                              ...(column?.filterProps as Partial<BaseSelectProps>)?.fixWindowProps
+                            }
+                          }"
                           :label="column.caption"
                           :mode="mode"
-                          :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="[
-                            'tm-0 my-1 bg-inherit dark:bg-inherit',
-                            column.class?.colFilterClassBody as string
-                          ]"
+                          :classes="filterControlClasses(column)"
+                          :class="filterControlClass(column)"
                           :style="`min-width: ${column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
-                          clear
+                          clearable
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                         <Calendar
                           v-else-if="column.type === 'date'"
                           :model-value="filterColumns[column?.dataField]"
-                          v-bind="column?.paramsFilter as BaseCalendarProps"
+                          v-bind="{
+                            ...filterControlProps(column),
+                            fixWindowProps: {
+                              scrollableEl: tableBody,
+                              ...(column?.filterProps as Partial<BaseCalendarProps>)?.fixWindowProps
+                            }
+                          }"
                           :label="column.caption"
                           :mode="mode"
                           label-mode="offsetDynamic"
-                          :class="['border-none font-normal', column.class?.colFilterClass as string]"
-                          :class-body="[
-                            'tm-0 my-1 bg-inherit dark:bg-inherit',
-                            column.class?.colFilterClassBody as string
-                          ]"
+                          :classes="filterControlClasses(column)"
+                          :class="filterControlClass(column)"
                           :style="`min-width: ${widthsColumns[column.dataField] ? widthsColumns[column.dataField] - 30 : column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
-                          clear
+                          clearable
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
                       </div>
                       <div v-else data-table-thead-col-no-filter :class="classNotFilter(column)">
-                        {{ column.caption }}
+                        <RenderColumnSlot v-if="column._headerSlot" :render="column._headerSlot" :args="{ column }" />
+                        <template v-else>{{ column.caption }}</template>
                       </div>
-                      <div
-                        v-if="column.isSort ?? isSort"
+                      <!--
+                        T2 (a11y): нативный <button> — единственный способ получить и tab order,
+                        и роль button, и активацию Enter/Space «из коробки». UA-хром кнопки снят
+                        глобальным reset'ом (baseStyle: button.fv → background transparent,
+                        border-width 0, padding 0), поэтому вёрстка не меняется.
+                        `.prevent` на keydown обязателен: он гасит синтетический click, который
+                        браузер сам генерирует по Enter/Space, — иначе sorting() отработал бы дважды.
+                      -->
+                      <button
+                        v-if="column.sortable ?? isSort"
+                        type="button"
                         data-table-thead-col-sort
                         :class="classIsSort(column)"
-                        @click="sorting(column?.dataField)">
+                        :aria-label="ariaSortLabel(column)"
+                        @click="sorting(column?.dataField)"
+                        @keydown.enter.prevent="sorting(column?.dataField)"
+                        @keydown.space.prevent="sorting(column?.dataField)">
                         <ArrowLongUpIcon
                           v-if="iconSort === 'Arrow' && [null, 'asc'].includes(sortColumns[column?.dataField])"
                           :class="classSortIcon" />
@@ -1781,9 +2108,9 @@
                         <BarsArrowDownIcon
                           v-if="iconSort === 'Bars' && sortColumns[column?.dataField] === 'desc'"
                           :class="classSortIcon" />
-                      </div>
+                      </button>
                       <div
-                        v-if="column.isResized ?? resizedColumns"
+                        v-if="column.resizable ?? resizableColumns"
                         data-table-thead-col-resized
                         :class="classResizedColumns(column, key)"
                         @mousedown="startResizeColumn($event, column.id)"
@@ -1797,7 +2124,14 @@
             </thead>
             <!-- -------------------------------- -->
             <tbody data-table-tbody ref="tbody" :class="classTBody">
-              <template v-for="(group, key) in resultDataSource" :key="key">
+              <tr
+                v-if="isVirtual && virtualWindow.topPad"
+                data-table-virtual-spacer-top
+                aria-hidden="true"
+                :style="`height:${virtualWindow.topPad}px`">
+                <td :colspan="dataColumns.length" class="p-0 border-0"></td>
+              </tr>
+              <template v-for="(group, key) in renderSource" :key="key">
                 <tr v-if="isGroup" data-table-tbody-group>
                   <th
                     :colspan="dataColumns.length"
@@ -1810,70 +2144,107 @@
                     </div>
                   </th>
                 </tr>
-                <template v-for="(data, indexRow) in group" :key="`${data?._key}-${indexRow}`">
+                <template v-for="(data, indexRow) in group" :key="data?._key">
                   <tr
                     data-table-tbody-tr
-                    :class="classTr(data, indexRow)"
-                    @click="clickRow(`tr--${indexRow}`, data, indexRow)">
-                    <template v-for="(column, indexCol) in dataColumns" :key="`${data?._key}-${indexRow}-${indexCol}`">
+                    :class="classTr(data, absIndex(indexRow))"
+                    :style="isVirtual ? `height:${virtualRowHeight}px` : undefined"
+                    :aria-rowindex="isVirtual ? absIndex(indexRow) + 1 : undefined"
+                    @click="clickRow(`tr--${absIndex(indexRow)}`, data, absIndex(indexRow))">
+                    <template v-for="(column, indexCol) in dataColumns" :key="`${data?._key}-${indexCol}`">
                       <td
                         v-if="column.visible"
                         data-table-tbody-td
-                        :class="classColumnTd(data, indexRow, column, indexCol)"
+                        :class="classColumnTd(data, absIndex(indexRow), column, indexCol)"
                         :style="styleColumnTd(column)"
                         @click="
                           clickCell(
-                            `td--${indexRow}--${column?.name ?? indexCol}`,
+                            `td--${absIndex(indexRow)}--${column?.name ?? indexCol}`,
                             column,
                             data[column.dataField],
                             setMarker(column, setCell(column, data[column.dataField], data)),
                             data,
-                            indexRow,
+                            absIndex(indexRow),
                             indexCol
                           )
                         ">
                         <div
-                          v-if="!column?.cellTemplate"
+                          v-if="column?._cellSlot"
+                          data-table-tbody-cell-slot
+                          :class="classTemplate(column)"
+                          :style="styleCellTable">
+                          <RenderColumnSlot
+                            :render="column._cellSlot"
+                            :args="{
+                              rowData: data,
+                              value: setCell(column, data[column.dataField], data),
+                              valueWithMarker: setMarker(column, setCell(column, data[column.dataField], data)),
+                              column,
+                              isCloseEditor: (isActive: boolean) =>
+                                isActive || clearEditableCell(absIndex(indexRow), indexCol),
+                              editValue: (value: any) => updateCell(data?._key, column, value)
+                            }" />
+                        </div>
+                        <div
+                          v-else-if="!column?.cellTemplate"
                           data-table-tbody-not-cell-template
                           :class="classCellTable(indexRow, column, indexCol)"
                           :style="styleCellTable">
                           <div
-                            v-if="!(editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol)"
-                            v-html="setMarker(column, setCell(column, data[column.dataField], data))" />
-                          <template v-if="editableCell?.indexRow === indexRow && editableCell?.indexCol === indexCol">
+                            v-if="
+                              !(editableCell?.indexRow === absIndex(indexRow) && editableCell?.indexCol === indexCol)
+                            ">
+                            <template
+                              v-for="(part, partIndex) in markerParts(
+                                column,
+                                setCell(column, data[column.dataField], data)
+                              )"
+                              :key="partIndex"
+                              ><mark v-if="part.mark" :class="classMark">{{ part.text }}</mark
+                              ><template v-else>{{ part.text }}</template></template
+                            >
+                          </div>
+                          <template
+                            v-if="editableCell?.indexRow === absIndex(indexRow) && editableCell?.indexCol === indexCol">
                             <Input
                               v-if="column.type === 'string' || column.type === 'number'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditInput)?.editorOptions,
-                                classInput: `pt-[3px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                  (column.edit as EditInput)?.editorOptions?.classInput ?? ''
-                                }`
+                                ...(column.editable as EditInput)?.editorProps,
+                                classes: {
+                                  ...((column.editable as EditInput)?.editorProps?.classes ?? {}),
+                                  base: 'border-none font-normal bg-transparent dark:bg-transparent',
+                                  control: `pt-[3px] pl-[2px] text-sm font-medium ${classes?.cell ?? ''} ${
+                                    (column.editable as EditInput)?.editorProps?.classes?.control ?? ''
+                                  }`
+                                }
                               }"
                               :mode="mode"
-                              class="border-none font-normal bg-transparent dark:bg-transparent"
-                              class-body="pt-0 -my-3 w-full"
+                              class="pt-0 -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @active="(active) => active || clearEditableCell(absIndex(indexRow), indexCol)"
                               @change:model-value="(value) => updateCell(data?._key, column, value)" />
                             <Select
                               v-else-if="column.type === 'select'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditSelect)?.editorOptions,
-                                paramsFixWindow: {
+                                ...(column.editable as EditSelect)?.editorProps,
+                                fixWindowProps: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditSelect)?.editorOptions?.paramsFixWindow
+                                  ...(column.editable as EditSelect)?.editorProps?.fixWindowProps
                                 },
-                                classSelect: `pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                  (column.edit as EditSelect)?.editorOptions?.classSelect ?? ''
-                                }`
+                                classes: {
+                                  ...((column.editable as EditSelect)?.editorProps?.classes ?? {}),
+                                  base: 'border-none font-normal bg-transparent dark:bg-transparent',
+                                  control: `pl-[2px] text-sm font-medium ${classes?.cell ?? ''} ${
+                                    (column.editable as EditSelect)?.editorProps?.classes?.control ?? ''
+                                  }`
+                                }
                               }"
                               :mode="mode"
-                              class="border-none font-normal bg-transparent dark:bg-transparent"
-                              class-body="pt-[0px] -my-3 w-full"
+                              class="pt-[0px] -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @active="(active) => active || clearEditableCell(absIndex(indexRow), indexCol)"
                               @update:model-value="
                                 (value) => {
                                   updateCell(data?._key, column, value)
@@ -1883,20 +2254,23 @@
                               v-else-if="column.type === 'date'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditDate)?.editorOptions,
-                                paramsFixWindow: {
+                                ...(column.editable as EditDate)?.editorProps,
+                                fixWindowProps: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditDate)?.editorOptions?.paramsFixWindow
+                                  ...(column.editable as EditDate)?.editorProps?.fixWindowProps
                                 },
-                                classDateText: `pt-[6px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                  (column.edit as EditDate)?.editorOptions?.classDateText ?? ''
-                                }`
+                                classes: {
+                                  ...((column.editable as EditDate)?.editorProps?.classes ?? {}),
+                                  base: 'border-none font-normal bg-transparent dark:bg-transparent',
+                                  text: `pt-[6px] pl-[2px] text-sm font-medium ${classes?.cell ?? ''} ${
+                                    (column.editable as EditDate)?.editorProps?.classes?.text ?? ''
+                                  }`
+                                }
                               }"
                               :mode="mode"
-                              class="border-none font-normal bg-transparent dark:bg-transparent"
-                              class-body="pt-0 -my-3 w-full"
+                              class="pt-0 -my-3 w-full"
                               label-mode="vanishing"
-                              @is-active="(isActive) => isActive || clearEditableCell(indexRow, indexCol)"
+                              @active="(active) => active || clearEditableCell(absIndex(indexRow), indexCol)"
                               @update:model-value="(value) => updateCell(data?._key, column, value)" />
                           </template>
                         </div>
@@ -1912,7 +2286,9 @@
                             :rowData="data"
                             :value="setCell(column, data[column.dataField], data)"
                             :value-with-marker="setMarker(column, setCell(column, data[column.dataField], data))"
-                            :is-close-editor="(isActive: boolean) => isActive || clearEditableCell(indexRow, indexCol)"
+                            :is-close-editor="
+                              (isActive: boolean) => isActive || clearEditableCell(absIndex(indexRow), indexCol)
+                            "
                             :edit-valiue="(value: any) => updateCell(data?._key, column, value)" />
                         </div>
                       </td>
@@ -1920,6 +2296,13 @@
                   </tr>
                 </template>
               </template>
+              <tr
+                v-if="isVirtual && virtualWindow.bottomPad"
+                data-table-virtual-spacer-bottom
+                aria-hidden="true"
+                :style="`height:${virtualWindow.bottomPad}px`">
+                <td :colspan="dataColumns.length" class="p-0 border-0"></td>
+              </tr>
             </tbody>
             <!-- -------------------------------- -->
             <tr
@@ -1936,7 +2319,7 @@
               <tr data-table-tfoot-tr>
                 <template v-for="column in dataColumns" :key="column.id">
                   <th v-if="column.visible" data-table-tfoot-th scope="col" :class="classThSummary(column)">
-                    <div :class="classThSummaryText(column)" v-html="summaryColumns[column.dataField]" />
+                    <div :class="classThSummaryText(column)">{{ summaryColumns[column.dataField] }}</div>
                   </th>
                 </template>
               </tr>
@@ -1953,69 +2336,77 @@
           :style="styleIsPagination">
           <Pagination
             :model-value="pageTable"
-            :size-page="+sizeTable"
+            :page-size="+sizeTable"
             :mode="modePagination"
             :total="lengthData"
-            :visible-number-pages="visibleNumberPages"
-            :is-info-text="isInfoText"
-            :sizes-selector="sizesSelector"
-            :is-page-size-selector="isPageSizeSelector"
-            :is-hidden-navigation-buttons="isHiddenNavigationButtons"
+            :visible-pages="visibleNumberPages"
+            :info-text="isInfoText"
+            :page-sizes="sizesSelector"
+            :page-size-selector="isPageSizeSelector"
+            :navigation-buttons="isNavigationButtons"
             :class="[
               'classPagination border-t sm:px-2',
               ((pagination as TablePagination)?.class as string) ?? '',
-              styles.class?.pagination as string,
+              raw('pagination'),
               defaultBorder as string,
-              styles.border?.pagination as string
+              borderOf('borderPagination') as string
             ]"
             :style="styleIsPagination"
             @update:model-value="switchPage"
-            @update:size-page="switchSizePage" />
+            @update:page-size="switchPageSize" />
         </div>
         <!-- -------------------------------- -->
         <transition
-          leave-active-class="transition ease-in duration-500"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-500"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-500"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-500"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="isLoading" data-table-loading :class="classIsLoading">
             <div :class="classIsLoadingBody">
-              <Loading type="FingerprintSpinner" :size="100" :color="isDark ? 'theme.600' : 'theme.500'" />
+              <Loading
+                type="FingerprintSpinner"
+                :size="100"
+                :color="isDark ? 'theme.600' : 'theme.500'"
+                v-bind="compoundLoadingProps" />
             </div>
           </div>
         </transition>
         <!-- -------------------------------- -->
         <transition
-          leave-active-class="transition ease-in duration-200"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-200"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="!isLoading && !allData?.length" data-table-no-data :class="classNoData">
             <TableCellsIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noData" />
+            <div>
+              <slot name="empty">{{ emptyText }}</slot>
+            </div>
           </div>
         </transition>
         <transition
-          leave-active-class="transition ease-in duration-200"
+          leave-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition ease-in duration-200"
+          enter-active-class="motion-safe:transition ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div v-if="!isLoading && allData?.length && !dataColumns?.length" data-table-no-column :class="classNoData">
             <ViewColumnsIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noColumn" />
+            <div>
+              <slot name="empty-columns">{{ emptyColumnsText }}</slot>
+            </div>
           </div>
         </transition>
         <transition
-          leave-active-class="transition-all ease-in duration-200"
+          leave-active-class="motion-safe:transition-all ease-in motion-safe:duration-200"
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
-          enter-active-class="transition-all ease-in duration-200"
+          enter-active-class="motion-safe:transition-all ease-in motion-safe:duration-200"
           enter-from-class="opacity-0"
           enter-to-class="opacity-100">
           <div
@@ -2023,17 +2414,14 @@
             data-table-no-filter
             :class="classNoData">
             <FunnelIcon aria-hidden="true" :class="classIcon" />
-            <div v-html="noFilter" />
+            <div>
+              <slot name="empty-filter">{{ emptyFilterText }}</slot>
+            </div>
           </div>
         </transition>
       </div>
-      <div
-        v-if="slots.footer"
-        data-table-footer
-        ref="tableFooter"
-        :class="classSlotFooterBody"
-        :style="styleSlotFooterBody">
-        <div :class="classSlotFooter">
+      <div v-if="slots.footer" ref="tableFooter" :class="classSlotFooterBody" :style="styleSlotFooterBody">
+        <div data-table-footer :class="classSlotFooter">
           <slot name="footer" />
         </div>
       </div>

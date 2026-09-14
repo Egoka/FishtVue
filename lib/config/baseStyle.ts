@@ -700,4 +700,57 @@ Constrain images and videos to the parent width and preserve their intrinsic asp
     animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
 }
+
+/* ---Print (N59, решение R21) ---------------------------------------------------------------
+   Единый блок вместо тринадцати покомпонентных правок. Покомпонентный путь провалился бы по
+   двум причинам сразу: print:-классы попадают в CSS только у смонтированных компонентов
+   (незакрытый Dialog или FixWindow своих правил не добавит), а адресация по data-атрибутам
+   покрывает и портальные узлы, которые рендерятся в body, вне дерева приложения.
+
+   Гейт @media print избавляет от рисков на экране: ни одно правило ниже не влияет на обычный
+   рендер. !important здесь уместен — на бумаге он должен побеждать инлайн-стили позиционирования
+   (FixWindow, Split) и тематические фоны. */
+@media print {
+  /* Эфемерные оверлеи на бумаге бессмысленны: они описывают состояние сеанса, а не документ. */
+  [data-fix-window],
+  [data-alert-container],
+  [data-dialog-background] {
+    display: none !important;
+  }
+
+  /* Поверхности печатаются плоскими: цветной фон и тени съедают тонер и мешают читать. */
+  [data-accordion],
+  [data-alert],
+  [data-badge],
+  [data-calendar],
+  [data-dialog],
+  [data-dialog-content],
+  [data-label],
+  [data-menu],
+  [data-separator],
+  [data-split],
+  [data-text-editor],
+  [data-virtual-scroller] {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Скролл-контейнеры обрезают контент по высоте окна — на бумаге окна нет.
+     Виртуализированный список печатает то, что отрисовано: полный набор строк в DOM
+     не существует в принципе, и это ограничение виртуализации, а не печати. */
+  [data-vs-viewport],
+  [data-split],
+  [data-menu],
+  [data-dialog-content] {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Разделители панелей — интерактивная ручка, на бумаге это просто линия. */
+  [data-split-separator] {
+    cursor: auto !important;
+  }
+}
 `

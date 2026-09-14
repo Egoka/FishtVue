@@ -11,12 +11,19 @@ import {
 } from "vue"
 import { tailwind, useStyle } from "fishtvue/theme"
 import { cn } from "fishtvue/utils/tailwindHandler"
-import { toKebabCase } from "fishtvue/utils/stringHandler"
+import { interpolate, selectPlural, toKebabCase } from "fishtvue/utils/stringHandler"
 import { fieldsPick, get } from "fishtvue/utils/objectHandler"
 import { isClient, minifyCSS } from "fishtvue/utils/domHandler"
 import { DefaultMessages, Locales } from "fishtvue/locale"
 import type { ComponentsOptions, FishtVue, OptionsTheme } from "fishtvue/config"
-import type { NamesComponents, PublicFields, setStyleOptions, StylesComponent } from "./TypeComponent"
+import type {
+  ClassesProps,
+  ClassesResolver,
+  NamesComponents,
+  PublicFields,
+  SetStyleOptions,
+  StylesComponent
+} from "./TypeComponent"
 import { UniqueKeySetCollection } from "fishtvue/utils/uniqueCollection"
 import { StyleClass, StyleMode } from "fishtvue/types"
 
@@ -49,6 +56,8 @@ export const cssComponents = new Map<NamesComponents, string>()
  * - `getOptions()`: A method that returns the options for the component.
  * - `getPrefix()`: A method that returns the prefix for the component.
  * - `initStyle(stylesComp)`: A method that initializes the style for the component.
+ * - `setStyle(stylesComp, options?)`: компилирует tw-классы в CSS и возвращает `"fv {prefix}-{kebab-name} …"`; `options.consumer` — сегменты потребителя (последние в twMerge, переживают `unstyled`).
+ * - `resolveClasses(props)`: резолвер `class`/`classes` — `cls(key, …base)`, `raw(key)`, `pick(key, fallback)` (dev-patterns §2 B–D).
  */
 export default class Component<T extends keyof ComponentsOptions> {
   private readonly __instance: ComponentInternalInstance | null
@@ -131,21 +140,28 @@ export default class Component<T extends keyof ComponentsOptions> {
     if (this.__stylesComp) this.__setStyle(this.__stylesComp)
   }
 
+  /**
+   * `setStyle(stylesComp, options?)`: компилирует tw-классы в CSS под `.{prefix}-{kebab-name}` и возвращает
+   * `"fv {prefix}-{kebab-name} …"`. `options.consumer` — сегменты потребителя (`class`/`classes.*`,
+   * dev-patterns §2 D/E): они всегда последние в twMerge и переживают `unstyled` — флаг означает
+   * «без темы», а не «без стилизации самим потребителем». Под `unstyled` база не компилируется и маркер
+   * `{prefix}-{kebab-name}` не выдаётся; `fv` остаётся — на него завязан UA-preflight из baseStyle,
+   * который инжектится независимо от `unstyled` (config/index.ts → BaseStylesComponent.initStyle).
+   */
   public setStyle = <T extends StyleClass | boolean | undefined>(
     stylesComp: T | T[],
-    options?: setStyleOptions
+    options?: SetStyleOptions
   ): string => {
+    const consumer = cn(options?.consumer ?? [])
+    if (this.__globalConfig?.config?.unstyled) return cn("fv", consumer)
     const specialClass = `${this.prefix}-${toKebabCase(this.name)}`
-    const styles = cn(stylesComp)
-    const isBaseClasses = options?.isBaseClasses ? "" : " "
-    const newClasses = styles
-      .split(" ")
-      .filter((item) => !listOfStyledComponents.hasValue(this.name, `${isBaseClasses}${item}`))
+    const styles = cn(stylesComp, consumer)
+    const newClasses = styles.split(" ").filter((item) => !listOfStyledComponents.hasValue(this.name, ` ${item}`))
     if (newClasses?.length) {
       newClasses.forEach((item) => {
-        listOfStyledComponents.add(this.name, [`${isBaseClasses}${item}`])
+        listOfStyledComponents.add(this.name, [` ${item}`])
         const css = tailwind(item, {
-          selector: options?.selector ? `${options.selector}${isBaseClasses}` : `.${specialClass}`,
+          selector: options?.selector ? `${options.selector} ` : `.${specialClass}`,
           darkSelector: this.__globalOptionsTheme?.darkModeSelector ?? ""
         })
         if (css) listOfCssComponents.add(this.name, [css])
@@ -153,6 +169,31 @@ export default class Component<T extends keyof ComponentsOptions> {
       if (this.__stylesComp) this.__setStyle(this.__stylesComp)
     }
     return `fv ${specialClass} ${styles}`
+  }
+
+  /**
+   * `resolveClasses(props)`: резолвер `class`/`classes` компонента (dev-patterns §2 B–D).
+   * `cls(key, ...base)` — класс собственного элемента через `setStyle`, порядок
+   * `base → options.classes[key] → props.classes[key] → (root) options.class → props.class`;
+   * `raw(key)` — только сегменты потребителя для hand-off ребёнку; `pick(key, fallback)` — aspect-ключ
+   * с заменяющей семантикой (`""` в props отключает). `props` читается лениво — внутри `computed`
+   * результат реактивен; опции — снимок на инстанс, как и `getOptions()`.
+   */
+  public resolveClasses = <K extends string>(props: ClassesProps<K>): ClassesResolver<K> => {
+    const opt = this.__options as ClassesProps<K> | undefined
+    // Массив ключей = «общий → частный» (Separator `segment` + `segmentStart`): сегменты
+    // разворачиваются в объявленном порядке, поэтому частный ключ выигрывает twMerge-конфликт.
+    const consumer = (key: K | "root" | Array<K | "root">): Array<StyleClass | undefined> =>
+      (Array.isArray(key) ? key : [key]).flatMap((k) => [
+        opt?.classes?.[k],
+        props.classes?.[k],
+        ...(k === "root" ? [opt?.class, props.class] : [])
+      ])
+    return {
+      cls: (key, ...base) => this.setStyle(base, { consumer: consumer(key) }),
+      raw: (key) => cn(consumer(key)),
+      pick: (key, fallback = "") => props.classes?.[key] ?? opt?.classes?.[key] ?? fallback
+    }
   }
 
   private __stylesBase: StylesComponent = (layers, css = "") =>
@@ -163,7 +204,9 @@ export default class Component<T extends keyof ComponentsOptions> {
     ${css}
   }
 `
-      : css
+      : // theme Issue 4 (Wave 2): даже без `optionsTheme.layers` component-стиль идёт в `@layer fishtvue`
+        // (зеркало base-style в config/index.ts) — канон dev-patterns §3, предсказуемая cascade.
+        `@layer fishtvue {${css}}`
 
   private __setStyle(stylesComp: StylesComponent): void {
     const CSS = [...(listOfCssComponents.get(this.name) ?? [])].sort((a, b) => {
@@ -180,15 +223,31 @@ export default class Component<T extends keyof ComponentsOptions> {
     listComponents.add(this.name)
   }
 
-  public t(key: keyof DefaultMessages | string): string | undefined {
-    if (!key) return
-    const nameLocale = this.__globalConfig?.getActiveLocale() ?? "en"
-    if (!nameLocale) return
-    const localeMessages = this.__globalLocale?.messages?.[nameLocale]
-    if (!localeMessages) return
-    const value = get<unknown>(localeMessages, key)
-    if (!value) return
-    return typeof value === "string" ? value : undefined
+  // Issue 3 / Wave 3.5: fallback chain `messages[active][key] → messages[default][key] → key`
+  // + опциональные interpolation/pluralization через `params`.
+  // Возвращаемый тип сужен с `string | undefined` до `string` — key используется как last resort,
+  // что делает t() безопасным для template/computed без дополнительного `?? "literal"` fallback.
+  // Без `params` поведение байт-в-байт прежнее (backward-compatible для всех single-arg вызовов):
+  //   - pluralization: если в строке есть `|`-формы и `params.count` — число, форма выбирается selectPlural по CLDR-правилам активной локали;
+  //   - interpolation: `{name}` подставляется из `params` (неизвестный плейсхолдер остаётся литералом — dev-сигнал).
+  public t(key: keyof DefaultMessages | string, params?: Record<string, string | number>): string {
+    if (!key) return ""
+    const active = this.__globalConfig?.getActiveLocale() ?? "en"
+    const def = this.__globalConfig?.getDefaultLocale() ?? "en"
+    const messages = this.__globalLocale?.messages
+    let value: string | undefined
+    const fromActive = get<unknown>(messages?.[active], key)
+    if (typeof fromActive === "string") value = fromActive
+    else if (def && def !== active) {
+      const fromDefault = get<unknown>(messages?.[def], key)
+      if (typeof fromDefault === "string") value = fromDefault
+    }
+    if (value === undefined) value = String(key)
+    if (params) {
+      if (typeof params.count === "number" && value.includes("|")) value = selectPlural(value, params.count, active)
+      value = interpolate(value, params)
+    }
+    return value
   }
 
   public componentsStyle(): StyleMode | undefined {

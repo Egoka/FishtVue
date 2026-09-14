@@ -19,7 +19,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -53,14 +53,14 @@
     height: 50px;
     width: 50px;
     position: relative;
-    border: 4px solid #ff1d5e;
+    border: 4px solid currentColor;
     animation: fulfilling-square-spinner-animation 4s infinite ease;
   }
 
   .fulfilling-square-spinner .spinner-inner {
     vertical-align: top;
     display: inline-block;
-    background-color: #ff1d5e;
+    background-color: currentColor;
     width: 100%;
     opacity: 1;
     animation: fulfilling-square-spinner-inner-animation 4s infinite ease-in;

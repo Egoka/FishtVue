@@ -1,7 +1,7 @@
 ---
 title: Playgrounds (sandbox & sandbox-nuxt)
 summary: Назначение и workflow двух песочниц для экспериментов и regression-репро.
-updated: 2026-05-09
+updated: 2026-09-14
 ---
 
 # Playgrounds (sandbox & sandbox-nuxt)
@@ -14,10 +14,14 @@ updated: 2026-05-09
 
 ## 2. When to use which
 
-- **`sandbox`** ([sandbox/](../sandbox)) — Vite + Vue 3, JavaScript. Минимальная конфигурация без TypeScript, без SSR. Подходит для:
+- **`sandbox`** ([sandbox/](../sandbox)) — Vite + Vue 3, TypeScript, без SSR. Единственный потребитель в репозитории, который собирается против живой `lib/` (alias `fishtvue` → `../lib`), поэтому он же и проверяет публичный API на вменяемость. Подходит для:
   - Быстрой пробы новой идеи.
   - Проверки UX-сценария на реальном компоненте.
   - Воспроизведения SPA-бага.
+
+  `pnpm sandbox:build` = `vue-tsc --noEmit` + `vite build`, и типовая проверка идёт со **`strictTemplates`** ([sandbox/tsconfig.json](../sandbox/tsconfig.json)): незнакомый проп в шаблоне — ошибка, а не молчаливый fallthrough-атрибут. Без этого песочница отстаёт от API незаметно — ровно так она и пропустила восемь волн редизайна props 1.0.0.
+
+  Проверка сужена до файлов песочницы обёрткой [scripts/typecheck.mjs](../sandbox/scripts/typecheck.mjs): SFC библиотеки попадают в программу TypeScript (импорт идёт raw-путём `fishtvue/{name}/{Name}.vue` — конвенция репозитория, `{name}.mjs` существует только в `dist/`), и `strictTemplates` начинает проверять ещё и их шаблоны. Это отдельный долг `lib/`, к песочнице отношения не имеющий.
 - **`sandbox-nuxt`** ([sandbox-nuxt/](../sandbox-nuxt)) — Nuxt 4 проект. Подходит для:
   - Проверки интеграции с Nuxt — auto-import, layers, server routes, SSR.
   - Тестирования модуля `fishtvue/module` и плагина `fishtvue/plugins/nuxt`.

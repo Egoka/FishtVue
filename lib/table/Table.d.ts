@@ -1,9 +1,18 @@
 import { VNode, MaybeRef } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass, StyleMode, THeight, TWidth } from "../types"
-import { BaseInputProps } from "fishtvue/input"
-import { BaseSelectProps } from "fishtvue/select"
+import {
+  ClassComponent,
+  ClassesMap,
+  GlobalComponentConstructor,
+  ReadRef,
+  StyleClass,
+  StyleMode,
+  THeight,
+  TWidth
+} from "../types"
+import { BaseInputProps, InputProps } from "fishtvue/input"
+import { BaseSelectProps, SelectProps } from "fishtvue/select"
 import { PaginationProps } from "fishtvue/pagination"
-import { BaseCalendarProps } from "fishtvue/calendar"
+import { BaseCalendarProps, CalendarProps } from "fishtvue/calendar"
 
 /**
  * ## Table
@@ -28,31 +37,36 @@ export type DataGrouping = Record<DataField, Array<Record<string, any>>>
 export type ResultData = Record<DataField, Array<Record<string, any>>>
 
 type EditorCell = {
-  isEdit?: boolean
+  editable?: boolean
 }
+// Фильтры и cell-редакторы v-bind'ятся прямо в контрол, поэтому принимают и его `class`/`classes`
+// (контракт props 1.0 — dev-patterns §2 A–C), а не только `Base*Props`-часть.
+type FilterInputProps = Partial<BaseInputProps> & Pick<InputProps, "class" | "classes">
+type FilterSelectProps = Partial<BaseSelectProps> & Pick<SelectProps, "class" | "classes">
+type FilterCalendarProps = Partial<BaseCalendarProps> & Pick<CalendarProps, "class" | "classes">
 export type EditInput = EditorCell & {
-  editorOptions?: Partial<BaseInputProps>
+  editorProps?: FilterInputProps
 }
 type InputDataType = {
   type?: "string" | "number"
-  paramsFilter?: Partial<BaseInputProps>
-  edit?: EditInput | boolean
+  filterProps?: FilterInputProps
+  editable?: EditInput | boolean
 }
 export type EditSelect = EditorCell & {
-  editorOptions?: Partial<BaseSelectProps>
+  editorProps?: FilterSelectProps
 }
 type SelectDataType = {
   type?: "select"
-  paramsFilter?: Partial<BaseSelectProps>
-  edit?: EditSelect | boolean
+  filterProps?: FilterSelectProps
+  editable?: EditSelect | boolean
 }
 export type EditDate = EditorCell & {
-  editorOptions?: Partial<BaseCalendarProps>
+  editorProps?: FilterCalendarProps
 }
 type DateDataType = {
   type?: "date"
-  paramsFilter?: Partial<BaseCalendarProps>
-  edit?: EditDate | boolean
+  filterProps?: FilterCalendarProps
+  editable?: EditDate | boolean
 }
 
 // ---INTERFACES--------------------------
@@ -60,7 +74,7 @@ type DateDataType = {
 /**
  * Represents toolbar configuration for the table.
  */
-export interface IToolbar {
+export interface TableToolbar {
   /**
    * Indicates whether the toolbar is visible.
    * @type {boolean | undefined}
@@ -71,13 +85,13 @@ export interface IToolbar {
    * Enables search input in the toolbar.
    * @type {boolean | undefined}
    */
-  search?: boolean
+  searchable?: boolean
 }
 
 /**
  * Sorting configuration for the table.
  */
-export interface ISort {
+export interface TableSort {
   /**
    * Indicates whether sorting is enabled.
    * @type {boolean | undefined}
@@ -94,7 +108,7 @@ export interface ISort {
 /**
  * Filtering configuration for the table.
  */
-export interface IFilter {
+export interface TableFilter {
   /**
    * Indicates whether filtering is enabled.
    * @type {boolean | undefined}
@@ -105,19 +119,19 @@ export interface IFilter {
    * Message displayed when no filters are applied.
    * @type {string | undefined}
    */
-  noFilter?: string
+  emptyFilterText?: string
 
   /**
    * Enables a "clear all filters" option.
    * @type {boolean | undefined}
    */
-  isClearAllFilter?: boolean
+  clearAll?: boolean
 }
 
 /**
  * Grouping configuration for the table.
  */
-export interface IGrouping {
+export interface TableGrouping {
   /**
    * Indicates whether grouping is enabled.
    * @type {boolean | undefined}
@@ -151,7 +165,7 @@ export interface TablePagination extends Omit<PaginationProps, "total" | "modelV
 /**
  * Configuration object for async data loading (mode 3: object).
  */
-export interface IAsyncDataConfig {
+export interface TableAsyncDataConfig {
   /**
    * URL endpoint for fetching data.
    * @type {string}
@@ -174,7 +188,7 @@ export interface IAsyncDataConfig {
 /**
  * Parameters passed to async data function (mode 4: function).
  */
-export interface IAsyncDataParams {
+export interface TableAsyncDataParams {
   /**
    * Current filter values applied to columns.
    * @type {Filters}
@@ -206,7 +220,7 @@ export interface IAsyncDataParams {
 /**
  * Result returned by async data function (mode 4: function).
  */
-export interface IAsyncDataResult {
+export interface TableAsyncDataResult {
   /**
    * Array of data records for the current page.
    * @type {DataSource}
@@ -217,7 +231,7 @@ export interface IAsyncDataResult {
    * Total count of all records (for pagination calculation).
    * @type {number}
    */
-  totalCount: number
+  total: number
 }
 
 /**
@@ -225,7 +239,7 @@ export interface IAsyncDataResult {
  *
  * Supports features like sorting, filtering, resizing, templates, and custom styles.
  */
-export type IColumn = {
+export type TableColumn = {
   /**
    * The field in the data source corresponding to this column.
    * @type {DataField | undefined}
@@ -272,19 +286,19 @@ export type IColumn = {
    * Indicates whether filtering is enabled for the column.
    * @type {boolean | undefined}
    */
-  isFilter?: boolean
+  filterable?: boolean
 
   /**
    * Indicates whether sorting is enabled for the column.
    * @type {boolean | undefined}
    */
-  isSort?: boolean
+  sortable?: boolean
 
   /**
    * Indicates whether the column can be resized.
    * @type {boolean | undefined}
    */
-  isResized?: boolean
+  resizable?: boolean
 
   /**
    * The default filter value for the column.
@@ -312,91 +326,78 @@ export type IColumn = {
 
   /**
    * Sets the value of a cell in the column.
-   * @param {IColumn} column - The column configuration.
+   * @param {TableColumn} column - The column configuration.
    * @param {any} value - The new value for the cell.
    * @param {any} [data] - The row data to which the cell belongs.
    * @returns {any}
    */
-  setCellValue?(column: IColumn, value: any, data?: any): any
+  setCellValue?(column: TableColumn, value: any, data?: any): any
 
   /**
    * Callback that is invoked when the column cell is clicked.
-   * @param {IColumn} column - The column configuration.
+   * @param {TableColumn} column - The column configuration.
    * @param {any} data - The row data for the clicked cell.
    * @param {number} indexRow - The index of the clicked row.
    */
-  onClick?(column: IColumn, data: any, indexRow: number): void
+  onClick?(column: TableColumn, data: any, indexRow: number): void
 
   /**
-   * Custom CSS classes for the column.
+   * Карта классов колонки (dev-patterns §2 B). Бывший вложенный `class`-объект.
+   * - `th` — ячейка заголовка (`<th>`), `headerText` — текст в ней (бывший `colText`).
+   * - `filter` — фильтр-контрол колонки (бывший `colFilter`).
+   * - `td` — ячейка данных, `cellText` — контент внутри неё.
+   * - `summary` — ячейка итога в `<tfoot>` (бывший `tf`), `summaryText` — её текст (бывший `sumText`).
+   *
+   * Классы самого фильтра-компонента переехали в `filterProps`: бывший `colFilterClass` →
+   * `filterProps.classes.base`, `colFilterClassBody` → `filterProps.class`.
    */
-  class?: {
-    /**
-     * CSS class for the header cell (`th`).
-     * @type {StyleClass | undefined}
-     */
+  classes?: {
+    /** Ячейка заголовка `<th>`. */
     th?: StyleClass
-
-    /**
-     * CSS class for the column filter input.
-     * @type {StyleClass | undefined}
-     */
-    colFilter?: StyleClass
-
-    /**
-     * CSS class for the column filter container.
-     * @type {StyleClass | "border-none font-normal" | undefined}
-     */
-    colFilterClass?: StyleClass | "border-none font-normal"
-
-    /**
-     * CSS class for the column filter body.
-     * @type {StyleClass | "tm-0 my-1" | undefined}
-     */
-    colFilterClassBody?: StyleClass | "tm-0 my-1"
-
-    /**
-     * CSS class for text content in the column header.
-     * @type {StyleClass | "text-left text-gray-400 dark:text-gray-500" | undefined}
-     */
-    colText?: StyleClass | "text-left text-gray-400 dark:text-gray-500"
-
-    /**
-     * CSS class for table data cells (`td`).
-     * @type {StyleClass | "px-6 py-4 text-gray-800 dark:text-gray-300" | undefined}
-     */
-    td?: StyleClass | "px-6 py-4 text-gray-800 dark:text-gray-300"
-
-    /**
-     * CSS class for text content within cells.
-     * @type {StyleClass | "flex items-center whitespace-pre-line overflow-auto" | undefined}
-     */
+    /** Текст заголовка колонки (бывший `colText`). */
+    headerText?: StyleClass | "text-left text-surface-400 dark:text-surface-500"
+    /** Фильтр-контрол колонки (бывший `colFilter`). */
+    filter?: StyleClass
+    /** Ячейка данных `<td>`. */
+    td?: StyleClass | "px-6 py-4 text-surface-800 dark:text-surface-300"
+    /** Контент внутри ячейки. */
     cellText?: StyleClass | "flex items-center whitespace-pre-line overflow-auto"
-
-    /**
-     * CSS class for the footer cell (`tf`).
-     * @type {StyleClass | undefined}
-     */
-    tf?: StyleClass
-
-    /**
-     * CSS class for summary text in the footer.
-     * @type {StyleClass | "text-left text-gray-400 dark:text-gray-500" | undefined}
-     */
-    sumText?: StyleClass | "text-left text-gray-400 dark:text-gray-500"
+    /** Ячейка итога в `<tfoot>` (бывший `tf`). */
+    summary?: StyleClass
+    /** Текст итога (бывший `sumText`). */
+    summaryText?: StyleClass | "text-left text-surface-400 dark:text-surface-500"
   }
 } & (InputDataType | SelectDataType | DateDataType)
 
-export interface IColumnPrivate extends Omit<IColumn, "dataField"> {
+export interface TableColumnPrivate extends Omit<TableColumn, "dataField"> {
   id: string
   dataField: string
-  isEdit: boolean
+  /** Резолвленный флаг фильтруемости колонки (`column.filterable` → глобальный `filter`). Internal. */
+  filterable: boolean
+  /** Резолвленный флаг сортируемости колонки (`column.sortable` → глобальный `sort`). Internal. */
+  sortable: boolean
+  /** Резолвленный флаг изменяемой ширины (`column.resizable` → глобальный `resizableColumns`). Internal. */
+  resizable: boolean
+  /**
+   * Резолвленный флаг «у ячеек колонки есть редактор» (`column.editable` →
+   * `column.editable.editable` → глобальный `editable`). Само поле `editable` несёт конфиг
+   * редактора, поэтому гейт живёт отдельно. Internal.
+   */
+  hasEditor: boolean
+  /** Compound-API: ключ родительской `<ColumnGroup>` (null — колонка вне группы). Internal. */
+  _groupKey?: number | null
+  /** Compound-API: захваченный `#cell` scoped-slot со `<Column>`. Internal. */
+  _cellSlot?: (props: any) => any
+  /** Compound-API: захваченный `#header` scoped-slot со `<Column>`. Internal. */
+  _headerSlot?: (props: any) => any
+  /** Compound-API: захваченный `#filter` scoped-slot со `<Column>`. Internal. */
+  _filterSlot?: (props: any) => any
 }
 
 /**
  * Summary configuration for table rows.
  */
-export interface ISummary {
+export interface TableSummary {
   /**
    * The field for which the summary is calculated.
    * @type {string | undefined}
@@ -429,257 +430,87 @@ export interface ISummary {
 
   /**
    * Customizes the summary text.
-   * @param {ISummary} summary - The summary configuration.
+   * @param {TableSummary} summary - The summary configuration.
    * @param {string} result - The calculated result.
    * @returns {string}
    */
-  customizeText?(summary: ISummary, result: string): string
+  customizeText?(summary: TableSummary, result: string): string
 }
 
-export interface ISummaryPrivate extends ISummary {
+export interface TableSummaryPrivate extends TableSummary {
   id: string
   dataField: string
   dataType: DataType
 }
 
-type border = string | "border-neutral-200 dark:border-neutral-800"
 /**
- * Represents CSS class styles for different parts of the Table component.
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-table>` (добавляется `ClassesMap`).
+ *
+ * **Element-ключи** (аддитивные, склеиваются с базой через twMerge):
+ * - `toolbar` — панель инструментов `[data-table-toolbar]`.
+ * - `header` / `footer` — слоты шапки и подвала (`[data-table-header]` / `[data-table-footer]`).
+ * - `body` — обёртка таблицы `[data-table-body]`.
+ * - `viewport` — скролл-контейнер `[data-table-viewport]` (бывший `bodyTable`).
+ * - `table` — сам `<table data-table-element>`.
+ * - `thead` / `tbody` / `tfoot` — секции таблицы.
+ * - `th` — ячейка заголовка `[data-table-thead-col]`.
+ * - `td` — ячейка данных `[data-table-tbody-td]` (бывший `cellText`, который вопреки имени шёл на `<td>`).
+ * - `cell` — контент внутри ячейки `[data-table-tbody-cell-template]`.
+ * - `group` / `groupText` — строка группировки и её текст.
+ * - `pagination` — корень [Pagination](./pagination.md).
+ *
+ * **Aspect-ключи** (заменяющие: `props ?? options ?? default`, `""` отключает):
+ * - `mark` — подсветка совпадений поиска (бывший `maskQuery`).
+ * - `rowActive` / `rowHover` — активная строка и hover (бывшие `activeRow` / `hoverRows`).
+ * - `animation` — transition таблицы.
+ * - `border` — общий цвет рамок (бывший `border` / `border.default`).
+ * - `borderTable`, `borderHeader`, `borderFilter`, `borderHead`, `borderCell`, `borderSummary`,
+ *   `borderPagination`, `borderFooter` — рамка конкретного региона; при отсутствии берётся `border`.
  */
-export type ITableStylesClass = {
-  /**
-   * CSS class for the table container.
-   * @type {StyleClass | undefined}
-   */
-  body?: StyleClass
-
-  /**
-   * CSS class for the toolbar section.
-   * @type {StyleClass | undefined}
-   */
-  toolbar?: StyleClass
-
-  /**
-   * CSS class for the table body container.
-   * @type {StyleClass | undefined}
-   */
-  bodyTable?: StyleClass
-
-  /**
-   * CSS class for the header slot.
-   * @type {StyleClass | undefined}
-   */
-  slotHeader?: StyleClass
-
-  /**
-   * CSS class for the footer slot.
-   * @type {StyleClass | undefined}
-   */
-  slotFooter?: StyleClass
-
-  /**
-   * CSS class for the table element.
-   * @type {StyleClass | undefined}
-   */
-  table?: StyleClass
-
-  /**
-   * CSS class for the `<thead>` element.
-   * @type {StyleClass | undefined}
-   */
-  thead?: StyleClass
-
-  /**
-   * CSS class for the `<tbody>` element.
-   * @type {StyleClass | undefined}
-   */
-  tbody?: StyleClass
-
-  /**
-   * CSS class for the `<tfoot>` element.
-   * @type {StyleClass | undefined}
-   */
-  tfoot?: StyleClass
-
-  /**
-   * CSS class for group rows.
-   * @type {StyleClass | undefined}
-   */
-  group?: StyleClass
-
-  /**
-   * CSS class for text in group rows.
-   * @type {StyleClass | undefined}
-   */
-  groupText?: StyleClass
-
-  /**
-   * CSS class for cell text.
-   * @type {StyleClass | undefined}
-   */
-  cellText?: StyleClass
-
-  /**
-   * CSS class for the pagination section.
-   * @type {StyleClass | undefined}
-   */
-  pagination?: StyleClass
-}
+export declare type TableClassKey =
+  | "toolbar"
+  | "header"
+  | "footer"
+  | "body"
+  | "viewport"
+  | "table"
+  | "thead"
+  | "tbody"
+  | "tfoot"
+  | "th"
+  | "td"
+  | "cell"
+  | "group"
+  | "groupText"
+  | "pagination"
+  | "mark"
+  | "rowActive"
+  | "rowHover"
+  | "animation"
+  | "border"
+  | "borderTable"
+  | "borderHeader"
+  | "borderFilter"
+  | "borderHead"
+  | "borderCell"
+  | "borderSummary"
+  | "borderPagination"
+  | "borderFooter"
 
 /**
- * Represents border styles for different parts of the Table component.
+ * Резолвленные не-классовые настройки отображения таблицы — то, что осталось от bag'а `styles`
+ * после выноса классов в `classes` и остальных полей в top-level props.
  */
-export type ITableStylesBorder = {
-  /**
-   * Border style for the table element.
-   * @type {border | "border-0" | undefined}
-   */
-  default?: border | "border-0"
-  /**
-   * Border style for the table element.
-   * @type {border | "border-0" | undefined}
-   */
-  table?: border | "border-0"
-
-  /**
-   * Border style for the header section.
-   * @type {border | "border-b-0" | undefined}
-   */
-  header?: border | "border-b-0"
-
-  /**
-   * Border style for the filter section.
-   * @type {border | "border-r-0" | undefined}
-   */
-  filter?: border | "border-r-0"
-
-  /**
-   * Border style for the `<thead>` element.
-   * @type {border | "border-b-0" | undefined}
-   */
-  head?: border | "border-b-0"
-
-  /**
-   * Border style for table cells.
-   * @type {border | "border-r-0 border-b-0" | undefined}
-   */
-  cell?: border | "border-r-0 border-b-0"
-
-  /**
-   * Border style for the summary row.
-   * @type {border | "border-t-0" | undefined}
-   */
-  summary?: border | "border-t-0"
-
-  /**
-   * Border style for the pagination section.
-   * @type {border | "border-t-0" | undefined}
-   */
-  pagination?: border | "border-t-0"
-
-  /**
-   * Border style for the footer section.
-   * @type {border | "border-t-0" | undefined}
-   */
-  footer?: border | "border-t-0"
-}
-
-/**
- * Represents the overall styles and configuration for the Table component.
- */
-export interface ITableStyles {
-  /**
-   * CSS class styles for various parts of the Table component.
-   * @type {ITableStylesClass | undefined}
-   */
-  class?: ITableStylesClass
-
-  /**
-   * The width of the table.
-   * @type {TWidth | undefined}
-   */
-  width?: TWidth
-
-  /**
-   * The height of the table.
-   * @type {THeight | undefined}
-   */
-  height?: THeight
-
-  /**
-   * Animation style applied to the table.
-   * @type {"transition-all duration-500" | "transition-none" | string | undefined}
-   */
-  animation?: "transition-all duration-500" | "transition-none" | string
-
-  /**
-   * Стили для активной (выбранной) строки таблицы.
-   * - `true` - применяет стили по умолчанию
-   * - `string` - применяет кастомные CSS классы
-   * - `false` или `undefined` - отключает стили активной строки
-   * @default "bg-neutral-100/90 dark:bg-neutral-900/50"
-   */
-  activeRow?: string | "bg-neutral-100/90 dark:bg-neutral-900/50" | boolean
-
-  /**
-   * Hover styles for table rows.
-   * @type {string | "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50" | boolean | undefined}
-   */
-  hoverRows?: string | "hover:bg-neutral-100/90 dark:hover:bg-neutral-900/50" | boolean
-
-  /**
-   * Indicates whether striped rows are enabled.
-   * @type {boolean | undefined}
-   */
-  isStripedRows?: boolean
-
-  /**
-   * Indicates whether horizontal lines are displayed between rows.
-   * @type {boolean | undefined}
-   */
-  horizontalLines?: boolean
-
-  /**
-   * Indicates whether vertical lines are displayed between columns.
-   * @type {boolean | undefined}
-   */
-  verticalLines?: boolean
-
-  /**
-   * The border radius applied to the table.
-   * @type {number | undefined}
-   */
-  borderRadiusPx?: number
-
-  /**
-   * The height of table cells.
-   * @type {number | undefined}
-   */
-  heightCell?: number
-
-  /**
-   * Indicates whether filter lines are displayed.
-   * @type {boolean | undefined}
-   */
-  filterLines?: boolean
-
-  /**
-   * The default width for table columns.
-   * @type {"max-width: 600px;min-width:100px;width:auto" | string | undefined}
-   */
-  defaultWidthColumn?: "max-width: 600px;min-width:100px;width:auto" | string
-
-  /**
-   * Query text mask applied to table content.
-   * @type {"font-bold text-theme-700 dark:text-theme-300" | string | undefined}
-   */
-  maskQuery?: "font-bold text-theme-700 dark:text-theme-300" | string
-
-  /**
-   * Border styles for various parts of the table.
-   * @type {border | "border-0 border-b-0 border-t-0 border-r-0" | ITableStylesBorder | undefined}
-   */
-  border?: border | "border-0 border-b-0 border-t-0 border-r-0" | ITableStylesBorder
+export declare type TableSettings = {
+  width: string
+  height: string
+  stripedRows: boolean
+  horizontalLines: boolean
+  verticalLines: boolean
+  filterLines: boolean
+  cellHeight?: number
+  borderRadius: number
+  defaultColumnWidth?: string
 }
 
 /**
@@ -702,42 +533,42 @@ export declare type TableProps = {
   /**
    * Toolbar configuration or visibility toggle.
    * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<IToolbar | boolean> | undefined}
+   * @type {MaybeRef<TableToolbar | boolean> | undefined}
    */
-  toolbar?: MaybeRef<IToolbar | boolean>
+  toolbar?: MaybeRef<TableToolbar | boolean>
 
   /**
    * Enables inline editing for table cells.
    * @type {boolean | undefined}
    */
-  edit?: boolean
+  editable?: boolean
 
   /**
    * Sorting configuration or visibility toggle.
    * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<ISort | boolean> | undefined}
+   * @type {MaybeRef<TableSort | boolean> | undefined}
    */
-  sort?: MaybeRef<ISort | boolean>
+  sort?: MaybeRef<TableSort | boolean>
 
   /**
    * Filtering configuration or visibility toggle.
    * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<IFilter | boolean> | undefined}
+   * @type {MaybeRef<TableFilter | boolean> | undefined}
    */
-  filter?: MaybeRef<IFilter | boolean>
+  filter?: MaybeRef<TableFilter | boolean>
 
   /**
    * Grouping configuration or group field name.
    * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<IGrouping | string> | undefined}
+   * @type {MaybeRef<TableGrouping | string> | undefined}
    */
-  grouping?: MaybeRef<IGrouping | string>
+  grouping?: MaybeRef<TableGrouping | string>
 
   /**
    * Enables column resizing.
    * @type {boolean | undefined}
    */
-  resizedColumns?: boolean
+  resizableColumns?: boolean
 
   /**
    * Pagination configuration or visibility toggle.
@@ -750,57 +581,80 @@ export declare type TableProps = {
    * Enables search functionality.
    * @type {boolean | undefined}
    */
-  search?: boolean
+  searchable?: boolean
 
   /**
    * Configuration for table columns.
    * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<boolean | Array<IColumn>> | undefined}
+   * @type {MaybeRef<boolean | Array<TableColumn>> | undefined}
    */
-  columns?: MaybeRef<boolean | Array<IColumn>>
+  columns?: MaybeRef<boolean | Array<TableColumn>>
 
   /**
    * Configuration for summary rows.
    * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<boolean | Array<ISummary>> | undefined}
+   * @type {MaybeRef<boolean | Array<TableSummary>> | undefined}
    */
-  summary?: MaybeRef<boolean | Array<ISummary>>
+  summary?: MaybeRef<boolean | Array<TableSummary>>
 
   /**
    * Number of rows visible in the table.
    * @type {number | undefined}
    */
-  countVisibleRows?: number
+  visibleRows?: number
 
   /**
    * Number of loading rows displayed during data fetching.
    * @type {number | undefined}
    */
-  sizeLoadingRows?: number
+  loadingRows?: number
 
   /**
    * Message displayed when there is no data.
    * @type {string | undefined}
    */
-  noData?: string
+  emptyText?: string
 
   /**
    * Message displayed when no columns are defined.
    * @type {string | undefined}
    */
-  noColumn?: string
+  emptyColumnsText?: string
+
+  /**
+   * Accessible table caption, rendered as a visually-hidden `<caption>` element
+   * (for screen readers). Use the `caption` slot to provide HTML content instead.
+   * @type {string | undefined}
+   */
+  caption?: string
+
+  /**
+   * Row virtualization for large client-side tables (renders only the visible window).
+   *
+   * - `undefined` (default) — auto-enabled when row count exceeds the threshold
+   *   (client-side, non-grouped, non-paginated tables only).
+   * - `false` — always render every row (legacy behavior).
+   * - `true` — force-enable regardless of row count.
+   * - object — force-enable with config: `rowHeight` (fixed px, default `heightCell + 9`),
+   *   `overscan` (extra rows above/below, default `6`), `threshold` (auto cutoff, default `100`).
+   *
+   * Not applied with `grouping`, active `pagination`, or `asyncData: true`/function mode.
+   * Fixed row height — multi-line cells are clipped to `rowHeight`.
+   * @type {boolean | { rowHeight?: number; overscan?: number; threshold?: number } | undefined}
+   */
+  virtual?: boolean | { rowHeight?: number; overscan?: number; threshold?: number }
 
   /**
    * Number of rows simulated during data loading.
    * @type {number | 100 | 1000 | 10000 | undefined}
    */
-  countDataOnLoading?: number | 100 | 1000 | 10000
+  loadingThreshold?: number | 100 | 1000 | 10000
 
   /**
    * Total number of rows in the data source.
    * @type {number | undefined}
    */
-  totalCount?: number
+  total?: number
 
   /**
    * Configuration for asynchronous data loading.
@@ -812,15 +666,15 @@ export declare type TableProps = {
    * - `string` - URL mode: fetches all data once on mount from the specified URL.
    *   Returns array of data. All standard features (filters, sort, search, pagination) work on client-side.
    *
-   * - `IAsyncDataConfig` (object) - Config mode: same as URL mode but with additional fetch options
+   * - `TableAsyncDataConfig` (object) - Config mode: same as URL mode but with additional fetch options
    *   (headers, query parameters).
    *
-   * - `(params: IAsyncDataParams) => Promise<IAsyncDataResult>` (function) - Function mode: user-defined async function.
+   * - `(params: TableAsyncDataParams) => Promise<TableAsyncDataResult>` (function) - Function mode: user-defined async function.
    *   Called on mount and when filters/sort/search/pagination change. Must return dataSource and totalCount.
    *
-   * @type {true | string | IAsyncDataConfig | ((params: IAsyncDataParams) => Promise<IAsyncDataResult>) | undefined}
+   * @type {true | string | TableAsyncDataConfig | ((params: TableAsyncDataParams) => Promise<TableAsyncDataResult>) | undefined}
    */
-  asyncData?: true | string | IAsyncDataConfig | ((params: IAsyncDataParams) => Promise<IAsyncDataResult>)
+  asyncData?: true | string | TableAsyncDataConfig | ((params: TableAsyncDataParams) => Promise<TableAsyncDataResult>)
 
   /**
    * Custom CSS class for the table container.
@@ -829,17 +683,70 @@ export declare type TableProps = {
   class?: StyleClass
 
   /**
-   * Custom styles configuration for the table.
-   * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<ITableStyles> | undefined}
+   * Карта классов внутренних элементов и aspect-ключей; `root` ≡ `class`. См. `TableClassKey`.
+   * @type {ClassesMap<TableClassKey> | undefined}
    */
-  styles?: MaybeRef<ITableStyles>
+  classes?: ClassesMap<TableClassKey>
+
+  /**
+   * Ширина таблицы. Число трактуется как px. Бывший `styles.width`.
+   * @type {TWidth | undefined}
+   */
+  width?: TWidth
+
+  /**
+   * Высота таблицы. Число трактуется как px. Бывший `styles.height`.
+   * @type {THeight | undefined}
+   */
+  height?: THeight
+
+  /**
+   * Чередующаяся заливка строк. Бывший `styles.isStripedRows`.
+   * @type {boolean | undefined}
+   */
+  stripedRows?: boolean
+
+  /**
+   * Горизонтальные линии между строками. Бывший `styles.horizontalLines`.
+   * @type {boolean | undefined}
+   */
+  horizontalLines?: boolean
+
+  /**
+   * Вертикальные линии между колонками. Бывший `styles.verticalLines`.
+   * @type {boolean | undefined}
+   */
+  verticalLines?: boolean
+
+  /**
+   * Линии вокруг строки фильтров. Бывший `styles.filterLines`.
+   * @type {boolean | undefined}
+   */
+  filterLines?: boolean
+
+  /**
+   * Высота ячейки в px. Бывший `styles.heightCell`.
+   * @type {number | undefined}
+   */
+  cellHeight?: number
+
+  /**
+   * Радиус скругления таблицы в px (`0` при `mode: "underlined"`). Бывший `styles.borderRadiusPx`.
+   * @type {number | undefined}
+   */
+  borderRadius?: number
+
+  /**
+   * Ширина колонки по умолчанию (CSS-строка). Бывший `styles.defaultWidthColumn`.
+   * @type {"max-width: 600px;min-width:100px;width:auto" | string | undefined}
+   */
+  defaultColumnWidth?: "max-width: 600px;min-width:100px;width:auto" | string
 }
 
 interface DynamicSlots {
   [key: string]: (args: {
     key: string
-    column: IColumn
+    column: TableColumn
     rowData: Record<string, any>
     value: string
     valueWithMarker: string
@@ -852,6 +759,14 @@ export declare type TableSlots = {
   header(): VNode[]
   footer(): VNode[]
   group(args: { item: string; length: number }): VNode[]
+  /** Accessible `<caption>` content (HTML allowed). Overrides the `caption` prop. */
+  caption(): VNode[]
+  /** Empty state shown when there is no data. Overrides the `noData` text. */
+  empty(): VNode[]
+  /** Empty state shown when no columns are defined. Overrides the `noColumn` text. */
+  "empty-columns"(): VNode[]
+  /** Empty state shown when filters/search produce no rows. Overrides the `noFilter` text. */
+  "empty-filter"(): VNode[]
 } & DynamicSlots
 /**
  * Defines the events emitted by the Table component.
@@ -861,19 +776,19 @@ export declare type TableEmits = {
    * Emitted when sorting is applied.
    * @param event
    * @param {Object} payload - The sorting payload.
-   * @param {Array<IColumnPrivate>} payload.dataColumns - The current state of all columns.
+   * @param {Array<TableColumnPrivate>} payload.dataColumns - The current state of all columns.
    * @param {Sorted} payload.sortedFields - The fields and their sorting order.
    */
-  (event: "sort", payload: { dataColumns: Array<IColumnPrivate>; sortedFields: Sorted }): void
+  (event: "sort", payload: { dataColumns: Array<TableColumnPrivate>; sortedFields: Sorted }): void
 
   /**
    * Emitted when filtering is applied.
    * @param event
    * @param {Object} payload - The filtering payload.
-   * @param {Array<IColumnPrivate>} payload.dataColumns - The current state of all columns.
+   * @param {Array<TableColumnPrivate>} payload.dataColumns - The current state of all columns.
    * @param {Filters} payload.filteredFields - The fields and their filter values.
    */
-  (event: "filter", payload: { dataColumns: Array<IColumnPrivate>; filteredFields: Filters }): void
+  (event: "filter", payload: { dataColumns: Array<TableColumnPrivate>; filteredFields: Filters }): void
 
   /**
    * Emitted when a search query is applied.
@@ -901,7 +816,7 @@ export declare type TableEmits = {
    * @param event
    * @param {Page} payload - The new page size.
    */
-  (event: "switch-size-page", payload: Page): void
+  (event: "switch-page-size", payload: Page): void
 
   /**
    * Emitted before editing a cell.
@@ -910,9 +825,9 @@ export declare type TableEmits = {
    * @param {any} payload.newValue - The new value for the cell.
    * @param {any} payload.oldValue - The previous value of the cell.
    * @param {string} payload._key - The key identifying the row.
-   * @param {IColumnPrivate} payload.column - The column being edited.
+   * @param {TableColumnPrivate} payload.column - The column being edited.
    */
-  (event: "before-edit-cell", payload: { newValue: any; oldValue: any; _key: string; column: IColumnPrivate }): void
+  (event: "before-edit-cell", payload: { newValue: any; oldValue: any; _key: string; column: TableColumnPrivate }): void
 
   /**
    * Emitted after editing a cell.
@@ -921,9 +836,9 @@ export declare type TableEmits = {
    * @param {any} payload.newValue - The new value for the cell.
    * @param {any} payload.oldValue - The previous value of the cell.
    * @param {string} payload._key - The key identifying the row.
-   * @param {IColumnPrivate} payload.column - The column that was edited.
+   * @param {TableColumnPrivate} payload.column - The column that was edited.
    */
-  (event: "after-edit-cell", payload: { newValue: any; oldValue: any; _key: string; column: IColumnPrivate }): void
+  (event: "after-edit-cell", payload: { newValue: any; oldValue: any; _key: string; column: TableColumnPrivate }): void
 
   /**
    * Emitted before editing a row.
@@ -980,7 +895,7 @@ export declare type TableEmits = {
    * @param event
    * @param {Object} payload - The cell click payload.
    * @param {HTMLElement} payload.eventEl - The HTML element triggering the click.
-   * @param {IColumnPrivate} payload.column - The column of the clicked cell.
+   * @param {TableColumnPrivate} payload.column - The column of the clicked cell.
    * @param {any} payload.value - The value of the clicked cell.
    * @param {any} payload.valueWithMarker - The marked value of the clicked cell.
    * @param {any} payload.data - The data associated with the clicked row.
@@ -990,7 +905,7 @@ export declare type TableEmits = {
     event: "click-cell",
     payload: {
       eventEl: HTMLElement
-      column: IColumnPrivate
+      column: TableColumnPrivate
       value: any
       valueWithMarker: any
       data: any
@@ -1015,6 +930,14 @@ export declare type TableEmits = {
  * Exposes state, props, and methods for interacting with the Table component programmatically.
  */
 export declare type TableExpose = {
+  // ---REF-LINK----------------------------
+  /**
+   * Корневой DOM-элемент компонента (`<div data-table-component>`).
+   * `undefined` до mount и при SSR.
+   * @type {HTMLElement | undefined}
+   */
+  componentTable: HTMLElement | undefined
+
   // ---STATE-------------------------
   /**
    * Уникальный идентификатор текущей активной (выбранной) строки.
@@ -1121,51 +1044,51 @@ export declare type TableExpose = {
 
   /**
    * The number of rows to simulate during data loading.
-   * @type {TableProps["countDataOnLoading"]}
+   * @type {TableProps["loadingThreshold"]}
    */
-  countDataOnLoading: TableProps["countDataOnLoading"]
+  countDataOnLoading: TableProps["loadingThreshold"]
 
   /**
-   * The mask applied to query text.
-   * @type {ITableStyles["maskQuery"]}
+   * Класс подсветки совпадений поиска (aspect-ключ `classes.mark`).
+   * @type {StyleClass}
    */
-  classMaskQuery: ITableStyles["maskQuery"]
+  classMark: StyleClass
 
   /**
    * The message displayed when there is no data.
-   * @type {TableProps["noData"]}
+   * @type {TableProps["emptyText"]}
    */
-  noData: TableProps["noData"]
+  noData: TableProps["emptyText"]
 
   /**
    * The message displayed when no columns are defined.
-   * @type {TableProps["noData"]}
+   * @type {TableProps["emptyText"]}
    */
-  noColumn: TableProps["noData"]
+  noColumn: TableProps["emptyText"]
 
   /**
    * The message displayed when no filters are applied.
-   * @type {IFilter["noFilter"]}
+   * @type {TableFilter["noFilter"]}
    */
-  noFilter: IFilter["noFilter"]
+  noFilter: TableFilter["noFilter"]
 
   /**
    * The icon used for sorting.
-   * @type {ISort["icon"]}
+   * @type {TableSort["icon"]}
    */
-  iconSort: ISort["icon"]
+  iconSort: TableSort["icon"]
 
   /**
    * Indicates whether column resizing is enabled.
-   * @type {TableProps["resizedColumns"]}
+   * @type {TableProps["resizableColumns"]}
    */
-  resizedColumns: TableProps["resizedColumns"]
+  resizedColumns: TableProps["resizableColumns"]
 
   /**
    * Indicates whether cell editing is enabled.
-   * @type {TableProps["edit"]}
+   * @type {TableProps["editable"]}
    */
-  isEditCells: TableProps["edit"]
+  isEditCells: TableProps["editable"]
 
   /**
    * The total number of rows in the data source.
@@ -1175,9 +1098,9 @@ export declare type TableExpose = {
 
   /**
    * The field used for grouping data.
-   * @type {IGrouping["groupField"] | null}
+   * @type {TableGrouping["groupField"] | null}
    */
-  groupField: IGrouping["groupField"] | null
+  groupField: TableGrouping["groupField"] | null
 
   /**
    * Indicates whether filtering is enabled.
@@ -1218,39 +1141,39 @@ export declare type TableExpose = {
 
   /**
    * The current page size for pagination.
-   * @type {TablePagination["sizePage"]}
+   * @type {TablePagination["pageSize"]}
    */
-  sizePage: TablePagination["sizePage"]
+  pageSize: TablePagination["pageSize"]
 
   /**
    * The number of visible pages in pagination.
-   * @type {TablePagination["visibleNumberPages"]}
+   * @type {TablePagination["visiblePages"]}
    */
-  visibleNumberPages: TablePagination["visibleNumberPages"]
+  visibleNumberPages: TablePagination["visiblePages"]
 
   /**
    * The available sizes for the page size selector.
-   * @type {TablePagination["sizesSelector"]}
+   * @type {TablePagination["pageSizes"]}
    */
-  sizesSelector: TablePagination["sizesSelector"]
+  sizesSelector: TablePagination["pageSizes"]
 
   /**
    * Indicates whether informational text is displayed in pagination.
-   * @type {TablePagination["isInfoText"]}
+   * @type {TablePagination["infoText"]}
    */
-  isInfoText: TablePagination["isInfoText"]
+  isInfoText: TablePagination["infoText"]
 
   /**
    * Indicates whether the page size selector is visible.
-   * @type {TablePagination["isPageSizeSelector"]}
+   * @type {TablePagination["pageSizeSelector"]}
    */
-  isPageSizeSelector: TablePagination["isPageSizeSelector"]
+  isPageSizeSelector: TablePagination["pageSizeSelector"]
 
   /**
-   * Indicates whether navigation buttons are hidden in pagination.
-   * @type {TablePagination["isHiddenNavigationButtons"]}
+   * Показываются ли кнопки навигации пагинации (`navigationButtons`, default `true`).
+   * @type {TablePagination["navigationButtons"]}
    */
-  isHiddenNavigationButtons: TablePagination["isHiddenNavigationButtons"]
+  isNavigationButtons: TablePagination["navigationButtons"]
 
   // ---CELL--------------------------------
   /**
@@ -1261,9 +1184,9 @@ export declare type TableExpose = {
 
   /**
    * The number of rows visible in the table.
-   * @type {ReadRef<TableProps["countVisibleRows"]>}
+   * @type {ReadRef<TableProps["visibleRows"]>}
    */
-  countVisibleRows: ReadRef<TableProps["countVisibleRows"]>
+  countVisibleRows: ReadRef<TableProps["visibleRows"]>
 
   /**
    * The calculated height of the table.
@@ -1286,15 +1209,15 @@ export declare type TableExpose = {
 
   /**
    * The current column definitions for the table.
-   * @type {Array<IColumnPrivate>}
+   * @type {Array<TableColumnPrivate>}
    */
-  dataColumns: Array<IColumnPrivate>
+  dataColumns: Array<TableColumnPrivate>
 
   /**
    * The current summary configurations for the table.
-   * @type {Array<ISummaryPrivate>}
+   * @type {Array<TableSummaryPrivate>}
    */
-  dataSummary: Array<ISummaryPrivate>
+  dataSummary: Array<TableSummaryPrivate>
 
   /**
    * The computed summary data for the table.
@@ -1304,10 +1227,12 @@ export declare type TableExpose = {
 
   // ---STYLE-------------------------------
   /**
-   * The styles applied to the table.
-   * @type {ITableStyles}
+   * Резолвленные не-классовые настройки отображения (`width`, `height`, `stripedRows`,
+   * `horizontalLines`, `verticalLines`, `filterLines`, `cellHeight`, `borderRadius`,
+   * `defaultColumnWidth`). Bag `styles` снят в 1.0.0 — это его безклассовый остаток.
+   * @type {TableSettings}
    */
-  styles: ITableStyles
+  settings: TableSettings
 
   /**
    * The calculated style for the table body.
@@ -1329,6 +1254,8 @@ export declare type TableExpose = {
 
   /**
    * Indicates whether dark mode is active.
+   * Источник — `optionsTheme.darkModeSelector` (наличие селектора в DOM), а при отсутствии
+   * конфигурации — `prefers-color-scheme: dark`.
    * @type {boolean}
    */
   isDark: boolean
@@ -1362,19 +1289,19 @@ export declare type TableExpose = {
   /**
    * Updates the value of a specific cell in the table.
    * @param {string} _key - The unique key identifying the row containing the cell to update.
-   * @param {IColumnPrivate} column - The column definition that identifies the cell to update.
+   * @param {TableColumnPrivate} column - The column definition that identifies the cell to update.
    * @param {any} value - The new value to set for the cell.
    * @returns {any | null} - The updated cell data if successful, or null if the cell or row was not found.
    */
-  updateCell(_key?: string, column?: IColumnPrivate, value?: any): any | null
+  updateCell(_key?: string, column?: TableColumnPrivate, value?: any): any | null
 
   /**
    * Retrieves a column by its data field.
-   * @param {IColumn["dataField"]} dataField - The data field of the column.
+   * @param {TableColumn["dataField"]} dataField - The data field of the column.
    * @param {number} [index] - The index of the column if there are duplicates.
-   * @returns {IColumnPrivate | undefined} - The column configuration or `undefined` if not found.
+   * @returns {TableColumnPrivate | undefined} - The column configuration or `undefined` if not found.
    */
-  getColumn(dataField: IColumn["dataField"], index?: number): IColumnPrivate | undefined
+  getColumn(dataField: TableColumn["dataField"], index?: number): TableColumnPrivate | undefined
 
   /**
    * Updates the data source of the table.
@@ -1384,17 +1311,17 @@ export declare type TableExpose = {
 
   /**
    * Sorts the table by a specified column.
-   * @param {IColumn["dataField"]} dataField - The field to sort by.
+   * @param {TableColumn["dataField"]} dataField - The field to sort by.
    * @param {Sort} [value] - The sorting direction (`asc`, `desc`, or `null`).
    */
-  sorting(dataField: IColumn["dataField"], value?: Sort): void
+  sorting(dataField: TableColumn["dataField"], value?: Sort): void
 
   /**
    * Filters the table by a specified column.
-   * @param {IColumn["dataField"]} dataField - The field to filter by.
+   * @param {TableColumn["dataField"]} dataField - The field to filter by.
    * @param {any} value - The filter value.
    */
-  filtering(dataField: IColumn["dataField"], value: any): void
+  filtering(dataField: TableColumn["dataField"], value: any): void
 
   /**
    * Searches the table using a query.
@@ -1410,9 +1337,9 @@ export declare type TableExpose = {
 
   /**
    * Changes the page size of the table.
-   * @param {Page} sizePage - The new page size.
+   * @param {Page} pageSize - The new page size.
    */
-  switchSizePage(sizePage: Page): void
+  switchPageSize(pageSize: Page): void
 
   /**
    * Starts the loading state for the table.
@@ -1439,33 +1366,147 @@ export declare type TableExpose = {
    * Only works when asyncData is configured as a function.
    */
   reloadData(): Promise<void>
+
+  /**
+   * Устанавливает фокус на корневой контейнер таблицы (`tabindex="-1"` — только программный фокус).
+   * @param {FocusOptions} [options] - Стандартные опции `HTMLElement.focus()`, например `preventScroll`.
+   */
+  focus(options?: FocusOptions): void
 }
 export declare type TableOption = Pick<
   TableProps,
   | "mode"
   | "toolbar"
-  | "edit"
+  | "editable"
   | "sort"
   | "filter"
   | "grouping"
-  | "resizedColumns"
+  | "resizableColumns"
   | "pagination"
-  | "search"
-  | "countVisibleRows"
-  | "sizeLoadingRows"
-  | "noData"
-  | "noColumn"
-  | "countDataOnLoading"
+  | "searchable"
+  | "visibleRows"
+  | "loadingRows"
+  | "emptyText"
+  | "emptyColumnsText"
+  | "loadingThreshold"
+  | "virtual"
   | "class"
-  | "styles"
+  | "classes"
+  | "width"
+  | "height"
+  | "stripedRows"
+  | "horizontalLines"
+  | "verticalLines"
+  | "filterLines"
+  | "cellHeight"
+  | "borderRadius"
+  | "defaultColumnWidth"
 >
+
+// ---COMPOUND API (<Column> / <ColumnGroup>) -----------------------------------
+// Renderless descriptors для compound-режима `<Table><Column>`. Свой DOM не рендерят —
+// <Table> читает их props/slots через VNode-walk (см. Table.vue) и строит <th>/ячейки сам.
+// Schema-driven `:columns` при наличии выигрывает (backward compat).
+
+/**
+ * Props for the `<Column>` descriptor. Полностью повторяют [TableColumn](#TableColumn) — одна колонка
+ * в compound-режиме. В шаблоне kebab-case: `data-field`, `is-sort`, `is-filter`, `data-type`…
+ */
+export declare type ColumnProps = TableColumn
+
+/**
+ * Scoped slots `<Column>`. Пробрасываются `<Table>` в рендер соответствующей колонки.
+ */
+export declare type ColumnSlots = {
+  /**
+   * Кастомный рендер ячейки колонки (замена дефолтного `markerParts`-рендера). Slot-props
+   * совпадают с `cellTemplate`-slot на `<Table>`.
+   */
+  cell(props: {
+    rowData: Record<string, any>
+    value: any
+    valueWithMarker: string
+    column: TableColumnPrivate
+    isCloseEditor: (isActive: boolean) => void
+    editValue: (value: any) => void
+  }): VNode[]
+  /**
+   * Кастомный рендер заголовка колонки (замена `caption`-текста в `<th>`).
+   */
+  header(props: { column: TableColumnPrivate }): VNode[]
+  /**
+   * Кастомный рендер фильтра колонки (замена встроенного Input/Select/Calendar-фильтра).
+   */
+  filter(props: { column: TableColumnPrivate }): VNode[]
+  /**
+   * Default slot — для вложения `<Column>` внутрь `<ColumnGroup>`; напрямую не рендерится.
+   */
+  default(): VNode[]
+}
+
+/**
+ * `<Column>` — renderless column descriptor for the compound `<Table>` API.
+ *
+ * ```vue
+ * <Table :data-source="rows">
+ *   <Column data-field="name" caption="Имя" is-sort>
+ *     <template #cell="{ rowData }"><strong>{{ rowData.name }}</strong></template>
+ *   </Column>
+ * </Table>
+ * ```
+ */
+declare class Column extends ClassComponent<ColumnProps, ColumnSlots, null, NonNullable<unknown>> {}
+
+/**
+ * Props for the `<ColumnGroup>` descriptor (multi-level headers).
+ */
+export declare type ColumnGroupProps = {
+  /**
+   * Заголовок группы — рендерится в верхнем ряду шапки как `<th colspan>` над колонками группы.
+   * @type {string | undefined}
+   */
+  caption?: string
+
+  /**
+   * Custom CSS class для группового `<th>`.
+   * @type {StyleClass | undefined}
+   */
+  class?: StyleClass
+}
+
+/**
+ * Slots of the `<ColumnGroup>` descriptor.
+ */
+export declare type ColumnGroupSlots = {
+  /**
+   * Default slot — вложенные `<Column>` группы.
+   */
+  default(): VNode[]
+}
+
+/**
+ * `<ColumnGroup>` — renderless multi-level-header descriptor for the compound `<Table>` API.
+ *
+ * ```vue
+ * <Table :data-source="rows">
+ *   <ColumnGroup caption="Личное">
+ *     <Column data-field="name" />
+ *     <Column data-field="age" type="number" />
+ *   </ColumnGroup>
+ * </Table>
+ * ```
+ */
+declare class ColumnGroup extends ClassComponent<ColumnGroupProps, ColumnGroupSlots, null, NonNullable<unknown>> {}
 
 // ---------------------------------------
 
 declare module "vue" {
   export interface GlobalComponents {
     Table: GlobalComponentConstructor<Table>
+    Column: GlobalComponentConstructor<Column>
+    ColumnGroup: GlobalComponentConstructor<ColumnGroup>
   }
 }
 
 export default Table
+export { Column, ColumnGroup }

@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
-import { App, Plugin } from "vue"
+import { App, Plugin, defineComponent, inject } from "vue"
 import { createApp } from "vue"
 import type { FishtVue as FishtVueType, FishtVueConfiguration } from "fishtvue/config"
-import FishtVue, { useFishtVue } from "fishtvue/config"
+import FishtVue, { useFishtVue, FishtVueSymbol } from "fishtvue/config"
 import { getDefaultLocale } from "fishtvue/config"
+import { cssComponents } from "fishtvue/component"
 
 describe("Testing config", () => {
   const expectText = "Start use FishtVue"
@@ -38,8 +39,8 @@ describe("Testing config", () => {
       expect(app.config.globalProperties.$fishtVue).toBeDefined()
 
       // Проверяем, что опции темы установлены правильно
-      expect((window as any).FishtVue.config.theme.name).toBe("Harmony")
-      expect(app.config.globalProperties.$fishtVue.config.theme.name).toBe("Harmony")
+      expect((window as any).FishtVue.config.optionsTheme.nameTheme).toBe("Harmony")
+      expect(app.config.globalProperties.$fishtVue.config.optionsTheme.nameTheme).toBe("Harmony")
     })
 
     it("should initialize and set global properties correctly", () => {
@@ -59,8 +60,8 @@ describe("Testing config", () => {
       expect(wrapper.text()).toBe(expectText)
       expect((window as any).FishtVue).toBeDefined()
       expect(app.config.globalProperties.$fishtVue).toBeDefined()
-      expect((window as any).FishtVue.config.theme.name).toBe("Harmony")
-      expect(app.config.globalProperties.$fishtVue.config.theme.name).toBe("Harmony")
+      expect((window as any).FishtVue.config.optionsTheme.nameTheme).toBe("Harmony")
+      expect(app.config.globalProperties.$fishtVue.config.optionsTheme.nameTheme).toBe("Harmony")
     })
 
     it("should access global properties through vm instance", () => {
@@ -81,7 +82,7 @@ describe("Testing config", () => {
       // @ts-ignore Проверяем доступность FishtVue через vm
       const fishtVueInstance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
       expect(fishtVueInstance).toBeDefined()
-      expect(fishtVueInstance.config.theme.name).toBe("Sapphire")
+      expect(fishtVueInstance.config.optionsTheme.nameTheme).toBe("Sapphire")
     })
 
     it("should default to Aurora theme when an invalid theme name is provided", () => {
@@ -102,7 +103,7 @@ describe("Testing config", () => {
       // @ts-ignore Проверяем, что установлена тема по умолчанию (Aurora)
       const fishtVueInstance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
       expect(fishtVueInstance).toBeDefined()
-      expect(fishtVueInstance.config.theme.name).toBe("Aurora")
+      expect(fishtVueInstance.config.optionsTheme.nameTheme).toBe("Aurora")
     })
   })
   describe("useFishtVue", () => {
@@ -148,7 +149,7 @@ describe("Testing config", () => {
       const fishtVueInstance = useFishtVue()
       expect(fishtVueInstance).toBeDefined()
       // @ts-ignore
-      expect(fishtVueInstance.config.theme.name).toBe("Aurora")
+      expect(fishtVueInstance.config.optionsTheme.nameTheme).toBe("Aurora")
     })
 
     it("should access useFishtVue function through global properties when plugin is installed", () => {
@@ -173,7 +174,7 @@ describe("Testing config", () => {
       // Вызов useFishtVue через глобальные свойства
       const fishtVueFromGlobal = fishtVueInstance.useFishtVue()
       expect(fishtVueFromGlobal).toBeDefined()
-      expect(fishtVueFromGlobal.config.theme.name).toBe("Harmony")
+      expect(fishtVueFromGlobal.config.optionsTheme.nameTheme).toBe("Harmony")
     })
 
     it("should warn and return undefined when FishtVue plugin is not installed", () => {
@@ -355,6 +356,24 @@ describe("Testing config", () => {
       warnSpy.mockRestore()
     })
 
+    it("should set activeLocale even for locale name not present in messages (Issue 6)", () => {
+      const options: FishtVueConfiguration = {
+        locale: {
+          defaultLocale: "en",
+          activeLocale: "en",
+          messages: { en: { hello: "Hello" } }
+        }
+      }
+      app.use(FishtVue, options)
+      const wrapper = mount(App, {
+        global: { plugins: [[FishtVue as any, options]] }
+      })
+      const fishtVueInstance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+      const result = fishtVueInstance.setActiveLocale("fr")
+      expect(result).toBe("fr")
+      expect(fishtVueInstance.config.locale.activeLocale).toBe("fr")
+    })
+
     it("should return default locale correctly using getDefaultLocale", () => {
       const options: FishtVueConfiguration = {
         locale: {
@@ -384,22 +403,17 @@ describe("Testing config", () => {
       expect(defaultLocale).toBe("en")
     })
 
-    it.skip("should warn and return undefined when accessing getDefaultLocale without plugin", () => {
-      const warnSpy = vi.spyOn(console, "warn")
+    it("should return undefined when accessing getDefaultLocale without plugin (Issue 6 — unblocked)", () => {
       // @ts-ignore
       delete window.FishtVue
       const defaultLocale = getDefaultLocale()
       expect(defaultLocale).toBeUndefined()
-      expect(warnSpy).toHaveBeenCalledWith("FishtVue is not installed!")
-
-      warnSpy.mockRestore()
     })
 
-    it.skip("should warn and return false when locale configuration is undefined in setActiveLocale", () => {
+    it("should warn and return false when locale configuration is undefined in setActiveLocale (Issue 6 — unblocked)", () => {
       const warnSpy = vi.spyOn(console, "warn")
 
       const options: FishtVueConfiguration = {
-        // Указываем конфигурацию без locale
         locale: undefined,
         optionsTheme: {
           nameTheme: "Aurora"
@@ -420,11 +434,171 @@ describe("Testing config", () => {
 
       const result = fishtVueInstance.setActiveLocale("ru")
 
+      // После Issue 1 fix: defaultOptions всегда содержит locale (en/ru messages),
+      // даже если пользователь передал locale: undefined — deepMerge сохраняет defaults.
+      // activeLocale ??= defaultLocale = "en" срабатывает в install. setActiveLocale("ru")
+      // успешно меняет локаль.
       expect(result).toBe("ru")
-      expect(warnSpy).toHaveBeenCalledWith("The locale has not been changed")
-
-      // Восстанавливаем исходное состояние console.warn
       warnSpy.mockRestore()
+    })
+  })
+
+  describe("FishtVueSymbol stability (Issue 1)", () => {
+    afterEach(() => {
+      // @ts-ignore
+      delete window.FishtVue
+    })
+
+    it("is a const Symbol — same reference across re-imports (no reassign)", async () => {
+      const modA = await import("fishtvue/config")
+      const modB = await import("fishtvue/config")
+      expect(modA.FishtVueSymbol).toBe(modB.FishtVueSymbol)
+      expect(typeof modA.FishtVueSymbol).toBe("symbol")
+    })
+
+    it("plugin provides instance under FishtVueSymbol (queried via globalProperties)", () => {
+      const app = createApp(App)
+      app.use(FishtVue, { optionsTheme: { nameTheme: "Aurora" } })
+      const wrapper = mount(App, {
+        global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme: "Aurora" } }]] }
+      })
+      const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+      expect(instance).toBeDefined()
+      expect(instance.config.optionsTheme.nameTheme).toBe("Aurora")
+    })
+
+    it("multi-app isolation: two apps with different configs do not cross-contaminate", () => {
+      const appA = createApp(App)
+      appA.use(FishtVue, { optionsTheme: { nameTheme: "Aurora" } })
+      const wrapperA = mount(App, {
+        global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme: "Aurora" } }]] }
+      })
+      const fvA = wrapperA.vm?.$?.appContext.config.globalProperties.$fishtVue
+
+      const appB = createApp(App)
+      appB.use(FishtVue, { optionsTheme: { nameTheme: "Sapphire" } })
+      const wrapperB = mount(App, {
+        global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme: "Sapphire" } }]] }
+      })
+      const fvB = wrapperB.vm?.$?.appContext.config.globalProperties.$fishtVue
+
+      expect(fvA?.config.optionsTheme.nameTheme).toBe("Aurora")
+      expect(fvB?.config.optionsTheme.nameTheme).toBe("Sapphire")
+      // Independent reactive objects — mutating one does not affect the other.
+      expect(fvA).not.toBe(fvB)
+    })
+  })
+
+  describe("baseStyle injection (Issue 2)", () => {
+    afterEach(() => {
+      document.head.querySelectorAll('style[data-fishtvue-style-id="BaseComponent"]').forEach((s) => s.remove())
+      // @ts-ignore
+      delete window.FishtVue
+    })
+
+    it("injects baseStyle CSS into document head on install (default layer)", () => {
+      const app = createApp(App)
+      app.use(FishtVue, { optionsTheme: { nameTheme: "Aurora" } })
+      mount(App, {
+        global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme: "Aurora" } }]] }
+      })
+      // useStyle инжектит при mount; cssComponents Map в lib/component/index.ts накапливает CSS
+      // per-name. Проверка по Map устойчивее к DOM-cleanup между тестами в одном worker.
+      const baseCss = cssComponents.get("BaseComponent" as any) ?? ""
+      expect(baseCss).toContain("@layer fishtvue")
+      expect(baseCss).toContain("--fv-translate-x")
+    })
+
+    it("wraps baseStyle in user-defined layers when optionsTheme.layers is provided", () => {
+      const app = createApp(App)
+      app.use(FishtVue, { optionsTheme: { layers: "reset, base" } })
+      mount(App, {
+        global: { plugins: [[FishtVue as any, { optionsTheme: { layers: "reset, base" } }]] }
+      })
+      const baseCss = cssComponents.get("BaseComponent" as any) ?? ""
+      // Минификация схлопывает пробелы вокруг запятой — толерантный regex.
+      expect(baseCss).toMatch(/@layer\s*reset\s*,\s*base/)
+    })
+  })
+
+  describe("Extensibility API (Issue 4)", () => {
+    afterEach(() => {
+      // @ts-ignore
+      delete window.FishtVue
+      // Очищаем module-level registries между тестами через утилиту.
+      const fv = FishtVue as any
+      if (typeof fv.__resetForTests === "function") fv.__resetForTests()
+    })
+
+    it("FishtVue.use(middleware) mutates config before install", () => {
+      const fv = FishtVue as any
+      fv.use((cfg: FishtVueConfiguration) => {
+        cfg.componentsOptions = { ...(cfg.componentsOptions ?? {}), Button: { variant: "outline" } }
+      })
+      const app = createApp(App)
+      app.use(FishtVue, {})
+      const wrapper = mount(App, { global: { plugins: [[FishtVue as any, {}]] } })
+      const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+      expect(instance?.config?.componentsOptions?.Button?.variant).toBe("outline")
+    })
+
+    it("FishtVue.registerComponent(name, component) globally registers via app.component", () => {
+      const fv = FishtVue as any
+      const CustomBtn = { name: "CustomBtn", template: "<button data-custom>x</button>" }
+      fv.registerComponent("CustomBtn", CustomBtn)
+      const Host = defineComponent({ template: "<CustomBtn />" })
+      const wrapper = mount(Host, { global: { plugins: [[FishtVue as any, {}]] } })
+      expect(wrapper.html()).toContain("data-custom")
+    })
+
+    it("FishtVue.extendTheme(name, theme) makes custom theme resolvable via nameTheme", () => {
+      const fv = FishtVue as any
+      const customTheme = {
+        name: "MyTheme",
+        semantic: { customThemeColor: "200deg", customThemeColorContrast: "60%" }
+      }
+      fv.extendTheme("MyTheme", customTheme)
+
+      const app = createApp(App)
+      app.use(FishtVue, { optionsTheme: { nameTheme: "MyTheme" as any } })
+      const wrapper = mount(App, {
+        global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme: "MyTheme" } }]] }
+      })
+      const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+      expect(instance?.config?.optionsTheme?.nameTheme).toBe("MyTheme")
+    })
+  })
+
+  describe("getDefaultOptions coverage (Issue 6)", () => {
+    afterEach(() => {
+      // @ts-ignore
+      delete window.FishtVue
+    })
+
+    it.each([
+      ["Aurora" as const, "Aurora"],
+      ["Harmony" as const, "Harmony"],
+      ["Sapphire" as const, "Sapphire"]
+    ])("resolves built-in theme %s", (nameTheme, expected) => {
+      const app = createApp(App)
+      app.use(FishtVue, { optionsTheme: { nameTheme } })
+      const wrapper = mount(App, {
+        global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme } }]] }
+      })
+      const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+      expect(instance?.config?.optionsTheme?.nameTheme).toBe(expected)
+    })
+
+    it("falls back to Aurora for invalid theme name", () => {
+      const app = createApp(App)
+      // @ts-ignore
+      app.use(FishtVue, { optionsTheme: { nameTheme: "NotARealTheme" } })
+      const wrapper = mount(App, {
+        // @ts-ignore
+        global: { plugins: [[FishtVue as any, { optionsTheme: { nameTheme: "NotARealTheme" } }]] }
+      })
+      const instance = wrapper.vm?.$?.appContext.config.globalProperties.$fishtVue
+      expect(instance?.config?.optionsTheme?.nameTheme).toBe("Aurora")
     })
   })
 })

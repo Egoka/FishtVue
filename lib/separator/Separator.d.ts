@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass } from "../types"
 
 /**
  * ## Separator
@@ -16,20 +16,47 @@ export type GradientLength = 0 | 5 | 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 
 export type Depth = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-separator>` (добавляется `ClassesMap`).
+ * Имена логические (`start`/`end`), а не физические: в RTL сегменты зеркалятся flex main-axis'ом.
+ * - `segment` — оба сегмента-обёртки (`[data-separator-start]`, `[data-separator-end]`), бывший `classBodyLine`.
+ * - `segmentStart` / `segmentEnd` — только начальный / конечный сегмент (бывшие `classBodyLineLeft/Right`).
+ * - `line` — линия внутри обоих сегментов (`[data-separator-line]`), бывший `classLine`.
+ * - `lineStart` / `lineEnd` — линия конкретного сегмента (бывшие `classLineLeft/Right`).
+ * - `content` — `<span data-separator-content>` со слотом.
+ */
+export declare type SeparatorClassKey =
+  | "segment"
+  | "segmentStart"
+  | "segmentEnd"
+  | "line"
+  | "lineStart"
+  | "lineEnd"
+  | "content"
+
+/**
  * Props for the Separator component.
  */
 export declare type SeparatorProps = {
   /**
-   * Indicates whether the separator is vertical.
-   * @type {boolean | undefined}
+   * Ориентация разделителя (бывший булев `vertical`). Единое имя с [Menu](./menu.md) и [Split](./split.md).
+   * @type {"horizontal" | "vertical" | undefined}
    */
-  vertical?: boolean
+  orientation?: "horizontal" | "vertical"
 
   /**
-   * Alignment of the content within the separator.
-   * @type {"right" | "left" | "center" | "full" | undefined}
+   * Alignment of the content within the separator (logical, RTL-aware).
+   *
+   * `"start"` — у логического начала строки (слева в LTR, справа в RTL), `"end"` — у конца,
+   * `"center"` — по центру (оба line-сегмента), `"full"` — контент во всю ширину (без сегментов).
+   * Порядок сегментов зеркалится автоматически через flex main-axis при `dir="rtl"`.
+   *
+   * Физические алиасы `"left"`/`"right"` сняты в major 2026-09-06 (решение R7).
+   * сохранены для backward compat; в dev-режиме предупреждают в консоль. Используй logical
+   * `"start"`/`"end"` для RTL-safe поведения.
+   *
+   * @type {"start" | "end" | "center" | "full" | undefined}
    */
-  contentPosition?: "right" | "left" | "center" | "full"
+  contentPosition?: "start" | "end" | "center" | "full"
 
   /**
    * Gradient applied to the separator lines.
@@ -45,52 +72,17 @@ export declare type SeparatorProps = {
   depth?: Depth
 
   /**
-   * Custom CSS class for the separator container.
+   * CSS-классы корня `<div data-separator>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom CSS class for the body of the separator line.
-   * @type {StyleClass | undefined}
+   * Карта классов внутренних элементов: `segment`, `segmentStart`, `segmentEnd`, `line`, `lineStart`,
+   * `lineEnd`, `content`; `root` ≡ `class`. См. `SeparatorClassKey`.
+   * @type {ClassesMap<SeparatorClassKey> | undefined}
    */
-  classBodyLine?: StyleClass
-
-  /**
-   * Custom CSS class for the main separator line.
-   * @type {StyleClass | undefined}
-   */
-  classLine?: StyleClass
-
-  /**
-   * Custom CSS class for the separator content.
-   * @type {StyleClass | undefined}
-   */
-  classContent?: StyleClass
-
-  /**
-   * Custom CSS class for the left body line.
-   * @type {StyleClass | undefined}
-   */
-  classBodyLineLeft?: StyleClass
-
-  /**
-   * Custom CSS class for the left separator line.
-   * @type {StyleClass | undefined}
-   */
-  classLineLeft?: StyleClass
-
-  /**
-   * Custom CSS class for the right body line.
-   * @type {StyleClass | undefined}
-   */
-  classBodyLineRight?: StyleClass
-
-  /**
-   * Custom CSS class for the right separator line.
-   * @type {StyleClass | undefined}
-   */
-  classLineRight?: StyleClass
+  classes?: ClassesMap<SeparatorClassKey>
 }
 
 export declare type SeparatorSlots = {
@@ -104,16 +96,17 @@ export declare type SeparatorEmits = null
 export declare type SeparatorExpose = {
   // ---PROPS-------------------------
   /**
-   * Indicates whether the separator is vertical.
-   * @type {SeparatorProps["vertical"]}
+   * Resolved ориентация разделителя.
+   * @type {NonNullable<SeparatorProps["orientation"]>}
    */
-  vertical: SeparatorProps["vertical"]
+  orientation: NonNullable<SeparatorProps["orientation"]>
 
   /**
-   * Alignment of the content within the separator.
-   * @type {SeparatorProps["content"]}
+   * Normalized (logical) alignment of the content within the separator.
+   * Значение уже нормализовано: неизвестный ввод сведён к `"center"`.
+   * @type {"start" | "end" | "center" | "full"}
    */
-  content: SeparatorProps["contentPosition"]
+  content: "start" | "end" | "center" | "full"
 
   /**
    * The applied gradient value for the separator.
@@ -134,54 +127,44 @@ export declare type SeparatorExpose = {
   depth: SeparatorProps["depth"]
 
   /**
-   * Custom CSS class for the separator container.
-   * @type {SeparatorProps["class"]}
-   */
-  classBase: SeparatorProps["class"]
-
-  /**
-   * Custom CSS class for the left body line.
+   * Итоговый класс корня `<div data-separator>` (база + `class`/`classes.root`).
    * @type {StyleClass}
    */
-  classBodyLineLeft: StyleClass
+  classBase: StyleClass
 
   /**
-   * Custom CSS class for the left separator line.
+   * Итоговый класс начального сегмента (`[data-separator-start]`).
    * @type {StyleClass}
    */
-  classLineLeft: StyleClass
+  classSegmentStart: StyleClass
 
   /**
-   * Custom CSS class for the separator content.
+   * Итоговый класс линии внутри начального сегмента.
+   * @type {StyleClass}
+   */
+  classLineStart: StyleClass
+
+  /**
+   * Итоговый класс `<span data-separator-content>`.
    * @type {StyleClass}
    */
   classContent: StyleClass
 
   /**
-   * Custom CSS class for the right body line.
+   * Итоговый класс конечного сегмента (`[data-separator-end]`).
    * @type {StyleClass}
    */
-  classBodyLineRight: StyleClass
+  classSegmentEnd: StyleClass
 
   /**
-   * Custom CSS class for the right separator line.
+   * Итоговый класс линии внутри конечного сегмента.
    * @type {StyleClass}
    */
-  classLineRight: StyleClass
+  classLineEnd: StyleClass
 }
 export declare type SeparatorOption = Pick<
   SeparatorProps,
-  | "contentPosition"
-  | "gradient"
-  | "depth"
-  | "class"
-  | "classBodyLine"
-  | "classLine"
-  | "classContent"
-  | "classBodyLineLeft"
-  | "classLineLeft"
-  | "classBodyLineRight"
-  | "classLineRight"
+  "orientation" | "contentPosition" | "gradient" | "depth" | "class" | "classes"
 >
 
 // ---------------------------------------

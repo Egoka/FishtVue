@@ -20,7 +20,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -83,12 +83,12 @@
   }
 
   .half-circle-spinner .circle.circle-1 {
-    border-top-color: #ff1d5e;
+    border-top-color: currentColor;
     animation: half-circle-spinner-animation 1s infinite;
   }
 
   .half-circle-spinner .circle.circle-2 {
-    border-bottom-color: #ff1d5e;
+    border-bottom-color: currentColor;
     animation: half-circle-spinner-animation 1s infinite alternate;
   }
 

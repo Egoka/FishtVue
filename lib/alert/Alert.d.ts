@@ -1,5 +1,23 @@
 import { CSSProperties, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, PositionShort, Size, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, Size, StyleClass, TeleportTarget } from "../types"
+
+/**
+ * Logical, RTL-safe position values for the alert.
+ *
+ * `start`/`end` — логические стороны (`start` = слева в LTR, справа в RTL).
+ * Физические `left`/`right`/`top-left`/… сняты в major 2026-09-06 (решение R7) — они не были
+ * (`left → start`, `right → end`) с dev-warning. Используй logical-значения для RTL-корректности.
+ */
+export declare type AlertPosition =
+  | "top"
+  | "bottom"
+  | "center"
+  | "start"
+  | "end"
+  | "top-start"
+  | "top-end"
+  | "bottom-start"
+  | "bottom-end"
 
 /**
  * ## Alert
@@ -9,6 +27,16 @@ import { ClassComponent, GlobalComponentConstructor, PositionShort, Size, StyleC
  * Provides support for various alert types, customizable styles, and flexible display configurations.
  */
 declare class Alert extends ClassComponent<AlertProps, AlertSlots, AlertEmits, AlertExpose> {}
+
+/**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-alert>` (добавляется `ClassesMap`).
+ * - `body` — карточка алерта `[data-alert-body]` (бывший инвертированный `class`).
+ * - `icon` — контейнер иконки типа `[data-alert-icon]`.
+ * - `content` — колонка текста `[data-alert-content]`.
+ * - `title` / `subtitle` — `[data-alert-title]` / `[data-alert-subtitle]`.
+ * - `close` — обёртка close-кнопки `[data-alert-button]`.
+ */
+export declare type AlertClassKey = "body" | "icon" | "content" | "title" | "subtitle" | "close"
 
 // ---------------------------------------
 export declare type BaseAlert = {
@@ -25,10 +53,10 @@ export declare type BaseAlert = {
   type?: "success" | "warning" | "info" | "error" | "neutral"
 
   /**
-   * Position of the alert on the screen.
-   * @type {PositionShort | undefined}
+   * Position of the alert on the screen (logical, RTL-safe).
+   * @type {AlertPosition | undefined}
    */
-  position?: PositionShort
+  position?: AlertPosition
 
   /**
    * Size of the alert.
@@ -49,16 +77,24 @@ export declare type BaseAlert = {
   subtitle?: string
 
   /**
-   * Selector for teleporting the alert to a specific container.
-   * @type {string | undefined}
+   * Контейнер, в который `openAlert` монтирует стек алертов. `false` — `document.body`.
+   * @type {TeleportTarget | undefined}
    */
-  toTeleport?: string
+  teleport?: TeleportTarget
 
   /**
-   * Custom CSS class for the alert.
+   * CSS-классы корня `<div data-alert>` (dev-patterns §2 A). До 1.0.0 адресовал карточку —
+   * теперь она доступна через `classes.body`.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Карта классов внутренних элементов: `body`, `icon`, `content`, `title`, `subtitle`, `close`;
+   * `root` ≡ `class`. См. `AlertClassKey`.
+   * @type {ClassesMap<AlertClassKey> | undefined}
+   */
+  classes?: ClassesMap<AlertClassKey>
 
   /**
    * Custom inline styles for the alert.
@@ -73,10 +109,11 @@ export declare type BaseAlert = {
   displayTime?: string | number | 1000 | 2000 | 3000 | 4000 | 5000
 
   /**
-   * Disables animations for the alert.
+   * Анимировать появление/скрытие. Bare-positive инверсия снятого `notAnimate`
+   * (dev-patterns §2 F): default перевёрнут в `true`.
    * @type {boolean | undefined}
    */
-  notAnimate?: boolean
+  animated?: boolean
 
   /**
    * Enables the close button for the alert.
@@ -88,16 +125,27 @@ export declare type BaseAlert = {
 /**
  * Props for the Alert component.
  */
-export interface AlertProps extends Omit<BaseAlert, "position" | "toTeleport"> {
+export interface AlertProps extends Omit<BaseAlert, "position"> {
   /**
-   * Position of the alert on the screen.
-   * @type {"top" | "bottom" | "left" | "right" | "center" | undefined}
+   * Position of the alert on the screen (logical, RTL-safe).
+   *
+   * Logical `start`/`end` зеркалятся в RTL. Физические `left`/`right` сняты (решение R7)
+   * (`left → start`, `right → end`) с dev-warning.
+   * @type {"top" | "bottom" | "center" | "start" | "end" | undefined}
    */
-  position?: "top" | "bottom" | "left" | "right" | "center"
+  position?: "top" | "bottom" | "center" | "start" | "end"
 }
 
 export declare type AlertSlots = {
   default(): VNode[]
+  /**
+   * Custom rendering for the alert subtitle. Fallback — `subtitle` prop rendered as
+   * **sanitized HTML** (best-effort sanitizer: strips `<script>`/`on*`/`javascript:` etc.).
+   *
+   * Use this slot for full control over rich markup, or when the content is untrusted and
+   * needs a stronger sanitizer (e.g. DOMPurify) than the built-in best-effort one.
+   */
+  subtitle(): VNode[]
 }
 
 /**
@@ -151,10 +199,29 @@ export declare type AlertExpose = {
   isCloseButton: AlertProps["closeButton"]
 
   /**
-   * Current position of the alert.
+   * Current position of the alert (raw, как передано в prop/option).
    * @type {AlertProps["position"]}
    */
   position: AlertProps["position"]
+
+  /**
+   * Logical (RTL-safe) позиция: физические `left`/`right` нормализованы в `start`/`end`.
+   * @type {"top" | "bottom" | "center" | "start" | "end" | "top-start" | "top-end" | "bottom-start" | "bottom-end"}
+   */
+  positionLogical: string
+
+  /**
+   * Off-screen transition-класс (enter-from / leave-to). Для logical `start`/`end`
+   * содержит `rtl:`-флип translate-направления.
+   * @type {string}
+   */
+  startEnterAndLeaveClass: string
+
+  /**
+   * On-screen transition-класс (enter-to / leave-from).
+   * @type {string}
+   */
+  endEnterAndLeaveClass: string
 
   /**
    * CSS classes for various parts of the alert.
@@ -169,10 +236,16 @@ export declare type AlertExpose = {
   size: StyleClass
 
   /**
-   * Base CSS class for the alert.
+   * Итоговый класс корня `<div data-alert>` (база + `class`/`classes.root`).
    * @type {StyleClass}
    */
   classBase: StyleClass
+
+  /**
+   * Итоговый класс карточки `[data-alert-body]` (база + type + size + `classes.body`).
+   * @type {StyleClass}
+   */
+  classBody: StyleClass
 
   // ---METHODS-----------------------
   /**
@@ -181,8 +254,8 @@ export declare type AlertExpose = {
   close(): void
 }
 export declare type AlertOption = Pick<
-  AlertProps & { toTeleport?: string },
-  "type" | "position" | "size" | "class" | "style" | "displayTime" | "notAnimate" | "toTeleport" | "closeButton"
+  AlertProps,
+  "type" | "position" | "size" | "class" | "classes" | "style" | "displayTime" | "animated" | "teleport" | "closeButton"
 >
 
 // ---------------------------------------

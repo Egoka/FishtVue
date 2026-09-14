@@ -19,7 +19,7 @@
       },
       color: {
         type: String,
-        default: "#fff"
+        default: "currentColor"
       }
     },
 
@@ -89,7 +89,7 @@
     height: calc(65px * 0.25 / 1.3);
     width: calc(65px * 0.25 / 1.3);
     animation-duration: 1000ms;
-    border: calc(65px * 0.04 / 1.3) solid #ff1d5e;
+    border: calc(65px * 0.04 / 1.3) solid currentColor;
     margin-right: auto;
     margin-left: auto;
     position: absolute;

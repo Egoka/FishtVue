@@ -152,12 +152,19 @@ export function generateOpacityTests(prefix: string, property: string, baseColor
 }
 
 /**
- * Генерирует тесты для цветовой палитры
+ * Генерирует тесты для цветовой палитры.
+ * Wave 3.3: именованные цвета эмитятся через CSS-variable indirection
+ * `rgb(var(--fv-{name}-{tone}, R G B))` — см. unoStyle/helpers.resolveColor + colorVars.test.ts.
  */
+const hexToTriplet = (hex: string): string => {
+  const int = parseInt(hex.slice(1), 16)
+  return `${(int >> 16) & 255} ${(int >> 8) & 255} ${int & 255}`
+}
+
 export function generateColorPaletteTests(prefix: string, property: string, colors: ColorDefinition[]): TestCase[] {
   return colors.map(({ name, tone, hex }) => ({
     classValue: `${prefix}-${name}-${tone}`,
-    expected: `.${prefix}-${name}-${tone} {\n  ${property}: ${hex};\n}`
+    expected: `.${prefix}-${name}-${tone} {\n  ${property}: rgb(var(--fv-${name}-${tone}, ${hexToTriplet(hex)}));\n}`
   }))
 }
 

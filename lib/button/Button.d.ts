@@ -1,5 +1,5 @@
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
-import { VNode } from "vue"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass } from "../types"
+import { Component, Ref, VNode } from "vue"
 
 /**
  * ## Button
@@ -11,14 +11,23 @@ import { VNode } from "vue"
 declare class Button extends ClassComponent<ButtonProps, ButtonSlots, ButtonEmits, ButtonExpose> {}
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — сам `<button data-button>` (добавляется `ClassesMap`).
+ * - `icon` — корень `Icons` (`[data-icon]`), бывший `classIcon`.
+ * - `loading` — корень `Loading` (`[data-loading]`), появляется при `loading: true`.
+ */
+export declare type ButtonClassKey = "icon" | "loading"
+
+/**
  * Styling options for the Button component.
  */
 type ButtonStyle = {
   /**
-   * The visual mode of the button.
+   * Визуальный вариант кнопки (бывший `mode`; значения не изменились). Единое имя с [Badge](./badge.md):
+   * `mode` во всей библиотеке означает `StyleMode` (`filled`/`outlined`/`underlined`), а здесь набор свой.
+   * Глобальный `componentsStyle` маппится сюда: `filled → primary`, `outlined → outline`, `underlined → ghost`.
    * @type {"primary" | "outline" | "ghost" | undefined}
    */
-  mode?: "primary" | "outline" | "ghost"
+  variant?: "primary" | "outline" | "ghost"
 
   /**
    * Size of the button.
@@ -39,16 +48,17 @@ type ButtonStyle = {
   color?: "theme" | "neutral" | "creative" | "destructive"
 
   /**
-   * Custom CSS class for the button.
+   * CSS-классы корня `<button data-button>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom CSS class for the button's icon.
-   * @type {StyleClass | undefined}
+   * Карта классов внутренних элементов: `icon` — корень `Icons`, `loading` — корень `Loading`;
+   * `root` ≡ `class`. См. `ButtonClassKey`.
+   * @type {ClassesMap<ButtonClassKey> | undefined}
    */
-  classIcon?: StyleClass
+  classes?: ClassesMap<ButtonClassKey>
 }
 /**
  * Base props shared between simple and icon buttons.
@@ -61,10 +71,17 @@ type BaseButtonProps = ButtonStyle & {
   icon?: string
 
   /**
-   * Position of the icon in relation to the text.
-   * @type {"left" | "right" | undefined}
+   * Position of the icon relative to the default content, using logical
+   * (writing-direction-aware) values:
+   * - `"start"` — перед контентом (визуально слева в LTR, справа в RTL);
+   * - `"end"` — после контента (default; визуально справа в LTR, слева в RTL).
+   *
+   * Физические алиасы `"left"` / `"right"` сняты в major 2026-09-06 (решение R7):
+   * они не были RTL-безопасны, а второй набор значений для одного prop'а
+   * приходилось бы поддерживать до следующего breaking-релиза.
+   * @type {"start" | "end" | undefined}
    */
-  iconPosition?: "left" | "right"
+  iconPosition?: "start" | "end"
 
   /**
    * Disables the button.
@@ -77,6 +94,28 @@ type BaseButtonProps = ButtonStyle & {
    * @type {boolean | undefined}
    */
   loading?: boolean
+
+  /**
+   * Accessible name announced by screen readers.
+   *
+   * Особенно важен для `type="icon"` без default-slot — без `ariaLabel` icon-only
+   * кнопка озвучивается screen-reader'ом просто как «button» (WCAG 2.1 SC 4.1.2).
+   *
+   * Для не-icon-кнопок не используется (текст внутри `<slot>` сам по себе является
+   * accessible name).
+   * @type {string | undefined}
+   */
+  ariaLabel?: string
+
+  /**
+   * Polymorphic корневой тег/компонент. По умолчанию `"button"`. Позволяет рендерить
+   * Button как `<a>` / `<RouterLink>` / `<NuxtLink>` с сохранением стилей. Для
+   * не-`<button>`/не-`<a>` корней автоматически проставляются `role="button"` и
+   * `tabindex` (`0`, либо `-1` при `disabled`); нативный `type` ставится только на
+   * `<button>`. Атрибуты вроде `href`/`to`/`target` пробрасываются через fallthrough.
+   * @type {string | Component | undefined}
+   */
+  as?: string | Component
 }
 
 /**
@@ -104,19 +143,52 @@ export type IconButtonProps = BaseButtonProps & {
  */
 export type ButtonProps = SimpleButtonProps | IconButtonProps
 export declare type ButtonSlots = {
+  /**
+   * Содержимое кнопки. Для `type="icon"` — content tooltip'а через FixWindow.
+   */
   default(): VNode[]
+
+  /**
+   * Контент перед `default`-slot'ом и до иконки. Используется для prepend-композиции
+   * (badge, status dot и т. п.). Имя `start` соответствует logical writing order: при
+   * `dir="rtl"` slot визуально оказывается справа (корневой `<button>` — `inline-flex`,
+   * main-axis следует document direction).
+   */
+  start?(): VNode[]
+
+  /**
+   * Контент после `default`-slot'а, после иконки и loading-индикатора. Используется
+   * для append-композиции. См. описание `start` про logical naming.
+   */
+  end?(): VNode[]
 }
-export declare type ButtonEmits = null
+export declare type ButtonEmits = {
+  /**
+   * Эмитится при нативном click по `<button>`. Кнопка не интерсептит и не превращает
+   * payload — это пробрасываемое нативное MouseEvent.
+   * @param {MouseEvent} payload — нативный click event с `target`/`currentTarget`.
+   */
+  (event: "click", payload: MouseEvent): void
+}
 /**
  * Methods and states exposed via `ref` for the Button component.
  */
 export declare type ButtonExpose = {
+  // ---STATE-------------------------
+  /**
+   * Ref на корневой элемент. По умолчанию `<button>`; при polymorphic `as` —
+   * соответствующий тег (`<a>` и т. п.). Позволяет programmatically делать
+   * `.focus()`/`.click()`/`.scrollIntoView()` без обращения к DOM-селекторам.
+   * @type {Readonly<Ref<HTMLElement | undefined>>}
+   */
+  buttonRef: Readonly<Ref<HTMLElement | undefined>>
+
   // ---PROPS-------------------------
   /**
-   * Current visual mode of the button.
-   * @type {ButtonProps["mode"]}
+   * Current visual variant of the button.
+   * @type {ButtonProps["variant"]}
    */
-  mode: ButtonProps["mode"]
+  variant: ButtonProps["variant"]
 
   /**
    * Current size of the button.
@@ -137,18 +209,30 @@ export declare type ButtonExpose = {
   color: ButtonProps["color"]
 
   /**
-   * Current CSS class for the button container.
-   * @type {ButtonProps["class"]}
+   * Итоговый класс корня `<button data-button>` (база + variant + size + `class`/`classes.root`).
+   * @type {StyleClass}
    */
-  classBase: ButtonProps["class"]
+  classBase: StyleClass
 
   /**
-   * Current CSS class for the button's icon.
-   * @type {ButtonProps["classIcon"]}
+   * Итоговый класс иконки — hand-off в корень `Icons` (база + `classes.icon`).
+   * @type {StyleClass}
    */
-  classIcon: ButtonProps["classIcon"]
+  classIcon: StyleClass
+
+  // ---METHODS-----------------------
+  /**
+   * Programmatically focuses the underlying `<button>`. Опционально принимает
+   * native `FocusOptions` (например, `{ preventScroll: true }`).
+   */
+  focus(options?: FocusOptions): void
+
+  /**
+   * Programmatically blurs the underlying `<button>`.
+   */
+  blur(): void
 }
-export declare type ButtonOption = Pick<ButtonProps, "mode" | "size" | "rounded" | "color" | "class" | "classIcon">
+export declare type ButtonOption = Pick<ButtonProps, "variant" | "size" | "rounded" | "color" | "class" | "classes">
 
 // ---------------------------------------
 

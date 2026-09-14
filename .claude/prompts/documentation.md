@@ -39,7 +39,7 @@ lib/<name>/
 - Layout: Form, InputLayout, Separator, Split, FixWindow
 - Disclosure: Accordion, Dialog, Menu, Alert
 - Feedback: Loading, Icons
-- A11y/infra: Aria, Component, Config
+- A11y/infra: Textarea, Component, Config
 
 # Источник истины
 
@@ -161,17 +161,26 @@ since: <версия fishtvue, в которой появилось>
 - Type — точно как в `.d.ts` (включая union, literal types).
 - Default — из `withDefaults()` в `.vue` ИЛИ из `getOptions()` (отметь "from global config").
 - Description — на основе JSDoc; если их нет, выведи из использования в `.vue`, но НЕ выдумывай.
+- `class` — всегда корень (`data-{kebab-name}`); внутренние элементы — только через `classes` (dev-patterns §2 A–B).
+
+### 5.1 Classes keys
+Таблица `| Key | Element (data-*) | Kind | Default |` по `{Target}ClassKey` из `.d.ts` — verbatim, плюс строка `root`. Kind — `element` (аддитивный: база → `componentsOptions.{Target}.classes.<key>` → `props.classes.<key>`, twMerge) или `aspect` (заменяющий: `props ?? options ?? default`, `""` отключает). Default — только для aspect-ключей (литерал из `pick(key, default)` в `.vue`). Источник селекторов — манифест `lib/classesContract.test.ts`.
 
 ## 6. Events / Emits + v-model contract
 Таблица: `| Event | Payload | When fired |`. Источник — `{Target}Emits` + `defineEmits` в `.vue`.
 
-**v-model contract** (обязательный подраздел для form-controls). Стандарт FishtVue:
-1. native `input` (внутренний DOM-обработчик),
-2. `update:modelValue` (синхронизация v-model),
-3. внутренние `watch` parent'а отрабатывают,
-4. `change:modelValue` (только когда значение действительно изменилось, после reactivity flush).
+**v-model contract** — подраздел обязателен во **всех** документах (§11.5): либо контракт, либо явное «не применимо для этого компонента» с причиной.
+
+Для form-control'ов стандарт FishtVue задаёт *порядок* и *семантику*, а не механизм:
+1. `update:modelValue` — первым, синхронизирует `v-model` на каждое изменение;
+2. `watch`'и parent'а отрабатывают;
+3. `change:modelValue` — после, означает «значение устоялось».
+
+**Момент устаканивания у каждого контрола свой — назови его явно, не копируй формулировку соседа:** native `change` (Input, Textarea, Switch), закрытие дропдауна (Select), смена/очистка даты (Calendar), blur либо programmatic save (TextEditor).
 
 Указать, когда какое событие подписывать: `update:modelValue` для непрерывного отслеживания, `change:modelValue` для тяжёлых операций.
+
+Компонентам вне form-control'ов парный канал не заводится (dev-patterns §2 H) — если у компонента есть `update:modelValue`, но нет `change:modelValue`, это надо объяснить: у булевой видимости или номера страницы нет момента, отличного от самого обновления.
 
 ## 7. Slots
 Таблица: `| Slot | Slot props | Description |`. Источник — `{Target}Slots` + `<slot>` в `.vue`. Указать default content, если есть.
@@ -192,7 +201,7 @@ const ref = useTemplateRef<InstanceType<typeof {Target}>>("{target}Ref")
 ## 10. Configuration & Customization
 
 ### 10.1 Global (через `app.use`)
-Поля доступные в `componentsOptions.{Target}` (источник — `{Target}Option` + `lib/config/FishtVue.d.ts`). Полный пример с типами и значениями.
+Поля доступные в `componentsOptions.{Target}` (источник — `{Target}Option` + `lib/config/FishtVue.d.ts`). Полный пример с типами и значениями, включая `class` и `classes` (слияние с per-instance — по ключу, dev-patterns §2 C).
 
 ### 10.2 Per-instance (через props)
 Те же значения переопределяются point-of-use. Приоритет: `props` > `global config` > `defaults`.
@@ -223,7 +232,7 @@ const ref = useTemplateRef<InstanceType<typeof {Target}>>("{target}Ref")
 ## 12. Accessibility & Security
 
 ### A11y
-- Используется ли Aria-компонент или ARIA-атрибуты (поиск `role=`, `aria-*` в `.vue`).
+- Используется ли Textarea-компонент или ARIA-атрибуты (поиск `role=`, `aria-*` в `.vue`).
 - Поведение клавиатуры (Tab, Enter, Escape, стрелки) — извлечь из `@keydown` обработчиков.
 - **Focus management:** для Dialog/Menu/Select — есть ли focus trap, восстанавливается ли focus на trigger при закрытии.
 - **Screen reader:** используются ли `aria-live` regions, `aria-describedby` для error messages.

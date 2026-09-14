@@ -1,5 +1,6 @@
 {
   "main": "./fixwindow.mjs",
   "module": "./fixwindow.mjs",
-  "types": "./FixWindow.d.ts"
+  "types": "./FixWindow.d.ts",
+  "sideEffects": false
 }

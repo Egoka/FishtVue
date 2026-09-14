@@ -7,7 +7,7 @@
 
   function open() {
     openAlert({
-      position: "top-right",
+      position: "top-end",
       type: "neutral",
       size: "xs",
       displayTime: 5000,

@@ -40,11 +40,15 @@ const globals = {
   HTMLTableRowElement: "readonly",
   HTMLElement: "readonly",
   HTMLInputElement: "readonly",
+  HTMLTextAreaElement: "readonly",
   HTMLButtonElement: "readonly",
+  HTMLFormElement: "readonly",
+  FormData: "readonly",
   HTMLStyleElement: "readonly",
   Response: "readonly",
   MouseEvent: "readonly",
   FocusEvent: "readonly",
+  FocusOptions: "readonly",
   KeyboardEvent: "readonly",
   InputEvent: "readonly",
   ShadowRoot: "readonly",
@@ -52,7 +56,13 @@ const globals = {
   HTMLCanvasElement: "readonly",
   HTMLAnchorElement: "readonly",
   HTMLHeadElement: "readonly",
+  SVGElement: "readonly",
   DOMRect: "readonly",
+  ScrollToOptions: "readonly",
+  ScrollBehavior: "readonly",
+  Window: "readonly",
+  EventTarget: "readonly",
+  EventListenerOptions: "readonly",
   crypto: "readonly",
   // Vue and Nuxt
   defineAppConfig: "readonly",
@@ -195,6 +205,16 @@ export default defineConfig([
     "**/dist/**/*",
     "**/node_modules/**/*",
     "**/.nuxt/**/*",
-    "**/.output/**/*"
+    "**/.output/**/*",
+    ".claude/worktrees/**/*",
+    // Vendor-код claude-workflow: генерируется CLI и перезаписывается на `claude-workflow
+    // update`. Автофиксы наших правил сломали бы сверку с шаблонами, а к канону `lib/` эти
+    // файлы отношения не имеют.
+    ".claude/hooks/**/*",
+    ".claude/scripts/**/*",
+    "scripts/update-project-structure.js",
+    "scripts/validate-task.js",
+    "eslint.config.ts",
+    "knip.config.ts"
   ])
 ])

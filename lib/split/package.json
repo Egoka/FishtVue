@@ -1,5 +1,6 @@
 {
   "main": "./split.mjs",
   "module": "./split.mjs",
-  "types": "./Split.d.ts"
+  "types": "./Split.d.ts",
+  "sideEffects": false
 }

@@ -1,5 +1,5 @@
-import { MaybeRef, VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { MaybeRef, Ref, VNode } from "vue"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
 
 /**
  * ## Accordion
@@ -13,9 +13,22 @@ declare class Accordion extends ClassComponent<AccordionProps, AccordionSlots, A
 
 // ---------------------------------------
 /**
- * Represents a single item within the Accordion component.
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-accordion>` (добавляется `ClassesMap`).
+ * - `item` — секция `[data-accordion-group]` (бывший `classItem`).
+ * - `header` — заголовок-кнопка `[data-accordion-button]`.
+ * - `title` — `<span data-accordion-title>` с текстом заголовка (бывший `classTitle`).
+ * - `panel` — раскрывающаяся панель `[data-accordion-panel]` (`role="region"`), бывший `classSubtitle`.
+ * - `content` — внутренний контейнер контента `[data-accordion-content]`.
  */
-export type AccordionItem = {
+export declare type AccordionClassKey = "item" | "header" | "title" | "panel" | "content"
+
+/**
+ * Represents a single item within the Accordion component.
+ *
+ * Переименован из `AccordionItem` в 1.0.0: имя `AccordionItem` занято renderless-компонентом
+ * compound-API (`<AccordionItem>`), и одно имя на компонент и на тип данных путало импорт.
+ */
+export type AccordionItemData = {
   /**
    * The title of the accordion item.
    * @type {string}
@@ -41,6 +54,15 @@ export type AccordionItem = {
   template?: string
 
   /**
+   * Internal: захваченный render-функционал содержимого секции для compound-API
+   * (`<AccordionItem>…</AccordionItem>`). Заполняется родительским `<Accordion>` при VNode-walk,
+   * не предназначен для прямого использования в schema-`items`.
+   * @type {(() => any) | undefined}
+   * @internal
+   */
+  _content?: () => any
+
+  /**
    * Any additional properties for the accordion item.
    * @type {any}
    */
@@ -51,11 +73,11 @@ export type AccordionItem = {
  */
 export declare type AccordionProps = {
   /**
-   * The data source for the accordion.
+   * Секции аккордеона (бывший `dataSource`). Единое имя коллекции с [VirtualScroller](./virtualscroller.md).
    * Can be passed as a constant value or as a ref.
-   * @type {MaybeRef<Array<AccordionItem>> | undefined}
+   * @type {MaybeRef<Array<AccordionItemData>> | undefined}
    */
-  dataSource?: MaybeRef<Array<AccordionItem>>
+  items?: MaybeRef<Array<AccordionItemData>>
   /**
    * Enables multiple sections to be open simultaneously.
    * @type {boolean}
@@ -72,51 +94,65 @@ export declare type AccordionProps = {
    */
   icon?: "ChevronDown" | "ArrowDownCircle" | "Plus" | string
   /**
-   * General CSS class for the root container.
+   * CSS-классы корня `<div data-accordion>` (dev-patterns §2 A).
    * @type {StyleClass}
    */
   class?: StyleClass
   /**
-   * CSS class for individual accordion items.
-   * @type {StyleClass}
+   * Карта классов внутренних элементов: `item`, `header`, `title`, `panel`, `content`; `root` ≡ `class`.
+   * См. `AccordionClassKey`.
+   * @type {ClassesMap<AccordionClassKey> | undefined}
    */
-  classItem?: StyleClass
-  /**
-   * CSS class for the title of an accordion item.
-   * @type {StyleClass}
-   */
-  classTitle?: StyleClass
-  /**
-   * CSS class for the subtitle of an accordion item.
-   * @type {StyleClass}
-   */
-  classSubtitle?: StyleClass
+  classes?: ClassesMap<AccordionClassKey>
 }
 interface DynamicSlots {
-  [key: string]: (args: Omit<AccordionItem, "template" | "open">) => VNode[]
+  [key: string]: (args: Omit<AccordionItemData, "template" | "open">) => VNode[]
 }
 export declare type AccordionSlots = {
+  /**
+   * Custom rendering for the title area of a section.
+   */
   title(args: { title: string }): VNode[]
+  /**
+   * Custom rendering for the subtitle area of a section.
+   * Replaces the default text fallback. The slot scope receives all `AccordionItemData`
+   * fields except `template` and `open`. Use this slot to opt into rich markup —
+   * the consumer is responsible for sanitizing any HTML they pass.
+   */
+  "item-subtitle"(args: Omit<AccordionItemData, "template" | "open">): VNode[]
 } & DynamicSlots
 /**
  * Events emitted by the Accordion component.
  */
+/**
+ * Payload события `toggle`: какая секция переключилась, в какое состояние и весь набор секций.
+ * До 1.0.0 событие отдавало только массив — по нему нельзя было понять, что именно изменилось.
+ */
+export declare type AccordionTogglePayload = {
+  /** Индекс переключённой секции. */
+  key: number
+  /** Новое состояние секции: `true` — раскрыта. */
+  open: boolean
+  /** Текущее состояние всех секций (тот же массив, что и раньше). */
+  items: Array<AccordionItemData>
+}
+
 export declare type AccordionEmits = {
   /**
    * Emitted when a section's state is toggled (opened/closed).
    * @param event
-   * @param {AccordionProps["dataSource"]} payload - Updated accordion data.
+   * @param {AccordionTogglePayload} payload - Какая секция переключилась и полный набор секций.
    */
-  (event: "toggle", payload: AccordionProps["dataSource"]): void
+  (event: "toggle", payload: AccordionTogglePayload): void
 }
 export declare type AccordionExpose = {
   // ---STATE-------------------------
 
   /**
    * Current state of the accordion items.
-   * @type {ReadRef<AccordionProps["dataSource"]>}
+   * @type {ReadRef<Array<AccordionItemData>>}
    */
-  dataItems: ReadRef<AccordionProps["dataSource"]>
+  dataItems: ReadRef<Array<AccordionItemData>>
 
   // ---PROPS-------------------------
 
@@ -139,28 +175,37 @@ export declare type AccordionExpose = {
   icon: ReadRef<AccordionProps["icon"]>
 
   /**
-   * CSS class for the root container.
-   * @type {ReadRef<AccordionProps["class"]>}
+   * Итоговый класс корня `<div data-accordion>` (база + `class`/`classes.root`).
+   * @type {ReadRef<StyleClass>}
    */
-  classBody: ReadRef<AccordionProps["class"]>
+  classBase: ReadRef<StyleClass>
 
   /**
-   * CSS class for individual accordion items.
-   * @type {ReadRef<AccordionProps["classItem"]>}
+   * Итоговый класс секции `[data-accordion-group]` (база + `classes.item`).
+   * @type {ReadRef<StyleClass>}
    */
-  classItem: ReadRef<AccordionProps["classItem"]>
+  classItem: ReadRef<StyleClass>
 
   /**
-   * CSS class for the title of an accordion item.
-   * @type {ReadRef<AccordionProps["classTitle"]>}
+   * Итоговый класс `<span data-accordion-title>` (база + `classes.title`).
+   * @type {ReadRef<StyleClass>}
    */
-  classTitle: ReadRef<AccordionProps["classTitle"]>
+  classTitle: ReadRef<StyleClass>
 
   /**
-   * CSS class for the subtitle of an accordion item.
-   * @type {ReadRef<AccordionProps["classSubtitle"]>}
+   * Итоговый класс панели `[data-accordion-panel]` (база + `classes.panel`).
+   * @type {ReadRef<StyleClass>}
    */
-  classSubtitle: ReadRef<AccordionProps["classSubtitle"]>
+  classPanel: ReadRef<StyleClass>
+
+  // ---ELEMENTS----------------------
+
+  /**
+   * Ref на корневой DOM-элемент аккордеона (`[data-accordion]`). `null`, пока секций нет
+   * (root скрыт через `v-if`). Полезно для скролла/измерений/интеграций со стороны потребителя.
+   * @type {Ref<HTMLElement | null>}
+   */
+  rootRef: Ref<HTMLElement | null>
 
   // ---METHODS-----------------------
 
@@ -169,10 +214,17 @@ export declare type AccordionExpose = {
    * @param {string | number} key - The key of the item to toggle.
    */
   toggle(key: string | number): void
+
+  /**
+   * Programmatically focuses the header at the given index and updates the
+   * roving tabindex so the focused header is keyboard-tabbable.
+   * @param {number} index - Zero-based index of the header to focus.
+   */
+  focus(index: number): void
 }
 export declare type AccordionOption = Pick<
   AccordionProps,
-  "multiple" | "animationDuration" | "icon" | "class" | "classItem" | "classTitle" | "classSubtitle"
+  "multiple" | "animationDuration" | "icon" | "class" | "classes"
 >
 
 // ---------------------------------------
@@ -183,3 +235,7 @@ declare module "vue" {
 }
 
 export default Accordion
+// value-экспорт compound-ребёнка (зеркало Menu.d.ts / Table.d.ts): `fishtvue/accordion`
+// типизируется через этот файл, поэтому класс и props-типы `AccordionItem` идут отсюда.
+export * from "./AccordionItem"
+export { default as AccordionItem } from "./AccordionItem"

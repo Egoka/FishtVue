@@ -1,5 +1,5 @@
-import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
+import { Ref, VNode } from "vue"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 import { IconsProps } from "fishtvue/icons"
 
 /**
@@ -12,7 +12,16 @@ import { IconsProps } from "fishtvue/icons"
 declare class Switch extends ClassComponent<SwitchProps, SwitchSlots, SwitchEmits, SwitchExpose> {}
 
 // ---------------------------------------
-type SwitchMode = StyleMode | "none" | string
+type SwitchMode = StyleMode | "none"
+
+/**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-switch>` (добавляется `ClassesMap`).
+ * - `control` — native-контрол `[data-switch-control]`: `<button role="switch">` либо `<input type="checkbox">`
+ *   (в зависимости от `switchingType`).
+ * - `label` — `<div data-switch-label>` с текстом `label`.
+ * - `help` — `<div data-switch-help>`: иконка подсказки с tooltip.
+ */
+export declare type SwitchClassKey = "control" | "label" | "help"
 /**
  * Base props for the Switch component.
  */
@@ -43,9 +52,9 @@ export declare type BaseSwitchProps = {
 
   /**
    * The type of switching mechanism (`checkbox` or `switch`).
-   * @type {"checkbox" | "switch" | string}
+   * @type {"checkbox" | "switch"}
    */
-  switchingType: "checkbox" | "switch" | string
+  switchingType: "checkbox" | "switch"
 }
 
 /**
@@ -89,14 +98,30 @@ export interface SwitchProps extends Partial<BaseSwitchProps> {
   required?: boolean
 
   /**
-   * Custom CSS class for the switch container.
+   * CSS-классы корня `<div data-switch>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Карта классов внутренних элементов: `control`, `label`, `help`; `root` ≡ `class`.
+   * См. `SwitchClassKey`.
+   * @type {ClassesMap<SwitchClassKey> | undefined}
+   */
+  classes?: ClassesMap<SwitchClassKey>
 }
 
 export declare type SwitchSlots = {
+  /**
+   * Default slot — альтернатива `label` prop'у, произвольный контент рядом со switch.
+   */
   default(): VNode[]
+  /**
+   * Optional slot для кастомизации help-tooltip контента. Имеет приоритет над `help: string`
+   * (тот рендерится как fallback). Slot — рекомендуемый способ передачи rich HTML,
+   * `help` prop остаётся text-only для XSS safety.
+   */
+  help?(): VNode[]
 }
 
 /**
@@ -109,13 +134,6 @@ export declare type SwitchEmits = {
    * @param {boolean} payload - The updated value of the switch.
    */
   (event: "update:modelValue", payload: boolean): void
-
-  /**
-   * Alias for `update:modelValue` event.
-   @param event
-   * @param {boolean} payload - The updated value of the switch.
-   */
-  (event: "updateModelValue", payload: boolean): void
 
   /**
    * Emitted when the value of the switch changes.
@@ -192,16 +210,25 @@ export declare type SwitchExpose = {
   switchingType: SwitchProps["switchingType"]
 
   /**
-   * Custom CSS class for the base switch container.
+   * Итоговый класс корня `<div data-switch>` (база + mode + state + `class`/`classes.root`).
    * @type {StyleClass}
    */
-  classBaseSwitch: StyleClass
+  classBase: StyleClass
 
   /**
-   * Custom CSS class for the switch element.
+   * Итоговый класс native-контрола `[data-switch-control]` (база + `classes.control`).
    * @type {StyleClass}
    */
-  classSwitch: StyleClass
+  classControl: StyleClass
+
+  // ---REFS--------------------------------
+  /**
+   * Template ref на native control: `<button role="switch">` в switch-режиме,
+   * `<input type="checkbox">` в checkbox-режиме. Используй для programmatic-доступа
+   * к DOM (focus, scrollIntoView и т.д.).
+   * @type {Ref<HTMLElement | undefined>}
+   */
+  inputRef: Ref<HTMLElement | undefined>
 
   // ---METHODS-----------------------------
   /**
@@ -209,11 +236,23 @@ export declare type SwitchExpose = {
    * @param {boolean} value - The new value of the switch.
    */
   inputEvent(value: boolean): void
+
+  /**
+   * Программно фокусирует native control. Принимает опциональный `FocusOptions`
+   * (например, `{ preventScroll: true }`).
+   * @param {FocusOptions} [options] - Native FocusOptions.
+   */
+  focus(options?: FocusOptions): void
+
+  /**
+   * Программно убирает фокус с native control.
+   */
+  blur(): void
 }
 
 export declare type SwitchOption = Pick<
   SwitchProps,
-  "mode" | "rounded" | "iconActive" | "iconInactive" | "switchingType" | "class"
+  "mode" | "rounded" | "iconActive" | "iconInactive" | "switchingType" | "class" | "classes"
 >
 
 // ---------------------------------------

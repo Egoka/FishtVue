@@ -1,5 +1,14 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, Position, RefLink, StyleClass, StyleMode } from "../types"
+import {
+  ClassComponent,
+  ClassesMap,
+  GlobalComponentConstructor,
+  Position,
+  RefLink,
+  StyleClass,
+  StyleMode,
+  TeleportTarget
+} from "../types"
 
 /**
  * ## FixWindow
@@ -11,6 +20,19 @@ import { ClassComponent, GlobalComponentConstructor, Position, RefLink, StyleCla
 declare class FixWindow extends ClassComponent<FixWindowProps, FixWindowSlots, FixWindowEmits, FixWindowExpose> {}
 
 export type FixWindowEvent = "hover" | "click" | "mousedown" | "mouseup" | "dblclick" | "contextmenu" | "none"
+/**
+ * Semantic ARIA role of the floating window. Если не задано — резолвится
+ * автоматически: `eventOpen: "hover"` → `"tooltip"`, иначе `"dialog"`.
+ */
+export type FixWindowRole = "tooltip" | "dialog" | "menu"
+
+/**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-fix-window>` (добавляется `ClassesMap`).
+ * - `content` — `<div data-fix-window-content>` со слотом (бывший инвертированный `class`).
+ * - `close` — корень `Button` закрытия `[data-fix-window-close]`.
+ */
+export declare type FixWindowClassKey = "content" | "close"
+
 /**
  * Props for the FixWindow component.
  */
@@ -34,28 +56,32 @@ export declare type FixWindowProps = {
   scrollableEl?: RefLink
 
   /**
-   * The CSS positioning style for the fixed window.
+   * CSS-стратегия позиционирования popover'а (Floating UI `strategy`). Бывший `typePosition`.
    * @type {"absolute" | "fixed" | undefined}
    */
-  typePosition?: "absolute" | "fixed"
+  strategy?: "absolute" | "fixed"
 
   /**
    * The position of the fixed window relative to the target element.
+   * Mapping на Floating UI Placement производится автоматически —
+   * для `dir="rtl"` documents значения `*-left` / `*-right` логически
+   * зеркалятся через `start` / `end` placement.
    * @type {Position | undefined}
    */
   position?: Position
 
   /**
-   * Custom CSS class for the fixed window container.
+   * CSS-классы корня `<div data-fix-window>` (dev-patterns §2 A). Бывший `classBody`.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom CSS class for the body of the fixed window.
-   * @type {StyleClass | undefined}
+   * Карта классов внутренних элементов: `content`, `close`; `root` ≡ `class`.
+   * См. `FixWindowClassKey`.
+   * @type {ClassesMap<FixWindowClassKey> | undefined}
    */
-  classBody?: StyleClass
+  classes?: ClassesMap<FixWindowClassKey>
 
   /**
    * Styling mode for the fixed window.
@@ -76,10 +102,10 @@ export declare type FixWindowProps = {
   eventClose?: FixWindowEvent
 
   /**
-   * Delay before opening the fixed window (in milliseconds).
+   * Задержка перед открытием popover'а, мс. Бывший `delay`.
    * @type {number | 100 | 500 | 1000 | 1500 | 2000 | undefined}
    */
-  delay?: number | 100 | 500 | 1000 | 1500 | 2000
+  openDelay?: number | 100 | 500 | 1000 | 1500 | 2000
 
   /**
    * Margin between the fixed window and the target element (in pixels).
@@ -94,7 +120,7 @@ export declare type FixWindowProps = {
   translatePx?: number | 2 | 5 | 10
 
   /**
-   * Padding for the fixed window's boundaries.
+   * Padding for the fixed window's boundaries (Floating UI shift/flip padding).
    * @type {number | 2 | 5 | 10 | undefined}
    */
   paddingWindow?: number | 2 | 5 | 10
@@ -116,6 +142,64 @@ export declare type FixWindowProps = {
    * @type {boolean | undefined}
    */
   stopOpenPropagation?: boolean
+
+  /**
+   * Teleport target для popover. `false` (default) — inline-render.
+   * `"body"` — рекомендованный target для popover'ов внутри scroll-parent'ов
+   * с `overflow: hidden / auto`. Также принимает CSS-селектор или `HTMLElement`.
+   * @type {TeleportTarget | undefined}
+   */
+  teleport?: TeleportTarget
+
+  /**
+   * Включает focus trap внутри popover (Tab/Shift+Tab циклятся между
+   * focusable элементами). Нужен для popover-form. Использует ту же native
+   * реализацию, что и Dialog (см. `getFocusable` / `onDialogKeydown` pattern).
+   * @type {boolean | undefined}
+   */
+  focusTrap?: boolean
+
+  /**
+   * Семантическая ARIA role. Если не задано — резолвится автоматически:
+   * `eventOpen: "hover"` → `"tooltip"`, иначе `"dialog"`. Также поддерживается
+   * через componentsOptions.
+   * @type {FixWindowRole | undefined}
+   */
+  role?: FixWindowRole
+
+  /**
+   * Accessible label для корневого элемента popover. Используется, когда
+   * нет внешнего заголовка для `aria-labelledby`. Не комбинируется с
+   * `ariaLabelledby` — labelledby имеет приоритет в браузерах.
+   * @type {string | undefined}
+   */
+  ariaLabel?: string
+
+  /**
+   * ID элемента-заголовка для связки через `aria-labelledby`.
+   * @type {string | undefined}
+   */
+  ariaLabelledby?: string
+
+  /**
+   * ID элемента-описания для связки через `aria-describedby`.
+   * @type {string | undefined}
+   */
+  ariaDescribedby?: string
+
+  /**
+   * CSS-селектор внутри popover для автофокуса при open (при `focusTrap: true`).
+   * По умолчанию — первый focusable элемент.
+   * @type {string | undefined}
+   */
+  initialFocus?: string
+
+  /**
+   * Возвращать ли focus на trigger element при close. По умолчанию `true`
+   * когда `focusTrap: true`, иначе focus return не выполняется.
+   * @type {boolean | undefined}
+   */
+  returnFocus?: boolean
 }
 export declare type FixWindowSlots = {
   default(): VNode[]
@@ -179,9 +263,9 @@ export declare type FixWindowExpose = {
 
   /**
    * Current delay before opening the fixed window.
-   * @type {FixWindowProps["delay"]}
+   * @type {FixWindowProps["openDelay"]}
    */
-  delay: FixWindowProps["delay"]
+  openDelay: FixWindowProps["openDelay"]
 
   /**
    * Current margin between the fixed window and the target element.
@@ -213,37 +297,61 @@ export declare type FixWindowExpose = {
    */
   element: HTMLElement
 
+  /**
+   * Trigger element, который был активен до open. Сохраняется автоматически
+   * для focus return при `focusTrap: true` и `returnFocus !== false`.
+   * `null` пока popover не открывался.
+   * @type {HTMLElement | null}
+   */
+  triggerEl: HTMLElement | null
+
   // ---METHODS-----------------------
   /**
-   * Opens the fixed window.
+   * Opens the fixed window. Optional event позволяет передать originating MouseEvent
+   * (для byCursor positioning или stopOpenPropagation).
    */
-  open(): void
+  open(event?: MouseEvent): void
 
   /**
-   * Closes the fixed window.
+   * Closes the fixed window. Optional event — для emit chain.
    */
-  close(): void
+  close(event?: MouseEvent): void
 
   /**
-   * Updates the position of the fixed window dynamically.
+   * Updates the position of the fixed window dynamically (Floating UI `update`).
    */
   updatePosition(): void
+
+  /**
+   * Программно ставит focus на initialFocus selector или первый focusable
+   * элемент внутри popover. Используется автоматически при open, если
+   * `focusTrap: true`.
+   */
+  focusFirst(): void
 }
 export declare type FixWindowOption = Pick<
   FixWindowProps,
-  | "typePosition"
+  | "strategy"
   | "position"
   | "class"
-  | "classBody"
+  | "classes"
   | "mode"
   | "eventOpen"
   | "eventClose"
-  | "delay"
+  | "openDelay"
   | "marginPx"
   | "translatePx"
   | "paddingWindow"
   | "byCursor"
   | "closeButton"
+  | "teleport"
+  | "focusTrap"
+  | "role"
+  | "ariaLabel"
+  | "ariaLabelledby"
+  | "ariaDescribedby"
+  | "initialFocus"
+  | "returnFocus"
 >
 
 // ---------------------------------------

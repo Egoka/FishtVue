@@ -1,7 +1,7 @@
 ---
 title: Locale
-summary: Структура Locales/Messages, встроенные en/ru, setActiveLocale, расширение. Optional validation keys для интеграции с rulesHandler.
-updated: 2026-05-10
+summary: Структура Locales/Messages, встроенные en/ru, setActiveLocale, расширение. Optional validation keys для интеграции с rulesHandler. t() fallback chain (active → default → key) с 2026-05-20; interpolation `{name}` + CLDR-pluralization через `Intl.PluralRules` (Wave 3.5) с 2026-06-19.
+updated: 2026-09-06
 stability: stable
 since: 0.2.11
 ---
@@ -63,11 +63,24 @@ type Locales = Partial<{
 
 **Чтение:**
 
-- `Component.t(key)` ([component/index.ts:183–192](../../lib/component/index.ts#L183-L192)):
-  1. `getActiveLocale()` — текущая локаль.
-  2. `messages[activeLocale]` — подмножество сообщений.
-  3. `get(messages, key)` ([utils/objectHandler.get](../../lib/utils/objectHandler.ts)) — поддержка dot-path: `"button.label"`.
-  4. Возвращает `string | undefined`. Не-строки фильтруются.
+- `Component.t(key, params?)` ([component/index.ts:191](../../lib/component/index.ts#L191)) — fallback chain (с 2026-05-20):
+  1. `getActiveLocale()` → `messages[active][key]` через `get()` ([utils/objectHandler.get](../../lib/utils/objectHandler.ts), поддержка dot-path: `"alert.close"`). Если строка — возвращается.
+  2. Если в active нет — `getDefaultLocale()` → `messages[default][key]`. Если строка — возвращается.
+  3. Last resort — возвращается **сам key как строка** (например, `"alert.close"`).
+  4. Empty/falsy key — возвращается `""`.
+  5. Сигнатура: `(key, params?) => string` (раньше `string | undefined`).
+
+- **Interpolation + pluralization** (с 2026-06-19, Wave 3.5) — опциональный `params: Record<string, string | number>`. Без `params` поведение байт-в-байт прежнее (backward-compatible). Когда `params` передан, к разрешённой строке применяются:
+  1. **Pluralization** — если строка содержит `|`-формы и `params.count` — число, форма выбирается через [`selectPlural`](../../lib/utils/stringHandler.ts) по CLDR-правилам активной локали (`Intl.PluralRules`). Формат формы — `<selector> <text>`, где `selector` это `=N` (точное совпадение) или CLDR-категория (`zero|one|two|few|many|other`); порядок выбора `=count → категория → other → первая форма`.
+  2. **Interpolation** — [`interpolate`](../../lib/utils/stringHandler.ts) подставляет `{name}` → `params[name]`; неизвестный плейсхолдер остаётся литералом (dev-сигнал о незаполненном параметре).
+
+  ```ts
+  X.t("welcome", { name: "Egor" })              // "Hello, Egor!"
+  X.t("select.resultsCount", { count: 5 })      // en: "Results: 5" · ru: "5 результатов"
+  X.t("select.resultsCount", { count: 21 })     // ru: "21 результат" (CLDR "one" — n===1 эвристика дала бы неверно)
+  ```
+
+  `Intl.PluralRules` — платформенный API (evergreen), новой npm-зависимости не вводит.
 
 **Переключение:**
 
@@ -79,6 +92,36 @@ type Locales = Partial<{
 - На клиенте `setActiveLocale` после mount триггерит реактивный re-render — это после-hydration изменение, не конфликт.
 
 **Animation:** не применимо.
+
+## 3.1 Метаданные локали и направление письма
+
+`NameLocale` — открытый union (`string | "en" | "ru"`), и это осознанно: закрывать его значило бы запретить пользовательские локали. Поэтому «что это за язык» описывает отдельный объект `LocaleMetadata`, а не тип кода:
+
+```ts
+import { getLocaleMetadata } from "fishtvue/config"
+
+getLocaleMetadata()       // метаданные активной локали
+getLocaleMetadata("ar-EG")
+// { code: "ar-EG", name: "ar-EG", direction: "rtl", dateLocale: "ar-EG", numberLocale: "ar-EG" }
+```
+
+| Поле | Назначение |
+| ---- | ---------- |
+| `code` | Код локали, как он передаётся в `setActiveLocale` |
+| `name` | Человекочитаемое имя на самом языке — для UI выбора локали |
+| `direction` | `"ltr"` / `"rtl"`; выставляется на `<html dir>` при смене локали |
+| `dateLocale` | Строка для `date-fns` / `Intl.DateTimeFormat` |
+| `numberLocale` | Строка для `Intl.NumberFormat` |
+
+**Метаданные выводятся, а не ищутся в словаре.** Справочник всех локалей мира библиотеке компонентов не нужен: BCP 47-код сам несёт достаточно информации. Встроенные `en` / `ru` описаны явно, для любого другого кода направление определяется по списку RTL-языков, а `dateLocale` / `numberLocale` равны самому коду — ровно то, что ждут `Intl.*` и `date-fns`. Возвращать `undefined` было бы хуже: каждый вызывающий подменял бы его на `"en"`.
+
+Регион, как правило, отбрасывается (`ar-EG` → `ar`), но не там, где он и определяет письменность: `uz` — латиница и LTR, `uz-AF` — арабица и RTL.
+
+**`<html dir>` синхронизируется автоматически** — на `install()` и на каждом `setActiveLocale()`. На `install()` это важно отдельно: иначе RTL-приложение стартовало бы в LTR и «прыгало» после первой смены локали.
+
+Атрибут ставится на **корневой элемент документа**, а не на контейнер приложения. Логические CSS-свойства (`ps-`/`pe-`/`start-`/`end-`) и `rtl:`-варианты движка читают направление от ближайшего предка с `dir`, а портальные узлы — Dialog, FixWindow, тосты `openAlert` — рендерятся в `body`, вне дерева приложения; для них таким предком является только `<html>`.
+
+**Выставленный вручную `dir` не перетирается.** Признак «это выставили мы» хранится в самом DOM — атрибуте `data-fv-dir`. Модульная переменная врала бы в трёх сценариях сразу: два приложения на одной странице, HMR-перезагрузка модуля и SSR-гидратация, где разметка пришла с сервера, а состояние модуля в браузере пустое.
 
 ## 4. Quick Start
 
@@ -173,7 +216,7 @@ Optional ключи добавлены 2026-05-10 в связке с `setDefault
 
 | Name | Type | Description |
 |---|---|---|
-| `Component.t(key)` | `(key: keyof DefaultMessages \| string) => string \| undefined` | Возвращает строку для текущей локали. Поддерживает dot-path. |
+| `Component.t(key, params?)` | `(key: keyof DefaultMessages \| string, params?: Record<string, string \| number>) => string` | Возвращает строку для текущей локали с fallback chain `active → default → key`. Поддерживает dot-path. Опциональный `params` включает interpolation (`{name}`) и pluralization (`params.count` + `\|`-формы, CLDR через `Intl.PluralRules`). Никогда не возвращает `undefined` (key как last resort). |
 
 Из `fishtvue/locale` (default export):
 
@@ -277,6 +320,33 @@ function pick(name: "en" | "ru") {
 </template>
 ```
 
+### 9.5 Interpolation и pluralization (Wave 3.5)
+
+```vue
+<script setup lang="ts">
+import Component from "fishtvue/component"
+
+const X = new Component<"Select">()
+
+// interpolation: {name} → params.name (messages.*.welcome = "Hello, {name}!")
+const greeting = X.t("welcome", { name: "Egor" }) // "Hello, Egor!"
+
+// pluralization: {count} + |-формы, выбор по CLDR-правилам активной локали
+const results = (n: number) => X.t("select.resultsCount", { count: n })
+// en:  results(0) → "No results" · results(1) → "1 result" · results(5) → "Results: 5"
+// ru:  results(1) → "1 результат" · results(2) → "2 результата" · results(5) → "5 результатов" · results(21) → "21 результат"
+</script>
+```
+
+Формат pluralized-сообщения — `<selector> <text>`-формы через `|` (selector = `=N` либо CLDR-категория):
+
+```ts
+// en
+"=0 No results|one 1 result|other Results: {count}"
+// ru (4 CLDR-формы + точное =0)
+"=0 Результатов не найдено|one {count} результат|few {count} результата|many {count} результатов|other {count} результата"
+```
+
 ## 10. Configuration & Customization
 
 ### 10.1 Global
@@ -369,8 +439,8 @@ describe("Pagination locale", () => {
 
 | Проблема | Причина | Решение |
 |---|---|---|
-| `t()` возвращает `undefined` | Ключа нет в `messages[activeLocale]`. | Добавь ключ в локаль или fallback в SFC: `X.t("key") ?? "fallback"`. |
-| После `setActiveLocale("xx")` ничего не изменилось | `messages.xx` не определён. | Передай `messages: { xx: {...} }` в plugin. |
+| `t()` возвращает сам key как строку (например, `"alert.close"`) | Ключа нет ни в `messages[active]`, ни в `messages[default]`. | Добавь ключ в один из locale messages, либо смирись с literal key как fallback (используется как development-signal). |
+| После `setActiveLocale("xx")` ключи внезапно не локализуются | `messages.xx` не определён → fallback на `messages[defaultLocale]` (`en` по умолчанию) — обычно тоже даёт нужный текст. | Если хочешь именно `xx`-локаль, передай `messages: { xx: {...} }` в plugin. |
 | Hydration mismatch для текстов | Сервер и клиент разрешили разные `activeLocale`. | Установи `defaultLocale` детерминированно (например, из cookie/header) до `app.mount()`. |
 | Ключи `rows` / `clear` есть в en.ts, но нет в `DefaultMessages` | Локали содержат расширения сверх `DefaultMessages` без обновления типа. | См. Known issues — это API inconsistency. |
 | `getActiveLocale()` возвращает `undefined` | Plugin не установлен. | Установи через `app.use(FishtVue, ...)`. |
@@ -404,9 +474,11 @@ describe("Pagination locale", () => {
 
 ### Behavioral caveats
 
-- `Component.t()` возвращает `undefined` при отсутствии ключа, а не fallback на `defaultLocale`. Если хочешь fallback — реализуй на стороне SFC или через wrapper.
-- При `setActiveLocale(name)` если `messages[name]` не существует, реактивность сработает, но `t()` начнёт возвращать `undefined`. Нет встроенной валидации существования локали.
+- ~~`Component.t()` возвращает `undefined` при отсутствии ключа, а не fallback на `defaultLocale`~~ — ✅ resolved 2026-05-20: fallback chain `active → default → key` встроен. Сигнатура возвращает `string` (не nullable).
+- При `setActiveLocale(name)` если `messages[name]` не существует, реактивность сработает; `t()` начнёт возвращать значения из `defaultLocale` (через fallback chain), а не undefined как раньше.
+- SFC-сайты с pattern `X.t("key") ?? "fallback"` — `??` теперь dead code (t() не возвращает nullish). Сохранены для backward compat, могут быть очищены в будущем cleanup'е.
 - Default messages импортируются из `lib/locale/locales/{en,ru}.ts` напрямую; если bundler не корректно tree-shake'ит, ru может попасть в bundle даже при использовании только en.
+- **Wave 3.5 (2026-06-19) — смена формата `select.resultsCount`/`table.resultsCount`:** мёртвый `%d`-плейсхолдер заменён на pluralized-формат (`<selector> <text>`-формы через `\|`, интерполяция через `{count}`). Потребитель, переопределявший эти ключи в старом `%d`-стиле, должен мигрировать на `{count}` + `\|`-формы — иначе `%d` останется литералом, а единственная форма будет применяться ко всем числам. Ключи `resultsCountOne`/`resultsCountNone` помечены `@deprecated` (формы единичного/нулевого результата теперь кодируются в `resultsCount` через `one`/`=0`), оставлены для backward compat.
 
 ### Bug report format
 

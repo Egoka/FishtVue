@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "jsx": "preserve",
+    "types": ["node", "vite/client"],
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    // `strict: false` намеренно. Задача типов здесь — ловить неправильное использование API
+    // библиотеки, а не доводить типовую гигиену демо-кода до идеала. Ужесточать — отдельная задача.
+    "strict": false,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      // Зеркало alias'а из vite.config.ts. Без этих строк vue-tsc не резолвит ни один импорт
+      // библиотеки: alias живёт только в конфиге Vite, а песочница — единственный в репозитории
+      // потребитель, который собирается против живой `lib/`.
+      "fishtvue": ["../lib/index.ts"],
+      "fishtvue/*": ["../lib/*"],
+      // Зеркало `resolve.dedupe` из vite.config.ts: и код песочницы, и SFC библиотеки должны
+      // видеть одну и ту же копию Vue. Иначе `App`/`Plugin` из двух установок — номинально
+      // разные типы, и `app.use(FishtVue, …)` не проходит ни одну перегрузку.
+      "vue": ["./node_modules/vue"],
+      "vue/*": ["./node_modules/vue/*"]
+    }
+  },
+  // Ради этой строки волна и затевалась: без `strictTemplates` vue-tsc считает незнакомый проп
+  // (например, снятый `:styles`) обычным fallthrough-атрибутом и молчит — то есть перевод на
+  // TypeScript не поймал бы ровно тот класс ошибок, ради которого делался.
+  "vueCompilerOptions": {
+    "strictTemplates": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue", "vite.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

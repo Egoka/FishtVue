@@ -2,7 +2,7 @@
 
 ## What this project is
 
-**FishtVue** — Vue 3 component library, публикуемая в npm одним пакетом `fishtvue`. Содержит 22 компонента (form-controls, data-display, layout, disclosure, feedback, a11y), инфраструктуру (`Component<T>` класс, Vue plugin `Config`, темы Aurora/Harmony/Sapphire, локали `en`/`ru`, Nuxt module) и 11 utility handlers. Каждый компонент имеет собственный `package.json` и точечный импорт `fishtvue/{name}` для tree-shaking.
+**FishtVue** — Vue 3 component library, публикуемая в npm одним пакетом `fishtvue`. Содержит 23 компонента (form-controls, data-display, layout, disclosure, feedback, a11y, virtualization), инфраструктуру (`Component<T>` класс, Vue plugin `Config`, темы Aurora/Harmony/Sapphire, локали `en`/`ru`, Nuxt module) и 11 utility handlers. Каждый компонент имеет собственный `package.json` и точечный импорт `fishtvue/{name}` для tree-shaking.
 
 Цель — стабильный, типизированный, SSR-совместимый, evergreen-only ui-кит без рантайм-зависимости от Tailwind у потребителя.
 
@@ -94,6 +94,17 @@
 - Не добавлять Nuxt Content директивы в `Documentation/`.
 - Не создавать файл `Documentation/issues/{name}.md`, если у компонента нет реальных проблем.
 - Не подключать новые dependencies в `lib/` без явного approve пользователя.
+- Не править этот файл, не обновив парный agent-guide — см. регламент ниже.
+
+## Два agent-guide
+
+Репозиторий держит два одинаковых agent-guide: `CLAUDE.md` (Claude Code) и `AGENTS.md` (Codex). Тексты обязаны совпадать; разрешено единственное расхождение — пути к каталогу agent-конфига (`.claude` в одном, `.Codex` в другом; имя самого файла в ссылках на глобальный конфиг). **Правишь один файл — сразу переноси правку во второй.**
+
+Проверка: нормализует оба файла к общему виду, вывод должен быть пуст.
+
+```bash
+norm() { sed 's#\.Codex#.claude#g; s#AGENTS\.md#CLAUDE.md#g' "$1"; }; diff <(norm CLAUDE.md) <(norm AGENTS.md)
+```
 
 ## Slash-команды
 

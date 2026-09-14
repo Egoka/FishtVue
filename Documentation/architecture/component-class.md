@@ -1,7 +1,7 @@
 ---
 title: Component class
-summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle.
-updated: 2026-05-09
+summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20 + опциональный params для interpolation/CLDR-pluralization (Wave 3.5) с 2026-06-19. Generic narrowing contract (D21) + HMR style-dedup задокументированы 2026-06-14.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -21,8 +21,8 @@ Source: [lib/component/index.ts](../../lib/component/index.ts), [lib/component/T
 ```
 lib/component/
 ├── index.ts            # реализация Component<T>
-├── TypeComponent.d.ts  # внешние типы: Component, NamesComponents, PublicFields, StylesComponent, setStyleOptions
-├── Component.test.ts   # 15 кейсов (Vitest)
+├── TypeComponent.d.ts  # внешние типы: Component, NamesComponents, PublicFields, StylesComponent, SetStyleOptions, ClassesProps, ClassesKey, ClassesResolver
+├── Component.test.ts   # 39 кейсов (Vitest)
 └── package.json        # main "./component.mjs", types "./TypeComponent.d.ts"
 ```
 
@@ -49,12 +49,14 @@ lib/component/
 4. `name` берётся из аргумента; если опущен — из `__instance?.type.__name` (имя SFC).
 5. `prefix` — из `optionsTheme.prefix` или `"fishtvue"` по умолчанию.
 6. `__options = $fishtVue.getOptions(name)` — frozen-копия `componentsOptions[name]`.
-7. `__hooks()` регистрирует `onServerPrefetch(() => initStyle())` и `vueOnMounted(() => initStyle())` — стили инициализируются автоматически.
+7. `__hooks()` регистрирует `onServerPrefetch(() => initStyle())` и `vueOnMounted(() => initStyle())` — стили инициализируются автоматически. **Это единственный источник вызова `initStyle()` на mount/SSR-prefetch.** Дополнительный ручной `onMounted(() => X.initStyle())` в SFC — антипаттерн (двойная инициализация), см. [dev-patterns.md §2 row 1](../dev-patterns.md#2-decisions). Wave 2.3 sweep (2026-05-16) убрал все ручные дубликаты из 6 SFC; в чистых SFC стоит comment-marker, фиксирующий канон.
+
+> **Generic narrowing (D21).** `T` в `Component<T>` — только для options-typing; runtime использует `this.name`. При добавлении нового компонента нужно расширить `ComponentsOptions` (шаг 7 чек-листа [dev-patterns.md §8](../dev-patterns.md#8-adding-a-new-component-checklist)). Подробнее — [§13 Generic narrowing contract](#13-typescript).
 
 Шаги стилизации:
 
-1. Внутри computed/SFC: `Button.setStyle([tw-классы])`.
-2. `cn(stylesComp)` (из `tailwindHandler`) сливает массив через `clsx + tailwind-merge`.
+1. Внутри computed/SFC: `Button.setStyle([tw-классы], { consumer })` — как правило через `const { cls, raw, pick } = Button.resolveClasses(props)`: `cls(key, …base)` сам собирает `consumer` из `componentsOptions.Button.classes[key]`, `props.classes[key]` и (для `root`) `options.class`/`props.class` ([component/index.ts:182](../../lib/component/index.ts#L182), dev-patterns §2 B–D).
+2. `cn(stylesComp, consumer)` (из `tailwindHandler`) сливает массив через `clsx + tailwind-merge`; сегмент потребителя всегда последний — twMerge отдаёт ему конфликт. Под `config.unstyled` шаги 3–6 пропускаются: возвращается `"fv " + consumer` ([component/index.ts:156](../../lib/component/index.ts#L156)) — UA-preflight `fv` и классы потребителя живут, тема нет.
 3. Каждый класс конвертится в CSS через `tailwind(item, { selector: ".fv-{name}", darkSelector })`.
 4. Уникальный CSS добавляется в `listOfCssComponents` (per-component реестр).
 5. `__setStyle()` собирает массив CSS, сортирует @media в конец, минифицирует через `minifyCSS` (если не выставлен `isNotMinifyCSS`), и вызывает `useStyle(css, { name })` для инжекции.
@@ -123,11 +125,12 @@ Note: тип-параметр `T extends keyof ComponentsOptions` — обяза
 | `getOptions()` | `() => ComponentsOptions[T] \| undefined` | Frozen-копия `componentsOptions[name]`. |
 | `getPrefix()` | `() => string \| undefined` | Возвращает `prefix`. |
 | `initStyle(stylesComp?)` | `(stylesComp?: StylesComponent) => void` | Применяет накопленный CSS через `useStyle`. Авто-вызывается из `__hooks()` на mount/SSR-prefetch. |
-| `setStyle<T>(stylesComp, options?)` | `(stylesComp: T \| T[], options?: setStyleOptions) => string` | Главный API: преобразует tw-классы в CSS, добавляет в реестр и возвращает `"fv {prefix}-{kebab-name} {merged-classes}"` для `:class=`. |
-| `t(key)` | `(key: keyof DefaultMessages \| string) => string \| undefined` | Локализация через `getActiveLocale()` + `messages[locale][key]`. Поддерживает dot-path (`"button.label"`). |
+| `setStyle<T>(stylesComp, options?)` | `(stylesComp: T \| T[], options?: SetStyleOptions) => string` | Главный API: преобразует tw-классы в CSS, добавляет в реестр и возвращает `"fv {prefix}-{kebab-name} {merged-classes}"` для `:class=`. |
+| `t(key, params?)` | `(key: keyof DefaultMessages \| string, params?: Record<string, string \| number>) => string` | Локализация с fallback chain `messages[active][key] → messages[default][key] → key`. Поддерживает dot-path. Опциональный `params` — interpolation (`{name}`) + pluralization (`params.count` + `\|`-формы через CLDR `Intl.PluralRules`); без `params` поведение прежнее. См. [locale.md §3](./locale.md#3-how-it-works). |
 | `componentsStyle()` | `() => StyleMode \| undefined` | Возвращает `componentsStyle` из global config: `"filled" \| "outlined" \| "underlined"`. |
+| `resolveClasses<K>(props)` | `(props: ClassesProps<K>) => ClassesResolver<K>` | Резолвер `class`/`classes` (dev-patterns §2 B–D): `cls(key, …base)` — класс собственного элемента через `setStyle` (порядок `base → options.classes[key] → props.classes[key] → (root) options.class → props.class`); `raw(key)` — только сегменты потребителя для hand-off ребёнку; `pick(key, fallback)` — aspect-ключ, `""` в props отключает. `cls`/`raw` принимают и **массив ключей** (`ClassesKey<K>`): `cls(["segment", "segmentStart"], …)` разворачивает сегменты «общий → частный», поэтому частный ключ выигрывает twMerge. Реактивен внутри `computed`. |
 
-`PublicFields` ([TypeComponent.d.ts:89–100](../../lib/component/TypeComponent.d.ts#L89-L100)) — список ключей, доступных в lifecycle-хуке: `name`, `prefix`, `onBefore*`, `on*`, `getOptions`, `getPrefix`, `initStyle`. `setStyle` и `t` через хук не пробрасываются.
+`PublicFields` ([TypeComponent.d.ts:139–150](../../lib/component/TypeComponent.d.ts#L139-L150)) — список ключей, доступных в lifecycle-хуке: `name`, `prefix`, `onBefore*`, `on*`, `getOptions`, `getPrefix`, `initStyle`. `setStyle` и `t` через хук не пробрасываются.
 
 ## 9. Examples
 
@@ -215,12 +218,12 @@ X.onBeforeUnmount(() => {
 
 ### 10.4 CSS layer override
 
-Переданный `layers` обрабатывается в `__stylesBase`:
+`__stylesBase` оборачивает CSS в `@layer fishtvue` **всегда** — даже без `optionsTheme.layers` (Issue 4 ✅ 2026-06-21, Wave 2): зеркало base-style, unlayered consumer-CSS предсказуемо перебивает FishtVue.
 
 ```ts
 layers && layers.length
-  ? `@layer ${layers}; @layer fishtvue { ${css} }`
-  : css
+  ? `@layer ${layers}; @layer fishtvue { ${css} }` // + order-декларация
+  : `@layer fishtvue { ${css} }` // дефолт: тоже в слой (раньше — сырой css)
 ```
 
 См. [Theme §10.4](./theme.md#104-css-layer-override).
@@ -237,7 +240,7 @@ layers && layers.length
 
 ### Security
 
-- Инжекция через `useStyle` создаёт `<style>` element. Требует `style-src 'unsafe-inline'` или nonce в CSP. Опциональный `nonce` поддерживается через `StyleOptions.nonce` ([Theme.d.ts:182](../../lib/theme/Theme.d.ts#L182)) — но `Component.__setStyle()` его не пробрасывает (см. Known issues).
+- Инжекция через `useStyle` создаёт `<style>` element. Требует `style-src 'unsafe-inline'` или nonce в CSP. Опциональный `nonce` поддерживается через `StyleOptions.nonce` ([Theme.d.ts:249](../../lib/theme/Theme.d.ts#L249)) — но `Component.__setStyle()` его не пробрасывает (см. Known issues).
 - Нет `eval`, `new Function`, динамических импортов.
 - `cssComponents: Map<NamesComponents, string>` — глобальная мапа без TTL, может расти (за счёт уникальных tw-комбинаций).
 
@@ -245,7 +248,7 @@ layers && layers.length
 
 ```ts
 import Component from "fishtvue/component"
-import type { PublicFields, StylesComponent, setStyleOptions } from "fishtvue/component"
+import type { ClassesKey, ClassesProps, ClassesResolver, PublicFields, SetStyleOptions, StylesComponent } from "fishtvue/component"
 
 // Типизированный класс
 const X = new Component<"Button">()
@@ -256,11 +259,25 @@ X.onMounted((instance) => {
   instance.getOptions()
 })
 
-// setStyle с options
-X.setStyle(["px-2", "py-1"], { selector: ".my-scope ", isBaseClasses: true })
+// setStyle с options: consumer — сегменты потребителя (переживают unstyled, последние в twMerge)
+X.setStyle(["px-2", "py-1"], { consumer: [props.class], selector: ".my-scope" })
+
+// resolveClasses — канонический путь в SFC
+type ButtonClassKey = "icon" | "loading"
+const { cls, raw, pick } = X.resolveClasses<ButtonClassKey>(props)
+const classBase = computed(() => cls("root", "inline-flex items-center"))
+const classIconHandOff = computed(() => raw("icon")) // → <Icons :class="[iconBase, classIconHandOff]" />
 ```
 
 `NamesComponents = keyof ComponentsOptions | "BaseComponent"` ([TypeComponent.d.ts:5](../../lib/component/TypeComponent.d.ts#L5)).
+
+### Generic narrowing contract (D21)
+
+Тип-параметр `T extends keyof ComponentsOptions` существует **только для options-typing**: он определяет тип, который вернёт `getOptions()`. В runtime класс оперирует строкой `this.name` (аргумент конструктора или `__instance.type.__name`), а не `T`. Следствия контракта:
+
+- `T` уже выводится из интерфейса `ComponentsOptions` — отдельный auto-derive type-helper не нужен. Опечатка `new Component<"Bttuon">()` ловится `vue-tsc` на compile-time.
+- **При добавлении нового компонента** обязательно расширить `ComponentsOptions` ключом этого компонента — иначе `new Component<"X">()` не пройдёт type-check, а `getOptions()` не будет типизирован. Это шаг 7 чек-листа [dev-patterns.md §8](../dev-patterns.md#8-adding-a-new-component-checklist) («Добавить опции в `lib/config/FishtVue.d.ts` (`ComponentsOptions`)»).
+- Если SFC объявляет `defineOptions({ name: "Custom" })` с именем вне `ComponentsOptions`, `this.name` типизируется как `undefined` — см. [§18 API inconsistencies](#18-known-issues--limitations).
 
 ## 14. Compatibility & Stability
 
@@ -272,7 +289,9 @@ X.setStyle(["px-2", "py-1"], { selector: ".my-scope ", isBaseClasses: true })
 
 ## 15. Testing recipes
 
-Тесты — [Component.test.ts](../../lib/component/Component.test.ts) (15 кейсов).
+Тесты — [Component.test.ts](../../lib/component/Component.test.ts) (26 кейсов). Wave 2.3 (2026-05-16) добавил SSR/client hook registration coverage, idempotence `initStyle()`, fallback chain на `window.FishtVue`, graceful no-config. 2026-06-14 (Issue 5): default-`__stylesBase` path (`initStyle()` без аргумента) + стабилизация flaky `getOptions` (явный `name` вместо order-dependent undefined-резолва под `isolate: false`).
+
+Инжекция `<style>` тестируется отдельно в [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")` (`vi.unmock("fishtvue/theme")` → реальный `useStyle` вместо глобального no-op мока): среди кейсов — HMR-дедуп (повторная инжекция с одним `name` → один `<style>`, контент заменён, не дубль; см. [Issues — Component class Issue 3](../issues/component-class.md)).
 
 Минимальный кейс:
 
@@ -312,7 +331,7 @@ describe("Component class", () => {
 | `getOptions()` возвращает `undefined` | Plugin не установлен или name не совпадает с ключом `ComponentsOptions`. | `app.use(FishtVue, {})` + проверь, что `name` в `new Component<"X">()` есть в `ComponentsOptions`. |
 | `setStyle` возвращает класс, но стили не применяются | `useStyle` не нашёл `<head>` (SSR). | Стили инжектятся только на клиенте — на сервере класс возвращается, но `<style>` не создаётся. На клиенте после hydration стиль появится. |
 | `name` отображается как `undefined` | SFC без `defineOptions({ name: "X" })` или без аргумента в `new Component<"X">()`. | Передай явно: `new Component<"X">("X")`. |
-| `t()` всегда возвращает `undefined` | Нет ключа в `locale.messages[activeLocale]` или активная локаль не соответствует messages. | Проверь конфиг плагина и `getActiveLocale()`. |
+| `t()` возвращает literal key вместо перевода | Ключа нет ни в `messages[active]`, ни в `messages[default]`. | Добавь ключ в локаль — fallback chain покрывает active → default → key. |
 | Custom layers не применяются | `optionsTheme.layers` не передан. | Передай: `app.use(FishtVue, { optionsTheme: { layers: "reset, base" } })`. |
 
 ## 17. Related
@@ -330,7 +349,7 @@ describe("Component class", () => {
 
 ### Incomplete or stubbed behavior
 
-- `__setStyle` не пробрасывает `nonce` в `useStyle`, хотя `StyleOptions.nonce` поддерживается ([Theme.d.ts:182](../../lib/theme/Theme.d.ts#L182)). При жёстком CSP без `'unsafe-inline'` это блокер.
+- `__setStyle` не пробрасывает `nonce` в `useStyle`, хотя `StyleOptions.nonce` поддерживается ([Theme.d.ts:249](../../lib/theme/Theme.d.ts#L249)). При жёстком CSP без `'unsafe-inline'` это блокер.
 
 ### Skipped tests
 
@@ -338,15 +357,16 @@ describe("Component class", () => {
 
 ### API inconsistencies
 
-- `setStyle` и `t` не входят в `PublicFields` ([TypeComponent.d.ts:89–100](../../lib/component/TypeComponent.d.ts#L89-L100)) — внутри lifecycle-хука их вызвать через `instance` нельзя. Это может удивить, если консумер ожидает доступ к `setStyle` из `onMounted(hook)`-callback'а.
+- `setStyle`, `resolveClasses` и `t` не входят в `PublicFields` ([TypeComponent.d.ts:139–150](../../lib/component/TypeComponent.d.ts#L139-L150)) — внутри lifecycle-хука их вызвать через `instance` нельзя. Это может удивить, если консумер ожидает доступ к `setStyle` из `onMounted(hook)`-callback'а.
 - `name` в `TypeComponent.d.ts` — `T extends keyof ComponentsOptions`, но реализация принимает `name?: T` опционально и резолвит из `__instance.type.__name`. Если SFC имеет `defineOptions({ name: "Custom" })` с именем вне `ComponentsOptions`, тип `name` будет `undefined`.
 
 ### Behavioral caveats
 
-- `Component.__hooks()` вызывает `initStyle()` и на `onServerPrefetch`, и на `onMounted` — на клиенте после SSR это двойная инициализация. Доплнительный явный `onMounted(() => X.initStyle())` в SFC ([Button.vue:346](../../lib/button/Button.vue#L346), [Label.vue:57](../../lib/label/Label.vue#L57)) даёт **третий** вызов. См. [dev-patterns.md §12](../dev-patterns.md#12-known-deviations-from-this-pattern).
+- `Component.__hooks()` вызывает `initStyle()` и на `onServerPrefetch`, и на `onMounted` — на клиенте после SSR это двойная инициализация. Ручной `onMounted(() => X.initStyle())` в SFC давал бы **третий** вызов; Wave 2.3 (2026-05-16) убрал все такие дубликаты из 6 SFC (Button, Icons, InputLayout × 2, Menu, Separator, Table). См. [dev-patterns.md §2 row 1](../dev-patterns.md#2-decisions).
 - `cssComponents: Map` — растёт по мере уникальных классов. Без TTL и cleanup. На long-running приложениях с тысячами разных динамических классов память будет расти.
-- `FishtVueSymbol` пере-инициализируется при каждом `app.use(FishtVue, ...)` — `Component`-инстанс, созданный между установками, может ссылаться на старый instance.
-- Fallback на `window.FishtVue` ([component/index.ts:68](../../lib/component/index.ts#L68)) ломается в multi-instance/multi-app сценариях и в SSR.
+- ~~HMR: дубли `<style>` в `<head>`~~ — ✅ resolved 2026-06-14. `useStyle.load()` переиспользует существующий `style[data-fishtvue-style-id="${name}"]` ([useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45)); при HMR-re-mount тот же `name` → один тег, контент заменяется. Verified: [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")`. См. [Issues — Component class Issue 3](../issues/component-class.md). **Minor dev-only limitation:** каждый вызов `useStyle()` создаёт новый незакрытый `watch(cssRef, …)` (прошлый closure не вызывает `unload()`) — старый watch инертен (его `cssRef` больше не мутируется), элемент один; полноценный teardown отложен как нетривиальный (трекинг handle'ов в `__setStyle`).
+- ~~`FishtVueSymbol` пере-инициализируется при каждом `app.use(FishtVue, ...)`~~ — ✅ resolved 2026-05-20: symbol теперь `const`, multi-app safe.
+- ~~Fallback на `window.FishtVue` ломается в multi-instance/multi-app сценариях~~ — ✅ resolved 2026-05-20: inject-first path в `isExistFishtVue` ([config/index.ts:116](../../lib/config/index.ts#L116)); window fallback используется только вне Vue setup context (например, imperative API).
 
 ### Bug report format
 

@@ -79,7 +79,7 @@
   }
 
   .st3067--transparent {
-    stroke: rgba(#ffffff, 0);
+    stroke: transparent;
   }
 
   .st3067--xlarge {

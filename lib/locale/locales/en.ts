@@ -13,6 +13,35 @@ export default <DefaultMessages>{
   find: "Find...",
   copy: "Copy",
   clear: "Clear",
+  inputLayout: {
+    copied: "Copied"
+  },
+  select: {
+    resultsCount: "=0 No results|one 1 result|other Results: {count}"
+  },
+  table: {
+    resultsCount: "=0 No results|one 1 result|other Results: {count}"
+  },
+  alert: {
+    close: "Close"
+  },
+  fixwindow: {
+    close: "Close"
+  },
+  loading: {
+    label: "Loading"
+  },
+  pagination: {
+    label: "Pagination",
+    page: "Page"
+  },
+  virtualScroller: {
+    loading: "Loading…"
+  },
+  textEditor: {
+    linkLabel: "Enter link:",
+    saveLabel: "Save"
+  },
   requiredField: "Required field",
   noData: "No data",
   noColumn: "There are no columns",

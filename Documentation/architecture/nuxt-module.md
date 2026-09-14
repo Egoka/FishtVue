@@ -1,7 +1,7 @@
 ---
 title: Nuxt module + plugin
-summary: fishtvue/module — defineNuxtModule с auto-import; fishtvue/plugins/nuxt — SSR-инжекция CSS.
-updated: 2026-05-09
+summary: fishtvue/module — defineNuxtModule с auto-import; fishtvue/plugins/nuxt — SSR-инжекция CSS. 2026-09-05 — disableGlobalStyles реализован, version-detection удалён, заведён nuxt.test.ts.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -42,29 +42,31 @@ lib/plugins/
 - `fishtvue/utils/objectHandler.fieldsOmit` — фильтрация module-only-полей перед передачей в plugin.
 - `fishtvue/config` — собственно plugin, который запускается из generated runtime-plugin.
 
-Внешние peer-зависимости (optional, [lib/package.json:30–43](../../lib/package.json#L30-L43)):
+Внешние peer-зависимости (optional, [lib/package.json:41–72](../../lib/package.json#L41-L72)):
 
 | Пакет | Версия |
 |---|---|
-| `@nuxt/kit` | `^4.1.2` |
-| `@nuxt/schema` | `^4.1.2` |
+| `@nuxt/kit` | `>=3.0.0` |
+| `@nuxt/schema` | `>=3.0.0` |
 | `nuxt` | `>=3.0.0` |
 
 В Vite-only проекте эти peer-deps опциональны и не подключаются.
+
+> **Wave 2.1 (Issue 4):** `@nuxt/kit`/`@nuxt/schema` peer-range расширен `^4.1.2` → `>=3.0.0` — раньше major-pin `^4.1.2` ломал Nuxt 3 (хотя `nuxt` допускал `>=3.0.0`). Теперь модуль корректно ставится и в Nuxt 3 (`@nuxt/kit ^3.x`), и в Nuxt 4. Tested with Nuxt 3.x and 4.x.
 
 Bundle: `dist/module/module.mjs`, `dist/plugins/Plugins.mjs`.
 
 ## 3. How it works
 
-**Module pipeline** ([module/nuxt.ts:23–76](../../lib/module/nuxt.ts#L23-L76)):
+**Module pipeline** ([module/nuxt.ts:10–79](../../lib/module/nuxt.ts#L10-L79)):
 
 1. `defineNuxtModule<FishtVueOptions>({ meta: { name: "fishtvue", configKey: "fishtvue", compatibility: { nuxt: ">=3.0.0" } } })` — регистрация.
 2. `defaults: { prefix: "", autoImport: true, disableGlobalStyles: false }` — module-only поля.
 3. `setup(options, nuxt)`:
    - `parentDir = join(dirname(__filename), "..")` — выходим в корень `lib/`.
    - `runtimeDir` добавляется в `nuxt.options.build.transpile` (для корректной обработки SFC) и алиас `#fishtvue` ([module/nuxt.ts:42–43](../../lib/module/nuxt.ts#L42-L43)).
-   - При `autoImport: true` все 22 имени из `FISHT_VUE_COMPONENTS` ([module/nuxt.ts:79–102](../../lib/module/nuxt.ts#L79-L102)) регистрируются через `addComponent({ name: prefix + componentName, filePath: join(runtimeDir, toFlatCase(componentName)), global, mode })`.
-   - `addPlugin({ src: "./plugins/nuxt.mjs", mode: "server" })` — server plugin.
+   - При `autoImport: true` все 23 имени из `FISHT_VUE_COMPONENTS` ([module/nuxt.ts:79–103](../../lib/module/nuxt.ts#L79-L103)) регистрируются через `addComponent({ name: prefix + componentName, filePath: join(runtimeDir, toFlatCase(componentName)), global, mode })`, следом — 9 compound-детей из `FISHT_VUE_SUBCOMPONENTS` ([module/nuxt.ts:106–116](../../lib/module/nuxt.ts#L106-L116)) с общим `filePath` родителя и полем `export`.
+   - `addPlugin({ src: "./plugins/nuxt.mjs", mode: "server" })` — server plugin. **Пропускается при `disableGlobalStyles: true`** ([module/nuxt.ts:56](../../lib/module/nuxt.ts#L56)).
    - `addPluginTemplate({ filename: "fishtvue.all.mjs", mode: "all", getContents })` — generated plugin, который импортирует `FishtVue` из `fishtvue/config` и вызывает `nuxtApp.vueApp.use(FishtVue, JSON.parse(<options>))`.
 4. `MODULE_OPTIONS = ["global", "mode", "prefix", "autoImport", "disableGlobalStyles"]` — список ключей, отсекаемых при передаче в plugin (через `fieldsOmit`).
 
@@ -115,7 +117,7 @@ export default defineNuxtConfig({
 <!-- pages/index.vue -->
 <template>
   <div>
-    <Button mode="primary">Hello</Button>
+    <Button variant="primary">Hello</Button>
   </div>
 </template>
 ```
@@ -131,8 +133,8 @@ export default defineNuxtConfig({
 | `global` | `AddComponentOptions["global"]` | — | Передаётся в `addComponent` — компонент глобален (доступен в layouts и т.д.). |
 | `mode` | `AddComponentOptions["mode"]` | — | `"all" \| "client" \| "server"`. Контролирует, где компонент рендерится. |
 | `prefix` | `string` | `""` | Префикс для auto-import: `<MyButton>` вместо `<Button>` при `prefix: "My"`. |
-| `autoImport` | `boolean` | `true` | Включает регистрацию 22 компонентов в auto-import. |
-| `disableGlobalStyles` | `boolean` | `false` | Объявлен в типе, но реальная обработка распределена по компонентам. |
+| `autoImport` | `boolean` | `true` | Включает регистрацию 23 компонентов + 9 compound-детей в auto-import. |
+| `disableGlobalStyles` | `boolean` | `false` | При `true` server plugin SSR-инжекции CSS не подключается. Client-плагин конфигурации (`app.use(FishtVue, …)`) не затрагивается — config, локали и тема остаются. |
 
 Все поля `FishtVueConfiguration` (см. [Config §5](./config.md#5-props)) тоже принимаются и пробрасываются в plugin.
 
@@ -207,6 +209,16 @@ export default defineNuxtConfig({
 })
 ```
 
+**Как выбирать префикс.** Значение подставляется буквально, без разделителя: `prefix: "Fv"` даёт `<FvButton>`, `prefix: "My"` — `<MyButton>`. Поэтому префикс должен быть в PascalCase и начинаться с заглавной — Vue не считает компонентом имя, начинающееся со строчной буквы в camelCase-разметке.
+
+**Когда префикс нужен.** Дефолт — пустая строка, то есть `<Button>`, `<Input>`, `<Table>`. Это удобные имена, но и самые вероятные для коллизии: свой `components/Button.vue` в проекте, другая UI-библиотека, `@nuxt/ui`. Nuxt в такой ситуации не падает — выигрывает компонент, зарегистрированный последним, и расхождение проявляется как «кнопка выглядит не так», а не как ошибка. Если в проекте есть **любая** вторая библиотека компонентов, префикс стоит задать сразу.
+
+**Что префикс НЕ затрагивает:**
+
+- точечный импорт — `import Button from "fishtvue/button"` называется так, как назвал его импортирующий;
+- compound-дети регистрируются с тем же префиксом (`<FvMenuItem>`, `<FvAccordionItem>`), то есть разметка остаётся согласованной;
+- `Config` — это Vue plugin, а не компонент, и в auto-import не участвует вовсе.
+
 ### 9.4 Без auto-import
 
 ```ts
@@ -277,7 +289,7 @@ Module расширяет `NuxtConfig`/`NuxtOptions` через augmentation ([m
 ## 14. Compatibility & Stability
 
 - **Nuxt:** `>=3.0.0` декларировано через `compatibility.nuxt`. Реально протестировано — Nuxt 3.x. Nuxt 4 — экспериментально (детект `isNuxt4()` присутствует, но используется только для `importPath`-выбора, и текущая ветка возвращает `"#app"` в обоих случаях).
-- **`@nuxt/kit`:** `^4.1.2` peer.
+- **`@nuxt/kit` / `@nuxt/schema`:** `>=3.0.0` optional peer (Wave 2.1 — раньше `^4.1.2`, ломал Nuxt 3). Tested with Nuxt 3.x and 4.x.
 - **Stability flag:** `stable` (для Nuxt 3); Nuxt 4 — `beta`.
 - **Breaking changes:** не зафиксировано в публичном API между 0.2.x.
 - **Deprecations:** на момент ревизии (2026-05-09) `@deprecated`-меток нет.
@@ -328,18 +340,19 @@ await setup({
 
 ### Incomplete or stubbed behavior
 
-- `getNuxtVersion()` ([module/nuxt.ts:10–17](../../lib/module/nuxt.ts#L10-L17)) при отсутствии `nuxt/package.json` возвращает захардкоженное `"4.0.0"`. В окружении без Nuxt вызов модуля даёт ложное «Nuxt 4 detected».
-- В [module/nuxt.ts:62](../../lib/module/nuxt.ts#L62) `importPath` всегда `"#app"` независимо от `isV4`. Условный код есть, поведение — единственное.
-- `disableGlobalStyles` объявлен в `ModuleOptions` ([module/index.d.ts:36](../../lib/module/index.d.ts#L36)), но в `setup` не обрабатывается — флаг dead для модуля.
+- ~~`getNuxtVersion()` при отсутствии `nuxt/package.json` возвращает захардкоженное `"4.0.0"`~~ ✅ 2026-09-05 — блок удалён целиком вместе с `isNuxt4()` и `createRequire`.
+- ~~`importPath` всегда `"#app"` независимо от `isV4`. Условный код есть, поведение — единственное~~ ✅ 2026-09-05 — мёртвый тернарник убран, `'#app'` подставляется литералом. Это и была причина удаления version-detection: других потребителей у него не было.
+- ~~`disableGlobalStyles` объявлен в `ModuleOptions`, но в `setup` не обрабатывается — флаг dead для модуля~~ ✅ 2026-09-05 — реализован, см. §пайплайн и таблицу опций.
 - `lib/plugins/Plugins.ts` ([plugins/Plugins.ts](../../lib/plugins/Plugins.ts)) — re-export `nuxtInitPlugin` через `import` namespace + default `{ nuxtInitPlugin }`. Использование `Plugins.ts` снаружи библиотеки сомнительно — реальный entry для Nuxt — server plugin через addPlugin.
 
 ### Skipped tests
 
-В пакете нет собственных тест-файлов.
+~~В пакете нет собственных тест-файлов.~~ 2026-09-05 — заведён [module/nuxt.test.ts](../../lib/module/nuxt.test.ts) (11 тестов, `lib/module` 100% stmts / 75% branch): auto-import, `prefix`, `autoImport: false`, обе ветки `disableGlobalStyles`, отсечение `MODULE_OPTIONS`, инвариант compound-детей. `lib/plugins/` остаётся без тестов — SSR-инжекция проверяется только косвенно.
 
 ### API inconsistencies
 
-- `MODULE_OPTIONS = ["global", "mode", "prefix", "autoImport", "disableGlobalStyles"]` — захардкоженный массив. При добавлении нового поля в `ModuleOptions` нужно обновлять вручную.
+- `MODULE_OPTIONS = ["global", "mode", "prefix", "autoImport", "disableGlobalStyles"]` — захардкоженный массив. При добавлении нового поля в `ModuleOptions` нужно обновлять вручную. Контракт отсечения покрыт тестом, но сам список — нет.
+- `FISHT_VUE_COMPONENTS` заполняется вручную и не сверяется с [lib/index.ts](../../lib/index.ts). Для `FISHT_VUE_SUBCOMPONENTS` инвариант против compound-баррелей заведён 2026-09-05 — именно он вскрыл отсутствие `MenuItem`/`MenuGroup`/`AccordionItem`.
 - `(process as any).server` в [plugins/nuxt.ts:6](../../lib/plugins/nuxt.ts#L6) — устаревший подход. Канон Nuxt 3.10+: `import.meta.server`. В Nuxt 4 `process` тоже работает, но не гарантировано.
 - `@ts-ignore` в [plugins/Plugins.d.ts:4](../../lib/plugins/Plugins.d.ts#L4) и [plugins/nuxt.ts:12](../../lib/plugins/nuxt.ts#L12) скрывают типовые расхождения с `@nuxt/schema`.
 - `prefix: ""` (пустая строка) — техника для отсутствия префикса; type не запрещает `undefined`. Defaults считают, что `prefix` всегда присутствует.

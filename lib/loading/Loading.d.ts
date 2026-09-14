@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
 import { componentsMapEpic, componentsMapSvg } from "fishtvue/loading/loadingTypes"
 
 /**
@@ -19,21 +19,30 @@ export type SvgLoading = keyof typeof componentsMapSvg
 export declare type LoadingProps = {
   /**
    * The type of loading animation to display.
-   * @type {EpicLoading | SvgLoading | "simple"}
+   *
+   * `"simple"` не перечисляется отдельно: это ключ `componentsMapSvg`, то есть уже член
+   * `SvgLoading` (см. `loadingTypes.ts`). Набор значений для вызывающего кода не изменился.
+   * @type {EpicLoading | SvgLoading | undefined}
    */
-  type?: EpicLoading | SvgLoading | "simple"
+  type?: EpicLoading | SvgLoading
 
   /**
    * The duration of the animation in milliseconds.
-   * @type {number | 1000 | 1200 | 1500 | 2000 | 2500 | 3000 | 4000 | 5000 | 6000 | undefined}
+   *
+   * Литералы — рекомендованные пресеты, `(number & {})` держит union открытым: любое число
+   * по-прежнему допустимо, но подсказки не схлопываются в `number` (идиома `lib/icons/Icons.d.ts`).
+   * @type {1000 | 1200 | 1500 | 2000 | 2500 | 3000 | 4000 | 5000 | 6000 | (number & {}) | undefined}
    */
-  animationDuration?: number | 1000 | 1200 | 1500 | 2000 | 2500 | 3000 | 4000 | 5000 | 6000
+  animationDuration?: 1000 | 1200 | 1500 | 2000 | 2500 | 3000 | 4000 | 5000 | 6000 | (number & {})
 
   /**
    * The size of the loading animation in pixels.
-   * @type {number | 40 | 50 | 55 | 60 | 64 | 65 | 66 | 70 | undefined}
+   *
+   * Пресетов нет — рендер принимает любое px-значение (default `20`), поэтому прежний
+   * `number | 40 | 50 | …` был декоративным: TS схлопывал его в `number` без autocomplete.
+   * @type {number | undefined}
    */
-  size?: number | 40 | 50 | 55 | 60 | 64 | 65 | 66 | 70
+  size?: number
 
   /**
    * The color of the loading animation.
@@ -42,10 +51,16 @@ export declare type LoadingProps = {
   color?: string
 
   /**
-   * Custom CSS class for the loading container.
+   * CSS-классы корня `<div data-loading>`.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Карта классов (dev-patterns §2 B). У Loading единственный элемент — корень, поэтому доступен только `root` (≡ `class`).
+   * @type {ClassesMap | undefined}
+   */
+  classes?: ClassesMap
 }
 
 export declare type LoadingSlots = null
@@ -87,7 +102,10 @@ export declare type LoadingExpose = {
    */
   classLoading: ReadRef<LoadingProps["class"]>
 }
-export declare type LoadingOption = Pick<LoadingProps, "animationDuration" | "size" | "color" | "class">
+export declare type LoadingOption = Pick<
+  LoadingProps,
+  "type" | "animationDuration" | "size" | "color" | "class" | "classes"
+>
 
 // ---------------------------------------
 

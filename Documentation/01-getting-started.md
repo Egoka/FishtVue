@@ -1,7 +1,7 @@
 ---
 title: Getting started
 summary: Знакомство с пакетом fishtvue, инициализация плагина, минимальный запуск.
-updated: 2026-05-09
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -80,7 +80,7 @@ import Button from "fishtvue/button"
 </script>
 
 <template>
-  <Button mode="primary" type="theme">Привет, FishtVue</Button>
+  <Button variant="primary" color="theme">Привет, FishtVue</Button>
 </template>
 ```
 
@@ -224,7 +224,7 @@ const { name } = storeToRefs(store)
 
 ### A11y
 
-На уровне плагина a11y-логики нет — только базовые стили. Каждый компонент сам решает свои a11y-задачи; для шаблонов screen-reader-семантики см. компонент [Aria](./components/aria.md).
+На уровне плагина a11y-логики нет — только базовые стили. Каждый компонент сам решает свои a11y-задачи; для шаблонов screen-reader-семантики см. компонент [Textarea](./components/textarea.md).
 
 ### Security
 

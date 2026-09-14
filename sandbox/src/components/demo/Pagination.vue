@@ -2,5 +2,5 @@
   import Pagination from "fishtvue/pagination/Pagination.vue"
 </script>
 <template>
-  <Pagination :total="100" :isHiddenNavigationButtons="true"></Pagination>
+  <Pagination :total="100" :navigationButtons="false"></Pagination>
 </template>

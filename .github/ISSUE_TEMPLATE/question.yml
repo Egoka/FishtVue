@@ -23,7 +23,7 @@ body:
         - General
         - Accordion
         - Alert
-        - Aria
+        - Textarea
         - Badge
         - Button
         - Calendar
@@ -43,6 +43,7 @@ body:
         - Table
         - TextEditor
         - Form
+        - VirtualScroller
     validations:
       required: true
 

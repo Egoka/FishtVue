@@ -1,0 +1,5 @@
+{
+  "main": "./textarea.mjs",
+  "module": "./textarea.mjs",
+  "types": "./Textarea.d.ts"
+}

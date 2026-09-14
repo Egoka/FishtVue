@@ -1,8 +1,8 @@
 ---
 title: Loading
-summary: Лоадер с типами Epic/SVG/simple, configurable size, color, animationDuration.
-updated: 2026-05-09
-stability: beta
+summary: props 1.0 (2026-09-14) — `class`/`classes.root` на корне, ключ `"4-dots-gooey"` (typo снят). Лоадер с типами Epic/SVG/simple, configurable size, color, animationDuration; ARIA status-регион, reduced-motion fallback.
+updated: 2026-09-14
+stability: stable
 since: 0.2.11
 ---
 
@@ -12,7 +12,7 @@ since: 0.2.11
 
 `Loading` — индикатор загрузки. Поддерживает три категории типов: `EpicLoading` (анимированные многокомпонентные), `SvgLoading` (статичные SVG с CSS-анимацией), `"simple"` (минималистичный спиннер). Конфигурируется через `size`, `color`, `animationDuration`.
 
-Stability: `beta` — coverage `Loading.vue` 79.06%, но coverage `loadingTypes.ts` 22.22% statements / 7.97% functions (большая часть type definitions не запускается на тестах).
+Stability: `stable` (с 2026-09-06) — coverage `Loading.vue` ~98% statements / 100% lines, `loadingTypes.ts` 100% ([Loading.test.ts](../../lib/loading/Loading.test.ts), 152 кейса, по тесту на каждую Epic/SVG вариацию). Последнее, что удерживало `beta`, — [Issue 7](../issues/loading.md) (hardcoded HEX в Epic/SVG); закрыто переводом всех спиннеров на `currentColor`.
 
 Source: [Source](../../lib/loading/Loading.vue), [Loading.d.ts](../../lib/loading/Loading.d.ts), [loadingTypes.ts](../../lib/loading/loadingTypes.ts), [Loading.test.ts](../../lib/loading/Loading.test.ts).
 
@@ -30,13 +30,13 @@ lib/loading/
 
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили; `onMounted` для дополнительной инициализации.
-- **Поток данных:** `type` → resolve в один из мап `componentsMapEpic`/`componentsMapSvg` → рендер компонента-инстанса. `size`/`color`/`animationDuration` управляются как inline-styles.
-- **Стили:** через `Loading.setStyle()`. CSS-анимации через `animation-duration` inline.
-- **Конфиг:** `componentsOptions.Loading` — см. §10.
-- **Локализация:** не использует.
+- **Lifecycle:** стили инжектит базовый `Component.__hooks()` (`onServerPrefetch + vueOnMounted`) — ручной `onMounted(() => initStyle())` в SFC отсутствует (канон, см. [dev-patterns §2](../dev-patterns.md)).
+- **Поток данных:** `resolvedType` (`props.type ?? options?.type ?? "simple"`) → resolve в один из мап `componentsMapEpic`/`componentsMapSvg` → ленивый `defineAsyncComponent`. `size`/`color`/`animationDuration` управляются как inline-styles.
+- **Стили:** все Tailwind-классы (контейнер + `sr-only` visually-hidden-лейбл) — только через `Loading.setStyle()` factory: движок генерирует CSS, у потребителя нет рантайм-зависимости от Tailwind. Литеральных `class="…"` в шаблоне нет. Динамические runtime-значения (`size`/`color` → `width`/`height`/`fill`) — inline `:style` (plain CSS, канон всей либы). CSS-анимации через `animation-duration` inline.
+- **Конфиг:** `componentsOptions.Loading` (включая `type`) — см. §10.
+- **Локализация:** `aria-label` статус-региона через `Loading.t("loading.label")` (ключ `loading.label` в en/ru).
 - **SSR:** SSR-safe (CSS-анимации работают и на сервере при initial render).
-- **Animation:** CSS keyframes (per-component-type).
+- **Animation:** CSS keyframes (per-component-type). При `prefers-reduced-motion: reduce` рендерится статичный `simple`-loader вместо анимации (см. §12).
 
 ## 4. Quick Start
 
@@ -52,15 +52,22 @@ import Loading from "fishtvue/loading"
 
 ## 5. Props
 
-`LoadingProps` ([Loading.d.ts:19–49](../../lib/loading/Loading.d.ts#L19-L49)):
+`LoadingProps` ([Loading.d.ts:19–64](../../lib/loading/Loading.d.ts#L19-L64)):
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `type` | `EpicLoading \| SvgLoading \| "simple"` | `"simple"` (или из global) | Тип индикатора. |
-| `animationDuration` | `number \| 1000 \| 1200 \| 1500 \| 2000 \| 2500 \| 3000 \| 4000 \| 5000 \| 6000` | — | Длительность (ms). |
-| `size` | `number \| 40 \| 50 \| 55 \| 60 \| 64 \| 65 \| 66 \| 70` | — | Размер (px). |
-| `color` | `string` | — | CSS color (HEX, hsl, var(...)). |
-| `class` | `StyleClass` | — | Класс контейнера. |
+| `type` | `EpicLoading \| SvgLoading` | `"simple"` (или из global) | Тип индикатора (`"simple"` — ключ `componentsMapSvg`). |
+| `animationDuration` | `1000 \| 1200 \| 1500 \| 2000 \| 2500 \| 3000 \| 4000 \| 5000 \| 6000 \| (number & {})` | `1500` | Длительность (ms); литералы — пресеты, любое число допустимо. |
+| `size` | `number` | `20` | Размер (px). |
+| `color` | `string` | `"currentColor"` | CSS color (HEX, токен палитры, var(...)). |
+| `class` | `StyleClass` | — | Классы корня `<div data-loading>`. |
+| `classes` | `ClassesMap` | — | Карта классов, см. §5.1: у Loading единственный элемент — корень, поэтому доступен только `root` (≡ `class`). |
+
+### 5.1 Classes keys
+
+| Key    | Element (`data-*`)      | Kind    | Default |
+| ------ | ----------------------- | ------- | ------- |
+| `root` | `<div data-loading>`    | element | —       |
 
 `EpicLoading = keyof typeof componentsMapEpic` ([loadingTypes.ts](../../lib/loading/loadingTypes.ts)) — extensive set of named animations.
 `SvgLoading = keyof typeof componentsMapSvg` — SVG-вариации.
@@ -116,7 +123,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`LoadingOption = Pick<LoadingProps, "animationDuration" | "size" | "color" | "class">`. **`type`** не входит в Option.
+`LoadingOption = Pick<LoadingProps, "type" | "animationDuration" | "size" | "color" | "class" | "classes">` ([Loading.d.ts:105](../../lib/loading/Loading.d.ts#L105)). `type` **входит** в Option — `componentsOptions.Loading.type` задаёт дефолтный тип глобально (Issue 4 закрыт 2026-06-03).
 
 ### 10.2 Per-instance
 
@@ -138,9 +145,9 @@ Root класс — `fv fishtvue-loading`.
 
 ### A11y
 
-- ARIA `role="status"`/`aria-live="polite"` — проверь по DOM. По умолчанию screen-reader может не озвучивать loader.
-- Для критичной a11y добавь `aria-label="Loading"` через `props.class` или wrap.
-- `prefers-reduced-motion` не учтён.
+- Корень — `<div role="status" aria-live="polite" :aria-label>` + visually-hidden `<span class="sr-only">` с тем же текстом. Screen-reader озвучивает loader.
+- `aria-label` локализуется через `Loading.t("loading.label")` (ключ `loading.label`, en `Loading` / ru `Загрузка`); реагирует на runtime locale-switch.
+- `prefers-reduced-motion: reduce` — рендерится статичный `simple`-loader (`animation-duration=0`) вместо анимации. Один guard покрывает все 126 вариаций.
 
 ### Security
 
@@ -156,8 +163,8 @@ import Loading from "fishtvue/loading"
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `beta` — coverage loadingTypes.ts 22.22%.
-- **Breaking changes:** не зафиксировано.
+- **Stability flag:** `stable` (2026-09-06) — coverage `loadingTypes.ts` 100%; [Issue 7](../issues/loading.md) (hardcoded HEX) закрыт. Root exports map (A4-5, Wave 2.1) — ✅ resolved 2026-06-14 (см. [issues/loading.md Issue 5](../issues/loading.md)).
+- **Breaking changes (1.0.0, props 1.0 — 2026-09-14):** ключ `"4-dots-goeey"` → `"4-dots-gooey"` (старое значение → dev-warning и fallback `"simple"`); `classes` добавлен (non-breaking). Миграция — [migration-guide.md](../migration-guide.md).
 - **Deprecations:** нет.
 
 ## 15. Testing recipes
@@ -191,7 +198,7 @@ describe("Loading", () => {
 ## 17. Related
 
 - [Button](./button.md), [Alert](./alert.md), [Dialog](./dialog.md) — потребители.
-- [Icons](./icons.md), [Aria](./aria.md).
+- [Icons](./icons.md), [Textarea](./textarea.md).
 
 ## 18. Known issues & limitations
 
@@ -201,8 +208,9 @@ describe("Loading", () => {
 
 ### Incomplete or stubbed behavior
 
-- `loadingTypes.ts` coverage 3.12% lines — большая часть named animations не вызывается ни в одном тесте.
-- `LoadingOption` не включает `type` — глобально нельзя задать дефолтный тип (только через wrapper).
+- ~~`loadingTypes.ts` coverage 3.12% lines~~ ✅ resolved 2026-06-03 — добавлен [Loading.test.ts](../../lib/loading/Loading.test.ts), coverage 100%.
+- ~~`LoadingOption` не включает `type`~~ ✅ resolved 2026-06-03 — `type` добавлен в `Pick`.
+- Hardcoded HEX (`#ff1d5e` и т.п.) в 20 `epic/*.vue` + 2 `svg/*.vue` — [Issue 7](../issues/loading.md), отложено в Wave 9 (colors → tokens).
 
 ### Skipped tests
 

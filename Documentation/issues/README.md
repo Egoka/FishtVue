@@ -1,70 +1,126 @@
 ---
 title: Issues — Index
 summary: Сводный индекс аудит-документов компонентов и инфра-модулей FishtVue по 60-пунктовому чек-листу + Configuration support + Dual-API gap. Cross-cutting findings, fix roadmap с чекбоксами.
-updated: 2026-05-10
-last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; severity matrix пересчитана; добавлен fix roadmap с чекбоксами.
+updated: 2026-09-14
+last-changes: 2026-09-14 — **Wave 13 (props 1.0.0) закрыта целиком: W0–W9**. W9 — песочница: переведена на API 1.0.0 и на TypeScript, сборка заведена в CI. Волна началась с находки, ломавшей её собственный критерий приёмки — `pnpm sandbox:build` не запускался вовсе (`--filter` не матчил ни одного проекта и выходил с кодом 0; мёртвыми были все семь `--filter`-скриптов, включая `doc:*`). Это и объясняет восемь волн незамеченного дрейфа. Типовая проверка идёт со `strictTemplates`: без него из 26 ошибок песочницы исчезают 13 — vue-tsc считает снятый prop fallthrough-атрибутом. Попутно вскрылись две копии Vue (свой install-root у песочницы) — два рантайма на странице и неработающий `provide`/`inject` между кодом песочницы и библиотеки. Отдельно стоят три места миграции: инвертированный `isHiddenNavigationButtons`, `Alert.position: "top-right"` (отставание ещё от §2) и `class` у FixWindow/Dialog, сменивший элемент (§9) — последнее не ловится ни typecheck'ом, ни grep'ом. Записан долг `lib/`: 199 нарушений `strictTemplates`, невидимых корневому `pnpm typecheck`. Ранее — W8 — документация и миграция: [migration-guide.md](../migration-guide.md) получил §9–§15 по редизайну props — семь разделов в формате §2 (`Что снято | Замена | Что будет, если оставить старое`) с `rg`/`sed`-рецептом на каждый класс переименований и явным списком **тихих** breaks (`class` сменил элемент у шести компонентов; переименованные события; сменившийся payload `toggle` у Accordion) — остальное ловится первым же `vue-tsc`. Wave 12 приведена в соответствие с R8 (codemod-чеклист схлопнут в одну строку, acceptance больше не обещает `npx fishtvue-codemod`), решения редизайна записаны как R37–R44 в [closure-progress.md](./closure-progress.md), `migration-guide.md` добавлен в индекс [Documentation/README.md](../README.md). Попутно закрыт остаток T2, пропущенный волной W2: `<SelectGroup>` держал обязательный `label` и его алиас `title` — остался один `title` (зеркало `FormSectionProps.title`/`MenuGroupData.title`; `label` рядом с `SelectItemProps.label` читался двусмысленно). Финальная сверка документации нашла реальные хвосты: `table.md` §10.1/§10.3 описывали снятый bag (`TableOption` со старыми именами, `styles.border`/`styles.class.*`), `dialog.md` §16/§18 — снятые `notAnimate`/`withoutMargin`/`notCloseBackground`, примеры `<Button mode>` в `01-getting-started.md` и `nuxt-module.md`, `FixWindowTeleport` в §13 `fix-window.md`; блок `Issue 6` в [textarea.md](./textarea.md) и четыре записи closure-документов пострадали от сплошной замены `Aria` → `Textarea` (получилось «`Textarea` → `Textarea`») — субъект записей восстановлен; починены восемь ссылок на несуществующий `aria.md` и якоря на сдвинувшийся код. Проверено скриптами: 1095 якорей `#L` и 3415 relative-ссылок — битых нет. Ранее — W7 — типы и barrel: закрыт дефект типов compound-детей (`Menu.d.ts`/`Accordion.d.ts` не реэкспортировали `MenuItem`/`MenuGroup`/`AccordionItem`, из-за чего subpath-импорт не проходил typecheck); `index.d.ts` приведён к `index.ts` — пропавший `VirtualScroller` добавлен, паритет barrel'ов закреплён тестом; `namesColors` → `ColorName`, снят алиас `_key`; механизм `PENDING` удалён — все четыре guard'а безусловны. Ранее — W6 — контракт emits: guard `emitsNaming` перестал быть слеп к многострочным сигнатурам (`Table.click-cell` не проверялся) и получил кейс контракта v-model-канала — `change:modelValue` только у шести form-control'ов; §6 всех 23 документов доведён до регламента (восемь документов не имели подраздела v-model contract либо не объясняли отсутствие `change:`), у Select и Switch назван реальный триггер канала; dev-patterns §7 и Шаблон A §6 зафиксировали, что единым является порядок и семантика канала, а не механизм. Попутно `fix(pagination)`: payload обоих v-model-каналов сужен до `number`, и рантайм перестал отправлять `undefined` в защитных ветках `switchPage`/`switchPageSize`. Ранее — W5 — контейнеры: Split, Menu и Form переведены на `class`/`classes`; растворён последний bag (`MenuStyles`), сняты `structureClass`/`structureClassGrid`/`classCol`/`classGrid` у Form; `horizontal`/`direction` → `orientation`, `modeStyle`/`modeLabel` → `mode`/`labelMode`, `isHidden` → `hidden`, `useFirstLetter` → `firstLetter`, `separatorNotHoverOpacity` → `separatorFade`; emits Menu стали `item-click`/`item-active`/`item-inactive`; типы `ItemMenu`/`GroupMenu`/`MenuItem` → `MenuItemData`/`MenuGroupData`/`MenuData`, `FieldAria` → `FieldTextarea`, `Size` → `PanelSize`. `classesContract`, `booleanProps` и `emitsNaming` теперь безусловны; в `propsNaming` остались только `types.d.ts` и `theme/Theme.d.ts` (W7). Ранее в тот же день — W4 — Table: bag `styles` растворён целиком (классы → `classes` с 15 element- и 13 aspect-ключами, остальное → top-level props), Column перешла с вложенного `class`-объекта на `classes` + `filterProps`/`editorProps`, Hungarian-имена сняты (`totalCount` → `total`, `countVisibleRows` → `visibleRows`, `noData`/`noColumn` → `emptyText`/`emptyColumnsText`), булевы переведены в positive (`editable`, `searchable`, `resizableColumns`, `filterable`/`sortable`/`resizable`), `I*`-типы стали `Table*`, событие `switch-size-page` → `switch-page-size`, корень получил `data-table` вместо `data-table-component`. W3b — overlay/навигация: у Alert, Dialog и FixWindow снята инверсия `class`/`classBody` (корень всегда `class`), заведены карты `classes` (`body`/`icon`/`content`/`title`/`subtitle`/`close` у Alert, `content`/`backdrop`/`close` у Dialog, `content`/`close` у FixWindow); негативные булевы переведены в positive с перевёрнутым default (`animated`, `margin`, `closeOnBackdrop`); `toTeleport: string` → `teleport: TeleportTarget`; FixWindow получил `strategy` и `openDelay`. Pagination избавился от Hungarian-имён (`pageSize`/`pageSizes`/`visiblePages`, `infoText`/`pageSizeSelector`/`navigationButtons`, `update:pageSize`, prop `selectProps`), VirtualScroller — от обхода `setStyle` (его `class`/`classContent` не видели ни `componentsOptions`, ни `unstyled`). W3a — Button/Badge (`mode` → `variant`, `classIcon` → `classes.icon`, `classContent` → `classes.content`, новые ключи `loading`/`point`/`close`, дубль-событие `delete` снято), Separator (булев `vertical` → `orientation`, `classBodyLine*`/`classLine*` → `classes.segment*`/`line*`, `data-separator-left/right` → `-start/-end`), Switch (карта `control`/`label`/`help`, `data-input-switch/checkbox` → `data-switch-button/checkbox`, expose `classBaseSwitch`/`classSwitch` → `classBase`/`classControl`), Accordion (`dataSource` → `items`, тип `AccordionItem` → `AccordionItemData`, payload `toggle` → `{ key, open, items }`). Расширен W0-API: `cls`/`raw` принимают массив ключей (`ClassesKey<K>`) для пар «общий → частный». W1 — листья (Icons/Loading/Label): база Icons переехала на `<i data-icon>`, `classes.icon` — svg, Label получил `label`/`labelMode`/`required`/`animated` и ключ `text`. W2 — семейство InputLayout (InputLayout, Input, Textarea, Select, Calendar, TextEditor): `class` — строго корень (`data-{name}` на нём), внутренние элементы — карта `classes` с семейными ключами (`base`/`label`/`help`/`message`/`before`/`after` + aspect `animation`) и собственными (`control`, `passwordToggle`, `list`, `option`, `mark`, `text`, `picker`, `editor`); булевы переведены в positive (`hasValue`/`invalid`/`clearable`/`searchable`/`closeOnSelect`/`range`); bag'и переименованы в `{inner}Props` (`fixWindowProps`, `datePickerProps`, `dialogProps`, `editorProps`); коллекция Select — `options` (MaybeRef, `toValue`), компонент `<SelectOption>` → `<SelectItem>`; emits — `active`, `ready`, `update:invalid`; типы — `SelectDataItem`, `DatePickerProps`, `CalendarPicker`, `CalendarMasks`, `CalendarRange*`, `TextEditorInstance`, `TextEditorQuillConfig`, `BaseTextareaProps`. Попутно закрыты дефекты: `componentsOptions.InputLayout.width` (читался `options.height`), склейка `max-h-max` без пробела у Textarea/TextEditor, `options.class` в focus-ветках. Предыдущая запись (2026-09-13) — **W0 закрыт**: фундамент `class`/`classes` — `Component.resolveClasses`, consumer-aware `setStyle` под `unstyled`, `mergeClasses`, четыре cross-cutting guard-теста с `PENDING`-allowlist, канон dev-patterns §2 A–I. Матрица не меняется (ТЗ, не finding). Предыдущая запись (2026-09-06) — **сводка закрыта: 0/0/0/0**. Последним закрылся Textarea Issue 6 — чистое переименование `Aria` → `Textarea` без deprecated-алиаса (решение R6). Ранее в тот же день — метаданные локалей (`direction`/`dateLocale`/`numberLocale`) с авто-`<html dir>`, RTL для Label через множитель направления, единый `@media print` в `baseStyle`, документирование Nuxt-префикса. Пять категорий сняты как фантомные (Theme F31, Locale K46/D22/B10, Nuxt F30/E29/B10) — секций в файлах им не соответствовало. Матрица `0/0/5/6` → **`0/0/1/0`**. Ранее в тот же день — uno-движок доведён до паритета с Tailwind v4 (Issues 2 и 4): container queries, `not-`/`in-`/`nth-`/`**` варианты, композиции group×aria/data, important-модификатор, 3D-трансформы, v4 gradient API, text-shadow/inset-shadow/inset-ring. Вне диалекта осознанно остаётся одно семейство — `mask-*` (обоснование — в issue). Матрица `0/0/10/8` → **`0/0/8/8`**. Ранее в тот же день — закрыт последний High: виртуализация списка опций Select (Wave 7). Ядро — headless `useVirtualScroll`, общее с VirtualScroller; внешних зависимостей не добавилось. Матрица `0/1/10/8` → **`0/0/10/8`**, строка Select перенесена в «Завершённые». Вместе с окном пришлось переписать keyboard-nav на index-математику и завести ARIA-роли listbox/option: без `aria-setsize`/`aria-posinset` виртуализация объявляла бы скринридеру размер окна вместо длины списка. Пункт Wave 7 про TextEditor `image-upload-request` снят решением R33 — относится к коду, который удаляется при переписывании редактора. Предыдущая запись (2026-09-05) — ревизия счётчиков и doc-sync. Строка TOTAL пересчитана по фактическим «Сводка»-таблицам всех активных файлов: `0 / 23 / 30 / 16` → **`0 / 5 / 21 / 18`**. Основной сдвиг High дал не объём работы, а синхронизация: девять компонентов держали открытыми категории A2/A4-5/C17 (packaging + SSR-инжекция стилей), закрытые волной 2 ещё в июне корневыми правками `lib/package.json`. Текстовый счётчик «115 numbered issues, из них открыто 77» удалён как недостоверный — заменён на число открытых позиций матрицы. Ячейка `25 active + 6 done` исправлена на `27 active + 3 done` по реальному содержимому каталога. В сводку добавлен **VirtualScroller** — 23-й компонент библиотеки, отсутствовавший в матрице целиком. Проставлено 14 чекбоксов Fix roadmap, отражающих уже сделанное. Закрыто в коде в тот же день: Nuxt auto-import compound-детей + `disableGlobalStyles` + удаление мёртвого version-detection; TextEditor — native form submit, разблокировка тест-суиты (0% → 95.89% coverage) и локализация подписей; Label — translate через CSS custom properties; новый composable `useDarkMode`. Детальный журнал — [closure-progress.md](./closure-progress.md), оценка остатка — [closure-assessment.md](./closure-assessment.md). Предыдущая запись (2026-08-02) — Table закрыл G34, Accordion закрыл B10; см. историю коммитов.
 ---
 
 # Issues — Index
 
 Внутренний аудит библиотеки `fishtvue` против 60-пунктового чек-листа индустриальных требований к UI-кит библиотекам, плюс проверка соответствия публичной [Configuration-документации](../../docs/content/ru/3.Configuration/) и анализ dual-API gap для коллекционных компонентов.
 
-> **Принцип:** файл `{component}.md` создаётся ТОЛЬКО при наличии хотя бы одной проблемы. Файл, у которого все issues закрыты, перемещается в [`./done/`](./done/). Чекбоксы в roadmap'е — single-source-of-truth прогресса.
+> **Принцип:** файл `{component}.md` создаётся ТОЛЬКО при наличии хотя бы одной проблемы. Файл, у которого ВСЕ issues закрыты (включая cross-cutting, не только component-localized), перемещается в `./done/`. Чекбоксы в roadmap'е — single-source-of-truth прогресса.
 
 ## Сводка по компонентам
 
-| Target | File | Critical | High | Medium | Low |
-|---|---|---|---|---|---|
-| Button | [button.md](./button.md) | 0 | 6 | 6 | 4 |
-| Label | [label.md](./label.md) | 0 | 4 | 3 | 2 |
-| Switch | [switch.md](./switch.md) | 1 | 5 | 4 | 3 |
-| Input | [input.md](./input.md) | 0 | 4 | 5 | 3 |
-| Aria | [aria.md](./aria.md) | 0 | 4 | 4 | 3 |
-| Select | [select.md](./select.md) | 2 | 6 | 4 | 3 |
-| Calendar | [calendar.md](./calendar.md) | 1 | 6 | 4 | 3 |
-| TextEditor | [texteditor.md](./texteditor.md) | 0 | 7 | 5 | 3 |
-| Table | [table.md](./table.md) | 2 | 8 | 5 | 4 |
-| Pagination | [pagination.md](./pagination.md) | 1 | 4 | 4 | 3 |
-| Badge | [badge.md](./badge.md) | 0 | 4 | 2 | 3 |
-| Form | [form.md](./form.md) | 1 | 6 | 4 | 3 |
-| InputLayout | [inputlayout.md](./inputlayout.md) | 2 | 4 | 4 | 3 |
-| Separator | [separator.md](./separator.md) | 0 | 3 | 2 | 2 |
-| Split | [split.md](./split.md) | 0 | 5 | 5 | 3 |
-| FixWindow | [fixwindow.md](./fixwindow.md) | 0 | 7 | 5 | 3 |
-| Accordion | [accordion.md](./accordion.md) | 1 | 5 | 3 | 3 |
-| Dialog | [dialog.md](./dialog.md) | 2 | 5 | 4 | 3 |
-| Menu | [menu.md](./menu.md) | 1 | 6 | 4 | 3 |
-| Alert | [alert.md](./alert.md) | 2 | 5 | 4 | 3 |
-| Loading | [loading.md](./loading.md) | 0 | 5 | 4 | 3 |
-| Icons | [icons.md](./icons.md) | 0 | 5 | 4 | 3 |
-| Component class | [component-class.md](./component-class.md) | 0 | 4 | 4 | 2 |
-| Config | [config.md](./config.md) | 1 | 5 | 4 | 2 |
-| Theme | [theme.md](./theme.md) | 0 | 6 | 4 | 2 |
-| Locale | [locale.md](./locale.md) | 0 | 5 | 4 | 2 |
-| Nuxt module | [nuxt-module.md](./nuxt-module.md) | 0 | 6 | 4 | 2 |
-| Utilities | [_utilities.md](./done/_utilities.md) | 0 | 1 | 0 | 1 |
-| **TOTAL** | **28 files** | **17** | **141** | **107** | **74** |
+### Активные — есть открытые issues
 
-Всего **339 issues** распределены по 28 documentов аудита (9 закрыты в [_utilities.md](./done/_utilities.md) 2026-05-10: Issues 1, 2, 3, 5, 6, 7, 8, 10, 11).
+| Target          | File                                       | Critical | High  | Medium | Low    |
+| --------------- | ------------------------------------------ | -------- | ----- | ------ | ------ |
+| —               | —                                          | —        | —     | —      | —      |
+| **TOTAL**       | **27 active + 3 done**                     | **0**    | **0** | **0**  | **0**  |
+
+> 🎉 **Активных позиций не осталось** (2026-09-06). Все строки перенесены в «Завершённые»; Calendar и TextEditor — в «Заморожено до переписывания». Открытым остаётся только сам rewrite этих двух компонентов, и это отдельный проект, а не позиция сводки.
+
+> ✅ **Ревизия счётчиков проведена 2026-09-05.** Дрейф, о котором предупреждала врезка от 2026-08-02, устранён: строка TOTAL пересчитана **по фактическим «Сводка»-таблицам всех активных файлов**, счётчик «открыто» ниже приведён к той же сумме, ячейка `active + done` исправлена по реальному содержимому каталога. Пять несогласованных чисел (TOTAL, текстовый счётчик, сумма по столбцам, сумма по файлам, число документов) сведены в одно.
+>
+> **Что дало основной сдвиг High `23 → 5`.** Не работа этого дня, а doc-sync: девять компонентов держали открытыми категории `A2` / `A4-5` / `C17` — «нет `sideEffects`, нет exports map, стили инжектятся только после client mount». Все три корневых issue закрыты волной 2 ещё в июне ([button.md](./button.md) Issues 1, 8, 9 — правки уровня `lib/package.json`, покрывающие всю библиотеку разом), но per-component документы об этом не узнали и продолжали считать их своими. Аналогично `L53` (`unstyled`) у Calendar — тело issue само писало «✅ framework-level resolved», а заголовок оставался незачёркнутым. Подробный разбор — [closure-assessment.md](./closure-assessment.md) §3 поз. 18, 19.
+>
+> **VirtualScroller добавлен в сводку** — 23-й компонент библиотеки отсутствовал в матрице целиком, хотя имеет документ, спеку, тесты, locale-ключи и Nuxt-регистрацию. Заведён [virtualscroller.md](./virtualscroller.md) с единственной реальной позицией (coverage 73.35 / 56.28 при пороге 80 / 70).
+>
+> **Второй проход 2026-09-05 — верификация каждой активной строки.** Проверка «а точно ли это открыто» сняла ещё три позиции как **фантомные**:
+>
+> - **Button** (`0/0/1/3`) — незачёркнутых issue в файле ноль, а четыре счётчика (`G34`/`D26`/`E29.7`/`G37`) файл сам описывает как «cross-cutting категории, локально решены» ещё 2026-05-10. → `0/0/0/0`, строка перенесена в «Завершённые».
+> - **Table** (`0/0/0/1`) — `D26` «консистентность событий» без отдельной секции. Проверено по [Table.d.ts](../../lib/table/Table.d.ts): все 15 эмитов типизированы, kebab-case, payload'ы структурны. → `0/0/0/0`, строка перенесена.
+> - **`E29.7` у Calendar и TextEditor** — в обоих файлах **ноль** `transition`. Гейтить нечего: это N/A, а не долг.
+>
+> Тем же проходом закрыт **сам пункт Wave 10.1**: построчный аудит (а не «есть/нет в файле») нашёл два настоящих пробела — active-классы `<transition>` в InputLayout и голый `transition` на иконке Switch. Оба исправлены, и заведён cross-cutting guard [lib/motionSafe.test.ts](../../lib/motionSafe.test.ts), который валит сборку на любом новом негейтнутом переходе. Ручная сверка больше не нужна.
+
+> **Методологическая оговорка сохраняется:** счётчик считает **категории чек-листа**, а не задачи. Cross-cutting категория остаётся у компонента, пока не закрыта глобальная волна, даже если локально делать нечего — см. [button.md](./button.md) («Button-локальных открытых секций нет; G34/D26/E29.7/G37 — cross-cutting категории, локально решены»). Поэтому 44 в матрице ≠ 44 задачи.
+
+> **2026-07-04 — Wave 9 (B10), первый батч:** Menu, Icons, Separator закрыли последний открытый пункт (B10 — semantic surface token) и переехали в таблицу «Завершённые» ниже. Select/Calendar/TextEditor/Theme закрыли свою B10-часть, но остаются active — другие открытые issues не связаны с этим заходом. ~~Accordion закрыл color-часть B10, но остаётся active — отдельный, не связанный с этим изменением gap (`forced-colors:outline` отсутствует).~~ **superseded 2026-08-02** — см. врезку ниже. См. [theme.md Issue 10](./theme.md) и раздел «Wave 9 — Theming polish» ниже.
+>
+> **2026-07-05 — Wave 9 (B10), residual-батч:** Split/Pagination/Table/Switch/Badge/InputLayout/FixWindow/Dialog — все уже отображённые в таблице «Завершённые» (`active/ ¹`) или active с другими открытыми issues (Table: G34/D26, не тронуты) — закрыли последний structural-neutral residual тем же rename на `surface-*`. Их числовые счётчики в таблице выше **не менялись** (B10 уже засчитывался resolved в их собственных severity-матрицах до этого захода). Структурная surface-миграция закрыта для всех 19/22 компонентов библиотеки — вне scope: Alert (semantic-intent, отдельный эпик), Loading (epic-spinners, отдельное прошлое решение), Button (`neutral`-mode — легитимный, не хардкод).
+>
+> **2026-08-02 — Table закрыл G34; Alert/Loading/Accordion/Switch — правки без изменения матриц:** `componentTable` + `focus()` выведены в `defineExpose`/`TableExpose` ([table.md — секция G34](./table.md)), матрица Table `0/0/1/1` → `0/0/0/1`, TOTAL Medium `31 → 30`. Строка Table **остаётся в «Активных»** — D26 (low) не трогали. Вне numbered-issue в том же заходе: Table — `aria-sort` + клавиатурная активация сортировки (accessible name из `column.caption`, **нового ключа локали не заводили**) и `isDark` через `optionsTheme.darkModeSelector`; Alert — hardening `sanitizeHtml` (границы атрибутов, совпадение внутри чужого значения, tag-aware поиск, склейка в исполняемый тег, политика «ровно один проход» декодирования) плюс типизированный `styleBase`, `default:`-ветки и allow-list `type` в `openAlert` ([alert.md Issue 1 amendment](./alert.md)); Loading — open-union типы props и dev-warn для неизвестного color-токена ([loading.md](./loading.md)); Accordion / Switch / Table — нативные контролы сохраняют класс-хук `fv` под `config.unstyled`, иначе UA-ресеты из `baseStyle` к ним не применялись. **Намеренно НЕ закрывалось:** Loading Issue 7 (hardcoded HEX) и промоушен `beta → stable`, Alert Issue 9 (theme tokens / semantic-intent эпик), D26, виртуализация, `displayTime`, print styles, `caption` в `TableOption`. Дрейф строки TOTAL относительно суммы по столбцам — **предсуществующий**, отдельной ревизией снова не занимались; тронута единственная ячейка (Medium), зеркалящая закрытие G34.
+>
+> **2026-08-02 — Accordion, B10 закрыт полностью:** high-contrast часть закрыта — в `classButton` ([Accordion.vue:136-138](../../lib/accordion/Accordion.vue#L136-L138)) добавлен `forced-colors:outline`, зеркалируя канон Badge / InputLayout / Pagination / Switch / Split / Table. Accordion был последним компонентом, у которого forced-colors-часть B10 оставалась открытым трекаемым пунктом (сплошного `forced-colors:*`-покрытия по библиотеке нет — вариант применяется точечно). Матрица `0/0/0/0` → строка перенесена в «Завершённые» ниже (папка `active/ ¹`). Утверждение врезки 2026-07-04 о сохраняющемся forced-colors gap — **superseded**. Обычное focus-состояние header-кнопки (`focus-visible:ring` / `outline`) в этот заход **не** трогалось — отдельная задача.
+
+### Заморожено до переписывания
+
+| Target     | File                             | Critical | High | Medium | Low | Причина |
+| ---------- | -------------------------------- | -------- | ---- | ------ | --- | ------- |
+| Calendar   | [calendar.md](./calendar.md)     | 0        | 1    | 1      | 1   | rewrite без v-calendar |
+| TextEditor | [texteditor.md](./texteditor.md) | 0        | 0    | 3      | 1   | rewrite без Quill      |
+
+> **Решение R30/R33/R34 от 2026-09-06.** В следующем major оба компонента переписываются на собственные реализации — без `v-calendar` и без Quill. Это продолжение линии, уже пройденной FixWindow (свой движок позиционирования вместо Floating UI) и VirtualScroller (своё окно вместо внешней библиотеки): меньше зависимостей, чище код, полный контроль над a11y и темизацией.
+>
+> Их открытые позиции **вынесены из активной матрицы и в счёт TOTAL не идут**: это обвязка вокруг кода, который будет удалён целиком, и вкладываться в неё — работа в мусорную корзину. Сам rewrite — **отдельный проект после** закрытия сводки, а не её часть.
+>
+> Что переносится во входные требования к новым компонентам: загрузка картинок через хук приложения вместо base64-инжекции (бывший [texteditor.md](./texteditor.md) Issue 6), локализуемый toolbar (Issues 8, 9), логические CSS-свойства и print-стили с самого начала, `darkModeSelector` вместо системной цветовой схемы, ref на корень и `focus()` (G34). Для date-picker зафиксировано отдельно: **паритет с v-calendar обязателен**, понижения функционала быть не должно — диапазоны дат, выбор времени, несколько месяцев рядом, отключённые даты и правила. Для редактора — базовое форматирование плюс таблицы и картинки.
+
+### Завершённые — matrix `0/0/0/0`
+
+| Target          | File                                       | Critical | High | Medium | Low | Папка     |
+| --------------- | ------------------------------------------ | -------- | ---- | ------ | --- | --------- |
+| Input           | [input.md](./input.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Pagination      | [pagination.md](./pagination.md)           | 0        | 0    | 0      | 0   | active/ ¹ |
+| Form            | [form.md](./form.md)                       | 0        | 0    | 0      | 0   | active/ ¹ |
+| Split           | [split.md](./split.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Switch          | [switch.md](./switch.md)                   | 0        | 0    | 0      | 0   | active/ ¹ |
+| Badge           | [badge.md](./badge.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| InputLayout     | [inputlayout.md](./inputlayout.md)         | 0        | 0    | 0      | 0   | active/ ¹ |
+| Component class | [component-class.md](./component-class.md) | 0        | 0    | 0      | 0   | active/ ¹ |
+| Menu            | [menu.md](./menu.md)                       | 0        | 0    | 0      | 0   | active/ ¹ |
+| Icons           | [icons.md](./icons.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Separator       | [separator.md](./separator.md)             | 0        | 0    | 0      | 0   | active/ ¹ |
+| Accordion       | [accordion.md](./accordion.md)             | 0        | 0    | 0      | 0   | active/ ¹ |
+| Button          | [button.md](./button.md)                   | 0        | 0    | 0      | 0   | active/ ¹ |
+| Table           | [table.md](./table.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Utilities       | [\_utilities.md](./_utilities.md)          | 0        | 0    | 0      | 0   | active/ ¹ |
+| VirtualScroller | [virtualscroller.md](./virtualscroller.md) | 0        | 0    | 0      | 0   | active/ ¹ |
+| Select          | [select.md](./select.md)                   | 0        | 0    | 0      | 0   | active/ ¹ |
+| Uno engine      | [uno-engine.md](./uno-engine.md)           | 0        | 0    | 0      | 0   | active/ ¹ |
+| Alert           | [alert.md](./alert.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Loading         | [loading.md](./loading.md)                 | 0        | 0    | 0      | 0   | active/ ¹ |
+| Textarea        | [textarea.md](./textarea.md)               | 0        | 0    | 0      | 0   | active/ ¹ |
+| Textarea        | [textarea.md](./textarea.md)               | 0        | 0    | 0      | 0   | active/ ¹ |
+| Label           | [label.md](./label.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Theme           | [theme.md](./theme.md)                     | 0        | 0    | 0      | 0   | active/ ¹ |
+| Locale          | [locale.md](./locale.md)                   | 0        | 0    | 0      | 0   | active/ ¹ |
+| Nuxt module     | [nuxt-module.md](./nuxt-module.md)         | 0        | 0    | 0      | 0   | active/ ¹ |
+| FixWindow       | [done/fixwindow.md](./done/fixwindow.md)   | 0        | 0    | 0      | 0   | done/     |
+| Dialog          | [done/dialog.md](./done/dialog.md)         | 0        | 0    | 0      | 0   | done/     |
+| Config          | [done/config.md](./done/config.md)         | 0        | 0    | 0      | 0   | done/     |
+
+> ¹ Numbered-матрица `0/0/0/0`, но файл остаётся в `active/` как трекер cross-cutting волн (semantic-token Wave 9 и т.п.); полностью закрытые файлы перемещены в `./done/`.
+
+Аудит-документов — **27 активных** в `issues/` плюс **3** в [./done/](./done/) (Dialog ✅ 2026-05-11, FixWindow ✅ 2026-05-16, Config ✅ 2026-05-20). Открытых позиций по матрице — **0**; плюс 6 позиций Calendar и TextEditor в разделе «Заморожено до переписывания», которые в TOTAL не идут. Решённые остаются в файлах зачёркнутыми. Прогресс закрытия отслеживается через чекбоксы в Fix roadmap ниже и зачёркнутые блоки внутри каждого `<component>.md`.
+
+> Прежняя формулировка «115 numbered issues … из них открыто 77» удалена как недостоверная: заголовков `## Issue N` в активных документах — 253 (вместе с зачёркнутыми), а 77 не сходилось ни с одной другой цифрой в файле. Считать имеет смысл только открытые позиции матрицы.
 
 ## Fix roadmap (live tracker)
 
 Карта исправлений по волнам. Каждая волна — самодостаточная единица доставки (1-3 sprint'а). Внутри волны задачи сгруппированы по unified fix-pattern: один patch закрывает множество issues одновременно. Чекбоксы — единственный source-of-truth прогресса.
 
 **Соглашения по чекбоксам:**
+
 - `[ ]` — не сделано
 - `[~]` — в работе (укажи assignee/PR в комментарии справа от чекбокса)
 - `[x]` — сделано + PR смёрджен + acceptance criteria закрыты в issue файле
 
 **Workflow закрытия issue:**
+
 1. Чекни `[x]` в roadmap'е.
 2. В соответствующем `<issue>.md` помечай `~~текст~~` зачёркнутым + `✅ resolved YYYY-MM-DD (PR #N)` рядом.
-3. Если ВСЕ issues файла закрыты — переместить файл в [`./done/`](./done/) и обновить ссылку в таблице сводки выше.
+3. Если ВСЕ issues файла закрыты (включая cross-cutting) — переместить файл в `./done/` и обновить ссылку в таблице сводки выше.
 4. Пересчитать severity matrix в таблице сводки.
 
 ---
 
-### 🔴 Wave 1 — Critical security & stability
+### 🔴 Wave 1 — Critical security & stability ✅ closed 2026-06-19
+
+> ✅ **Волна закрыта.** Все 14 XSS-сайтов (§1.1), 6+ memory-leak cleanup'ов (§1.2) и оба architecture-blocker'а (§1.3) — `[x]`. Открытого Critical-**кода** в `lib/` не осталось. Остаточные `**Severity:** **critical**`-метки в [menu.md](./menu.md)/[form.md](./form.md) относятся к уже зачёркнутым (resolved) issue-заголовкам и зачёркнуты для консистентности; severity matrix TOTAL Critical = **0**.
 
 **Цель:** убрать все CVE-кандидаты и memory leaks. Без этой волны библиотека не должна публиковаться в production.
 **Estimated:** 2-3 sprint'а.
@@ -75,22 +131,21 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 
 Унифицированный fix: заменить `v-html="X"` на `<slot name="X"><span>{{ X }}</span></slot>`. Сохраняет custom HTML только при явном использовании slot потребителем.
 
-- [ ] [Switch.vue:244](../../lib/switch/Switch.vue#L244) — `help` prop → `#help` slot · [switch.md Issue 1](./switch.md)
-- [ ] [InputLayout.vue:294](../../lib/inputlayout/InputLayout.vue#L294) — `help` prop → `#help` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает help-XSS во ВСЕХ form-controls** (Input/Aria/Select/Calendar/TextEditor наследуют InputLayout)
-- [ ] [InputLayout.vue:313](../../lib/inputlayout/InputLayout.vue#L313) — `messageInvalid` prop → `#messageInvalid` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает validation-XSS во ВСЕХ form-controls**
-- [ ] [Select.vue:553](../../lib/select/Select.vue#L553) — `item.marker` → `#item-marker` scoped slot + safe `<mark>` VNode-builder · [select.md Issue 1](./select.md)
-- [ ] [Select.vue:562](../../lib/select/Select.vue#L562) — `noData` → `#empty` slot · [select.md Issue 1](./select.md)
-- [ ] [Select.vue:564](../../lib/select/Select.vue#L564) — `noData` (второй сайт) → переиспользует `#empty` slot · [select.md Issue 1](./select.md)
-- [ ] [Form.vue:380](../../lib/form/Form.vue#L380) — select-marker copy → переиспользовать Select после fix Select XSS · [form.md Issue 1](./form.md)
-- [ ] [Table.vue:1842](../../lib/table/Table.vue#L1842) — cell `setMarker(...)` → `#cell-${dataField}` scoped slot + `<CellWithMarker>` VNode-renderer · [table.md Issue 1](./table.md) · **самый опасный: cell content приходит из server data**
-- [ ] [Table.vue:1939](../../lib/table/Table.vue#L1939) — summary → `#summary-${dataField}` scoped slot · [table.md Issue 1](./table.md)
-- [ ] [Table.vue:1999](../../lib/table/Table.vue#L1999) — `noData` → `#empty` slot · [table.md Issue 1](./table.md)
-- [ ] [Table.vue:2011](../../lib/table/Table.vue#L2011) — `noColumn` → `#empty-columns` slot · [table.md Issue 1](./table.md)
-- [ ] [Table.vue:2026](../../lib/table/Table.vue#L2026) — `noFilter` → `#empty-filter` slot · [table.md Issue 1](./table.md)
-- [ ] [Menu.vue:388](../../lib/menu/Menu.vue#L388) — `item.info` → `#item-info` scoped slot · [menu.md Issue 1](./menu.md)
-- [ ] [Menu.vue:392](../../lib/menu/Menu.vue#L392) — `item.info` (FixWindow ветка) → переиспользует `#item-info` · [menu.md Issue 1](./menu.md)
-- [ ] [Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) — `item.subtitle` → `#item-subtitle` scoped slot · [accordion.md Issue 1](./accordion.md)
-- [ ] [Alert.vue:253](../../lib/alert/Alert.vue#L253) — `subtitle` → `#subtitle` slot · [alert.md Issue 1](./alert.md)
+- [x] [Switch.vue:268–270](../../lib/switch/Switch.vue#L268-L270) — `help` prop → `#help` slot · [switch.md Issue 1](./switch.md) · ✅ resolved 2026-05-11
+- [x] [InputLayout.vue:372-375](../../lib/inputlayout/InputLayout.vue#L372-L375) — `help` prop → `#help` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает help-XSS во ВСЕХ form-controls** (Input/Textarea/Select/Calendar/TextEditor наследуют InputLayout) · ✅ resolved 2026-05-11
+- [x] [InputLayout.vue:394-398](../../lib/inputlayout/InputLayout.vue#L394-L398) — `messageInvalid` prop → `#messageInvalid` slot · [inputlayout.md Issue 1](./inputlayout.md) · **закрывает validation-XSS во ВСЕХ form-controls** · ✅ resolved 2026-05-11
+- [x] [Select.vue marker site](../../lib/select/Select.vue) — `item.marker` → `#marker` scoped slot + safe substring helper (`splitByQuery` + `markerParts` + `<mark>` через `<template v-for>` без `v-html`) · [select.md Issue 1](./select.md) · ✅ resolved 2026-05-11
+- [x] [Select.vue noData (×2)](../../lib/select/Select.vue) — `noData` оба сайта → unified `#empty` scoped slot · [select.md Issue 1](./select.md) · ✅ resolved 2026-05-11
+- [x] [Form.vue](../../lib/form/Form.vue) — удалён `#item`-override (select-marker copy) → Form переиспользует безопасный default Select (`#marker`/`markerParts`) · [form.md Issue 1](./form.md) · ✅ resolved 2026-06-03
+- [x] [Table.vue cell](../../lib/table/Table.vue) — cell `setMarker(...)` v-html → безопасный `markerParts()` + `<mark>` через `<template v-for>` (без v-html); кастомный HTML — через per-column slot · [table.md Issue 1](./table.md) · ✅ resolved 2026-06-07 · **был самый опасный: cell content из server data**
+- [x] [Table.vue summary](../../lib/table/Table.vue) — summary → text-render `{{ summaryColumns[dataField] }}` · [table.md Issue 1](./table.md) · ✅ resolved 2026-06-07
+- [x] [Table.vue noData](../../lib/table/Table.vue) — `noData` → `#empty` slot (text default) · [table.md Issue 1](./table.md) · ✅ resolved 2026-06-07
+- [x] [Table.vue noColumn](../../lib/table/Table.vue) — `noColumn` → `#empty-columns` slot (text default) · [table.md Issue 1](./table.md) · ✅ resolved 2026-06-07
+- [x] [Table.vue noFilter](../../lib/table/Table.vue) — `noFilter` → `#empty-filter` slot (text default) · [table.md Issue 1](./table.md) · ✅ resolved 2026-06-07
+- [x] [Menu.vue:629](../../lib/menu/Menu.vue#L629) — `item.info` → `#item-info` scoped slot · [menu.md Issue 1](./menu.md) · ✅ resolved 2026-06-06
+- [x] [Menu.vue:637](../../lib/menu/Menu.vue#L637) — `item.info` (FixWindow ветка) → переиспользует `#item-info` · [menu.md Issue 1](./menu.md) · ✅ resolved 2026-06-06
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — `item.subtitle` → `#item-subtitle` scoped slot · [accordion.md Issue 1](./accordion.md) · ✅ resolved 2026-05-11
+- [x] [Alert.vue:263](../../lib/alert/Alert.vue#L263) — `subtitle` → `#subtitle` slot · [alert.md Issue 1](./alert.md) · ✅ resolved 2026-05-11
 
 **Acceptance:** payload `<img src=x onerror=alert(1)>` не исполняется ни в одном из 14 сайтов (CI-test). Документация компонентов §12 Security обновлена с примером кастомизации через slot.
 
@@ -98,29 +153,29 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 
 Унифицированный fix: сохранять Observer / DOM listener в `ref`, в `onBeforeUnmount` вызывать `disconnect()` / `removeEventListener()`. Альтернатива — VueUse composables (`useResizeObserver`, `useEventListener`, `useIntersectionObserver`) для auto-cleanup.
 
-- [ ] [Select.vue:279-281](../../lib/select/Select.vue#L279) — `ResizeObserver` сохранить в ref + disconnect · [select.md Issue 2](./select.md)
-- [ ] [Select.vue:286,291](../../lib/select/Select.vue#L286) — keydown listeners (`openSelectOnEnter`, `keydownSelect`) cleanup при unmount-while-open · [select.md Issue 2](./select.md)
-- [ ] [Calendar.vue:322-327](../../lib/calendar/Calendar.vue#L322) — `MutationObserver` на documentElement сохранить + disconnect · [calendar.md Issue 1](./calendar.md) · **рекомендация: вынести в singleton `useDarkMode()` composable** (один observer на весь app)
-- [ ] [Calendar.vue:254,261](../../lib/calendar/Calendar.vue#L254) — keydown listeners cleanup · [calendar.md Issue 1](./calendar.md)
-- [ ] [Pagination.vue:255](../../lib/pagination/Pagination.vue#L255) — anonymous `new ResizeObserver(...)` → сохранить в ref + disconnect · [pagination.md Issue 1](./pagination.md)
-- [ ] [InputLayout.vue:177-179](../../lib/inputlayout/InputLayout.vue#L177) — anonymous ResizeObserver на `beforeInput` сохранить + disconnect · [inputlayout.md Issue 2](./inputlayout.md)
-- [ ] [InputLayout.vue:181-183](../../lib/inputlayout/InputLayout.vue#L181) — anonymous ResizeObserver на `afterInput` сохранить + disconnect · [inputlayout.md Issue 2](./inputlayout.md)
-- [ ] [Table.vue:1519-1527](../../lib/table/Table.vue#L1519) — `lastRowVisibleObserver` (IntersectionObserver) добавить в `onUnmounted` disconnect · [table.md Issue 2](./table.md)
-- [ ] [Table.vue:1553-1554](../../lib/table/Table.vue#L1553) — `window.mousemove`/`mouseup` cleanup при unmount-while-resize · [table.md Issue 2](./table.md)
-- [ ] [Dialog.vue:155](../../lib/dialog/Dialog.vue#L155) — `escapeListener` cleanup при unmount-while-open + восстановление `body.style.overflow` · [dialog.md Issue 2](./dialog.md)
+- [x] [Select.vue ResizeObserver](../../lib/select/Select.vue) — сохранён в `let resizeObserver` closure + `onBeforeUnmount` disconnect (зеркалит InputLayout pattern) · [select.md Issue 2](./select.md) · ✅ resolved 2026-05-11
+- [x] [Select.vue keydown listeners](../../lib/select/Select.vue) — `openSelectOnEnter` и `keydownSelect` cleanup в `onBeforeUnmount` (с `isClient()` SSR-guard) · [select.md Issue 2](./select.md) · ✅ resolved 2026-05-11
+- [x] [Calendar.vue:99,338](../../lib/calendar/Calendar.vue#L99) — `MutationObserver` сохранён в setup-scoped `let darkObserver` + disconnect в `onBeforeUnmount` ([Calendar.vue:258-265](../../lib/calendar/Calendar.vue#L258-L265)) · [calendar.md Issue 1](./calendar.md) · ✅ resolved 2026-05-11 · (singleton `useDarkMode()` composable — future direction, не входит в этот fix)
+- [x] [Calendar.vue:258-265](../../lib/calendar/Calendar.vue#L258-L265) — keydown listeners cleanup в `onBeforeUnmount` · [calendar.md Issue 1](./calendar.md) · ✅ resolved 2026-05-11
+- [x] [Pagination.vue:259-268](../../lib/pagination/Pagination.vue#L259-L268) — anonymous `new ResizeObserver(...)` → сохранён в массив `navigationObservers` + disconnect в `onBeforeUnmount` · [pagination.md Issue 1](./pagination.md) · ✅ resolved 2026-06-06
+- [x] [InputLayout.vue:210-214](../../lib/inputlayout/InputLayout.vue#L210-L214) — anonymous ResizeObserver на `beforeInput` сохранить (`let beforeObserver`) + disconnect ([InputLayout.vue:243-248](../../lib/inputlayout/InputLayout.vue#L243-L248)) · [inputlayout.md Issue 2](./inputlayout.md) · ✅ resolved 2026-05-11
+- [x] [InputLayout.vue:216-220](../../lib/inputlayout/InputLayout.vue#L216-L220) — anonymous ResizeObserver на `afterInput` сохранить (`let afterObserver`) + disconnect ([InputLayout.vue:243-248](../../lib/inputlayout/InputLayout.vue#L243-L248)) · [inputlayout.md Issue 2](./inputlayout.md) · ✅ resolved 2026-05-11
+- [x] [Table.vue onUnmounted](../../lib/table/Table.vue#L983) — `lastRowVisibleObserver` (IntersectionObserver) добавлен в `onUnmounted` disconnect · [table.md Issue 2](./table.md) · ✅ resolved 2026-06-07
+- [x] [Table.vue onUnmounted](../../lib/table/Table.vue#L983) — `window.mousemove`/`mouseup` cleanup при unmount-while-resize · [table.md Issue 2](./table.md) · ✅ resolved 2026-06-07
+- [x] [Dialog.vue](../../lib/dialog/Dialog.vue) — `escapeListener` cleanup в `onBeforeUnmount` + reference-counted scroll lock release; `body.style.overflow` восстановление через [lib/utils/scrollLockHandler.ts](../../lib/utils/scrollLockHandler.ts) · [done/dialog.md Issue 2](./done/dialog.md) · ✅ resolved 2026-05-12
 
 **Acceptance:** mount/unmount × 100 в Chrome Memory profiler — heap не растёт (для каждого из 6 компонентов отдельный test). DevTools Performance не показывает retained DOM-узлов с listeners.
 
 #### 1.3 Architecture blockers (2 issues)
 
-- [ ] [config/index.ts:16,71,124](../../lib/config/index.ts#L16) — `FishtVueSymbol` стабилизировать: `const FishtVueSymbol: InjectionKey<FishtVue> = Symbol("FishtVue")`, убрать reassign в install, заменить `Symbol.toString()` сравнение на reference check · [config.md Issue 1](./config.md) · **highest leverage: исправляет inject во ВСЕХ компонентах**
-- [ ] [openAlert.ts:35-98](../../lib/alert/openAlert.ts#L35) — переписать на `createApp(h(Alert, ...))` programmatic API вместо `document.createElement` + manual listeners · [alert.md Issue 2](./alert.md)
+- [x] [config/index.ts:18,82,124](../../lib/config/index.ts#L18) — `FishtVueSymbol` стабилизировано: `const FishtVueSymbol: InjectionKey<FishtVue> = Symbol("FishtVue")`, reassign в install удалён, `Symbol.toString()` сравнение заменено на inject-first/window-fallback. · [done/config.md Issue 1](./done/config.md) · ✅ resolved 2026-05-20 · **highest leverage: исправлен inject во ВСЕХ компонентах + component-class Issue 2 (window.FishtVue coupling)**
+- [x] [openAlert.ts:106](../../lib/alert/openAlert.ts#L106) — переписан на `createApp(Alert, { ...options, "onUpdate:modelValue": destroy })` — нет manual `addEventListener`, cleanup через Vue emit chain · [alert.md Issue 2](./alert.md) · ✅ resolved 2026-05-11
 
 **Acceptance:** multi-app сценарий (`createApp().use(FishtVue,A)` × 2 с разными configs) — оба работают изолированно. `openAlert` SSR-safe (returns no-op без падения).
 
 ---
 
-### 🟠 Wave 2 — Distribution & SSR foundation
+### 🟠 Wave 2 — Distribution & SSR foundation ✅ closed 2026-06-21
 
 **Цель:** убрать ~70% bundle bloat у потребителя; устранить flash-of-unstyled-content при SSR; превратить library в правильный ESM/CJS dual package.
 **Estimated:** 1-2 sprint'а.
@@ -129,91 +184,93 @@ last-changes: utilities — Issues 1, 2, 3, 5, 6, 7, 8, 10, 11 закрыты; s
 
 #### 2.1 Packaging (one-time fix в [lib/package.json](../../lib/package.json))
 
-- [ ] [lib/package.json:17-18](../../lib/package.json#L17) — добавить `exports` map с условиями `types`/`import`/`require`/`default` для всех subpath: `./button`, `./input`, `./theme`, `./config`, `./component`, `./locale`, `./module`, `./plugins/nuxt`, `./utils/*`, `./types` · [button.md Issue 9](./button.md)
-- [ ] [lib/package.json](../../lib/package.json) — добавить `"sideEffects": ["**/*.css", "**/*.vue"]` (Vue SFC `<style>` имеют side-effects) · [button.md Issue 8](./button.md)
-- [ ] [lib/package.json:56](../../lib/package.json#L56) — `vue` из `dependencies` → `peerDependencies: "^3.5.0"` · [calendar.md Issue 3](./calendar.md)
-- [ ] [lib/package.json:44-57](../../lib/package.json#L44) — `lodash-es`, `date-fns`, `gsap`, `quill`, `@vueup/vue-quill`, `v-calendar`, `tailwind-merge`, `clsx` → optional `peerDependencies` + `peerDependenciesMeta.optional: true` · [calendar.md Issue 2](./calendar.md), [texteditor.md Issue 3](./texteditor.md)
-- [ ] [lib/rollup.config.js:409](../../lib/rollup.config.js#L409) — раскомментировать `get_CJS_ESM()` или явно решить ESM-only + добавить `engines: { node: ">=18" }` · [button.md Issue 9](./button.md)
-- [ ] [lib/package.json](../../lib/package.json) — добавить `"files": ["**/*.mjs", "**/*.d.ts", "**/*.map", "**/package.json", "*.css", "README.md", "LICENSE.md"]` для контроля содержимого npm-tarball · [table.md Issue 13, 14](./table.md)
-- [ ] [lib/package.json:28-32](../../lib/package.json#L28) — расширить `@nuxt/kit` peer range до `>=3.0.0` (сейчас `^4.1.2` ломает Nuxt 3) · [nuxt-module.md Issue 4](./nuxt-module.md)
+- [x] root `exports` map ✅ 2026-06-11 (Issue 5c-b) — генерируется build-step'ом ([`buildRootExports()` в rollup.config.js](../../lib/rollup.config.js)) из rollup-выходов + вложенных package.json/.d.ts: явные entry на каждый `.mjs` (identity + extensionless) + bare-dir (PascalCase `types`, lowercase `import`) + `./*/package.json`. Strict superset, ноль wildcard-неоднозначности. **Verified:** `npm pack` → install → `import.meta.resolve` 19/19 субпутей в pure Node ESM (раньше падали), исполнение CSS-free субпутей, `tsc` bundler+nodenext типы. Пререкизит **5c-a** (Menu publish-gap: `MenuItem.vue`/`MenuGroup.vue` не публиковались → переведены на `index.ts`-bundle, зеркало Table). Контракт — [lib/package.test.ts](../../lib/package.test.ts). · [button.md Issue 9](./button.md), [table.md Issue 5](./table.md). ESM-only ратифицирован ✅ 2026-06-07.
+- [x] [lib/package.json](../../lib/package.json) — `"sideEffects": false` на root ✅ 2026-06-07 (выбран `false`, не массив: в dist нет `.vue`/`.css` — SFC → `.mjs`, CSS инжектится в рантайме через lifecycle, не на import) · контракт в [lib/package.test.ts](../../lib/package.test.ts) · [button.md Issue 8](./button.md) · **per-component:** теперь инъектится в КАЖДЫЙ `dist/{name}/package.json` через `copyDependencies()` на build-step (раньше вручную: Dialog 2026-05-12, FixWindow 2026-05-16, Loading/Menu/Separator/Split 2026-06).
+- [x] [lib/package.json](../../lib/package.json) — `vue` из `dependencies` → required `peerDependencies: "^3.5.0"` · [calendar.md Issue 3](./calendar.md) · ✅ resolved 2026-06-19 (Wave 2.1) · контракт в [lib/package.test.ts](../../lib/package.test.ts)
+- [x] [lib/package.json](../../lib/package.json) — тяжёлые single-purpose deps `gsap`, `quill`, `@vueup/vue-quill`, `v-calendar` → optional `peerDependencies` + `peerDependenciesMeta.optional: true` · [calendar.md Issue 2](./calendar.md), [texteditor.md Issue 3](./texteditor.md) · ✅ resolved 2026-06-19 (Wave 2.1). **Note:** `lodash-es`/`date-fns`/`tailwind-merge`/`clsx` сознательно ОСТАВЛЕНЫ в `dependencies` — они в core-утилитах (`cn()`/dateHandler) и Select/Table (always-imported); optional ухудшил бы DX без выигрыша. Контракт lock'ает обе границы в [lib/package.test.ts](../../lib/package.test.ts).
+- [x] [lib/rollup.config.js:409](../../lib/rollup.config.js#L409) — решено **ESM-only** + добавлен `"engines": { "node": ">=18" }` ✅ 2026-06-07. `get_CJS_ESM()` остаётся выключенным (аудитория — bundler-based Vue/Nuxt, ESM нативен) · [button.md Issue 9](./button.md)
+- [x] [lib/package.json](../../lib/package.json) — `"files": ["**/*.mjs","**/*.map","**/*.d.ts","**/package.json","README.md","LICENSE.md","CHANGELOG.md"]` ✅ 2026-06-07. Проброс в `dist/package.json` через `addPackageJson()`; `npm pack --dry-run` из `dist/`: 174 `.mjs` + 174 `.mjs.map` (sourcemaps ✅), 0× `*.test.*`/`.vue`/non-`.d.ts`-`.ts`. `copyDependencies()` дополнительно пропускает `*.test.*` · [table.md Issue 13, 14](./table.md)
+- [x] [lib/package.json](../../lib/package.json) — `@nuxt/kit`/`@nuxt/schema` peer range `^4.1.2` → `>=3.0.0` (раньше `^4.1.2` ломал Nuxt 3) · [nuxt-module.md Issue 4](./nuxt-module.md) · ✅ resolved 2026-06-19 (Wave 2.1)
 
 #### 2.2 Lazy import тяжёлых deps
 
-- [ ] [lib/icons/Icons.vue](../../lib/icons/Icons.vue) — heroicons через `defineAsyncComponent(() => import("@heroicons/vue/24/${stileIcon}/${pascalCase(type)}.vue"))` · [icons.md Issue 1](./icons.md), [button.md Issue 7](./button.md)
-- [ ] [lib/texteditor/TextEditor.vue:3-5](../../lib/texteditor/TextEditor.vue#L3) — Quill через `defineAsyncComponent`, CSS импорты в `onMounted` · [texteditor.md Issue 3](./texteditor.md)
-- [ ] [lib/calendar/Calendar.vue](../../lib/calendar/Calendar.vue) — v-calendar `DatePicker` через `defineAsyncComponent` · [calendar.md Issue 2](./calendar.md)
-- [ ] [lib/loading/Loading.vue](../../lib/loading/Loading.vue) — Epic-вариации lazy через `defineAsyncComponent` · [loading.md Issue 2](./loading.md)
-- [ ] [lib/button/Button.vue:5-6](../../lib/button/Button.vue#L5) — `Loading` и `FixWindow` lazy-import (только при `loading: true` или `type: "icon"`) · [button.md Issue 6](./button.md)
+- [x] [lib/icons/Icons.vue](../../lib/icons/Icons.vue) — heroicons точечный `import(`@heroicons/vue/24/{outline\|solid}/${Name}.js`)` + Iconify-fallback (trade-off: async/SSR; `unplugin-icons` для гарантированного tree-shaking) · [icons.md Issue 1](./icons.md), [button.md Issue 7](./button.md) · ✅ resolved 2026-06-12
+- [x] [lib/texteditor/TextEditor.vue](../../lib/texteditor/TextEditor.vue) — Quill уже lazy (`await import("@vueup/vue-quill")`); CSS-импорты перенесены в `onMounted` (dynamic `import()`) · [texteditor.md Issue 3](./texteditor.md) · ✅ resolved 2026-06-19 (Wave 2.1)
+- [x] [lib/calendar/Calendar.vue](../../lib/calendar/Calendar.vue) — v-calendar `DatePicker` lazy в `onMounted` (ref-based `(await import("v-calendar")).DatePicker` + `<component :is>` — ref→реальный инстанс; CSS lazy) · [calendar.md Issue 2](./calendar.md) · ✅ resolved 2026-06-19 (Wave 2.1)
+- [x] [lib/loading/Loading.vue](../../lib/loading/Loading.vue) — Epic-вариации lazy через `defineAsyncComponent` · [loading.md Issue 2](./loading.md) · ✅ 2026-06-03 (уже реализовано: `componentsMapEpic`/`componentsMapSvg` = `() => import(...)`)
+- [x] [Button.vue](../../lib/button/Button.vue) — `Loading`/`FixWindow` через `defineAsyncComponent` (async-chunks, грузятся при `loading`/icon-tooltip) · [button.md Issue 6](./button.md) · ✅ resolved 2026-06-12
 
 #### 2.3 SSR style injection
 
-- [ ] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, Label, Switch, Input, Aria, Select, Calendar, TextEditor, Table, Pagination, Badge, Form, InputLayout, Separator, Split, FixWindow, Accordion, Dialog, Menu, Alert, Loading, Icons.
-- [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — оборачивать каждый component-style в `@layer fishtvue { ... }` (или настраиваемый layer name из `optionsTheme.layers`) · [theme.md Issue 4](./theme.md)
-- [ ] [theme/helpers/useStyle.ts](../../lib/theme/helpers/useStyle.ts) — HMR teardown: replace content existing `<style>` element, не append new · [component-class.md Issue 3](./component-class.md)
+- [x] **Удалить `onMounted(() => X.initStyle())`** из 22 SFC — base class уже вызывает через `onServerPrefetch + vueOnMounted` · [component-class.md Issue 1](./component-class.md). Затрагивает: Button, ~~Label~~ ✅ 2026-05-11, ~~Switch~~ ✅ 2026-05-11, ~~Input~~ ✅ 2026-05-11, ~~Textarea~~ ✅ 2026-05-11, ~~Select~~ ✅ 2026-05-11, ~~Calendar~~ ✅ 2026-05-11, ~~Alert~~ ✅ 2026-05-11, ~~Dialog~~ ✅ 2026-05-12, ~~FixWindow~~ ✅ 2026-05-16, ~~Form~~ ✅ 2026-06-03 (initStyle bundled с field-init — снят при правке form.md), ~~TextEditor~~ ✅ 2026-06-19 (Wave 2.1 — был последним реальным дублем), Table, Pagination, Badge, InputLayout, Separator, ~~Split~~ ✅ 2026-06-06, Accordion, ~~Menu~~ ✅ 2026-06-06, ~~Loading~~ ✅ 2026-06-03, ~~Pagination~~ ✅ 2026-06-13, Icons. **Прогресс:** ✅ фактически завершено. Source-scan `lib/**/*.vue` (2026-06-19): **0 SFC с прямым `initStyle()`-вызовом** (TextEditor был последним); остальные unstruck-имена (Button/Table/Pagination/Badge/InputLayout/Separator/Accordion/Icons) несут канонический комментарий «`initStyle()` НЕ вызывается тут» либо вовсе не вызывают его — дубля нет.
+- [x] [component/index.ts:159-169](../../lib/component/index.ts#L159-L169) — `Component.__stylesBase` else-ветка оборачивает component-style в `@layer fishtvue` и без `optionsTheme.layers` (зеркало base-style; canon-correction: seam **НЕ** в `useStyle.ts` — там был бы двойной wrap base-style) · [theme.md Issue 4](./theme.md) · ✅ resolved 2026-06-21 (Wave 2)
+- [x] [theme/helpers/useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45) — HMR teardown: `load()` реюзает `style[data-fishtvue-style-id]` (replace content, не append new) · [component-class.md Issue 3](./component-class.md) · ✅ resolved 2026-06-14 (stale roadmap-checkbox синхронизирован 2026-06-21)
 
 #### 2.4 Body scroll lock — reference counted
 
-- [ ] [Dialog.vue:147-148, 157-159](../../lib/dialog/Dialog.vue#L147) — заменить string-concat `body.style.overflow` на reference-counted `useScrollLock` (VueUse) или собственный singleton с counter · [dialog.md Issue 3](./dialog.md)
-- [ ] [Split.vue:525, 534, 558-559](../../lib/split/Split.vue#L525) — `document.body.classList.add(cursorClass)` → локальный overlay div `<div class="split-drag-overlay">` (без global state мутации) · [split.md Issue 1](./split.md)
+- [x] [Dialog.vue](../../lib/dialog/Dialog.vue) — заменено на reference-counted singleton [lib/utils/scrollLockHandler.ts](../../lib/utils/scrollLockHandler.ts) (`lockBodyScroll` / `unlockBodyScroll` + counter + сохранение оригинальных `body.style.overflow` / `paddingRight`) · [done/dialog.md Issue 3](./done/dialog.md) · ✅ resolved 2026-05-12 · готов к переиспользованию Split
+- [x] [Split.vue:103-105](../../lib/split/Split.vue#L103-L105), [Split.vue:717](../../lib/split/Split.vue#L717) — `document.body.classList.add(cursorClass)` → локальный overlay div `<div data-split-drag-overlay>` (без global state мутации, `watch(activeCursorPanel)` удалён) · [split.md Issue 1](./split.md) · ✅ resolved 2026-06-06
 
 **Acceptance:** `pnpm sandbox:build` + analyzer показывает ~70% bundle reduction для consumer не использующего Calendar/TextEditor/много heroicons. SSR-render через `renderToString` содержит inline `<style>` с правилами компонентов (snapshot test). DevTools Memory: HMR-обновление компонента 50× → один `<style>` в head, не 50.
 
 ---
 
-### 🟠 Wave 3 — Configuration support (документация → реальность)
+### 🟠 Wave 3 — Configuration support (документация → реальность) ✅ closed 2026-07-02
 
 **Цель:** закрыть documentation lies — публичная Configuration-док обещает API которого нет.
 **Estimated:** 2-3 sprint'а.
 **Зависимости:** Wave 1.3 (стабильный FishtVueSymbol).
 **Параллельно с:** Wave 4 (a11y) — независимо.
 
+> **Canon-заметка (2026-07-02, закрытие волны).** Пункт 3.3 «Style invalidation mechanism (event-bus или watcher → все `Component.initStyle()` реinject)» реализован **НЕ буквально**: по решению владельца (после анализа эффективности собственного uno-движка) выбрана **CSS-variable indirection** — движок эмитит палитру через `rgb(var(--fv-{name}-{tone}, fallback))`, а runtime API переписывает один `:root`-tokens-тег (`FishtVueTokens`). Acceptance «usePreset → все компоненты перерисуются» выполняется без invalidation и без live-чтения config в правилах (движок — process-wide singleton; live-binding дал бы утечку тем между apps/tenants в SSR). Runtime-смена `darkModeSelector` остаётся known limitation ([architecture/theme.md §18](../architecture/theme.md#18-known-issues--limitations)).
+
 #### 3.1 `unstyled: true` enforcement (один фикс → 22 компонента)
 
-- [ ] [component/index.ts](../../lib/component/index.ts) — в `Component.setStyle()` добавить guard `if (this.config?.unstyled) return ""` · [component-class.md Issue 6](./component-class.md), [button.md Issue 14](./button.md)
-- [ ] Тест: `app.use(FishtVue, { unstyled: true })` + mount каждого из 22 компонентов → assert `class` пустой / отсутствует.
+- [x] [component/index.ts:138](../../lib/component/index.ts#L138) — в `Component.setStyle()` (134-157) добавлен guard `if (this.__globalConfig?.config?.unstyled) return ""` · [component-class.md Issue 6](./component-class.md), [button.md Issue 14](./button.md) · ✅ resolved 2026-05-11 (cross-cutting — закрывает Issue 6 во всех 22 компонентах одной правкой)
+- [x] Тест: Select.test.ts > `respects unstyled: true via Component.setStyle guard` — `class` корня пустой при `unstyled: true`. Демонстрирует cross-cutting эффект (применимо ко всем компонентам — same setStyle entry point).
 
 #### 3.2 `componentsStyle` global fallback consistency
 
 Унификация: все form-controls с `mode` prop должны учитывать `Component.componentsStyle()` в fallback chain.
 
-- [ ] [Button.vue:301-303](../../lib/button/Button.vue#L301) — добавить `Button.componentsStyle()` mapping (`filled→primary`, `outlined→outline`, `underlined→ghost`) · [button.md Issue 13](./button.md)
-- [ ] [Input.vue:42](../../lib/input/Input.vue#L42) — добавить `?? Input.componentsStyle()` в fallback · [input.md Issue 2](./input.md)
-- [ ] [Aria.vue:49](../../lib/aria/Aria.vue#L49) — добавить `?? Aria.componentsStyle()` · [aria.md Issue 4](./aria.md)
-- [ ] [Select.vue](../../lib/select/Select.vue) — добавить `?? Select.componentsStyle()` · [select.md Issue 5](./select.md)
-- [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — добавить `?? Calendar.componentsStyle()` · [calendar.md Issue 6](./calendar.md)
-- [ ] [TextEditor.vue:54](../../lib/texteditor/TextEditor.vue#L54) — добавить `?? TextEditor.componentsStyle()` · [texteditor.md Issue 7](./texteditor.md)
-- [ ] [Badge.vue:17](../../lib/badge/Badge.vue#L17) — добавить mapping (`filled→primary`, etc.) · [badge.md Issue 2](./badge.md)
+- [x] [Button.vue](../../lib/button/Button.vue) — computed `componentsStyleMode` mapping (`filled→primary`, `outlined→outline`, `underlined→ghost`) в fallback chain `mode` · [button.md Issue 13](./button.md) · ✅ resolved 2026-06-12
+- [x] [Input.vue:62-64](../../lib/input/Input.vue#L62-L64) — добавить `?? Input.componentsStyle()` в fallback · [input.md Issue 2](./input.md) ✅ 2026-05-11
+- [x] [Textarea.vue:49-51](../../lib/textarea/Textarea.vue#L49-L51) — добавить `?? Textarea.componentsStyle()` · [textarea.md Issue 4](./textarea.md) ✅ 2026-05-11
+- [x] [Select.vue](../../lib/select/Select.vue) — добавлено `?? options?.mode ?? Select.componentsStyle()` в fallback chain (`mode` computed) · [select.md Issue 5](./select.md) · ✅ resolved 2026-05-11
+- [x] [Calendar.vue:106-108](../../lib/calendar/Calendar.vue#L106-L108) — добавлено `?? Calendar.componentsStyle()` · [calendar.md Issue 6](./calendar.md) · ✅ resolved 2026-05-11
+- [x] [TextEditor.vue:52-55](../../lib/texteditor/TextEditor.vue#L52-L55) — добавлено `?? TextEditor.componentsStyle()` в mode-цепочку (зеркало Input) · [texteditor.md Issue 7](./texteditor.md) · ✅ resolved 2026-07-02 (+ source-scan тест)
+- [x] [Badge.vue:17–23](../../lib/badge/Badge.vue#L17-L23) — добавить mapping (`filled→primary`, `outlined→outline`, `underlined→neutral`) · [badge.md Issue 2](./badge.md) ✅ 2026-05-10
 
-#### 3.3 Theme runtime API (новый файл per function)
+#### 3.3 Theme runtime API (новый файл per function) ✅ closed 2026-07-02
 
-Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает функции — реализовать.
+Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md) обещает функции — реализованы через CSS-variable indirection (см. canon-заметку выше + [theme.md Issue 1](./theme.md)).
 
-- [ ] `lib/theme/usePreset.ts` — полная замена пресета + reinject styles · [theme.md Issue 1](./theme.md)
-- [ ] `lib/theme/updatePreset.ts` — deepMerge + reinject · [theme.md Issue 1](./theme.md)
-- [ ] `lib/theme/updatePrimaryPalette.ts` — shortcut на updatePreset · [theme.md Issue 1](./theme.md)
-- [ ] `lib/theme/updateSurfacePalette.ts` — с поддержкой `light`/`dark` подразделов · [theme.md Issue 1](./theme.md)
-- [ ] `lib/theme/$dt.ts` — token metadata lookup · [theme.md Issue 1](./theme.md)
-- [ ] `lib/theme/palette.ts` — экспортировать существующий helper в публичный API · [theme.md Issue 1](./theme.md)
-- [ ] [lib/theme/index.ts](../../lib/theme/index.ts) — re-export всех 6 публичных функций · [theme.md Issue 1](./theme.md)
-- [ ] Style invalidation mechanism: при theme change все Component.initStyle() реinject (через event-bus или watcher на `FishtVue.config.theme`) · [theme.md Issue 1](./theme.md)
-- [ ] [Documentation/architecture/theme.md](../architecture/theme.md) — обновить с описанием реальных API.
+- [x] [lib/theme/usePreset.ts](../../lib/theme/usePreset.ts) — полная замена пресета (`linksTheme`) + перезапись tokens-тега · ✅ 2026-07-02
+- [x] [lib/theme/updatePreset.ts](../../lib/theme/updatePreset.ts) — deepMerge поверх копии текущей темы + перезапись · ✅ 2026-07-02
+- [x] [lib/theme/updatePrimaryPalette.ts](../../lib/theme/updatePrimaryPalette.ts) — брендовый слот = цвет `theme` (`semantic.primary` → `--fv-theme-*` override; hex-палитра / `'{indigo.500}'`-refs / одиночный hex → `palette()`) · ✅ 2026-07-02
+- [x] [lib/theme/updateSurfacePalette.ts](../../lib/theme/updateSurfacePalette.ts) — `semantic.surface` → `--fv-surface-*` с `light`/`dark` scoping (dark → `darkModeSelector`/`prefers-color-scheme`); потребление компонентами — 19/19 структурных ✅ 2026-07-05 (11/19 2026-07-04 + residual 8/19 2026-07-05), Alert epic — см. Wave 9 ниже · ✅ 2026-07-02
+- [x] [lib/theme/$dt.ts](../../lib/theme/$dt.ts) — token metadata lookup (`{ name?, variable?, value }` по dot-path) · ✅ 2026-07-02
+- [x] `palette` — уже экспортировался из [lib/theme/index.ts](../../lib/theme/index.ts) (stale-пункт); добавлена `'{blue}'`-форма из публичного контракта · ✅ 2026-07-02
+- [x] [lib/theme/index.ts](../../lib/theme/index.ts) — re-export всех функций (+ типовые декларации в [Theme.d.ts](../../lib/theme/Theme.d.ts)) · ✅ 2026-07-02
+- [x] ~~Style invalidation mechanism (event-bus/watcher)~~ → **закрыт by design** CSS-variable indirection: движок эмитит `rgb(var(--fv-…, fallback))` ([unoStyle/helpers.ts `resolveColor`](../../lib/theme/unoStyle/helpers.ts)), install инжектит tokens-тег ([helpers/tokensCss.ts](../../lib/theme/helpers/tokensCss.ts), [config/index.ts:169-172](../../lib/config/index.ts#L169-L172)), runtime API переписывает его — reinject/invalidation не нужны · ✅ 2026-07-02
+- [x] [Documentation/architecture/theme.md](../architecture/theme.md) — §2/§3/§8/§10.2.1/§10.3/§18 обновлены · ✅ 2026-07-02
 
 #### 3.4 `darkModeSelector` через UnoCSS preset
 
-- [ ] [theme/uno.ts](../../lib/theme/uno.ts) — генерировать `dark:*` варианты на основе `optionsTheme.darkModeSelector` config · [theme.md Issue 5](./theme.md)
-- [ ] Тест: `<html data-theme="dark">` + `darkModeSelector: "[data-theme='dark']"` → Button рендерится в dark mode.
+- [x] `dark:*` варианты генерируются на основе `optionsTheme.darkModeSelector` config · ✅ 2026-06-12 — оказалось **уже реализовано**: `Component.setStyle` прокидывает `darkSelector` ([component/index.ts:150](../../lib/component/index.ts#L150)) → `tailwind()` подменяет media-query на селектор ([unoStyle/tailwind.ts:95](../../lib/theme/unoStyle/tailwind.ts#L95)). Правок движка не потребовалось · [theme.md Issue 5](./theme.md), [button.md Issue 16](./button.md)
+- [x] Тест: `<html data-theme="dark">` + `darkModeSelector: "[data-theme='dark']"` → компонент рендерит dark-стили на настроенный селектор · ✅ 2026-06-12 — [lib/theme/darkModeSelector.test.ts](../../lib/theme/darkModeSelector.test.ts) (plugin-config через probe) + engine-кейсы в [Uno.test.ts](../../lib/theme/unoStyle/Uno.test.ts).
 
 #### 3.5 Locale fallback chain + interpolation
 
-- [ ] [component/index.ts `t(key)`](../../lib/component/index.ts) — fallback chain: `messages[active] → messages[default] → key` · [config.md Issue 3](./config.md), [locale.md Issue 2](./locale.md)
-- [ ] Параметризованный `t(key, params)` с interpolation `{name}` · [locale.md Issue 3](./locale.md)
-- [ ] Pluralization rules per-locale (Russian имеет 4 формы) · [locale.md Issue 3](./locale.md)
+- [x] [component/index.ts `t(key)`](../../lib/component/index.ts#L191) — fallback chain: `messages[active] → messages[default] → key` · [config.md Issue 3](./done/config.md), [locale.md Issue 2](./locale.md) · ✅ resolved 2026-05-20
+- [x] Параметризованный `t(key, params)` с interpolation `{name}` ([component/index.ts:191](../../lib/component/index.ts#L191) + [stringHandler.interpolate](../../lib/utils/stringHandler.ts)) · [locale.md Issue 3](./locale.md) · ✅ resolved 2026-06-19
+- [x] Pluralization rules per-locale (Russian имеет 4 формы) — CLDR через `Intl.PluralRules` ([stringHandler.selectPlural](../../lib/utils/stringHandler.ts); `<selector> <text>`-формы `=N`/CLDR через `|`) · [locale.md Issue 3](./locale.md) · ✅ resolved 2026-06-19
 
-**Acceptance:** все обещания публичной [docs/content/ru/3.Configuration/](../../docs/content/ru/3.Configuration/) проверяемы тестами. `import { usePreset } from "fishtvue/theme"` работает. `unstyled: true` отключает стили во всех 22 компонентах.
+**Acceptance:** все обещания публичной [docs/content/ru/3.Configuration/](../../docs/content/ru/3.Configuration/) проверяемы тестами ✅ ([themeApi.test.ts](../../lib/theme/themeApi.test.ts) 16 + [colorVars.test.ts](../../lib/theme/unoStyle/colorVars.test.ts) 18). `import { usePreset } from "fishtvue/theme"` работает ✅ (+ dist-смоук в pure Node ESM). `unstyled: true` отключает стили во всех 22 компонентах ✅ (3.1, 2026-05-11). Browser-verified: runtime-перекрашивание живых компонентов в sandbox.
 
 ---
 
-### 🟠 Wave 4 — A11y baseline (WCAG 2.1 AA conformance)
+### 🟠 Wave 4 — A11y baseline (WCAG 2.1 AA conformance) ✅ closed 2026-06-20
 
 **Цель:** library проходит axe-core / Lighthouse для базовых интерактивных компонентов.
 **Estimated:** 2-3 sprint'а.
@@ -222,56 +279,57 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 4.1 Focus management (Dialog + popover)
 
-- [ ] [Dialog.vue](../../lib/dialog/Dialog.vue) — focus trap через `useFocusTrap` (VueUse) · [dialog.md Issue 1](./dialog.md)
-- [ ] [Dialog.vue](../../lib/dialog/Dialog.vue) — focus return на trigger при close (сохранять `document.activeElement` при open) · [dialog.md Issue 5](./dialog.md)
-- [ ] [Dialog.vue:185](../../lib/dialog/Dialog.vue#L185) — `role="dialog"` + `aria-modal="true"` + `aria-labelledby` + `aria-describedby` · [dialog.md Issue 4](./dialog.md)
-- [ ] [FixWindow.vue](../../lib/fixwindow/FixWindow.vue) — prop `:focusTrap?: boolean` для popover-mode · [fixwindow.md Issue 4](./fixwindow.md)
-- [ ] [FixWindow.vue](../../lib/fixwindow/FixWindow.vue) — focus return при close · [fixwindow.md Issue 5](./fixwindow.md)
+- [x] [Dialog.vue](../../lib/dialog/Dialog.vue) — focus trap **dependency-free** (собственный `FOCUSABLE_SELECTOR` + Tab/Shift+Tab cycle; НЕ VueUse `useFocusTrap` — `@vueuse/core` удалён из deps при FixWindow-рефакторе) · [done/dialog.md](./done/dialog.md) · ✅ resolved (тесты Dialog.test.ts «focus trap»)
+- [x] [Dialog.vue](../../lib/dialog/Dialog.vue) — focus return на trigger при close (`triggerEl = document.activeElement` при open, restore при close; prop `returnFocus` default `true`) · [done/dialog.md](./done/dialog.md) · ✅ resolved
+- [x] [Dialog.vue](../../lib/dialog/Dialog.vue) — `role="dialog"` + `aria-modal="true"` + `aria-labelledby` + `aria-describedby` + `tabindex="-1"` · [done/dialog.md](./done/dialog.md) · ✅ resolved
+- [x] [FixWindow.vue](../../lib/fixwindow/FixWindow.vue) — prop `focusTrap?: boolean` (popover-mode, default `false`) + computed `role` (tooltip/dialog/menu) + aria-props + `initialFocus`/`returnFocus` · [done/fixwindow.md](./done/fixwindow.md) · ✅ resolved
+- [x] [FixWindow.vue](../../lib/fixwindow/FixWindow.vue) — focus return при close (когда `focusTrap` + `returnFocus`) · [done/fixwindow.md](./done/fixwindow.md) · ✅ resolved
 
 #### 4.2 ARIA roles + attributes
 
-- [ ] [Button.vue:351](../../lib/button/Button.vue#L351) — `aria-label` для icon-кнопок (с dev-warning если type="icon" без label) · [button.md Issue 2](./button.md)
-- [ ] [Label.vue:60](../../lib/label/Label.vue#L60) — корень `<div>` → `<label :for="forId">` + новый prop `forId` · [label.md Issue 1](./label.md)
-- [ ] [Pagination.vue:262](../../lib/pagination/Pagination.vue#L262) — `<nav role="navigation" aria-label>` + `aria-current="page"` · [pagination.md Issue 4](./pagination.md)
-- [ ] [Loading.vue](../../lib/loading/Loading.vue) — `role="status"` + `aria-live="polite"` + `aria-label="Loading"` (с локализацией) · [loading.md Issue 3](./loading.md)
-- [ ] [Alert.vue](../../lib/alert/Alert.vue) — `role="alert"`/`role="status"` based on severity + `aria-live` · [alert.md Issue 3](./alert.md)
-- [ ] [Menu.vue](../../lib/menu/Menu.vue) — `role="menu"` + `role="menuitem"` + `aria-haspopup` + `aria-expanded` · [menu.md Issue 4](./menu.md)
-- [ ] [Accordion.vue](../../lib/accordion/Accordion.vue) — disclosure pattern: header `<button aria-expanded aria-controls>` + content `role="region"` · [accordion.md Issue 3](./accordion.md)
-- [ ] [Split.vue](../../lib/split/Split.vue) — resize handle `role="separator"` + `aria-orientation` + `aria-valuenow/min/max` · [split.md Issue 4](./split.md)
-- [ ] [Table.vue](../../lib/table/Table.vue) — `<caption>` slot + `<th scope="col">` · [table.md Issue 8](./table.md)
-- [ ] [Icons.vue](../../lib/icons/Icons.vue) — default `aria-hidden="true"` + prop `:label` для семантических · [icons.md Issue 3](./icons.md)
-- [ ] [Separator.vue](../../lib/separator/Separator.vue) — корень `<hr>` или `<div role="separator" aria-orientation>` · [separator.md Issue 2](./separator.md)
+- [x] [Button.vue:382–390](../../lib/button/Button.vue#L382-L390) — `aria-label` для icon-кнопок (с dev-warning если type="icon" без label) · [done/button.md Issue 2](./button.md) · resolved 2026-05-10
+- [x] [Label.vue:76](../../lib/label/Label.vue#L76) — корень `<label data-label :for="forId">` + prop `forId` · [label.md Issue 1](./label.md) · ✅ resolved 2026-05-11
+- [x] [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) — **label↔control association** (Wave 4, 2026-06-19): `useId()` → `fieldId`/`labelId`, `<Label :id :for-id>`, scoped `<slot :id :labelledby>`; потребители (Input/Textarea — `for`; Select/Calendar/TextEditor — `aria-labelledby`; Select +`role="combobox"`/`aria-expanded`) забиндили scope · [inputlayout.md Issue 10](./inputlayout.md) · ✅ resolved
+- [x] [Pagination.vue:292-297](../../lib/pagination/Pagination.vue#L292) — `<nav role="navigation" aria-label>` + `aria-current="page"` (per-page `aria-label`) · [pagination.md Issue 4](./pagination.md) · ✅ resolved 2026-06-13 (код+тесты «Accessibility (ARIA)»; stale roadmap-checkbox синхронизирован 2026-06-20)
+- [x] [Loading.vue](../../lib/loading/Loading.vue) — `role="status"` + `aria-live="polite"` + `aria-label` (локализован через `loading.label`) + `sr-only` span · [loading.md Issue 3](./loading.md) · ✅ resolved 2026-06-03
+- [x] [Alert.vue:255](../../lib/alert/Alert.vue#L255) — `role="alert"`/`role="status"` + `aria-live` + `aria-atomic` mapped per `type` · [alert.md Issue 3](./alert.md) · ✅ resolved 2026-05-11
+- [x] [Menu.vue](../../lib/menu/Menu.vue) — `role="menu"`/`menuitem`/`group`/`separator` + `aria-orientation` + `aria-haspopup` + `aria-expanded` · [menu.md Issue 4](./menu.md) · ✅ resolved 2026-06-06
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — disclosure pattern: header `<button aria-expanded aria-controls>` + content `role="region" aria-labelledby` · [accordion.md Issue 3](./accordion.md) · ✅ resolved 2026-05-11
+- [x] [Split.vue:674-685](../../lib/split/Split.vue#L674-L685) — resize handle `role="separator"` + `aria-orientation` + `aria-valuenow/min/max` + `aria-controls` (role/valuenow уже были; добавлены orientation/controls + panel `id` через `useId`) · [split.md Issue 4](./split.md) · ✅ resolved 2026-06-06
+- [x] [Table.vue](../../lib/table/Table.vue) — `<caption>` prop+slot (sr-only); `<th scope="col">` уже был (thead/colgroup/tfoot) · [table.md Issue 8](./table.md) · ✅ resolved 2026-06-07
+- [x] [Icons.vue](../../lib/icons/Icons.vue) — default `aria-hidden="true"` + prop `:label` для семантических (wrapper-based pattern) · [icons.md Issue 3](./icons.md) ✅ 2026-05-10
+- [x] [Separator.vue](../../lib/separator/Separator.vue) — корень `<div role="separator" :aria-orientation>` (unconditional, без нового prop) · [separator.md Issue 2](./separator.md) · ✅ resolved 2026-06-06
 
 #### 4.3 Keyboard navigation
 
-- [ ] [Menu.vue](../../lib/menu/Menu.vue) — ArrowUp/Down между items, ArrowRight/Left для submenu, Home/End, typeahead, roving tabindex · [menu.md Issue 3](./menu.md)
-- [ ] [Accordion.vue](../../lib/accordion/Accordion.vue) — ArrowUp/Down между header items · [accordion.md Issue 4](./accordion.md)
-- [ ] [Split.vue](../../lib/split/Split.vue) — стрелки на focused resize handle (с Shift для крупного шага) · [split.md Issue 5](./split.md)
-- [ ] [Select.vue:341-352](../../lib/select/Select.vue#L341) — audit existing keyboard logic (ArrowUp/Down уже есть) + добавить Home/End/typeahead.
+- [x] [Menu.vue](../../lib/menu/Menu.vue) — ArrowUp/Down между items, ArrowRight/Left для submenu, Home/End, typeahead, roving tabindex · [menu.md Issue 3](./menu.md) · ✅ resolved 2026-06-06
+- [x] [Accordion.vue](../../lib/accordion/Accordion.vue) — ArrowUp/Down/Home/End между header items + roving tabindex · [accordion.md Issue 4](./accordion.md) · ✅ resolved 2026-05-11
+- [x] [Split.vue:453](../../lib/split/Split.vue#L453) — стрелки на focused resize handle (Shift — крупный шаг, Home/End — экстремумы; direction-aware) · [split.md Issue 5](./split.md) · ✅ resolved 2026-06-06
+- [x] [Select.vue keydownSelect](../../lib/select/Select.vue#L586) — ArrowUp/Down (roving tabindex, уже было) + **Home/End** (`focusItemAt`, прыжки к первому/последнему) + **first-char typeahead** для `noQuery`-listbox (`typeaheadFocus`, матч по textContent + APG-циклирование на повторе символа; в default-режиме печать фокусит search-input → фильтрация = de-facto typeahead) · ✅ resolved 2026-06-20
 
 #### 4.4 aria-live announcements
 
-- [ ] [Select.vue](../../lib/select/Select.vue) — `<div aria-live="polite">{{ resultsCount }}</div>` для search results · [select.md Issue 8](./select.md)
-- [ ] [Pagination.vue](../../lib/pagination/Pagination.vue) — announce «Page N of M» при switchPage · [pagination.md Issue 5](./pagination.md)
-- [ ] [Table.vue](../../lib/table/Table.vue) — announce filter/sort/search results count · [table.md Issue 9](./table.md)
-- [ ] [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) — `aria-live="assertive"` на error region · [inputlayout.md Issue 6](./inputlayout.md)
+- [x] [Select.vue](../../lib/select/Select.vue) — `<div data-select-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>` для search results + новые locale-ключи `select.resultsCount` / `select.resultsCountOne` / `select.resultsCountNone` (en + ru + TypesLocale) · [select.md Issue 8](./select.md) · ✅ resolved 2026-05-11
+- [x] [Pagination.vue:298-307](../../lib/pagination/Pagination.vue#L298) — announce «Page N of M» при switchPage (sr-only `role="status"` `aria-live="polite"` `aria-atomic="true"`) · [pagination.md Issue 5](./pagination.md) · ✅ resolved 2026-06-13 (код+тест «renders a polite live region»; stale roadmap-checkbox синхронизирован 2026-06-20)
+- [x] [Table.vue](../../lib/table/Table.vue) — announce filter/sort/search results count (sr-only `[data-table-aria-live]` polite + `table.resultsCount*`) · [table.md Issue 9](./table.md) · ✅ resolved 2026-06-07
+- [x] [InputLayout.vue:443-451](../../lib/inputlayout/InputLayout.vue#L443-L451) — `aria-live="assertive"` + `aria-atomic="true"` на error region · [inputlayout.md Issue 6](./inputlayout.md) · ✅ resolved 2026-05-11
 
 **Acceptance:** axe-core CI passes для каждого компонента. Lighthouse a11y score = 100 для sandbox-pages со всеми компонентами. Manual screen-reader test (NVDA/VoiceOver) — каждый интерактивный компонент озвучивается корректно.
 
 ---
 
-### 🟠 Wave 5 — Floating UI integration
+### 🟠 Wave 5 — Floating UI integration ✅ closed 2026-07-02
 
 **Цель:** все popover/tooltip/dropdown позиционируются корректно при scroll/resize/viewport-overflow. Click-outside работает через Teleport.
 **Estimated:** 1-2 sprint'а.
 **Зависимости:** Wave 1.2 (FixWindow listeners cleanup).
 **Параллельно с:** Wave 4 (a11y) — независимо.
 
-- [ ] [FixWindow.vue](../../lib/fixwindow/FixWindow.vue) — переписать manual position calc на `@floating-ui/vue` (`useFloating`, `autoUpdate`, `offset`, `flip`, `shift`) · [fixwindow.md Issue 2](./fixwindow.md)
-- [ ] [FixWindow.vue](../../lib/fixwindow/FixWindow.vue) — Teleport через prop `:teleport?: string | HTMLElement | false` (default `'body'` для popover-mode) · [fixwindow.md Issue 1](./fixwindow.md)
-- [ ] [FixWindow.vue:230](../../lib/fixwindow/FixWindow.vue#L230) — click-outside через `useClickOutside([reference, floating])` (VueUse) — handles teleport · [fixwindow.md Issue 3](./fixwindow.md)
-- [ ] [FixWindow.vue](../../lib/fixwindow/FixWindow.vue) — `aria-role` computed (tooltip / dialog / menu) на основе `eventOpen` + содержимого · [fixwindow.md Issue 8](./fixwindow.md)
-- [ ] **Verify Calendar/Select/Menu** наследуют новый FixWindow без regression — все имеют integration tests.
+- [x] [FixWindow.vue](../../lib/fixwindow/FixWindow.vue) — canon-correction: пункт устарел вдвойне — `@floating-ui/vue`-интеграция была сделана 2026-05-16, а **затем намеренно удалена** 2026-06-14 (по запросу пользователя: минимум рантайм-зависимостей) в пользу собственного dependency-free `useFloating.ts`/`useClickOutside.ts` (auto-flip/auto-shift/scroll-tracking — полный паритет). Буквальная реализация этого пункта означала бы отмену ратифицированного решения — НЕ выполняется · [done/fixwindow.md Issue 2 Migration follow-up](./done/fixwindow.md) · ✅ resolved 2026-07-02 (roadmap sync)
+- [x] [FixWindow.vue:75,662](../../lib/fixwindow/FixWindow.vue#L75) — `teleport?: string | HTMLElement | false` computed (default `false`, backward-compat) + `<Teleport :to :disabled>` в template · [done/fixwindow.md Issue 1](./done/fixwindow.md) · ✅ resolved 2026-05-16 (stale roadmap-checkbox синхронизирован 2026-07-02)
+- [x] [FixWindow.vue:503](../../lib/fixwindow/FixWindow.vue#L503) — click-outside через собственный `useClickOutside` (dependency-free, Teleport-aware via `composedPath`) — handles teleport · [done/fixwindow.md Issue 3](./done/fixwindow.md)
+- [x] [FixWindow.vue:77-81](../../lib/fixwindow/FixWindow.vue#L77-L81) — `role` computed (`tooltip` при `eventOpen==='hover'`, иначе `dialog`, explicit override через prop) — уже задвоено в закрытой Wave 4 §4.1 (тот же `done/fixwindow.md` кредит) · [done/fixwindow.md Issue 8](./done/fixwindow.md) · ✅ resolved 2026-05-16 (stale + duplicate-credit синхронизирован 2026-07-02)
+- [x] **Verify Calendar/Select/Menu** наследуют новый FixWindow без regression — все имеют integration tests. **Menu ✅ 2026-06-06** (submenu через FixWindow с Floating UI + focus trap; nested `<Menu>` рендерится корректно — `Menu.test.ts`); **Table ✅ 2026-06-11** (filter + cell-editor Select/Calendar плавают через FixWindow с `scrollableEl: tableBody` — [table.md Issue 10](./table.md)); **Calendar ✅** (dropdown через `<FixWindow v-bind="paramsFixWindow">`, покрыт Mode/Date-selection тестами); **Select ✅** (явный integration-тест `wrapper.findComponent({name:"FixWindow"})` + `paramsFixWindow`-passthrough в `describe("Select Component - custom strategies")`). Регрессии нет и после dependency-free-миграции 2026-06-14 — весь suite зелёный · ✅ resolved 2026-07-02
 
 **Acceptance:** popover не обрезается при overflow:hidden родителя; auto-flip при near viewport edge; scroll body — позиция обновляется. Calendar/Select/Menu pop-ups работают через Teleport.
 
@@ -286,36 +344,43 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 Унифицированный fix-pattern: `provide(CONTEXT, { register, unregister })` в parent + child компоненты регистрируют себя при mount. Schema-driven prop (`:dataColumns`, `:structure`, `:dataSelect`, `:items`) выигрывает при конфликте — backward compat.
 
-#### 6.1 Table → `<Table><Column>`
+#### 6.1 Table → `<Table><Column>` — ✅ resolved 2026-06-07
 
-- [ ] `lib/table/Column.vue` — child компонент с inject `TABLE_CONTEXT` + register · [table.md Issue 3](./table.md)
-- [ ] `lib/table/TableContext.ts` — `InjectionKey<TableContext>` с `registerColumn` / `unregisterColumn` · [table.md Issue 3](./table.md)
-- [ ] [Table.vue](../../lib/table/Table.vue) — provide context, resolve `dataColumns` (props или children), children walk через useSlots() + Fragment-flatten.
-- [ ] Per-column scoped slots `cell`, `header`, `filter`, `summary` — пробрасываются через registered descriptor.
-- [ ] [Documentation/components/table.md](../components/table.md) §10.5 «Compound API».
-- [ ] Тесты: schema, compound, mixed (schema выигрывает).
+> Реализовано через **VNode-walk `slots.default()`** (канон FishtVue, зеркало Menu), а НЕ provide/inject — `TableContext.ts` не понадобился (renderless-дети читаются по имени из default-slot).
 
-#### 6.2 Form → `<Form><FormField>` + `<FormSection>`
+- [x] `lib/table/Column.vue` + `lib/table/ColumnGroup.vue` — renderless descriptors (VNode-walk, не inject) · [table.md Issue 3](./table.md) · ✅ 2026-06-07
+- [x] ~~`lib/table/TableContext.ts`~~ — не нужен: VNode-walk вместо provide/inject (canon — зеркало Menu) · ✅ 2026-06-07
+- [x] [Table.vue](../../lib/table/Table.vue) — `compoundParsed` walk (Fragment-flatten, по имени), `columns` computed fallback к compound, schema `:columns` выигрывает · ✅ 2026-06-07
+- [x] Per-column scoped slots `cell`/`header`/`filter` — захватываются с vnode и рендерятся через `RenderColumnSlot` · ✅ 2026-06-07 (`summary` — через существующий tfoot, отдельный slot не вводился)
+- [x] `<ColumnGroup>` multi-level headers + `<Pagination>`/`<Loading>` overrides (сверх исходного ТЗ) · ✅ 2026-06-07
+- [x] Регистрация: `fishtvue/table` named-экспорты (rollup entry → index.ts) + root barrel + Nuxt `FISHT_VUE_SUBCOMPONENTS` · ✅ 2026-06-07
+- [x] [Documentation/components/table.md](../components/table.md) §10.5 «Compound API» · ✅ 2026-06-07
+- [x] Тесты: `Column.test.ts` 14 кейсов (schema/compound/precedence/slots/group/override/reactivity) · ✅ 2026-06-07
 
-- [ ] `lib/form/FormField.vue` + `lib/form/FormSection.vue` · [form.md Issue 2](./form.md)
-- [ ] `Form.registerFieldType("MyDatePicker", ...)` — расширение typeField · [form.md Issue 3](./form.md)
-- [ ] Native `<form @submit>` integration + FormData · [form.md Issue 4](./form.md)
-- [ ] [Documentation/components/form.md](../components/form.md) §10 + §M.
+#### 6.2 Form → `<Form><FormField>` + `<FormSection>` — ✅ resolved 2026-06-13
+
+> Реализовано через **VNode-walk `slots.default()`** (канон FishtVue, зеркало Table/Menu), а НЕ provide/inject.
+
+- [x] `lib/form/FormField.vue` + `lib/form/FormSection.vue` — renderless descriptors (VNode-walk) · [form.md Issue 2](./form.md) · ✅ 2026-06-13
+- [x] `registerFieldType("MyField", ...)` — open typeField union + [lib/form/fieldRegistry.ts](../../lib/form/fieldRegistry.ts) · [form.md Issue 3](./form.md) · ✅ 2026-06-13
+- [x] Native `<form @submit>` + FormData (`action`/`method`/`enctype`/`nativeSubmit`) · [form.md Issue 4](./form.md) · ✅ 2026-06-13
+- [x] Регистрация: `fishtvue/form` named-экспорты (rollup entry → index.ts) + root barrel + Nuxt `FISHT_VUE_SUBCOMPONENTS` · ✅ 2026-06-13
+- [x] [Documentation/components/form.md](../components/form.md) §10.5 Compound API + §M native submit + custom field types · ✅ 2026-06-13
 
 #### 6.3 Select → `<Select><SelectOption>` + `<SelectGroup>`
 
-- [ ] `lib/select/SelectOption.vue` + `lib/select/SelectGroup.vue` · [select.md Issue 3](./select.md)
-- [ ] Children walk + Fragment-flatten.
+- [x] `lib/select/SelectOption.vue` + `lib/select/SelectGroup.vue` · [select.md Issue 3](./select.md) · ✅ 2026-06-13 (чекбокс проставлен 2026-09-05 — реализация была на месте с июня)
+- [x] Children walk + Fragment-flatten — VNode-walk `compoundParsed` ([Select.vue:92-97](../../lib/select/Select.vue#L92-L97)) · ✅ 2026-06-13
 - [ ] [Documentation/components/select.md](../components/select.md) §10.5.
 
 #### 6.4 Menu → `<Menu><MenuItem>` + `<MenuGroup>`
 
-- [ ] `lib/menu/MenuItem.vue` (recursive — submenu) + `lib/menu/MenuGroup.vue` · [menu.md Issue 2](./menu.md)
-- [ ] Submenu через recursive `<MenuItem><MenuItem></MenuItem></MenuItem>`.
+- [x] `lib/menu/MenuItem.vue` + `lib/menu/MenuGroup.vue` (renderless descriptors; VNode-walk вместо provide/inject) · [menu.md Issue 2](./menu.md) · ✅ resolved 2026-06-06
+- [x] Submenu через recursive `<MenuItem><MenuItem></MenuItem></MenuItem>`. · ✅ resolved 2026-06-06 (экспорт через root barrel; `:groups` выигрывает; [menu.md §9.5](../components/menu.md))
 
 #### 6.5 Accordion → `<Accordion><AccordionItem>`
 
-- [ ] `lib/accordion/AccordionItem.vue` · [accordion.md Issue 2](./accordion.md)
+- [x] `lib/accordion/AccordionItem.vue` · [accordion.md Issue 2](./accordion.md) · ✅ resolved 2026-06-14 (renderless descriptor + VNode-walk; compound-entry в `lib/rollup.config.js`; `:data-source` выигрывает; [accordion.md §9.4](../components/accordion.md))
 
 **Acceptance:** для каждого из 5 компонентов schema-driven и compound API работают одновременно (test). Volar autocomplete для child-компонентов работает. Documentation обновлена с примерами обоих API.
 
@@ -325,13 +390,13 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 **Цель:** library работает с 10k+ rows без deg.
 **Estimated:** 1-2 sprint'а.
-**Зависимости:** Wave 6.1 Table compound (для добавления virtual в API).
+**Зависимости:** нет (Table virtual сделан dependency-free, без Wave 6.1).
 **Параллельно с:** Wave 8.
 
-- [ ] [Table.vue](../../lib/table/Table.vue) — `:virtual?: boolean` + `:virtualThreshold?: number`, виртуализация через `@tanstack/vue-virtual` · [table.md Issue 4](./table.md)
-- [ ] [Select.vue](../../lib/select/Select.vue) — то же для dropdown list · [select.md Issue 7](./select.md)
+- [x] [Table.vue](../../lib/table/Table.vue) — `virtual?: boolean | { rowHeight?, overscan?, threshold? }`, **dependency-free** windowing (fixed rowHeight, spacer-`<tr>`, absolute index, `aria-rowcount`/`aria-rowindex`); auto + opt-out · [table.md Issue 4](./table.md) · ✅ resolved 2026-06-07
+- [x] [Select.vue](../../lib/select/Select.vue) — dropdown list через headless `useVirtualScroll` (общее ядро с [VirtualScroller](../components/virtualscroller.md), **не** отдельная реализация); подключено безусловно, окно включается по внутреннему порогу 100 (R13/R19); keyboard-nav переписан на index-математику (R17), GSAP-stagger гасится только в windowed-режиме (R18), группы окно не включают (R20). `aria-setsize`/`aria-posinset` + `role="listbox"`/`option` — обязательная часть, иначе виртуализация ухудшила бы a11y · [select.md Issue 7](./select.md) · ✅ resolved 2026-09-06
 - [ ] [Menu.vue](../../lib/menu/Menu.vue) — то же для длинных menu (опционально) · [menu.md](./menu.md)
-- [ ] [TextEditor.vue:97](../../lib/texteditor/TextEditor.vue#L97) — Quill image-button → custom handler с emit `image-upload-request` (вместо base64-инжекции) · [texteditor.md Issue 6](./texteditor.md)
+- [x] ~~[TextEditor.vue:98](../../lib/texteditor/TextEditor.vue#L98) — Quill image-button → custom handler с emit `image-upload-request`~~ → **снят решением R33** (2026-09-06): относится к коду, который удаляется целиком при переписывании TextEditor без Quill. Требование «загрузка через хук приложения, а не base64» перенесено во входные требования нового редактора · [texteditor.md Issue 6](./texteditor.md)
 
 **Acceptance:** 10k rows Table initial render <100ms, scroll 60fps. 5k options Select dropdown — same. Quill image-handler не инжектит multi-megabyte data-URLs.
 
@@ -345,20 +410,20 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 8.1 RTL support
 
-- [ ] Глобальная замена `left/right` Tailwind classes на `start/end` (logical) во всех компонентах · cross-cutting issue.
-- [ ] [Button.d.ts](../../lib/button/Button.d.ts) — `iconPosition: "start" | "end"` (deprecation `"left"|"right"`) · [button.md Issue 3](./button.md)
-- [ ] [Separator.d.ts](../../lib/separator/Separator.d.ts) — `contentPosition: "start" | "end"` · [separator.md Issue 3](./separator.md)
+- [~] Глобальная замена `left/right` Tailwind classes на `start/end` (logical) во всех компонентах · cross-cutting issue. **Прогресс 2026-06-11:** Table ([Table.vue](../../lib/table/Table.vue) — resize-handle `pe-2` + `rtl:`-override inset + dir-aware `resizeColumn` width-math; group-label `start-*`/`ps-*`) ✅ [table.md Issue 11](./table.md). **2026-06-13:** Pagination ([Pagination.vue:182–183](../../lib/pagination/Pagination.vue#L182-L183) — directional иконки `rtl:-scale-x-100` + физический `ml-3` → logical `ms-3`; порядок prev/next зеркалит `inline-flex` нативно, без `flex-row-reverse`) ✅ [pagination.md Issue 6](./pagination.md). **2026-06-13:** Split ([isRtlHorizontal — Split.vue:408](../../lib/split/Split.vue#L408) — dir-aware pointer-resize-математика + keyboard-инверсия; физических `left/right` offset'ов у Split нет → логические-классы не нужны) ✅ [split.md Issue 7](./split.md). **2026-06-13:** Switch ([Switch.vue:126–127](../../lib/switch/Switch.vue#L126-L127) — `classAfterInput` `end-0` + `classIconBody` `me-2`; thumb `translate-x` оставлен как позиционирование внутри controlled-track) ✅ partial [switch.md Issue 8](./switch.md). **2026-06-13:** Badge ([Badge.vue:53–60](../../lib/badge/Badge.vue#L53-L60) — физические `pl-1`/`pr-1` → логические `ps-1`/`pe-1` для point/close-padding; `inline-flex` зеркалит порядок point/close нативно) ✅ [badge.md Issue 6](./badge.md). **2026-06-14:** Accordion ([Accordion.vue](../../lib/accordion/Accordion.vue) — заголовок `text-left` → `text-start`, иконки `ml-8` → `ms-8`; вертикальная Arrow Up/Down-навигация направление-нейтральна) ✅ [accordion.md Issue 7 · F31](./accordion.md). **2026-06-14:** Separator ([Separator.d.ts](../../lib/separator/Separator.d.ts) + [Separator.vue:20](../../lib/separator/Separator.vue#L20) — `contentPosition` logical `start`/`end` (+ deprecated `left`/`right` алиасы + dev-warn); порядок line-сегментов зеркалит flex main-axis нативно, направление градиента — `rtl:bg-gradient-to-*`; `useDirectionality()` не нужен) ✅ [separator.md Issue 3](./separator.md). **2026-06-14:** Alert (NEW локальный `AlertPosition` — logical `start`/`end`/`top-start`/`bottom-end` (+ deprecated физ. `left`/`right`/`top-left`/… с dev-warn); `Alert.vue` `positionLogical` + slide-in `rtl:`-флип translate + `ms-3`/`ms-auto ps-3`; `openAlert` `toLogicalPosition()` нормализация + `start-0`/`end-0`/`ps-*`/`pe-*` + физ./лог. дедуп контейнера; `PositionShort` shared с Dialog не тронут) ✅ [alert.md Issue 7](./alert.md). Движок поддерживает `rtl:`/`ltr:` + логические `start`/`end`/`pe`/`ps` — pattern готов к применению на остальных компонентах.
+- [x] [Button.d.ts](../../lib/button/Button.d.ts) — `iconPosition: "start" | "end"` (deprecation `"left"|"right"`) · [button.md Issue 3](./button.md) · RTL делегирован `inline-flex` main-axis (без отдельного CSS) · ✅ resolved 2026-06-07
+- [x] [Separator.d.ts](../../lib/separator/Separator.d.ts) — `contentPosition: "start" | "end"` (deprecated `"left"|"right"` + dev-warn) · RTL-порядок сегментов делегирован flex main-axis, градиент — `rtl:bg-gradient-to-*` · [separator.md Issue 3](./separator.md) · ✅ resolved 2026-06-14
 - [ ] Auto-detect `<html dir="rtl">` через `useDirectionality()` composable + соответствующий API в Locale (Issue 4 в [locale.md](./locale.md))
 - [ ] Тесты с `dir="rtl"` для каждого компонента (snapshot-based).
 
 #### 8.2 i18n текстов
 
-- [ ] [rulesHandler.ts / rulesMethods.ts](../../lib/utils/rulesHandler.ts) — validation messages через `t("validation.required")` keys + добавить ключи в [locales/{en,ru}.ts](../../lib/locale/locales/) · [form.md Issue 6](./form.md)
-- [ ] [Calendar.vue](../../lib/calendar/Calendar.vue) — пробросить FishtVue locale в v-calendar · [calendar.md Issue 8](./calendar.md)
+- [~] [rulesHandler.ts / rulesMethods.ts](../../lib/utils/rulesHandler.ts) — validation messages локализуются. **Прогресс 2026-06-03:** `setDefaultRuleMessages()` + locale-ключи (`invalidEmail` и др.) уже в [locales/{en,ru}.ts](../../lib/locale/locales/); ~~Form~~ ✅ авто-применяет их через `applyLocaleToRules()` (guarded `useFishtVue()` + `watch(getActiveLocale)`) · [form.md Issue 6](./form.md). Остаётся: авто-wiring для standalone Input/Select без Form.
+- [x] [Calendar.vue:102-105, 378, 391](../../lib/calendar/Calendar.vue#L102-L105) — `getActiveLocale()` пробрасывается в `<DatePicker :locale>`, priority `props > options > active > "en"` · [calendar.md Issue 8](./calendar.md) · ✅ resolved 2026-05-11
 - [ ] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — Quill toolbar tooltips через i18n · [texteditor.md Issue 8, 9](./texteditor.md)
-- [ ] [numberHandler.convertToPhone](../../lib/utils/numberHandler.ts) — параметризовать по locale · [input.md Issue 7](./input.md)
-- [ ] [Select.vue search](../../lib/select/Select.vue) — фильтрация через `Intl.Collator(locale, { sensitivity: 'base' })` · [select.md Issue 10](./select.md)
-- [ ] Локализация UI-текстов (Pagination prev/next уже есть): Loading aria-label, Alert Confirm/Cancel, Dialog title, и т.д.
+- [~] [numberHandler.convertToPhone](../../lib/utils/numberHandler.ts) — параметризовать по locale · [input.md Issue 7](./input.md). **Прогресс 2026-05-11:** `phoneFormats` пробрасывается через `InputProps.phoneFormats` + `InputOption.phoneFormats`; `toPhone(e, options)` расширен. Auto-bind к активной локали — оставлен на следующую итерацию (требует расширения `lib/locale/` + либо `libphonenumber-js` peer-dep, либо встроенной таблицы locale → PhoneFormat[]).
+- [x] [Select.vue search](../../lib/select/Select.vue) — фильтрация через `Intl.Collator(getActiveLocale() ?? "en", { sensitivity: "base", usage: "search" })` (diacritic + case insensitive). Сcollator также используется в `splitByQuery` для подсветки — match-логика согласована · [select.md Issue 10](./select.md) · ✅ resolved 2026-05-11
+- [ ] Локализация UI-текстов (Pagination prev/next уже есть): ~~Loading aria-label~~ ✅ 2026-06-03 (`loading.label`), Alert Confirm/Cancel, Dialog title, и т.д.
 
 **Acceptance:** library работает в RTL (`<html dir="rtl">`) — visual snapshots проходят. `setActiveLocale("ru")` — все тексты включая validation messages переключаются.
 
@@ -370,11 +435,11 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **Estimated:** 1-2 sprint'а.
 **Зависимости:** Wave 3.3 (theme runtime API), Wave 3.4 (darkModeSelector).
 
-- [ ] Замена `gray-*` / `stone-*` / `neutral-*` / `red-*` / `green-*` Tailwind primitives на semantic tokens (`bg-surface`, `text-muted-foreground`, `border-border`) во всех компонентах · cross-cutting [switch.md Issue 12](./switch.md)
-- [ ] [theme/uno.ts](../../lib/theme/uno.ts) — определить semantic mappings · [theme.md](./theme.md)
-- [ ] [theme/primitive.ts](../../lib/theme/primitive.ts) (761 lines) — разбить на per-color файлы для tree-shake · [theme.md Issue 7](./theme.md)
-- [ ] [TextEditor.vue:368-383](../../lib/texteditor/TextEditor.vue#L368) — HEX hardcode → CSS-переменные · [texteditor.md Issue 2](./texteditor.md)
-- [ ] [Label.vue](../../lib/label/Label.vue) — translate-y px hardcode → CSS custom properties · [label.md Issue 5](./label.md)
+- [x] Замена `gray-*` / `stone-*` / `neutral-*` / `slate-*` / `zinc-*` Tailwind primitives на semantic `surface` token во всех компонентах · cross-cutting [theme.md Issue 10](./theme.md). **2026-07-04 — движок:** `surface` добавлен как 23-й именованный цвет в [primitive.ts](../../lib/theme/primitive.ts) (дефолт — копия `gray`) + `ColorName` union в [Theme.d.ts:178](../../lib/theme/Theme.d.ts#L178); `bg-surface-*`/`text-surface-*`/etc. работают через тот же `resolveColor()`, что и любой другой именованный цвет — правок `unoRules.ts` не потребовалось (regex строятся динамически из `Object.keys(colors)`). **Первый батч (11/19), 2026-07-04:** Menu, Accordion, Icons, Select, TextEditor (+ HEX-in-style-block → `var(--fv-surface-*)`), Separator, Calendar, Input, Form, Label, Textarea. **Residual-батч (8/19), 2026-07-05:** Split, Pagination, Table, Switch, Badge, InputLayout, FixWindow, Dialog — все уже закрыли номерной B10 через `forced-colors`+preset-aware `theme-*` accent ранее, теперь дозакрыли оставшиеся структурные нейтрали тем же rename; semantic-intent цвета в тех же class-строках (required-asterisk `text-red-500` в Switch, delete-hover `text-red-*` в Table, clear-hover `text-red-*` в InputLayout, help-hover `text-yellow-500`) сохранены нетронутыми. **Итог: 19/19 (100%) структурная миграция закрыта.** См. соответствующие `issues/<name>.md` (FixWindow/Dialog — в `issues/done/`). **Alert (`green`/`yellow`/`blue`/`red` severity-цвета) — отдельный будущий эпик**, вне scope этой волны: это semantic-intent цвета (success/warning/info/error), не структурный chrome — нужны собственные новые semantic-слоты + runtime update-функции, а не rename на `surface`. **Button `neutral`-mode** — проверено, не хардкод: легитимный именованный color-mode кнопки, аналог `theme`/`success`, вне scope.
+- [ ] [theme/uno.ts](../../lib/theme/uno.ts) — определить semantic mappings · [theme.md](./theme.md) (не проверялось в рамках 2026-07-04 захода — не путать с `surface`-токеном выше, объём неясен)
+- [ ] [theme/primitive.ts](../../lib/theme/primitive.ts) (776 lines) — разбить на per-color файлы для tree-shake · [theme.md Issue 7](./theme.md)
+- [x] [TextEditor.vue:384-398](../../lib/texteditor/TextEditor.vue#L384) — HEX hardcode → `var(--fv-surface-*)` · [texteditor.md Issue 2](./texteditor.md) ✅ 2026-07-04
+- [x] [Label.vue](../../lib/label/Label.vue) — translate-y px hardcode → CSS custom properties (`--fv-label-translate-y{,-offset,-rest}`) · [label.md Issue 5](./label.md) · ✅ 2026-09-05
 
 **Acceptance:** `usePreset(SapphireTheme)` визуально меняет ВСЕ компоненты в любом sandbox-page (visual regression test).
 
@@ -387,53 +452,60 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 #### 10.1 prefers-reduced-motion
 
-- [ ] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting [button.md Issue 10](./button.md)
-- [ ] [Loading.vue](../../lib/loading/Loading.vue) — статичный fallback (loader-circle outline) в reduced-motion mode · [loading.md Issue 6](./loading.md)
+- [x] Все `transition-*` Tailwind classes → `motion-safe:transition-*` (или `@media (prefers-reduced-motion)` CSS) · cross-cutting · Button уже сделан ([button.md Issue 10](./button.md)) — pattern готов к применению на остальных 21 компонента. **Прогресс 2026-05-11:** Input ([Input.vue:87, 89, 98](../../lib/input/Input.vue#L87-L98)) ✅; Select ([Select.vue](../../lib/select/Select.vue) — root transition + classSelectList + classLiItem + TransitionGroup leave/enter classes + Badge inline + print: prefixes) ✅; Textarea ([Textarea.vue:65](../../lib/textarea/Textarea.vue#L65) — `motion-safe:placeholder:transition-all` + `print:*`) ✅; Label ([Label.vue:36](../../lib/label/Label.vue#L36) — `motion-safe:transition-all motion-safe:duration-200`) ✅; Menu ([Menu.vue](../../lib/menu/Menu.vue) — default `styles.animation = "motion-safe:transition-all motion-safe:duration-500"` в `classMenu`/`classMenuItem`) ✅ 2026-06-06; Split ([Split.vue:89, 95](../../lib/split/Split.vue#L89-L95) — root `motion-safe:transition-all` + separator-icon `motion-safe:transition-opacity`) ✅ 2026-06-06; Table ([Table.vue](../../lib/table/Table.vue) — `animation`-токен + `classIsSort`/`classResizedColumns`/`classTr` + 5 inline `<transition>`-обёрток + search-Input → `motion-safe:`) ✅ 2026-06-11. **2026-06-13:** Switch ([Switch.vue:64, 98, 106, 136](../../lib/switch/Switch.vue#L64) — root `classBaseSwitch` + switch/checkbox-track + thumb `motion-safe:`; inline `<Icons>`-thumb вынесен в NEW computed `classSwitchIconImg` через `setStyle`) ✅ [switch.md Issue 7](./switch.md); InputLayout ([InputLayout.vue:67-72, 149-154](../../lib/inputlayout/InputLayout.vue#L67-L72) — root `animation` `motion-safe:transition-all motion-safe:duration-550` + оба `<transition>`-блока + hover-иконки `motion-safe:*`; inline-классы зарегистрированы явно module-scope `InputLayout.setStyle`) ✅ [inputlayout.md Issue 8](./inputlayout.md). **2026-06-14:** Accordion ([Accordion.vue](../../lib/accordion/Accordion.vue) — `classSubtitle`/`styleIcon`/`classRect` → `motion-safe:transition*` + `onRootLeave` мгновенный unmount под `prefers-reduced-motion: reduce`) ✅ [accordion.md Issue 7 · E29.7](./accordion.md).
+
+  **✅ closed 2026-09-05.** Счётчик «11 / 22» вводил в заблуждение — знаменатель считал все компоненты, включая те, у которых `transition` нет вовсе. Фактически из 23 компонентов переходы есть у 16, у остальных 7 (Badge, Calendar, Icons, Loading, Pagination, Separator, TextEditor) гейтить нечего.
+
+  **Построчный аудит, который откладывался всё это время, наконец проведён** — и нашёл два реальных пробела, которых покомпонентный заход не видел: (1) [InputLayout.vue](../../lib/inputlayout/InputLayout.vue) — `leave-active-class`/`enter-active-class` у `<transition>` (эти классы попадают в DOM напрямую, минуя `Component.setStyle()`, поэтому сверка по классам компонента их не задевала); (2) [Switch.vue](../../lib/switch/Switch.vue) — голый `transition` на иконке помощи. Оба исправлены.
+
+  Чтобы вопрос не возвращался, заведён cross-cutting guard [lib/motionSafe.test.ts](../../lib/motionSafe.test.ts): он сканирует все SFC и валит сборку на любом негейтнутом `transition-*`, указывая файл и строку. Отдельно проверено, что guard видит именно active-классы `<transition>` — тот случай, который и был пропущен.
+- [x] [Loading.vue](../../lib/loading/Loading.vue) — статичный fallback (`simple`-loader, `animation-duration=0`) в reduced-motion mode через `matchMedia` guard в обёртке · [loading.md Issue 6](./loading.md) · ✅ resolved 2026-06-03
 
 #### 10.2 Print styles
 
-- [ ] Глобальный `@media print` блок: интерактивные компоненты (Button, Select, Loading) скрываются или упрощаются · [button.md Issue 15](./button.md)
+- [~] Глобальный `@media print` блок: интерактивные компоненты (Button, Select, Loading) скрываются или упрощаются · [button.md Issue 15](./button.md). **Прогресс 2026-05-11:** Input ([Input.vue:90](../../lib/input/Input.vue#L90)) получил `print:border print:border-black print:bg-white print:text-black print:shadow-none`. **2026-06-03:** Loading ([Loading.vue](../../lib/loading/Loading.vue)) → `print:hidden` в `classLoading` ([loading.md Issue 8](./loading.md)). **2026-06-11:** Table ([Table.vue](../../lib/table/Table.vue)) → `print:hidden` на loading-overlay + resize-handle ([table.md Issue 12](./table.md)). **2026-06-12:** Button ([Button.vue](../../lib/button/Button.vue)) → `print:border print:bg-white print:text-black print:shadow-none` в `baseClasses` (style-for-print) ([button.md Issue 15](./button.md)). **2026-06-13:** Pagination ([Pagination.vue](../../lib/pagination/Pagination.vue)) → `print:border-black` (classBase) + `print:text-black` (active indicator) + `forced-colors:outline` (active page, B10) ([pagination.md Issue 8](./pagination.md)). **2026-06-13:** Switch ([Switch.vue:66, 84](../../lib/switch/Switch.vue#L66)) → `print:border print:border-black print:bg-white print:text-black print:shadow-none` на обе ветки `classBaseSwitch` (style-for-print) ([switch.md Issue 14](./switch.md)). **2026-06-13:** InputLayout ([InputLayout.vue:92](../../lib/inputlayout/InputLayout.vue#L92)) → `print:border print:border-black print:bg-white print:text-black print:shadow-none` на `classBody` (style-for-print) + `forced-colors:outline` на `classBase` (B10) ([inputlayout.md Issue 8](./inputlayout.md)). **2026-08-02:** Accordion ([Accordion.vue:136-138](../../lib/accordion/Accordion.vue#L136-L138)) → `forced-colors:outline` на `classButton` (B10, high-contrast часть) — последний открытый трекаемый forced-colors-пункт; print-часть Accordion не трогалась ([accordion.md](./accordion.md)). Pattern зафиксирован, но цельного `@media print` блока ещё нет.
 
 #### 10.3 Polymorphic & composition
 
-- [ ] [Button.vue](../../lib/button/Button.vue) — `as?: string | Component` (default `"button"`, поддержка `<NuxtLink>`) · [button.md Issue 5](./button.md)
-- [ ] [Button.vue](../../lib/button/Button.vue) — slots `start` + `end` + `prepend`/`append` · [button.md Issue 12](./button.md)
-- [ ] [Button.vue](../../lib/button/Button.vue) — expose `buttonRef` + `focus()` / `blur()` методы · [button.md Issue 4](./button.md)
-- [ ] [Switch.vue](../../lib/switch/Switch.vue) — expose `inputRef` · [switch.md Issue 11](./switch.md)
-- [ ] [Pagination.vue](../../lib/pagination/Pagination.vue) — expose root ref · [pagination.md Issue 7](./pagination.md)
+- [x] [Button.vue](../../lib/button/Button.vue) — `as?: string | Component` через `<component :is>` (`<a>`/`<NuxtLink>`, авто role/tabindex/aria-disabled) · [button.md Issue 5](./button.md) · ✅ resolved 2026-06-12
+- [x] [Button.vue:400–407](../../lib/button/Button.vue#L400-L407) — slots `start` + `end` · [done/button.md Issue 12](./button.md) · resolved 2026-05-10 (slot names `start`/`end` выбраны для logical-writing-order)
+- [x] [Button.vue:344–366](../../lib/button/Button.vue#L344-L366) — expose `buttonRef` + `focus()` / `blur()` методы · [done/button.md Issue 4](./button.md) · resolved 2026-05-10
+- [x] [Switch.vue](../../lib/switch/Switch.vue) — expose `inputRef` + `focus`/`blur` · [switch.md Issue 11](./switch.md) · ✅ resolved 2026-05-11
+- [x] [Pagination.vue:203–224](../../lib/pagination/Pagination.vue#L203-L224) — expose `paginationRef` + `focus()` · [pagination.md Issue 7](./pagination.md) · ✅ resolved 2026-06-13
+- [x] [Split.vue:139–142](../../lib/split/Split.vue#L139-L142) — expose `focus()` (→ первый separator; root уже был `resizableGroup`) · [split.md Issue 9](./split.md) · ✅ resolved 2026-06-13
 
 #### 10.4 API consistency
 
-- [ ] [Switch.vue:168-169](../../lib/switch/Switch.vue#L168) — удалить дубль emit `updateModelValue` · [switch.md Issue 2](./switch.md)
-- [ ] [Switch.d.ts:48](../../lib/switch/Switch.d.ts#L48) — закрыть union `switchingType: "checkbox" | "switch"` (убрать `| string`) · [switch.md Issue 9](./switch.md)
-- [ ] [Aria.d.ts:97](../../lib/aria/Aria.d.ts#L97) — `change:modelValue(payload: string)` (was boolean type bug) · [aria.md Issue 1](./aria.md)
-- [ ] [TextEditor.d.ts](../../lib/texteditor/TextEditor.d.ts) — то же `change:modelValue` type bug fix · [texteditor.md Issue 5](./texteditor.md)
-- [ ] [Icons.d.ts:21](../../lib/icons/Icons.d.ts#L21) — `variant?: "outline"|"solid"` (было `stileIcon` опечатка), deprecation soft · [icons.md Issue 4](./icons.md)
-- [ ] [Icons.d.ts:17](../../lib/icons/Icons.d.ts#L17) — template literal type для `type` (heroicons union + iconify pattern) · [icons.md Issue 5](./icons.md)
-- [ ] [Badge.vue:78](../../lib/badge/Badge.vue#L78) — `delete` emit → `close` (deprecation) · [badge.md Issue 5](./badge.md)
-- [ ] [Switch.vue:244](../../lib/switch/Switch.vue#L244) — `<input type="hidden">` рядом с `<button role="switch">` для native form integration · [switch.md Issue 3](./switch.md)
-- [ ] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — hidden `<input>` для native form submit · [texteditor.md Issue 10](./texteditor.md)
-- [ ] [Form.vue](../../lib/form/Form.vue) — корень `<form>` (после Wave 6.2) · [form.md Issue 4](./form.md)
-- [ ] [Input.vue:31](../../lib/input/Input.vue#L31) — расширить `arrayInputType` ["text","number","email","password","tel","url","search"] · [input.md Issue 6](./input.md)
-- [ ] [Loading.d.ts](../../lib/loading/Loading.d.ts) — `LoadingOption` включить `type` · [loading.md Issue 4](./loading.md)
+- [x] [Switch.vue](../../lib/switch/Switch.vue) — удалить дубль emit `updateModelValue` · [switch.md Issue 2](./switch.md) · ✅ resolved 2026-05-11
+- [x] [Switch.d.ts:48](../../lib/switch/Switch.d.ts#L48) — закрыть union `switchingType: "checkbox" | "switch"` (убрать `| string`) · [switch.md Issue 9](./switch.md) · ✅ resolved 2026-05-11
+- [x] [Textarea.d.ts:125](../../lib/textarea/Textarea.d.ts#L125) — `change:modelValue(payload: string)` (was boolean type bug) · [textarea.md Issue 1](./textarea.md) · ✅ 2026-05-11 (чекбокс проставлен 2026-09-05)
+- [x] [TextEditor.d.ts:121](../../lib/texteditor/TextEditor.d.ts#L121) — то же `change:modelValue` type bug fix · [texteditor.md Issue 5](./texteditor.md) · ✅ 2026-05-11 (чекбокс проставлен 2026-09-05)
+- [x] [Icons.d.ts:84](../../lib/icons/Icons.d.ts#L84) — `variant?: "outline"|"solid"` (было `stileIcon` опечатка), deprecation soft через runtime `console.warn` · [icons.md Issue 4](./icons.md) ✅ 2026-05-10 (hard removal + codemod — Wave 12)
+- [x] [Icons.d.ts:61](../../lib/icons/Icons.d.ts#L61) — `IconType = HeroIconName | IconifyIconName | (string & {})` template literal union (hand-curated 30 heroicons + Iconify pattern + open fallback) · [icons.md Issue 5](./icons.md) ✅ 2026-05-10 (full ~280 union via build-script — future)
+- [x] [Badge.vue:80–83](../../lib/badge/Badge.vue#L80-L83) — `delete` emit → `close` (soft deprecation, both emit) · [badge.md Issue 5](./badge.md) ✅ 2026-05-10
+- [x] [Switch.vue:218–227](../../lib/switch/Switch.vue#L218-L227) — скрытый `<input type="checkbox" hidden>` form-bridge рядом с `<button role="switch">` для native form integration · [switch.md Issue 3](./switch.md) · ✅ resolved 2026-05-11
+- [x] [TextEditor.vue](../../lib/texteditor/TextEditor.vue) — hidden `<input>` для native form submit · [texteditor.md Issue 10](./texteditor.md) · ✅ 2026-09-05
+- [x] [Form.vue:478](../../lib/form/Form.vue#L478) — корень `<form>` (после Wave 6.2) · [form.md Issue 4](./form.md) · ✅ (чекбокс проставлен 2026-09-05)
+- [x] [Input.vue:31-39](../../lib/input/Input.vue#L31-L39) — расширить `arrayInputType` ["text","number","email","password","tel","url","search"] · [input.md Issue 6](./input.md) ✅ 2026-05-11
+- [x] [Loading.d.ts](../../lib/loading/Loading.d.ts) — `LoadingOption` включить `type` · [loading.md Issue 4](./loading.md) · ✅ resolved 2026-06-03 (+ `resolvedType` в Loading.vue)
 
 #### 10.5 Window.FishtVue coupling cleanup
 
-- [ ] [component/index.ts:68](../../lib/component/index.ts#L68) — primary path `inject(FishtVueSymbol)`, `(window as any).FishtVue` только fallback · [component-class.md Issue 2](./component-class.md)
+- [x] [component/index.ts:67-68](../../lib/component/index.ts#L67-L68) — `window.FishtVue` уже только fallback: primary path — `appContext.config.globalProperties.$fishtVue` · [component-class.md Issue 2](./component-class.md) ✅ resolved 2026-05-20 (чекбокс проставлен 2026-09-05; буквальный `inject(FishtVueSymbol)` вместо `globalProperties` — вкусовщина, не gap)
 
 #### 10.6 Other architecture
 
-- [ ] [Animation transitions](../../lib/accordion/Accordion.vue) — `<Transition>` с `@after-leave` для unmount-safe collapse · [accordion.md Issue 6](./accordion.md)
-- [ ] [Input.vue:175](../../lib/input/Input.vue#L175) — `focus(event?: FocusEvent)` argless вариант · [input.md Issue 10](./input.md)
-- [ ] [Input.vue:213](../../lib/input/Input.vue#L213) — eye-icon class через computed (option `passwordToggleClass`) · [input.md Issue 5](./input.md)
-- [ ] [InputLayout.vue:184](../../lib/inputlayout/InputLayout.vue#L184) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` · [inputlayout.md Issue 5](./inputlayout.md)
-- [ ] [InputLayout.vue:226](../../lib/inputlayout/InputLayout.vue#L226) — `clipboard.writeText` feature-detect + execCommand fallback · [inputlayout.md Issue 3](./inputlayout.md)
-- [ ] [Switch.vue:232-234](../../lib/switch/Switch.vue#L232) — help-icon contrast (`text-gray-400` → `text-gray-500` light) · [switch.md Issue 6](./switch.md)
-- [ ] [Badge.vue:32](../../lib/badge/Badge.vue#L32) — `ring-neutral-500/30` → `ring-neutral-300` · [badge.md Issue 4](./badge.md)
-- [ ] [calendar.md Issue 9 — Floating UI](./calendar.md) (закрывается через Wave 5).
-- [ ] [_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./done/_utilities.md) — низкий приоритет.
+- [x] [Animation transitions](../../lib/accordion/Accordion.vue) — `<Transition :css="false">` с JS `@leave` hook для unmount-safe collapse · [accordion.md Issue 6](./accordion.md) · ✅ resolved 2026-05-11
+- [x] [Input.vue:212-220](../../lib/input/Input.vue#L212-L220) — `focus(eventOrOptions?: FocusEvent | FocusOptions)` argless + FocusOptions вариант · [input.md Issue 10](./input.md) ✅ 2026-05-11
+- [x] [Input.vue:96-102](../../lib/input/Input.vue#L96-L102), [Input.vue:255-266](../../lib/input/Input.vue#L255-L266) — eye-icon class через computed (option `passwordToggleClass`, theme-токены) · [input.md Issue 5](./input.md) ✅ 2026-05-11
+- [x] [InputLayout.vue:188-223](../../lib/inputlayout/InputLayout.vue#L188-L223) — убрать `document.querySelector("header")` hardcode → prop `:offsetTop` (number / string / `() => number`) + `resolveOffsetTop()` · [inputlayout.md Issue 5](./inputlayout.md) · ✅ resolved 2026-05-11
+- [x] [InputLayout.vue:264-309](../../lib/inputlayout/InputLayout.vue#L264-L309) — `clipboard.writeText` feature-detect + `legacyCopy()` execCommand fallback + SSR guard · [inputlayout.md Issue 3](./inputlayout.md) · ✅ resolved 2026-05-11
+- [x] [Switch.vue:277](../../lib/switch/Switch.vue#L277) — help-icon contrast (`text-gray-400` → `text-gray-500` light) · [switch.md Issue 6](./switch.md) · ✅ resolved 2026-05-11
+- [x] [Badge.vue:38](../../lib/badge/Badge.vue#L38) — `ring-neutral-500/30` → `ring-neutral-300 dark:ring-neutral-700` · [badge.md Issue 4](./badge.md) ✅ 2026-05-10
+- [x] [calendar.md Issue 9 — Floating UI](./calendar.md) — закрыт через Wave 5 ✅ 2026-07-02 (чекбокс проставлен 2026-09-05).
+- [x] [\_utilities.md Issue 9 — arrayHandler.sort стабильность документировать](./_utilities.md) · ✅ 2026-09-05 — `sort` оказался comparator'ом, а не сортировщиком: стабильность обеспечивает вызывающий `Array.prototype.sort` (стабилен по спеке с ES2019). См. [utilities/arrayHandler.md §9.1](../utilities/arrayHandler.md).
 
-**Acceptance:** axe-core CI без contrast violations. Codemods для deprecated aliases (Aria→Textarea, stileIcon→variant, iconPosition left→start, delete→close emit).
+**Acceptance:** axe-core CI без contrast violations. Codemods для deprecated aliases (Textarea→Textarea, stileIcon→variant, iconPosition left→start, delete→close emit).
 
 ---
 
@@ -442,19 +514,19 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 **Цель:** все компоненты ≥80% statement coverage, ≥70% branch coverage, infrastructure modules покрыты.
 **Estimated:** 2-3 sprint'а (параллельно с другими волнами).
 
-- [ ] [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) — разблокировать 17 skipped tests (`vi.mock("@vueup/vue-quill")`) · [texteditor.md Issue 1](./texteditor.md). **Цель: coverage 0% → ≥70%**
-- [ ] [Loading.test.ts](../../lib/loading/Loading.test.ts) — тест каждой Epic/Svg вариации · [loading.md Issue 1](./loading.md). **Цель: loadingTypes 3% → ≥70%**
+- [x] [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) — разблокировать 17 тестов (`vi.mock("@vueup/vue-quill")`) · [texteditor.md Issue 1](./texteditor.md) · ✅ 2026-09-05. **Цель coverage 0% → ≥70% перевыполнена: 95.89% stmts / 85.18% branch**, 27/27 тестов, 0 todo. Рецепт из этого пункта оказался верным, но выполнимым стал только после Wave 2.1 (lazy-загрузка Quill). Уточнение: тесты были `describe.todo`, а не `it.skip`.
+- [x] [Loading.test.ts](../../lib/loading/Loading.test.ts) — тест каждой Epic/Svg вариации · [loading.md Issue 1](./loading.md). **Цель: loadingTypes 3% → ≥70%** · ✅ resolved 2026-06-03 (достигнуто 100%, 145 кейсов). Подъём beta → stable ждёт Issue 7 (Wave 9).
 - [ ] [Calendar.test.ts](../../lib/calendar/Calendar.test.ts) — coverage gap (377-396 + 219-340 untested) · [calendar.md](./calendar.md). **Цель: 63% → ≥80%**
-- [ ] [Split.test.ts](../../lib/split/Split.test.ts) — 7 тестов недостаточно; добавить resize, persist, panels · [split.md Issue 2](./split.md). **Цель: 60%/39% → ≥80%/70%**
-- [ ] [FixWindow.test.ts](../../lib/fixwindow/FixWindow.test.ts) — uncovered 568-661 · [fixwindow.md Issue 7](./fixwindow.md). **Цель: 77% → ≥90%**
-- [ ] [Table.test.ts](../../lib/table/Table.test.ts) — branch coverage 67% → 80% (edit-cells + asyncData ветви) · [table.md Issue 7](./table.md)
+- [x] [Split.test.ts](../../lib/split/Split.test.ts) — 7 → 32 теста (resize, persist, keyboard, ARIA, overlay, pixel default-size + recalc через mock geometry) · [split.md Issue 2](./split.md). **Цель: 60%/39% → ≥80%/70%** · ✅ resolved 2026-06-06 (достигнуто 85.19% / 71.77%; Split поднят beta → stable)
+- [x] [FixWindow.test.ts](../../lib/fixwindow/FixWindow.test.ts) · [fixwindow.md Issue 7](./done/fixwindow.md). **Цель 77% → ≥90% достигнута: 90.6%** (чекбокс проставлен 2026-09-05)
+- [x] [Table.test.ts](../../lib/table/Table.test.ts) — branch coverage 67% → 80% (edit-cells + asyncData ветви) · [table.md Issue 7](./table.md). **Достигнуто: 80.34%** (чекбокс проставлен 2026-09-05)
 - [ ] [Form.test.ts](../../lib/form/Form.test.ts) — async validators, conditional rules, nested structure · [form.md Issue 8](./form.md)
 - [ ] **Infrastructure tests:**
-  - [ ] [config/baseStyle.ts](../../lib/config/baseStyle.ts) — coverage 0% → mount-test что styles в head · [config.md Issue 2](./config.md)
-  - [ ] [theme/themes/{Aurora,Harmony,Sapphire}.ts](../../lib/theme/themes/) — coverage 0% → preset structure tests + apply test · [theme.md Issue 2](./theme.md)
-  - [ ] [theme/uno.ts](../../lib/theme/uno.ts) + [semantic.ts](../../lib/theme/semantic.ts) — coverage 0% → tests · [theme.md Issue 3](./theme.md)
-  - [ ] [locale/locales/{en,ru}.ts](../../lib/locale/locales/) — coverage 0% → completeness test (все ключи DefaultMessages) · [locale.md Issue 1](./locale.md)
-  - [ ] [module/nuxt.ts](../../lib/module/nuxt.ts) + [plugins/{nuxt,Plugins}.ts](../../lib/plugins/) — coverage 0% → integration test через `@nuxt/test-utils` · [nuxt-module.md Issue 1, 7](./nuxt-module.md)
+  - [x] [config/baseStyle.ts](../../lib/config/baseStyle.ts) — mount-test, что стили доезжают до head · [config.md Issue 2](./done/config.md) · ✅ 2026-09-05 ([baseStyle.test.ts](../../lib/config/baseStyle.test.ts))
+  - [x] [theme/themes/{Aurora,Harmony,Sapphire}.ts](../../lib/theme/themes/) — preset structure + apply · [theme.md Issue 2](./theme.md) · ✅ 2026-09-05 ([themes.test.ts](../../lib/theme/themes/themes.test.ts))
+  - [x] [theme/uno.ts](../../lib/theme/uno.ts) + [semantic.ts](../../lib/theme/semantic.ts) — покрыты поведенчески · [theme.md Issue 3](./theme.md) · ✅ 2026-09-05
+  - [x] [locale/locales/{en,ru}.ts](../../lib/locale/locales/) — симметрия ключей en↔ru, непустота значений, формат pluralization · [locale.md Issue 1](./locale.md) · ✅ 2026-09-05 ([locale.test.ts](../../lib/locale/locale.test.ts))
+  - [x] [module/nuxt.ts](../../lib/module/nuxt.ts) + [plugins/{nuxt,Plugins}.ts](../../lib/plugins/) — тесты · [nuxt-module.md Issue 1, 7](./nuxt-module.md) · ✅ 2026-09-05. `lib/module` — [nuxt.test.ts](../../lib/module/nuxt.test.ts), 11 тестов, **0% → 100% stmts / 75% branch**; `lib/plugins/nuxt.ts` — [plugins.test.ts](../../lib/plugins/plugins.test.ts), 6 тестов, **0% → 100%** по всем метрикам. Оба через мок (`@nuxt/kit`, `nuxt/app`), без поднятия Nuxt. Integration-тест через `@nuxt/test-utils` **не** делался — отдельная задача, если понадобится проверять реальный SSR-рендер.
 
 **Acceptance:** project-wide coverage ≥85% statements / ≥75% branch. CI badge обновлён. TextEditor поднят с `experimental` до `beta`. Loading / Split поднят с `beta` до `stable`.
 
@@ -462,21 +534,39 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 
 ### 🟢 Wave 12 — Migration & DX
 
-**Цель:** miграция на новые API без user pain.
+**Цель:** миграция на новые API без user pain.
 **Estimated:** 1 sprint.
 **Зависимости:** Wave 6, 10 (deprecated aliases).
 
-- [ ] **Codemods для breaking changes:**
-  - [ ] `Aria` → `Textarea` (rename + import-update) · [aria.md Issue 6](./aria.md)
-  - [ ] `iconPosition: "left"|"right"` → `"start"|"end"` · [button.md Issue 3](./button.md)
-  - [ ] `stileIcon` → `variant` · [icons.md Issue 4](./icons.md)
-  - [ ] `delete` emit → `close` for Badge · [badge.md Issue 5](./badge.md)
-  - [ ] `change:modelValue` type для Aria/TextEditor · [aria.md Issue 1](./aria.md)
-- [ ] [CHANGELOG.md](../../CHANGELOG.md) (auto-gen) — documentation для каждого breaking change.
-- [ ] [Documentation/issues/migration-guide.md](./migration-guide.md) — пошаговый guide для major-bumps.
-- [ ] [Documentation/02-installation.md](../02-installation.md) — обновить с новыми peer-deps optional flags.
+- [x] **Codemod — отдельный npm-пакет после публикации 1.0.0 (решение R8).** Внутри этого репозитория codemod'а нет и не будет: `lib/` не получает `jscodeshift`/`ts-morph` в зависимости. Все механические замены закрыты `rg`/`sed`-рецептами в [migration-guide.md](../migration-guide.md) — по рецепту на каждый класс переименований. Прежние подпункты (`iconPosition`, `stileIcon`, `delete` → `close` у Badge) отслеживали алиасы, которые сняты целиком в `687075e` (решение R7): деприкационного пути больше нет, мигрировать нужно один раз и по guide'у.
+- [x] [Documentation/migration-guide.md](../migration-guide.md) — пошаговый guide для major-bumps: §1–§8 (закрытие аудит-сводки · 2026-09-06), §9–§15 (редизайн props 1.0.0 · 2026-09-14, Wave 13 / W8).
+- [x] [Documentation/02-installation.md](../02-installation.md) — обновлён с optional peer-deps ещё в Wave 2.1 (§2.5, врезка про `v-calendar`/`quill`/`gsap`) · чекбокс проставлен 2026-09-05.
+- [x] [CHANGELOG.md](../../CHANGELOG.md) — генерируется `@semantic-release/changelog` из Conventional Commits; каждый breaking change приезжает туда footer'ом `BREAKING CHANGE:` своего коммита. Руками файл не правится (регламент — `CLAUDE.md`).
 
-**Acceptance:** `npx fishtvue-codemod` в потребительском проекте — все deprecated APIs автозаменены.
+**Acceptance:** потребитель проходит major по [migration-guide.md](../migration-guide.md) сверху вниз; каждый класс переименований имеет `rg`-рецепт, а два тихих класса (§9 — `class` сменил элемент, §14 — переименованные события и payload `toggle`) названы явно, потому что инструментами не ловятся.
+
+---
+
+### 🟢 Wave 13 — Props standardization (major 1.0.0)
+
+**Цель:** единый публичный API props перед 1.0.0 — `class` только корень, карта `classes: ClassesMap<XClassKey>` вместо плоских `classX`/bag `styles`/суффиксных `*Class`, positive-булевы, имена концептов, emits, типы без Hungarian. Решения и таблицы переименований — [migration-guide.md](../migration-guide.md) §9–§15 (W8), канон — [dev-patterns.md §2 A–I](../dev-patterns.md#2-decisions).
+**Estimated:** 10 коммитов (волны W0–W9), каждая — компонент целиком (props всех уровней, emits, типы, тесты, документ).
+**Зависимости:** Wave 10.4 (API consistency), Wave 12 (migration guide).
+
+- [x] **W0 — фундамент** (2026-09-13): `ClassesMap`/`TeleportTarget`/`ItemKey` в `types.d.ts`; `Component.resolveClasses(props)` (`cls`/`raw`/`pick`) и consumer-aware `setStyle` — под `unstyled` возвращает `fv` + классы потребителя, три патча `|| "fv"` сняты; `cn` в `.d.ts` — rest-параметры, `mergeClasses`; четыре guard-теста с `PENDING`-allowlist ([classesContract](../../lib/classesContract.test.ts), [propsNaming](../../lib/propsNaming.test.ts), [booleanProps](../../lib/booleanProps.test.ts), [emitsNaming](../../lib/emitsNaming.test.ts)); dev-patterns §2 A–I, §4, §5, §7, §8; Template A §5.1.
+- [x] **W1 — листья** (2026-09-14): Icons (база на `<i data-icon>`, `classes.icon`), Loading, Label (`class`↔`classes.text`, `title→label`, `type→labelMode`, `isRequired→required`, `animate→animated`), typo `4-dots-gooey`.
+- [x] **W2 — семейство InputLayout:** `InputLayoutClassKey` (`base`/`label`/`help`/`message`/`before`/`after`/`animation`), `control`; `hasValue`/`invalid`/`clearable`; Select → `SelectItem`, `options`, `searchable`, `emptyText`, `fixWindowProps`; Calendar `datePickerProps`, `closeOnSelect`, `ready`; TextEditor `dialogProps`/`editorProps`; `data-{name}` на корне, `-control` на контроле.
+- [x] **W3a** (2026-09-14): Button/Badge `mode→variant` (+ `classes.icon`/`loading`, `classes.content`/`point`/`close`, маркеры `data-button-icon`/`-loading`, `data-badge-*`), Separator `orientation` + `segment*/line*` + `data-separator-start/end`, Switch (`classes.control`/`label`/`help`, `data-switch-button`/`-checkbox`, expose `classBase`/`classControl`), Accordion (`items` через `toValue`, ключи `item`/`header`/`title`/`panel`/`content`, payload `toggle` → `{ key, open, items }`, `AccordionItemData`, мёртвый `AccordionItemOption` удалён). Попутно `cls`/`raw` расширены до массива ключей (`ClassesKey<K>`) — пары «общий → частный» (`segment` + `segmentStart`) нельзя собрать в шаблоне: Vue склеивает массив `:class` строкой, twMerge между элементами не работает.
+- [x] **W3b** (2026-09-14): Alert (`class` → корень `[data-alert]`, карточка → `classes.body` + маркер `data-alert-body`, ключи `icon`/`content`/`title`/`subtitle`/`close`, `notAnimate` → `animated`, `toTeleport` → `teleport: TeleportTarget`, выправлена инвертированная precedence `props.class`/`options.class`), Dialog (`classBody` → `class`, прежний `class` → `classes.content`, ключи `backdrop`/`close`, `notAnimate`/`withoutMargin`/`notCloseBackground` → `animated`/`margin`/`closeOnBackdrop`, `toTeleport` → `teleport`, структурный `absolute` карточки уехал в базу), FixWindow (та же инверсия `class`/`classBody`, ключ `close` + `data-fix-window-close`, `typePosition` → `strategy`, `delay` → `openDelay`, `FixWindowTeleport` → общий `TeleportTarget`), Pagination (`pageSize`/`pageSizes`/`visiblePages`, positive-булевы, `update:sizePage` → `update:pageSize`, expose-only `paramsSelect` → prop `selectProps`, корень стал реактивным, снят `TypeError` на `.sort()` по frozen-снимку опций), VirtualScroller (`classes` `viewport`/`content`/`loader`, `delay` → `throttle`, `showLoader` → `loader`, корень и контент переведены с «прямо в DOM» на `cls(key, …)` — заработали `componentsOptions` и `unstyled`). Попутно в guard'е `classesContract` закрыты две order-зависимости: лениво загружаемые дети (`flushLazy`) и телепортируемые корни, у которых `wrapper.element` — fragment-якорь (`queryAll` с fallback на `document.body`); `booleanProps` перестал требовать own default у **обязательных** Boolean-props.
+- [x] **W4 — Table** (2026-09-14): `styles` растворён (`classes.*` + `stripedRows`/`horizontalLines`/`verticalLines`/`filterLines`/`cellHeight`/`borderRadius`/`defaultColumnWidth`/`width`/`height`), Column `classes`/`filterProps`/`editorProps`/`filterable`/`sortable`/`resizable`, `editable`/`searchable`/`resizableColumns`, `total`, `emptyText*`, `switch-page-size`, `Table*`-типы, `data-table`. Ключи `border*` — aspect с fallback на общий `border` (бывшая двойственность `styles.border`: строка ИЛИ объект). `TableColumnPrivate` развёл конфиг редактора (`editable`) и резолвленный гейт (`hasEditor`). Guard `classesContract` получил no-op заглушки `IntersectionObserver`/`ResizeObserver` — Table их требует, а своего setup-файла у guard'а нет; `booleanProps` пополнился renderless-исключениями `table/Column.vue` и `table/ColumnGroup.vue`.
+- [x] **W5 — контейнеры** (2026-09-14): Split (`styles` → `classes.panel/separator/separatorIcon/overlay`, `direction` → `orientation` + `data-orientation`, `separatorNotHoverOpacity` → `separatorFade` с перевёрнутым default, `Size` → `PanelSize`), Menu (второй и последний bag: `styles.class.*` → 10 element-ключей, `styles.animation`/`activeRows`/`selectedRows` → aspect `animation`/`itemActive`/`itemSelected`, `styles.width`/`height` → top-level `width`/`height`; `horizontal` → `orientation`, `useFirstLetter` → `firstLetter`, `paramsWindowMenu` → `fixWindowProps`, `MenuSeparator.isVisible` → `visible`; emits `onActive`/`onInactive`/`onClick` → `item-active`/`item-inactive`/`item-click`; типы `ItemMenu`/`GroupMenu`/`MenuItem` → `MenuItemData`/`MenuGroupData`/`MenuData`, `MenuFixWindow` → `MenuFixWindowProps`, мёртвые `MenuItemOption`/`MenuGroupOption` удалены; новые маркеры `data-menu-item-icon`/`-title`/`-info`/`-end-icon`), Form (`structureClass`/`structureClassGrid`/`classCol`/`classGrid` → `classes.section`/`grid`/`field`, новый маркер `[data-form-field]`, `modeStyle`/`modeLabel` → `mode`/`labelMode`, `isHidden` → `hidden` ×4, `FieldCustom.isValue` → `hasValue`, `<FormField type>` снят в пользу `typeComponent`, `FieldAria` → `FieldTextarea`). Попутно: нереактивные `ref(setStyle())` у Split/Form → `computed`; хвостовые структурные классы после сегмента потребителя убраны у Split/Menu (§2 D); `unstyled` у Form перестал съедать `class` потребителя (§2 E); `unref` → `toValue` в Table/Form/Menu/Split — последние четыре SFC на старом чтении `MaybeRef` (решение 3). Chevron подменю обёрнут в `<span data-menu-item-end-icon>`: heroicons — функциональные компоненты, произвольные атрибуты сквозь них не проходят (тот же приём, что у Icons в W1). **Все четыре guard'а по компонентам обнулены**: `classesContract`, `booleanProps` и `emitsNaming` — `PENDING = []`, в `propsNaming` остались только `types.d.ts` и `theme/Theme.d.ts` (W7).
+- [x] **W6 — контракт emits** (2026-09-14): guard `emitsNaming` научился разбирать тело `*Emits`-блока целиком — построчный regex не видел многострочные сигнатуры, из-за чего `Table.click-cell` был невидим (69 событий из 70); счётчик зафиксирован точным числом, чтобы новая слепота роняла тест. Добавлен кейс **контракта v-model-канала**: `change:modelValue` несут ровно шесть form-control'ов (зеркало `baseInputs` из `Form.vue`), остальным с `update:modelValue` он запрещён. §6 доведён до регламента во всех 23 документах: четыре (`alert`, `separator`, `calendar`, `text-editor`) не имели подраздела v-model contract вовсе, четыре (`alert`, `dialog`, `fix-window`, `pagination`) не объясняли отсутствие `change:modelValue`. У `select` и `switch` §6 называл неверный триггер канала — исправлено по коду (закрытие дропдауна и native `change` соответственно). Починен `menu.md:78` — Quick Start звал снятое `@on-click`. dev-patterns §7 получил строку про канал `change:<prop>` и запрет `on*`/`is*`/`get*`, Шаблон A §6 — оговорку, что единым является порядок и семантика, а не механизм: момент «значение устоялось» у каждого контрола свой. Асимметрия `focus`/`blur` (есть только у Input и Textarea) зафиксирована в §18 Select/Calendar/TextEditor как осознанная.
+- [x] **W7 — типы и barrel** (2026-09-14): найден и закрыт дефект типов compound-детей — `lib/{menu,accordion}/package.json` указывают `types` на родительский `.d.ts`, а тот не реэкспортировал классы детей: `import { MenuItem } from "fishtvue/menu"` проходил рантайм (named-экспорт `menu.mjs`), но падал на typecheck, а `AccordionItem` не имел типа и в корневом barrel'е; теперь `Menu.d.ts`/`Accordion.d.ts` реэкспортируют детей, как Table/Select/Form. `index.d.ts` приведён к `index.ts` (добавлен пропавший `VirtualScroller`, сняты subpath-строки `fishtvue/menu/MenuItem`), паритет двух barrel'ов закреплён новым `describe` в `package.test.ts` — дрейф не ловился ничем. `namesColors` → `ColorName` (+ JSDoc), снят алиас `_key` (поле данных `_key` в строках Table и payload'ах его emits **остаётся** — переименование поля вне объёма T5). Механизм `PENDING` удалён из всех четырёх guard'ов: константы, self-check-тесты и `skipIf` — guard'ы безусловны. Пункты волны, закрытые ранее: мёртвых `*Option` нет (все 23 живы), `SetStyleOptions` и `4-dots-gooey` сделаны, `FishtVue.d.ts` полон (23 ↔ 23).
+- [x] **W8 — документация и миграция** (2026-09-14): [migration-guide.md](../migration-guide.md) §9–§15 — семь разделов в формате §2 (`Что снято | Замена | Что будет, если оставить старое`) плюс `rg`/`sed`-рецепт на каждый класс переименований; введён явный список **тихих** breaks (§9 `class` сменил элемент у шести компонентов, §14 переименованные события и сменившийся payload `toggle` у Accordion) — остальное ловится первым же `vue-tsc`. Wave 12 приведена в соответствие с R8: codemod-чеклист схлопнут в одну строку, acceptance больше не обещает `npx fishtvue-codemod`. Решения 1–8 редизайна записаны в [closure-progress.md](./closure-progress.md) как R37–R44. Финальная сверка документации нашла и закрыла реальные хвосты: `table.md` §10.1/§10.3 описывали снятый bag (`TableOption` со старыми именами, `styles.border`/`styles.class.*`), `dialog.md` §16/§18 — снятые `notAnimate`/`withoutMargin`/`notCloseBackground`, примеры `<Button mode>` в `01-getting-started.md` и `nuxt-module.md`, `FixWindowTeleport` в §13 `fix-window.md`; блок `Issue 6` в [textarea.md](./textarea.md) и четыре записи в closure-документах пострадали от сплошной замены `Aria` → `Textarea` (получилось «`Textarea` → `Textarea`») — субъект записи восстановлен. Проверено скриптами: 1095 якорей `#L` и 3415 relative-ссылок — битых нет.
+- [x] **W9 — sandbox** (2026-09-14, `e290383` + `f53312f` + `9f68b25`): `sandbox/` переведена на API 1.0.0 и на TypeScript, её сборка заведена в CI. Волна началась с находки, ломавшей её собственный критерий приёмки: **`pnpm sandbox:build` не запускался вовсе** — `pnpm --filter sandbox` не матчил ни одного проекта и выходил с кодом 0. Причин две: корневой `pnpm-workspace.yaml` gitignored и генерируется в CI без ключа `packages:` (иначе ломается Vercel-деплой `docs/`), а имя пакета — `@fishtvue/sandbox`, не `sandbox`. Мёртвыми были все семь `--filter`-скриптов, включая `doc:*`; переведены на `--dir`. Это и объясняет восемь волн незамеченного дрейфа: корневой tsconfig держит `sandbox` в `exclude`, в CI её не было, а «зелёный» гейт ничего не запускал. Типовая проверка идёт со **`strictTemplates`** — проверено на живом дереве, что без него из 26 ошибок песочницы исчезают 13 (в т.ч. `dataSource`, `dataSelect`, `classLine`, `styles`, инвертированный `isHiddenNavigationButtons`): vue-tsc считает снятый prop обычным fallthrough-атрибутом. Попутно вскрылись **две копии Vue** (3.5.13 у песочницы против 3.5.25 у корня, свой install-root): два рантайма на странице, `provide`/`inject` между кодом песочницы и кодом библиотеки не видят друг друга — плагин `Config` тихо работал через window-фолбэк; лечится `resolve.dedupe` + зеркальным `paths`. Из миграции отдельно стоят три места: `isHiddenNavigationButtons` → `navigationButtons` (инверсия — механическое переименование вернуло бы кнопки), `Alert.position: "top-right"` → `"top-end"` (песочница отстала ещё от §2: физические значения сняты в `687075e` и молча откатывались на default) и `class` у `FixWindow`/`Dialog`, который сохранил имя, но сменил элемент (§9) — ни typecheck, ни grep этого не видят, prop валиден.
+- [ ] **Долг `lib/`: 199 нарушений `strictTemplates`.** Вскрыт волной W9 и намеренно **не** чинился в ней. Корневой `pnpm typecheck` их не видит — в [tsconfig.json](../../tsconfig.json) нет `vueCompilerOptions`, поэтому шаблоны самой библиотеки проверяются слабее, чем шаблоны её потребителя. Проверка песочницы сужена до её собственных файлов обёрткой [sandbox/scripts/typecheck.mjs](../../sandbox/scripts/typecheck.mjs); SFC библиотеки попадают в программу неизбежно — импорт идёт raw-путём `fishtvue/{name}/{Name}.vue` (конвенция репозитория: `{name}.mjs` существует только в `dist/`, `index.ts` есть не у всех подпакетов). Матрицу сводки не меняет — это не audit-finding по 60-пунктовому чек-листу, а технический долг типизации, кандидат в отдельную волну после 1.0.0.
+
+**Acceptance:** guard-тесты безусловны; `rg 'class[A-Z]\w*\??:|styles\??:|params[A-Z]' lib --glob '*.d.ts'`, `rg 'unref\(' lib --glob '*.vue'`, `rg '\|\| "fv"' lib` — пусто; матрица сводки не меняется (это ТЗ, не audit-finding).
 
 ---
 
@@ -487,43 +577,45 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 ### 🔴 Critical cross-cutting
 
 **XSS через v-html (всего 14 sites в 9 компонентах):**
-- [Switch.vue:244](../../lib/switch/Switch.vue#L244) (help) — [switch.md Issue 1](./switch.md)
-- [InputLayout.vue:294, 313](../../lib/inputlayout/InputLayout.vue#L294) (help, messageInvalid) — affects ALL form-controls — [inputlayout.md Issue 1](./inputlayout.md)
-- [Select.vue:553, 562, 564](../../lib/select/Select.vue#L553) (marker, noData ×2) — [select.md Issue 1](./select.md)
-- [Form.vue:380](../../lib/form/Form.vue#L380) (select-marker copy) — [form.md Issue 1](./form.md)
-- [Table.vue:1842, 1939, 1999, 2011, 2026](../../lib/table/Table.vue#L1842) (cell, summary, noData/Column/Filter ×3) — [table.md Issue 1](./table.md)
-- [Menu.vue:388, 392](../../lib/menu/Menu.vue#L388) (item.info ×2) — [menu.md Issue 1](./menu.md)
-- [Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) (item.subtitle) — [accordion.md Issue 1](./accordion.md)
-- [Alert.vue:253](../../lib/alert/Alert.vue#L253) (subtitle) — [alert.md Issue 1](./alert.md)
+
+- ~~[Switch.vue] (help)~~ ✅ resolved 2026-05-11 — `help` prop → `#help` slot с text-fallback (без `v-html`) — see [switch.md Issue 1](./switch.md)
+- ~~[InputLayout.vue:294, 313]~~ (help, messageInvalid) — affects ALL form-controls — ✅ resolved 2026-05-11 — see [inputlayout.md Issue 1](./inputlayout.md). Slots `#help` / `#messageInvalid` с text-node fallback. Cross-cutting forwarding в 5 form-controls — follow-up PR.
+- ~~[Select.vue:553, 562, 564]~~ (marker, noData ×2) ✅ resolved 2026-05-11 — see [select.md Issue 1](./select.md). `#marker` scoped slot + `#empty` slot + safe substring helper `splitByQuery`/`markerParts` — никакого `v-html`.
+- ~~[Form.vue:380] (select-marker copy)~~ ✅ resolved 2026-06-03 — `#item`-override удалён, Form переиспользует безопасный default Select — [form.md Issue 1](./form.md)
+- ~~[Table.vue] (cell, summary, noData/Column/Filter ×3)~~ ✅ resolved — во всём `lib/` не осталось ни одного `v-html` в Table: рендер идёт через `markerParts` + `<mark>` и text-node ([Table.vue:1639-1641](../../lib/table/Table.vue#L1639-L1641)). Единственный `v-html` в библиотеке — санитизированный [Alert.vue:299](../../lib/alert/Alert.vue#L299). Статус зафиксирован doc-sync'ом 2026-09-05.
+- ~~[Menu.vue:388, 392] (item.info ×2)~~ ✅ resolved 2026-06-06 — оба `v-html` → `#item-info` scoped slot с text-fallback — see [menu.md Issue 1](./menu.md)
+- ~~[Accordion.vue:149](../../lib/accordion/Accordion.vue#L149) (item.subtitle)~~ ✅ resolved 2026-05-11 — see [accordion.md Issue 1](./accordion.md)
+- ~~[Alert.vue:263](../../lib/alert/Alert.vue#L263) (subtitle)~~ ✅ resolved 2026-05-11 — see [alert.md Issue 1](./alert.md)
 
 **Memory leaks (observers/listeners без cleanup):**
-- Select ResizeObserver + keydown listeners ([select.md Issue 2](./select.md))
-- Calendar MutationObserver на documentElement ([calendar.md Issue 1](./calendar.md))
-- Pagination anonymous ResizeObserver ([pagination.md Issue 1](./pagination.md))
-- InputLayout 2× anonymous ResizeObservers ([inputlayout.md Issue 2](./inputlayout.md))
-- Table IntersectionObserver + window mousemove/up partial cleanup ([table.md Issue 2](./table.md))
-- Dialog escapeListener при unmount-while-open ([dialog.md Issue 2](./dialog.md))
 
-**FishtVueSymbol race-condition:** [config.md Issue 1](./config.md).
-**Alert imperative DOM bypass Vue:** [alert.md Issue 2](./alert.md).
+- ~~Select ResizeObserver + keydown listeners~~ ✅ resolved 2026-05-11 ([select.md Issue 2](./select.md)) — `let resizeObserver` + `onBeforeUnmount` disconnect + removeEventListener для обоих keydown handlers.
+- ~~Calendar MutationObserver на documentElement~~ ([calendar.md Issue 1](./calendar.md)) ✅ resolved 2026-05-11
+- ~~Pagination anonymous ResizeObserver~~ ✅ resolved 2026-06-06 ([pagination.md Issue 1](./pagination.md))
+- ~~InputLayout 2× anonymous ResizeObservers~~ ✅ resolved 2026-05-11 ([inputlayout.md Issue 2](./inputlayout.md))
+- ~~Table IntersectionObserver + window mousemove/up partial cleanup~~ ✅ resolved — `onUnmounted` снимает оба observer'а и три window-слушателя ([Table.vue:1246-1258](../../lib/table/Table.vue#L1246-L1258)). Зафиксировано 2026-09-05.
+- ~~Dialog escapeListener при unmount-while-open~~ ✅ resolved — `onBeforeUnmount` + `removeEventListener` ([Dialog.vue:221-226](../../lib/dialog/Dialog.vue#L221-L226)). Зафиксировано 2026-09-05.
+
+**FishtVueSymbol race-condition:** [config.md Issue 1](./done/config.md).
+~~**Alert imperative DOM bypass Vue:**~~ ✅ resolved 2026-05-11 — `openAlert` переписан на `createApp(Alert, rootProps)` + Vue emit chain ([alert.md Issue 2](./alert.md)).
 
 ### 🟠 High cross-cutting
 
-**Distribution/packaging** (sideEffects, exports map, peer-deps): затрагивает все 22 компонента — [button.md Issue 8 и 9](./button.md), [calendar.md Issue 2, 3](./calendar.md).
-**SSR style injection (C17):** дубль `Component.initStyle()` в каждом из 22 SFC — [component-class.md Issue 1](./component-class.md).
-**`unstyled: true` не реализован (L53):** [component-class.md Issue 6](./component-class.md), [button.md Issue 14](./button.md).
-**`componentsStyle` global fallback inconsistent (L53):** Button/Input/Aria/Select/Calendar/TextEditor/Badge не имеют — см. [button.md Issue 13](./button.md), [input.md Issue 2](./input.md).
-**Theme runtime API не реализован (L53):** [theme.md Issue 1](./theme.md).
+~~**Distribution/packaging** (sideEffects, exports map, peer-deps)~~ ✅ closed — волна 2: [button.md Issue 8](./button.md) (`sideEffects`) ✅ 2026-06-07, [Issue 9](./button.md) (exports map, ESM/CJS) ✅ 2026-06-11, peer-deps ✅ 2026-06-19 (Wave 2.1). Контракт — [lib/package.test.ts](../../lib/package.test.ts). Per-component документы, продолжавшие числить `A2`/`A4-5` открытыми, синхронизированы 2026-09-05.
+~~**SSR style injection (C17):** дубль `Component.initStyle()` в каждом из 22 SFC~~ ✅ closed — [button.md Issue 1](./button.md) ✅ 2026-06-07 + [component-class.md Issue 1](./component-class.md); стиль инжектится из `Component.__hooks()` (`onServerPrefetch` + `onMounted`), явные вызовы из SFC убраны. Синхронизировано 2026-09-05.
+~~**`unstyled: true` не реализован (L53):**~~ ✅ resolved 2026-05-11 — `Component.setStyle()` guard в [lib/component/index.ts:138](../../lib/component/index.ts#L138). Cross-cutting fix — все 22 компонента, использующие базовый класс, теперь респектят `unstyled: true` config. См. [component-class.md Issue 6](./component-class.md).
+~~**`componentsStyle` global fallback inconsistent (L53)**~~ ✅ closed 2026-07-02 — все form-controls с `mode` учитывают fallback: ~~Input~~/~~Textarea~~/~~Select~~/~~Calendar~~ 2026-05-11, ~~Badge~~ 2026-05-10, ~~Button~~ 2026-06-12, ~~TextEditor~~ 2026-07-02 (Wave 3.2 закрыта) — см. [texteditor.md Issue 7](./texteditor.md).
+~~**Theme runtime API не реализован (L53)**~~ ✅ resolved 2026-07-02 — usePreset/updatePreset/updatePrimaryPalette/updateSurfacePalette/$dt/palette через CSS-variable indirection (Wave 3.3 закрыта) — [theme.md Issue 1](./theme.md).
 **A11y (focus trap, ARIA roles, keyboard navigation):** см. список в Wave 4.
-**FixWindow Floating UI integration:** [fixwindow.md Issue 1, 2, 3](./fixwindow.md).
+**FixWindow Floating UI integration:** [fixwindow.md Issue 1, 2, 3](./done/fixwindow.md).
 
 ### 🟡 Medium cross-cutting
 
 **RTL не поддерживается:** буквальные `left/right` во всех компонентах — Wave 8.1.
 **`prefers-reduced-motion` не учитывается:** Wave 10.1.
-**Locale fallback chain отсутствует:** Wave 3.5.
-**Hardcoded colors через Tailwind primitives:** Wave 9.
-**Dual-API gap для Table/Form/Select/Menu/Accordion:** Wave 6.
+~~**Locale fallback chain отсутствует:**~~ ✅ resolved (fallback chain 2026-05-20 + interpolation/pluralization 2026-06-19 — Wave 3.5 закрыта; `Component.t(key, params?)`).
+**Hardcoded colors через Tailwind primitives:** Wave 9 — движок + структурная миграция всех 19/19 компонентов ✅ 2026-07-05 (11/19 2026-07-04 + 8/19 residual 2026-07-05). Остаётся только Alert semantic-intent epic (отдельная задача, новые semantic-слоты) и Loading epic-spinners (отдельное прошлое решение).
+**Dual-API gap для Table/Form/Select/~~Menu~~/~~Accordion~~:** Wave 6 (Menu ✅ 2026-06-06 — `<MenuItem>`/`<MenuGroup>`; Accordion ✅ 2026-06-14 — `<AccordionItem>`).
 
 ## 60-point audit checklist
 
@@ -671,7 +763,7 @@ Documentation [2.Theming.md](../../docs/content/ru/3.Configuration/2.Theming.md)
 ---
 title: Issues — {ComponentName}
 summary: Аудит критических и потенциальных проблем компонента {ComponentName}.
-updated: 2026-05-10
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/{name}/
 related-doc: ../components/{name}.md
@@ -682,11 +774,11 @@ related-doc: ../components/{name}.md
 ## Сводка
 
 | Severity | Count | Categories |
-|---|---|---|
-| critical | N | C14 |
-| high | N | A2, E29.3 |
-| medium | N | … |
-| low | N | … |
+| -------- | ----- | ---------- |
+| critical | N     | C14        |
+| high     | N     | A2, E29.3  |
+| medium   | N     | …          |
+| low      | N     | …          |
 
 ## Issue 1: <название>
 
@@ -695,23 +787,27 @@ related-doc: ../components/{name}.md
 - **Где:** [{File}:{line}](../../lib/{name}/{File}#L{line})
 
 ### Что найдено
+
 …
 
 ### Почему это проблема
+
 …
 
 ### Что нужно сделать
+
 …
 
 ### Acceptance criteria
+
 - [ ] …
 
 ## Cross-cutting: Configuration support
 
-| Настройка | Поддержано? | Комментарий |
-|---|---|---|
-| `componentsOptions.{Name}` | ✅ / ❌ | … |
-| ... | ... | ... |
+| Настройка                  | Поддержано? | Комментарий |
+| -------------------------- | ----------- | ----------- |
+| `componentsOptions.{Name}` | ✅ / ❌     | …           |
+| ...                        | ...         | ...         |
 
 ## Dual-API gap (если применимо)
 

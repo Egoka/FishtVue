@@ -37,7 +37,10 @@ export declare type PseudoClasses = {
     | "out-of-range"
     | "placeholder-shown"
     | "autofill"
-    | "read-only",
+    | "read-only"
+    | "optional"
+    | "user-valid"
+    | "user-invalid",
     string
   >
   // prettier-ignore
@@ -67,12 +70,14 @@ export declare type PseudoClasses = {
     | "selection"
     | "file"
     | "backdrop"
-    | "placeholder",
+    | "placeholder"
+    | "details-content",
     string
   >
   // prettier-ignore
   specialStates: Record<
     | "open"
+    | "inert"
     | "rtl"
     | "ltr",
     string
@@ -83,8 +88,32 @@ export declare type Modifier = Partial<{
   stateName: string
   abstract: string
   child: string
+  descendant: string
+  // Issue 2 (uno-engine.md): v4-варианты волны 3.
+  not: string
+  notInner: string
+  inVariant: string
+  inInner: string
+  nth: string
+  nthValue: string
+  nthAbstract: string
+  stateRel: string
+  stateSel: string
+  stateSelDyn: string
+  stateSelAbstract: string
+  stateSelBool: string
+  stateRelName: string
+  container: string
+  containerName: string
+  containerDynamic: string
+  containerAbstract: string
+  containerDynamicName: string
+  supportsNamed: string
+  supportsFeature: string
   has: string
   hasValue: string
+  hasNamed: string
+  selectorsBoolean: string
   media: string[]
   mediaDynamic: string
   mediaAbstract: string

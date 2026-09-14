@@ -1,4 +1,4 @@
-import * as Vue from "vue"
+import { createApp, type App } from "vue"
 import Alert from "./Alert.vue"
 import Component from "fishtvue/component"
 import type { BaseAlert } from "./Alert"
@@ -6,114 +6,138 @@ import { isClient } from "fishtvue/utils/domHandler"
 import { generateUUID } from "fishtvue/utils/functionHandler"
 
 const valuesPosition = [
+  // logical (RTL-safe)
   "top",
   "bottom",
-  "left",
-  "right",
   "center",
-  "bottom-left",
-  "top-left",
-  "bottom-right",
-  "top-right"
+  "start",
+  "end",
+  "bottom-start",
+  "top-start",
+  "bottom-end",
+  "top-end"
 ]
 
+const valuesType = ["success", "warning", "info", "error", "neutral"]
+
+// Issue 7 / F31 (RTL): валидация позиции по allow-list. Физические алиасы ("left"/"top-right"/…)
+// сняты в major 2026-09-06 (решение R7) — они не были RTL-безопасны, а поддерживать два набора
+// значений одного prop'а пришлось бы до следующего breaking-релиза.
+//
+// Allow-list оставлен: `openAlert` вызывают в том числе из untyped JS, и неизвестная позиция должна
+// давать дефолтный тост, а не сломанную вёрстку. Старое `"left"` теперь попадает именно сюда.
+function toLogicalPosition(position?: BaseAlert["position"]): string {
+  const p = (position ?? "top") as string
+  return valuesPosition.includes(p) ? p : "top"
+}
+
+// Allow-list для `type` (зеркало `toLogicalPosition`): openAlert вызывают в том числе из untyped JS,
+// где TS-union не защищает. Неизвестное значение — dev-warn + фолбэк на default-тип "success",
+// а не throw: рантайм-ошибка в toast-е дороже неверного цвета.
+function toValidType(type: string): BaseAlert["type"] {
+  if (valuesType.includes(type)) return type as BaseAlert["type"]
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(
+      `[FishtVue Alert] type="${type}" is not supported; ` +
+        `expected one of ${valuesType.join(", ")}. Falling back to "success".`
+    )
+  }
+  return "success"
+}
+
+// Принимает уже нормализованную logical-позицию. Logical-utilities (start/end/ps/pe) авто-зеркалятся
+// при dir="rtl"; gutters mobile-first (pt-3 sm:pt-5).
+function alertClassPosition(position: string): Array<string> {
+  const arrayClass: string[] = []
+  if (position === "center") arrayClass.push("top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2")
+  if (position.includes("bottom")) arrayClass.push(`bottom-0 pb-3 sm:pb-5`)
+  else if (position.includes("top")) arrayClass.push(`top-0 pt-3 sm:pt-5`)
+  else arrayClass.push("top-1/2 -translate-y-1/2")
+  if (position.includes("end")) arrayClass.push(`end-0 pe-3 sm:pe-5`)
+  else if (position.includes("start")) arrayClass.push(`start-0 ps-3 sm:ps-5`)
+  else arrayClass.push("left-1/2 -translate-x-1/2")
+  return arrayClass
+}
+
 export function openAlert(optionsAlert: BaseAlert) {
+  // SSR no-op (Issue 2, audit 2026-05-11): `document` is unavailable on the server.
   if (!isClient()) return
   const AlertComponent = new Component<"Alert">("Alert")
   const globalOptions = AlertComponent.getOptions()
-  // SET alertId
+
   const alertId = `alert-${generateUUID()}`
-  // SET options
   const options: BaseAlert = Object.assign({}, optionsAlert)
-  if (!options.position || !(options?.position && valuesPosition.includes(options.position))) {
-    options.position = "top"
-  }
+  // Issue 7 / F31: нормализация позиции по allow-list (физические алиасы сняты — решение R7).
+  const pos = toLogicalPosition(options.position)
+  options.position = pos as BaseAlert["position"]
+  // `undefined` не трогаем: глобальные options компонента должны сохранить право подставить свой `type`.
+  if (options.type !== undefined) options.type = toValidType(options.type)
   if (!("modelValue" in options) || typeof options?.modelValue !== "boolean") {
     options.modelValue = true
   }
-  /////////////////////////////////////////////////////////
-  const alertBody = document.querySelector(`.alert-${options.position}`)
-  if (alertBody) {
-    const divAlert = document.createElement("div")
-    divAlert.id = alertId
-    divAlert.className = "z-[100]"
-    divAlert.style.cssText = "pointer-events: all;"
-    divAlert.className = AlertComponent.setStyle(divAlert.className)
-    alertBody.prepend(divAlert)
-  } else {
-    const toMount = document.querySelector(optionsAlert?.toTeleport ?? globalOptions?.toTeleport ?? "body")
-    const div = document.createElement("div")
-    div.className = AlertComponent.setStyle(
-      `alert-${options.position} ${optionsAlert?.toTeleport ? "absolute" : "fixed"} z-[100] flex gap-4 overflow-auto max-h-screen pointer-events-none transition-all duration-500 ${
-        options.position.includes("bottom") ? "flex-col-reverse" : "flex-col"
-      } ${
-        options.position.includes("left")
-          ? "items-start"
-          : options.position.includes("right")
-            ? "items-end"
-            : "items-center"
-      } ${alertClassPosition(options.position).join(" ")}`
+
+  // Step 1 — resolve / create shared position container (preserves stacking).
+  let alertBody = document.querySelector(`.alert-${pos}`)
+  if (!alertBody) {
+    // `TeleportTarget`: строка — CSS-селектор, `HTMLElement` — сразу контейнер, `false` — body.
+    const target = optionsAlert?.teleport ?? globalOptions?.teleport ?? "body"
+    const toMount =
+      target instanceof HTMLElement ? target : document.querySelector(typeof target === "string" ? target : "body")
+    if (!toMount) {
+      console.warn("The element for mounting the Alert component was not found")
+      return
+    }
+    const newContainer = document.createElement("div")
+    // N59 (print, решение R21): контейнер тостов адресуется data-атрибутом, а не классом позиции —
+    // единый `@media print` в baseStyle прячет именно его. Инлайновый `<Alert>` при этом печатается:
+    // он описывает документ, а всплывающий тост — состояние сеанса.
+    newContainer.setAttribute("data-alert-container", pos)
+    newContainer.className = AlertComponent.setStyle(
+      `alert-${pos} ${optionsAlert?.teleport ? "absolute" : "fixed"} z-[100] flex gap-3 sm:gap-4 overflow-auto max-h-screen pointer-events-none motion-safe:transition-all motion-safe:duration-500 ${
+        pos.includes("bottom") ? "flex-col-reverse" : "flex-col"
+      } ${pos.includes("start") ? "items-start" : pos.includes("end") ? "items-end" : "items-center"} ${alertClassPosition(pos).join(" ")}`
     )
-    if (toMount) toMount.append(div)
-    else console.warn("The element for mounting the Alert component was not found")
-    // SET div alert
-    const divAlert = document.createElement("div")
-    divAlert.id = alertId
-    divAlert.className = "z-[100]"
-    divAlert.style.cssText = "pointer-events: all;"
-    divAlert.className = AlertComponent.setStyle(divAlert.className)
-    div.prepend(divAlert)
+    toMount.append(newContainer)
+    alertBody = newContainer
   }
-  /////////////////////////////////////////////////////////
-  // SET mount
-  const alert = Vue.createApp(Alert, { ...options })
-  alert.mount(`#${alertId}`)
-  /////////////////////////////////////////////////////////
-  // SET destroy
-  let timer: number | null = null
-  if (options.displayTime && +options.displayTime >= 100) {
-    timer = +setTimeout(() => destroy(), +options.displayTime) as number
-  }
-  const alertButton = document.querySelector(`#${alertId} [data-alert-button] button[data-button]`)
-  if (alertButton) {
-    alertButton.addEventListener("click", destroy)
-  }
-  /////////////////////////////////////////////////////////
-  // functions
+
+  // Step 2 — per-alert child node; Vue mounts and owns its inner subtree.
+  const divAlert = document.createElement("div")
+  divAlert.id = alertId
+  divAlert.className = AlertComponent.setStyle("z-[100]")
+  divAlert.style.cssText = "pointer-events: all;"
+  alertBody.prepend(divAlert)
+
+  // Step 3 — Vue-bound cleanup (Issue 2, audit 2026-05-11). No manual addEventListener;
+  // Alert emits `update:modelValue(false)` on both close-button click and timer expiry.
+  let destroyed = false
+  let app: App | null = null
+
   function destroy() {
-    if (!isClient()) return
-    const alertEl = document.querySelector(`#${alertId}`)
-    if (alertEl) {
-      alertEl.className = "z-10"
-    }
-    if (typeof timer === "number" && timer > 0) {
-      clearTimeout(timer)
-    }
+    if (destroyed) return
+    destroyed = true
+    // Match leave-transition duration (motion-safe:duration-500) + small buffer.
     setTimeout(() => {
-      alert.unmount()
-      const divAlert = document.querySelector(`#${alertId}`)
-      if (divAlert) {
-        divAlert.remove()
+      try {
+        app?.unmount()
+      } catch {
+        // Already torn down — ignore.
       }
-      const alertBodyForDelete = document.querySelector(`.alert-${options.position}`)
-      if (alertBodyForDelete && alertBodyForDelete.childElementCount === 0) {
-        alertBodyForDelete.remove()
+      app = null
+      divAlert.remove()
+      const sharedContainer = document.querySelector(`.alert-${pos}`)
+      if (sharedContainer && sharedContainer.childElementCount === 0) {
+        sharedContainer.remove()
       }
     }, 600)
   }
 
-  function alertClassPosition(position: BaseAlert["position"]): Array<string> {
-    if (position) {
-      if (!valuesPosition.includes(position)) position = "center"
-    } else position = "center"
-    const arrayClass: string[] = []
-    if (position === "center") arrayClass.push("top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2")
-    if (position.includes("bottom")) arrayClass.push(`bottom-0 pb-5`)
-    else if (position.includes("top")) arrayClass.push(`top-0 pt-5`)
-    else arrayClass.push("top-1/2 -translate-y-1/2")
-    if (position.includes("right")) arrayClass.push(`right-0 pr-5`)
-    else if (position.includes("left")) arrayClass.push(`left-0 pl-5`)
-    else arrayClass.push("left-1/2 -translate-x-1/2")
-    return arrayClass
-  }
+  // createApp(rootComponent, rootProps) — event listeners pass as `on*` props (Vue 3 idiom).
+  app = createApp(Alert, {
+    ...options,
+    "onUpdate:modelValue": (visible: boolean) => {
+      if (!visible) destroy()
+    }
+  })
+  app.mount(divAlert)
 }

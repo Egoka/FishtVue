@@ -64,7 +64,7 @@ Read-only `pnpm`-скрипты (`pnpm typecheck`, `pnpm test --run`, `pnpm form
 | component class, lifecycle, initStyle, hooks, ClassComponent, `__hooks` | `Documentation/architecture/component-class.md`, `Documentation/issues/component-class.md` |
 | nuxt, ssr, module, auto-import | `Documentation/architecture/nuxt-module.md`, `Documentation/issues/nuxt-module.md` |
 | utility, handler, helper (array / colors / date / dom / function / number / object / rules / string / tailwind / uniqueCollection) | matching `Documentation/utilities/{name}Handler.md` (или `uniqueCollection.md`) + `Documentation/issues/done/_utilities.md` (большинство пунктов закрыто; для активных issues — `Documentation/issues/_utilities.md`, если файл вернулся в активную папку) |
-| aria, a11y, accessibility, keyboard, focus, screen reader | `Documentation/components/aria.md`, `Documentation/issues/aria.md` |
+| aria, a11y, accessibility, keyboard, focus, screen reader | `Documentation/components/textarea.md`, `Documentation/issues/textarea.md` |
 | icons, svg | `Documentation/components/icons.md`, `Documentation/issues/icons.md` |
 | install, setup, getting started, sandbox, playground | `Documentation/01-getting-started.md`, `Documentation/02-installation.md`, `Documentation/playgrounds.md` |
 | test, vitest, coverage, @vue/test-utils | `lib/{component}/{Name}.test.ts` (читай существующий тест трогаемого компонента, чтобы соблюсти стиль) |

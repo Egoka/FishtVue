@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass } from "../types"
 import { VNode } from "vue"
 
 /**
@@ -11,26 +11,37 @@ import { VNode } from "vue"
 declare class Badge extends ClassComponent<BadgeProps, BadgeSlots, BadgeEmits, BadgeExpose> {}
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<div data-badge>` (добавляется `ClassesMap`).
+ * - `content` — `<div data-badge-content>` с содержимым default-слота (бывший `classContent`).
+ * - `point` — `<svg data-badge-point>` точка-индикатор при `point: true`.
+ * - `close` — корень `Button` (`[data-badge-close]`) при `closeButton: true`.
+ */
+export declare type BadgeClassKey = "content" | "point" | "close"
+
+/**
  * Props for the Badge component.
  */
 export declare type BadgeProps = {
   /**
-   * The style mode of the badge.
+   * Визуальный вариант badge (бывший `mode`; значения не изменились). Единое имя с [Button](./button.md):
+   * `mode` в библиотеке означает `StyleMode` (`filled`/`outlined`/`underlined`), а здесь набор свой.
+   * Глобальный `componentsStyle` маппится сюда: `filled → primary`, `outlined → outline`, `underlined → neutral`.
    * @type {"primary" | "secondary" | "outline" | "neutral" | undefined}
    */
-  mode?: "primary" | "secondary" | "outline" | "neutral"
+  variant?: "primary" | "secondary" | "outline" | "neutral"
 
   /**
-   * Custom CSS class for the badge container.
+   * CSS-классы корня `<div data-badge>` (dev-patterns §2 A).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Custom CSS class for the badge content.
-   * @type {StyleClass | undefined}
+   * Карта классов внутренних элементов: `content`, `point`, `close`; `root` ≡ `class`.
+   * См. `BadgeClassKey`.
+   * @type {ClassesMap<BadgeClassKey> | undefined}
    */
-  classContent?: StyleClass
+  classes?: ClassesMap<BadgeClassKey>
 
   /**
    * Indicates whether to show a point indicator.
@@ -52,9 +63,9 @@ export declare type BadgeSlots = {
  */
 export declare type BadgeEmits = {
   /**
-   * Emitted when the badge is deleted (via close button or action).
+   * Emitted when the badge is closed (via close button or action).
    */
-  (event: "delete"): void
+  (event: "close"): void
 }
 /**
  * Methods and states exposed via `ref` for the Badge component.
@@ -62,10 +73,10 @@ export declare type BadgeEmits = {
 export declare type BadgeExpose = {
   // ---PROPS-------------------------
   /**
-   * Current style mode of the badge.
-   * @type {BadgeProps["mode"]}
+   * Current visual variant of the badge.
+   * @type {BadgeProps["variant"]}
    */
-  mode: BadgeProps["mode"]
+  variant: BadgeProps["variant"]
 
   /**
    * Indicates whether the point indicator is enabled.
@@ -79,13 +90,25 @@ export declare type BadgeExpose = {
    */
   isCloseButton: BadgeProps["closeButton"]
 
+  /**
+   * Итоговый класс корня `<div data-badge>` (база + variant + `class`/`classes.root`).
+   * @type {StyleClass}
+   */
+  classBase: StyleClass
+
+  /**
+   * Итоговый класс `<div data-badge-content>` (база + `classes.content`).
+   * @type {StyleClass}
+   */
+  classContent: StyleClass
+
   // ---METHODS-----------------------
   /**
    * Deletes the badge, triggering the associated event.
    */
   deleteBadge(): void
 }
-export declare type BadgeOption = Pick<BadgeProps, "mode" | "class" | "classContent" | "point" | "closeButton">
+export declare type BadgeOption = Pick<BadgeProps, "variant" | "class" | "classes" | "point" | "closeButton">
 
 // ---------------------------------------
 

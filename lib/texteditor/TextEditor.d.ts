@@ -1,7 +1,7 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor } from "../types"
 import { Delta } from "@vueup/vue-quill"
-import { InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
+import { InputLayoutClassKey, InputLayoutExpose, InputLayoutOption, InputLayoutProps } from "fishtvue/inputlayout"
 // @ts-ignore
 import Quill, { Sources } from "quill"
 import { DialogProps } from "fishtvue/dialog"
@@ -16,7 +16,7 @@ import { DialogProps } from "fishtvue/dialog"
 declare class TextEditor extends ClassComponent<TextEditorProps, TextEditorSlots, TextEditorEmits, TextEditorExpose> {}
 
 // ---------------------------------------
-export declare interface IQuillEditor {
+export declare interface TextEditorInstance {
   editor: HTMLElement | undefined
   getEditor: () => Element
   getToolbar: () => Element
@@ -39,7 +39,7 @@ declare type Module = {
   options?: object
 }
 
-export declare interface IDataTextEditor {
+export declare interface TextEditorQuillConfig {
   content: ContentPropType
   contentType: "delta" | "html" | "text"
   enable: boolean
@@ -50,18 +50,25 @@ export declare interface IDataTextEditor {
   globalOptions: any
 }
 
+/**
+ * Ключи карты `classes` (dev-patterns §2 B): семейные `InputLayoutClassKey` плюс `editor` —
+ * inline-контейнер Quill `[data-text-editor-editor]`. `root` — корень `<InputLayout data-text-editor>`.
+ * Классы диалога snow-режима задаются через `dialogProps.class` / `dialogProps.classes`.
+ */
+export declare type TextEditorClassKey = InputLayoutClassKey | "editor"
+
 export declare type BaseTextEditorProps = {
   /**
-   * Configuration for the dialog that opens the editor.
+   * Props, пробрасываемые в `Dialog` snow-режима (бывший `paramsDialog`).
    * @type {Partial<DialogProps> | undefined}
    */
-  paramsDialog?: Partial<DialogProps>
+  dialogProps?: Partial<DialogProps>
 
   /**
-   * Configuration for the Quill text editor.
-   * @type {Partial<IDataTextEditor> | undefined}
+   * Props, пробрасываемые в Quill-редактор (бывший `paramsTextEditor`).
+   * @type {Partial<TextEditorQuillConfig> | undefined}
    */
-  paramsTextEditor?: Partial<IDataTextEditor>
+  editorProps?: Partial<TextEditorQuillConfig>
 
   /**
    * The theme for the Quill editor.
@@ -73,7 +80,8 @@ export declare type BaseTextEditorProps = {
 /**
  * Props for the TextEditor component.
  */
-export interface TextEditorProps extends Omit<InputLayoutProps, "value" | "isValue">, Partial<BaseTextEditorProps> {
+export interface TextEditorProps
+  extends Omit<InputLayoutProps, "value" | "hasValue" | "classes">, Partial<BaseTextEditorProps> {
   /**
    * Unique identifier for the text editor.
    * @type {string | undefined}
@@ -85,6 +93,13 @@ export interface TextEditorProps extends Omit<InputLayoutProps, "value" | "isVal
    * @type {string | number | null | undefined}
    */
   modelValue?: string | number | null | undefined
+
+  /**
+   * Карта классов внутренних элементов: семейные ключи уходят в `InputLayout`, `editor` — inline-контейнер
+   * Quill; `root` ≡ `class`. См. `TextEditorClassKey`.
+   * @type {ClassesMap<TextEditorClassKey> | undefined}
+   */
+  classes?: ClassesMap<TextEditorClassKey>
 }
 
 export declare type TextEditorSlots = {
@@ -104,18 +119,21 @@ export declare type TextEditorEmits = {
   (event: "update:modelValue", payload: string): void
 
   /**
-   * Emitted when the validation state changes.
+   * v-model-канал prop'а `invalid`: ввод сбрасывает ошибку — payload всегда `false`.
    * @param event
    * @param {boolean} payload - The new validation state.
    */
-  (event: "update:isInvalid", payload: boolean): void
+  (event: "update:invalid", payload: boolean): void
 
   /**
-   * Emitted when the value changes.
+   * Emitted when the value changes (after blur / programmatic save).
+   *
+   * Fixed in 2026-05-11: payload type was `boolean` by mistake — runtime always emits the HTML string content.
+   *
    * @param event
-   * @param {boolean} payload - Indicates the change.
+   * @param {string} payload - The new HTML content of the editor (empty string on clear).
    */
-  (event: "change:modelValue", payload: boolean): void
+  (event: "change:modelValue", payload: string): void
 }
 
 /**
@@ -130,16 +148,25 @@ export declare type TextEditorExpose = {
   layout: InputLayoutExpose | undefined
 
   /**
+   * Reference to the component's ROOT element (G34).
+   *
+   * The root of TextEditor is `<InputLayout>`, so the element is taken from its own expose
+   * (`inputBody`). Mirrors `componentTable` on Table and `buttonRef` on Button.
+   * @type {HTMLElement | undefined}
+   */
+  componentTextEditor: HTMLElement | undefined
+
+  /**
    * The value displayed in the editor layout.
    * @type {TextEditorProps["modelValue"]}
    */
   valueLayout: TextEditorProps["modelValue"]
 
   /**
-   * The CSS class applied to the editor layout.
-   * @type {TextEditorProps["class"]}
+   * Итоговый класс inline-контейнера редактора `[data-text-editor-editor]` (база + `classes.editor`).
+   * @type {string}
    */
-  classLayout: TextEditorProps["class"]
+  classEditor: string
 
   /**
    * Indicates whether the editor dialog is open.
@@ -149,9 +176,9 @@ export declare type TextEditorExpose = {
 
   /**
    * Reference to the Quill editor instance.
-   * @type {IQuillEditor | undefined}
+   * @type {TextEditorInstance | undefined}
    */
-  quillEditorLink: IQuillEditor | undefined
+  quillEditorLink: TextEditorInstance | undefined
 
   /**
    * Indicates whether the text editor is active.
@@ -191,14 +218,20 @@ export declare type TextEditorExpose = {
   isDisabled: TextEditorProps["disabled"]
   /**
    * Indicates whether the editor is loading.
-   * @type {TextEditorProps["isInvalid"]}
+   * @type {NonNullable<TextEditorProps["loading"]>}
    */
-  isLoading: TextEditorProps["isInvalid"]
+  isLoading: NonNullable<TextEditorProps["loading"]>
   /**
-   * Indicates whether the editor is invalid.
-   * @type {TextEditorProps["isInvalid"]}
+   * Indicates whether the editor is invalid (resolved `invalid`, `false` при `disabled`).
+   * @type {boolean}
    */
-  isInvalid: TextEditorProps["isInvalid"]
+  isInvalid: boolean
+
+  /**
+   * Показывается ли кнопка очистки (resolved `clearable`: props → options → `false`).
+   * @type {boolean}
+   */
+  isClearable: boolean
 
   /**
    * The validation message for the editor.
@@ -207,22 +240,16 @@ export declare type TextEditorExpose = {
   messageInvalid: TextEditorProps["messageInvalid"]
 
   /**
-   * The CSS class applied to the editor container.
-   * @type {TextEditorProps["class"]}
+   * Resolved props диалога snow-режима.
+   * @type {NonNullable<TextEditorProps["dialogProps"]>}
    */
-  classStyle: TextEditorProps["class"]
+  dialogProps: NonNullable<TextEditorProps["dialogProps"]>
 
   /**
-   * Configuration for the dialog used by the editor.
-   * @type {TextEditorProps["paramsDialog"]}
+   * Resolved props Quill-редактора (defaults + options + props).
+   * @type {Partial<TextEditorQuillConfig>}
    */
-  paramsDialog: TextEditorProps["paramsDialog"]
-
-  /**
-   * Configuration for the Quill editor.
-   * @type {Partial<TextEditorProps["paramsTextEditor"]>}
-   */
-  paramsQuillEditor: Partial<TextEditorProps["paramsTextEditor"]>
+  editorProps: Partial<TextEditorQuillConfig>
 
   /**
    * The layout configuration for the editor input.
@@ -240,10 +267,19 @@ export declare type TextEditorExpose = {
    * Prepares the editor for interaction.
    */
   ready(): void
+
+  /**
+   * Moves focus into the editor (G34).
+   *
+   * Delegates to Quill when it is loaded — it knows where inside the contenteditable to put the
+   * caret. Falls back to focusing the root element, so the call is not silently useless when the
+   * optional `@vueup/vue-quill` peer is absent.
+   */
+  focus(): void
 }
 export declare type TextEditorOption = Pick<
   TextEditorProps,
-  "paramsDialog" | "paramsTextEditor" | "theme" | keyof InputLayoutOption
+  "dialogProps" | "editorProps" | "theme" | "class" | "classes" | keyof InputLayoutOption
 >
 
 // ---------------------------------------

@@ -1,5 +1,6 @@
 {
   "main": "./loading.mjs",
   "module": "./loading.mjs",
-  "types": "./Loading.d.ts"
+  "types": "./Loading.d.ts",
+  "sideEffects": ["**/*.css", "**/*.vue"]
 }

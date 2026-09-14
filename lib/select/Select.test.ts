@@ -1,7 +1,10 @@
 import { mount, flushPromises } from "@vue/test-utils"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { h, nextTick, ref } from "vue"
 import FishtVue from "fishtvue/config"
 import Select from "fishtvue/select/Select.vue"
+import SelectItem from "fishtvue/select/SelectItem.vue"
+import SelectGroup from "fishtvue/select/SelectGroup.vue"
 import { SelectProps } from "fishtvue/select/Select"
 
 describe("Select Component Tests", () => {
@@ -10,7 +13,7 @@ describe("Select Component Tests", () => {
     it("renders correctly with default props", () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: ["Option 1", "Option 2", "Option 3"],
+          options: ["Option 1", "Option 2", "Option 3"],
           modelValue: null
         }
       })
@@ -22,7 +25,7 @@ describe("Select Component Tests", () => {
     it("renders multiple select mode", () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: ["Option 1", "Option 2"],
+          options: ["Option 1", "Option 2"],
           multiple: true
         }
       })
@@ -30,10 +33,10 @@ describe("Select Component Tests", () => {
       expect(wrapper.findAll("[data-select-item]").length).toBe(0)
     })
 
-    it("sets default keySelect and valueSelect when dataSelect is empty", () => {
+    it("sets default keySelect and valueSelect when options is empty", () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: []
+          options: []
         }
       })
 
@@ -44,15 +47,15 @@ describe("Select Component Tests", () => {
       expect(valueSelect).toBe(null)
     })
 
-    it("uses provided keySelect and valueSelect when they exist in dataSelect", () => {
-      const dataSelect = [
+    it("uses provided keySelect and valueSelect when they exist in options", () => {
+      const options = [
         { id: 1, value: "Option 1" },
         { id: 2, value: "Option 2" }
       ]
 
       const wrapper = mount(Select, {
         props: {
-          dataSelect,
+          options,
           keySelect: "id",
           valueSelect: "value"
         }
@@ -65,17 +68,17 @@ describe("Select Component Tests", () => {
       expect(valueSelect).toBe("value")
     })
 
-    it("falls back to defaults when keySelect and valueSelect do not exist in dataSelect", () => {
-      const dataSelect = [
+    it("falls back to defaults when keySelect and valueSelect do not exist in options", () => {
+      const options = [
         { name: "Option 1", description: "First option" },
         { name: "Option 2", description: "Second option" }
       ]
 
       const wrapper = mount(Select, {
         props: {
-          dataSelect,
-          keySelect: "id", // Doesn't exist in dataSelect
-          valueSelect: "value" // Doesn't exist in dataSelect
+          options,
+          keySelect: "id", // Doesn't exist in options
+          valueSelect: "value" // Doesn't exist in options
         }
       })
 
@@ -83,14 +86,14 @@ describe("Select Component Tests", () => {
       const valueSelect = wrapper.vm.valueSelect
 
       // Check fallback behavior
-      expect(keySelect).toBe("name") // Default to the first key in the dataSelect object
-      expect(valueSelect).toBe("description") // Default to the second key in the dataSelect object
+      expect(keySelect).toBe("name") // Default to the first key in the options object
+      expect(valueSelect).toBe("description") // Default to the second key in the options object
     })
 
     it("opens the dropdown automatically when autoFocus is true", async () => {
       const wrapper = mount(Select, {
         props: {
-          dataSelect: ["Option 1", "Option 2", "Option 3"],
+          options: ["Option 1", "Option 2", "Option 3"],
           autoFocus: true
         },
         attachTo: document.body // Ensure events like focus are handled properly
@@ -111,19 +114,21 @@ describe("Select Component Tests", () => {
         const selectElement = wrapper.find("[data-select-list]")
         const classList = selectElement.attributes("class")
 
+        // B10 (2026-07-04): border-gray-*/bg-stone-* → border-surface-*/bg-surface-* (та же тональность,
+        // family rename на semantic-токен `surface`, см. Documentation/issues/select.md).
         if (mode === "outlined") {
-          expect(classList).toContain("border border-gray-300 dark:border-gray-600 bg-white dark:bg-black")
+          expect(classList).toContain("border border-surface-300 dark:border-surface-600 bg-white dark:bg-black")
           expect(classList).not.toContain("rounded-none")
-          expect(classList).not.toContain("bg-stone-100")
+          expect(classList).not.toContain("bg-surface-100")
         } else if (mode === "underlined") {
           expect(classList).toContain(
-            "rounded-none border-0 border-gray-300 dark:border-gray-700 border-b bg-stone-50 dark:bg-stone-950"
+            "rounded-none border-0 border-surface-300 dark:border-surface-700 border-b bg-surface-50 dark:bg-surface-950"
           )
           expect(classList).toContain("rounded-none")
           expect(classList).toContain("border-b")
         } else if (mode === "filled") {
-          expect(classList).toContain("border-0 bg-stone-100 dark:bg-stone-900")
-          expect(classList).not.toContain("border-0 border-gray-300")
+          expect(classList).toContain("border-0 bg-surface-100 dark:bg-surface-900")
+          expect(classList).not.toContain("border-0 border-surface-300")
           expect(classList).not.toContain("rounded-none")
         }
       })
@@ -143,15 +148,15 @@ describe("Select Component Tests", () => {
     it("applies default options from library", () => {
       const app = createAppWithFishtVue({
         multiple: true,
-        closeButtonBadge: true,
-        noData: "No data",
+        badgeCloseButton: true,
+        emptyText: "No data",
         maxVisible: 2
       })
 
       const wrapper = mount(Select, {
         global: { plugins: [app] },
         props: {
-          dataSelect: ["Option 1", "Option 2", "Option 3"],
+          options: ["Option 1", "Option 2", "Option 3"],
           modelValue: ["Option 1", "Option 2"]
         }
       })
@@ -169,10 +174,10 @@ describe("Select Component Tests", () => {
 
       const wrapper = mount(Select, {
         props: {
-          dataSelect: ["Apple", "Banana", "Cherry"],
+          options: ["Apple", "Banana", "Cherry"],
           modelValue: null,
           multiple: true,
-          paramsFixWindow: {
+          fixWindowProps: {
             el: "[data-v-app]",
             eventClose: "click"
           }
@@ -182,7 +187,7 @@ describe("Select Component Tests", () => {
 
       // Open the select dropdown
       expect(wrapper.find("[data-fix-window]").isVisible()).toBe(false)
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       const componentFixWindow = wrapper.findComponent({ name: "FixWindow" })
       expect(componentFixWindow.vm.isOpen).toBe(true)
@@ -216,7 +221,7 @@ describe("Select Component Tests", () => {
       expect(wrapper.vm.isOpenList).toBe(false)
 
       // Open the select dropdown
-      await wrapper.find("[data-select]").trigger("click")
+      await wrapper.find("[data-select-control]").trigger("click")
       await flushPromises()
       expect(componentFixWindow.vm.isOpen).toBe(true)
 
@@ -232,9 +237,972 @@ describe("Select Component Tests", () => {
       document.body?.dispatchEvent(clickEvent)
 
       expect(wrapper.emitted("change:modelValue")?.[0][0]).toEqual(["Banana"])
-      expect((wrapper.emitted("change:modelValue")?.[0][1] as any)[0].marker).toBe(
-        `<span class="fv fishtvue-select font-bold text-theme-700 dark:text-theme-300">Ban</span>ana`
-      )
+      // Issue 1 (2026-05-11): `item.marker` HTML-сборка убрана как XSS surface — substring highlight теперь рендерится через
+      // безопасный template helper, а не мутирует data. selectItem payload — оригинальный объект из options.
+      const selectItem = (wrapper.emitted("change:modelValue")?.[0][1] as any)[0]
+      expect(selectItem.marker).toBeUndefined()
+      wrapper.unmount()
     })
+  })
+
+  describe("Audit fixes 2026-05-11 (Issues 1, 2, 5, 6, 8, 10, 11)", () => {
+    let warnSpy: ReturnType<typeof vi.spyOn>
+    let removeListenerSpy: ReturnType<typeof vi.spyOn>
+    let resizeObserverDisconnectSpy: ReturnType<typeof vi.fn>
+    let originalResizeObserver: typeof ResizeObserver
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+      removeListenerSpy = vi.spyOn(document, "removeEventListener")
+      resizeObserverDisconnectSpy = vi.fn()
+      originalResizeObserver = (globalThis as any).ResizeObserver
+      const disconnect = resizeObserverDisconnectSpy
+      class MockResizeObserver {
+        public cb: unknown
+        constructor(cb: unknown) {
+          this.cb = cb
+        }
+        observe = vi.fn()
+        unobserve = vi.fn()
+        disconnect = disconnect
+      }
+      ;(globalThis as any).ResizeObserver = MockResizeObserver
+    })
+
+    afterEach(() => {
+      warnSpy.mockRestore()
+      removeListenerSpy.mockRestore()
+      ;(globalThis as any).ResizeObserver = originalResizeObserver
+      delete (globalThis as any).__xssTriggered
+      // Очистка window.FishtVue — он мутируется FishtVue plugin'ом и pollutes following tests.
+      delete (window as any).FishtVue
+    })
+
+    // ---ISSUE 1 — XSS guard ---------------------------------------
+    it("does not execute XSS payload from a legacy `marker` field", async () => {
+      // Поле `marker` игнорировалось с 2026-05-11 и снято из типа в major 2026-09-06 (решение R7).
+      // Проверяется главное: произвольный HTML из данных не попадает в разметку ни при каких
+      // условиях — ни в закрытом списке, ни после фильтрации.
+      //
+      // Прежняя редакция этого теста дополнительно требовала `expect(warnSpy).toHaveBeenCalled()`
+      // — якобы deprecation-предупреждения. На деле спай ловил совсем другое: warn'ы движка о
+      // дропнутых классах (`class "selectBody" was dropped`), которые дедуплицируются глобально,
+      // поэтому проверка зависела от порядка файлов. Само же предупреждение о `marker` не могло
+      // сработать никогда: `dataList` получает уже пересобранные `dataSelect`-объекты, в которых
+      // поля `marker` нет. Ассерт удалён вместе с мёртвым кодом, который он «проверял».
+      const xssPayload = '<img src=x onerror="window.__xssTriggered=true">'
+      ;(globalThis as any).__xssTriggered = false
+      const wrapper = mount(Select, {
+        props: {
+          options: [{ id: 1, value: "alpha", marker: xssPayload }],
+          modelValue: null
+        }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      if (search.exists()) {
+        await search.setValue("a")
+        await search.trigger("input")
+        await flushPromises()
+      }
+      const html = wrapper.html()
+      expect(html).not.toContain("onerror=")
+      expect(html).not.toMatch(/<img[^>]*src=x/)
+      expect((globalThis as any).__xssTriggered).toBe(false)
+      wrapper.unmount()
+    })
+
+    it("does not execute XSS payload from emptyText prop", async () => {
+      const xssPayload = "<img src=x onerror=alert(1)><script>alert(2)</script>"
+      const wrapper = mount(Select, {
+        props: {
+          options: [],
+          emptyText: xssPayload
+        }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      const html = wrapper.html()
+      // Raw `<img>` или `<script>` теги (как DOM-узлы) не должны быть в выводе — только escaped text.
+      expect(html).not.toMatch(/<img\s+src=x/i)
+      expect(html).not.toMatch(/<script\b/i)
+      // Payload должен присутствовать как escaped текст — это подтверждает, что Vue text-interpolation guard сработал.
+      expect(html).toContain("&lt;img")
+      expect(html).toContain("&lt;script")
+      wrapper.unmount()
+    })
+
+    it("renders custom #marker scoped slot when provided", async () => {
+      const wrapper = mount(Select, {
+        props: {
+          options: [{ id: 1, value: "Apple" }],
+          modelValue: null
+        },
+        slots: {
+          marker: `<template #marker="{ item, query }">
+            <span data-custom-marker>{{ item.value }}-q={{ query }}</span>
+          </template>`
+        }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      expect(wrapper.find("[data-custom-marker]").exists()).toBe(true)
+      expect(wrapper.find("[data-custom-marker]").text()).toContain("Apple")
+      wrapper.unmount()
+    })
+
+    // ---ISSUE 2 — memory leak cleanup -----------------------------
+    it("removes keydown listeners on unmount-while-focused", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["a", "b"], modelValue: null },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select-control]").trigger("focusin")
+      await nextTick()
+      removeListenerSpy.mockClear()
+      wrapper.unmount()
+      const removed = removeListenerSpy.mock.calls.map((c: unknown[]) => c[0])
+      expect(removed).toContain("keydown")
+    })
+
+    it("disconnects ResizeObserver on unmount", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["a"], modelValue: null },
+        attachTo: document.body
+      })
+      await nextTick()
+      resizeObserverDisconnectSpy.mockClear()
+      wrapper.unmount()
+      expect(resizeObserverDisconnectSpy).toHaveBeenCalled()
+    })
+
+    // ---ISSUE 5 — componentsStyle fallback ------------------------
+    it("falls back to global componentsStyle when props.mode not provided", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { componentsStyle: "filled" })
+        }
+      }
+      const wrapper = mount(Select, {
+        global: { plugins: [app as any] },
+        props: { options: ["a"] }
+      })
+      expect(wrapper.vm.mode).toBe("filled")
+    })
+
+    it("prop.mode wins over global componentsStyle", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { componentsStyle: "filled" })
+        }
+      }
+      const wrapper = mount(Select, {
+        global: { plugins: [app as any] },
+        props: { options: ["a"], mode: "outlined" }
+      })
+      expect(wrapper.vm.mode).toBe("outlined")
+    })
+
+    // ---ISSUE 6 — unstyled enforcement (base class fix) -----------
+    it("respects unstyled: true via Component.setStyle guard", () => {
+      const app = {
+        install(app: any) {
+          app.use(FishtVue, { unstyled: true })
+        }
+      }
+      const wrapper = mount(Select, {
+        global: { plugins: [app as any] },
+        props: { options: ["a"] }
+      })
+      const control = wrapper.find("[data-select-control]")
+      const classAttr = control.attributes("class") ?? ""
+      expect(classAttr).not.toContain("fishtvue-select")
+      expect(classAttr).not.toContain("w-46")
+    })
+
+    // ---ISSUE 8 — aria-live -------------------------------------
+    it("renders aria-live region with results count when query is active", async () => {
+      // Issue 3 (2026-05-20): Component.t() возвращает key как last resort без плагина.
+      // Чтобы %d template из en messages применился, подключаем FishtVue plugin.
+      const wrapper = mount(Select, {
+        props: { options: ["Apple", "Banana", "Bandana"], modelValue: null },
+        attachTo: document.body,
+        global: { plugins: [[FishtVue as any, {}]] }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      await search.setValue("an")
+      await search.trigger("input")
+      await flushPromises()
+      const live = wrapper.find("[data-select-aria-live]")
+      expect(live.exists()).toBe(true)
+      expect(live.attributes("aria-live")).toBe("polite")
+      // Two matches: "Banana" + "Bandana" — оба содержат substring "an".
+      expect(live.text()).toMatch(/2/)
+      wrapper.unmount()
+    })
+
+    it("localizes the results count via Russian pluralization (Wave 3.5)", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["Apple", "Banana", "Bandana"], modelValue: null },
+        attachTo: document.body,
+        global: { plugins: [[FishtVue as any, { locale: { defaultLocale: "ru" } }]] }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      await search.setValue("an")
+      await search.trigger("input")
+      await flushPromises()
+      // Two matches → Russian "few" form: "2 результата".
+      expect(wrapper.find("[data-select-aria-live]").text()).toBe("2 результата")
+      wrapper.unmount()
+    })
+
+    // ---ISSUE 10 — Intl.Collator (diacritic-insensitive) ----------
+    it("filters dataList through Intl.Collator (diacritic-insensitive)", async () => {
+      const wrapper = mount(Select, {
+        props: {
+          options: [
+            { id: 1, value: "Müller" },
+            { id: 2, value: "Smith" }
+          ],
+          modelValue: null
+        },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      await search.setValue("muller")
+      await search.trigger("input")
+      await flushPromises()
+      expect(wrapper.vm.dataList.length).toBe(1)
+      expect(wrapper.vm.dataList[0].value).toBe("Müller")
+      wrapper.unmount()
+    })
+
+    // ---ISSUE 11 — motion-safe prefix -----------------------------
+    it("uses motion-safe: prefix on transition classes", () => {
+      const wrapper = mount(Select, {
+        props: { options: ["a"] }
+      })
+      // Корневой контейнер должен иметь print:* классы, что зеркалит Input pattern.
+      const root = wrapper.find("[data-select-control]")
+      const html = wrapper.html()
+      // motion-safe: появляется хотя бы один раз в style sheet корневых классов
+      expect(html).toMatch(/motion-safe:/)
+      // print: классы добавлены для печати
+      expect(root.attributes("class")).toMatch(/print:/)
+    })
+  })
+})
+
+// =====================================================================================================================
+// Audit fixes 2026-06-13 — Issue 3 (compound API) + Issue 9 (RTL)
+// =====================================================================================================================
+describe("Select — Issue 3: compound <SelectItem>/<SelectGroup> API", () => {
+  // ---HAPPY PATH ------------------------------------------------------------
+  it("renders options from compound <SelectItem> children", async () => {
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [h(SelectItem, { value: "a" }, () => "Apple"), h(SelectItem, { value: "b" }, () => "Banana")]
+      }
+    })
+    await nextTick()
+    const options = wrapper.findAll("[data-select-list-item]")
+    expect(options.length).toBe(2)
+    expect(wrapper.text()).toContain("Apple")
+    expect(wrapper.text()).toContain("Banana")
+  })
+
+  it("uses `label` prop as display text when provided", async () => {
+    const wrapper = mount(Select, {
+      slots: { default: () => [h(SelectItem, { value: "a", label: "Custom Label" }, () => "ignored")] }
+    })
+    await nextTick()
+    expect(wrapper.text()).toContain("Custom Label")
+  })
+
+  // ---SCHEMA WINS ----------------------------------------------------------
+  it("schema-driven options wins over compound children", async () => {
+    const wrapper = mount(Select, {
+      props: { options: ["Schema 1", "Schema 2", "Schema 3"] },
+      slots: { default: () => [h(SelectItem, { value: "a" }, () => "Compound A")] }
+    })
+    await nextTick()
+    const options = wrapper.findAll("[data-select-list-item]")
+    expect(options.length).toBe(3)
+    expect(wrapper.text()).toContain("Schema 1")
+    expect(wrapper.text()).not.toContain("Compound A")
+  })
+
+  // ---SELECTION ------------------------------------------------------------
+  it("selecting a compound option emits its `value` as modelValue", async () => {
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [h(SelectItem, { value: "a" }, () => "Apple"), h(SelectItem, { value: "b" }, () => "Banana")]
+      }
+    })
+    await nextTick()
+    await wrapper.findAll("[data-select-list-item]")[1].trigger("click")
+    const emitted = wrapper.emitted("update:modelValue")
+    expect(emitted).toBeTruthy()
+    expect(emitted?.[emitted.length - 1][0]).toBe("b")
+  })
+
+  it("infers value type — numeric `value` round-trips through modelValue", async () => {
+    const wrapper = mount(Select, {
+      slots: { default: () => [h(SelectItem, { value: 42 }, () => "Answer")] }
+    })
+    await nextTick()
+    await wrapper.findAll("[data-select-list-item]")[0].trigger("click")
+    const emitted = wrapper.emitted("update:modelValue")
+    expect(emitted?.[emitted.length - 1][0]).toBe(42)
+  })
+
+  // ---DISABLED -------------------------------------------------------------
+  it("disabled compound option is marked aria-disabled and is not selectable", async () => {
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [
+          h(SelectItem, { value: "a", disabled: true }, () => "Locked"),
+          h(SelectItem, { value: "b" }, () => "Free")
+        ]
+      }
+    })
+    await nextTick()
+    const items = wrapper.findAll("[data-select-list-item]")
+    expect(items[0].attributes("aria-disabled")).toBe("true")
+    await items[0].trigger("click")
+    expect(wrapper.emitted("update:modelValue")).toBeFalsy()
+    // не-disabled опция по-прежнему выбирается
+    await items[1].trigger("click")
+    expect(wrapper.emitted("update:modelValue")).toBeTruthy()
+  })
+
+  // ---GROUPS ---------------------------------------------------------------
+  it("renders <SelectGroup> title header above its options", async () => {
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [
+          h(SelectGroup, { title: "Fruits" }, () => [
+            h(SelectItem, { value: "a" }, () => "Apple"),
+            h(SelectItem, { value: "b" }, () => "Banana")
+          ])
+        ]
+      }
+    })
+    await nextTick()
+    expect(wrapper.find("[data-select-group]").exists()).toBe(true)
+    expect(wrapper.find("[data-select-group]").text()).toContain("Fruits")
+    // опции группы — выбираемы и НЕ включают header в selectable-список
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(2)
+  })
+
+  it("снятый `label` заголовком группы больше не работает (props 1.0)", async () => {
+    // До 1.0.0 <SelectGroup> принимал и `label`, и алиас `title`. Остался только `title`:
+    // `label` уходит в $attrs дескриптора и до header-строки не доезжает.
+    const wrapper = mount(Select, {
+      slots: {
+        default: () => [
+          h(SelectGroup, { label: "Fruits" } as any, () => [h(SelectItem, { value: "a" }, () => "Apple")])
+        ]
+      }
+    })
+    await nextTick()
+    // заголовок пустой → header-строка не рендерится вовсе
+    expect(wrapper.find("[data-select-group]").exists()).toBe(false)
+    expect(wrapper.text()).not.toContain("Fruits")
+    // опции группы при этом на месте — снят заголовок, а не группировка
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(1)
+  })
+
+  // ---BOUNDARY -------------------------------------------------------------
+  it("falls back to empty state when no children and no options", async () => {
+    const wrapper = mount(Select)
+    await nextTick()
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(0)
+  })
+})
+
+describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
+  it("option row uses logical padding (ps-/pe-), not physical (pl-/pr-)", async () => {
+    const wrapper = mount(Select, { props: { options: ["a", "b"] } })
+    await nextTick()
+    const li = wrapper.find("[data-select-list-item]")
+    const cls = li.attributes("class") ?? ""
+    expect(cls).toMatch(/\bps-8\b/)
+    expect(cls).toMatch(/\bpe-4\b/)
+    expect(cls).not.toMatch(/\bpl-8\b/)
+    expect(cls).not.toMatch(/\bpr-4\b/)
+  })
+
+  it("item value uses rtl:text-right override for alignment", async () => {
+    const wrapper = mount(Select, { props: { options: ["a"] } })
+    await nextTick()
+    expect(wrapper.html()).toMatch(/rtl:text-right/)
+  })
+
+  it("check icon uses logical start-0 / ps-2 (not left-0 / pl-2)", async () => {
+    const wrapper = mount(Select, {
+      props: { options: ["a"], modelValue: "a", keySelect: "id", valueSelect: "value" }
+    })
+    await nextTick()
+    await flushPromises()
+    // выбранный элемент показывает check-иконку с логическими классами (scoped на сам span,
+    // т.к. left-0 встречается в разметке вложенного InputLayout-search — не относится к Select)
+    const check = wrapper.find("[data-select-check]")
+    expect(check.exists()).toBe(true)
+    const cls = check.attributes("class") ?? ""
+    expect(cls).toMatch(/\bstart-0\b/)
+    expect(cls).toMatch(/\bps-2\b/)
+    expect(cls).not.toMatch(/\bleft-0\b/)
+    expect(cls).not.toMatch(/\bpl-2\b/)
+  })
+
+  it("dropdown offset uses logical margin ms-[...] (not physical ml-[...])", async () => {
+    const wrapper = mount(Select, { props: { options: ["a"] }, attachTo: document.body })
+    await wrapper.find("[data-select-control]").trigger("click")
+    await flushPromises()
+    const html = wrapper.html()
+    expect(html).toMatch(/ms-\[/)
+    expect(html).not.toMatch(/ml-\[/)
+    wrapper.unmount()
+  })
+
+  describe("Accessibility — combobox role & label association (Wave 4)", () => {
+    it("marks the trigger as role=combobox with aria-expanded reflecting the closed state", () => {
+      const wrapper = mount(Select, { props: { options: [], label: "Country" } })
+      const trigger = wrapper.find("[data-select-control]")
+      expect(trigger.attributes("role")).toBe("combobox")
+      expect(trigger.attributes("aria-expanded")).toBe("false")
+    })
+
+    it("links the trigger to the label via aria-labelledby and a shared id", () => {
+      const wrapper = mount(Select, { props: { options: [], label: "Country", id: "country" } })
+      const trigger = wrapper.find("[data-select-control]")
+      expect(trigger.attributes("id")).toBe("country")
+      expect(trigger.attributes("aria-labelledby")).toBe("country-label")
+      // Select's dropdown carries its own search <Input> (with an auto-id label),
+      // so scope to the label the trigger actually references.
+      expect(wrapper.find("label[data-label]#country-label").exists()).toBe(true)
+    })
+
+    it("toggles aria-expanded to true when the dropdown opens", async () => {
+      const wrapper = mount(Select, { props: { options: ["a"], label: "Country" }, attachTo: document.body })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      expect(wrapper.find("[data-select-control]").attributes("aria-expanded")).toBe("true")
+      wrapper.unmount()
+    })
+  })
+
+  // gsap = optional peerDependency (Wave 2.1): не должен быть top-level eager-импортом, иначе
+  // ~50KB тянутся в каждый bundle с `fishtvue/select` даже без анимации. Грузится lazy через
+  // `import("gsap")` в transition-хуках; без gsap анимация деградирует до мгновенной (но список
+  // обязан стать видимым). Прямой mock-reject здесь не годится — hoisted `vi.mock("gsap")`
+  // протёк бы на весь файл и сломал остальные Select-тесты с реальным gsap; поэтому lazy + ветка
+  // graceful-fallback проверяются на уровне source, а видимость списка — поведенчески (real gsap).
+  describe("Lazy gsap (Wave 2.1 — optional peer)", () => {
+    it("loads gsap lazily with a graceful no-gsap fallback in transition hooks", async () => {
+      const fs = await import("node:fs/promises")
+      const path = await import("node:path")
+      const url = await import("node:url")
+      const here = path.dirname(url.fileURLToPath(import.meta.url))
+      const src = await fs.readFile(path.join(here, "Select.vue"), "utf8")
+      // нет top-level `import gsap from "gsap"`
+      expect(src).not.toMatch(/^\s*import\s+gsap\s+from\s+["']gsap["']/m)
+      // lazy dynamic import + try/catch graceful degradation
+      expect(src).toMatch(/import\(["']gsap["']\)/)
+      // fallback без gsap выставляет финальные стили (иначе onBeforeEnter оставит список невидимым)
+      expect(src).toMatch(/el\.style\.opacity/)
+      expect(src).toMatch(/el\.style\.height/)
+    })
+
+    it("still renders dropdown items when opened (animation = progressive enhancement)", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1", "Option 2", "Option 3"], modelValue: null },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      expect(wrapper.vm.isOpenList).toBe(true)
+      expect(wrapper.findAll("[data-select-list-item]").length).toBe(3)
+      wrapper.unmount()
+    })
+  })
+
+  // Wave 4.3 — keyboard nav: Home/End прыжки + first-char typeahead (для noQuery-listbox).
+  describe("Select Component - Keyboard Home/End/typeahead (Wave 4.3)", () => {
+    async function openList(props: Record<string, unknown>) {
+      const wrapper = mount(Select, { props, attachTo: document.body })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      expect(wrapper.vm.isOpenList).toBe(true)
+      return wrapper
+    }
+
+    it("End focuses the last list item, Home focuses the first", async () => {
+      const wrapper = await openList({ options: ["Apple", "Banana", "Cherry"], modelValue: null })
+
+      await wrapper.trigger("keydown", { key: "End" })
+      await nextTick()
+      let items = wrapper.findAll("[data-select-list-item]")
+      expect(items[items.length - 1].attributes("tabindex")).toBe("0")
+      expect(items[0].attributes("tabindex")).toBe("-1")
+
+      await wrapper.trigger("keydown", { key: "Home" })
+      await nextTick()
+      items = wrapper.findAll("[data-select-list-item]")
+      expect(items[0].attributes("tabindex")).toBe("0")
+      expect(items[items.length - 1].attributes("tabindex")).toBe("-1")
+
+      wrapper.unmount()
+    })
+
+    it("searchable: false renders no search input (typeahead branch reachable)", async () => {
+      const wrapper = await openList({ options: ["Apple", "Banana"], modelValue: null, searchable: false })
+      expect(wrapper.find("[data-select-search]").exists()).toBe(false)
+      wrapper.unmount()
+    })
+
+    it("typeahead (searchable: false) focuses first item starting with the typed character", async () => {
+      const wrapper = await openList({ options: ["Apple", "Banana", "Cherry"], modelValue: null, searchable: false })
+
+      await wrapper.trigger("keydown", { key: "b" })
+      await nextTick()
+      const items = wrapper.findAll("[data-select-list-item]")
+      expect(items[1].attributes("tabindex")).toBe("0") // Banana
+      expect(items[0].attributes("tabindex")).toBe("-1")
+      expect(items[2].attributes("tabindex")).toBe("-1")
+
+      wrapper.unmount()
+    })
+
+    it("typeahead (searchable: false) cycles through items sharing the first character on repeat", async () => {
+      const wrapper = await openList({ options: ["Apple", "Avocado", "Banana"], modelValue: null, searchable: false })
+
+      await wrapper.trigger("keydown", { key: "a" })
+      await nextTick()
+      let items = wrapper.findAll("[data-select-list-item]")
+      expect(items[0].attributes("tabindex")).toBe("0") // Apple
+
+      await wrapper.trigger("keydown", { key: "a" })
+      await nextTick()
+      items = wrapper.findAll("[data-select-list-item]")
+      expect(items[1].attributes("tabindex")).toBe("0") // Avocado
+      expect(items[0].attributes("tabindex")).toBe("-1")
+
+      wrapper.unmount()
+    })
+  })
+
+  describe("FixWindow class-body — guard ms-[…px] (uno-engine fail-closed regression)", () => {
+    it("не рендерит ms-[undefinedpx] до готовности layout.beforeWidth", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null }
+      })
+      // Первый рендер — template ref `layout` ещё не привязан (beforeWidth undefined);
+      // без guard'а класс интерполируется как ms-[undefinedpx] и дропается движком с warn.
+      expect(wrapper.html()).not.toContain("undefinedpx")
+      expect(document.body.innerHTML).not.toContain("undefinedpx")
+      await nextTick()
+      expect(wrapper.html()).not.toContain("undefinedpx")
+      wrapper.unmount()
+    })
+  })
+
+  // ---B10 — semantic surface tokens вместо hardcoded gray/stone-family classes -------------------
+  describe("Select Component - B10 semantic surface tokens", () => {
+    const legacyGrayFamily = /\b(?:bg|text|border|ring|from|via)-(?:neutral|stone|zinc|slate|gray)-\d+/
+
+    it.each([
+      { mode: "outlined", expected: "border-surface-300 dark:border-surface-600" },
+      { mode: "underlined", expected: "border-surface-300 dark:border-surface-700" }
+    ])("mode: $mode dropdown border uses surface-family (not gray)", async ({ mode, expected }) => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-list]").classes().join(" ")
+      expect(cls).toContain(expected)
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it.each([
+      { mode: "underlined", expected: "bg-surface-50 dark:bg-surface-950" },
+      { mode: "filled", expected: "bg-surface-100 dark:bg-surface-900" }
+    ])("mode: $mode dropdown background uses surface-family (not stone)", async ({ mode, expected }) => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-list]").classes().join(" ")
+      expect(cls).toContain(expected)
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("option item text uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-list-item]").classes().join(" ")
+      expect(cls).toContain("text-surface-900")
+      expect(cls).toContain("dark:text-surface-100")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("option sublabel (item value) uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const html = wrapper.find("[data-select-list-item]").html()
+      expect(html).toContain("text-surface-600")
+      expect(html).toContain("dark:text-surface-300")
+      expect(html).not.toMatch(legacyGrayFamily)
+    })
+
+    it("group header text uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, {
+        slots: {
+          default: () => [h(SelectGroup, { title: "Fruits" }, () => [h(SelectItem, { value: "a" }, () => "Apple")])]
+        }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-group]").classes().join(" ")
+      expect(cls).toContain("text-surface-500")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("no-data text uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, { props: { options: [], modelValue: null } })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      // classNoData рендерится внутри [data-select-list-items] (hasData: false ветка #empty slot),
+      // не прямым потомком [data-select-list] (сиблинг gradient-wrapper divs).
+      const cls = wrapper.find("[data-select-list-items] div").classes().join(" ")
+      expect(cls).toContain("text-surface-500")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it("search icon uses surface-family (not gray)", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const icon = wrapper.find("[data-select-search] [data-icon]")
+      expect(icon.exists()).toBe(true)
+      const cls = icon.classes().join(" ")
+      expect(cls).toContain("text-surface-400")
+      expect(cls).toContain("dark:text-surface-600")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+
+    it.each([
+      { mode: "outlined", expected: "ring-surface-200" },
+      { mode: "underlined", expected: "ring-surface-200 dark:ring-surface-950" },
+      { mode: "filled", expected: "ring-surface-100 dark:ring-surface-900" }
+    ])("mode: $mode search-input ring uses surface-family (not stone)", async ({ mode, expected }) => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null, mode: mode as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      // Класс ring-surface-* Select'а мержится Vue class-fallthrough в тот же class-attribute,
+      // что и собственный bg-* класс InputLayout (та же DOM-нода data-select-search) —
+      // проверяем только присутствие нужного ring-* (InputLayout — отдельный компонент, вне скоупа).
+      const cls = wrapper.find("[data-select-search]").classes().join(" ")
+      expect(cls).toContain(expected)
+    })
+
+    it("outlined mode search-input ring keeps literal dark:ring-black untouched", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null, mode: "outlined" as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      const cls = wrapper.find("[data-select-search]").classes().join(" ")
+      expect(cls).toContain("dark:ring-black")
+    })
+
+    it("underlined/filled gradient overlay uses surface-family (not stone)", async () => {
+      const wrapper = mount(Select, {
+        props: { options: ["Option 1"], modelValue: null, mode: "underlined" as SelectProps["mode"] }
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      await nextTick()
+      // Скоуп строго на два sticky gradient-wrapper внутри [data-select-list] (top-0 / top-[220px] —
+      // уникальные для classGradientSelectListTop/Button), а не на весь html() с вложенным InputLayout.
+      const top = wrapper.find("[data-select-list] > div.top-0 > div")
+      const bottom = wrapper.find('[data-select-list] > div[class*="top-\\[220px\\]"] > div')
+      expect(top.exists()).toBe(true)
+      expect(bottom.exists()).toBe(true)
+      const cls = [top.attributes("class") ?? "", bottom.attributes("class") ?? ""].join(" ")
+      expect(cls).toContain("from-surface-50")
+      expect(cls).toContain("dark:from-surface-950")
+      expect(cls).toContain("via-surface-50")
+      expect(cls).toContain("dark:via-surface-950")
+      expect(cls).not.toMatch(legacyGrayFamily)
+    })
+  })
+})
+
+// =====================================================================================================================
+// Wave 13 / W2 — контракт props 1.0: `class` → корень `[data-select]`, `classes` → карта
+// (семейные + `control`/`list`/`option`/aspect `mark`), `options`/`searchable`/`emptyText`/`badgeCloseButton`/
+// `fixWindowProps`, emits `active`/`update:invalid`.
+// =====================================================================================================================
+describe("Select — props 1.0 (Wave 13, W2)", () => {
+  const withOptions = (options: Record<string, unknown>) => ({
+    install(app: any) {
+      app.use(FishtVue, { componentsOptions: { Select: options } })
+    }
+  })
+  afterEach(() => {
+    delete (window as any).FishtVue
+  })
+
+  it("публичный набор props — контракт 1.0 (dataSelect/noQuery/noData/classSelect* сняты)", () => {
+    const wrapper = mount(Select)
+    expect(wrapper.props()).toEqual({
+      id: undefined,
+      modelValue: undefined,
+      classes: undefined,
+      mode: undefined,
+      label: undefined,
+      labelMode: undefined,
+      invalid: undefined,
+      messageInvalid: undefined,
+      required: undefined,
+      loading: undefined,
+      disabled: undefined,
+      help: undefined,
+      clearable: undefined,
+      width: undefined,
+      height: undefined,
+      class: undefined,
+      offsetTop: undefined,
+      options: undefined,
+      autoFocus: undefined,
+      keySelect: undefined,
+      valueSelect: undefined,
+      multiple: undefined,
+      maxVisible: undefined,
+      badgeCloseButton: undefined,
+      emptyText: undefined,
+      searchable: undefined,
+      fixWindowProps: undefined
+    })
+  })
+
+  it("legacy-имена (dataSelect/noQuery/noData) больше не работают — опции не рендерятся", async () => {
+    const wrapper = mount(Select, {
+      props: { dataSelect: ["a", "b"], noQuery: true, noData: "нет" } as any
+    })
+    await nextTick()
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(0)
+    // `noQuery` больше не отключает поиск — поле фильтра на месте
+    expect(wrapper.find("[data-select-search]").exists()).toBe(true)
+    expect(wrapper.find("[data-select]").attributes("nodata")).toBe("нет")
+  })
+
+  it("корень Select — корень InputLayout с data-select; триггер получил data-select-control", () => {
+    const wrapper = mount(Select, { props: { options: ["a"], label: "L", class: "probe-root" } })
+    const root = wrapper.find("[data-select]")
+    expect(root.attributes("data-input-layout")).toBeDefined()
+    expect(root.classes()).toContain("probe-root")
+    expect(root.element.querySelectorAll("[class~='probe-root']").length).toBe(0)
+    const control = wrapper.find("[data-select-control]")
+    expect(control.exists()).toBe(true)
+    expect(control.attributes("role")).toBe("combobox")
+  })
+
+  it.each([
+    ["base", "[data-input-layout-base]"],
+    ["label", "[data-select] > [data-label]"],
+    ["control", "[data-select-control]"],
+    ["list", "[data-select-list]"],
+    ["option", "[data-select-list-item]"]
+  ])("classes.%s → %s", async (key, selector) => {
+    const wrapper = mount(Select, { props: { options: ["a"], label: "L", classes: { [key]: "probe-key" } } })
+    await nextTick()
+    expect(wrapper.find(selector).classes()).toContain("probe-key")
+    expect(wrapper.find("[data-select]").classes()).not.toContain("probe-key")
+  })
+
+  it("aspect-ключ mark: замена дефолта и отключение пустой строкой", async () => {
+    const openWithMark = async (mark: string) => {
+      const wrapper = mount(Select, {
+        props: { options: ["Apple", "Banana"], classes: { mark } },
+        attachTo: document.body
+      })
+      await wrapper.find("[data-select-control]").trigger("click")
+      await flushPromises()
+      const search = wrapper.find("[data-select-search] input")
+      await search.setValue("an")
+      await search.trigger("input")
+      await flushPromises()
+      return wrapper
+    }
+    const custom = await openWithMark("italic underline")
+    const markEl = custom.find("[data-select-list-item] mark")
+    expect(markEl.exists()).toBe(true)
+    expect(markEl.classes()).toContain("italic")
+    expect(markEl.classes()).not.toContain("font-bold")
+    custom.unmount()
+    const off = await openWithMark("")
+    const offMark = off.find("[data-select-list-item] mark")
+    expect(offMark.exists()).toBe(true)
+    expect(offMark.classes()).toEqual([])
+    off.unmount()
+  })
+
+  it("componentsOptions.Select.classes сливается по ключу под props.classes", async () => {
+    const wrapper = mount(Select, {
+      global: { plugins: [withOptions({ class: "opt-root", classes: { control: "p-2 opt-ctl", list: "opt-list" } })] },
+      props: { options: ["a"], class: "prop-root", classes: { control: "p-4" } }
+    })
+    await nextTick()
+    const control = wrapper.find("[data-select-control]").classes()
+    expect(control).toContain("p-4")
+    expect(control).toContain("opt-ctl")
+    expect(control).not.toContain("p-2")
+    expect(wrapper.find("[data-select-list]").classes()).toContain("opt-list")
+    expect(wrapper.find("[data-select]").classes()).toEqual(expect.arrayContaining(["opt-root", "prop-root"]))
+  })
+
+  it("searchable: default true, `false` убирает поле поиска, componentsOptions достижим", async () => {
+    const def = mount(Select, { props: { options: ["a"] } })
+    await nextTick()
+    expect(def.props("searchable")).toBeUndefined()
+    expect(def.find("[data-select-search]").exists()).toBe(true)
+    const off = mount(Select, { props: { options: ["a"], searchable: false } })
+    await nextTick()
+    expect(off.find("[data-select-search]").exists()).toBe(false)
+    const byOption = mount(Select, {
+      global: { plugins: [withOptions({ searchable: false })] },
+      props: { options: ["a"] }
+    })
+    await nextTick()
+    expect(byOption.find("[data-select-search]").exists()).toBe(false)
+    delete (window as any).FishtVue
+    const propWins = mount(Select, {
+      global: { plugins: [withOptions({ searchable: false })] },
+      props: { options: ["a"], searchable: true }
+    })
+    await nextTick()
+    expect(propWins.find("[data-select-search]").exists()).toBe(true)
+  })
+
+  it("emptyText заменяет noData, попадает в #empty slot-scope", async () => {
+    const wrapper = mount(Select, { props: { options: [], emptyText: "Пусто" } })
+    await nextTick()
+    expect(wrapper.text()).toContain("Пусто")
+    let scope: any
+    const withSlot = mount(Select, {
+      props: { options: [] },
+      slots: {
+        empty: (args: any) => {
+          scope = args
+          return "slot"
+        }
+      }
+    })
+    await nextTick()
+    expect(Object.keys(scope)).toEqual(expect.arrayContaining(["emptyText", "query", "hasData"]))
+    withSlot.unmount()
+  })
+
+  it("badgeCloseButton заменяет closeButtonBadge", async () => {
+    const wrapper = mount(Select, {
+      props: { options: [{ id: 1, value: "a" }], modelValue: [1], multiple: true, badgeCloseButton: true }
+    })
+    await nextTick()
+    expect(wrapper.find("[data-select-item] [data-badge-close]").exists()).toBe(true)
+  })
+
+  it("fixWindowProps заменяет paramsFixWindow (resolved через expose)", async () => {
+    const wrapper = mount(Select, { props: { options: ["a"], fixWindowProps: { position: "top-right" } } })
+    await nextTick()
+    expect((wrapper.vm as any).fixWindowProps.position).toBe("top-right")
+    expect(wrapper.findComponent({ name: "FixWindow" }).props("position")).toBe("top-right")
+  })
+
+  it("emits active / update:invalid вместо isActive / update:isInvalid", async () => {
+    const wrapper = mount(Select, { props: { options: ["a"] }, attachTo: document.body })
+    await wrapper.find("[data-select-control]").trigger("click")
+    await flushPromises()
+    expect(wrapper.emitted("active")?.[0]).toEqual([true])
+    expect(wrapper.emitted("isActive")).toBeUndefined()
+    await wrapper.findAll("[data-select-list-item]")[0].trigger("click")
+    expect(wrapper.emitted("update:invalid")?.[0]).toEqual([false])
+    expect(wrapper.emitted("update:isInvalid")).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it("focus-ring триггера живёт в classes.base у InputLayout и уступает рамке ошибки", async () => {
+    const wrapper = mount(Select, { props: { options: ["a"] }, attachTo: document.body })
+    const base = () => wrapper.find("[data-input-layout-base]").classes()
+    await wrapper.find("[data-select-control]").trigger("focusin")
+    expect(base()).toContain("ring-theme-600")
+    await wrapper.setProps({ invalid: true })
+    expect(base()).toContain("ring-red-500")
+    expect(base()).not.toContain("ring-theme-600")
+    wrapper.unmount()
+  })
+
+  it("clearable достижим через componentsOptions", async () => {
+    const wrapper = mount(Select, {
+      global: { plugins: [withOptions({ clearable: true })] },
+      props: { options: [{ id: 1, value: "a" }], modelValue: 1 }
+    })
+    await nextTick()
+    expect(wrapper.find("[data-input-layout-clear]").exists()).toBe(true)
+  })
+
+  it("unstyled: классы потребителя остаются на корне, control и list, темы нет", async () => {
+    const wrapper = mount(Select, {
+      global: { plugins: [{ install: (app: any) => app.use(FishtVue, { unstyled: true }) }] },
+      props: { options: ["a"], class: "probe-root", classes: { control: "probe-ctl", list: "probe-list" } }
+    })
+    await nextTick()
+    expect(wrapper.find("[data-select]").classes()).toEqual(["fv", "probe-root"])
+    expect(wrapper.find("[data-select-control]").classes()).toEqual(["fv", "probe-ctl"])
+    const list = wrapper.find("[data-select-list]").classes()
+    expect(list).toContain("probe-list")
+    expect(list.some((c) => c.startsWith("fishtvue-"))).toBe(false)
+  })
+
+  it("options принимает ref (MaybeRef) и реагирует на его изменение", async () => {
+    const source = ref<Array<string>>(["a"])
+    const wrapper = mount(Select, { props: { options: source } })
+    await nextTick()
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(1)
+    source.value = ["a", "b", "c"]
+    await nextTick()
+    expect(wrapper.findAll("[data-select-list-item]").length).toBe(3)
   })
 })

@@ -1,7 +1,7 @@
 ---
 title: Accordion
-summary: Аккордеон с multiple раскрытием, кастомными иконками и анимацией.
-updated: 2026-05-09
+summary: Аккордеон с multiple раскрытием, кастомными иконками, WAI-ARIA disclosure pattern, keyboard navigation, dual-API (schema + compound <AccordionItem>), RTL и motion-safe.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -12,7 +12,9 @@ since: 0.2.11
 
 `Accordion` — раскрывающиеся секции. Поддерживает single или multiple раскрытие, выбор иконки (`ChevronDown`/`ArrowDownCircle`/`Plus` или custom через [Icons](./icons.md)), настраиваемую длительность анимации.
 
-Stability: `stable` — 15 кейсов, coverage `Accordion.vue` 100%.
+**Dual-API:** секции задаются либо schema-массивом `:items`, либо декларативно через compound-дочерний компонент `<AccordionItem>` (`<Accordion><AccordionItem>…</AccordionItem></Accordion>`). При наличии `:items` schema выигрывает (backward compat). Реализовано через VNode-walk (zerkalo [Menu](./menu.md)/`Table`), без provide/inject.
+
+Stability: `stable` — 38 кейсов (`Accordion.test.ts`) + 3 (`AccordionItem.test.ts`) = 41, coverage `Accordion.vue` 100% (Security/A11y/Animation/Dual-API/RTL+motion блоки покрыты).
 
 Source: [Source](../../lib/accordion/Accordion.vue), [Accordion.d.ts](../../lib/accordion/Accordion.d.ts), [Accordion.test.ts](../../lib/accordion/Accordion.test.ts).
 
@@ -21,22 +23,30 @@ Source: [Source](../../lib/accordion/Accordion.vue), [Accordion.d.ts](../../lib/
 ```
 lib/accordion/
 ├── Accordion.vue
-├── Accordion.d.ts        # 185 строк
-├── Accordion.test.ts     # 15 кейсов
+├── Accordion.d.ts          # ~220 строк
+├── Accordion.test.ts       # 38 кейсов (Security / A11y / Animation / Dual-API / RTL+motion покрыты)
+├── AccordionItem.vue       # renderless descriptor для compound-API
+├── AccordionItem.d.ts
+├── AccordionItem.test.ts   # 3 кейса (renderless)
+├── index.ts                # runtime barrel (default Accordion + named AccordionItem)
 └── package.json
 ```
 
 Зависимости: `@heroicons/vue/20/solid` (`ChevronDownIcon`, `ArrowDownCircleIcon`), [Icons](./icons.md), [objectHandler.fieldsOmit](../utilities/objectHandler.md).
 
+**Сборка:** `accordion` — compound-entry (`lib/rollup.config.js`: `COMPOUND_ENTRIES` + `addEntry("accordion", "index.ts", "accordion")`); `accordion.mjs` бандлит `Accordion` + renderless `AccordionItem` как named-экспорты.
+
 ## 3. How it works
 
-- **Lifecycle:** `Component.__hooks()` инжектит стили; `onMounted(() => Accordion.initStyle())` дополнительно.
-- **Поток данных:** `dataSource: AccordionItem[]` → reactive копия `dataItems` → toggle меняет `open`-флаги → `toggle` event.
-- **Стили:** через `Accordion.setStyle()` (~8 вызовов в computed).
+- **Lifecycle:** `Component.__hooks()` инжектит стили (без дублирующего `onMounted` в SFC).
+- **Поток данных:** `items: MaybeRef<AccordionItemData[]>` (читается через `toValue()`) **или** compound `<AccordionItem>`-дети (VNode-walk → `compoundItems`) → `sourceItems` (schema побеждает) → reactive `dataItems` → toggle меняет `open`-флаги → `toggle` event. В compound-режиме open-state сохраняется по индексу при re-render (slots дают свежие объекты).
+- **Стили:** через `Accordion.resolveClasses<AccordionClassKey>(props)` — `cls(key, …base)` в каждом computed; порядок склейки — база → state → `options.classes[k]` → `props.classes[k]` → `options.class` → `props.class` (dev-patterns §2 D).
 - **Конфиг:** `componentsOptions.Accordion` — см. §10.
-- **Локализация:** не использует.
-- **SSR:** SSR-safe.
-- **Animation:** CSS `transition-all duration-200 ease-out` на иконках; inline `transition-duration` на content (управляется через `animationDuration`).
+- **Локализация:** не использует (нет статичных текстовых лейблов).
+- **SSR:** SSR-safe. Стабильные id для ARIA-связки header↔panel генерируются через `useId()`.
+- **Animation:** иконки/панель — `motion-safe:transition…` (под `prefers-reduced-motion: reduce` переходы выключаются); inline `transition-duration` на content (управляется через `animationDuration`). Root обёрнут в `<Transition :css="false">` с JS `@leave` hook, который держит DOM смонтированным `animationDuration` ms — это устраняет flash при unmount во время collapse; при reduced-motion `@leave` размонтирует мгновенно (без таймера).
+- **RTL:** логические утилиты — `text-start` (выравнивание заголовка), `ms-8` (отступ иконки). Вертикальная keyboard-навигация (Arrow Up/Down) направление-нейтральна.
+- **A11y:** WAI-ARIA disclosure pattern — `<button aria-controls aria-expanded>` ↔ `<div role="region" aria-labelledby>`. Roving tabindex + ArrowUp/Down/Home/End навигация между header'ами.
 
 ## 4. Quick Start
 
@@ -51,7 +61,7 @@ const items = [
 </script>
 
 <template>
-  <Accordion :data-source="items" />
+  <Accordion :items="items" />
 </template>
 ```
 
@@ -61,27 +71,56 @@ const items = [
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `dataSource` | `MaybeRef<AccordionItem[]>` | — | Список секций. |
+| `items` | `MaybeRef<AccordionItemData[]>` | — | Список секций (бывший `dataSource`). Внутри читается через `toValue()` — принимает и plain-массив, и `ref`. |
 | `multiple` | `boolean` | `false` | Несколько секций открыты одновременно. |
 | `animationDuration` | `100 \| 200 \| 300 \| 500 \| 1000 \| 3000 \| number` | — | Длительность (ms). |
 | `icon` | `"ChevronDown" \| "ArrowDownCircle" \| "Plus" \| string` | `"ChevronDown"` | Иконка trigger'а. |
-| `class`, `classItem`, `classTitle`, `classSubtitle` | `StyleClass` | — | CSS классы. |
+| `class` | `StyleClass` | — | Классы **только корня** `[data-accordion]` (dev-patterns §2 A). |
+| `classes` | `ClassesMap<AccordionClassKey>` | — | Карта внутренних элементов. См. §5.1. |
 
-`AccordionItem` (фрагмент): `{ key: string | number, title: string, subtitle?: string, template?: string, open?: boolean, [key: string]: any }`.
+`AccordionItemData` (schema-тип секции, бывший `AccordionItem`): `{ key: string | number, title: string, subtitle?: string, template?: string, open?: boolean, [key: string]: any }` ([Accordion.d.ts:31](../../lib/accordion/Accordion.d.ts#L31)). Имя разведено с компонентом `<AccordionItem>`.
+
+### 5.1 Classes keys
+
+`AccordionClassKey = "item" | "header" | "title" | "panel" | "content"` ([Accordion.d.ts:23](../../lib/accordion/Accordion.d.ts#L23)).
+
+| Key | Element (`data-*`) | Kind | Default |
+| --- | --- | --- | --- |
+| `root` | `[data-accordion]` | element | контейнер списка секций |
+| `item` | `[data-accordion-group]` (`role="group"`) | element | рамка/фон секции (бывший `classItem`) |
+| `header` | `[data-accordion-button]` (`<button aria-expanded>`) | element | — |
+| `title` | `[data-accordion-title]` (`<span>`) | element | `text-start` + типографика заголовка (бывший `classTitle`) |
+| `panel` | `[data-accordion-panel]` (`role="region"`) | element | контент-область (бывший `classSubtitle`) |
+| `content` | `[data-accordion-content]` | element | `overflow-hidden` (обёртка анимации высоты) |
+
+### 5.2 Compound `<AccordionItem>` (descriptor)
+
+Renderless дочерний компонент для compound-API. `AccordionItemProps`:
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `title` | `string` | `""` | Заголовок секции (в `<button>`). |
+| `subtitle` | `string` | — | Plain-text fallback содержимого, когда default slot пуст. |
+| `open` | `boolean` | `false` | Initial open-state секции. |
+
+Содержимое секции — **default slot** компонента `<AccordionItem>` (имеет приоритет над `subtitle`). Эмитов нет (`AccordionItemEmits = null`). Импорт: `import { AccordionItem } from "fishtvue/accordion"`.
 
 ## 6. Events / Emits + v-model contract
 
 | Event | Payload | When fired |
 |---|---|---|
-| `toggle` | `AccordionItem[]` | На открытие/закрытие — payload содержит обновлённые items. |
+| `toggle` | `AccordionTogglePayload` = `{ key: number; open: boolean; items: AccordionItemData[] }` | На открытие/закрытие — `key` и `open` описывают переключённую секцию, `items` содержит полный обновлённый набор. |
 
-v-model contract — не применимо.
+v-model contract — не применимо: Accordion не form-control, `change:modelValue` не заводится (dev-patterns §2 H).
+
+> До 1.0.0 payload был голым массивом секций — потребителю приходилось диффать его самому, чтобы понять, какая секция переключилась.
 
 ## 7. Slots
 
 | Slot | Slot props | Description |
 |---|---|---|
 | `title` | `{ title: string }` | Кастомный заголовок секции. |
+| `item-subtitle` | `{ ...AccordionItem без template и open }` | Контент subtitle при отсутствии `item.template`. Default fallback — `<p>{{ subtitle }}</p>` (auto-escape). Override для произвольного markup'а; consumer ответственен за санитизацию входных данных. |
 | `[template]` | `{ ...AccordionItem без template и open }` | Динамический slot — имя совпадает с `item.template`. Контент секции. |
 
 ## 8. Exposed methods
@@ -90,24 +129,26 @@ v-model contract — не применимо.
 
 | Name | Type | Description |
 |---|---|---|
-| `dataItems` | `ReadRef<AccordionItem[]>` | Текущее состояние (с `open`-флагами). |
+| `dataItems` | `ReadRef<AccordionItemData[]>` | Текущее состояние (с `open`-флагами). |
 | `multiple`, `animationDuration`, `icon` | derived | Computed. |
-| `classBody`, `classItem`, `classTitle`, `classSubtitle` | derived | Computed CSS. |
+| `classBase`, `classItem`, `classTitle`, `classPanel` | `ReadRef<StyleClass>` | Итоговые классы корня, секции, заголовка и панели. |
+| `rootRef` | `Ref<HTMLElement \| null>` | Ref на корневой `[data-accordion]` элемент (`null`, пока секций нет — root под `v-if`). |
 | `toggle(key)` | `(key: string \| number) => void` | Программный toggle. |
+| `focus(index)` | `(index: number) => void` | Программно фокусирует header указанного индекса и обновляет roving tabindex. |
 
 ## 9. Examples
 
 ### 9.1 Базовый
 
 ```vue
-<Accordion :data-source="[{ key: 1, title: 'Q1', subtitle: 'A1' }]" />
+<Accordion :items="[{ key: 1, title: 'Q1', subtitle: 'A1' }]" />
 ```
 
 ### 9.2 Multiple + custom icon
 
 ```vue
 <Accordion
-  :data-source="items"
+  :items="items"
   :multiple="true"
   icon="Plus"
   :animation-duration="500" />
@@ -124,7 +165,7 @@ const items = [
 </script>
 
 <template>
-  <Accordion :data-source="items">
+  <Accordion :items="items">
     <template #profile>
       <p>Profile detail content</p>
     </template>
@@ -135,7 +176,26 @@ const items = [
 </template>
 ```
 
-### 9.4 Программный toggle
+### 9.4 Compound `<Accordion><AccordionItem>`
+
+```vue
+<script setup lang="ts">
+import Accordion, { AccordionItem } from "fishtvue/accordion"
+</script>
+
+<template>
+  <Accordion :multiple="true">
+    <AccordionItem title="Profile" :open="true">
+      <RichProfileCard />
+    </AccordionItem>
+    <AccordionItem title="Settings" subtitle="Plain-text fallback без слота" />
+  </Accordion>
+</template>
+```
+
+> При одновременном `:items` и `<AccordionItem>`-детях — выигрывает `:items` (backward compat).
+
+### 9.5 Программный toggle
 
 ```vue
 <script setup lang="ts">
@@ -149,7 +209,7 @@ function openSection2() {
 </script>
 
 <template>
-  <Accordion ref="a" :data-source="items" />
+  <Accordion ref="a" :items="items" />
   <button @click="openSection2">Open B</button>
 </template>
 ```
@@ -158,7 +218,7 @@ function openSection2() {
 
 ### 10.1 Global
 
-`AccordionOption = Pick<AccordionProps, "multiple" | "animationDuration" | "icon" | "class" | "classItem" | "classTitle" | "classSubtitle">`.
+`AccordionOption = Pick<AccordionProps, "multiple" | "animationDuration" | "icon" | "class" | "classes">` ([Accordion.d.ts:225–228](../../lib/accordion/Accordion.d.ts#L225-L228)). Карта `classes` сливается с props **по ключу** (dev-patterns §2 C).
 
 ### 10.2 Per-instance
 
@@ -166,7 +226,7 @@ function openSection2() {
 
 ### 10.3 Theming
 
-Цвет фона/border — `theme.semantic.primary` или `neutral.*`. Override через `classItem`.
+Цвет фона/border — `theme.semantic.primary` или `neutral.*`. Override — `classes.item` (секция) или `class` (корень).
 
 ### 10.4 CSS layer override
 
@@ -180,27 +240,46 @@ Root класс — `fv fishtvue-accordion`.
 
 ### A11y
 
-- ARIA `role="region"`/`aria-expanded` — проверь по DOM. Для полноценного accordion-pattern (WAI-ARIA) добавь `aria-controls` на trigger и `aria-labelledby` на panel.
-- Keyboard: Enter/Space на trigger — toggle. ArrowDown/Up для навигации между секциями — НЕ реализованы.
-- `prefers-reduced-motion` не учтён.
+WAI-ARIA disclosure pattern реализован полностью:
+
+- Каждый header — `<button :aria-expanded :aria-controls>` со стабильным `id` (через `useId()`).
+- Каждый panel — `<div role="region" :aria-labelledby>` ссылается на id header'а.
+- **Keyboard:**
+  - `Enter`/`Space` на header — toggle (нативное поведение button'а).
+  - `ArrowDown` / `ArrowUp` — переход фокуса между header'ами.
+  - `Home` / `End` — переход на первый / последний header.
+  - Roving tabindex — только header в focus получает `tabindex="0"`, остальные `-1`.
+- `aria-hidden="true"` на иконках trigger'а — корректно для декоративного SVG.
+- **Motion:** переходы иконок/панели гейтятся через `motion-safe:` — под `prefers-reduced-motion: reduce` анимации выключены, а `<Transition>` `@leave` размонтирует панель мгновенно.
+- **RTL:** логические утилиты `text-start` / `ms-8` — корректное зеркалирование в `dir="rtl"`.
 
 ### Security
 
-- Не рендерит HTML из props (но slot контент — ответственность родителя).
+- `item.subtitle` рендерится через interpolation `{{ }}` (auto-escape). XSS-payloads типа `<img src=x onerror=alert(1)>` отображаются как plain text, не исполняются.
+- Override через slot `#item-subtitle` — opt-in для произвольного markup'а. Consumer **обязан** санитизировать любой HTML, который попадает в этот слот.
+- Динамический `#[template]`-slot — та же модель: HTML внутри рендерится напрямую, ответственность санитизации на consumer'е.
 
 ## 13. TypeScript
 
 ```ts
 import type { AccordionProps, AccordionEmits, AccordionExpose, AccordionItem } from "fishtvue/accordion"
-import Accordion from "fishtvue/accordion"
+import type { AccordionItemProps, AccordionItemSlots } from "fishtvue/accordion/AccordionItem"
+import Accordion, { AccordionItem as AccordionItemComponent } from "fishtvue/accordion"
 ```
 
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable` — 15 кейсов, coverage 100%.
-- **Breaking changes:** не зафиксировано.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 59 кейсов, coverage 100%.
+- **Breaking changes (1.0.0, редизайн props):**
+  - `dataSource` → `items` (семантика коллекции, решение 7).
+  - `classItem`/`classTitle`/`classSubtitle` → `classes.item`/`classes.title`/`classes.panel`; добавлены ключи `classes.header` и `classes.content`; `class` адресует **только** корень.
+  - тип `AccordionItem` → `AccordionItemData` (имя освобождено под компонент `<AccordionItem>`).
+  - payload `toggle`: `AccordionItemData[]` → `{ key, open, items }` — **silent break**, старые обработчики получат объект вместо массива.
+  - DOM: добавлены `data-accordion-title`, `data-accordion-panel`, `data-accordion-content`.
+  - expose: `classBody` → `classBase`, `classSubtitle` → `classPanel`.
+  - удалён мёртвый `AccordionItemOption`.
+- **Deprecations:** нет — старые имена сняты без алиасов (решение R6).
 
 ## 15. Testing recipes
 
@@ -213,7 +292,7 @@ import Accordion from "fishtvue/accordion/Accordion.vue"
 describe("Accordion", () => {
   it("toggle event", async () => {
     const wrapper = mount(Accordion, {
-      props: { dataSource: [{ key: 1, title: "A" }] },
+      props: { items: [{ key: 1, title: "A" }] },
       global: { plugins: [[FishtVue, {}]] }
     })
     expect(wrapper.exists()).toBe(true)
@@ -221,7 +300,7 @@ describe("Accordion", () => {
 })
 ```
 
-Реальные тесты — [Accordion.test.ts](../../lib/accordion/Accordion.test.ts) (15 кейсов).
+Реальные тесты — [Accordion.test.ts](../../lib/accordion/Accordion.test.ts) (59 кейсов) + [AccordionItem.test.ts](../../lib/accordion/AccordionItem.test.ts) (3 кейса).
 
 ## 16. Troubleshooting / FAQ
 
@@ -231,7 +310,7 @@ describe("Accordion", () => {
 | Custom slot не работает | `item.template` имя не совпадает со slot-name. | Совпадай 1:1. |
 | Иконка не появляется | `icon` некорректное значение. | Используй `"ChevronDown"`/`"ArrowDownCircle"`/`"Plus"` или имя из [Icons](./icons.md). |
 | Анимация дёргается | CSS conflict с другими transitions. | Override `animationDuration`. |
-| `toggle()` не работает | `key` не существует в dataSource. | Проверь `dataSource[i].key`. |
+| `toggle()` не работает | `key` не существует в `items`. | Проверь `items[i].key`. |
 
 ## 17. Related
 
@@ -245,7 +324,7 @@ describe("Accordion", () => {
 
 ### Incomplete or stubbed behavior
 
-- Coverage 100% statements / 86.44% branch — несколько ветвей ([Accordion.vue:85–86, 134–139, 148](../../lib/accordion/Accordion.vue#L85-L86)) не покрыты тестами по branch.
+- Branch coverage <100% для редких иконных ветвей внутри `<slot name="title">` fallback'а (`Plus` / `ChevronDown` / `ArrowDownCircle` / `Icons`). Не блокирует stable.
 
 ### Skipped tests
 
@@ -253,15 +332,16 @@ describe("Accordion", () => {
 
 ### API inconsistencies
 
-- `AccordionItem` имеет `[key: string]: any` — открытое расширение полей.
+- `AccordionItemData` имеет `[key: string]: any` — открытое расширение полей.
 - `animationDuration` open union с numeric — narrow не работает.
 - `icon` open union со `string` — narrow не работает.
 
 ### Behavioral caveats
 
 - Динамические slot'ы по `template` — имя должно совпадать; ошибки при опечатке тихие.
-- При смене `dataSource` (reactive) — open-флаги сбрасываются.
-- ARIA-keyboard навигация (ArrowKeys) не реализована — для строгого WAI-ARIA pattern нужно дописать.
+- При смене `items` (reactive, schema-режим) — open-флаги сбрасываются. В compound-режиме open-state сохраняется по индексу секции при re-render.
+- Compound-`<AccordionItem :open>` — `open` это **initial** state; после первого рендера управление переходит к внутреннему состоянию (последующие реактивные изменения prop `open` не пробрасываются). Для управляемого сценария используйте schema-`:items`.
+- `<Transition>` `@leave` использует `setTimeout(animationDuration)` — реальный CSS transition end не отслеживается (jsdom не эмитит `transitionend`); в браузере анимация и таймер совпадают, расхождения нет.
 
 ### Bug report format
 

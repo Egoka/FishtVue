@@ -222,3 +222,30 @@ export declare function toKebabCase(str: string): string
  **Note**: The `stringify` function is a custom implementation similar to `JSON.stringify`, but with additional support for indentation and handling of different types of values.
  */
 export declare function stringify(value: any, indent?: number, currentIndent?: number): string
+
+/**
+ #### `interpolate` Function Documentation
+
+ Подставляет именованные плейсхолдеры `{name}` в шаблон значениями из `params`. Неизвестный плейсхолдер
+ остаётся литералом (dev-сигнал). Без `params` шаблон возвращается без изменений.
+
+ ##### Syntax
+ ```typescript
+ export function interpolate(template: string, params?: Record<string, string | number>): string
+ ```
+ */
+export declare function interpolate(template: string, params?: Record<string, string | number>): string
+
+/**
+ #### `selectPlural` Function Documentation
+
+ Выбирает форму из pipe-разделённого шаблона (`<selector> <text>`, selector = `=N` или CLDR-категория
+ `zero|one|two|few|many|other`) по числу `count` через `Intl.PluralRules(locale)`. Порядок:
+ точное `=count` → категория → `other` → первая форма. Интерполяцию плейсхолдеров не выполняет.
+
+ ##### Syntax
+ ```typescript
+ export function selectPlural(template: string, count: number, locale?: string): string
+ ```
+ */
+export declare function selectPlural(template: string, count: number, locale?: string): string
