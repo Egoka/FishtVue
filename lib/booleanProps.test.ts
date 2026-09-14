@@ -24,8 +24,7 @@ const PENDING: string[] = [
   "menu/MenuItem.vue",
   "split/Split.vue",
   "table/Column.vue",
-  "table/ColumnGroup.vue",
-  "table/Table.vue"
+  "table/ColumnGroup.vue"
 ]
 
 /**
@@ -34,7 +33,12 @@ const PENDING: string[] = [
  * `resolvePropValue`. Vue-кастинг отсутствующего Boolean в `false` их не касается, поэтому правило
  * «own default» к ним не применяется (dev-patterns §2 F).
  */
-const RENDERLESS = new Set(["select/SelectItem.vue", "accordion/AccordionItem.vue"])
+const RENDERLESS = new Set([
+  "select/SelectItem.vue",
+  "accordion/AccordionItem.vue",
+  "table/Column.vue",
+  "table/ColumnGroup.vue"
+])
 
 const FORBIDDEN_PREFIX = /^(?:is|not|without|no|show|use)[A-Z]/
 

@@ -35,18 +35,18 @@
     EditInput,
     EditSelect,
     Filters,
-    IAsyncDataConfig,
-    IAsyncDataParams,
-    IAsyncDataResult,
-    IColumn,
-    IColumnPrivate,
-    IFilter,
-    IGrouping,
-    ISort,
-    ISummaryPrivate,
-    ITableStyles,
-    ITableStylesBorder,
-    IToolbar,
+    TableAsyncDataConfig,
+    TableAsyncDataParams,
+    TableAsyncDataResult,
+    TableColumn,
+    TableColumnPrivate,
+    TableFilter,
+    TableGrouping,
+    TableSort,
+    TableSummaryPrivate,
+    TableClassKey,
+    TableSettings,
+    TableToolbar,
     Page,
     ResultData,
     Search,
@@ -75,24 +75,33 @@
   import { formatDate } from "fishtvue/utils/dateHandler"
   import { generateUUID } from "fishtvue/utils/functionHandler"
   import { convertToNumber, convertToPhone, isNumber } from "fishtvue/utils/numberHandler"
-  import { deepCopyObject, deepMerge, deepMergeSoft } from "fishtvue/utils/objectHandler"
+  import { deepCopyObject, deepMerge, deepMergeSoft, fieldsOmit } from "fishtvue/utils/objectHandler"
+  import { cn, mergeClasses } from "fishtvue/utils/tailwindHandler"
   // ---BASE-COMPONENT----------------------
   const Table = new Component<"Table">()
   const options = Table.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = withDefaults(defineProps<TableProps>(), {
     toolbar: undefined,
-    edit: undefined,
+    editable: undefined,
     sort: undefined,
     filter: undefined,
-    resizedColumns: undefined,
+    resizableColumns: undefined,
     pagination: undefined,
-    search: undefined,
+    searchable: undefined,
     columns: undefined,
     summary: undefined,
-    virtual: undefined
+    virtual: undefined,
+    stripedRows: undefined,
+    horizontalLines: undefined,
+    verticalLines: undefined,
+    filterLines: undefined,
+    // union `asyncData` включает `boolean` — без own default Vue скастовал бы отсутствующий
+    // prop в `false` и слой `componentsOptions` стал бы недостижим (dev-patterns §2 F).
+    asyncData: undefined
   })
   const emit = defineEmits<TableEmits>()
+  const { cls, raw, pick } = Table.resolveClasses<TableClassKey>(props)
   const slots = useSlots()
   // ---COMPOUND-API (VNode-walk <Column>/<ColumnGroup>/<Pagination>/<Loading>) ----------
   // Считываем декларативные дети из default slot и синтезируем descriptor'ы колонок + header-группы
@@ -122,8 +131,8 @@
     const def = vn?.children?.default
     return typeof def === "function" ? compoundNormalize(def()) : []
   }
-  // Извлекаем IColumn из <Column>-vnode: props + захваченные scoped-slots (cell/header/filter) + ключ группы.
-  function extractColumn(vn: any, groupKey: number | null): IColumn {
+  // Извлекаем TableColumn из <Column>-vnode: props + захваченные scoped-slots (cell/header/filter) + ключ группы.
+  function extractColumn(vn: any, groupKey: number | null): TableColumn {
     const childSlots = (vn?.children && typeof vn.children === "object" ? vn.children : {}) as Record<string, any>
     return {
       ...(vn?.props ?? {}),
@@ -131,18 +140,18 @@
       _cellSlot: typeof childSlots.cell === "function" ? childSlots.cell : undefined,
       _headerSlot: typeof childSlots.header === "function" ? childSlots.header : undefined,
       _filterSlot: typeof childSlots.filter === "function" ? childSlots.filter : undefined
-    } as IColumn
+    } as TableColumn
   }
   type CompoundHeaderGroupMeta = { key: number; caption?: string; class?: any }
   const compoundParsed = computed<{
-    columns: Array<IColumn>
+    columns: Array<TableColumn>
     groups: Array<CompoundHeaderGroupMeta>
     pagination?: Record<string, any>
     loading?: Record<string, any>
   }>(() => {
     const raw = typeof slots.default === "function" ? slots.default() : undefined
     const top = compoundFlatten(compoundNormalize(raw))
-    const columnsAcc: Array<IColumn> = []
+    const columnsAcc: Array<TableColumn> = []
     const groupsAcc: Array<CompoundHeaderGroupMeta> = []
     let pagination: Record<string, any> | undefined
     let loading: Record<string, any> | undefined
@@ -163,7 +172,7 @@
     }
     return { columns: columnsAcc, groups: groupsAcc, pagination, loading }
   })
-  const compoundColumns = computed<Array<IColumn>>(() => compoundParsed.value.columns)
+  const compoundColumns = computed<Array<TableColumn>>(() => compoundParsed.value.columns)
   const compoundPaginationConfig = computed<Record<string, any> | undefined>(() => compoundParsed.value.pagination)
   const compoundLoadingProps = computed<Record<string, any>>(() => compoundParsed.value.loading ?? {})
   // Стабильный рендерер захваченного со <Column> scoped-slot (cell/header/filter): определён один раз,
@@ -206,32 +215,32 @@
   const mode = computed<NonNullable<TableProps["mode"]>>(
     () => (props?.mode as TableProps["mode"]) ?? options?.mode ?? Table.componentsStyle() ?? "outlined"
   )
-  const toolbar = computed<IToolbar | boolean>(() => deepMerge(options?.toolbar, unref(props?.toolbar)) ?? false)
-  const sort = computed<ISort | boolean>(() => deepMerge(options?.sort, unref(props?.sort)) ?? false)
-  const filter = computed<IFilter | boolean>(() => deepMerge(options?.filter, unref(props?.filter)) ?? false)
-  const grouping = computed<IGrouping | string>(() => deepMerge(options?.grouping, unref(props?.grouping)))
+  const toolbar = computed<TableToolbar | boolean>(() => deepMerge(options?.toolbar, unref(props?.toolbar)) ?? false)
+  const sort = computed<TableSort | boolean>(() => deepMerge(options?.sort, unref(props?.sort)) ?? false)
+  const filter = computed<TableFilter | boolean>(() => deepMerge(options?.filter, unref(props?.filter)) ?? false)
+  const grouping = computed<TableGrouping | string>(() => deepMerge(options?.grouping, unref(props?.grouping)))
   const pagination = computed<TablePagination | boolean>(() => {
     // Явный `:pagination` (object/false) выигрывает над compound `<Pagination>`-child.
     const explicit = unref(props?.pagination)
     if (explicit !== undefined && explicit !== null) return deepMerge(options?.pagination, explicit) ?? false
     return (deepMerge(options?.pagination, compoundPaginationConfig.value) as TablePagination | boolean) ?? false
   })
-  const columns = computed<boolean | Array<IColumn>>(() => {
+  const columns = computed<boolean | Array<TableColumn>>(() => {
     // Schema `:columns` (массив ИЛИ false) выигрывает; иначе — compound `<Column>`-дети.
     const schema = unref(props?.columns)
-    if (schema !== undefined && schema !== null) return schema as boolean | Array<IColumn>
+    if (schema !== undefined && schema !== null) return schema as boolean | Array<TableColumn>
     return compoundColumns.value.length ? compoundColumns.value : false
   })
   // -----------
   const isVisibleToolbar = computed<boolean>(
-    () => (isSearch.value || !!toolbar.value) && ((toolbar.value as IToolbar)?.visible ?? true)
+    () => (isSearch.value || !!toolbar.value) && ((toolbar.value as TableToolbar)?.visible ?? true)
   )
   const isSearch = computed<boolean>(
-    () => (toolbar.value as IToolbar)?.search ?? props?.search ?? options?.search ?? false
+    () => (toolbar.value as TableToolbar)?.searchable ?? props?.searchable ?? options?.searchable ?? false
   )
   const isFilterClear = computed<boolean>(
     () =>
-      ((filter.value as IFilter)?.isClearAllFilter ?? false) &&
+      ((filter.value as TableFilter)?.clearAll ?? false) &&
       (!!noEmptyFilters(filterColumns).length || !!queryTable.value.length)
   )
   const isColumns = computed<boolean>(() =>
@@ -241,28 +250,32 @@
     const summaryValue = unref(props.summary)
     return typeof summaryValue === "boolean" ? summaryValue : Array.isArray(summaryValue)
   })
-  const countDataOnLoading = computed<NonNullable<TableProps["countDataOnLoading"]>>(
-    () => (props?.countDataOnLoading as TableProps["countDataOnLoading"]) ?? options?.countDataOnLoading ?? 1000
+  const loadingThreshold = computed<NonNullable<TableProps["loadingThreshold"]>>(
+    () => (props?.loadingThreshold as TableProps["loadingThreshold"]) ?? options?.loadingThreshold ?? 1000
   )
-  const classMaskQuery = computed<NonNullable<ITableStyles["maskQuery"]>>(() =>
-    Table.setStyle(styles.value?.maskQuery ?? "font-bold text-theme-700 dark:text-theme-400")
+  // Aspect-ключ `mark`: `""` отключает подсветку целиком, поэтому пустое значение не уходит
+  // в `setStyle` (иначе на `<mark>` остался бы голый префикс — урок W2/Select).
+  const classMark = computed<StyleClass>(() => {
+    const value = pick("mark", "font-bold text-theme-700 dark:text-theme-400")
+    return value?.length ? Table.setStyle(value) : ""
+  })
+  const emptyText = computed<NonNullable<TableProps["emptyText"]>>(
+    () => props.emptyText ?? options?.emptyText ?? Table.t("noData") ?? "No data"
   )
-  const noData = computed<NonNullable<TableProps["noData"]>>(
-    () => props.noData ?? options?.noData ?? Table.t("noData") ?? "No data"
+  const emptyColumnsText = computed<NonNullable<TableProps["emptyText"]>>(
+    () => props.emptyColumnsText ?? options?.emptyColumnsText ?? Table.t("noColumn") ?? "There are no columns"
   )
-  const noColumn = computed<NonNullable<TableProps["noData"]>>(
-    () => props.noColumn ?? options?.noColumn ?? Table.t("noColumn") ?? "There are no columns"
-  )
-  const noFilter = computed<NonNullable<IFilter["noFilter"]>>(
-    () => (filter.value as IFilter)?.noFilter ?? Table.t("noDataForQuery") ?? "No data was found for your query"
+  const emptyFilterText = computed<NonNullable<TableFilter["emptyFilterText"]>>(
+    () =>
+      (filter.value as TableFilter)?.emptyFilterText ?? Table.t("noDataForQuery") ?? "No data was found for your query"
   )
   const caption = computed<NonNullable<TableProps["caption"]>>(() => props.caption ?? "")
-  const iconSort = computed<ISort["icon"]>(() => (sort.value as ISort)?.icon ?? "Arrow")
-  const resizedColumns = computed<NonNullable<TableProps["resizedColumns"]>>(
-    () => props?.resizedColumns ?? options?.resizedColumns ?? false
+  const iconSort = computed<TableSort["icon"]>(() => (sort.value as TableSort)?.icon ?? "Arrow")
+  const resizableColumns = computed<NonNullable<TableProps["resizableColumns"]>>(
+    () => props?.resizableColumns ?? options?.resizableColumns ?? false
   )
-  const isEditCells = computed<NonNullable<TableProps["edit"]>>(() => props?.edit ?? options?.edit ?? false)
-  const lengthData = computed<number>(() => totalCountAsync.value ?? props.totalCount ?? dataSource.value.length)
+  const isEditCells = computed<NonNullable<TableProps["editable"]>>(() => props?.editable ?? options?.editable ?? false)
+  const lengthData = computed<number>(() => totalCountAsync.value ?? props.total ?? dataSource.value.length)
   // aria-live: озвучивание количества строк после filter/search/sort (polite, sr-only).
   // Wave 3.5: локализация + плюрализация одним ключом через Component.t(key, { count }) —
   // CLDR-формы активной локали (например, ru: 21 → "результат", 5 → "результатов"; см. table.resultsCount в locale messages).
@@ -297,7 +310,7 @@
         ? !!grouping.value.length
         : false
   )
-  const groupField = computed<IGrouping["groupField"] | null>(() =>
+  const groupField = computed<TableGrouping["groupField"] | null>(() =>
     typeof grouping.value === "object"
       ? typeof grouping.value?.groupField === "string"
         ? grouping.value.groupField
@@ -331,20 +344,20 @@
   const isAsyncDataFunction = computed<boolean>(() => asyncDataMode.value === "function")
   const asyncDataUrl = computed<string | null>(() => {
     if (asyncDataMode.value === "url") return asyncData.value as string
-    if (asyncDataMode.value === "config") return (asyncData.value as IAsyncDataConfig)?.url ?? null
+    if (asyncDataMode.value === "config") return (asyncData.value as TableAsyncDataConfig)?.url ?? null
     return null
   })
-  const asyncDataConfig = computed<IAsyncDataConfig | null>(() => {
-    if (asyncDataMode.value === "config") return asyncData.value as IAsyncDataConfig
+  const asyncDataConfig = computed<TableAsyncDataConfig | null>(() => {
+    if (asyncDataMode.value === "config") return asyncData.value as TableAsyncDataConfig
     return null
   })
   // ---CELL--------------------------------
-  const heightCell = computed<number>(() => styles.value?.heightCell ?? 50)
-  const countVisibleRows = computed<NonNullable<TableProps["countVisibleRows"]>>(
-    () => props?.countVisibleRows ?? options?.countVisibleRows ?? 0
+  const heightCell = computed<number>(() => settings.value.cellHeight ?? 50)
+  const visibleRows = computed<NonNullable<TableProps["visibleRows"]>>(
+    () => props?.visibleRows ?? options?.visibleRows ?? 0
   )
-  const sizeLoadingRows = computed<NonNullable<TableProps["sizeLoadingRows"]>>(
-    () => props?.sizeLoadingRows ?? options?.sizeLoadingRows ?? 5
+  const loadingRows = computed<NonNullable<TableProps["loadingRows"]>>(
+    () => props?.loadingRows ?? options?.loadingRows ?? 5
   )
   // ---VIRTUALIZATION----------------------
   const virtualScrollTop = ref<number>(0)
@@ -388,10 +401,10 @@
   // `TablePagination extends Omit<PaginationProps, …>` — поля схемы переименовались вместе с
   // Pagination (W3b). Локальные имена и expose Table остаются прежними до W4, где переименовывается
   // весь публичный API таблицы разом.
-  const sizePage = computed<NonNullable<TablePagination["pageSize"]>>(() =>
+  const pageSize = computed<NonNullable<TablePagination["pageSize"]>>(() =>
     isNumber((pagination.value as TablePagination)?.pageSize as number)
       ? +(pagination.value as any).pageSize
-      : countVisibleRows.value || sizeTable.value
+      : visibleRows.value || sizeTable.value
   )
   const visibleNumberPages = computed<TablePagination["visiblePages"]>(
     () => (pagination.value as TablePagination)?.visiblePages
@@ -422,8 +435,8 @@
   })
   const resultDataSource = computed<ResultData>(() => {
     let resultData: Record<string, any> = toRaw(dataGrouping.value)
-    let limit = countVisibleRows.value + sizeLoadedRows.value
-    if (resultData && countVisibleRows.value > 0 && !isVirtual.value) {
+    let limit = visibleRows.value + sizeLoadedRows.value
+    if (resultData && visibleRows.value > 0 && !isVirtual.value) {
       const result: Record<string, any> = {}
       for (const item of Object.keys(resultData)) {
         if (limit > resultData[item]?.length) {
@@ -441,7 +454,7 @@
     return resultData
   })
   // Окно виртуализации поверх плоского (non-grouped) результата. Читает resultDataSource,
-  // поэтому result-data продолжает эмититься. countVisibleRows-слайс в virtual-режиме отключён.
+  // поэтому result-data продолжает эмититься. visibleRows-слайс в virtual-режиме отключён.
   const virtualWindow = computed<{ rows: any[]; startIndex: number; topPad: number; bottomPad: number }>(() => {
     if (!isVirtual.value) return { rows: [], startIndex: 0, topPad: 0, bottomPad: 0 }
     const { rowHeight, overscan } = virtualConfig.value
@@ -471,17 +484,17 @@
     virtualScrollTop.value = virtualScrollEl.scrollTop
     virtualViewportHeight.value = virtualScrollEl.clientHeight
   }
-  const dataColumns = computed<Array<IColumnPrivate>>(() => {
+  const dataColumns = computed<Array<TableColumnPrivate>>(() => {
     const listFields: Array<string> = LD.uniq(
       LD.flatMap(allData.value, (item) => Object.keys(item)) as string[]
     ).filter((field) => field !== "_key")
     const columnsValue = columns.value
     if (Array.isArray(columnsValue) && columnsValue?.length) {
-      return <Array<IColumnPrivate>>columnsValue
+      return <Array<TableColumnPrivate>>columnsValue
         .map((column, index) => {
           const fieldName = column.dataField ?? listFields[index] ?? ""
           if (fieldName === "") return false
-          const options = <IColumnPrivate>{
+          const options = <TableColumnPrivate>{
             ...column,
             id: `Col-${fieldName}-${index}`,
             dataField: fieldName,
@@ -492,72 +505,75 @@
                 ? `Col ${fieldName}`
                 : (fieldName as string).charAt(0).toUpperCase() + (fieldName as string).slice(1)),
             visible: typeof column?.visible === "boolean" ? column.visible : true,
-            isFilter: typeof column.isFilter === "boolean" ? column.isFilter : isFilter.value,
-            isSort: typeof column.isSort === "boolean" ? column.isSort : isSort.value,
-            isResized: typeof column.isResized === "boolean" ? column.isResized : resizedColumns.value,
-            isEdit: typeof column.edit === "boolean" ? column.edit : (column?.edit?.isEdit ?? isEditCells.value),
+            filterable: typeof column.filterable === "boolean" ? column.filterable : isFilter.value,
+            sortable: typeof column.sortable === "boolean" ? column.sortable : isSort.value,
+            resizable: typeof column.resizable === "boolean" ? column.resizable : resizableColumns.value,
+            hasEditor:
+              typeof column.editable === "boolean"
+                ? column.editable
+                : (column?.editable?.editable ?? isEditCells.value),
             type: column.type ?? "string"
           }
           switch (options.type) {
             case "string": {
-              options.paramsFilter = { autocomplete: "off", ...column.paramsFilter } as Partial<BaseInputProps>
-              options.edit = {
-                editorOptions: {
-                  ...options.paramsFilter,
+              options.filterProps = { autocomplete: "off", ...column.filterProps } as Partial<BaseInputProps>
+              options.editable = {
+                editorProps: {
+                  ...options.filterProps,
                   autoFocus: true,
-                  ...(column?.edit as EditInput)?.editorOptions
+                  ...(column?.editable as EditInput)?.editorProps
                 } as Partial<BaseInputProps>
               }
               break
             }
             case "number": {
-              options.paramsFilter = {
+              options.filterProps = {
                 autocomplete: "off",
                 maskInput: "number",
-                ...column.paramsFilter
+                ...column.filterProps
               } as Partial<BaseInputProps>
-              options.edit = {
-                editorOptions: {
-                  ...options.paramsFilter,
+              options.editable = {
+                editorProps: {
+                  ...options.filterProps,
                   autoFocus: true,
-                  ...(column?.edit as EditInput)?.editorOptions
+                  ...(column?.editable as EditInput)?.editorProps
                 } as Partial<BaseInputProps>
               }
               break
             }
             case "select": {
-              options.paramsFilter = {
+              options.filterProps = {
                 multiple: true,
                 maxVisible: 0,
                 classes: { control: "normal-case max-h-[25rem]", list: "normal-case font-normal" },
                 options:
-                  (column?.paramsFilter as Partial<BaseSelectProps>)?.options ??
+                  (column?.filterProps as Partial<BaseSelectProps>)?.options ??
                   LD.uniq(LD.map(allData.value, options.dataField ?? ""))
                     .filter((v) => v !== null && v !== undefined)
                     .sort((a, b) => String(a).localeCompare(String(b))),
                 fixWindowProps: {
                   position: "bottom",
-                  ...(column?.paramsFilter as Partial<BaseSelectProps>)?.fixWindowProps
+                  ...(column?.filterProps as Partial<BaseSelectProps>)?.fixWindowProps
                 },
-                ...column.paramsFilter
-              } as IColumnPrivate["paramsFilter"]
-              options.edit = {
-                editorOptions: (<BaseSelectProps>{
-                  ...options.paramsFilter,
+                ...column.filterProps
+              } as TableColumnPrivate["filterProps"]
+              options.editable = {
+                editorProps: (<BaseSelectProps>{
+                  ...options.filterProps,
                   autoFocus: true,
                   multiple: false,
-                  ...(column?.edit as EditSelect)?.editorOptions,
+                  ...(column?.editable as EditSelect)?.editorProps,
                   fixWindowProps: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...(column?.edit as EditSelect)?.editorOptions?.fixWindowProps
+                    ...(column?.editable as EditSelect)?.editorProps?.fixWindowProps
                   }
-                }) as IColumnPrivate["paramsFilter"]
+                }) as TableColumnPrivate["filterProps"]
               }
               break
             }
             case "date": {
-              options.paramsFilter = {
+              options.filterProps = {
                 range: true,
                 datePickerProps: {
                   attributes: [
@@ -572,27 +588,27 @@
                     }
                   ],
                   mask:
-                    (column.paramsFilter as Partial<BaseCalendarProps>)?.datePickerProps?.masks?.modelValue ??
+                    (column.filterProps as Partial<BaseCalendarProps>)?.datePickerProps?.masks?.modelValue ??
                     "DD.MM.YYYY"
                 },
                 fixWindowProps: {
                   position: "bottom",
-                  ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.fixWindowProps
+                  ...(column?.filterProps as Partial<BaseCalendarProps>)?.fixWindowProps
                 },
-                ...column.paramsFilter
+                ...column.filterProps
               } as Partial<BaseCalendarProps>
-              options.edit = {
-                editorOptions: {
-                  ...options.paramsFilter,
+              options.editable = {
+                editorProps: {
+                  ...options.filterProps,
                   range: false,
                   autoFocus: true,
-                  ...(column?.edit as EditDate)?.editorOptions,
+                  ...(column?.editable as EditDate)?.editorProps,
                   label: "",
                   labelMode: "none",
                   fixWindowProps: {
                     position: "bottom",
                     eventClose: "hover",
-                    ...((column?.edit as EditDate)?.editorOptions as Partial<BaseCalendarProps>)?.fixWindowProps
+                    ...((column?.editable as EditDate)?.editorProps as Partial<BaseCalendarProps>)?.fixWindowProps
                   }
                 } as Partial<BaseCalendarProps> & Pick<InputLayoutProps, "label" | "labelMode">
               }
@@ -603,8 +619,8 @@
         })
         .filter((i) => i)
     } else {
-      return listFields.map<IColumnPrivate>((column, index): IColumnPrivate => {
-        const options: IColumnPrivate = {
+      return listFields.map<TableColumnPrivate>((column, index): TableColumnPrivate => {
+        const options: TableColumnPrivate = {
           id: `Col-${column}-${index}`,
           dataField: column,
           name: `Col-${column}`,
@@ -613,16 +629,16 @@
             ? `Col ${column}`
             : (column.charAt(0).toUpperCase() + column.slice(1))?.replace(/_/g, " "),
           visible: true,
-          isFilter: isFilter.value,
-          isSort: isSort.value,
-          isResized: resizedColumns.value,
-          isEdit: isEditCells.value
+          filterable: isFilter.value,
+          sortable: isSort.value,
+          resizable: resizableColumns.value,
+          hasEditor: isEditCells.value
         }
-        if (options.isEdit) {
-          options.paramsFilter = { autocomplete: "off" } as Partial<BaseInputProps>
-          options.edit = {
-            editorOptions: {
-              ...options.paramsFilter,
+        if (options.hasEditor) {
+          options.filterProps = { autocomplete: "off" } as Partial<BaseInputProps>
+          options.editable = {
+            editorProps: {
+              ...options.filterProps,
               autoFocus: true
             } as Partial<BaseInputProps>
           }
@@ -649,11 +665,11 @@
     }
     return out
   })
-  const dataSummary = computed<Array<ISummaryPrivate>>(() => {
+  const dataSummary = computed<Array<TableSummaryPrivate>>(() => {
     if (!isSummary.value) return []
     const summaryValue = unref(props.summary)
     if (Array.isArray(summaryValue) && summaryValue?.length) {
-      return <Array<ISummaryPrivate>>summaryValue.map((summary, index) => {
+      return <Array<TableSummaryPrivate>>summaryValue.map((summary, index) => {
         const column = getColumn(summary.dataField, index)
         if (column) {
           const summaryName = summary.dataField ?? column.dataField
@@ -693,7 +709,7 @@
         return {}
       })
     } else {
-      return <Array<ISummaryPrivate>>dataColumns.value
+      return <Array<TableSummaryPrivate>>dataColumns.value
         .filter((item) => item.visible)
         .map((column) => ({
           name: `Sum-${column.name}`,
@@ -727,44 +743,40 @@
    * Used to apply active styles to the clicked row via classTr function.
    */
   const activeRow = ref<string | null>()
-  const heightTable = ref<string>(countVisibleRows.value ? `height: ${baseTableHeight}px` : "height: auto")
-  const styles = computed<
-    Omit<ITableStyles, "border" | "activeRow"> & { border?: ITableStylesBorder; activeRow: string }
-  >((): any => {
-    const s = deepMergeSoft<ITableStyles>(deepCopyObject(options?.styles), deepCopyObject(unref(props?.styles)))
+  const heightTable = ref<string>(visibleRows.value ? `height: ${baseTableHeight}px` : "height: auto")
+  // Не-классовые настройки отображения: bag `styles` растворён в top-level props (§2 B),
+  // здесь остался только их резолв `props ?? options ?? default`.
+  const settings = computed<TableSettings>(() => {
+    const width = props.width ?? options?.width
+    const height = props.height ?? options?.height
     return {
-      ...s,
-      activeRow:
-        typeof s?.activeRow === "string"
-          ? (s?.activeRow as string)
-          : typeof s?.activeRow === "boolean" && s?.activeRow
-            ? "bg-surface-100/90 dark:bg-surface-900/50"
-            : "",
-      hoverRows:
-        typeof s?.hoverRows === "string"
-          ? (s?.hoverRows as string)
-          : typeof s?.hoverRows === "boolean" && s?.hoverRows
-            ? "hover:bg-surface-100/90 dark:hover:bg-surface-900/50"
-            : "",
-      width: s?.width ? (typeof s?.width === "number" ? `${s?.width}px` : s?.width) : "",
-      height: s?.height ? (typeof s?.height === "number" ? `${s?.height}px` : s?.height) : "",
-      animation: s?.animation ?? "motion-safe:transition-all motion-safe:duration-500",
-      borderRadiusPx: s?.borderRadiusPx ?? (mode.value === "underlined" ? 0 : 7),
-      isStripedRows: s?.isStripedRows ?? false,
-      horizontalLines: s?.horizontalLines ?? true
+      width: width ? (typeof width === "number" ? `${width}px` : width) : "",
+      height: height ? (typeof height === "number" ? `${height}px` : height) : "",
+      stripedRows: props.stripedRows ?? options?.stripedRows ?? false,
+      horizontalLines: props.horizontalLines ?? options?.horizontalLines ?? true,
+      verticalLines: props.verticalLines ?? options?.verticalLines ?? false,
+      filterLines: props.filterLines ?? options?.filterLines ?? false,
+      cellHeight: props.cellHeight ?? options?.cellHeight,
+      borderRadius: props.borderRadius ?? options?.borderRadius ?? (mode.value === "underlined" ? 0 : 7),
+      defaultColumnWidth: props.defaultColumnWidth ?? options?.defaultColumnWidth
     }
   })
-  const defaultBorder = computed(() =>
-    typeof styles.value?.border === "object"
-      ? (styles.value?.border.default ?? "border-surface-200 dark:border-surface-800")
-      : (styles.value?.border ?? "border-surface-200 dark:border-surface-800")
+  // Aspect-ключи (§2 B): `""` отключает, иначе `props ?? options ?? default`.
+  const classAnimation = computed<StyleClass>(() =>
+    pick("animation", "motion-safe:transition-all motion-safe:duration-500")
   )
+  const classRowActive = computed<StyleClass>(() => pick("rowActive", "bg-surface-100/90 dark:bg-surface-900/50"))
+  const classRowHover = computed<StyleClass>(() =>
+    pick("rowHover", "hover:bg-surface-100/90 dark:hover:bg-surface-900/50")
+  )
+  // Общий цвет рамок; региональные ключи падают на него, если не заданы (бывший `styles.border.default`).
+  const defaultBorder = computed<StyleClass>(() => pick("border", "border-surface-200 dark:border-surface-800"))
+  const borderOf = (key: TableClassKey): StyleClass => pick(key, defaultBorder.value)
   const tableBodyStyle = computed<string>(() => {
-    const borderTop = !slots.header
-      ? `border-top-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-top-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
-      : ""
+    const radius = settings.value.borderRadius - 1
+    const borderTop = !slots.header ? `border-top-left-radius: ${radius}px;border-top-right-radius: ${radius}px;` : ""
     const borderBottom = !(isPagination.value || slots.footer)
-      ? `border-bottom-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-bottom-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
+      ? `border-bottom-left-radius: ${radius}px;border-bottom-right-radius: ${radius}px;`
       : ""
     return `${borderTop}${borderBottom}`
   })
@@ -787,20 +799,10 @@
   Table.setStyle("print:hidden")
   Table.setStyle("forced-colors:outline")
   const classBaseTable = computed<StyleClass>(() =>
-    Table.setStyle([
-      "componentTable classBody inline-block align-middle relative w-full p-1.5",
-      styles.value?.animation,
-      styles.value.class?.body,
-      options?.class ?? "",
-      props?.class ?? ""
-    ])
+    cls("root", "componentTable classBody inline-block align-middle relative w-full p-1.5", classAnimation.value)
   )
   const classBaseToolbar = computed(() =>
-    Table.setStyle([
-      "classToolbar toolbar flex mb-2 justify-between items-end",
-      styles.value?.animation,
-      styles.value.class?.toolbar
-    ])
+    cls("toolbar", "classToolbar toolbar flex mb-2 justify-between items-end", classAnimation.value)
   )
   const classSearch = ref(Table.setStyle("ml-1"))
   const classIcon = ref(Table.setStyle("h-5 w-5 text-surface-400 dark:text-surface-600"))
@@ -809,9 +811,7 @@
       "h-4 w-4 text-surface-400 dark:text-surface-600 group-hover:text-red-400 group-hover:dark:text-red-600"
     )
   )
-  const classTableBody = computed(() =>
-    Table.setStyle(["flex flex-col border", defaultBorder.value, styles.value.border?.table])
-  )
+  const classTableBody = computed(() => cls("body", "flex flex-col border", borderOf("borderTable")))
   const classBodySlotHeader = computed(() =>
     Table.setStyle([
       "min-h-[1.5rem] text-surface-500",
@@ -821,74 +821,71 @@
   )
   const styleHeader = computed(
     () =>
-      `border-top-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-top-right-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;`
+      `border-top-left-radius: ${settings.value.borderRadius - 1}px;border-top-right-radius: ${settings.value.borderRadius - 1}px;`
   )
   const classSlotHeader = computed(() =>
-    Table.setStyle([
-      "classSlotHeader p-2 border-b-2",
-      styles.value.class?.slotHeader,
-      defaultBorder.value,
-      styles.value.border?.header
-    ])
+    Table.setStyle(["classSlotHeader p-2 border-b-2", borderOf("borderHeader"), raw("header")])
   )
   const classBaseTableBody = ref(Table.setStyle("relative"))
-  const classBodyTable = computed(() =>
-    Table.setStyle(["classBodyTable overflow-x-auto", styles.value?.animation, styles.value.class?.bodyTable])
-  )
+  const classBodyTable = computed(() => cls("viewport", "classBodyTable overflow-x-auto", classAnimation.value))
   const styleBodyTable = computed(() => [
     tableBodyStyle.value,
     heightTable.value,
-    countVisibleRows.value > 0 ? "" : `min-height: ${baseTableHeight}px;`
+    visibleRows.value > 0 ? "" : `min-height: ${baseTableHeight}px;`
   ])
-  const classTable = computed(() =>
-    Table.setStyle(["classTable min-w-full border-separate border-spacing-0", styles.value.class?.table])
-  )
-  const classTHead = computed(() =>
-    Table.setStyle(["classTHead sticky top-0 z-20", styles.value.class?.thead || modeStyle.value])
-  )
+  const classTable = computed(() => cls("table", "classTable min-w-full border-separate border-spacing-0"))
+  const classTHead = computed(() => cls("thead", "classTHead sticky top-0 z-20", raw("thead") ? "" : modeStyle.value))
   const classHeadTr = computed(() => Table.setStyle("bg-inherit dark:bg-inherit"))
-  const classTh = (column: IColumnPrivate) =>
+  const classTh = (column: TableColumnPrivate) =>
     Table.setStyle([
       column.id,
-      column.class?.th,
       "group/th",
       "bg-inherit dark:bg-inherit",
-      column.isFilter ? "pl-1 pr-0 py-2" : "pl-6 py-5",
+      column.filterable ? "pl-1 pr-0 py-2" : "pl-6 py-5",
       "border-b",
-      defaultBorder.value,
-      styles.value.border?.head
+      borderOf("borderHead"),
+      raw("th"),
+      column.classes?.th
     ])
-  const styleTh = (column: IColumnPrivate) =>
+  const styleTh = (column: TableColumnPrivate) =>
     !widthsColumns[column.dataField]
-      ? (styles.value?.defaultWidthColumn ?? "max-width: 600px;min-width:100px;width:auto")
+      ? (settings.value.defaultColumnWidth ?? "max-width: 600px;min-width:100px;width:auto")
       : `width: ${widthsColumns[column.dataField]}px;min-width: ${widthsColumns[column.dataField]}px;max-width: ${widthsColumns[column.dataField]}px;`
-  const styleThFilter = (column: IColumnPrivate) => {
-    const width = widthsColumns[column.dataField] - ((column?.isSort ?? isSort.value) ? 28 : 18)
+  const styleThFilter = (column: TableColumnPrivate) => {
+    const width = widthsColumns[column.dataField] - ((column?.sortable ?? isSort.value) ? 28 : 18)
     return `width: ${width}px;min-width: ${width}px;max-width: ${width}px;`
   }
   const classBodyFilter = computed(() =>
     Table.setStyle([
       "group relative flex w-full bg-inherit dark:bg-inherit",
-      styles.value.filterLines ? "border-r group-last/th:border-r-0" : "",
-      defaultBorder.value,
-      styles.value.border?.filter
+      settings.value.filterLines ? "border-r group-last/th:border-r-0" : "",
+      borderOf("borderFilter")
     ])
   )
-  const classIsFilter = (column: IColumnPrivate) =>
+  // Hand-off в filter-контрол колонки (dev-patterns §2 G): база Table + `filterProps` потребителя.
+  // До 1.0.0 это были `column.class.colFilterClass` (шёл в `classes.base`) и `colFilterClassBody`
+  // (шёл в `class`) — оба переехали внутрь самого `filterProps`.
+  const filterControlProps = (column: TableColumnPrivate) =>
+    fieldsOmit((column?.filterProps ?? {}) as Record<string, any>, ["class", "classes"])
+  const filterControlClasses = (column: TableColumnPrivate, base: StyleClass = "border-none font-normal") =>
+    mergeClasses({ base }, (column?.filterProps as { classes?: Record<string, StyleClass> })?.classes)
+  const filterControlClass = (column: TableColumnPrivate) =>
+    cn("tm-0 my-1 bg-inherit dark:bg-inherit", (column?.filterProps as { class?: StyleClass })?.class)
+  const classIsFilter = (column: TableColumnPrivate) =>
     Table.setStyle([
       "w-full cursor-pointer bg-inherit dark:bg-inherit",
-      column.class?.colFilter,
-      column.isSort || isSort.value ? "" : "px-1"
+      column.classes?.filter,
+      column.sortable || isSort.value ? "" : "px-1"
     ])
-  const classNotFilter = (column: IColumnPrivate) =>
+  const classNotFilter = (column: TableColumnPrivate) =>
     Table.setStyle([
       "block text-sm font-medium truncate",
       "text-left text-surface-400 dark:text-surface-500",
-      column.class?.colText
+      column.classes?.headerText
     ])
   // Под `unstyled` setStyle сам оставляет `fv` (UA-preflight `button.fv` из baseStyle) — отдельный
   // fallback не нужен (component/index.ts, dev-patterns §2 E).
-  const classIsSort = (column: IColumnPrivate) =>
+  const classIsSort = (column: TableColumnPrivate) =>
     Table.setStyle([
       "flex items-center motion-safe:transition-opacity motion-safe:duration-500 pr-1 cursor-pointer",
       // T2: триггер сортировки доступен с клавиатуры, поэтому у несортированной колонки он обязан
@@ -898,16 +895,16 @@
   const classSortIcon = ref(Table.setStyle("ml-1 h-4 w-4 text-surface-400 dark:text-surface-600"))
   // T2 (a11y): aria-sort отражает live-состояние sortColumns — параллельного state нет.
   // `undefined` убирает атрибут целиком: несортируемая колонка не должна объявляться sortable.
-  const ariaSort = (column: IColumnPrivate): "ascending" | "descending" | "none" | undefined => {
-    if (!(column?.isSort ?? isSort.value)) return undefined
+  const ariaSort = (column: TableColumnPrivate): "ascending" | "descending" | "none" | undefined => {
+    if (!(column?.sortable ?? isSort.value)) return undefined
     const sort = sortColumns?.[column?.dataField]
     return sort === "asc" ? "ascending" : sort === "desc" ? "descending" : "none"
   }
   // T2 (a11y): accessible name триггера берётся из уже существующего caption колонки (он всегда
   // заполнен при нормализации колонок, fallback выводится из dataField). Явно переданный
   // пустой caption добиваем самим dataField — новый locale-key не нужен.
-  const ariaSortLabel = (column: IColumnPrivate): string => String(column?.caption || column?.dataField || "")
-  const classResizedColumns = (column: IColumnPrivate, key: number) =>
+  const ariaSortLabel = (column: TableColumnPrivate): string => String(column?.caption || column?.dataField || "")
+  const classResizedColumns = (column: TableColumnPrivate, key: number) =>
     Table.setStyle([
       // Issue 11 (RTL): pe-2 (padding-inline-end) авто-флипается по dir; inset — физический default
       // (работает без dir-атрибута) + rtl:-override (negative-логический inset движок не поддерживает).
@@ -923,24 +920,21 @@
       mode.value === "underlined" ? "rounded-none" : ""
     ])
   )
-  const classTBody = computed(() => Table.setStyle(["classTBody overflow-y-auto", styles.value.class?.tbody]))
+  const classTBody = computed(() => cls("tbody", "classTBody overflow-y-auto"))
   const classGroup = computed(() =>
-    Table.setStyle([
+    cls(
+      "group",
       "classGroup sticky",
       "border-t-2 border-b",
       "font-medium text-base whitespace-nowrap",
       "text-left text-surface-800 dark:text-surface-300 px-6 py-2 pe-3 ps-10 sm:ps-12",
-      styles.value.class?.group ?? modeStyle.value,
-      defaultBorder.value,
-      styles.value.border?.cell
-    ])
+      raw("group") ? "" : modeStyle.value,
+      borderOf("borderCell")
+    )
   )
   const styleGroup = computed(() => `top:${thead.value?.clientHeight ?? 1 - 1}px`)
   const classGroupText = computed(() =>
-    Table.setStyle([
-      "sticky classGroupText start-10 sm:start-12 flex items-center w-fit min-h-[2.5rem] truncate",
-      styles.value.class?.groupText
-    ])
+    cls("groupText", "sticky classGroupText start-10 sm:start-12 flex items-center w-fit min-h-[2.5rem] truncate")
   )
   const styleGroupText = computed(() => `min-height: ${heightCell.value}px`)
   /**
@@ -953,11 +947,9 @@
   const classTr = (data: Record<string, any>, indexRow: number): string =>
     Table.setStyle([
       `tr--${indexRow} group/tr`,
-      activeRow.value === `${data?._key}-${indexRow}`
-        ? `active-row forced-colors:outline ${styles.value.activeRow}`
-        : "",
-      styles.value.hoverRows ? `${styles.value.hoverRows} motion-safe:transition-colors motion-safe:duration-200` : "",
-      styles.value.isStripedRows
+      activeRow.value === `${data?._key}-${indexRow}` ? `active-row forced-colors:outline ${classRowActive.value}` : "",
+      classRowHover.value ? `${classRowHover.value} motion-safe:transition-colors motion-safe:duration-200` : "",
+      settings.value.stripedRows
         ? mode.value === "filled"
           ? "odd:bg-surface-100 even:bg-surface-50 dark:odd:bg-surface-900 dark:even:bg-surface-950"
           : mode.value === "outlined"
@@ -967,50 +959,48 @@
               : ""
         : ""
     ])
-  const classColumnTd = (_: Record<string, any>, indexRow: number, column: IColumnPrivate, indexCol: number) =>
+  const classColumnTd = (_: Record<string, any>, indexRow: number, column: TableColumnPrivate, indexCol: number) =>
     Table.setStyle([
       "ColumnClassTd",
       `td--${indexRow}--${column?.name ?? indexCol}`,
       "first:border-l-0 group-first/tr:border-t-0 last:border-r-0 group-last/tr:border-b-0",
       "text-sm font-medium",
       "px-4 py-1 text-surface-800 dark:text-surface-300",
-      column.class?.td,
-      styles.value.class?.cellText,
-      defaultBorder.value,
-      styles.value.border?.cell,
-      styles.value.verticalLines ? "border-r" : "border-r-0",
-      styles.value.horizontalLines ? "border-b" : "border-b-0",
+      borderOf("borderCell"),
+      settings.value.verticalLines ? "border-r" : "border-r-0",
+      settings.value.horizontalLines ? "border-b" : "border-b-0",
+      raw("td"),
+      column.classes?.td,
       editableCell.value?.indexRow === indexRow && editableCell.value?.indexCol === indexCol ? "px-1" : ""
     ])
-  const styleColumnTd = (column: IColumnPrivate) =>
+  const styleColumnTd = (column: TableColumnPrivate) =>
     !widthsColumns[column.dataField]
-      ? (styles.value?.defaultWidthColumn ?? "max-width: 600px;min-width:100px;width:auto")
+      ? (settings.value.defaultColumnWidth ?? "max-width: 600px;min-width:100px;width:auto")
       : `width: ${widthsColumns[column.dataField]}px;min-width: ${widthsColumns[column.dataField]}px;max-width: ${widthsColumns[column.dataField]}px;`
-  const classCellTable = (indexRow: number, column: IColumnPrivate, indexCol: number) =>
+  const classCellTable = (indexRow: number, column: TableColumnPrivate, indexCol: number) =>
     Table.setStyle([
       "flex items-center whitespace-pre-line overflow-auto",
-      column.class?.cellText,
+      raw("cell"),
+      column.classes?.cellText,
       editableCell.value?.indexRow === indexRow && editableCell.value?.indexCol === indexCol ? "overflow-visible" : ""
     ])
   const styleCellTable = computed(() => `min-height: ${heightCell.value}px;max-height: ${heightCell.value * 5 + 2}px;`)
-  const classTemplate = (column: IColumnPrivate) =>
-    Table.setStyle(["flex items-center whitespace-pre-line overflow-auto", column.class?.cellText])
+  const classTemplate = (column: TableColumnPrivate) =>
+    Table.setStyle(["flex items-center whitespace-pre-line overflow-auto", raw("cell"), column.classes?.cellText])
   const classFooterPaddingHeight = ref(Table.setStyle("border-none"))
   const styleFooterPaddingHeight = computed(() => `height: ${footerPaddingHeight.value - 1}px`)
-  const classTFoot = computed(() =>
-    Table.setStyle(["classTFoot sticky bottom-0", styles.value.class?.tfoot ?? modeStyle.value])
-  )
-  const classThSummary = (column: IColumnPrivate) =>
-    Table.setStyle(["px-3 py-3", column.class?.tf, "border-t", defaultBorder.value, styles.value.border?.summary])
-  const classThSummaryText = (column: IColumnPrivate) =>
+  const classTFoot = computed(() => cls("tfoot", "classTFoot sticky bottom-0", raw("tfoot") ? "" : modeStyle.value))
+  const classThSummary = (column: TableColumnPrivate) =>
+    Table.setStyle(["px-3 py-3", "border-t", borderOf("borderSummary"), column.classes?.summary])
+  const classThSummaryText = (column: TableColumnPrivate) =>
     Table.setStyle([
       "block font-normal text-sm text-left text-surface-400 dark:text-surface-500 truncate",
-      column.class?.sumText
+      column.classes?.summaryText
     ])
   const classIsPagination = computed(() => Table.setStyle([isSummary.value ? "relative sm:px-5" : "", modeStyle.value]))
   const styleIsPagination = computed(() =>
     !slots.footer
-      ? `border-bottom-left-radius: ${(styles.value?.borderRadiusPx ?? 1) - 1}px;border-bottom-right-radius: ${(styles.value.borderRadiusPx ?? 1) - 1}px;`
+      ? `border-bottom-left-radius: ${settings.value.borderRadius - 1}px;border-bottom-right-radius: ${settings.value.borderRadius - 1}px;`
       : ""
   )
   const classIsLoading = ref(
@@ -1035,15 +1025,10 @@
   )
   const styleSlotFooterBody = computed(
     () =>
-      `border-bottom-left-radius: ${styles.value.borderRadiusPx}px;border-bottom-right-radius: ${styles.value.borderRadiusPx}px;`
+      `border-bottom-left-radius: ${settings.value.borderRadius}px;border-bottom-right-radius: ${settings.value.borderRadius}px;`
   )
   const classSlotFooter = computed(() =>
-    Table.setStyle([
-      "classSlotFooter p-2 border-t-2",
-      styles.value.class?.slotFooter,
-      defaultBorder.value,
-      styles.value.border?.footer
-    ])
+    Table.setStyle(["classSlotFooter p-2 border-t-2", borderOf("borderFooter"), raw("footer")])
   )
   // ---TABLE_OBSERVER----------------------
   let tableObserver: ResizeObserver
@@ -1131,13 +1116,13 @@
     isFilterClear,
     isColumns,
     isSummary,
-    countDataOnLoading,
-    classMaskQuery,
-    noData,
-    noColumn,
-    noFilter,
+    loadingThreshold,
+    classMark,
+    emptyText,
+    emptyColumnsText,
+    emptyFilterText,
     iconSort,
-    resizedColumns,
+    resizableColumns,
     isEditCells,
     lengthData,
     groupField,
@@ -1148,7 +1133,7 @@
     // ---PAGINATION--------------------------
     startPage,
     modePagination,
-    sizePage,
+    pageSize,
     visibleNumberPages,
     sizesSelector,
     isInfoText,
@@ -1156,7 +1141,7 @@
     isNavigationButtons,
     // ---CELL--------------------------------
     heightCell,
-    countVisibleRows,
+    visibleRows,
     heightTable,
     // ---DATA--------------------------------
     dataSource,
@@ -1165,7 +1150,7 @@
     dataSummary,
     summaryColumns,
     // ---STYLE-------------------------------
-    styles,
+    settings,
     tableBodyStyle,
     modeStyle,
     isDark,
@@ -1181,7 +1166,7 @@
     filtering,
     searching,
     switchPage,
-    switchSizePage,
+    switchPageSize,
     clearFilter,
     startLoading,
     stopLoading,
@@ -1231,7 +1216,7 @@
     }, 10)
 
     if (isAsyncDataUrl.value) loadDataFromUrl()
-    // Function mode: initial load triggered by sizePage/startPage immediate watchers
+    // Function mode: initial load triggered by pageSize/startPage immediate watchers
   })
   onUnmounted(() => {
     if (isClient()) {
@@ -1253,10 +1238,10 @@
   // Emits still fire so that tests/external listeners see the initial sort/filter state.
   let suppressLoadFromFunctionInWatchers = false
   watch(
-    () => [countVisibleRows.value, styles.value.height],
+    () => [visibleRows.value, settings.value.height],
     (value, oldValue) => {
       clientHeightTable.value = 0
-      const timeout: number = value[0] === oldValue[0] && styles.value?.hoverRows !== "transition-none" ? 500 : 1
+      const timeout: number = value[0] === oldValue[0] && classRowHover.value !== "transition-none" ? 500 : 1
       setTimeout(() => updateHeightTable(), timeout)
     }
   )
@@ -1303,25 +1288,25 @@
     }
   )
   watch(startPage, (numberPage: number) => setTimeout(() => switchPage(numberPage), 1), { immediate: true })
-  watch(sizePage, (sizePageValue: number) => switchSizePage(sizePageValue ?? sizePage.value), { immediate: true })
+  watch(pageSize, (sizePageValue: number) => switchPageSize(sizePageValue ?? pageSize.value), { immediate: true })
 
   // ---METHODS-----------------------------
   function getHeightVisibleRows(): number {
-    if (countVisibleRows.value && tbody.value && componentTable.value) {
+    if (visibleRows.value && tbody.value && componentTable.value) {
       const tagTrs: NodeListOf<HTMLTableRowElement> | undefined = (tbody.value as HTMLElement)?.querySelectorAll(
-        `tr:nth-child(-n+${countVisibleRows.value ?? 1})`
+        `tr:nth-child(-n+${visibleRows.value ?? 1})`
       )
       if (tagTrs && tagTrs.length) {
         let sum = 0
         tagTrs.forEach((item) => (sum += item?.offsetHeight ?? 0))
         return sum
-      } else return countVisibleRows.value * (4 * 2 + heightCell.value + 1)
+      } else return visibleRows.value * (4 * 2 + heightCell.value + 1)
     }
     return 0
   }
 
   function updateHeightTable(): void {
-    if (styles.value.height) {
+    if (settings.value.height) {
       function getHeight(el: HTMLElement | undefined): number {
         let height = 0
         if (el)
@@ -1348,7 +1333,7 @@
         (getHeight(tableFooter.value) ?? 0)
       clientHeightTable.value = height >= 0 ? height : 0
       heightTable.value = `height:${height >= 0 ? height : 0}px;`
-    } else if (countVisibleRows.value) {
+    } else if (visibleRows.value) {
       const resultHeight = (thead.value?.clientHeight ?? 0) + (tfoot.value?.clientHeight ?? 0) + getHeightVisibleRows()
       clientHeightTable.value = resultHeight > 0 ? resultHeight : baseTableHeight
       heightTable.value = `height: ${resultHeight > 0 ? resultHeight : baseTableHeight}px;`
@@ -1358,7 +1343,7 @@
     }
   }
 
-  function getColumn(dataField: IColumn["dataField"], index?: number): IColumnPrivate | undefined {
+  function getColumn(dataField: TableColumn["dataField"], index?: number): TableColumnPrivate | undefined {
     return dataColumns.value.find((column, item) => (dataField ? column.dataField === dataField : item === index))
   }
 
@@ -1400,7 +1385,7 @@
     return data ?? []
   }
 
-  function sorting(dataField: IColumn["dataField"], value?: Sort) {
+  function sorting(dataField: TableColumn["dataField"], value?: Sort) {
     if (!dataField) {
       return
     }
@@ -1414,7 +1399,7 @@
               ? null
               : null
     }
-    const timeout = lengthData.value > countDataOnLoading.value ? 800 : 10
+    const timeout = lengthData.value > loadingThreshold.value ? 800 : 10
     if (timeout > 100) {
       startLoading()
     }
@@ -1424,15 +1409,15 @@
     }, timeout)
   }
 
-  function filtering(dataField: IColumn["dataField"], value: any) {
+  function filtering(dataField: TableColumn["dataField"], value: any) {
     if (!dataField) return
     const isLoading =
       typeof value === "object" || typeof value === "number"
         ? true
         : (filterColumns[dataField] as string | Array<any>)?.length > (value as string | Array<any>)?.length
     const timeout =
-      (allData.value?.length ?? 0) > countDataOnLoading.value
-        ? (lengthData.value > countDataOnLoading.value || value === null || value === "" || isLoading) &&
+      (allData.value?.length ?? 0) > loadingThreshold.value
+        ? (lengthData.value > loadingThreshold.value || value === null || value === "" || isLoading) &&
           filterColumns[dataField] !== value
           ? 800
           : 0
@@ -1449,8 +1434,8 @@
   function searching(value: Search | null) {
     const isLoading = queryTable.value?.length > (value?.length ?? 0)
     const timeout =
-      (allData.value?.length ?? 0) > countDataOnLoading.value
-        ? lengthData.value > countDataOnLoading.value || value === null || value === "" || isLoading
+      (allData.value?.length ?? 0) > loadingThreshold.value
+        ? lengthData.value > loadingThreshold.value || value === null || value === "" || isLoading
           ? 800
           : 0
         : 0
@@ -1473,16 +1458,16 @@
     }
   }
 
-  function switchSizePage(sizePage: Page | undefined) {
-    sizeTable.value = sizePage ?? 5
+  function switchPageSize(pageSize: Page | undefined) {
+    sizeTable.value = pageSize ?? 5
     switchPage(1)
-    emit("switch-size-page", sizeTable.value)
+    emit("switch-page-size", sizeTable.value)
     if (isAsyncDataFunction.value) {
       loadDataFromFunction()
     }
   }
 
-  function isEqualsValue(column: IColumnPrivate, columnValue: any, value: any): boolean {
+  function isEqualsValue(column: TableColumnPrivate, columnValue: any, value: any): boolean {
     if (columnValue === null || columnValue === undefined) return false
     switch (column.type) {
       case "string":
@@ -1513,7 +1498,7 @@
     }
   }
 
-  function setSummary(summary: ISummaryPrivate): string {
+  function setSummary(summary: TableSummaryPrivate): string {
     let result: number | string | null | undefined = null
     const columnData: Array<any> = LD.map(dataSource.value, summary.dataField ?? "")
     switch (summary.type) {
@@ -1567,21 +1552,21 @@
     else return String(summary?.displayFormat).replace(/\{0}/g, `${result}`)
   }
 
-  function setCell(column: IColumnPrivate, value: any, data?: any): string {
+  function setCell(column: TableColumnPrivate, value: any, data?: any): string {
     function toMask() {
       if (column?.mask === "phone") return convertToPhone(String(value))
       else if (column?.mask === "number")
         return convertToNumber(
           value,
-          (column.paramsFilter as Partial<BaseInputProps>)?.lengthInteger ?? 20,
-          (column.paramsFilter as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
+          (column.filterProps as Partial<BaseInputProps>)?.lengthInteger ?? 20,
+          (column.filterProps as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
           ""
         )
       else if (column?.mask === "price")
         return convertToNumber(
           value,
-          (column.paramsFilter as Partial<BaseInputProps>)?.lengthInteger ?? 20,
-          (column.paramsFilter as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
+          (column.filterProps as Partial<BaseInputProps>)?.lengthInteger ?? 20,
+          (column.filterProps as Partial<BaseInputProps>)?.lengthDecimal ?? 0,
           " "
         )
       else return String(value)
@@ -1603,7 +1588,7 @@
           valueCell = toMask()
           break
         case "date":
-          valueCell = formatDate(value, (column as EditDate).editorOptions?.datePickerProps?.mask)
+          valueCell = formatDate(value, (column as EditDate).editorProps?.datePickerProps?.mask)
           break
         default:
           valueCell = value
@@ -1612,11 +1597,11 @@
     return valueCell
   }
 
-  function setMarker(column: IColumnPrivate, valueCell: any): string {
+  function setMarker(column: TableColumnPrivate, valueCell: any): string {
     if (valueCell && (filterColumns[column.dataField] || queryTable.value.length))
       valueCell = valueCell.replace(
         new RegExp(escapeRegExp(String(filterColumns[column.dataField] ?? queryTable.value)), "gi"),
-        `<span class="${classMaskQuery.value}">$&</span>`
+        `<span class="${classMark.value}">$&</span>`
       )
     return valueCell
   }
@@ -1628,7 +1613,7 @@
 
   // Безопасный аналог setMarker: разбивает значение ячейки на текстовые части, отмечая
   // совпадения с query/filter. Рендерится через <mark> + text-node (без v-html) — нет XSS.
-  function markerParts(column: IColumnPrivate, valueCell: any): Array<{ text: string; mark: boolean }> {
+  function markerParts(column: TableColumnPrivate, valueCell: any): Array<{ text: string; mark: boolean }> {
     const text = valueCell === null || valueCell === undefined ? "" : String(valueCell)
     const rawQuery = filterColumns[column.dataField] ?? queryTable.value
     const query = typeof rawQuery === "string" ? rawQuery : ""
@@ -1717,14 +1702,14 @@
 
   function clickCell(
     key: string,
-    column: IColumnPrivate,
+    column: TableColumnPrivate,
     value: any,
     valueWithMarker: any,
     data: any,
     indexRow: number,
     indexCol: number
   ) {
-    if (column.isEdit) editableCell.value = { indexRow, indexCol }
+    if (column.hasEditor) editableCell.value = { indexRow, indexCol }
     if (typeof column.onClick === "function") column.onClick(column, data, indexRow)
     emit("click-cell", {
       eventEl: ((tbody.value as HTMLElement)?.querySelector(`.${key}`) as HTMLElement) ?? null,
@@ -1772,7 +1757,7 @@
     return null
   }
 
-  function updateCell(_key?: string, column?: IColumnPrivate, value?: any): any | null {
+  function updateCell(_key?: string, column?: TableColumnPrivate, value?: any): any | null {
     if (_key && Array.isArray(allData.value) && column && column?.dataField) {
       const index = allData.value?.findIndex((i) => i._key === _key)
       if (index >= 0 && column.dataField in allData.value[index]) {
@@ -1786,11 +1771,11 @@
   }
 
   function startLastRowVisibleObserver() {
-    if (tbody.value && countVisibleRows.value > 0) {
+    if (tbody.value && visibleRows.value > 0) {
       const el = (tbody.value as HTMLElement)?.querySelector(rowSelector)
       if (el) lastRowVisibleObserver.unobserve(el)
       sizeLoadedRows.value =
-        countVisibleRows.value + sizeLoadedRows.value > dataSource.value?.length
+        visibleRows.value + sizeLoadedRows.value > dataSource.value?.length
           ? (dataSource.value?.length ?? sizeLoadedRows.value)
           : sizeLoadedRows.value
       nextTick(() => {
@@ -1806,7 +1791,7 @@
     if (!tbody.value) return
     const el = (tbody.value as HTMLElement)?.querySelector(rowSelector)
     if (el) lastRowVisibleObserver.unobserve(el)
-    sizeLoadedRows.value += sizeLoadingRows.value
+    sizeLoadedRows.value += loadingRows.value
     nextTick(() => {
       if (!tbody.value) return
       if (sizeLoadedRows.value >= dataSource.value?.length) return
@@ -1830,7 +1815,7 @@
   function resizeColumn($event: MouseEvent, columnId: string) {
     const columnEl = (thead.value as HTMLElement)?.querySelector(`.${columnId}`)
     if (columnEl) {
-      const column = <IColumnPrivate>dataColumns.value.find((item) => item.id === columnId)
+      const column = <TableColumnPrivate>dataColumns.value.find((item) => item.id === columnId)
       const rect = columnEl.getBoundingClientRect()
       // Issue 11 (RTL): resize-handle живёт на trailing-крае колонки. В RTL trailing = левый край,
       // поэтому ширину считаем от ПРАВОГО края (rect.right - pageX), а не от левого.
@@ -1848,7 +1833,7 @@
     resizeColumn(ev, resizableColumn.value ?? "")
   }
 
-  function startResizeColumn($event: MouseEvent, column: IColumnPrivate["id"]) {
+  function startResizeColumn($event: MouseEvent, column: TableColumnPrivate["id"]) {
     if ($event.stopPropagation) $event.stopPropagation()
     if ($event.preventDefault) $event.preventDefault()
     resizableColumn.value = column
@@ -1922,7 +1907,7 @@
 
     startLoading()
     try {
-      const params: IAsyncDataParams = {
+      const params: TableAsyncDataParams = {
         filters: getFilters(filterColumns),
         sort: getSorted(sortColumns),
         search: queryTable.value,
@@ -1932,11 +1917,11 @@
         }
       }
 
-      const result = await (asyncData.value as (params: IAsyncDataParams) => Promise<IAsyncDataResult>)(params)
+      const result = await (asyncData.value as (params: TableAsyncDataParams) => Promise<TableAsyncDataResult>)(params)
 
       if (result && Array.isArray(result.dataSource)) {
         allData.value = result.dataSource.map((item) => ({ ...item, _key: generateUUID() }))
-        totalCountAsync.value = typeof (result.totalCount as unknown) === "number" ? result.totalCount : undefined
+        totalCountAsync.value = typeof (result.total as unknown) === "number" ? result.total : undefined
         updateDataSource()
       } else {
         allData.value = []
@@ -1956,11 +1941,11 @@
 
 <template>
   <div
-    data-table-component
+    data-table
     ref="componentTable"
     tabindex="-1"
     :class="classBaseTable"
-    :style="`width:${styles.width};height:${styles.height};`">
+    :style="`width:${settings.width};height:${settings.height};`">
     <div data-table-aria-live class="sr-only" aria-live="polite" aria-atomic="true">{{ ariaResultsLabel }}</div>
     <div v-if="isVisibleToolbar" data-table-toolbar ref="tableToolbar" :class="classBaseToolbar">
       <slot v-if="slots.toolbar" data-table-toolbar-slot name="toolbar" />
@@ -2001,15 +1986,15 @@
         </Button>
       </transition>
     </div>
-    <div data-table-body :class="classTableBody" :style="`border-radius: ${styles.borderRadiusPx}px;`">
-      <div v-if="slots.header" data-table-header ref="tableHeader" :class="classBodySlotHeader" :style="styleHeader">
-        <div data-table-header-slot :class="classSlotHeader">
+    <div data-table-body :class="classTableBody" :style="`border-radius: ${settings.borderRadius}px;`">
+      <div v-if="slots.header" ref="tableHeader" :class="classBodySlotHeader" :style="styleHeader">
+        <div data-table-header :class="classSlotHeader">
           <slot name="header" />
         </div>
       </div>
       <div data-table-body-base :class="classBaseTableBody">
-        <div ref="tableBody" data-table-scroll :class="classBodyTable" :style="styleBodyTable">
-          <table data-table ref="table" :class="classTable" :aria-rowcount="isVirtual ? lengthData : undefined">
+        <div ref="tableBody" data-table-viewport :class="classBodyTable" :style="styleBodyTable">
+          <table data-table-element ref="table" :class="classTable" :aria-rowcount="isVirtual ? lengthData : undefined">
             <caption v-if="caption || slots.caption" data-table-caption class="sr-only">
               <slot name="caption">{{ caption }}</slot>
             </caption>
@@ -2022,9 +2007,9 @@
                   data-table-thead-group-col
                   scope="colgroup"
                   :colspan="g.span"
-                  :class="classTh({ class: { th: g.class } } as IColumnPrivate)">
+                  :class="classTh({ classes: { th: g.class } } as TableColumnPrivate)">
                   <div :class="classBodyFilter">
-                    <div :class="classNotFilter({} as IColumnPrivate)">{{ g.caption }}</div>
+                    <div :class="classNotFilter({} as TableColumnPrivate)">{{ g.caption }}</div>
                   </div>
                 </th>
               </tr>
@@ -2038,16 +2023,16 @@
                     :class="classTh(column)"
                     :style="styleTh(column)">
                     <div :class="classBodyFilter">
-                      <div v-if="column.isFilter" data-table-thead-col-filter :class="classIsFilter(column)">
+                      <div v-if="column.filterable" data-table-thead-col-filter :class="classIsFilter(column)">
                         <RenderColumnSlot v-if="column._filterSlot" :render="column._filterSlot" :args="{ column }" />
                         <Input
                           v-else-if="column.type === 'string' || column.type === 'number'"
                           :model-value="filterColumns[column?.dataField]"
-                          v-bind="column?.paramsFilter as BaseInputProps"
+                          v-bind="filterControlProps(column)"
                           :label="column.caption"
                           :mode="mode"
-                          :classes="{ base: ['border-none font-normal', column.class?.colFilterClass as string] }"
-                          :class="['tm-0 my-1 bg-inherit dark:bg-inherit', column.class?.colFilterClassBody as string]"
+                          :classes="filterControlClasses(column)"
+                          :class="filterControlClass(column)"
                           :style="`min-width: ${column.minWidth || 70}px;${styleThFilter(column)}`"
                           label-mode="offsetDynamic"
                           clearable
@@ -2058,21 +2043,16 @@
                           v-else-if="column.type === 'select'"
                           :model-value="filterColumns[column?.dataField]"
                           v-bind="{
-                            ...(column?.paramsFilter as BaseSelectProps),
+                            ...filterControlProps(column),
                             fixWindowProps: {
                               scrollableEl: tableBody,
-                              ...(column?.paramsFilter as Partial<BaseSelectProps>)?.fixWindowProps
+                              ...(column?.filterProps as Partial<BaseSelectProps>)?.fixWindowProps
                             }
                           }"
                           :label="column.caption"
                           :mode="mode"
-                          :classes="{
-                            ...((
-                              column?.paramsFilter as Partial<BaseSelectProps> & { classes?: Record<string, string> }
-                            )?.classes ?? {}),
-                            base: ['border-none font-normal', column.class?.colFilterClass as string]
-                          }"
-                          :class="['tm-0 my-1 bg-inherit dark:bg-inherit', column.class?.colFilterClassBody as string]"
+                          :classes="filterControlClasses(column)"
+                          :class="filterControlClass(column)"
                           :style="`min-width: ${column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
                           clearable
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
@@ -2080,17 +2060,17 @@
                           v-else-if="column.type === 'date'"
                           :model-value="filterColumns[column?.dataField]"
                           v-bind="{
-                            ...(column?.paramsFilter as BaseCalendarProps),
+                            ...filterControlProps(column),
                             fixWindowProps: {
                               scrollableEl: tableBody,
-                              ...(column?.paramsFilter as Partial<BaseCalendarProps>)?.fixWindowProps
+                              ...(column?.filterProps as Partial<BaseCalendarProps>)?.fixWindowProps
                             }
                           }"
                           :label="column.caption"
                           :mode="mode"
                           label-mode="offsetDynamic"
-                          :classes="{ base: ['border-none font-normal', column.class?.colFilterClass as string] }"
-                          :class="['tm-0 my-1 bg-inherit dark:bg-inherit', column.class?.colFilterClassBody as string]"
+                          :classes="filterControlClasses(column)"
+                          :class="filterControlClass(column)"
                           :style="`min-width: ${widthsColumns[column.dataField] ? widthsColumns[column.dataField] - 30 : column.width || column.minWidth || 50}px;${styleThFilter(column)}`"
                           clearable
                           @update:model-value="(v) => filtering(column?.dataField, v)" />
@@ -2108,7 +2088,7 @@
                         браузер сам генерирует по Enter/Space, — иначе sorting() отработал бы дважды.
                       -->
                       <button
-                        v-if="column.isSort ?? isSort"
+                        v-if="column.sortable ?? isSort"
                         type="button"
                         data-table-thead-col-sort
                         :class="classIsSort(column)"
@@ -2130,7 +2110,7 @@
                           :class="classSortIcon" />
                       </button>
                       <div
-                        v-if="column.isResized ?? resizedColumns"
+                        v-if="column.resizable ?? resizableColumns"
                         data-table-thead-col-resized
                         :class="classResizedColumns(column, key)"
                         @mousedown="startResizeColumn($event, column.id)"
@@ -2220,7 +2200,7 @@
                                 setCell(column, data[column.dataField], data)
                               )"
                               :key="partIndex"
-                              ><mark v-if="part.mark" :class="classMaskQuery">{{ part.text }}</mark
+                              ><mark v-if="part.mark" :class="classMark">{{ part.text }}</mark
                               ><template v-else>{{ part.text }}</template></template
                             >
                           </div>
@@ -2230,12 +2210,12 @@
                               v-if="column.type === 'string' || column.type === 'number'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditInput)?.editorOptions,
+                                ...(column.editable as EditInput)?.editorProps,
                                 classes: {
-                                  ...((column.edit as EditInput)?.editorOptions?.classes ?? {}),
+                                  ...((column.editable as EditInput)?.editorProps?.classes ?? {}),
                                   base: 'border-none font-normal bg-transparent dark:bg-transparent',
-                                  control: `pt-[3px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                    (column.edit as EditInput)?.editorOptions?.classes?.control ?? ''
+                                  control: `pt-[3px] pl-[2px] text-sm font-medium ${classes?.cell ?? ''} ${
+                                    (column.editable as EditInput)?.editorProps?.classes?.control ?? ''
                                   }`
                                 }
                               }"
@@ -2248,16 +2228,16 @@
                               v-else-if="column.type === 'select'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditSelect)?.editorOptions,
+                                ...(column.editable as EditSelect)?.editorProps,
                                 fixWindowProps: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditSelect)?.editorOptions?.fixWindowProps
+                                  ...(column.editable as EditSelect)?.editorProps?.fixWindowProps
                                 },
                                 classes: {
-                                  ...((column.edit as EditSelect)?.editorOptions?.classes ?? {}),
+                                  ...((column.editable as EditSelect)?.editorProps?.classes ?? {}),
                                   base: 'border-none font-normal bg-transparent dark:bg-transparent',
-                                  control: `pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                    (column.edit as EditSelect)?.editorOptions?.classes?.control ?? ''
+                                  control: `pl-[2px] text-sm font-medium ${classes?.cell ?? ''} ${
+                                    (column.editable as EditSelect)?.editorProps?.classes?.control ?? ''
                                   }`
                                 }
                               }"
@@ -2274,16 +2254,16 @@
                               v-else-if="column.type === 'date'"
                               :model-value="data[column.dataField]"
                               v-bind="{
-                                ...(column.edit as EditDate)?.editorOptions,
+                                ...(column.editable as EditDate)?.editorProps,
                                 fixWindowProps: {
                                   scrollableEl: tableBody,
-                                  ...(column.edit as EditDate)?.editorOptions?.fixWindowProps
+                                  ...(column.editable as EditDate)?.editorProps?.fixWindowProps
                                 },
                                 classes: {
-                                  ...((column.edit as EditDate)?.editorOptions?.classes ?? {}),
+                                  ...((column.editable as EditDate)?.editorProps?.classes ?? {}),
                                   base: 'border-none font-normal bg-transparent dark:bg-transparent',
-                                  text: `pt-[6px] pl-[2px] text-sm font-medium ${styles.class?.cellText ?? ''} ${
-                                    (column.edit as EditDate)?.editorOptions?.classes?.text ?? ''
+                                  text: `pt-[6px] pl-[2px] text-sm font-medium ${classes?.cell ?? ''} ${
+                                    (column.editable as EditDate)?.editorProps?.classes?.text ?? ''
                                   }`
                                 }
                               }"
@@ -2367,13 +2347,13 @@
             :class="[
               'classPagination border-t sm:px-2',
               ((pagination as TablePagination)?.class as string) ?? '',
-              styles.class?.pagination as string,
+              raw('pagination'),
               defaultBorder as string,
-              styles.border?.pagination as string
+              borderOf('borderPagination') as string
             ]"
             :style="styleIsPagination"
             @update:model-value="switchPage"
-            @update:page-size="switchSizePage" />
+            @update:page-size="switchPageSize" />
         </div>
         <!-- -------------------------------- -->
         <transition
@@ -2404,7 +2384,7 @@
           <div v-if="!isLoading && !allData?.length" data-table-no-data :class="classNoData">
             <TableCellsIcon aria-hidden="true" :class="classIcon" />
             <div>
-              <slot name="empty">{{ noData }}</slot>
+              <slot name="empty">{{ emptyText }}</slot>
             </div>
           </div>
         </transition>
@@ -2418,7 +2398,7 @@
           <div v-if="!isLoading && allData?.length && !dataColumns?.length" data-table-no-column :class="classNoData">
             <ViewColumnsIcon aria-hidden="true" :class="classIcon" />
             <div>
-              <slot name="empty-columns">{{ noColumn }}</slot>
+              <slot name="empty-columns">{{ emptyColumnsText }}</slot>
             </div>
           </div>
         </transition>
@@ -2435,18 +2415,13 @@
             :class="classNoData">
             <FunnelIcon aria-hidden="true" :class="classIcon" />
             <div>
-              <slot name="empty-filter">{{ noFilter }}</slot>
+              <slot name="empty-filter">{{ emptyFilterText }}</slot>
             </div>
           </div>
         </transition>
       </div>
-      <div
-        v-if="slots.footer"
-        data-table-footer
-        ref="tableFooter"
-        :class="classSlotFooterBody"
-        :style="styleSlotFooterBody">
-        <div :class="classSlotFooter">
+      <div v-if="slots.footer" ref="tableFooter" :class="classSlotFooterBody" :style="styleSlotFooterBody">
+        <div data-table-footer :class="classSlotFooter">
           <slot name="footer" />
         </div>
       </div>

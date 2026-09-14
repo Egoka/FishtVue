@@ -1,7 +1,7 @@
 ---
 title: Table
 summary: Полнофункциональная таблица: sort/filter/group/search/pagination, edit, summary, asyncData (4 режима).
-updated: 2026-06-19
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -49,14 +49,14 @@ lib/table/
   1. `dataSource` (или результат asyncData) → `allData`.
   2. На client-side применяются: `filterColumns`, `sortColumns`, `queryTable`, `pageTable`/`sizeTable`. (При `asyncData: true` — отключено, обработка на стороне пользователя через events.)
   3. Результат — `resultData`-payload, эмитится events `result-data`.
-  4. `dataSource` рендерится с поддержкой `IColumn[]` определения колонок (auto-detect если опущено или `true`).
+  4. `dataSource` рендерится с поддержкой `TableColumn[]` определения колонок (auto-detect если опущено или `true`).
 - **AsyncData (4 режима):**
   - `true` — async-mode, client-side processing выключен; пользователь сам обрабатывает sort/filter/search/pagination через events и обновляет `dataSource`.
   - `string` — URL для одноразового fetch на mount. Все client-side фичи активны.
-  - `IAsyncDataConfig` — `{ url, headers?, query? }` — то же, с доп. опциями fetch.
-  - `(params: IAsyncDataParams) => Promise<IAsyncDataResult>` — function mode: callback вызывается на mount + при изменении filters/sort/search/pagination. Возвращает `{ dataSource, totalCount }`.
+  - `TableAsyncDataConfig` — `{ url, headers?, query? }` — то же, с доп. опциями fetch.
+  - `(params: TableAsyncDataParams) => Promise<TableAsyncDataResult>` — function mode: callback вызывается на mount + при изменении filters/sort/search/pagination. Возвращает `{ dataSource, total }`.
 - **Virtualization:** большие client-side таблицы по умолчанию рендерят только видимое окно строк (auto при `> threshold`); выключается `:virtual="false"`. См. §10.5.
-- **Стили:** через `Table.setStyle()` для контейнера; кастомизация — через `styles: ITableStyles`.
+- **Стили:** через `Table.resolveClasses<TableClassKey>(props)` — `cls(key, …)` для собственных элементов, `pick(key, default)` для aspect-ключей. Bag `styles` растворён: классы → `classes`, остальное → top-level props (§5).
 - **Конфиг:** `componentsOptions.Table` — см. §10.
 - **Локализация:** `Table.t()` для default messages (`noData`, `noColumn`, `noDataForQuery`, `clearAllFilters`, `find`, `of`, `items`).
 - **SSR:** SSR-safe в client-side mode; для asyncData function mode на сервере — нужен fallback `dataSource`.
@@ -84,34 +84,76 @@ lib/table/
 
 ## 5. Props
 
-`TableProps` ([Table.d.ts:688–860](../../lib/table/Table.d.ts#L688-L860)):
+`TableProps` ([Table.d.ts:519–744](../../lib/table/Table.d.ts#L519-L744)):
 
 | Prop                  | Type                                                                            | Default  | Description                                                                                                                                                      |
 | --------------------- | ------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mode`                | `StyleMode`                                                                     | —        | Визуальный режим.                                                                                                                                                |
 | `dataSource`          | `MaybeRef<Array<any>>`                                                          | —        | Массив строк. Может быть ref или константой.                                                                                                                     |
-| `toolbar`             | `MaybeRef<IToolbar \| boolean>`                                                 | —        | Конфиг toolbar или `true/false`.                                                                                                                                 |
-| `edit`                | `boolean`                                                                       | `false`  | Inline-редактирование.                                                                                                                                           |
-| `sort`                | `MaybeRef<ISort \| boolean>`                                                    | —        | Sort-конфиг.                                                                                                                                                     |
-| `filter`              | `MaybeRef<IFilter \| boolean>`                                                  | —        | Filter-конфиг.                                                                                                                                                   |
-| `grouping`            | `MaybeRef<IGrouping \| string>`                                                 | —        | Группировка по полю.                                                                                                                                             |
-| `resizedColumns`      | `boolean`                                                                       | —        | Resize колонок.                                                                                                                                                  |
+| `toolbar`             | `MaybeRef<TableToolbar \| boolean>`                                             | —        | Конфиг toolbar или `true/false`.                                                                                                                                 |
+| `editable`            | `boolean`                                                                       | `false`  | Inline-редактирование. Бывший `edit`.                                                                                                                            |
+| `sort`                | `MaybeRef<TableSort \| boolean>`                                                | —        | Sort-конфиг.                                                                                                                                                     |
+| `filter`              | `MaybeRef<TableFilter \| boolean>`                                              | —        | Filter-конфиг.                                                                                                                                                   |
+| `grouping`            | `MaybeRef<TableGrouping \| string>`                                             | —        | Группировка по полю.                                                                                                                                             |
+| `resizableColumns`    | `boolean`                                                                       | `false`  | Resize колонок. Бывший `resizedColumns`.                                                                                                                         |
 | `pagination`          | `MaybeRef<TablePagination \| boolean>`                                          | —        | Pagination-конфиг.                                                                                                                                               |
-| `search`              | `boolean`                                                                       | —        | Поиск во всех колонках.                                                                                                                                          |
-| `columns`             | `MaybeRef<boolean \| Array<IColumn>>`                                           | auto     | Конфиг колонок.                                                                                                                                                  |
-| `summary`             | `MaybeRef<boolean \| Array<ISummary>>`                                          | —        | Summary rows (sum/min/max/avg/count).                                                                                                                            |
-| `countVisibleRows`    | `number`                                                                        | —        | Лимит видимых строк.                                                                                                                                             |
-| `sizeLoadingRows`     | `number`                                                                        | —        | Сколько skeleton-строк показывать.                                                                                                                               |
-| `noData` / `noColumn` | `string`                                                                        | (locale) | Сообщения пустых состояний (рендерятся как текст; HTML — через slot `empty`/`empty-columns`).                                                                    |
+| `searchable`          | `boolean`                                                                       | `false`  | Поиск во всех колонках. Бывший `search`.                                                                                                                          |
+| `columns`             | `MaybeRef<boolean \| Array<TableColumn>>`                                       | auto     | Конфиг колонок.                                                                                                                                                  |
+| `summary`             | `MaybeRef<boolean \| Array<TableSummary>>`                                      | —        | Summary rows (sum/min/max/avg/count).                                                                                                                            |
+| `visibleRows`         | `number`                                                                        | `0`      | Лимит видимых строк. Бывший `countVisibleRows`.                                                                                                                   |
+| `loadingRows`         | `number`                                                                        | `5`      | Сколько skeleton-строк показывать. Бывший `sizeLoadingRows`.                                                                                                      |
+| `emptyText` / `emptyColumnsText` | `string`                                                             | (locale) | Сообщения пустых состояний (текст; HTML — через slot `empty`/`empty-columns`). Бывшие `noData`/`noColumn`.                                                        |
 | `caption`             | `string`                                                                        | —        | Accessible `<caption>` (sr-only) для screen reader. HTML — через slot `caption`.                                                                                 |
 | `virtual`             | `boolean \| { rowHeight?, overscan?, threshold? }`                              | auto     | Виртуализация строк. `undefined` — auto при `> threshold` (client-side, без grouping/pagination); `false` — выключить; `true`/object — форс + config. См. §10.5. |
-| `countDataOnLoading`  | `number`                                                                        | —        | Симулированное количество строк при loading.                                                                                                                     |
-| `totalCount`          | `number`                                                                        | —        | Общий count для server-side pagination.                                                                                                                          |
-| `asyncData`           | `true \| string \| IAsyncDataConfig \| ((params) => Promise<IAsyncDataResult>)` | —        | См. §3.                                                                                                                                                          |
-| `class`               | `StyleClass`                                                                    | —        | Класс контейнера.                                                                                                                                                |
-| `styles`              | `MaybeRef<ITableStyles>`                                                        | —        | Полный override стилей.                                                                                                                                          |
+| `loadingThreshold`    | `number`                                                                        | `1000`   | Симулированное количество строк при loading. Бывший `countDataOnLoading`.                                                                                         |
+| `total`               | `number`                                                                        | —        | Общий count для server-side pagination. Бывший `totalCount`.                                                                                                      |
+| `asyncData`           | `true \| string \| TableAsyncDataConfig \| ((params) => Promise<TableAsyncDataResult>)` | — | См. §3.                                                                                                                                              |
+| `class`               | `StyleClass`                                                                    | —        | Классы **только корня** `[data-table]` (dev-patterns §2 A).                                                                                                       |
+| `classes`             | `ClassesMap<TableClassKey>`                                                     | —        | Карта внутренних элементов и aspect-ключей. См. §5.1.                                                                                                             |
+| `width` / `height`    | `TWidth` / `THeight`                                                            | —        | Размеры таблицы (число → px). Бывшие `styles.width`/`styles.height`.                                                                                              |
+| `stripedRows`         | `boolean`                                                                       | `false`  | Чередующаяся заливка строк. Бывший `styles.isStripedRows`.                                                                                                        |
+| `horizontalLines`     | `boolean`                                                                       | `true`   | Линии между строками. Бывший `styles.horizontalLines`.                                                                                                            |
+| `verticalLines`       | `boolean`                                                                       | `false`  | Линии между колонками. Бывший `styles.verticalLines`.                                                                                                             |
+| `filterLines`         | `boolean`                                                                       | `false`  | Линии вокруг строки фильтров. Бывший `styles.filterLines`.                                                                                                        |
+| `cellHeight`          | `number`                                                                        | `50`     | Высота ячейки в px. Бывший `styles.heightCell`.                                                                                                                   |
+| `borderRadius`        | `number`                                                                        | `7` / `0` при `underlined` | Радиус скругления. Бывший `styles.borderRadiusPx`.                                                                                              |
+| `defaultColumnWidth`  | `string`                                                                        | `max-width: 600px;min-width:100px;width:auto` | Ширина колонки по умолчанию. Бывший `styles.defaultWidthColumn`.                                                            |
 
-`IColumn` ([Table.d.ts:228–388](../../lib/table/Table.d.ts#L228-L388)) — большой объект на колонку: `dataField`, `name`, `caption`, `visible`, `width`/`minWidth`/`maxWidth`, `isFilter`, `isSort`, `isResized`, `defaultFilter`, `defaultSort`, `mask`, `cellTemplate`, `setCellValue`, `onClick`, `class.{th,colFilter,colText,td,cellText,tf,sumText}`, `type` (`string`/`number`/`select`/`date`), `paramsFilter` (для filter editor), `edit` (`boolean | EditInput | EditSelect | EditDate`).
+`TableColumn` ([Table.d.ts:242–371](../../lib/table/Table.d.ts#L242-L371)) — объект на колонку: `dataField`, `name`, `caption`, `visible`, `width`/`minWidth`/`maxWidth`, `filterable`, `sortable`, `resizable`, `defaultFilter`, `defaultSort`, `mask`, `cellTemplate`, `setCellValue`, `onClick`, `classes.{th,headerText,filter,td,cellText,summary,summaryText}`, `type` (`string`/`number`/`select`/`date`), `filterProps` (props фильтр-контрола), `editable` (`boolean | EditInput | EditSelect | EditDate`, внутри — `editorProps`).
+
+### 5.1 Classes keys
+
+`TableClassKey` ([Table.d.ts:470–498](../../lib/table/Table.d.ts#L470-L498)). Bag `styles` растворён: классы уехали сюда, остальное — в top-level props выше.
+
+**Element-ключи** (аддитивные, склеиваются с базой через twMerge):
+
+| Key | Element (`data-*`) | Было |
+| --- | --- | --- |
+| `root` | `[data-table]` | `styles.class.body` + `class` |
+| `toolbar` | `[data-table-toolbar]` | `styles.class.toolbar` |
+| `header` / `footer` | `[data-table-header]` / `[data-table-footer]` | `styles.class.slotHeader` / `slotFooter` |
+| `body` | `[data-table-body]` | — (новый) |
+| `viewport` | `[data-table-viewport]` | `styles.class.bodyTable` |
+| `table` | `[data-table-element]` (`<table>`) | `styles.class.table` |
+| `thead` / `tbody` / `tfoot` | одноимённые секции | `styles.class.thead` / `tbody` / `tfoot` |
+| `th` | `[data-table-thead-col]` | — (новый) |
+| `td` | `[data-table-tbody-td]` | `styles.class.cellText` (вопреки имени шёл на `<td>`) |
+| `cell` | контент ячейки | — (новый) |
+| `group` / `groupText` | строка группировки и её текст | `styles.class.group` / `groupText` |
+| `pagination` | корень [Pagination](./pagination.md) | `styles.class.pagination` |
+
+**Aspect-ключи** (заменяющие: `props ?? options ?? default`, `""` отключает):
+
+| Key | Default | Было |
+| --- | --- | --- |
+| `mark` | `font-bold text-theme-700 dark:text-theme-400` | `styles.maskQuery` |
+| `rowActive` | `bg-surface-100/90 dark:bg-surface-900/50` | `styles.activeRow` |
+| `rowHover` | `hover:bg-surface-100/90 dark:hover:bg-surface-900/50` | `styles.hoverRows` |
+| `animation` | `motion-safe:transition-all motion-safe:duration-500` | `styles.animation` |
+| `border` | `border-surface-200 dark:border-surface-800` | `styles.border` (строка) / `styles.border.default` |
+| `borderTable`, `borderHeader`, `borderFilter`, `borderHead`, `borderCell`, `borderSummary`, `borderPagination`, `borderFooter` | падают на `border` | `styles.border.{table,header,filter,head,cell,summary,pagination,footer}` |
+
+Булевы `activeRow`/`hoverRows` больше не принимают `true` — вместо них передаётся сам класс (или дефолт остаётся, если ключ не задан).
 
 ## 6. Events / Emits + v-model contract
 
@@ -122,7 +164,7 @@ lib/table/
 | `search`                               | `Search` (string)                                             | На toolbar search.            |
 | `result-data`                          | `ResultData`                                                  | После client-side processing. |
 | `switch-page`                          | `Page`                                                        | При смене страницы.           |
-| `switch-size-page`                     | `Page`                                                        | При смене page-size.          |
+| `switch-page-size`                     | `Page`                                                        | При смене page-size. Бывший `switch-size-page` — **silent break**. |
 | `before-edit-cell` / `after-edit-cell` | `{ newValue, oldValue, _key, column }`                        | До/после inline-edit.         |
 | `before-edit-row` / `after-edit-row`   | `{ newValue, oldValue, _key }`                                | Row-level edit.               |
 | `add-row`                              | `{ value, index, _key }`                                      | При добавлении.               |
@@ -187,8 +229,8 @@ v-model contract — не применимо: Table не имеет одного
 <Table
   :data-source="rows"
   :columns="[
-    { dataField: 'name', caption: 'Name', isSort: true, isFilter: true },
-    { dataField: 'age', caption: 'Age', type: 'number', isSort: true }
+    { dataField: 'name', caption: 'Name', sortable: true, filterable: true },
+    { dataField: 'age', caption: 'Age', type: 'number', sortable: true }
   ]"
   :toolbar="{ visible: true, search: true }"
   :pagination="{ visible: true, sizePage: 20 }" />
@@ -199,10 +241,10 @@ v-model contract — не применимо: Table не имеет одного
 ```vue
 <script setup lang="ts">
   import Table from "fishtvue/table"
-  import type { IAsyncDataParams, IAsyncDataResult } from "fishtvue/table"
+  import type { TableAsyncDataParams, TableAsyncDataResult } from "fishtvue/table"
   import { api } from "@/api"
 
-  async function load(params: IAsyncDataParams): Promise<IAsyncDataResult> {
+  async function load(params: TableAsyncDataParams): Promise<TableAsyncDataResult> {
     const { dataSource, totalCount } = await api.users.list(params)
     return { dataSource, totalCount }
   }
@@ -220,14 +262,14 @@ v-model contract — не применимо: Table не имеет одного
   :data-source="users"
   :edit="true"
   :columns="[
-    { dataField: 'name', edit: { editorOptions: { autoFocus: true } } },
-    { dataField: 'role', type: 'select', edit: { editorOptions: { dataSelect: roles } } },
+    { dataField: 'name', editable: { editorProps: { autoFocus: true } } },
+    { dataField: 'role', type: 'select', editable: { editorProps: { options: roles } } },
     { dataField: 'birthday', type: 'date', edit: true }
   ]"
   @after-edit-cell="(p) => api.update(p._key, { [p.column.dataField]: p.newValue })" />
 ```
 
-> **Floating popovers (filter + editor).** Dropdown'ы `type: "select"`/`"date"` (и в фильтре, и в cell-editor) плавают через `FixWindow` (собственный dependency-free движок позиционирования — flip/shift). Таблица передаёт им `paramsFixWindow.scrollableEl = tableBody`, поэтому popover трекает скролл-контейнер (`absolute`-стратегия) и не «отрывается» при прокрутке. Переопределить позицию/teleport на колонку: `paramsFilter: { paramsFixWindow: { position, teleport } }` (фильтр) или `edit.editorOptions.paramsFixWindow` (редактор) — override выигрывает над дефолтом.
+> **Floating popovers (filter + editor).** Dropdown'ы `type: "select"`/`"date"` (и в фильтре, и в cell-editor) плавают через `FixWindow` (собственный dependency-free движок позиционирования — flip/shift). Таблица передаёт им `fixWindowProps.scrollableEl = tableBody`, поэтому popover трекает скролл-контейнер (`absolute`-стратегия) и не «отрывается» при прокрутке. Переопределить позицию/teleport на колонку: `filterProps: { fixWindowProps: { position, teleport } }` (фильтр) или `editable.editorProps.fixWindowProps` (редактор) — override выигрывает над дефолтом.
 
 ## 10. Configuration & Customization
 
@@ -301,7 +343,7 @@ ARIA: при активной виртуализации `<table>` получа�
 </template>
 ```
 
-**`<Column>`** ([Column.vue](../../lib/table/Column.vue)) — props идентичны элементу `IColumn` (`data-field`, `caption`, `is-sort`, `is-filter`, `is-resized`, `type`, `params-filter`, `edit`, `width`/`min-width`/`max-width`, `visible`, …). Scoped-slots:
+**`<Column>`** ([Column.vue](../../lib/table/Column.vue)) — props идентичны элементу `TableColumn` (`data-field`, `caption`, `sortable`, `filterable`, `resizable`, `type`, `filter-props`, `editable`, `width`/`min-width`/`max-width`, `visible`, …). Scoped-slots:
 
 | Slot     | Slot props                                                              | Описание                                                                            |
 | -------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -319,7 +361,7 @@ ARIA: при активной виртуализации `<table>` получа�
 
 ## 11. Form integration & validation
 
-Не применимо в стандартном смысле. Edit-mode принимает `editorOptions` для Input/Select/Calendar — туда можно передать `rules` для валидации значения ячейки.
+Не применимо в стандартном смысле. Edit-mode принимает `editorProps` для Input/Select/Calendar — туда можно передать `rules` для валидации значения ячейки.
 
 ## 12. Accessibility & Security
 
@@ -354,11 +396,11 @@ import type {
   TableEmits,
   TableSlots,
   TableExpose,
-  IColumn,
-  ISummary,
-  ITableStyles,
-  IAsyncDataParams,
-  IAsyncDataResult,
+  TableColumn,
+  TableSummary,
+  TableClassKey,
+  TableAsyncDataParams,
+  TableAsyncDataResult,
   Sorted,
   Filters,
   Search,
@@ -374,9 +416,34 @@ t.value?.reloadData()
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.x`.
-- **Stability flag:** `stable`.
-- **Breaking changes:** на 2026-05-09 не зафиксировано.
-- **Deprecations:** нет.
+- **Stability flag:** `stable` — 179 кейсов (`Table.test.ts` + `Column.test.ts`).
+- **Breaking changes (1.0.0, редизайн props):**
+  - bag `styles` снят целиком: классы → `classes` (см. §5.1), остальное → top-level props
+    (`width`, `height`, `stripedRows`, `horizontalLines`, `verticalLines`, `filterLines`,
+    `cellHeight`, `borderRadius`, `defaultColumnWidth`). Типы `ITableStyles`, `ITableStylesClass`,
+    `ITableStylesBorder` и `type border` удалены.
+  - `class` теперь адресует **только** корень `[data-table]`.
+  - булевы: `edit` → `editable`, `search` → `searchable` (в том числе `TableToolbar.search`),
+    `resizedColumns` → `resizableColumns`; Column `isFilter`/`isSort`/`isResized` →
+    `filterable`/`sortable`/`resizable`; `EditorCell.isEdit` → `editable`;
+    `TableFilter.isClearAllFilter` → `clearAll`.
+  - имена: `totalCount` → `total` (и в `TableAsyncDataResult`), `countVisibleRows` → `visibleRows`,
+    `sizeLoadingRows` → `loadingRows`, `countDataOnLoading` → `loadingThreshold`,
+    `noData`/`noColumn` → `emptyText`/`emptyColumnsText`, `TableFilter.noFilter` → `emptyFilterText`.
+  - Column: вложенный `class`-объект → `classes` (`th`, `headerText`, `filter`, `td`, `cellText`,
+    `summary`, `summaryText`); `colFilterClass` → `filterProps.classes.base`, `colFilterClassBody`
+    → `filterProps.class`; `paramsFilter` → `filterProps`, `editorOptions` → `editorProps`.
+  - событие `switch-size-page` → `switch-page-size` — **silent break**: старые обработчики
+    перестают вызываться.
+  - типы: `IColumn(Private)`, `ISummary(Private)`, `IToolbar`, `ISort`, `IFilter`, `IGrouping`,
+    `IAsyncData*` → `Table*`.
+  - DOM: корень `data-table-component` → `data-table`; `<table>` получил `data-table-element`;
+    `data-table-scroll` → `data-table-viewport`; маркеры `data-table-header`/`-footer` переехали
+    на визуальные полосы слотов (внешние обёртки их больше не несут).
+  - expose: `styles` → `settings` (только не-классовые настройки), `classMaskQuery` → `classMark`,
+    `switchSizePage` → `switchPageSize`, `sizePage` → `pageSize`,
+    `isHiddenNavigationButtons` → `isNavigationButtons`.
+- **Deprecations:** нет — старые имена сняты без алиасов (решение R6).
 - В commit `7393c9a` (`fix(table): repair asyncData tests and behavior`) были стабилизированы asyncData-тесты — учитывай при ревизии.
 
 ## 15. Testing recipes
@@ -427,7 +494,7 @@ describe("Table", () => {
 ### Incomplete or stubbed behavior
 
 - Coverage: branch 80.01% / statements 92.57% ([Table.vue](../../lib/table/Table.vue)), цель >80% достигнута (см. [issues/table.md Issue 7 ✅](../issues/table.md)). Покрыты edit-cell editors, asyncData (4 режима), masks, summary/filter type-branches, loading-timeout, virtualization, security/a11y.
-- `IColumnPrivate.isEdit: boolean` ([Table.d.ts:393](../../lib/table/Table.d.ts#L393)) — внутренний флаг, expose'ится через TableExpose.
+- `TableColumnPrivate.hasEditor: boolean` — внутренний резолвленный гейт «у ячеек есть редактор»; сам `editable` несёт конфиг.
 - Virtualization (§10.5) — v1: только flat client-side (не grouping), **fixed** `rowHeight` (multi-line ячейки клипаются), edit-mode в окне работает, но не оптимизирован. Dynamic-height и virtual+grouping — отдельным заходом.
 
 ### Skipped tests
@@ -437,10 +504,10 @@ describe("Table", () => {
 ### API inconsistencies
 
 - `Filters = Record<DataField, any>` ([Table.d.ts:25](../../lib/table/Table.d.ts#L25)) — `any` в публичном типе.
-- `IColumn.defaultFilter?: any` ([Table.d.ts:293](../../lib/table/Table.d.ts#L293)) — `any`.
-- `IColumn.setCellValue(column, value: any, data?: any): any` — `any`-цепочка.
+- `TableColumn.defaultFilter?: any` ([Table.d.ts:293](../../lib/table/Table.d.ts#L293)) — `any`.
+- `TableColumn.setCellValue(column, value: any, data?: any): any` — `any`-цепочка.
 - `dataSource?: MaybeRef<Array<any> | []>` — `Array<any>` нивелирует TS-проверки на форму строк.
-- `class.colFilterClass: StyleClass | "border-none font-normal"` — литерал среди свободных классов в нескольких полях `IColumn.class.*` — путаница.
+- ~~`class.colFilterClass` — литерал среди свободных классов в полях `IColumn.class.*`.~~ ✅ resolved (1.0.0): карта колонки — `classes.{th,headerText,filter,td,cellText,summary,summaryText}`, а классы самого фильтр-контрола переехали внутрь `filterProps` (`classes.base` / `class`).
 - `TableOption` **не включает** `dataSource`, `columns`, `summary`, `asyncData`, `totalCount`, `countDataOnLoading` — глобальная конфигурация ограничена визуальными настройками.
 
 ### Behavioral caveats

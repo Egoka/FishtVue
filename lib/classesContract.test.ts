@@ -15,7 +15,7 @@ import FishtVue from "fishtvue/config"
  * Per-component нюансы (aspect-ключи, hand-off'ы, слоты) живут в `<Name>.test.ts`; здесь — инвариант.
  * `PENDING` — компоненты до своей волны; обнуляется в W7, после чего `skipIf` удаляется.
  */
-const PENDING: string[] = ["Form", "Menu", "Split", "Table"]
+const PENDING: string[] = ["Form", "Menu", "Split"]
 
 type Entry = {
   name: string
@@ -315,6 +315,20 @@ const flushLazy = async (isReady: () => boolean, maxTicks = 300): Promise<void> 
     await flushPromises()
   }
 }
+
+// Table использует IntersectionObserver/ResizeObserver для виртуализации и resize-колонок;
+// в jsdom их нет, а у guard'а нет своего setup-файла — подставляем no-op заглушки.
+const stubObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return []
+  }
+}
+if (typeof (globalThis as any).IntersectionObserver === "undefined")
+  (globalThis as any).IntersectionObserver = stubObserver
+if (typeof (globalThis as any).ResizeObserver === "undefined") (globalThis as any).ResizeObserver = stubObserver
 
 describe("Cross-cutting контракт class/classes (dev-patterns §2 A–E)", () => {
   // `window.FishtVue` — глобальный singleton (config inject-first / window-fallback): чистим,
