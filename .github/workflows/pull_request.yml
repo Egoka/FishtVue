@@ -47,3 +47,15 @@ jobs:
         run: pnpm test
       - name: Build library
         run: pnpm lib:build
+      - name: Build sandbox
+        # Песочница — единственный потребитель в репозитории, который собирается против живой
+        # lib/, и до 1.0.0 её не проверял никто: корневой tsconfig держит её в exclude, а
+        # `sandbox:build` не запускался вовсе (фильтр не матчил ни одного проекта). Из-за этого
+        # она незаметно отстала от API за восемь волн редизайна props.
+        #
+        # Свой install-root и свой лок-файл, поэтому корневой `pnpm install` её не ставит.
+        # `sandbox:build` = `vue-tsc --noEmit` (со strictTemplates) + `vite build`: голый
+        # vite build проходит и на полностью устаревшем API, типовая проверка — нет.
+        run: |
+          pnpm --dir sandbox install --frozen-lockfile
+          pnpm sandbox:build
