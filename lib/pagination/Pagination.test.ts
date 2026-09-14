@@ -784,6 +784,25 @@ describe("Pagination — контракт props 1.0.0", () => {
     expect(wrapper.emitted("update:sizePage")).toBeUndefined()
   })
 
+  it("payload обоих v-model-каналов — число, и `update:pageSize` несёт размер, а не активную страницу", async () => {
+    const wrapper = mount(Pagination, { props: { total: 100, modelValue: 3, pageSize: 10 } })
+
+    // Смена страницы: канал `modelValue` несёт номер страницы
+    ;(wrapper.vm as any).switchPage(5)
+    await nextTick()
+    const page = wrapper.emitted("update:modelValue")?.[0]?.[0]
+    expect(typeof page).toBe("number")
+    expect(page).toBe(5)
+
+    // Смена размера: канал `pageSize` несёт именно размер (до 1.0 тип ссылался на `modelValue`)
+    ;(wrapper.vm as any).switchPageSize(25)
+    await nextTick()
+    const size = wrapper.emitted("update:pageSize")?.[0]?.[0]
+    expect(typeof size).toBe("number")
+    expect(size).toBe(25)
+    expect(size).not.toBe(page)
+  })
+
   it("корень реактивен: смена props.class пересчитывает класс (был нереактивный ref)", async () => {
     const wrapper = mount(Pagination, { props: { total: 100, class: "probe-one" } })
     expect(wrapper.find("[data-pagination]").classes()).toContain("probe-one")

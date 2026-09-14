@@ -100,17 +100,19 @@ export declare type PaginationSlots = {
 export declare type PaginationEmits = {
   /**
    * Emitted when the active page (`modelValue`) is updated.
+   * Payload — всегда число: канал синхронизирует `modelValue`, а не отражает его optional-тип.
    * @param event
-   * @param {PaginationProps["modelValue"]} payload - The updated page number.
+   * @param {number} payload - The updated page number.
    */
-  (event: "update:modelValue", payload: PaginationProps["modelValue"]): void
+  (event: "update:modelValue", payload: number): void
 
   /**
-   * Emitted when the page size is updated.
+   * Emitted when the page size is updated. Payload — новый размер страницы (не активная
+   * страница: до 1.0 здесь по ошибке стоял тип `PaginationProps["modelValue"]`).
    * @param event
-   * @param {PaginationProps["modelValue"]} payload - The updated page size.
+   * @param {number} payload - The updated page size.
    */
-  (event: "update:pageSize", payload: PaginationProps["modelValue"]): void
+  (event: "update:pageSize", payload: number): void
 }
 
 /**

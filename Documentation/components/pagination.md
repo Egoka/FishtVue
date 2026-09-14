@@ -80,7 +80,14 @@ const page = ref(1)
 | `update:modelValue` | `number` | На клик по странице или Previous/Next. |
 | `update:pageSize` | `number` | На смену размера страницы через select. Бывший `update:sizePage` — **silent break**: старые обработчики просто перестают вызываться. |
 
-v-model: стандартный `v-model:modelValue`. Для размера страницы — `v-model:pageSize`.
+**v-model contract:** активная страница — стандартный `v-model`, размер страницы — именованный
+канал `v-model:page-size`. Оба payload'а — `number` (до 1.0 `update:pageSize` был типизирован
+через `PaginationProps["modelValue"]`, то есть ссылался на активную страницу и допускал
+`undefined`).
+
+`change:modelValue` у Pagination **не заводится**: это не form-control, а канал несёт номер
+страницы — у него нет момента «значение устоялось», отличного от самого обновления
+(dev-patterns §2 H). Для тяжёлых операций подписывайся на `update:modelValue` напрямую.
 
 ## 7. Slots
 
