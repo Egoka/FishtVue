@@ -452,7 +452,8 @@ describe("Menu Component", () => {
       await nextTick()
       await flushHero()
 
-      const separatorIcons = wrapper.findAll("svg")
+      // Icons (props 1.0): hand-off `class` ложится на корень <i data-icon>, не на svg
+      const separatorIcons = wrapper.findAll("[data-icon]")
       expect(separatorIcons.length).toBeGreaterThan(0)
       expect(separatorIcons[0].classes()).toContain("chevron-right")
     })
@@ -981,7 +982,7 @@ describe("Menu Component", () => {
       })
       await nextTick()
       await flushHero()
-      const icon = wrapper.find("[data-separator] svg")
+      const icon = wrapper.find("[data-separator] [data-icon]")
       expect(icon.exists()).toBe(true)
       expect(icon.classes()).toContain("text-surface-200")
       expect(icon.classes()).toContain("dark:text-surface-800")

@@ -1,5 +1,5 @@
 import { VNode } from "vue"
-import { ClassComponent, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass, StyleMode } from "../types"
 
 /**
  * ## Label
@@ -14,26 +14,33 @@ declare class Label extends ClassComponent<LabelProps, LabelSlots, LabelEmits, L
 export type LabelMode = "offsetDynamic" | "offsetStatic" | "dynamic" | "static" | "vanishing" | "none"
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<label data-label>` (добавляется `ClassesMap`).
+ * - `text` — внутренний `<span data-label-text>` с текстом лейбла.
+ */
+export declare type LabelClassKey = "text"
+
+/**
  * Props for the Label component.
  */
 export declare type LabelProps = {
   /**
-   * The text content of the label.
+   * Текст лейбла (fallback default-слота). Единое имя с form-controls (`InputLayout.label`, `Switch.label`).
    * @type {string | undefined}
    */
-  title?: string
+  label?: string
 
   /**
-   * Indicates whether the field associated with the label is required.
+   * Обязательное поле — красная звёздочка после текста.
    * @type {boolean | undefined}
    */
-  isRequired?: boolean
+  required?: boolean
 
   /**
-   * The display mode of the label (e.g., floating, static).
+   * Режим позиционирования лейбла (floating / static / offset / vanishing / none).
+   * Единое имя с `InputLayout.labelMode` и `Form.labelMode`.
    * @type {LabelMode | undefined}
    */
-  type?: LabelMode
+  labelMode?: LabelMode
 
   /**
    * The styling mode for the label.
@@ -65,25 +72,26 @@ export declare type LabelProps = {
   forId?: string
 
   /**
-   * Custom CSS class for the label container.
-   * @type {StyleClass | undefined}
-   */
-  classBody?: StyleClass
-
-  /**
-   * Custom CSS class for the label content.
+   * CSS-классы корня `<label data-label>` (контейнер с позиционированием).
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
 
   /**
-   * Включает CSS-transition позиционирования лейбла. По умолчанию `true`.
+   * Карта классов внутренних элементов: `text` — `<span data-label-text>`, `root` ≡ `class`.
+   * @type {ClassesMap<LabelClassKey> | undefined}
+   */
+  classes?: ClassesMap<LabelClassKey>
+
+  /**
+   * Включает CSS-transition позиционирования лейбла. Default `true` (резолвится в компоненте,
+   * отсутствующий prop остаётся `undefined` — dev-patterns §2 F).
    * `InputLayout` пробрасывает сюда mount-tick (`isTick`): на первом кадре `false`,
    * чтобы floating-label сразу отрисовался в нужной позиции без «переезда» из исходной
    * точки, а после mount — `true`, и переход при focus / изменении value анимируется.
    * @type {boolean | undefined}
    */
-  animate?: boolean
+  animated?: boolean
 }
 
 /**
@@ -91,7 +99,7 @@ export declare type LabelProps = {
  */
 export declare type LabelSlots = {
   /**
-   * Default slot — overrides `title` prop. Useful for inserting
+   * Default slot — overrides `label` prop. Useful for inserting
    * `<strong>`, icons, or other inline markup as label content.
    */
   default?(): VNode[]
@@ -106,29 +114,32 @@ export declare type LabelExpose = {
   // ---PROPS-------------------------
   /**
    * Current styling mode of the label.
-   * @type {LabelProps["mode"]}
+   * @type {NonNullable<LabelProps["mode"]>}
    */
-  mode: LabelProps["mode"]
+  mode: NonNullable<LabelProps["mode"]>
 
   /**
    * Current display mode of the label.
-   * @type {LabelProps["type"]}
+   * @type {NonNullable<LabelProps["labelMode"]>}
    */
-  type: LabelProps["type"]
+  labelMode: NonNullable<LabelProps["labelMode"]>
 
   /**
-   * Custom CSS class for the label container.
-   * @type {LabelProps["classBody"]}
+   * Итоговый класс корня `<label data-label>` (база + `class`/`classes.root`).
+   * @type {string}
    */
-  classBase: LabelProps["classBody"]
+  classBase: string
 
   /**
-   * Custom CSS class for the label content.
-   * @type {LabelProps["class"]}
+   * Итоговый класс текста `<span data-label-text>` (база + `classes.text`).
+   * @type {string}
    */
-  classContent: LabelProps["class"]
+  classContent: string
 }
-export declare type LabelOption = Pick<LabelProps, "type" | "mode" | "translateX" | "maxWidth" | "class" | "classBody">
+export declare type LabelOption = Pick<
+  LabelProps,
+  "labelMode" | "mode" | "translateX" | "maxWidth" | "class" | "classes"
+>
 
 // ---------------------------------------
 

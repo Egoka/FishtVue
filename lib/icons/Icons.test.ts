@@ -66,10 +66,24 @@ describe("Icons Component Tests", () => {
         }
       })
       await flushHero()
-      expect(wrapper.html())
-        .toBe(`<i data-icon=""><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" data-slot="icon" class="fv fishtvue-icons h-5 w-5 text-surface-900 dark:text-surface-100 select-none">
-    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"></path>
-  </svg></i>`)
+      // props 1.0 (решение 6): база размера/цвета живёт на корне <i data-icon>, svg — block h-full w-full.
+      const root = wrapper.find("[data-icon]")
+      expect(root.classes()).toEqual([
+        "fv",
+        "fishtvue-icons",
+        "inline-block",
+        "shrink-0",
+        "h-5",
+        "w-5",
+        "text-surface-900",
+        "dark:text-surface-100",
+        "select-none"
+      ])
+      const svg = wrapper.find("svg")
+      expect(svg.attributes("data-icon-svg")).toBe("")
+      expect(svg.attributes("aria-hidden")).toBe("true")
+      expect(svg.classes()).toEqual(["fv", "fishtvue-icons", "block", "h-full", "w-full"])
+      expect(svg.find("path").attributes("d")).toBe("m4.5 12.75 6 6 9-13.5")
     })
 
     it("does not render any icon if type is invalid", async () => {
@@ -94,9 +108,11 @@ describe("Icons Component Tests", () => {
       })
 
       await flushHero()
-      const iconElement = wrapper.find("svg")
-      expect(iconElement.attributes("class")).toContain("custom-class")
-      expect(iconElement.attributes("style")).toContain("color: red;")
+      // `class` и `style` — корень <i data-icon> (dev-patterns §2 A); svg наследует цвет.
+      const root = wrapper.find("[data-icon]")
+      expect(root.attributes("class")).toContain("custom-class")
+      expect(root.attributes("style")).toContain("color: red;")
+      expect(wrapper.find("svg").attributes("class")).not.toContain("custom-class")
     })
 
     it("renders an Iconify icon when type matches", async () => {
@@ -295,19 +311,58 @@ describe("Icons Component Tests", () => {
   // change, но подключает default-цвет иконки к theme-token indirection.
   // -----------------------------------------------------------------------
   describe("Semantic token migration — default color uses surface-* (Issue 9 / B10)", () => {
-    it("classIcon default includes text-surface-900 dark:text-surface-100 (not gray)", () => {
+    it("classBase (root) default includes text-surface-900 dark:text-surface-100 (not gray)", () => {
       const wrapper = mount(Icons, { props: { type: "Check" } })
-      const classIcon = (wrapper.vm as any).classIcon as string
-      expect(classIcon).toContain("text-surface-900")
-      expect(classIcon).toContain("dark:text-surface-100")
-      expect(classIcon).not.toContain("gray")
+      const classBase = (wrapper.vm as any).classBase as string
+      expect(classBase).toContain("text-surface-900")
+      expect(classBase).toContain("dark:text-surface-100")
+      expect(classBase).not.toContain("gray")
     })
 
-    it("rendered SVG class attribute carries surface-* tone classes", () => {
+    it("rendered root class attribute carries surface-* tone classes; svg inherits color", () => {
       const wrapper = mount(Icons, { props: { type: "Check" } })
-      const svgClass = wrapper.find("svg").attributes("class")
-      expect(svgClass).toContain("text-surface-900")
-      expect(svgClass).toContain("dark:text-surface-100")
+      const rootClass = wrapper.find("[data-icon]").attributes("class")
+      expect(rootClass).toContain("text-surface-900")
+      expect(rootClass).toContain("dark:text-surface-100")
+      expect(wrapper.find("svg").attributes("class")).not.toContain("text-surface-900")
+    })
+  })
+
+  // props 1.0 (dev-patterns §2 A–D): `class` — корень <i data-icon>, `classes.icon` — <svg data-icon-svg>.
+  describe("class / classes (props 1.0)", () => {
+    it("`class` lands only on the root, `classes.icon` only on the svg", () => {
+      const wrapper = mount(Icons, {
+        props: { type: "Check", class: "probe-root", classes: { icon: "probe-icon" } }
+      })
+      const root = wrapper.find("[data-icon]")
+      const svg = wrapper.find("[data-icon-svg]")
+      expect(root.classes()).toContain("probe-root")
+      expect(root.classes()).not.toContain("probe-icon")
+      expect(svg.classes()).toContain("probe-icon")
+      expect(svg.classes()).not.toContain("probe-root")
+    })
+
+    it("`classes.root` targets the same element as `class`", () => {
+      const wrapper = mount(Icons, { props: { type: "Check", classes: { root: "probe-root" } } })
+      expect(wrapper.find("[data-icon]").classes()).toContain("probe-root")
+    })
+
+    it("consumer sizing overrides the h-5 w-5 base through twMerge (hand-off contract for Button/Badge/Menu)", () => {
+      const wrapper = mount(Icons, { props: { type: "Check", class: "h-4 w-4" } })
+      const root = wrapper.find("[data-icon]").classes()
+      expect(root).toContain("h-4")
+      expect(root).toContain("w-4")
+      expect(root).not.toContain("h-5")
+      expect(root).not.toContain("w-5")
+    })
+
+    it("Iconify branch also renders the svg under classes.icon", async () => {
+      const wrapper = mount(Icons, {
+        props: { type: "icon-park-solid:circles-and-triangles", classes: { icon: "probe-icon" } }
+      })
+      await flushHero()
+      const iconify = wrapper.findComponent({ name: "Icon" })
+      if (iconify.exists()) expect(iconify.attributes("class")).toContain("probe-icon")
     })
   })
 
@@ -326,21 +381,31 @@ describe("Icons Component Tests", () => {
       }
     })
 
-    it("classIcon is an empty string when unstyled:true", () => {
+    it("root and svg carry the bare `fv` when unstyled:true", () => {
       const wrapper = mount(Icons, {
         props: { type: "Check" },
         global: { plugins: [appWith({ unstyled: true })] }
       })
+      expect((wrapper.vm as any).classBase).toBe("fv")
       expect((wrapper.vm as any).classIcon).toBe("fv")
     })
 
-    it("classIcon keeps the default class when unstyled:false", () => {
+    it("keeps consumer class / classes.icon under unstyled", () => {
+      const wrapper = mount(Icons, {
+        props: { type: "Check", class: "probe-root", classes: { icon: "probe-icon" } },
+        global: { plugins: [appWith({ unstyled: true })] }
+      })
+      expect(wrapper.find("[data-icon]").classes()).toEqual(["fv", "probe-root"])
+      expect(wrapper.find("[data-icon-svg]").classes()).toEqual(["fv", "probe-icon"])
+    })
+
+    it("classBase keeps the default class when unstyled:false", () => {
       const wrapper = mount(Icons, {
         props: { type: "Check" },
         global: { plugins: [appWith({ unstyled: false })] }
       })
-      expect((wrapper.vm as any).classIcon).not.toBe("")
-      expect((wrapper.vm as any).classIcon).toContain("h-5")
+      expect((wrapper.vm as any).classBase).toContain("h-5")
+      expect((wrapper.vm as any).classIcon).toContain("h-full")
     })
   })
 
@@ -367,9 +432,22 @@ describe("Icons Component Tests", () => {
       })
 
       await flushHero()
-      // Проверяем, что иконка рендерится с глобальным классом
-      const iconElement = wrapper.find("svg")
-      expect(iconElement.attributes("class")).toContain("global-class")
+      // Глобальный `class` — корень; `classes.icon` — svg (слияние по ключу, dev-patterns §2 C)
+      expect(wrapper.find("[data-icon]").attributes("class")).toContain("global-class")
+      expect(wrapper.find("svg").attributes("class")).not.toContain("global-class")
+    })
+
+    it("merges componentsOptions.Icons.classes.icon under props.classes.icon (local wins conflicts)", async () => {
+      const app = createAppWithFishtVue({ classes: { icon: "global-icon opacity-50" } })
+      const wrapper = mount(Icons, {
+        props: { type: "Check", classes: { icon: "opacity-100" } },
+        global: { plugins: [app] }
+      })
+      await flushHero()
+      const svg = wrapper.find("[data-icon-svg]").classes()
+      expect(svg).toContain("global-icon")
+      expect(svg).toContain("opacity-100")
+      expect(svg).not.toContain("opacity-50")
     })
 
     it('componentsOptions.Icons.variant="solid" applies when prop is absent', async () => {

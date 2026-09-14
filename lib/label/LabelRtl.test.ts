@@ -29,14 +29,14 @@ describe("Label — RTL через множитель направления", (
 
   it("переключатель направления присутствует при любом типе лейбла", () => {
     for (const type of ["dynamic", "offsetDynamic", "offsetStatic", "static", "vanishing", "none"] as const) {
-      const wrapper = mount(Label, { props: { title: "Email", type } })
+      const wrapper = mount(Label, { props: { label: "Email", labelMode: type } })
       expect(wrapper.find("[data-label]").classes()).toContain("rtl:[--fv-label-dir:-1]")
       wrapper.unmount()
     }
   })
 
   it("звёздочка обязательного поля использует логический отступ", () => {
-    const wrapper = mount(Label, { props: { title: "Email", isRequired: true } })
+    const wrapper = mount(Label, { props: { label: "Email", required: true } })
     const classes = wrapper.find("[data-label]").classes().join(" ")
 
     expect(classes).toContain("after:ms-0.5")
@@ -45,7 +45,7 @@ describe("Label — RTL через множитель направления", (
   })
 
   it("пользовательский translateX тоже умножается на направление", () => {
-    const wrapper = mount(Label, { props: { title: "Email", translateX: 24 } })
+    const wrapper = mount(Label, { props: { label: "Email", translateX: 24 } })
 
     expect(wrapper.find("[data-label]").attributes("style")).toContain(
       "--fv-translate-x: calc(24px * var(--fv-label-dir, 1))"

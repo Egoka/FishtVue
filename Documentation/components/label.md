@@ -1,7 +1,7 @@
 ---
 title: Label
-summary: Label с пятью режимами (dynamic/static/offset*/vanishing/none), required-маркером, нативной for-связкой с input, default-слотом для кастомного контента и prop `animate` (mount-tick gate против «переезда» позиции). §10.3 — вертикальные смещения через CSS custom properties (2026-09-05).
-updated: 2026-09-06
+summary: props 1.0 (2026-09-14) — `label`/`required`/`labelMode`/`animated`, `class` = корень `<label data-label>`, текст — `classes.text`. Label с пятью режимами (dynamic/static/offset*/vanishing/none), required-маркером, нативной for-связкой с input, default-слотом для кастомного контента и prop `animated` (mount-tick gate против «переезда» позиции). §10.3 — вертикальные смещения через CSS custom properties (2026-09-05).
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -33,8 +33,8 @@ lib/label/
 - **Lifecycle:** автоматическая инжекция стилей через `Component.__hooks()` (`onServerPrefetch + vueOnMounted -> initStyle`). SFC не дублирует вызов — см. [dev-patterns §2](../dev-patterns.md) decision row 1.
 - **Поток данных:** props + `Label.getOptions()` → computed `mode`/`type`/`translateX`/`maxWidth` → `classBase` (через `Label.setStyle`) и `classContent`. Resolve: `props ?? options ?? Label.componentsStyle() ?? "outlined"`.
 - **Стили:** transform-классы зависят от `type`. Для `dynamic`: `peer-focus:-translate-y-[var(--fv-label-translate-y,60px)] peer-focus:translate-x-[calc(16px*var(--fv-label-dir,1))] -translate-y-[var(--fv-label-translate-y-rest,28px)]`. Вертикальные смещения параметризованы CSS-переменными (§10.3), горизонтальные умножаются на `--fv-label-dir` — множитель направления письма (`1` в LTR, `-1` в RTL). Required-маркер `*` через `after:content-['*'] after:ms-0.5` — логический отступ, чтобы звёздочка вставала слева в RTL.
-- **For-id association:** при заданном `forId` корневой `<label>` получает нативный `for="<id>"` ([Label.vue:71](../../lib/label/Label.vue#L76)) — браузер автоматически связывает label и input, click фокусирует input, screen-reader озвучивает связку.
-- **Конфиг:** `componentsOptions.Label` ключи — `mode`, `type`, `translateX`, `maxWidth`, `class`, `classBody`.
+- **For-id association:** при заданном `forId` корневой `<label>` получает нативный `for="<id>"` ([Label.vue:99](../../lib/label/Label.vue#L99)) — браузер автоматически связывает label и input, click фокусирует input, screen-reader озвучивает связку.
+- **Конфиг:** `componentsOptions.Label` ключи — `mode`, `labelMode`, `translateX`, `maxWidth`, `class`, `classes` (слияние `class`/`classes` с per-instance — по ключу).
 - **Локализация:** не использует.
 - **SSR:** SSR-safe (Component.__hooks регистрирует `onServerPrefetch`).
 - **Animation:** `motion-safe:transition-all motion-safe:duration-200` ([Label.vue:36](../../lib/label/Label.vue#L40)) — анимации отключаются при `prefers-reduced-motion: reduce`.
@@ -49,7 +49,7 @@ import Label from "fishtvue/label"
 <template>
   <div class="relative">
     <input id="email-input" class="peer ..." />
-    <Label for-id="email-input" title="Email" type="dynamic" />
+    <Label for-id="email-input" label="Email" label-mode="dynamic" />
   </div>
 </template>
 ```
@@ -58,20 +58,29 @@ import Label from "fishtvue/label"
 
 ## 5. Props
 
-`LabelProps` ([Label.d.ts:19-87](../../lib/label/Label.d.ts#L19-L87)):
+`LabelProps` ([Label.d.ts:25-95](../../lib/label/Label.d.ts#L25-L95)):
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `title` | `string` | — | Текст метки (используется как fallback default-слота). |
-| `isRequired` | `boolean` | `undefined` | Показывает `*` справа. |
-| `type` | `"offsetDynamic" \| "offsetStatic" \| "dynamic" \| "static" \| "vanishing" \| "none"` | `"dynamic"` | Поведение метки. |
+| `label` | `string` | — | Текст метки (используется как fallback default-слота). Единое имя с `InputLayout.label`/`Switch.label`. |
+| `required` | `boolean` | `false` (prop `undefined`) | Показывает `*` после текста (логический отступ `after:ms-0.5`). |
+| `labelMode` | `LabelMode` | `"dynamic"` | Поведение метки: `"offsetDynamic" \| "offsetStatic" \| "dynamic" \| "static" \| "vanishing" \| "none"`. Единое имя с `InputLayout.labelMode`/`Form.labelMode`. |
 | `mode` | `StyleMode` (`"filled" \| "outlined" \| "underlined"`) | `"outlined"` (или из `Label.componentsStyle()`) | Связь с input-mode. |
 | `translateX` | `number \| string` | `0` | Горизонтальный сдвиг. `number` → `${n}px`; строка передаётся as-is (`"1rem"`, `"50%"`, `"var(--x)"`). |
 | `maxWidth` | `number \| string` | `0` | Макс. ширина. `number` → `${n - 38}px`; строка оборачивается в `calc(<value> - 38px)` (`"100%"`, `"5rem"`, `var()`). |
 | `forId` | `string` | — | `id` целевого form-control. Устанавливает нативный `for` атрибут — клик на label фокусирует input, screen-reader озвучивает связку (WCAG 2.1 SC 1.3.1). |
-| `classBody` | `StyleClass` | — | Класс контейнера label. |
-| `class` | `StyleClass` | — | Класс текста. |
-| `animate` | `boolean` | `true` | Включает CSS-transition позиционирования метки. `InputLayout` передаёт сюда mount-tick (`isTick`): `false` на первом кадре — floating-label сразу рисуется в нужной позиции без «переезда» из исходной точки, `true` после mount — переход при focus / изменении value анимируется. |
+| `class` | `StyleClass` | — | Классы корня `<label data-label>` (контейнер с позиционированием). |
+| `classes` | `ClassesMap<LabelClassKey>` | — | Карта классов внутренних элементов, см. §5.1. `root` ≡ `class`. |
+| `animated` | `boolean` | `true` (prop `undefined`) | Включает CSS-transition позиционирования метки; default резолвится в компоненте (dev-patterns §2 F). `InputLayout` передаёт сюда mount-tick (`isTick`): `false` на первом кадре — floating-label сразу рисуется в нужной позиции без «переезда» из исходной точки, `true` после mount — переход при focus / изменении value анимируется. |
+
+### 5.1 Classes keys
+
+`LabelClassKey` ([Label.d.ts:20](../../lib/label/Label.d.ts#L20)). Element-ключи аддитивны: база → `componentsOptions.Label.classes.<key>` → `props.classes.<key>` (twMerge, потребитель побеждает).
+
+| Key    | Element (`data-*`)          | Kind    | Default |
+| ------ | --------------------------- | ------- | ------- |
+| `root` | `<label data-label>`        | element | —       |
+| `text` | `<span data-label-text>`    | element | —       |
 
 ## 6. Events / Emits + v-model contract
 
@@ -83,26 +92,26 @@ import Label from "fishtvue/label"
 
 | Slot | Bindings | Description |
 |---|---|---|
-| `default` | — | Контент метки. Если не передан — используется `title` prop. Полезно для вставки `<strong>`, иконок, или другой inline-разметки. |
+| `default` | — | Контент метки. Если не передан — используется `label` prop. Полезно для вставки `<strong>`, иконок, или другой inline-разметки. |
 
 ```vue
-<Label for-id="email-input" title="Email"><strong>Email</strong> *</Label>
+<Label for-id="email-input" label="Email"><strong>Email</strong> *</Label>
 ```
 
 ## 8. Exposed methods
 
-`LabelExpose` ([Label.d.ts:96-121](../../lib/label/Label.d.ts#L96-L121)):
+`LabelExpose` ([Label.d.ts:113-138](../../lib/label/Label.d.ts#L113-L138)):
 
 | Name | Type | Description |
 |---|---|---|
-| `mode` | `LabelProps["mode"]` | Текущий mode. |
-| `type` | `LabelProps["type"]` | Текущий type. |
-| `classBase` | `LabelProps["classBody"]` | Финальный класс контейнера. |
-| `classContent` | `LabelProps["class"]` | Финальный класс текста. |
+| `mode` | `NonNullable<LabelProps["mode"]>` | Текущий mode. |
+| `labelMode` | `NonNullable<LabelProps["labelMode"]>` | Текущий labelMode. |
+| `classBase` | `string` | Финальный класс корня `<label data-label>` (база + `class`/`classes.root`). |
+| `classContent` | `string` | Финальный класс текста `<span data-label-text>` (база + `classes.text`). |
 
 ```ts
 const labelRef = useTemplateRef<InstanceType<typeof Label>>("lbl")
-labelRef.value?.type
+labelRef.value?.labelMode
 ```
 
 ## 9. Examples
@@ -113,7 +122,7 @@ labelRef.value?.type
 <template>
   <div class="relative">
     <input id="email" class="peer focus:outline-none border-b" placeholder=" " />
-    <Label for-id="email" title="Email" type="dynamic" :is-required="true" />
+    <Label for-id="email" label="Email" label-mode="dynamic" required />
   </div>
 </template>
 ```
@@ -133,7 +142,7 @@ app.use(FishtVue, {
 ### 9.3 Vanishing — скрывается при фокусе
 
 ```vue
-<Label title="Search..." type="vanishing" />
+<Label label="Search..." label-mode="vanishing" />
 ```
 
 ### 9.4 Custom-разметка через default-слот
@@ -147,7 +156,7 @@ app.use(FishtVue, {
 ### 9.5 Responsive maxWidth с CSS unit
 
 ```vue
-<Label for-id="comment" title="Комментарий" max-width="100%" translate-x="1rem" />
+<Label for-id="comment" label="Комментарий" max-width="100%" translate-x="1rem" />
 ```
 
 `max-width` рендерится как `calc(100% - 38px)`, `--fv-translate-x: 1rem` — масштабируется с font-size.
@@ -165,7 +174,7 @@ const store = useFormStore()
 <template>
   <div class="relative">
     <input id="email" class="peer" v-model="store.email" />
-    <Label for-id="email" :title="store.emailLabel" :is-required="store.isEmailRequired" />
+    <Label for-id="email" :label="store.emailLabel" :required="store.isEmailRequired" />
   </div>
 </template>
 ```
@@ -174,7 +183,7 @@ const store = useFormStore()
 
 ### 10.1 Global
 
-`LabelOption = Pick<LabelProps, "type" | "mode" | "translateX" | "maxWidth" | "class" | "classBody">` ([Label.d.ts:122](../../lib/label/Label.d.ts#L122)).
+`LabelOption = Pick<LabelProps, "labelMode" | "mode" | "translateX" | "maxWidth" | "class" | "classes">` ([Label.d.ts:139](../../lib/label/Label.d.ts#L139)). `class`/`classes` сливаются с per-instance по ключу (dev-patterns §2 C).
 
 ### 10.2 Per-instance
 
@@ -223,7 +232,7 @@ Visual `*`-маркер для `required` — чисто косметическ�
 
 ### A11y
 
-- **Семантика:** Корневой узел — нативный `<label data-label>` ([Label.vue:71](../../lib/label/Label.vue#L76)). При заданном `for-id` атрибут `for` устанавливается и работает нативная браузерная связка: click на label фокусирует input, screen-reader озвучивает «{title}, edit text» при focus на input.
+- **Семантика:** Корневой узел — нативный `<label data-label>` ([Label.vue:99](../../lib/label/Label.vue#L99)). При заданном `for-id` атрибут `for` устанавливается и работает нативная браузерная связка: click на label фокусирует input, screen-reader озвучивает «{title}, edit text» при focus на input.
 - **Внутри InputLayout `for-id` проставляется автоматически** ([InputLayout.vue](../../lib/inputlayout/InputLayout.vue) генерит стабильный id через `useId()` и передаёт `:for-id` + `:id` метке) — все form-controls (Input/Textarea/Select/Calendar/TextEditor) получают связь без ручной настройки. Standalone-Label вне InputLayout требует явного `for-id`. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - **Required-индикатор:** `*` через CSS `after:content-['*']` — не озвучивается screen-reader'ом. Добавь `aria-required="true"` на input самостоятельно или используй InputLayout-обёртку.
 - **Focus management:** не применимо — сам Label не focusable.
@@ -247,7 +256,7 @@ const lbl = useTemplateRef<InstanceType<typeof Label>>("lbl")
 
 - **Vue:** `^3.5.x`.
 - **Stability flag:** `stable` — audit-driven coverage (a11y, typing, slot, motion-safe, unstyled, mode/type variants).
-- **Breaking changes:** на 2026-05-11 не зафиксировано. Type `translateX`/`maxWidth` расширен с `number` до `number | string` — backwards-compatible.
+- **Breaking changes (1.0.0, props 1.0 — 2026-09-14):** `title` → `label`, `isRequired` → `required`, `type` → `labelMode`, `animate` → `animated`; `classBody` → `class` (корень `<label>`), прежний `class` (текст) → `classes.text`. Старые имена падают fallthrough-атрибутами на корень и ничего не меняют. Expose `type` → `labelMode`. Миграция — [migration-guide.md](../migration-guide.md). Ранее: type `translateX`/`maxWidth` расширен с `number` до `number | string` — backwards-compatible.
 - **Deprecations:** нет.
 
 ## 15. Testing recipes
@@ -259,13 +268,13 @@ import FishtVue from "fishtvue/config"
 import Label from "fishtvue/label/Label.vue"
 
 describe("Label", () => {
-  it("renders title", () => {
-    const wrapper = mount(Label, { props: { title: "Hello" } })
+  it("renders label", () => {
+    const wrapper = mount(Label, { props: { label: "Hello" } })
     expect(wrapper.text()).toContain("Hello")
   })
 
   it("emits native for-attribute when forId is provided", () => {
-    const wrapper = mount(Label, { props: { forId: "x", title: "X" } })
+    const wrapper = mount(Label, { props: { forId: "x", label: "X" } })
     expect(wrapper.find("label").attributes("for")).toBe("x")
   })
 })
@@ -278,7 +287,7 @@ describe("Label", () => {
 | Проблема | Причина | Решение |
 |---|---|---|
 | Label не двигается на focus у соседнего input | input не имеет класса `peer`. | Добавь `class="peer"` на input. |
-| `*`-маркер не отображается | `isRequired` не передан или передан `undefined`. | `:is-required="true"`. |
+| `*`-маркер не отображается | `required` не передан или передан `undefined`. | `required` / `:required="true"`. |
 | Click на label не фокусирует input | `for-id` не задан или не совпадает с `id` input. | Передай `<Label :for-id="inputId">` с совпадающим `id` на input. |
 | `maxWidth` не работает в percentage | Передан `number` — формула `n - 38px`. | Передавай строку: `max-width="100%"` → `calc(100% - 38px)`. |
 | Label перекрывает input в dynamic-режиме | По дефолту labels translate `-y-7` от base. Нужно соответствие input padding. | Используй [InputLayout](./input-layout.md) — он задаёт корректный layout. |
@@ -306,13 +315,13 @@ describe("Label", () => {
 
 ### API inconsistencies
 
-- `LabelExpose.classBase` соответствует `LabelProps.classBody` — поля переименованы при exposing.
+- ~~`LabelExpose.classBase` соответствует `LabelProps.classBody` — поля переименованы при exposing.~~ ✅ 2026-09-14: `classBody` снят, `class` = корень, `classBase` — его итоговый класс.
 
 ### Behavioral caveats
 
 - `peer-focus:` стили требуют, чтобы Label был sibling после `peer`-элемента в DOM.
 - Если input оборачивается в дополнительный контейнер — `peer` теряет связь с label. Используй `peer/group`-класс для именованных peer'ов.
-- Required-маркер цвет (`text-red-500`) не зависит от темы — для customisation override через `props.classBody`.
+- Required-маркер цвет (`text-red-500`) не зависит от темы — для customisation override через `props.class`.
 - `for-id` указывает на `id` целевого input — на стороне потребителя нужно гарантировать уникальность id (например, через `useId()` Vue 3.5+).
 - **RTL (2026-09-06).** Направление вынесено в множитель `--fv-label-dir`: `1` в LTR, `-1` в RTL (переключается классом `rtl:[--fv-label-dir:-1]`). Горизонтальные смещения записаны как `translate-x-[calc(16px*var(--fv-label-dir,1))]`, поэтому в RTL лейбл уезжает к началу строки, а не к её концу. Величины не изменились — в LTR рендер прежний. Звёздочка обязательного поля использует логический `after:ms-0.5`.
 - **Классы `peer-focus:translate-x-*` не действуют.** Горизонтальный сдвиг типов `dynamic` / `offsetDynamic` / `offsetStatic` / `static` управляется **только** prop'ом `translateX` (по умолчанию `0`): компонент пишет `--fv-translate-x` инлайн-стилем, а инлайн побеждает класс. Это не изменено намеренно — «оживление» классов сдвинуло бы каждый динамический лейбл при фокусе, то есть изменило бы внешний вид без запроса. Нужен сдвиг — задавай `translateX`.

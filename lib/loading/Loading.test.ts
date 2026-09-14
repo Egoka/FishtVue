@@ -147,6 +147,47 @@ describe("Loading Component", () => {
     })
   })
 
+  // props 1.0 (dev-patterns §2 A–E): единственный элемент — корень; `classes.root` ≡ `class`.
+  describe("class / classes (props 1.0)", () => {
+    it("`class` and `classes.root` land on the root and win twMerge conflicts against the base", () => {
+      const wrapper = mount(Loading, { props: { class: "probe-root block", classes: { root: "probe-key" } } })
+      const root = wrapper.find("[data-loading]").classes()
+      expect(root).toContain("probe-root")
+      expect(root).toContain("probe-key")
+      expect(root).toContain("block")
+      expect(root).not.toContain("inline-block")
+      expect(wrapper.find("[data-loading] .sr-only").classes()).not.toContain("probe-root")
+    })
+
+    it("merges componentsOptions.Loading.class / classes.root under local props", () => {
+      const app = createAppWithFishtVue({
+        componentsOptions: { Loading: { class: "global-root p-2", classes: { root: "global-key" } } }
+      })
+      const wrapper = mount(Loading, { props: { class: "p-4" }, global: { plugins: [app as any] } })
+      const root = wrapper.find("[data-loading]").classes()
+      expect(root).toContain("global-root")
+      expect(root).toContain("global-key")
+      expect(root).toContain("p-4")
+      expect(root).not.toContain("p-2")
+    })
+
+    it("keeps consumer classes under unstyled, drops the theme", () => {
+      const app = createAppWithFishtVue({ unstyled: true })
+      const wrapper = mount(Loading, {
+        props: { class: "probe-root", classes: { root: "probe-key" } },
+        global: { plugins: [app as any] }
+      })
+      // порядок сегментов потребителя: classes.root → class (dev-patterns §2 D)
+      expect(wrapper.find("[data-loading]").classes()).toEqual(["fv", "probe-key", "probe-root"])
+    })
+
+    it('resolves the corrected "4-dots-gooey" key (typo "goeey" снят в 1.0)', () => {
+      const wrapper = mount(Loading, { props: { type: "4-dots-gooey" } })
+      expect(vm(wrapper).type).toBe("4-dots-gooey")
+      expect(wrapper.find("[data-loading]").exists()).toBe(true)
+    })
+  })
+
   describe("Option resolution (Issue 4)", () => {
     it("applies componentsOptions.Loading including type", () => {
       const app = createAppWithFishtVue({

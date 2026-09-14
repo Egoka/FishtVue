@@ -175,8 +175,8 @@
 </script>
 
 <script setup lang="ts">
-  import { computed, ref, watch } from "vue"
-  import type { IconsProps } from "./Icons"
+  import { computed, markRaw, ref, watch } from "vue"
+  import type { IconsClassKey, IconsProps } from "./Icons"
   import { convertToCamelCase } from "fishtvue/utils/stringHandler"
   // ---------------------------------------
   // https://icon-sets.iconify.design/ — fallback для имён вне heroicons-реестра (см. module-scope <script>)
@@ -188,6 +188,7 @@
   const options = Icons.getOptions()
   // ---PROPS-EMITS-SLOTS-------------------
   const props = defineProps<IconsProps>()
+  const { cls } = Icons.resolveClasses<IconsClassKey>(props)
   // ---REF-LINK----------------------------
   const isViewIcon = ref(false)
   // ---PROPS-------------------------------
@@ -195,14 +196,13 @@
   const variant = computed<"outline" | "solid">(() => props.variant ?? options?.variant ?? "outline")
   const label = computed<string | undefined>(() => (props.label ? props.label : undefined))
   const style = computed(() => props.style)
-  const classIcon = computed(() =>
-    Icons.setStyle([
-      "h-5 w-5 text-surface-900 dark:text-surface-100",
-      options?.class ?? "",
-      props?.class ?? "",
-      "select-none"
-    ])
+  // props 1.0 (решение 6): база размера/цвета — на корне <i data-icon>, чтобы `class` был корнем
+  // (dev-patterns §2 A). svg растягивается на бокс и наследует color/fill/stroke — hand-off'ы
+  // `class="h-4 w-4 text-…"` из Button/Badge/Menu продолжают работать без правок.
+  const classBase = computed(() =>
+    cls("root", "inline-block shrink-0 h-5 w-5 text-surface-900 dark:text-surface-100 select-none")
   )
+  const classIcon = computed(() => cls("icon", "block h-full w-full"))
 
   const heroIcon = ref<any | undefined>(undefined)
   // ---------------------------------------
@@ -243,7 +243,10 @@
     const set = currentVariant === "solid" ? HERO_SOLID : HERO_OUTLINE
     const comp = set[name]
     if (comp) {
-      heroIcon.value = comp
+      // heroicons экспортируют функциональные компоненты, а у них сквозь проваливаются только
+      // class/style/on* (`getFunctionalFallthrough` в runtime-core) — `data-icon-svg` до svg не доезжал.
+      // Оборачиваем render в options-компонент: полный attrs-fallthrough, инстанс на иконку копеечный.
+      heroIcon.value = markRaw({ name, render: comp as (...args: unknown[]) => unknown })
       return true
     }
     return false
@@ -267,14 +270,15 @@
     type,
     variant,
     label,
+    classBase,
     classIcon,
     style
   })
 </script>
 
 <template>
-  <i data-icon :role="label ? 'img' : undefined" :aria-label="label">
-    <component v-if="heroIcon" :is="heroIcon" :class="classIcon" :style="style" />
-    <Icon v-else-if="isViewIcon" :icon="type" :class="classIcon" :style="style" aria-hidden="true" />
+  <i data-icon :role="label ? 'img' : undefined" :aria-label="label" :class="classBase" :style="style">
+    <component v-if="heroIcon" :is="heroIcon" data-icon-svg :class="classIcon" />
+    <Icon v-else-if="isViewIcon" :icon="type" data-icon-svg :class="classIcon" aria-hidden="true" />
   </i>
 </template>

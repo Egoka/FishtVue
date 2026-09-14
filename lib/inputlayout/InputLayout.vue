@@ -339,13 +339,13 @@
       v-if="label"
       :id="labelId"
       :for-id="fieldId"
-      :title="label"
-      :type="labelType"
+      :label="label"
+      :label-mode="labelType"
       :mode="mode"
-      :is-required="isRequired"
+      :required="isRequired"
       :translate-x="beforeWidth || 10"
       :max-width="widthInput"
-      :animate="isTick" />
+      :animated="isTick" />
     <span
       ref="afterInput"
       :class="classAfterInput"

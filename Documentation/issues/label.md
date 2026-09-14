@@ -1,7 +1,7 @@
 ---
 title: Issues — Label
 summary: Аудит Label — 9 из 11 issues ✅ resolved (for-id, dup initStyle, translateX/maxWidth typing, type-via-options, unstyled cross-cutting, motion-safe, default slot, B10 semantic-token, translate через CSS custom properties). Остаются Issues 3 (packaging, cross-cutting закрыт волной 2) и 9 (RTL).
-updated: 2026-09-06
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/label/
 related-doc: ../components/label.md
@@ -233,7 +233,7 @@ Cross-cutting инфраструктура (Wave 9) добавила 23-й им�
 
 | Настройка                 | Поддержано? | Комментарий                                                                    |
 | ------------------------- | ----------- | ------------------------------------------------------------------------------ |
-| `componentsOptions.Label` | ✅          | через `Label.getOptions()` (mode/type/translateX/maxWidth/class/classBody)     |
+| `componentsOptions.Label` | ✅          | через `Label.getOptions()` (mode/labelMode/translateX/maxWidth/class/classes) |
 | `componentsStyle` global  | ✅          | через `Label.componentsStyle()` fallback на mode                               |
 | `unstyled: true`          | ✅          | через cross-cutting fix в `Component.setStyle` (Issue 7 ✅)                    |
 | Theme tokens vs hardcode  | ⚠️          | Issue 11 ✅ resolved 2026-07-04 (`classContent` → `surface-*`); px-смещения всё ещё хардкодны (Issue 5 — Wave 3.3); `text-red-500` для required-маркера хардкоден |

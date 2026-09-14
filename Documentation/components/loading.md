@@ -1,7 +1,7 @@
 ---
 title: Loading
-summary: Лоадер с типами Epic/SVG/simple, configurable size, color, animationDuration; ARIA status-регион, reduced-motion fallback.
-updated: 2026-09-06
+summary: props 1.0 (2026-09-14) — `class`/`classes.root` на корне, ключ `"4-dots-gooey"` (typo снят). Лоадер с типами Epic/SVG/simple, configurable size, color, animationDuration; ARIA status-регион, reduced-motion fallback.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -52,15 +52,22 @@ import Loading from "fishtvue/loading"
 
 ## 5. Props
 
-`LoadingProps` ([Loading.d.ts:19–49](../../lib/loading/Loading.d.ts#L19-L49)):
+`LoadingProps` ([Loading.d.ts:19–64](../../lib/loading/Loading.d.ts#L19-L64)):
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `type` | `EpicLoading \| SvgLoading \| "simple"` | `"simple"` (или из global) | Тип индикатора. |
-| `animationDuration` | `number \| 1000 \| 1200 \| 1500 \| 2000 \| 2500 \| 3000 \| 4000 \| 5000 \| 6000` | — | Длительность (ms). |
-| `size` | `number \| 40 \| 50 \| 55 \| 60 \| 64 \| 65 \| 66 \| 70` | — | Размер (px). |
-| `color` | `string` | — | CSS color (HEX, hsl, var(...)). |
-| `class` | `StyleClass` | — | Класс контейнера. |
+| `type` | `EpicLoading \| SvgLoading` | `"simple"` (или из global) | Тип индикатора (`"simple"` — ключ `componentsMapSvg`). |
+| `animationDuration` | `1000 \| 1200 \| 1500 \| 2000 \| 2500 \| 3000 \| 4000 \| 5000 \| 6000 \| (number & {})` | `1500` | Длительность (ms); литералы — пресеты, любое число допустимо. |
+| `size` | `number` | `20` | Размер (px). |
+| `color` | `string` | `"currentColor"` | CSS color (HEX, токен палитры, var(...)). |
+| `class` | `StyleClass` | — | Классы корня `<div data-loading>`. |
+| `classes` | `ClassesMap` | — | Карта классов, см. §5.1: у Loading единственный элемент — корень, поэтому доступен только `root` (≡ `class`). |
+
+### 5.1 Classes keys
+
+| Key    | Element (`data-*`)      | Kind    | Default |
+| ------ | ----------------------- | ------- | ------- |
+| `root` | `<div data-loading>`    | element | —       |
 
 `EpicLoading = keyof typeof componentsMapEpic` ([loadingTypes.ts](../../lib/loading/loadingTypes.ts)) — extensive set of named animations.
 `SvgLoading = keyof typeof componentsMapSvg` — SVG-вариации.
@@ -116,7 +123,7 @@ app.use(FishtVue, {
 
 ### 10.1 Global
 
-`LoadingOption = Pick<LoadingProps, "type" | "animationDuration" | "size" | "color" | "class">`. `type` **входит** в Option — `componentsOptions.Loading.type` задаёт дефолтный тип глобально (Issue 4 закрыт 2026-06-03).
+`LoadingOption = Pick<LoadingProps, "type" | "animationDuration" | "size" | "color" | "class" | "classes">` ([Loading.d.ts:105](../../lib/loading/Loading.d.ts#L105)). `type` **входит** в Option — `componentsOptions.Loading.type` задаёт дефолтный тип глобально (Issue 4 закрыт 2026-06-03).
 
 ### 10.2 Per-instance
 
@@ -157,7 +164,7 @@ import Loading from "fishtvue/loading"
 
 - **Vue:** `^3.5.x`.
 - **Stability flag:** `stable` (2026-09-06) — coverage `loadingTypes.ts` 100%; [Issue 7](../issues/loading.md) (hardcoded HEX) закрыт. Root exports map (A4-5, Wave 2.1) — ✅ resolved 2026-06-14 (см. [issues/loading.md Issue 5](../issues/loading.md)).
-- **Breaking changes:** не зафиксировано.
+- **Breaking changes (1.0.0, props 1.0 — 2026-09-14):** ключ `"4-dots-goeey"` → `"4-dots-gooey"` (старое значение → dev-warning и fallback `"simple"`); `classes` добавлен (non-breaking). Миграция — [migration-guide.md](../migration-guide.md).
 - **Deprecations:** нет.
 
 ## 15. Testing recipes

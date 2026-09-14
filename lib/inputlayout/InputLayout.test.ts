@@ -745,7 +745,7 @@ describe("InputLayout Component", () => {
     it("help icon uses surface-* base color, keeps semantic yellow hover untouched", async () => {
       const wrapper = mount(InputLayout, { props: { value: "", help: "Some help text" } })
       await flushHero()
-      const cls = wrapper.find("[data-input-layout-help] svg")?.attributes("class") ?? ""
+      const cls = wrapper.find("[data-input-layout-help] [data-icon]")?.attributes("class") ?? ""
       expect(cls).toContain("text-surface-400")
       expect(cls).toContain("dark:text-surface-600")
       expect(cls).not.toMatch(/(?:^|\s)text-gray-400(?:\s|$)/)
@@ -757,7 +757,7 @@ describe("InputLayout Component", () => {
     it("clear icon uses surface-* base color, keeps semantic red hover untouched", async () => {
       const wrapper = mount(InputLayout, { props: { value: "test", clear: true } })
       await flushHero()
-      const cls = wrapper.find("[data-input-layout-clear] svg")?.attributes("class") ?? ""
+      const cls = wrapper.find("[data-input-layout-clear] [data-icon]")?.attributes("class") ?? ""
       expect(cls).toContain("text-surface-400")
       expect(cls).toContain("dark:text-surface-600")
       expect(cls).not.toMatch(/(?:^|\s)text-gray-400(?:\s|$)/)
@@ -770,7 +770,7 @@ describe("InputLayout Component", () => {
     it("copy icon uses surface-* for both base and hover (structural, not semantic) — not hardcoded gray-*", async () => {
       const wrapper = mount(InputLayout, { props: { value: "test", disabled: true } })
       await flushHero()
-      const cls = wrapper.find("[data-input-layout-copy] svg")?.attributes("class") ?? ""
+      const cls = wrapper.find("[data-input-layout-copy] [data-icon]")?.attributes("class") ?? ""
       expect(cls).toContain("text-surface-400")
       expect(cls).toContain("dark:text-surface-600")
       expect(cls).toContain("hover:text-surface-600")

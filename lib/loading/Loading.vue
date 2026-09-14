@@ -15,6 +15,7 @@
 
   // ---PROPS-EMITS-SLOTS-------------------
   const props = defineProps<LoadingProps>()
+  const { cls } = Loading.resolveClasses<never>(props)
 
   // ---STATE-------------------------------
   // prefers-reduced-motion: вместо анимаций рендерим статичный simple-loader (Issue 6).
@@ -114,9 +115,7 @@
     return resolvedColor
   })
 
-  const classLoading = computed<LoadingProps["class"]>(() =>
-    Loading.setStyle(["inline-block", "print:hidden", options?.class ?? "", props?.class ?? ""])
-  )
+  const classLoading = computed<string>(() => cls("root", "inline-block", "print:hidden"))
 
   const containerStyle = computed(() => ({
     width: `${size.value}px`,

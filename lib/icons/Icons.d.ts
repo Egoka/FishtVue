@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, StyleClass } from "../types"
 import { CSSProperties } from "vue"
 
 /**
@@ -75,6 +75,12 @@ export declare type IconifyIconName = `${string}:${string}`
 export declare type IconType = HeroIconName | IconifyIconName | (string & {})
 
 /**
+ * Ключи карты `classes` (dev-patterns §2 B). `root` — `<i data-icon>` (добавляется `ClassesMap`).
+ * - `icon` — внутренний `<svg data-icon-svg>` (heroicon или Iconify).
+ */
+export declare type IconsClassKey = "icon"
+
+/**
  * Props for the Icons component.
  */
 export declare type IconsProps = {
@@ -114,13 +120,21 @@ export declare type IconsProps = {
   label?: string
 
   /**
-   * Custom CSS class for the icon.
-   * @type {"h-5 w-5 text-surface-900 dark:text-surface-100" | StyleClass | undefined}
+   * CSS-классы корня `<i data-icon>` — сюда переехала база размера и цвета
+   * (`inline-block shrink-0 h-5 w-5 text-surface-900 dark:text-surface-100 select-none`);
+   * `<svg>` растягивается на `h-full w-full` и наследует `color`. Консьюмерские `h-4 w-4` перебивают базу через twMerge.
+   * @type {StyleClass | undefined}
    */
-  class?: "h-5 w-5 text-surface-900 dark:text-surface-100" | StyleClass
+  class?: StyleClass
 
   /**
-   * Custom inline styles for the icon.
+   * Карта классов внутренних элементов: `icon` — `<svg data-icon-svg>`, `root` ≡ `class`.
+   * @type {ClassesMap<IconsClassKey> | undefined}
+   */
+  classes?: ClassesMap<IconsClassKey>
+
+  /**
+   * Inline-стили корня `<i data-icon>` (`color` наследуется svg).
    * @type {CSSProperties | undefined}
    */
   style?: CSSProperties
@@ -151,10 +165,16 @@ export declare type IconsExpose = {
   label: IconsProps["label"]
 
   /**
-   * The current CSS class applied to the icon.
-   * @type {IconsProps["class"]}
+   * Итоговый класс корня `<i data-icon>` (база + `class`/`classes.root`).
+   * @type {string}
    */
-  classIcon: IconsProps["class"]
+  classBase: string
+
+  /**
+   * Итоговый класс внутреннего `<svg data-icon-svg>` (`block h-full w-full` + `classes.icon`).
+   * @type {string}
+   */
+  classIcon: string
 
   /**
    * The current inline styles applied to the icon.
@@ -162,7 +182,7 @@ export declare type IconsExpose = {
    */
   style: IconsProps["style"]
 }
-export declare type IconsOption = Pick<IconsProps, "class" | "variant">
+export declare type IconsOption = Pick<IconsProps, "class" | "classes" | "variant">
 
 // ---------------------------------------
 

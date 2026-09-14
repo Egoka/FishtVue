@@ -1,4 +1,4 @@
-import { ClassComponent, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
+import { ClassComponent, ClassesMap, GlobalComponentConstructor, ReadRef, StyleClass } from "../types"
 import { componentsMapEpic, componentsMapSvg } from "fishtvue/loading/loadingTypes"
 
 /**
@@ -51,10 +51,16 @@ export declare type LoadingProps = {
   color?: string
 
   /**
-   * Custom CSS class for the loading container.
+   * CSS-классы корня `<div data-loading>`.
    * @type {StyleClass | undefined}
    */
   class?: StyleClass
+
+  /**
+   * Карта классов (dev-patterns §2 B). У Loading единственный элемент — корень, поэтому доступен только `root` (≡ `class`).
+   * @type {ClassesMap | undefined}
+   */
+  classes?: ClassesMap
 }
 
 export declare type LoadingSlots = null
@@ -96,7 +102,10 @@ export declare type LoadingExpose = {
    */
   classLoading: ReadRef<LoadingProps["class"]>
 }
-export declare type LoadingOption = Pick<LoadingProps, "type" | "animationDuration" | "size" | "color" | "class">
+export declare type LoadingOption = Pick<
+  LoadingProps,
+  "type" | "animationDuration" | "size" | "color" | "class" | "classes"
+>
 
 // ---------------------------------------
 

@@ -1541,7 +1541,7 @@ describe("Form Component Tests", () => {
           ]
         }
       })
-      const icons = wrapper.findAll("[data-icon] svg")
+      const icons = wrapper.findAll("[data-icon]")
       expect(icons.length).toBeGreaterThanOrEqual(2)
       icons.forEach((icon) => {
         const cls = icon.classes().join(" ")

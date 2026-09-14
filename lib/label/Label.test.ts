@@ -9,30 +9,44 @@ describe("Label Component Tests", () => {
     it("renders with default props", () => {
       const wrapper = mount(Label, {
         props: {
-          title: "Default Label"
+          label: "Default Label"
         }
       })
 
       expect(wrapper.find("[data-label]").exists()).toBe(true)
       expect(wrapper.text()).toBe("Default Label")
+      // props 1.0: полный контракт props — переименования снимают старые имена, `classes` появляется
+      expect(wrapper.props()).toEqual({
+        label: "Default Label",
+        required: undefined,
+        labelMode: undefined,
+        mode: undefined,
+        translateX: undefined,
+        maxWidth: undefined,
+        forId: undefined,
+        class: undefined,
+        classes: undefined,
+        animated: undefined
+      })
     })
 
     it("renders <label> as root element with data-label", () => {
       const wrapper = mount(Label, {
         props: {
-          title: "Root tag"
+          label: "Root tag"
         }
       })
 
       expect(wrapper.element.tagName).toBe("LABEL")
       expect(wrapper.find("label[data-label]").exists()).toBe(true)
+      expect(wrapper.find("[data-label] span[data-label-text]").exists()).toBe(true)
     })
 
-    it("applies correct styles for type 'dynamic'", () => {
+    it("applies correct styles for labelMode 'dynamic'", () => {
       const wrapper = mount(Label, {
         props: {
-          title: "Dynamic Label",
-          type: "dynamic"
+          label: "Dynamic Label",
+          labelMode: "dynamic"
         }
       })
 
@@ -41,11 +55,11 @@ describe("Label Component Tests", () => {
       )
     })
 
-    it("applies required marker when 'isRequired' is true", () => {
+    it("applies required marker when 'required' is true", () => {
       const wrapper = mount(Label, {
         props: {
-          title: "Required Label",
-          isRequired: true
+          label: "Required Label",
+          required: true
         }
       })
 
@@ -56,7 +70,7 @@ describe("Label Component Tests", () => {
     it("computes dynamic translateX style", () => {
       const wrapper = mount(Label, {
         props: {
-          title: "Translate Label",
+          label: "Translate Label",
           translateX: 20
         }
       })
@@ -69,7 +83,7 @@ describe("Label Component Tests", () => {
     it("computes correct maxWidth style", () => {
       const wrapper = mount(Label, {
         props: {
-          title: "MaxWidth Label",
+          label: "MaxWidth Label",
           maxWidth: 100
         }
       })
@@ -95,8 +109,8 @@ describe("Label Component Tests", () => {
       ])('applies correct background style for mode "%s"', (mode, expectedBackground) => {
         const wrapper = mount(Label, {
           props: {
-            title: "Test Label",
-            type: "offsetDynamic",
+            label: "Test Label",
+            labelMode: "offsetDynamic",
             // @ts-ignore
             mode
           }
@@ -107,7 +121,7 @@ describe("Label Component Tests", () => {
       })
     })
 
-    describe("Label Component - Type Variants", () => {
+    describe("Label Component - labelMode Variants", () => {
       it.each([
         [
           "dynamic",
@@ -127,12 +141,12 @@ describe("Label Component Tests", () => {
           "none",
           "opacity-0 -translate-y-[var(--fv-label-translate-y-rest,28px)] translate-x-[calc(32px*var(--fv-label-dir,1))]"
         ]
-      ])('applies correct class for type "%s"', (type, expectedClass) => {
+      ])('applies correct class for labelMode "%s"', (labelMode, expectedClass) => {
         const wrapper = mount(Label, {
           props: {
-            title: "Test Label",
+            label: "Test Label",
             // @ts-ignore
-            type
+            labelMode
           }
         })
 
@@ -144,7 +158,7 @@ describe("Label Component Tests", () => {
     /**
      * Issue 5 (B11): вертикальные смещения параметризованы CSS custom properties.
      * Прежние литералы (`-translate-y-[60px]`) не масштабировались вместе с font-size —
-     * при `classBody: "text-base"` лейбл вылезал за пределы поля, и починить это без правки
+     * при `class: "text-base"` лейбл вылезал за пределы поля, и починить это без правки
      * исходника было нельзя.
      */
     describe("Label Component - translate custom properties (Issue 5)", () => {
@@ -155,10 +169,10 @@ describe("Label Component Tests", () => {
         ["static", "--fv-label-translate-y,60px"],
         ["vanishing", "--fv-label-translate-y-rest,28px"],
         ["none", "--fv-label-translate-y-rest,28px"]
-      ])('type "%s" ссылается на переменную, а не на литерал px', (type, variable) => {
+      ])('labelMode "%s" ссылается на переменную, а не на литерал px', (labelMode, variable) => {
         const wrapper = mount(Label, {
           // @ts-ignore
-          props: { title: "Test Label", type }
+          props: { label: "Test Label", labelMode }
         })
         const classes = wrapper.find("[data-label]").classes().join(" ")
 
@@ -184,6 +198,57 @@ describe("Label Component Tests", () => {
     })
   })
 
+  // props 1.0 (dev-patterns §2 A–D): `class` — только корень `<label data-label>`,
+  // внутренний текст — `classes.text` (`<span data-label-text>`), ключ `root` ≡ `class`.
+  describe("Label Component - class / classes (props 1.0)", () => {
+    it("`class` lands only on the root <label>, never on the text span", () => {
+      const wrapper = mount(Label, { props: { label: "L", class: "probe-root" } })
+      expect(wrapper.find("[data-label]").classes()).toContain("probe-root")
+      expect(wrapper.find("[data-label-text]").classes()).not.toContain("probe-root")
+    })
+
+    it("`classes.text` lands on the text span, `classes.root` on the root", () => {
+      const wrapper = mount(Label, {
+        props: { label: "L", classes: { root: "probe-root", text: "probe-text" } }
+      })
+      expect(wrapper.find("[data-label]").classes()).toContain("probe-root")
+      expect(wrapper.find("[data-label]").classes()).not.toContain("probe-text")
+      expect(wrapper.find("[data-label-text]").classes()).toContain("probe-text")
+      expect(wrapper.find("[data-label-text]").classes()).not.toContain("probe-root")
+    })
+
+    it("consumer classes come last and win twMerge conflicts against the base", () => {
+      const wrapper = mount(Label, { props: { label: "L", class: "h-4", classes: { text: "text-lg" } } })
+      const root = wrapper.find("[data-label]").classes()
+      expect(root).toContain("h-4")
+      expect(root).not.toContain("h-2.5")
+      const text = wrapper.find("[data-label-text]").classes()
+      expect(text).toContain("text-lg")
+      expect(text).not.toContain("text-sm")
+    })
+
+    it("reacts to `classes` replacement", async () => {
+      const wrapper = mount(Label, { props: { label: "L", classes: { text: "first" } } })
+      expect(wrapper.find("[data-label-text]").classes()).toContain("first")
+      await wrapper.setProps({ classes: { text: "second" } })
+      expect(wrapper.find("[data-label-text]").classes()).toContain("second")
+      expect(wrapper.find("[data-label-text]").classes()).not.toContain("first")
+    })
+
+    it("legacy names (title/type/isRequired/animate/classBody) are no longer props — они падают атрибутами на корень и ничего не меняют", () => {
+      const wrapper = mount(Label, {
+        // снятые в 1.0 имена — намеренно мимо типов
+        props: { title: "Old", type: "none", isRequired: true, classBody: "old-body" } as any
+      })
+      const root = wrapper.find("[data-label]")
+      expect(wrapper.text()).toBe("")
+      expect(root.classes()).not.toContain("old-body")
+      expect(root.classes()).not.toContain("opacity-0")
+      expect(root.classes()).not.toContain("after:content-['*']")
+      expect(root.attributes("title")).toBe("Old")
+    })
+  })
+
   describe("Label Component - With Library Initialization", () => {
     const createAppWithFishtVue = (options = {}) => ({
       install(app: any) {
@@ -194,15 +259,15 @@ describe("Label Component Tests", () => {
         })
       }
     })
-    it("applies global styles from library initialization", () => {
+    it("applies global class / classes from library initialization", () => {
       const app = createAppWithFishtVue({
-        classBody: "global-class-body",
-        class: "global-class-content"
+        class: "global-class-root",
+        classes: { text: "global-class-text" }
       })
 
       const wrapper = mount(Label, {
         props: {
-          title: "Global Styled Label"
+          label: "Global Styled Label"
         },
         global: {
           plugins: [app]
@@ -210,40 +275,50 @@ describe("Label Component Tests", () => {
       })
 
       const labelElement = wrapper.find("[data-label]")
-      expect(labelElement.classes()).toContain("global-class-body")
+      expect(labelElement.classes()).toContain("global-class-root")
 
-      const contentElement = wrapper.find("span")
-      expect(contentElement.classes()).toContain("global-class-content")
+      const contentElement = wrapper.find("[data-label-text]")
+      expect(contentElement.classes()).toContain("global-class-text")
+      expect(contentElement.classes()).not.toContain("global-class-root")
     })
 
-    it("overrides global styles with local props", () => {
+    it("merges global and local classes per key; local wins twMerge conflicts", () => {
       const app = createAppWithFishtVue({
-        classBody: "global-class-body"
+        class: "global-class-root p-2",
+        classes: { text: "global-text p-1" }
       })
 
       const wrapper = mount(Label, {
         props: {
-          title: "Override Styled Label",
-          classBody: "local-class-body"
+          label: "Override Styled Label",
+          class: "local-class-root p-4",
+          classes: { text: "local-text p-3" }
         },
         global: {
           plugins: [app]
         }
       })
 
-      const labelElement = wrapper.find("[data-label]")
-      expect(labelElement.classes()).toContain("local-class-body")
-      expect(labelElement.classes()).toContain("global-class-body")
+      const root = wrapper.find("[data-label]").classes()
+      expect(root).toContain("local-class-root")
+      expect(root).toContain("global-class-root")
+      expect(root).toContain("p-4")
+      expect(root).not.toContain("p-2")
+      const text = wrapper.find("[data-label-text]").classes()
+      expect(text).toContain("local-text")
+      expect(text).toContain("global-text")
+      expect(text).toContain("p-3")
+      expect(text).not.toContain("p-1")
     })
 
-    it("uses global 'type' when not provided locally", () => {
+    it("uses global 'labelMode' when not provided locally", () => {
       const app = createAppWithFishtVue({
-        type: "offsetDynamic"
+        labelMode: "offsetDynamic"
       })
 
       const wrapper = mount(Label, {
         props: {
-          title: "Global Type Label"
+          label: "Global Type Label"
         },
         global: {
           plugins: [app]
@@ -255,15 +330,15 @@ describe("Label Component Tests", () => {
       )
     })
 
-    it("local 'type' overrides global 'type'", () => {
+    it("local 'labelMode' overrides global 'labelMode'", () => {
       const app = createAppWithFishtVue({
-        type: "offsetDynamic"
+        labelMode: "offsetDynamic"
       })
 
       const wrapper = mount(Label, {
         props: {
-          title: "Local Type Label",
-          type: "vanishing"
+          label: "Local Type Label",
+          labelMode: "vanishing"
         },
         global: {
           plugins: [app]
@@ -281,7 +356,7 @@ describe("Label Component Tests", () => {
   describe("Label Component - for-id (a11y)", () => {
     it("applies for attribute when forId is provided", () => {
       const wrapper = mount(Label, {
-        props: { forId: "email-input", title: "Email" }
+        props: { forId: "email-input", label: "Email" }
       })
 
       expect(wrapper.find("label").attributes("for")).toBe("email-input")
@@ -289,7 +364,7 @@ describe("Label Component Tests", () => {
 
     it("omits for attribute when forId is undefined", () => {
       const wrapper = mount(Label, {
-        props: { title: "No for-id" }
+        props: { label: "No for-id" }
       })
 
       expect(wrapper.find("label").attributes("for")).toBeUndefined()
@@ -304,7 +379,7 @@ describe("Label Component Tests", () => {
       // non-native controls reference via aria-labelledby (Wave 4).
       const wrapper = mount(Label, {
         attrs: { id: "email-input-label" },
-        props: { forId: "email-input", title: "Email" }
+        props: { forId: "email-input", label: "Email" }
       })
       expect(wrapper.find("label").attributes("id")).toBe("email-input-label")
     })
@@ -314,7 +389,7 @@ describe("Label Component Tests", () => {
   describe("Label Component - translateX / maxWidth typing", () => {
     it("accepts translateX as string with CSS unit", () => {
       const wrapper = mount(Label, {
-        props: { title: "Rem translate", translateX: "1rem" }
+        props: { label: "Rem translate", translateX: "1rem" }
       })
 
       expect(wrapper.find("[data-label]").attributes("style")).toContain(
@@ -324,7 +399,7 @@ describe("Label Component Tests", () => {
 
     it("accepts translateX as percentage string", () => {
       const wrapper = mount(Label, {
-        props: { title: "Pct translate", translateX: "50%" }
+        props: { label: "Pct translate", translateX: "50%" }
       })
 
       expect(wrapper.find("[data-label]").attributes("style")).toContain(
@@ -334,7 +409,7 @@ describe("Label Component Tests", () => {
 
     it("accepts maxWidth as string with calc fallback", () => {
       const wrapper = mount(Label, {
-        props: { title: "Pct maxWidth", maxWidth: "100%" }
+        props: { label: "Pct maxWidth", maxWidth: "100%" }
       })
 
       const span = wrapper.find("span")
@@ -343,7 +418,7 @@ describe("Label Component Tests", () => {
 
     it("accepts maxWidth as rem string", () => {
       const wrapper = mount(Label, {
-        props: { title: "Rem maxWidth", maxWidth: "5rem" }
+        props: { label: "Rem maxWidth", maxWidth: "5rem" }
       })
 
       const span = wrapper.find("span")
@@ -351,8 +426,8 @@ describe("Label Component Tests", () => {
     })
   })
 
-  // Issue 7 (L53, audit 2026-05-10) — `unstyled: true` regression test
-  // Cross-cutting fix in Component.setStyle (lib/component/index.ts:138).
+  // Issue 7 (L53, audit 2026-05-10) — `unstyled: true` regression test.
+  // props 1.0 (dev-patterns §2 E): под unstyled остаются `fv` и классы потребителя, тема — нет.
   describe("Label Component - unstyled cross-cutting", () => {
     afterEach(() => {
       // Component falls back to `window.FishtVue` when no app instance is
@@ -361,15 +436,15 @@ describe("Label Component Tests", () => {
       delete (window as any).FishtVue
     })
 
-    it("respects unstyled: true via Component.setStyle guard", () => {
-      const unstyledApp = {
-        install(app: any) {
-          app.use(FishtVue, { unstyled: true })
-        }
+    const unstyledApp = {
+      install(app: any) {
+        app.use(FishtVue, { unstyled: true })
       }
+    }
 
+    it("respects unstyled: true via Component.setStyle guard", () => {
       const wrapper = mount(Label, {
-        props: { title: "Unstyled Label" },
+        props: { label: "Unstyled Label" },
         global: {
           plugins: [unstyledApp]
         }
@@ -379,13 +454,23 @@ describe("Label Component Tests", () => {
       const span = wrapper.find("span")
       expect(span.classes()).toEqual(["fv"])
     })
+
+    it("keeps consumer class / classes under unstyled", () => {
+      const wrapper = mount(Label, {
+        props: { label: "Unstyled Label", class: "probe-root", classes: { text: "probe-text" } },
+        global: { plugins: [unstyledApp] }
+      })
+
+      expect(wrapper.find("[data-label]").classes()).toEqual(["fv", "probe-root"])
+      expect(wrapper.find("[data-label-text]").classes()).toEqual(["fv", "probe-text"])
+    })
   })
 
   // Issue 8 (E29.7, audit 2026-05-10) — prefers-reduced-motion guard
   describe("Label Component - motion-safe", () => {
     it("applies motion-safe guard on transition classes", () => {
       const wrapper = mount(Label, {
-        props: { title: "Motion-safe" }
+        props: { label: "Motion-safe" }
       })
 
       const classes = wrapper.find("[data-label]").classes()
@@ -397,19 +482,20 @@ describe("Label Component Tests", () => {
   })
 
   // Issue: floating-label «переезжал» из исходной точки в финальную на mount.
-  // Transition теперь гейтится prop `animate` (InputLayout передаёт isTick), чтобы
-  // на первом кадре лейбл стоял на месте без анимации.
-  describe("Label Component - animate prop (position transition gate)", () => {
-    it("keeps the motion-safe transition by default (animate defaults to true)", () => {
-      const classes = mount(Label, { props: { title: "L" } })
-        .find("[data-label]")
-        .classes()
+  // Transition гейтится prop `animated` (InputLayout передаёт isTick), чтобы
+  // на первом кадре лейбл стоял на месте без анимации. props 1.0: булев без
+  // `withDefaults`-литерала — default `true` живёт в резолвере (dev-patterns §2 F).
+  describe("Label Component - animated prop (position transition gate)", () => {
+    it("keeps the motion-safe transition by default (animated resolves to true, prop stays undefined)", () => {
+      const wrapper = mount(Label, { props: { label: "L" } })
+      expect(wrapper.props("animated")).toBeUndefined()
+      const classes = wrapper.find("[data-label]").classes()
       expect(classes).toContain("motion-safe:transition-all")
       expect(classes).toContain("motion-safe:duration-200")
     })
 
-    it("drops the position transition when animate=false (no mount slide)", () => {
-      const classes = mount(Label, { props: { title: "L", animate: false } })
+    it("drops the position transition when animated=false (no mount slide)", () => {
+      const classes = mount(Label, { props: { label: "L", animated: false } })
         .find("[data-label]")
         .classes()
       expect(classes).not.toContain("motion-safe:transition-all")
@@ -427,7 +513,7 @@ describe("Label Component Tests", () => {
   // -----------------------------------------------------------------------
   describe("Label Component - semantic token migration — content color uses surface-* (Issue 11 / B10)", () => {
     it("classContent includes text-surface-400 dark:text-surface-500 (not gray)", () => {
-      const wrapper = mount(Label, { props: { title: "Surface tone" } })
+      const wrapper = mount(Label, { props: { label: "Surface tone" } })
       const classContent = (wrapper.vm as any).classContent as string
       expect(classContent).toContain("text-surface-400")
       expect(classContent).toContain("dark:text-surface-500")
@@ -435,34 +521,45 @@ describe("Label Component Tests", () => {
     })
 
     it("rendered span class attribute carries surface-* tone classes", () => {
-      const wrapper = mount(Label, { props: { title: "Surface tone" } })
+      const wrapper = mount(Label, { props: { label: "Surface tone" } })
       const spanClass = wrapper.find("span").attributes("class")
       expect(spanClass).toContain("text-surface-400")
       expect(spanClass).toContain("dark:text-surface-500")
     })
   })
 
-  // Issue 10 (G37, audit 2026-05-10) — default slot for custom title content
+  // Issue 10 (G37, audit 2026-05-10) — default slot for custom label content
   describe("Label Component - default slot", () => {
-    it("renders title prop as fallback when no default slot is provided", () => {
+    it("renders label prop as fallback when no default slot is provided", () => {
       const wrapper = mount(Label, {
-        props: { title: "Plain title" }
+        props: { label: "Plain label" }
       })
 
-      expect(wrapper.text()).toBe("Plain title")
+      expect(wrapper.text()).toBe("Plain label")
     })
 
-    it("renders default slot content overriding title prop", () => {
+    it("renders default slot content overriding label prop", () => {
       const wrapper = mount(Label, {
-        props: { title: "Plain title" },
+        props: { label: "Plain label" },
         slots: {
-          default: "<strong>Slot title</strong>"
+          default: "<strong>Slot label</strong>"
         }
       })
 
       expect(wrapper.find("strong").exists()).toBe(true)
-      expect(wrapper.find("strong").text()).toBe("Slot title")
-      expect(wrapper.text()).toBe("Slot title")
+      expect(wrapper.find("strong").text()).toBe("Slot label")
+      expect(wrapper.text()).toBe("Slot label")
+    })
+  })
+
+  describe("Label Component - expose", () => {
+    it("exposes mode, labelMode, classBase, classContent", () => {
+      const wrapper = mount(Label, { props: { label: "L", labelMode: "static", mode: "filled" } })
+      const vm = wrapper.vm as any
+      expect(vm.mode).toBe("filled")
+      expect(vm.labelMode).toBe("static")
+      expect(String(vm.classBase)).toContain("fishtvue-label")
+      expect(String(vm.classContent)).toContain("text-sm")
     })
   })
 })

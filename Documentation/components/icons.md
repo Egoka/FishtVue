@@ -1,7 +1,7 @@
 ---
 title: Icons
-summary: Универсальный icon — Heroicons + Iconify, два variant (outline/solid), wrapper-based a11y, narrow IconType union. Heroicons на tree-shakeable const-реестр explicit named-импортов (2026-06-14, Issue 1): bundler оставляет только curated-набор (37 имён ≈ 11 KB) вместо всех 648 (~94 KB); sync lookup сохранён → prod-Vite/SSR-корректность не теряется; имена вне набора → Iconify-fallback.
-updated: 2026-07-04
+summary: props 1.0 (2026-09-14) — `class` ложится на корень `<i data-icon>` (туда переехала база размера/цвета), svg — `classes.icon` (`<svg data-icon-svg>`). Универсальный icon — Heroicons + Iconify, два variant (outline/solid), wrapper-based a11y, narrow IconType union. Heroicons на tree-shakeable const-реестр explicit named-импортов (2026-06-14, Issue 1): bundler оставляет только curated-набор (37 имён ≈ 11 KB) вместо всех 648 (~94 KB); sync lookup сохранён → prod-Vite/SSR-корректность не теряется; имена вне набора → Iconify-fallback.
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -62,16 +62,27 @@ lib/icons/
 
 ## 5. Props
 
-`IconsProps` ([Icons.d.ts:80–134](../../lib/icons/Icons.d.ts#L80-L134)):
+`IconsProps` ([Icons.d.ts:86–141](../../lib/icons/Icons.d.ts#L86-L141)):
 
 | Prop        | Type                                                       | Default     | Description                                                                                                                                                                                                                                                                                        |
 | ----------- | ---------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `type`      | `IconType`                                                 | —           | **Обязателен**. Имя иконки. Heroicons (например, `"check"`, `"x-mark"`) или Iconify (`"mdi:home"`, `"ph:user"`). Поддерживает autocomplete для популярных heroicons (`HeroIconName` subset) и Iconify-паттерн (`${string}:${string}`); любая другая строка валидна через `(string & {})`-fallback. |
 | `variant`   | `"outline" \| "solid"`                                     | `"outline"` | Стиль (только Heroicons). Iconify имеет собственный механизм через suffix в `type`.                                                                                                                                                                                                                |
 | `label`     | `string`                                                   | —           | Accessible label для семантической иконки. Задан → wrapper получает `role="img"` + `aria-label="<label>"`. Пуст/опущен → wrapper прозрачен, SVG остаётся `aria-hidden="true"` (декоративный режим).                                                                                                |
-| `stileIcon` | `"outline" \| "solid"`                                     | —           | **@deprecated**. Используй `variant`. Soft-deprecated в `0.2.x` (dev `console.warn` при использовании без `variant`), будет удалён в `1.0`. Codemod планируется в [Wave 12](../issues/README.md#-wave-12--migration--dx).                                                                          |
-| `class`     | `"h-5 w-5 text-surface-900 dark:text-surface-100" \| StyleClass` | preset      | CSS класс.                                                                                                                                                                                                                                                                                         |
-| `style`     | `CSSProperties`                                            | —           | Inline style.                                                                                                                                                                                                                                                                                      |
+| `class`     | `StyleClass`                                               | —           | Классы корня `<i data-icon>`. База `inline-block shrink-0 h-5 w-5 text-surface-900 dark:text-surface-100 select-none` живёт здесь; консьюмерские `h-4 w-4` перебивают её через twMerge (dev-patterns §2 A/D).                                                                                        |
+| `classes`   | `ClassesMap<IconsClassKey>`                                | —           | Карта классов внутренних элементов, см. §5.1. `root` ≡ `class`.                                                                                                                                                                                                                                    |
+| `style`     | `CSSProperties`                                            | —           | Inline style корня `<i data-icon>`; `color` наследуется svg.                                                                                                                                                                                                                                     |
+
+### 5.1 Classes keys
+
+`IconsClassKey` ([Icons.d.ts:81](../../lib/icons/Icons.d.ts#L81)). Element-ключи аддитивны: база → `componentsOptions.Icons.classes.<key>` → `props.classes.<key>` (twMerge, потребитель побеждает).
+
+| Key    | Element (`data-*`)      | Kind    | Default |
+| ------ | ----------------------- | ------- | ------- |
+| `root` | `<i data-icon>`         | element | —       |
+| `icon` | `<svg data-icon-svg>`   | element | —       |
+
+SVG получает `block h-full w-full` и растягивается на бокс корня; heroicons — функциональные компоненты, у которых сквозь проходят только `class`/`style`, поэтому render оборачивается в options-компонент, чтобы `data-icon-svg` доезжал до svg ([Icons.vue](../../lib/icons/Icons.vue), `resolveHeroIcon`).
 
 ### IconType union
 
@@ -130,14 +141,15 @@ export declare type IconType = HeroIconName | IconifyIconName | (string & {})
 
 ## 8. Exposed methods
 
-`IconsExpose` ([Icons.d.ts:140–171](../../lib/icons/Icons.d.ts#L140-L171)):
+`IconsExpose` ([Icons.d.ts:147–184](../../lib/icons/Icons.d.ts#L147-L184)):
 
 | Name        | Type                   | Description                                                          |
 | ----------- | ---------------------- | -------------------------------------------------------------------- |
 | `type`      | `IconType`             | Текущий type.                                                        |
-| `variant`   | `"outline" \| "solid"` | Резолвленный variant (с учётом `stileIcon`-fallback и options).      |
+| `variant`   | `"outline" \| "solid"` | Резолвленный variant (с учётом options).                             |
 | `label`     | `string \| undefined`  | Текущий accessible label (или `undefined` для декоративного режима). |
-| `classIcon` | `IconsProps["class"]`  | Финальный класс.                                                     |
+| `classBase` | `string`               | Финальный класс корня `<i data-icon>` (база + `class`/`classes.root`). |
+| `classIcon` | `string`               | Финальный класс `<svg data-icon-svg>` (`block h-full w-full` + `classes.icon`). |
 | `style`     | `IconsProps["style"]`  | Inline style.                                                        |
 
 ## 9. Examples
@@ -189,7 +201,11 @@ Screen reader озвучивает `<i role="img" aria-label="Delete row">`; SVG
 
 ### 10.1 Global
 
-`IconsOption = Pick<IconsProps, "class" | "variant">` ([Icons.d.ts:172](../../lib/icons/Icons.d.ts#L172)). `type` и `label` всегда per-instance.
+`IconsOption = Pick<IconsProps, "class" | "classes" | "variant">` ([Icons.d.ts:185](../../lib/icons/Icons.d.ts#L185)). `type` и `label` всегда per-instance. `class`/`classes` сливаются с per-instance по ключу (dev-patterns §2 C):
+
+```ts
+app.use(FishtVue, { componentsOptions: { Icons: { variant: "solid", class: "h-6 w-6", classes: { icon: "drop-shadow" } } } })
+```
 
 ### 10.2 Per-instance
 
@@ -281,8 +297,8 @@ const unknown: IconType = "some-custom-name"
 - **Stability flag:** `stable` — 101 кейс, coverage 93.93%+.
 - **Breaking changes:** при апгрейде Heroicons 3.x — возможны переименования иконок.
 - **Behavior change (2026-06-14, Issue 1 tree-shaking):** heroicon-имя вне curated-набора (37, см. `HeroIconName`) больше не резолвится как heroicon → уходит в Iconify-fallback. Потребителям, использовавшим произвольные heroicon-имена (`"camera"`, `"credit-card"`, …): добавь имя в curated-набор (PR) либо перейди на Iconify (`addCollection` / CDN). Документированные 30 `HeroIconName` + 7 internal не затронуты.
-- **Deprecations:**
-  - `stileIcon` (`0.2.x`) — soft-deprecated, replaced by `variant`. Эмитит dev `console.warn` при использовании без `variant`. Будет удалён в `1.0`. Codemod — Wave 12.
+- **Breaking changes (1.0.0, props 1.0 — 2026-09-14):** `class` теперь корень `<i data-icon>` (раньше — svg); туда же переехала база размера/цвета, svg получает `block h-full w-full`. Классы для svg — `classes.icon`. `style` — тоже корень. Литерал-подсказка в типе `class` снята (`StyleClass`). Expose: добавлен `classBase`, `classIcon` теперь класс svg. Миграция — [migration-guide.md](../migration-guide.md).
+- **Deprecations:** нет. Алиас `stileIcon` снят 2026-09-06 (R7) — атрибут игнорируется, вариант резолвится дефолтом `outline`.
 
 ## 15. Testing recipes
 
@@ -310,12 +326,6 @@ describe("Icons", () => {
     expect(root.attributes("aria-label")).toBe("Delete row")
   })
 
-  it("warns when stileIcon used without variant", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
-    mount(Icons, { props: { type: "check", stileIcon: "solid" } })
-    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/stileIcon.*deprecated/i))
-    warn.mockRestore()
-  })
 })
 ```
 
@@ -328,7 +338,6 @@ describe("Icons", () => {
 | Иконка не отображается                     | Имя `type` некорректно.                                  | Сверься на heroicons.com / icon-sets.iconify.design.                                                                                                                                                                                                                                                          |
 | Iconify-иконка медленно загружается        | Lazy-load с CDN.                                         | Используй `addCollection` для локального bundle (см. §12 Security).                                                                                                                                                                                                                                           |
 | `variant: "solid"` для Iconify не работает | `variant` применяется только к Heroicons.                | Используй разные `type` для Iconify-вариантов (`mdi:home` vs `mdi:home-outline`).                                                                                                                                                                                                                             |
-| `stileIcon` теперь warning                 | Soft deprecation.                                        | Замени на `variant`; codemod в Wave 12.                                                                                                                                                                                                                                                                       |
 | Custom class конфликтует с default         | Default `h-5 w-5 text-gray-*` имеет ту же специфичность. | Передавай `class` явно или конфигурируй `componentsOptions.Icons.class`.                                                                                                                                                                                                                                      |
 | CSP блокирует Iconify CDN                  | `connect-src` запрещает `api.iconify.design`.            | Bundle Iconify-collection локально (`addCollection`), см. §12.                                                                                                                                                                                                                                                |
 | Direction-иконка в RTL смотрит не туда     | `arrow-right`, `chevron-*` буквально направлены.         | Зеркаль через CSS: `[dir="rtl"] [data-rtl-mirror] { transform: scaleX(-1); }` — оберни иконку: `<span data-rtl-mirror><Icons type="arrow-right" /></span>`. Или per-instance: `:style="{ transform: dir === 'rtl' ? 'scaleX(-1)' : undefined }"`. Дизайн-системы (Material, Fluent) рекомендуют этот pattern. |
@@ -358,7 +367,7 @@ describe("Icons", () => {
 
 ### API inconsistencies
 
-- `stileIcon` (опечатка от «styleIcon») сохранён как deprecated alias `variant`. Удаление в `1.0` + codemod в Wave 12.
+- ~~`stileIcon` (опечатка от «styleIcon») сохранён как deprecated alias `variant`.~~ ✅ снят 2026-09-06 (R7).
 - `HeroIconName` — curated-набор из 37 имён, === runtime const-реестр (Issue 1 tree-shaking): это и autocomplete, и фактическая граница offline-резолва heroicons. Полный набор (~280 имён) тянул бы весь heroicons-bundle (или требовал build-script `unplugin-icons`) — компромисс между bundle-size и покрытием. См. §12 Bundle.
 
 ### Behavioral caveats

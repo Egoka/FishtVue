@@ -892,7 +892,7 @@ describe("Select — Issue 9: RTL via logical Tailwind properties", () => {
       await wrapper.find("[data-select]").trigger("click")
       await flushPromises()
       await nextTick()
-      const icon = wrapper.find("[data-select-search] svg")
+      const icon = wrapper.find("[data-select-search] [data-icon]")
       expect(icon.exists()).toBe(true)
       const cls = icon.classes().join(" ")
       expect(cls).toContain("text-surface-400")

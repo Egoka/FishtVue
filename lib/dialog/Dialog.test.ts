@@ -695,7 +695,7 @@ describe("Dialog Component Tests", () => {
       mount(Dialog, {
         props: { modelValue: true, closeButton: true, toTeleport: "#modal" }
       })
-      const icon = document.querySelector("#modal [data-dialog-close] svg") as SVGElement | null
+      const icon = document.querySelector("#modal [data-dialog-close] [data-icon]") as HTMLElement | null
       expect(icon).not.toBeNull()
       const cls = icon!.getAttribute("class") ?? ""
       expect(cls).toContain("fill-surface-500")

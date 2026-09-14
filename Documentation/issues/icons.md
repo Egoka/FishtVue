@@ -1,7 +1,7 @@
 ---
 title: Issues — Icons
 summary: Аудит Icons — heroicons переведены на tree-shakeable const-реестр explicit named-импортов (2026-06-14, Issue 1): bundler оставляет только curated-набор (37 имён ≈ 11 KB gzip) вместо всех 648 (~94 KB); sync lookup сохранён → prod-Vite/SSR-корректность не теряется; имена вне набора → Iconify-fallback. Iconify CSP — docs-only (offline-prop declined, addCollection-mitigation в §12). API-уровень (variant, label, narrow IconType) закрыт в 0.2.x. B10 (semantic-token hardcode) resolved 2026-07-04 — все issues закрыты.
-updated: 2026-09-06
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/icons/
 related-doc: ../components/icons.md
@@ -254,7 +254,7 @@ Default-класс иконки переименован **family-only** (то �
 | ------------------------- | ----------- | --------------------------------------------------------------------------------- |
 | `componentsOptions.Icons` | ✅          | `class` + `variant` ([Icons.d.ts:172](../../lib/icons/Icons.d.ts#L172))          |
 | `componentsStyle` global  | N/A         | Icons не имеет mode-enum, использует `variant` локально                          |
-| `unstyled: true`          | ✅          | `Component.setStyle` guard → `classIcon === ""` (Issue 6 / L53, regression-тест) |
+| `unstyled: true`          | ✅          | `Component.setStyle` под флагом → `classBase === "fv"` + классы потребителя (props 1.0, dev-patterns §2 E; regression-тест) |
 | Theme tokens vs hardcode  | ✅          | `text-surface-900 dark:text-surface-100` — semantic token (Issue 9, resolved 2026-07-04) |
 | Runtime theme switch      | ⚠️          | через class только                                                                |
 | `t()` для текста          | N/A         | label передаётся пользователем — он отвечает за локализацию                      |
