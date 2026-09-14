@@ -1,7 +1,7 @@
 ---
 title: Nuxt module + plugin
 summary: fishtvue/module — defineNuxtModule с auto-import; fishtvue/plugins/nuxt — SSR-инжекция CSS. 2026-09-05 — disableGlobalStyles реализован, version-detection удалён, заведён nuxt.test.ts.
-updated: 2026-09-05
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -117,7 +117,7 @@ export default defineNuxtConfig({
 <!-- pages/index.vue -->
 <template>
   <div>
-    <Button mode="primary">Hello</Button>
+    <Button variant="primary">Hello</Button>
   </div>
 </template>
 ```

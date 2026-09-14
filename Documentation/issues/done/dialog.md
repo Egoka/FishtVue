@@ -1,7 +1,7 @@
 ---
 title: Issues — Dialog (done)
 summary: Аудит Dialog закрыт 2026-05-12 — все 9 issues resolved одним fix(dialog) коммитом. Добавлены focus trap (native), reference-counted scroll lock (новый lib/utils/scrollLockHandler.ts), role="dialog"/aria-modal/labelledby/describedby, focus return, motion-safe transitions, RTL close button, aria-live region, sideEffects: false, sr-only live region. Cross-cutting SSR styles + exports map (Issue 6 подпункты) defer to Wave 2.1. Остаточный B10 (structural neutral hardcode) мигрирован на surface token 2026-07-05 (Wave 9 follow-up), матрица не меняется.
-updated: 2026-07-05
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/dialog/
 related-doc: ../../components/dialog.md
@@ -117,7 +117,7 @@ related-doc: ../../components/dialog.md
 ## ~~Issue 9: LOW — prefers-reduced-motion для transitions~~ ✅ resolved 2026-05-12
 
 - **Категория:** E29.7
-- **Резолюция:** все transitions обёрнуты в `motion-safe:` префикс — `transition-all ease-in-out duration-500` → `motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500`. Backdrop blur `transition-all duration-200` → `motion-safe:transition-all motion-safe:duration-200`. Tailwind транспилирует `motion-safe:` в `@media (prefers-reduced-motion: no-preference)`. Зеркалит [button.md Issue 10](../button.md) и [aria.md Issue 9](../aria.md) ✅ pattern.
+- **Резолюция:** все transitions обёрнуты в `motion-safe:` префикс — `transition-all ease-in-out duration-500` → `motion-safe:transition-all motion-safe:ease-in-out motion-safe:duration-500`. Backdrop blur `transition-all duration-200` → `motion-safe:transition-all motion-safe:duration-200`. Tailwind транспилирует `motion-safe:` в `@media (prefers-reduced-motion: no-preference)`. Зеркалит [button.md Issue 10](../button.md) и [textarea.md Issue 9](../textarea.md) ✅ pattern.
 
 ### Acceptance criteria
 

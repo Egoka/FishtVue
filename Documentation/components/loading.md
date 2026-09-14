@@ -198,7 +198,7 @@ describe("Loading", () => {
 ## 17. Related
 
 - [Button](./button.md), [Alert](./alert.md), [Dialog](./dialog.md) — потребители.
-- [Icons](./icons.md), [Textarea](./aria.md).
+- [Icons](./icons.md), [Textarea](./textarea.md).
 
 ## 18. Known issues & limitations
 

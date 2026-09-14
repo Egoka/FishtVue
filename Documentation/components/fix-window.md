@@ -305,7 +305,7 @@ import type {
   FixWindowEmits,
   FixWindowExpose,
   FixWindowRole,
-  FixWindowTeleport,
+  FixWindowClassKey,
   Position,
   FixWindowEvent,
   RefLink

@@ -275,7 +275,20 @@ v-model contract — не применимо: Table не имеет одного
 
 ### 10.1 Global
 
-`TableOption = Pick<TableProps, "mode" | "toolbar" | "edit" | "sort" | "filter" | "grouping" | "resizedColumns" | "pagination" | "search" | "countVisibleRows" | "sizeLoadingRows" | "noData" | "noColumn" | "countDataOnLoading" | "class" | "styles">`.
+`TableOption` ([Table.d.ts:1376–1404](../../lib/table/Table.d.ts#L1376-L1404)):
+
+```ts
+Pick<
+  TableProps,
+  | "mode" | "toolbar" | "editable" | "sort" | "filter" | "grouping" | "resizableColumns"
+  | "pagination" | "searchable" | "visibleRows" | "loadingRows" | "emptyText"
+  | "emptyColumnsText" | "loadingThreshold" | "virtual" | "class" | "classes"
+  | "width" | "height" | "stripedRows" | "horizontalLines" | "verticalLines"
+  | "filterLines" | "cellHeight" | "borderRadius" | "defaultColumnWidth"
+>
+```
+
+Не-классовые настройки, жившие в `styles`, стали самостоятельными ключами опции — глобально настраивается каждая по отдельности, а не весь bag целиком.
 
 ### 10.2 Per-instance
 
@@ -284,8 +297,8 @@ v-model contract — не применимо: Table не имеет одного
 ### 10.3 Theming
 
 - Цвета через `theme.semantic`.
-- Custom borders: `styles.border` ([Table.d.ts:532–585](../../lib/table/Table.d.ts#L532-L585)).
-- Custom classes per-section: `styles.class.{toolbar, table, thead, tbody, tfoot, group, pagination, ...}`.
+- Классы секций — ключи `classes` (§5.1): `toolbar`, `table`, `thead`, `tbody`, `tfoot`, `group`, `pagination` и остальные ([Table.d.ts:470–498](../../lib/table/Table.d.ts#L470-L498)).
+- Рамки — aspect-ключи `border` (общий) и `borderTable` / `borderHeader` / `borderFilter` / `borderHead` / `borderCell` / `borderSummary` / `borderPagination` / `borderFooter` (региональные, падают на общий). Пустая строка отключает рамку региона.
 
 ### 10.4 CSS layer override
 
@@ -512,7 +525,7 @@ describe("Table", () => {
 
 ### Behavioral caveats
 
-- `MaybeRef` повсюду — `dataSource`, `toolbar`, `sort`, `filter`, `grouping`, `pagination`, `columns`, `summary`, `styles`. Может быть ref или константа. Type-system не отличит, какое поведение применяется в данный момент — потребитель должен помнить о реактивности.
+- `MaybeRef` — у data/schema-props: `dataSource`, `toolbar`, `sort`, `filter`, `grouping`, `pagination`, `columns`, `summary` (решение 3; остальные props — plain). Может быть ref или константа. Type-system не отличит, какое поведение применяется в данный момент — потребитель должен помнить о реактивности.
 - `asyncData: true` отключает client-side processing; большинство ивентов всё равно эмитится — пользователь должен обработать.
 - `grouping` отключает pagination и sort на сгруппированных полях (поведение определено в реализации).
 - `summary` суммирует только числовые поля; для типов `string`/`date` — count единственная разумная опция.

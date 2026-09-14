@@ -419,7 +419,7 @@ describe("Select", () => {
 
 - `BaseDataItem` слабо типизирован — `string | number | SelectDataItem` (где `SelectDataItem` — open объект) ([Select.d.ts:17-20](../../lib/select/Select.d.ts#L17-L20)).
 - `modelValue` в multiple-режиме — `Array<number | string | null>`. `null` в массиве — странность.
-- `classSelect: StyleClass | "justify-end"` — литерал `"justify-end"` среди свободных классов — странный narrow.
+- ~~`classSelect: StyleClass | "justify-end"` — литерал `"justify-end"` среди свободных классов — странный narrow.~~ ✅ resolved (1.0.0): хук стал ключом `classes.control` в `ClassesMap<SelectClassKey>` — тип `StyleClass` без литерал-подсказок.
 - Slot `values` payload `{ selected, key?, deleteSelect? }` — все три опциональны, что усложняет типизацию.
 - Нет событий `focus` / `blur` — они есть только у [Input](./input.md) и [Textarea](./textarea.md). Асимметрия осознанная: major 1.0.0 переименовывал события, но новых не добавлял (dev-patterns §7). Фокус-состояние доступно через `active`.
 

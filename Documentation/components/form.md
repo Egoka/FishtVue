@@ -30,7 +30,7 @@ lib/form/
 └── package.json
 ```
 
-Зависимости: [Input](./input.md), [Select](./select.md), [Calendar](./calendar.md), [TextEditor](./text-editor.md), [Switch](./switch.md), [Button](./button.md), [Textarea](./aria.md). [rulesHandler](../utilities/rulesHandler.md), [objectHandler](../utilities/objectHandler.md), [functionHandler](../utilities/functionHandler.md), [domHandler.isClient](../utilities/domHandler.md). Внешних — нет.
+Зависимости: [Input](./input.md), [Select](./select.md), [Calendar](./calendar.md), [TextEditor](./text-editor.md), [Switch](./switch.md), [Button](./button.md), [Textarea](./textarea.md). [rulesHandler](../utilities/rulesHandler.md), [objectHandler](../utilities/objectHandler.md), [functionHandler](../utilities/functionHandler.md), [domHandler.isClient](../utilities/domHandler.md). Внешних — нет.
 
 ## 3. How it works
 

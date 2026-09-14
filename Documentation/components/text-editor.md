@@ -236,7 +236,7 @@ Quill рендерит контент в contenteditable-`div`'ах, поэто�
 <input type="hidden" data-text-editor-value :name="id" :value="modelValue ?? ''" />
 ```
 
-- **Имя поля — это `id`.** Канон общий с [Textarea](./aria.md): `<TextEditor id="bio">` → `formData.get("bio")`.
+- **Имя поля — это `id`.** Канон общий с [Textarea](./textarea.md): `<TextEditor id="bio">` → `formData.get("bio")`.
 - **Без `id` поле не рендерится** — безымянный input в `FormData` всё равно не попал бы.
 - Значение обновляется на каждый ввод, а не по `change:modelValue` (тот эмитится на blur) — submit в любой момент отдаёт актуальный HTML.
 

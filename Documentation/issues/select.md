@@ -1,7 +1,7 @@
 ---
 title: Issues — Select
 summary: 14/14 issues закрыты (2026-05-11 wave + 2026-06-13 — Issue 3 compound API, Issue 9 RTL, Issue 4 inherited SSR/exports; 2026-07-02 — Issue 12 ms-[undefinedpx] guard; 2026-07-04 — B10 миграция на semantic-токен `surface`; 2026-09-06 — Issue 7 виртуализация списка опций). Открытых позиций нет. Wave 4.3 keyboard (Home/End/typeahead) ✅ 2026-06-20.
-updated: 2026-09-06
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/select/
 related-doc: ../components/select.md
@@ -191,7 +191,7 @@ watch(isOpenList, (value) => {
 
 **Что сделано (2026-06-13):**
 
-- Добавлены renderless-дети [SelectOption.vue](../../lib/select/SelectOption.vue) (props `value` required, `label?`, `disabled?`) и [SelectGroup.vue](../../lib/select/SelectGroup.vue) (props `label`/`title`) — зеркало [FormField](../../lib/form/FormField.vue)/[FormSection](../../lib/form/FormSection.vue).
+- Добавлены renderless-дети [SelectItem.vue](../../lib/select/SelectItem.vue) (props `value` required, `label?`, `disabled?`) и [SelectGroup.vue](../../lib/select/SelectGroup.vue) (props `label`/`title`) — зеркало [FormField](../../lib/form/FormField.vue)/[FormSection](../../lib/form/FormSection.vue).
 - В [Select.vue](../../lib/select/Select.vue) — VNode-walk `slots.default()` в computed `compoundParsed` (helpers `compoundFlatten`/`isVNodeNamed`/`compoundChildren`, обработка Fragment/Comment/Text); `sourceData` computed подменяет `props.dataSelect` в `keySelect`/`valueSelect`/`dataSelect` пайплайне. **Schema-driven `dataSelect` выигрывает** (`schemaActive`), иначе — compound-опции.
 - `renderRows` computed вставляет non-selectable group-headers (`[data-select-group]`, `role="presentation"`) между опциями; keyboard-nav таргетит `li[data-select-list-item]` (headers исключены). `disabled`-опции — `aria-disabled`, guard в `select()`, dimmed-класс.
 - Runtime barrel [index.ts](../../lib/select/index.ts) (rollup-entry, зеркало form/table/menu); типы `SelectOptionProps`/`SelectGroupProps` + `declare class` + `GlobalComponents` в [Select.d.ts](../../lib/select/Select.d.ts). Naming: value-`SelectOption` сосуществует с options-типом `SelectOption` (разные namespace TS, companion pattern).
@@ -270,7 +270,7 @@ Custom rendering каждого option возможен только через 
    ```
 6. Children walk при render — используем `useSlots()` + `Fragment` flattening для обработки conditional `<template v-if>`.
 7. Документация: новый раздел в [Documentation/components/select.md](../components/select.md) §10.5 «Compound API».
-8. Codemod (см. Issue 28-aria.md): автозамена опционально.
+8. Codemod (см. Issue 28 в [textarea.md](./textarea.md)): автозамена опционально.
 
 ### Acceptance criteria
 

@@ -257,10 +257,10 @@ describe("Dialog", () => {
 
 | Проблема | Причина | Решение |
 |---|---|---|
-| Dialog не закрывается на Escape | `notCloseBackground` или другое модальное окно перехватывает event. | Проверь z-stack. |
+| Dialog не закрывается на Escape | Другое модальное окно перехватывает event. | Проверь z-stack. Клик по подложке — отдельный канал, он гейтится `closeOnBackdrop`. |
 | Focus вернулся не туда | Между open и close сменился `document.activeElement` (например, programmatic focus). | Передавай явный trigger через wrapper или `returnFocus: false` + ручное управление. |
 | Teleport target не найден | DOM не существует или ещё не отрендерился. | Тыпа `<div id="modal-root">` в `App.vue`. |
-| Animation выглядит резко | `notAnimate: true`, `transition-duration: 0`, или у пользователя `prefers-reduced-motion: reduce`. | Сними флаг / проверь OS-настройки. |
+| Animation выглядит резко | `animated: false`, `transition-duration: 0`, или у пользователя `prefers-reduced-motion: reduce`. | Сними флаг / проверь OS-настройки. |
 | `closeDialog()` через ref не работает | `isOpen` уже false. | Проверь state. |
 | Nested Dialog ломает scroll lock | Не должен — reference-counted lock через `lib/utils/scrollLockHandler.ts`. | Сообщи bug, если counter рассогласован. |
 | `initialFocus` selector не сработал | Селектор не находит элемент внутри dialog. | Используй уникальный CSS-класс. |
@@ -294,8 +294,8 @@ describe("Dialog", () => {
 ### Behavioral caveats
 
 - При множестве Dialog'ов одновременно — backdrop накладывается; reference-counted scroll lock корректно балансируется, но z-index конфликты возможны (рекомендуется один Dialog за раз).
-- `withoutMargin: true` убирает padding — useful для full-screen layouts, но контент должен сам обеспечить inner padding.
-- `notAnimate: true` отключает enter/leave transition; close на Escape будет резким.
+- `margin: false` убирает padding — useful для full-screen layouts, но контент должен сам обеспечить inner padding.
+- `animated: false` отключает enter/leave transition; close на Escape будет резким.
 - `motion-safe:` префикс — Tailwind транспилирует в `@media (prefers-reduced-motion: no-preference)`. У пользователей с `reduce` все transitions no-op.
 - `returnFocus: true` сохраняет `document.activeElement` в момент open — если фокус был на body (не на trigger), focus return сработает на body.
 

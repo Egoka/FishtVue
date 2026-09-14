@@ -1,7 +1,7 @@
 ---
 title: Issues — Separator
 summary: Аудит Separator — все пункты закрыты, включая B10 (semantic tokens). A4-5/C17/E29.1/F31/L53/A2/B10 закрыты.
-updated: 2026-09-06
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/separator/
 related-doc: ../components/separator.md
@@ -54,8 +54,8 @@ related-doc: ../components/separator.md
 
 - **Категория:** F31
 - **Severity:** ~~medium~~
-- **Где:** [Separator.d.ts:28-41](../../lib/separator/Separator.d.ts#L28-L41), [Separator.vue:20-25](../../lib/separator/Separator.vue#L20-L25), [Separator.vue:152-161](../../lib/separator/Separator.vue#L152-L161)
-- **Resolution:** `contentPosition` принимает logical `"start" | "end"` (+ `"center" | "full"`); `"left" | "right"` сохранены как deprecated алиасы (`left → start`, `right → end`) через type-union + computed-нормализацию ([Separator.vue:20](../../lib/separator/Separator.vue#L20)). Порядок line-сегментов зеркалится **бесплатно** через flex main-axis корня (`relative flex`) — под `dir="rtl"` сегмент `data-separator-left` визуально уходит вправо, поэтому `start`-контент остаётся у логического начала; отдельный CSS/`useDirectionality()` не нужен (зеркало [button.md Issue 3](./button.md)). Градиентная заливка горизонтальных сегментов зеркалится `rtl:`-вариантом (`bg-gradient-to-r rtl:bg-gradient-to-l` / `bg-gradient-to-l rtl:bg-gradient-to-r`, движок знает `specialStates rtl/ltr`). `onMounted` dev-warn при использовании deprecated значений ([Separator.vue:136-147](../../lib/separator/Separator.vue#L136-L147)). Тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) describe "RTL & logical contentPosition (Issue 3 / F31)".
+- **Где:** [Separator.d.ts:28-41](../../lib/separator/Separator.d.ts#L28-L41), [Separator.vue:20-25](../../lib/separator/Separator.vue#L20-L25), [Separator.vue](../../lib/separator/Separator.vue) (блок снят вместе с алиасом)
+- **Resolution:** `contentPosition` принимает logical `"start" | "end"` (+ `"center" | "full"`); `"left" | "right"` сохранены как deprecated алиасы (`left → start`, `right → end`) через type-union + computed-нормализацию ([Separator.vue:20](../../lib/separator/Separator.vue#L20)). Порядок line-сегментов зеркалится **бесплатно** через flex main-axis корня (`relative flex`) — под `dir="rtl"` сегмент `data-separator-left` визуально уходит вправо, поэтому `start`-контент остаётся у логического начала; отдельный CSS/`useDirectionality()` не нужен (зеркало [button.md Issue 3](./button.md)). Градиентная заливка горизонтальных сегментов зеркалится `rtl:`-вариантом (`bg-gradient-to-r rtl:bg-gradient-to-l` / `bg-gradient-to-l rtl:bg-gradient-to-r`, движок знает `specialStates rtl/ltr`). `onMounted` dev-warn при использовании deprecated значений ([Separator.vue](../../lib/separator/Separator.vue) — блок снят вместе с алиасом). Тесты — [Separator.test.ts](../../lib/separator/Separator.test.ts) describe "RTL & logical contentPosition (Issue 3 / F31)".
 
 > **Алиас снят 2026-09-06 (решение R7).** Обратно совместимый вход убран вместе с dev-warn'ом в рамках единого major: держать второй публичный путь к тому же поведению до следующего breaking-релиза значило бы поддерживать два контракта параллельно. Что делать потребителю — [migration-guide.md §2](../migration-guide.md).
 

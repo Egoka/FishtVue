@@ -347,7 +347,7 @@ describe("Icons", () => {
 
 - [Button](./button.md) — использует Icons для иконок-prop.
 - [Loading](./loading.md), [Switch](./switch.md), [Alert](./alert.md) — используют Icons.
-- [Textarea](./aria.md), [Form](./form.md), [Menu](./menu.md).
+- [Textarea](./textarea.md), [Form](./form.md), [Menu](./menu.md).
 
 ## 18. Known issues & limitations
 

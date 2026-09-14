@@ -1,7 +1,7 @@
 ---
 title: Issues — Input
 summary: Аудит Input. Все 15/15 issues закрыты. 11 закрыты 2026-05-11 (initStyle dedup, componentsStyle fallback, password-toggle override, extended types, phoneFormats prop/option, autocomplete defaults, motion-safe, argless focus, print styles, RTL test, emit semantics docs). 2 cross-cutting закрыты 2026-06-13 (doc-sync к Wave 2.1/3.1 — packaging `sideEffects`+`exports` map и `unstyled` guard уже в каноне; добавлен Input-scoped unstyled regression-тест). Issue 14 закрыт 2026-06-13 (вспышка один кадр при mount/фокусе — широкий `motion-safe:transition-all` на инпуте → узкий `motion-safe:transition-colors`; пересмотрен acceptance Issue 9, E29.7 сохранён). Issue 15 закрыт 2026-07-04 (B10 hardcode — `text-gray-900`/`dark:text-gray-100`, `focus:placeholder:text-gray-400`/`focus:placeholder:dark:text-gray-500` и база `text-gray-400`/`dark:text-gray-600` password-toggle иконки мигрированы на новый semantic-токен `surface`, та же числовая шкала).
-updated: 2026-07-04
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/input/
 related-doc: ../components/input.md
@@ -162,7 +162,7 @@ related-doc: ../components/input.md
   3. `focus(focusEvent)` — template handler (эмитит `"focus"`).
 
   В `InputExpose` ([Input.d.ts](../../lib/input/Input.d.ts)) сигнатура также обновлена. Паритет с `Button.focus()` ([done/button.md Issue 4](./button.md)). Покрыто 3 тестами (argless / FocusEvent / FocusOptions).
-- **Cross-cutting (deferred):** Textarea/Select/TextEditor имеют ту же проблему — оставлены открытыми в [aria.md](./aria.md), [select.md](./select.md), [texteditor.md](./texteditor.md) (вне scope Input-ТЗ).
+- **Cross-cutting (deferred):** Textarea/Select/TextEditor имеют ту же проблему — оставлены открытыми в [textarea.md](./textarea.md), [select.md](./select.md), [texteditor.md](./texteditor.md) (вне scope Input-ТЗ).
 
 ### Acceptance criteria
 

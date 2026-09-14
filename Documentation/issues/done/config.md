@@ -1,7 +1,7 @@
 ---
 title: Issues — Config (FishtVue plugin) [resolved]
 summary: Все 6 audit issues закрыты 2026-05-20 — FishtVueSymbol стабилизирован (const InjectionKey<FishtVue>), baseStyle покрыт тестами, locale fallback chain в t(), extensibility API (use/registerComponent/extendTheme), 2 skipped теста разблокированы.
-updated: 2026-05-20
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support
 source: lib/config/
 related-doc: ../../architecture/config.md
@@ -24,7 +24,7 @@ related-doc: ../../architecture/config.md
 
 - **Категория:** C13 (architecture leak)
 - **Severity:** ~~critical~~
-- **Где:** [config/index.ts:18](../../../lib/config/index.ts#L18), [config/index.ts:81](../../../lib/config/index.ts#L82)
+- **Где:** [config/index.ts:18](../../../lib/config/index.ts#L18), [config/index.ts:116](../../../lib/config/index.ts#L116)
 - **Resolution:** symbol теперь `export const FishtVueSymbol: InjectionKey<FishtVue> = Symbol("FishtVue")`; reassign в install удалён; `isExistFishtVue` использует `inject(FishtVueSymbol)` primary path + `window.FishtVue` fallback вне setup; type-cast `InjectionKey<string>` → `InjectionKey<FishtVue>` в FishtVue.d.ts:73.
 
 ### Acceptance criteria

@@ -1,7 +1,7 @@
 ---
 title: Issues — Textarea
 summary: Аудит Textarea. 8/11 issues закрыто 2026-05-11 (type bug change:modelValue → string + cross-cutting TextEditor, dup initStyle removal, componentsStyle fallback, unstyled regression test, modelValue type narrow, typed before/after slot props, motion-safe placeholder, print styles). Issue 11 B10-часть (hardcode gray-* → surface-*) закрыта 2026-07-04. Issue 6 (rename Aria → Textarea) закрыт 2026-09-06. Открытых позиций нет.
-updated: 2026-09-06
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/textarea/
 related-doc: ../components/textarea.md
@@ -98,20 +98,20 @@ Runtime передаёт `string` (содержимое textarea), но тип �
 
 См. [component-class.md Issue 6](./component-class.md) ✅ и [button.md Issue 14](./button.md) для остальных частей (SSR/sideEffects).
 
-## Issue 6: Имя компонента «Textarea» вводит в заблуждение — **open (deferred to breaking-change PR)**
+## Issue 6: Имя компонента «Aria» вводит в заблуждение — **open (deferred to breaking-change PR)**
 
 - **Категория:** D25 (консистентность naming)
 - **Severity:** medium
 - **Где:** [Textarea.vue:9](../../lib/textarea/Textarea.vue#L9), [Textarea.d.ts:11](../../lib/textarea/Textarea.d.ts#L11)
-- **Status:** ✅ resolved 2026-09-06. Ранее: tracked for a separate breaking-change PR (major version bump). Rename требует создания `lib/textarea/{Textarea.vue,...}`, deprecated re-export из `lib/textarea/`, обновления `lib/index.ts`, `lib/rollup.config.js`, `lib/config/FishtVue.d.ts` (Textarea key в ComponentsOptions), `lib/module/nuxt.ts`. Из-за blast radius вынесено в отдельный PR.
+- **Status:** ✅ resolved 2026-09-06. Ранее: tracked for a separate breaking-change PR (major version bump). Rename требует создания `lib/textarea/{Textarea.vue,...}`, deprecated re-export из `lib/aria/`, обновления `lib/index.ts`, `lib/rollup.config.js`, `lib/config/FishtVue.d.ts` (Textarea key в ComponentsOptions), `lib/module/nuxt.ts`. Из-за blast radius вынесено в отдельный PR.
 
 ### Что найдено
 
-`Textarea` — отсылка к WAI-ARIA, но на самом деле компонент — обёртка над `<textarea>` (multiline input). Имя путает: разработчик ищет «общий a11y abstraction», а получает textarea.
+`Aria` — отсылка к WAI-ARIA, но на самом деле компонент — обёртка над `<textarea>` (multiline input). Имя путает: разработчик ищет «общий a11y abstraction», а получает textarea.
 
 ### Почему это проблема
 
-- DX: импорт `import Textarea from "fishtvue/textarea"` для multiline-input выглядит как hack.
+- DX: импорт `import Aria from "fishtvue/aria"` для multiline-input выглядит как hack.
 - Поиск по имени не находит — пользователь ищет «textarea» в [Documentation/](../) — нет.
 - Нарушает principle of least astonishment.
 
@@ -119,15 +119,15 @@ Runtime передаёт `string` (содержимое textarea), но тип �
 
 1. Переименовать в `Textarea` (или `MultilineInput`):
    - Создать новый файл `lib/textarea/Textarea.{vue,d.ts,test.ts,package.json}`.
-   - Сохранить старый `lib/textarea/*` как deprecated re-export:
+   - Сохранить старый `lib/aria/*` как deprecated re-export:
      ```ts
-     // lib/textarea/Textarea.d.ts
+     // lib/aria/Aria.d.ts
      export { default } from "fishtvue/textarea"
      export * from "fishtvue/textarea"
      ```
-   - Console.warn при импорте `fishtvue/textarea`: `[FishtVue] "Textarea" is deprecated, use "Textarea" — will be removed in 0.4.0`.
-2. Обновить [Documentation/components/textarea.md](../components/textarea.md) → переименовать в `textarea.md`.
-3. Codemod (см. Issue 28): автозамена `import Textarea from "fishtvue/textarea"` → `import Textarea from "fishtvue/textarea"`.
+   - Console.warn при импорте `fishtvue/aria`: `[FishtVue] "Aria" is deprecated, use "Textarea" — will be removed in 0.4.0`.
+2. Обновить `Documentation/components/aria.md` → переименовать в [textarea.md](../components/textarea.md).
+3. Codemod (см. Issue 28): автозамена `import Aria from "fishtvue/aria"` → `import Textarea from "fishtvue/textarea"`.
 4. Major version bump (0.3 → 1.0 или 0.4) с changelog entry.
 
 ### Что сделано (2026-09-06, решение R6)

@@ -1,7 +1,7 @@
 ---
 title: Getting started
 summary: Знакомство с пакетом fishtvue, инициализация плагина, минимальный запуск.
-updated: 2026-05-09
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -80,7 +80,7 @@ import Button from "fishtvue/button"
 </script>
 
 <template>
-  <Button mode="primary" type="theme">Привет, FishtVue</Button>
+  <Button variant="primary" color="theme">Привет, FishtVue</Button>
 </template>
 ```
 

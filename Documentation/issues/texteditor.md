@@ -1,7 +1,7 @@
 ---
 title: Issues — TextEditor
 summary: Аудит TextEditor. Issue 1 (0% coverage / todo-тесты) и Issue 10 (native form submit) закрыты 2026-09-05 — vi.mock Quill, 27/27 тестов, покрытие 0% → 95.89%. Issue 2 (B10 — hardcode на surface-*) закрыт 2026-07-04 (Wave 9). Issue 7 (componentsStyle fallback + unstyled) закрыт 2026-07-02 (Wave 3.2). Issue 3 (Quill → optional peer + lazy CSS) закрыт 2026-06-19 (Wave 2.1). Issue 5 (type bug change:modelValue → string) закрыт 2026-05-11. Открыты: image upload, i18n Quill, cross-cutting print/motion/RTL.
-updated: 2026-09-05
+updated: 2026-09-14
 audit-checklist: 60-point + Configuration support + Dual-API gap
 source: lib/texteditor/
 related-doc: ../components/text-editor.md
@@ -176,7 +176,7 @@ Quill ≈ 200kb minified тянулся ВСЕМИ потребителями fi
 - **Категория:** D26
 - **Severity:** ~~medium~~
 - **Где:** [TextEditor.d.ts:121](../../lib/texteditor/TextEditor.d.ts#L121)
-- **Resolution:** Cross-cutting fix вместе с [aria.md Issue 1](./aria.md). `TextEditorEmits["change:modelValue"]` payload изменён `boolean` → `string`. Runtime поведение не меняется (всегда эмитилась HTML-строка) — это type-only fix, исправляющий Volar-hint для подписчиков `@change:modelValue`. Существующие 17 skipped тестов в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) (см. Issue 1) при разблокировке смогут assert'ить корректный type. Documentation [components/text-editor.md](../components/text-editor.md) §6 обновлена.
+- **Resolution:** Cross-cutting fix вместе с [textarea.md Issue 1](./textarea.md). `TextEditorEmits["change:modelValue"]` payload изменён `boolean` → `string`. Runtime поведение не меняется (всегда эмитилась HTML-строка) — это type-only fix, исправляющий Volar-hint для подписчиков `@change:modelValue`. Существующие 17 skipped тестов в [TextEditor.test.ts](../../lib/texteditor/TextEditor.test.ts) (см. Issue 1) при разблокировке смогут assert'ить корректный type. Documentation [components/text-editor.md](../components/text-editor.md) §6 обновлена.
 
 ## Issue 6: Image upload не задокументирован — toolbar содержит `image` button
 

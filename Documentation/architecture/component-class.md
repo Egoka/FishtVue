@@ -1,7 +1,7 @@
 ---
 title: Component class
 summary: Базовый класс Component<T>, lifecycle, инжекция стилей, getOptions/t/setStyle. t() с fallback chain (active → default → key) с 2026-05-20 + опциональный params для interpolation/CLDR-pluralization (Wave 3.5) с 2026-06-19. Generic narrowing contract (D21) + HMR style-dedup задокументированы 2026-06-14.
-updated: 2026-09-13
+updated: 2026-09-14
 stability: stable
 since: 0.2.11
 ---
@@ -366,7 +366,7 @@ describe("Component class", () => {
 - `cssComponents: Map` — растёт по мере уникальных классов. Без TTL и cleanup. На long-running приложениях с тысячами разных динамических классов память будет расти.
 - ~~HMR: дубли `<style>` в `<head>`~~ — ✅ resolved 2026-06-14. `useStyle.load()` переиспользует существующий `style[data-fishtvue-style-id="${name}"]` ([useStyle.ts:43-45](../../lib/theme/helpers/useStyle.ts#L43-L45)); при HMR-re-mount тот же `name` → один тег, контент заменяется. Verified: [Theme.test.ts](../../lib/theme/Theme.test.ts) `describe("useStyle")`. См. [Issues — Component class Issue 3](../issues/component-class.md). **Minor dev-only limitation:** каждый вызов `useStyle()` создаёт новый незакрытый `watch(cssRef, …)` (прошлый closure не вызывает `unload()`) — старый watch инертен (его `cssRef` больше не мутируется), элемент один; полноценный teardown отложен как нетривиальный (трекинг handle'ов в `__setStyle`).
 - ~~`FishtVueSymbol` пере-инициализируется при каждом `app.use(FishtVue, ...)`~~ — ✅ resolved 2026-05-20: symbol теперь `const`, multi-app safe.
-- ~~Fallback на `window.FishtVue` ломается в multi-instance/multi-app сценариях~~ — ✅ resolved 2026-05-20: inject-first path в `isExistFishtVue` ([config/index.ts:81](../../lib/config/index.ts#L82)); window fallback используется только вне Vue setup context (например, imperative API).
+- ~~Fallback на `window.FishtVue` ломается в multi-instance/multi-app сценариях~~ — ✅ resolved 2026-05-20: inject-first path в `isExistFishtVue` ([config/index.ts:116](../../lib/config/index.ts#L116)); window fallback используется только вне Vue setup context (например, imperative API).
 
 ### Bug report format
 

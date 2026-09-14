@@ -37,7 +37,7 @@ lib/label/
 - **Конфиг:** `componentsOptions.Label` ключи — `mode`, `labelMode`, `translateX`, `maxWidth`, `class`, `classes` (слияние `class`/`classes` с per-instance — по ключу).
 - **Локализация:** не использует.
 - **SSR:** SSR-safe (Component.__hooks регистрирует `onServerPrefetch`).
-- **Animation:** `motion-safe:transition-all motion-safe:duration-200` ([Label.vue:36](../../lib/label/Label.vue#L40)) — анимации отключаются при `prefers-reduced-motion: reduce`.
+- **Animation:** `motion-safe:transition-all motion-safe:duration-200` ([Label.vue:51](../../lib/label/Label.vue#L51)) — анимации отключаются при `prefers-reduced-motion: reduce`.
 
 ## 4. Quick Start
 
@@ -236,7 +236,7 @@ Visual `*`-маркер для `required` — чисто косметическ�
 - **Внутри InputLayout `for-id` проставляется автоматически** ([InputLayout.vue](../../lib/inputlayout/InputLayout.vue) генерит стабильный id через `useId()` и передаёт `:for-id` + `:id` метке) — все form-controls (Input/Textarea/Select/Calendar/TextEditor) получают связь без ручной настройки. Standalone-Label вне InputLayout требует явного `for-id`. См. [inputlayout.md Issue 10](../issues/inputlayout.md).
 - **Required-индикатор:** `*` через CSS `after:content-['*']` — не озвучивается screen-reader'ом. Добавь `aria-required="true"` на input самостоятельно или используй InputLayout-обёртку.
 - **Focus management:** не применимо — сам Label не focusable.
-- **Reduced motion:** анимации помечены `motion-safe:` ([Label.vue:36](../../lib/label/Label.vue#L40)) — отключаются при `prefers-reduced-motion: reduce`.
+- **Reduced motion:** анимации помечены `motion-safe:` ([Label.vue:51](../../lib/label/Label.vue#L51)) — отключаются при `prefers-reduced-motion: reduce`.
 
 ### Security
 
