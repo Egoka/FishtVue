@@ -47,6 +47,12 @@ jobs:
         run: pnpm test
       - name: Build library
         run: pnpm lib:build
+      - name: Publish contract on built dist
+        # `pnpm test` идёт до сборки, поэтому проверки `dist/package.json` в lib/package.test.ts
+        # там пропускаются (describe.skipIf). Прогоняем файл ещё раз по свежему dist/: так в 1.0.1
+        # не уехала бы exports-цель `./module/nuxt.mjs`, которой нет в tarball. Coverage выключен —
+        # глобальные пороги рассчитаны на полный прогон.
+        run: pnpm vitest run lib/package.test.ts --coverage.enabled=false
       - name: Build sandbox
         # Песочница — единственный потребитель в репозитории, который собирается против живой
         # lib/, и до 1.0.0 её не проверял никто: корневой tsconfig держит её в exclude, а
