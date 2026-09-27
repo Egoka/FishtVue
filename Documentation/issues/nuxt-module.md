@@ -1,7 +1,7 @@
 ---
 title: Issues — Nuxt module + plugins
-summary: Аудит lib/module + lib/plugins. Issue 4 (peer range @nuxt/kit) закрыт 2026-06-19 (Wave 2.1); Issues 1 (частично), 2, 5 закрыты 2026-09-05 — заведён nuxt.test.ts (lib/module 0% → 100% stmts), удалено мёртвое version-detection через require, реализован disableGlobalStyles. Остаются hardcoded FISHT_VUE_COMPONENTS, lib/plugins 0%, prefer-component-naming.
-updated: 2026-09-06
+summary: Аудит lib/module + lib/plugins. Issue 4 (peer range @nuxt/kit) закрыт 2026-06-19 (Wave 2.1); Issues 1 (частично), 2, 5 закрыты 2026-09-05 — заведён nuxt.test.ts (lib/module 0% → 100% stmts), удалено мёртвое version-detection через require, реализован disableGlobalStyles. 2026-09-27 — найдены и закрыты два дефекта упаковки 1.0.1 — @nuxt/kit переехал из optional peer в dependencies (Issue 9), exports `./module` указывал на несуществующий `module/nuxt.mjs` (Issue 10).
+updated: 2026-09-27
 audit-checklist: 60-point + Configuration support
 source: lib/module/, lib/plugins/
 related-doc: ../architecture/nuxt-module.md
@@ -14,8 +14,8 @@ related-doc: ../architecture/nuxt-module.md
 | Severity | Count | Categories |
 |---|---|---|
 | critical | 0 | — |
-| high | 0 | ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2, ~~C18~~ ✅, ~~J46 (module 0%)~~ ✅, ~~L53 (disableGlobalStyles)~~ ✅ 2026-09-05 |
-| medium | 0 | ~~D25 (Issue 8 — prefix)~~ ✅ 2026-09-06, ~~F30~~ ✅ фантом, ~~D21 (Issue 3 — hardcoded списки)~~ ✅ 2026-09-05, ~~K46 (Issue 7)~~ ✅ 2026-09-05, ~~K52~~ ✅ 2026-09-05 |
+| high | 0 | ~~A2, A4-5 (Issue 6)~~ ✅ закрыты волной 2, ~~C18~~ ✅, ~~J46 (module 0%)~~ ✅, ~~L53 (disableGlobalStyles)~~ ✅ 2026-09-05, ~~A3 (Issue 9 — @nuxt/kit как optional peer)~~ ✅ 2026-09-27 |
+| medium | 0 | ~~D25 (Issue 8 — prefix)~~ ✅ 2026-09-06, ~~F30~~ ✅ фантом, ~~D21 (Issue 3 — hardcoded списки)~~ ✅ 2026-09-05, ~~K46 (Issue 7)~~ ✅ 2026-09-05, ~~K52~~ ✅ 2026-09-05, ~~A4-5 (Issue 10 — exports `./module`)~~ ✅ 2026-09-27 |
 | low | 0 | ~~E29, B10~~ ✅ N/A — см. врезку |
 
 > **Три категории неприменимы к build-модулю.** `F30` (i18n), `E29` (a11y) и `B10` (theme tokens) достались `nuxt-module.md` от общего 60-пунктового чек-листа, рассчитанного на компоненты. `lib/module/nuxt.ts` не рендерит разметку, не показывает текст пользователю и не имеет цветов: он регистрирует компоненты и плагин на этапе сборки. Ни одной секции этим категориям в файле не соответствует — тот же класс фантомов, что снят в T11 у Button и Table.
@@ -115,6 +115,8 @@ const getNuxtVersion = () => {
 ## ~~Issue 4: peer Nuxt range — `nuxt: ">=3.0.0"` и `@nuxt/kit ^4.1.2` несогласованы~~ ✅ resolved 2026-06-19 (Wave 2.1)
 
 > **Status:** ✅ resolved 2026-06-19 (Wave 2.1). `@nuxt/kit`/`@nuxt/schema` peer-range расширен `^4.1.2` → `>=3.0.0` — согласован с `nuxt: ">=3.0.0"`. Nuxt 3 больше не получает несовместимый `@nuxt/kit` major 4.
+>
+> **Частично заменено Issue 9 (2026-09-27):** `@nuxt/kit` больше не peer — он в `dependencies` с тем же диапазоном `>=3.0.0`. Peer-диапазон `>=3.0.0` остался у `@nuxt/schema` и `nuxt`.
 
 **Что сделано (2026-06-19):**
 
@@ -194,6 +196,50 @@ Plugins.ts 6 lines, nuxt.ts 22 lines — coverage 0%. Server plugin критич
 **Resolution.** Раздел [architecture/nuxt-module.md §9.3](../architecture/nuxt-module.md) расширен с примера до контракта: как выбирать значение (PascalCase, подставляется буквально, без разделителя), **когда префикс нужен** и что он не затрагивает.
 
 Практически важен второй пункт. Дефолтные имена `<Button>` / `<Input>` / `<Table>` — самые вероятные для коллизии: собственный `components/Button.vue`, вторая UI-библиотека, `@nuxt/ui`. Nuxt в такой ситуации не падает — выигрывает зарегистрированный последним, и расхождение проявляется как «кнопка выглядит не так», а не как ошибка сборки. Такое отлаживают часами, поэтому рекомендация задавать префикс при наличии любой второй библиотеки вынесена в текст явно.
+
+## ~~Issue 9: `@nuxt/kit` — optional peer, а модуль импортирует его безусловно~~ ✅ resolved 2026-09-27
+
+- **Категория:** A3 (классификация зависимостей)
+- **Severity:** ~~high~~
+- **Где:** [lib/package.json:73](../../lib/package.json#L73), [module/nuxt.ts:1](../../lib/module/nuxt.ts#L1)
+
+### Что найдено
+
+Первая строка модуля — `import { … } from "@nuxt/kit"`, без `try`/fallback. При этом в 1.0.1 `@nuxt/kit` был **optional** `peerDependency`. Optional peer не ставят ни npm, ни pnpm, а Nuxt-приложение само от `@nuxt/kit` обычно не зависит: это транзитивная зависимость `nuxt`. Итог зависит от раскладки `node_modules` у потребителя:
+
+- **npm** в подкаталоге pnpm-монорепозитория кладёт `fishtvue` обычным каталогом, `@nuxt/kit` из него не резолвится → `nuxt prepare` падает `Error while importing module fishtvue/module: Error: Cannot find module '@nuxt/kit'`. Воспроизведено на реальном Nuxt 4-приложении при обновлении `0.2.11 → 1.0.1`.
+- **pnpm** работал случайно: optional peer подхватывался из графа (там оказался `@nuxt/kit@4.0.2` при `nuxt@4.0.0`), а в 0.2.x — из скрытого hoist `.pnpm/node_modules` (`@nuxt/kit@3.19.2`, другой major, чем у самого Nuxt).
+- **yarn PnP** и `hoist=false` — падение гарантировано.
+
+### Что сделано
+
+- `@nuxt/kit` перенесён из `peerDependencies`/`peerDependenciesMeta` в `dependencies` с диапазоном `>=3.0.0` — тем же, что у `compatibility.nuxt` модуля. Так устроены все Nuxt-модули экосистемы (`@nuxt/image`, `@nuxt/icon`, `@nuxt/fonts`, `@nuxtjs/i18n`, `@nuxtjs/color-mode`), и так требует документация Nuxt Kit: пакет ставится в `dependencies`, версия не ниже версии `nuxt`. npm и pnpm предпочитают версии, уже присутствующие в дереве или lockfile приложения, поэтому свежий major сверху обычно не приезжает. Точное совпадение с `@nuxt/kit` самого Nuxt не гарантируется — как не гарантировалось и при peer.
+- `@nuxt/schema` и `nuxt` остались optional peer: `@nuxt/schema` нужен только типам ([module/index.d.ts](../../lib/module/index.d.ts)), `nuxt` — только как хост.
+- **Цена решения:** Vite-потребитель без Nuxt теперь тоже получает `@nuxt/kit` при установке. Альтернатива — вынести модуль в отдельный пакет (`@fishtvue/nuxt`) — это новый публичный пакет и breaking change для `modules: ["fishtvue/module"]`; в этот заход не делалась.
+- Контракт — [lib/package.test.ts](../../lib/package.test.ts): «ships @nuxt/kit as a runtime dependency, not an optional peer» и инвариант «declares every bare runtime import of the Nuxt module as a dependency» — он парсит импорты `module/nuxt.ts` и валит тест, если модуль начнёт импортировать пакет, не объявленный в `dependencies`.
+
+## ~~Issue 10: `exports["./module"]` указывает на несуществующий `module/nuxt.mjs`~~ ✅ resolved 2026-09-27
+
+- **Категория:** A4-5 (exports map)
+- **Severity:** ~~medium~~ — Nuxt обходил дефект, pure Node — нет
+- **Где:** [module/package.json](../../lib/module/package.json), [rollup.config.js:522](../../lib/rollup.config.js#L522), [rollup.config.js:594–599](../../lib/rollup.config.js#L594-L599)
+
+### Что найдено
+
+Rollup выпускает модуль как `module/index.mjs` (`addEntry("module", "nuxt.ts", "index")`), а вложенный `lib/module/package.json` объявлял `main`/`module` = `./nuxt.mjs`. `buildRootExports()` берёт `module || main` вложенного манифеста и пишет в корневую карту как есть — в опубликованной 1.0.1 `exports["./module"]` = `./module/nuxt.mjs`, которого в tarball нет.
+
+- `import("fishtvue/module")` в Node падает `ERR_MODULE_NOT_FOUND … module/nuxt.mjs`.
+- Nuxt дефект маскировал: `loadNuxtModuleInstance` перебирает суффиксы (`nuxt`, `module`, …, `index`) и доходит до `fishtvue/module/index`, который есть в карте как identity-entry.
+- В 0.2.x расхождение тоже было, но без `exports`-карты бандлеры и Nuxt резолвили каталог через `index.mjs`, и оно не проявлялось.
+- Существующие тесты карты этого не ловили: спот-чеки проверяли `table`/`menu`/`config`/`loading`, а весь блок `dist/` пропускается в CI — `pnpm test` идёт до `lib:build`.
+
+### Что сделано
+
+- `lib/module/package.json`: `main`/`module` → `./index.mjs`. Имя выходного файла не менялось, поэтому deep-импорт `fishtvue/module/index.mjs` продолжает работать.
+- Source-тест «points at the file rollup emits for the Nuxt module» сверяет `lib/module/package.json` с `addEntry("module", …)` из `rollup.config.js` — работает без `dist/` и идёт в CI.
+- В блок `dist/` добавлены «resolves fishtvue/module to the emitted Nuxt module entry» и общий инвариант «points every concrete export target at a file that exists in dist» — ловит любую цель карты, которой нет в сборке (wildcard-цели пропускаются).
+- В CI (`pull_request.yml`, `release.yml`) после `lib:build` добавлен шаг «Publish contract on built dist» — `pnpm vitest run lib/package.test.ts --coverage.enabled=false`. Теперь проверки по `dist/` выполняются и до публикации.
+- Проверено: `npm pack` собранного `dist/` → чистая `npm install` → `import("fishtvue/module")` в Node резолвится в `module/index.mjs` и отдаёт функцию модуля с `meta.name = "fishtvue"`.
 
 ## Cross-cutting: Configuration support
 

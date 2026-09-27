@@ -1,7 +1,7 @@
 ---
 title: Installation
-summary: Установка fishtvue в Vite (Vue 3) и Nuxt 3/4 проектах. §2.5 — publish contract (ESM-only, sideEffects, files-whitelist, sourcemaps). Wave 2.1 — vue → required peer, тяжёлые deps (v-calendar/quill/gsap) → optional peer.
-updated: 2026-06-19
+summary: Установка fishtvue в Vite (Vue 3) и Nuxt 3/4 проектах. §2.5 — publish contract (ESM-only, sideEffects, files-whitelist, sourcemaps). Wave 2.1 — vue → required peer, тяжёлые deps (v-calendar/quill/gsap) → optional peer. 1.0.2 — @nuxt/kit из optional peer в dependencies.
+updated: 2026-09-27
 stability: stable
 since: 0.2.11
 ---
@@ -33,12 +33,13 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 - `fishtvue/module` — Nuxt module (`defineNuxtModule`).
 - `fishtvue/plugins/nuxt` — Nuxt plugin (`nuxtInitPlugin`).
 
-**Runtime dependencies** ([lib/package.json `dependencies`](../lib/package.json#L74)) — устанавливаются автоматически вместе с `fishtvue`:
+**Runtime dependencies** ([lib/package.json `dependencies`](../lib/package.json#L70)) — устанавливаются автоматически вместе с `fishtvue`:
 
 | Пакет                     | Версия              | Зачем                                |
 | ------------------------- | ------------------- | ------------------------------------ |
 | `@heroicons/vue`          | `^2.1.5`            | Icons компонент.                     |
 | `@iconify/vue`            | `^4.1.2`            | Icons компонент (Iconify backend).   |
+| `@nuxt/kit`               | `>=3.0.0`           | Nuxt module `fishtvue/module`. В Vite-бандл не попадает. |
 | `date-fns`                | `^4.1.0`            | Calendar и `dateHandler`.            |
 | `clsx` + `tailwind-merge` | `^2.1.x` / `^3.4.0` | `tailwindHandler.cn`.                |
 | `lodash-es`               | `^4.18.1`           | Локальные утилиты (Select / Table).  |
@@ -52,8 +53,10 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 | `v-calendar`                 | `^3.0.0`    | да       | `Calendar`.                                        |
 | `@vueup/vue-quill` + `quill` | `^1.2.0` / `^2.0.0` | да | `TextEditor`.                                      |
 | `gsap`                       | `^3.12.0`   | да       | Анимация раскрытия списка `Select` (опционально).  |
-| `@nuxt/kit` + `@nuxt/schema` | `>=3.0.0`   | да       | Nuxt module (Nuxt 3 и 4).                          |
+| `@nuxt/schema`               | `>=3.0.0`   | да       | Типы Nuxt module (Nuxt 3 и 4).                     |
 | `nuxt`                       | `>=3.0.0`   | да       | Nuxt module.                                       |
+
+> **1.0.2 — `@nuxt/kit` больше не peer.** Модуль импортирует его безусловно, а optional peer не ставят ни npm, ни pnpm; Nuxt-приложение само от `@nuxt/kit` обычно не зависит. В 1.0.1 это давало `Cannot find module '@nuxt/kit'` при строгой резолюции — см. [issues/nuxt-module.md](./issues/nuxt-module.md) Issue 9.
 
 > **Wave 2.1 — vue как peer, тяжёлые deps как optional peer.** `vue` переведён из `dependencies` в **required `peerDependencies` (`^3.5.0`)**: иначе npm мог поставить вторую копию Vue → ломались `provide/inject`, reactivity-контексты и plugin-дубли. Тяжёлые single-purpose deps (`v-calendar`, `@vueup/vue-quill`, `quill`, `gsap`) переведены в **optional `peerDependencies`** — они больше не тянутся ко ВСЕМ потребителям, а грузятся lazy теми компонентами, что их используют (`Calendar`/`TextEditor` — `defineAsyncComponent`/dynamic `import()` + CSS в `onMounted`; `Select` деградирует на мгновенную анимацию без `gsap`). **Поэтому при использовании `Calendar`/`TextEditor` установи соответствующий peer вручную:**
 >
@@ -75,7 +78,7 @@ Source: [lib/package.json](../lib/package.json), [lib/rollup.config.js](../lib/r
 - **Tree-shaking.** `"sideEffects": false` — на root И в каждом под-пакете `dist/{name}/package.json` (инъектится `copyDependencies()` на build-step). CSS инжектится в рантайме через lifecycle (`onServerPrefetch`/`onMounted`), не на import-time, поэтому модули чисты и неиспользуемые компоненты вырезаются.
 - **`files`-whitelist** контролирует содержимое tarball: `**/*.mjs`, `**/*.map`, `**/*.d.ts`, `**/package.json`, `README.md`, `LICENSE.md`, `CHANGELOG.md`. Это (1) **гарантирует публикацию sourcemaps** (`.mjs.map`, 1:1 к `.mjs`) и (2) **отсекает** тестовые/исходные артефакты — `copyDependencies()` дополнительно пропускает `*.test.*`. Контроль: `pnpm pack` (`cd dist && npm pack`).
 - **Root `exports` map (Issue 5c-b).** `dist/package.json` несёт корневую `exports`-карту, сгенерированную build-step'ом (`buildRootExports()` в [rollup.config.js](../lib/rollup.config.js)) из rollup-выходов + вложенных `package.json`/`.d.ts`: ЯВНЫЙ entry на каждый emitted `.mjs` (identity `*.mjs` + extensionless субпуть) + bare-dir из вложенного package.json (`./table` → `import: ./table/table.mjs`, `types: ./table/Table.d.ts` — обход lowercase/PascalCase) + `./*/package.json`. Без карты пакет резолвился **только в бандлерах**; теперь `fishtvue/{name}` / `fishtvue/utils/{handler}` работают и в pure Node ESM. Verified: `npm pack` → install → `import.meta.resolve` всех публичных субпутей + `tsc` (`bundler`/`nodenext`).
-- **Контракт зафиксирован тестом** [lib/package.test.ts](../lib/package.test.ts) (`sideEffects`, `files` с `**/*.map`, `engines.node`, ESM entry points + `exports`-карта при наличии `dist/`) — ломается при регрессии манифеста.
+- **Контракт зафиксирован тестом** [lib/package.test.ts](../lib/package.test.ts) (`sideEffects`, `files` с `**/*.map`, `engines.node`, ESM entry points + `exports`-карта при наличии `dist/`; в CI этот файл прогоняется ещё раз после `lib:build`, включая проверку, что каждая цель карты существует в сборке) — ломается при регрессии манифеста.
 
 ## 3. How it works
 
@@ -307,7 +310,7 @@ export default defineNuxtConfig({
 ## 14. Compatibility & Stability
 
 - **Vue:** `^3.5.0` — **required `peerDependency`** (Wave 2.1; раньше была в `dependencies`). Приложение поставляет свою копию Vue; дубль runtime'а исключён.
-- **Nuxt:** `>=3.0.0` (включая Nuxt 4). `@nuxt/kit`/`@nuxt/schema` — optional peer `>=3.0.0` (раньше `^4.1.2` ломал Nuxt 3).
+- **Nuxt:** `>=3.0.0` (включая Nuxt 4). `@nuxt/kit` — `dependencies` `>=3.0.0` (с 1.0.2; раньше optional peer). `@nuxt/schema` — optional peer `>=3.0.0` (раньше `^4.1.2` ломал Nuxt 3).
 - **Node:** `>=18` (декларирован в `engines`, [lib/package.json](../lib/package.json)). Пакет **ESM-only** (`.mjs`) — для чистых CJS-проектов нужен bundler/ESM-loader. Публикуемый контракт (sideEffects, files-whitelist, sourcemaps) — см. §2.5.
 - **Браузеры:** evergreen (Chrome, Firefox, Safari, Edge — последние 2 версии). IE не поддерживается.
 - **Stability flag:** `stable`.
@@ -343,6 +346,7 @@ describe("Button after install", () => {
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `Cannot resolve "fishtvue/config"` в Vite                  | Не установлен пакет `fishtvue`.                                                                                       | `pnpm add fishtvue`.                                                                    |
 | `Cannot find module 'fishtvue/module'` в Nuxt              | `nuxt.config.ts` подключает модуль до установки пакета.                                                               | Сначала `pnpm add fishtvue`, потом перезапусти `nuxi`.                                  |
+| `Error while importing module fishtvue/module: Cannot find module '@nuxt/kit'` | fishtvue ≤ 1.0.1 объявлял `@nuxt/kit` optional peer — он не ставился. Типично для `npm install` внутри pnpm-монорепозитория. | Обнови fishtvue до ≥ 1.0.2. На 1.0.1 — `pnpm add @nuxt/kit` в приложение или установка тем же менеджером, что и весь репозиторий. |
 | Auto-import не работает в Nuxt                             | `autoImport: false` или конфликт `prefix` с другим модулем.                                                           | Проверь `nuxt.config.ts#fishtvue.autoImport`.                                           |
 | Компонент рендерится без стилей                            | Не подключён `app.use(FishtVue, {})` (Vite) или `disableGlobalStyles: true` (Nuxt).                                   | Подключи плагин или сними флаг.                                                         |
 | Tailwind override не побеждает стили компонента            | Стили в `@layer fishtvue` имеют тот же приоритет, что и другие layers, но проигрывают стилям вне layers.              | См. §10.4 / [01-getting-started §10.4](./01-getting-started.md#104-css-layer-override). |

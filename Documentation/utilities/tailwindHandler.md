@@ -1,7 +1,7 @@
 ---
 title: utils/tailwindHandler
 summary: cn() — слияние Tailwind-классов через clsx + tailwind-merge; mergeClasses() — по-ключевое слияние карт classes.
-updated: 2026-09-13
+updated: 2026-09-27
 stability: stable
 since: 0.2.11
 ---
@@ -24,7 +24,7 @@ lib/utils/tailwindHandler.d.ts
 lib/utils/tailwindHandler.test.ts   # 12 кейсов
 ```
 
-Зависимости — `clsx ^2.1.x`, `tailwind-merge ^3.4.0` ([lib/package.json:48, 54](../../lib/package.json#L48)).
+Зависимости — `clsx ^2.1.x`, `tailwind-merge ^3.4.0` ([lib/package.json:74, 78](../../lib/package.json#L74)).
 
 ## 3. How it works
 

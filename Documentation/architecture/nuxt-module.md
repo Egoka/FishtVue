@@ -1,7 +1,7 @@
 ---
 title: Nuxt module + plugin
-summary: fishtvue/module — defineNuxtModule с auto-import; fishtvue/plugins/nuxt — SSR-инжекция CSS. 2026-09-05 — disableGlobalStyles реализован, version-detection удалён, заведён nuxt.test.ts.
-updated: 2026-09-14
+summary: fishtvue/module — defineNuxtModule с auto-import; fishtvue/plugins/nuxt — SSR-инжекция CSS. 2026-09-05 — disableGlobalStyles реализован, version-detection удалён, заведён nuxt.test.ts. 2026-09-27 — @nuxt/kit в dependencies, exports `./module` → `module/index.mjs`.
+updated: 2026-09-27
 stability: stable
 since: 0.2.11
 ---
@@ -25,7 +25,7 @@ Source: [lib/module/nuxt.ts](../../lib/module/nuxt.ts), [lib/module/index.d.ts](
 lib/module/
 ├── nuxt.ts             # defineNuxtModule({ name: "fishtvue", ... })
 ├── index.d.ts          # ModuleOptions, FishtVueOptions = FishtVueConfiguration & ModuleOptions
-└── package.json        # entry для "fishtvue/module"
+└── package.json        # entry для "fishtvue/module": main → ./index.mjs (выход rollup)
 
 lib/plugins/
 ├── nuxt.ts             # server-side defineNuxtPlugin — ssrContext head injection
@@ -42,19 +42,19 @@ lib/plugins/
 - `fishtvue/utils/objectHandler.fieldsOmit` — фильтрация module-only-полей перед передачей в plugin.
 - `fishtvue/config` — собственно plugin, который запускается из generated runtime-plugin.
 
-Внешние peer-зависимости (optional, [lib/package.json:41–72](../../lib/package.json#L41-L72)):
+Внешние зависимости ([lib/package.json:41–79](../../lib/package.json#L41-L79)):
 
-| Пакет | Версия |
-|---|---|
-| `@nuxt/kit` | `>=3.0.0` |
-| `@nuxt/schema` | `>=3.0.0` |
-| `nuxt` | `>=3.0.0` |
+| Пакет | Версия | Как объявлен | Зачем |
+|---|---|---|---|
+| `@nuxt/kit` | `>=3.0.0` | `dependencies` ([lib/package.json:73](../../lib/package.json#L73)) | Рантайм модуля: `defineNuxtModule`, `addComponent`, `addPlugin`, `addPluginTemplate`, `createResolver`. |
+| `@nuxt/schema` | `>=3.0.0` | optional peer | Только типы ([module/index.d.ts](../../lib/module/index.d.ts)). |
+| `nuxt` | `>=3.0.0` | optional peer | Хост-приложение. |
 
-В Vite-only проекте эти peer-deps опциональны и не подключаются.
+`@nuxt/kit` — обычная зависимость, потому что модуль импортирует его безусловно, а Nuxt-приложение само от `@nuxt/kit` обычно не зависит. До 1.0.2 он был optional peer, и при строгой резолюции `nuxt prepare` падал `Cannot find module '@nuxt/kit'` — см. [issues/nuxt-module.md Issue 9](../issues/nuxt-module.md). Vite-only проект получает `@nuxt/kit` при установке, но в бандл он не попадает: его импортирует только `fishtvue/module`.
 
-> **Wave 2.1 (Issue 4):** `@nuxt/kit`/`@nuxt/schema` peer-range расширен `^4.1.2` → `>=3.0.0` — раньше major-pin `^4.1.2` ломал Nuxt 3 (хотя `nuxt` допускал `>=3.0.0`). Теперь модуль корректно ставится и в Nuxt 3 (`@nuxt/kit ^3.x`), и в Nuxt 4. Tested with Nuxt 3.x and 4.x.
+> **Wave 2.1 (Issue 4):** `@nuxt/kit`/`@nuxt/schema` peer-range расширен `^4.1.2` → `>=3.0.0` — раньше major-pin `^4.1.2` ломал Nuxt 3 (хотя `nuxt` допускал `>=3.0.0`). Теперь модуль корректно ставится и в Nuxt 3 (`@nuxt/kit ^3.x`), и в Nuxt 4. Tested with Nuxt 3.x and 4.x. Диапазон `>=3.0.0` у `@nuxt/kit` сохранён и после переезда в `dependencies` (Issue 9).
 
-Bundle: `dist/module/module.mjs`, `dist/plugins/Plugins.mjs`.
+Bundle: `dist/module/index.mjs` (entry `fishtvue/module`, [rollup.config.js:522](../../lib/rollup.config.js#L522)), `dist/plugins/plugins.mjs`. До 1.0.2 `exports["./module"]` указывал на несуществующий `module/nuxt.mjs` — см. [issues/nuxt-module.md Issue 10](../issues/nuxt-module.md).
 
 ## 3. How it works
 
@@ -289,7 +289,7 @@ Module расширяет `NuxtConfig`/`NuxtOptions` через augmentation ([m
 ## 14. Compatibility & Stability
 
 - **Nuxt:** `>=3.0.0` декларировано через `compatibility.nuxt`. Реально протестировано — Nuxt 3.x. Nuxt 4 — экспериментально (детект `isNuxt4()` присутствует, но используется только для `importPath`-выбора, и текущая ветка возвращает `"#app"` в обоих случаях).
-- **`@nuxt/kit` / `@nuxt/schema`:** `>=3.0.0` optional peer (Wave 2.1 — раньше `^4.1.2`, ломал Nuxt 3). Tested with Nuxt 3.x and 4.x.
+- **`@nuxt/kit`:** `>=3.0.0` в `dependencies` (с 1.0.2; раньше optional peer, Issue 9). **`@nuxt/schema`:** `>=3.0.0` optional peer (Wave 2.1 — раньше `^4.1.2`, ломал Nuxt 3). Tested with Nuxt 3.x and 4.x.
 - **Stability flag:** `stable` (для Nuxt 3); Nuxt 4 — `beta`.
 - **Breaking changes:** не зафиксировано в публичном API между 0.2.x.
 - **Deprecations:** на момент ревизии (2026-05-09) `@deprecated`-меток нет.
@@ -319,6 +319,7 @@ await setup({
 |---|---|---|
 | Auto-import не работает | `autoImport: false` или `prefix` конфликтует с другим модулем. | Проверь `nuxt.config.ts#fishtvue.autoImport`. |
 | `Cannot find module "fishtvue/module"` | Pre-install: модуль перечислен в `nuxt.config.ts`, но `fishtvue` ещё не в `node_modules`. | `pnpm add fishtvue` затем перезапусти `nuxi`. |
+| `Error while importing module fishtvue/module: Cannot find module '@nuxt/kit'` | fishtvue ≤ 1.0.1: `@nuxt/kit` был optional peer и не ставился. Чаще всего проявляется при `npm install` внутри pnpm-монорепозитория. | Обнови fishtvue до ≥ 1.0.2 (`@nuxt/kit` в `dependencies`). На 1.0.1 — поставь `@nuxt/kit` в приложение явно или устанавливай тем же менеджером, что и весь репозиторий. |
 | CSS не появляется в HTML на сервере | Server plugin не запустился — возможно, проблема `(process as any).server` детекта в Nuxt 4 (у Nuxt 4 рекомендуется `import.meta.server`). | Проверь head-вывод: `view-source:`; см. Known issues. |
 | Опции не применяются | Передаются через `fishtvue:` ключ, но не доходят до plugin'а. | Проверь, что `MODULE_OPTIONS` ([module/nuxt.ts:78](../../lib/module/nuxt.ts#L78)) не содержит твой ключ — иначе он отфильтруется. |
 | Конфликт двух SSR-инжекций | Server plugin + клиентский `useStyle` дают два `<style>`-блока. | Браузер дедупит идентичные правила; визуально разницы нет. |
