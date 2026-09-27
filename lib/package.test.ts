@@ -99,10 +99,36 @@ describe("lib/package.json dependency contract (Wave 2.1)", () => {
 
   it("widens Nuxt peer ranges to support Nuxt 3 + 4 (K49)", () => {
     // Раньше @nuxt/kit/@nuxt/schema были прибиты к ^4.1.2, ломая Nuxt 3 (хотя nuxt: >=3.0.0).
-    expect(peers["@nuxt/kit"]).toBe(">=3.0.0")
+    // @nuxt/kit с тех пор переехал в dependencies (nuxt-module.md Issue 9); peer-диапазон остался
+    // у @nuxt/schema (только типы module/index.d.ts) и nuxt.
     expect(peers["@nuxt/schema"]).toBe(">=3.0.0")
-    for (const dep of ["@nuxt/kit", "@nuxt/schema", "nuxt"]) {
+    expect(peers.nuxt).toBe(">=3.0.0")
+    for (const dep of ["@nuxt/schema", "nuxt"]) {
       expect(peersMeta[dep]?.optional, `${dep} must stay optional`).toBe(true)
+    }
+  })
+
+  it("ships @nuxt/kit as a runtime dependency, not an optional peer (nuxt-module.md Issue 9)", () => {
+    // `fishtvue/module` импортирует @nuxt/kit безусловно. Optional peer не ставят ни npm, ни pnpm,
+    // а Nuxt-приложение само от @nuxt/kit обычно не зависит (он транзитивный у nuxt) → при строгой
+    // резолюции модуль падал `Cannot find module '@nuxt/kit'`. Канон Nuxt для модулей — dependencies.
+    expect(deps["@nuxt/kit"]).toBe(">=3.0.0")
+    expect(peers["@nuxt/kit"]).toBeUndefined()
+    expect(peersMeta["@nuxt/kit"]).toBeUndefined()
+  })
+
+  it("declares every bare runtime import of the Nuxt module as a dependency (Issue 9)", () => {
+    // Модуль исполняется в Node на этапе сборки Nuxt: всё, что он импортирует не из `node:` и не из
+    // самого fishtvue, обязано приехать вместе с пакетом. Type-only импорты в рантайм не попадают;
+    // `#app` — строка шаблона generated-плагина (alias Nuxt-приложения), а не импорт модуля.
+    const src = readFileSync(resolve(process.cwd(), "lib/module/nuxt.ts"), "utf-8")
+    const external = [...src.matchAll(/^import\s+(?!type\b)[^"']*from\s+["']([^"']+)["']/gm)]
+      .map((m) => m[1])
+      .filter((s) => !/^(node:|fishtvue\/|\.|#)/.test(s))
+    expect(external.length).toBeGreaterThan(0)
+    for (const specifier of external) {
+      const name = specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0]
+      expect(deps[name], `${name} is imported by lib/module/nuxt.ts`).toBeDefined()
     }
   })
 
@@ -116,10 +142,32 @@ describe("lib/package.json dependency contract (Wave 2.1)", () => {
 })
 
 /**
+ * Вложенный `lib/module/package.json` — источник bare-субпути `fishtvue/module`: `buildRootExports()`
+ * берёт из него `module || main` и пишет в корневую `exports`-карту как есть. До 1.0.2 там стоял
+ * `./nuxt.mjs`, а rollup выпускал `module/index.mjs` — карта указывала на несуществующий файл, и
+ * `import("fishtvue/module")` в pure Node падал `ERR_MODULE_NOT_FOUND`. Nuxt маскировал ошибку
+ * перебором суффиксов (`module/index`). Проверяем по исходникам, без `dist/`: тест идёт и в CI.
+ */
+describe("lib/module/package.json entry (nuxt-module.md Issue 10)", () => {
+  it("points at the file rollup emits for the Nuxt module", () => {
+    const rollup = readFileSync(resolve(process.cwd(), "lib/rollup.config.js"), "utf-8")
+    const out = rollup.match(/addEntry\("module",\s*"nuxt\.ts",\s*"([^"]+)"\)/)?.[1]
+    expect(out, "addEntry для lib/module/nuxt.ts не найден в rollup.config.js").toBeDefined()
+    const sub = JSON.parse(readFileSync(resolve(process.cwd(), "lib/module/package.json"), "utf-8")) as {
+      main?: string
+      module?: string
+    }
+    expect(sub.main).toBe(`./${out}.mjs`)
+    expect(sub.module).toBe(`./${out}.mjs`)
+  })
+})
+
+/**
  * Контракт корневой `exports`-карты (Issue 5c-b / A4-5). Карта генерируется build-step'ом
  * (`buildRootExports()` в rollup.config.js) из выходов rollup, поэтому проверяем по
  * `dist/package.json` — но ТОЛЬКО если сборка присутствует (иначе skip, чтобы `pnpm test`
- * без `lib:build` не падал). Полная проверка резолва — отдельным `npm pack` + import-смоком.
+ * без `lib:build` не падал). В CI файл прогоняется второй раз после `lib:build` (шаг «Publish
+ * contract on built dist»). Полная проверка резолва — отдельным `npm pack` + import-смоком.
  */
 const distPkgPath = resolve(process.cwd(), "dist/package.json")
 const hasDist = existsSync(distPkgPath)
@@ -146,6 +194,23 @@ describe.skipIf(!hasDist)("dist/package.json root exports map (Issue 5c-b)", () 
     expect(exp["./menu/menu.mjs"]).toMatchObject({ import: "./menu/menu.mjs" })
     expect(exp["./utils/domHandler"]).toMatchObject({ import: "./utils/domHandler.mjs" })
     expect(exp["./*/package.json"]).toBe("./*/package.json")
+  })
+
+  it("resolves fishtvue/module to the emitted Nuxt module entry (nuxt-module.md Issue 10)", () => {
+    expect(exp["./module"]).toMatchObject({ types: "./module/index.d.ts", import: "./module/index.mjs" })
+  })
+
+  it("points every concrete export target at a file that exists in dist (Issue 10)", () => {
+    // Спот-чеки выше не ловят «карта ссылается на файл, которого нет в tarball» — именно так в 1.0.1
+    // уехал `./module/nuxt.mjs`. Wildcard-цели (`./*/package.json`) проверить поштучно нельзя — пропускаем.
+    const targets = new Set<string>()
+    const collect = (value: unknown) => {
+      if (typeof value === "string") targets.add(value)
+      else if (value && typeof value === "object") Object.values(value).forEach(collect)
+    }
+    Object.values(exp).forEach(collect)
+    const missing = [...targets].filter((t) => !t.includes("*") && !existsSync(resolve(process.cwd(), "dist", t)))
+    expect(missing).toEqual([])
   })
 
   // A4-5 (loading.md Issue 5). Loading — ЕДИНСТВЕННЫЙ компонент, чей runtime делает глубокий

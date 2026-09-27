@@ -1,7 +1,7 @@
 ---
 title: utils/dateHandler
 summary: isDate type guard, formatDate с локалями, convertMask dayjs → date-fns.
-updated: 2026-05-09
+updated: 2026-09-27
 stability: stable
 since: 0.2.11
 ---
@@ -24,7 +24,7 @@ lib/utils/dateHandler.d.ts          # 204 строки
 lib/utils/dateHandler.test.ts       # 40 кейсов
 ```
 
-Зависимости: `date-fns ^4.1.0`, `date-fns/locale` ([lib/package.json:50](../../lib/package.json#L50)).
+Зависимости: `date-fns ^4.1.0`, `date-fns/locale` ([lib/package.json:76](../../lib/package.json#L76)).
 
 ## 3. How it works
 

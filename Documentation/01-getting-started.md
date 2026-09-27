@@ -1,7 +1,7 @@
 ---
 title: Getting started
 summary: Знакомство с пакетом fishtvue, инициализация плагина, минимальный запуск.
-updated: 2026-09-14
+updated: 2026-09-27
 stability: stable
 since: 0.2.11
 ---
@@ -298,7 +298,7 @@ describe("MyComponent", () => {
 | Темная тема не переключилась | `optionsTheme.darkModeSelector` не совпадает с фактическим селектором (`html.dark`, `[data-theme="dark"]`). | Согласуй селектор с DOM-разметкой. |
 | Override CSS-класса не работает | Стиль внутри `@layer fishtvue` имеет более низкий приоритет, чем не-layer стили — но равный другим layers. | См. §10.4: дополнительный layer позже либо вне layers. |
 | TypeScript не находит `$fishtVue` в template | `tsconfig` не подхватил augmentation из `fishtvue/config`. | Добавь `"types": ["fishtvue/config"]` или импортни модуль в любом `.ts`. |
-| Плагин ругается на peer-deps `@nuxt/kit`/`@nuxt/schema` | Nuxt-зависимости — peer dependencies (см. [lib/package.json:30–47](../lib/package.json#L30-L47)). В Vite-проекте можно игнорировать предупреждение. | Для Vite-only проектов — игнорируй; для Nuxt-проекта добавь `nuxt`. |
+| Плагин ругается на peer-deps `@nuxt/schema`/`nuxt` | Это optional peer dependencies (см. [lib/package.json:41–69](../lib/package.json#L41-L69)). `@nuxt/kit` с 1.0.2 — обычная зависимость и ставится вместе с пакетом. В Vite-проекте можно игнорировать предупреждение. | Для Vite-only проектов — игнорируй; для Nuxt-проекта добавь `nuxt`. |
 
 ## 17. Related
 

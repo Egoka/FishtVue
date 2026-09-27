@@ -62,6 +62,9 @@ jobs:
         run: pnpm test
       - name: Build library
         run: pnpm lib:build
+      - name: Publish contract on built dist
+        # Контракт манифеста по свежему dist/ — см. комментарий в pull_request.yml.
+        run: pnpm vitest run lib/package.test.ts --coverage.enabled=false
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
