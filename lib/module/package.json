@@ -1,5 +1,5 @@
 {
-  "main": "./nuxt.mjs",
-  "module": "./nuxt.mjs",
+  "main": "./index.mjs",
+  "module": "./index.mjs",
   "types": "./index.d.ts"
 }
